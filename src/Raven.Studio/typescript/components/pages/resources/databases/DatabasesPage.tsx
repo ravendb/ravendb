@@ -6,7 +6,6 @@ import { DatabasesToolbarActions } from "./DatabasesToolbarActions";
 import { DatabasesFilter } from "./DatabasesFilter";
 import { DatabasesCounter } from "./DatabasesCounter";
 import { NoDatabases } from "./NoDatabases";
-import changesContext from "common/changesContext";
 import { DatabaseFilterCriteria, DatabaseSharedInfo } from "../../../models/databases";
 import { useChangesContext } from "hooks/useChangesContext";
 
@@ -85,10 +84,10 @@ export function DatabasesPage(props: DatabasesPageProps) {
     }, []);
 
     useEffect(() => {
-        const sub = serverNotifications.watchAllDatabaseChanges(() => fetchDatabases());
+        const sub = serverNotifications().watchAllDatabaseChanges(() => fetchDatabases());
 
         return () => sub.off();
-    }, [serverNotifications]);
+    }, [serverNotifications()]);
 
     return (
         <div>

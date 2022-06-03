@@ -5,12 +5,12 @@ import databaseNotificationCenterClient from "common/databaseNotificationCenterC
 import * as React from "react";
 
 export interface ChangesContextProps {
-    serverNotifications: serverNotificationCenterClient;
+    serverNotifications: () => serverNotificationCenterClient;
     databaseNotifications: () => databaseNotificationCenterClient;
 }
 
 const localChangesContext = createContext<ChangesContextProps>({
-    serverNotifications: changesContext.default.serverNotifications(),
+    serverNotifications: changesContext.default.serverNotifications,
     databaseNotifications: changesContext.default.databaseNotifications,
 });
 

@@ -15,6 +15,14 @@ import { UncontrolledTooltip } from "../../../../common/UncontrolledTooltip";
 import { IndexDistribution, IndexProgress } from "./IndexDistribution";
 import { IndexProgressTooltip } from "./IndexProgressTooltip";
 import IndexSourceType = Raven.Client.Documents.Indexes.IndexSourceType;
+import {
+    RichPanel,
+    RichPanelDetailItem,
+    RichPanelDetails,
+    RichPanelHeader,
+    RichPanelSelect,
+} from "../../../../common/RichPanel";
+import { Checkbox } from "../../../../common/Checkbox";
 
 interface IndexPanelProps {
     database: database;
@@ -145,28 +153,13 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
 
     return (
         <>
-            <div
-                className={classNames(
-                    "index-item",
-                    { "index-sidebyside": hasReplacement },
-                    { "index-sidebyside": isReplacement }
-                )}
-                ref={ref}
-            >
-                <div className="index-header" id={indexUniqueId(index)}>
-                    <div className="index-select">
+            <RichPanel className={classNames({ "index-sidebyside": hasReplacement || isReplacement })} ref={ref}>
+                <RichPanelHeader id={indexUniqueId(index)}>
+                    <RichPanelSelect>
                         {canReadWriteDatabase(database) && (
-                            <div className="checkbox">
-                                <input
-                                    type="checkbox"
-                                    className="styled"
-                                    checked={selected}
-                                    onChange={toggleSelection}
-                                />
-                                <label />
-                            </div>
+                            <Checkbox toggleSelection={toggleSelection} selected={selected} />
                         )}
-                    </div>
+                    </RichPanelSelect>
 
                     <h3 className="index-name flex-grow">
                         <a href={editUrl} title={index.name}>
@@ -317,19 +310,19 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                                         <span className="caret" />
                                     </button>
                                     <ul className="dropdown-menu">
-                                        <li data-bind="visible: canBeEnabled()">
+                                        <li>
                                             <a href="#" onClick={enableIndexing} title="Enable indexing">
                                                 <i className="icon-play" />
                                                 <span>Enable indexing</span>
                                             </a>
                                         </li>
-                                        <li data-bind="visible: canBeDisabled()">
+                                        <li>
                                             <a href="#" onClick={disableIndexing} title="Disable indexing">
                                                 <i className="icon-cancel" />
                                                 <span>Disable indexing</span>
                                             </a>
                                         </li>
-                                        <li data-bind="visible: canBePaused()">
+                                        <li>
                                             <a
                                                 href="#"
                                                 onClick={pauseIndexing}
@@ -340,7 +333,7 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                                                 <span>Pause indexing until restart</span>
                                             </a>
                                         </li>
-                                        <li data-bind="visible: canBeResumed()">
+                                        <li>
                                             <a
                                                 href="#"
                                                 onClick={resumeIndexing}
@@ -365,8 +358,6 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                                         type="button"
                                         className="btn btn-default dropdown-toggle"
                                         data-toggle="dropdown"
-                                        aria-haspopup="true"
-                                        aria-expanded="false"
                                     >
                                         <span className="caret" />
                                         <span className="sr-only">Toggle Dropdown</span>
@@ -411,83 +402,81 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                             )}
                         </div>
                     </div>
-                </div>
-                <div>
-                    <div className="index-details">
-                        {(index.reduceOutputCollectionName || index.patternForReferencesToReduceOutputCollection) && (
-                            <div className="index-detail-item">
-                                <div className="index-type-icon" id={reduceOutputId}>
-                                    {index.reduceOutputCollectionName &&
-                                        !index.patternForReferencesToReduceOutputCollection && (
-                                            <span>
-                                                <i className="icon-output-collection" />
-                                            </span>
-                                        )}
-                                    {index.patternForReferencesToReduceOutputCollection && (
+                </RichPanelHeader>
+                <RichPanelDetails>
+                    {(index.reduceOutputCollectionName || index.patternForReferencesToReduceOutputCollection) && (
+                        <RichPanelDetailItem>
+                            <div className="index-type-icon" id={reduceOutputId}>
+                                {index.reduceOutputCollectionName &&
+                                    !index.patternForReferencesToReduceOutputCollection && (
                                         <span>
-                                            <i className="icon-reference-pattern" />
+                                            <i className="icon-output-collection" />
                                         </span>
                                     )}
-                                    <UncontrolledTooltip target={reduceOutputId} animation placement="right">
-                                        <>
-                                            {index.reduceOutputCollectionName && (
-                                                <span>
-                                                    Reduce Results are saved in Collection:
-                                                    <br />
-                                                    <strong>{index.reduceOutputCollectionName}</strong>
-                                                </span>
-                                            )}
-                                            {index.collectionNameForReferenceDocuments && (
+                                {index.patternForReferencesToReduceOutputCollection && (
+                                    <span>
+                                        <i className="icon-reference-pattern" />
+                                    </span>
+                                )}
+                                <UncontrolledTooltip target={reduceOutputId} animation placement="right">
+                                    <>
+                                        {index.reduceOutputCollectionName && (
+                                            <span>
+                                                Reduce Results are saved in Collection:
+                                                <br />
+                                                <strong>{index.reduceOutputCollectionName}</strong>
+                                            </span>
+                                        )}
+                                        {index.collectionNameForReferenceDocuments && (
+                                            <span>
+                                                <br />
+                                                Referencing Documents are saved in Collection:
+                                                <br />
+                                                <strong>{index.collectionNameForReferenceDocuments}</strong>
+                                            </span>
+                                        )}
+                                        {!index.collectionNameForReferenceDocuments &&
+                                            index.patternForReferencesToReduceOutputCollection && (
                                                 <span>
                                                     <br />
                                                     Referencing Documents are saved in Collection:
                                                     <br />
-                                                    <strong>{index.collectionNameForReferenceDocuments}</strong>
+                                                    <strong>{index.reduceOutputCollectionName}/References</strong>
                                                 </span>
                                             )}
-                                            {!index.collectionNameForReferenceDocuments &&
-                                                index.patternForReferencesToReduceOutputCollection && (
-                                                    <span>
-                                                        <br />
-                                                        Referencing Documents are saved in Collection:
-                                                        <br />
-                                                        <strong>{index.reduceOutputCollectionName}/References</strong>
-                                                    </span>
-                                                )}
-                                        </>
-                                    </UncontrolledTooltip>
-                                </div>
+                                    </>
+                                </UncontrolledTooltip>
                             </div>
-                        )}
+                        </RichPanelDetailItem>
+                    )}
 
-                        {(hasReplacement || isReplacement) && (
-                            <div className="index-detail-item">
-                                {hasReplacement && (
-                                    <span className="margin-left     margin-left-sm">
-                                        <span className="label label-warning">OLD</span>
-                                    </span>
-                                )}
-                                {isReplacement && (
-                                    <span className="margin-left margin-left-sm">
-                                        <span className="label label-warning">NEW</span>
-                                    </span>
-                                )}
-                            </div>
-                        )}
-                        <div className="index-detail-item">
-                            <i className={IndexUtils.indexTypeIcon(index.type)} />
-                            {IndexUtils.formatType(index.type)}
-                        </div>
-                        <IndexSourceTypeComponent sourceType={index.sourceType} />
-                        {inlineDetails && (
-                            <InlineDetails
-                                index={index}
-                                globalIndexingStatus={globalIndexingStatus}
-                                showStaleReason={(location) => showStaleReasons(index, location)}
-                            />
-                        )}
-                    </div>
-                </div>
+                    {(hasReplacement || isReplacement) && (
+                        <RichPanelDetailItem>
+                            {hasReplacement && (
+                                <span className="margin-left margin-left-sm">
+                                    <span className="label label-warning">OLD</span>
+                                </span>
+                            )}
+                            {isReplacement && (
+                                <span className="margin-left margin-left-sm">
+                                    <span className="label label-warning">NEW</span>
+                                </span>
+                            )}
+                        </RichPanelDetailItem>
+                    )}
+                    <RichPanelDetailItem>
+                        <i className={IndexUtils.indexTypeIcon(index.type)} />
+                        {IndexUtils.formatType(index.type)}
+                    </RichPanelDetailItem>
+                    <IndexSourceTypeComponent sourceType={index.sourceType} />
+                    {inlineDetails && (
+                        <InlineDetails
+                            index={index}
+                            globalIndexingStatus={globalIndexingStatus}
+                            showStaleReason={(location) => showStaleReasons(index, location)}
+                        />
+                    )}
+                </RichPanelDetails>
                 {index.nodesInfo.length > 1 && (
                     <IndexDistribution
                         index={index}
@@ -495,7 +484,7 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                         showStaleReason={(location) => showStaleReasons(index, location)}
                     />
                 )}
-            </div>
+            </RichPanel>
         </>
     );
 }
@@ -504,7 +493,7 @@ function IndexSourceTypeComponent(props: { sourceType: IndexSourceType }) {
     const { sourceType } = props;
 
     return (
-        <div className="index-detail-item">
+        <RichPanelDetailItem>
             {sourceType === "Counters" && (
                 <>
                     <i className="icon-new-counter" title="Index source: Counters" />
@@ -523,7 +512,7 @@ function IndexSourceTypeComponent(props: { sourceType: IndexSourceType }) {
                     Documents
                 </>
             )}
-        </div>
+        </RichPanelDetailItem>
     );
 }
 
@@ -541,12 +530,12 @@ function InlineDetails(props: InlineDetailsProps) {
 
     return (
         <>
-            <div className="index-detail-item">
+            <RichPanelDetailItem>
                 <i className="icon-list" />
                 Entries
                 <div className="value">{nodeInfo.details.entriesCount.toLocaleString()}</div>
-            </div>
-            <div
+            </RichPanelDetailItem>
+            <RichPanelDetailItem
                 className={classNames("index-detail-item", {
                     "text-danger": nodeInfo.details.errorCount > 0,
                 })}
@@ -554,10 +543,10 @@ function InlineDetails(props: InlineDetailsProps) {
                 <i className="icon-warning" />
                 Errors
                 <div className="value">{nodeInfo.details.errorCount.toLocaleString()}</div>
-            </div>
-            <div className="index-detail-item" id={indexId}>
+            </RichPanelDetailItem>
+            <RichPanelDetailItem id={indexId}>
                 <IndexProgress inline nodeInfo={nodeInfo} />
-            </div>
+            </RichPanelDetailItem>
             <IndexProgressTooltip
                 target={indexId}
                 nodeInfo={index.nodesInfo[0]}

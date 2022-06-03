@@ -142,125 +142,26 @@
     }
 
     .indexes-list {
-        .index-item {
-            background-color: colors.$gray-900;
+        .index-name {
+            margin: 0;
+            flex-grow: 1;
+            margin-right: sizes.$gutter;
+        }
 
-            & + .index-item {
-                margin-top: sizes.$gutter;
-            }
+        .index-properties {
+            .properties-value {
+                margin-right: sizes.$gutter-sm;
 
-            &.index-sidebyside {
-                border-left: 31px solid #d2923d;
-            }
-
-            .index-header {
-                background-color: colors.$gray-800;
-                padding: sizes.$gutter-sm;
-                display: flex;
-                flex-wrap: wrap;
-                align-items: center;
-
-                .index-select {
-                    width: sizes.$gutter;
-                    height: sizes.$gutter;
-                    margin-right: sizes.$gutter-sm;
-
-                    .checkbox {
-                        width: 100%;
-                        height: 100%;
-                        padding: 0;
-                        position: relative;
-
-                        input.styled {
-                            margin: 0 !important;
-                            top: 0;
-                            width: 100%;
-                            height: 100%;
-                        }
-
-                        label {
-                            position: absolute;
-                            padding: 0;
-                            display: flex;
-                            justify-content: center;
-                            align-items: center;
-                            width: 100%;
-                            height: 100%;
-                            top: 0;
-
-                            &::before {
-                                width: 100%;
-                                height: 100%;
-                                left: 0;
-                                top: 0;
-                                margin-left: 0;
-                            }
-
-                            &:after {
-                                display: inline;
-                                position: relative;
-                                width: auto;
-                                height: auto;
-                                left: auto;
-                                top: auto;
-                                margin-left: 0;
-                                padding-left: 0;
-                                padding-top: 0;
-                                font-size: 17px;
-                            }
-                        }
-                    }
-                }
-
-                .index-name {
-                    margin: 0;
-                    flex-grow: 1;
-                    margin-right: sizes.$gutter;
-                }
-
-                .index-properties {
-                    .properties-value {
-                        margin-right: sizes.$gutter-sm;
-
-                        .dropdown-toggle {
-                            color: colors.$color-4;
-                        }
-                    }
-                }
-
-                .actions {
-                }
-            }
-
-            .index-details {
-                padding: sizes.$gutter-xs math.div(sizes.$gutter, 2);
-                padding-left: sizes.$gutter-md;
-                display: flex;
-                border-bottom: 1px solid variables.$hr-border;
-
-                .index-detail-item {
-                    padding: sizes.$gutter-xs math.div(sizes.$gutter, 2);
-                    display: flex;
-                    align-items: center;
-
-                    & > i {
-                        margin-right: sizes.$gutter-xxs;
-                    }
-
-                    .value {
-                        margin-left: sizes.$gutter-xxs;
-                        font-weight: bold;
-                        color: colors.$white;
-                    }
-
-                    .progress-circle .state-indicator {
-                        margin-top: -3px;
-                        margin-bottom: -3px;
-                    }
+                .dropdown-toggle {
+                    color: colors.$color-4;
                 }
             }
         }
-
+        
+        .index-sidebyside {
+            border-left: 31px solid #d2923d;
+        }
+        
         .sidebyside-actions {
             .panel {
                 margin-bottom: 0;

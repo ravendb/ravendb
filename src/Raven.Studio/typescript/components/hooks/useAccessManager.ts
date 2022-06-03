@@ -17,11 +17,21 @@ function isOperatorOrAbove() {
     return accessManager.default.isOperatorOrAbove();
 }
 
+function isClusterAdminOrClusterNode() {
+    return accessManager.default.isClusterAdminOrClusterNode();
+}
+
+function isAdminAccessOrAbove(db: database) {
+    return accessManager.default.adminAccessOrAboveForDatabase(db);
+}
+
 export function useAccessManager() {
     return {
         canHandleOperation,
         canReadWriteDatabase,
         canReadOnlyDatabase,
         isOperatorOrAbove,
+        isClusterAdminOrClusterNode,
+        isAdminAccessOrAbove,
     };
 }
