@@ -52,7 +52,12 @@ namespace Sparrow.Server.Compression
         public static int GetDictionarySize(in TEncoderState state)
         {
             int entries = MemoryMarshal.Cast<byte, int>(state.EncodingTable.Slice(0, 4))[0];
-            return entries * Unsafe.SizeOf<Interval3Gram>() + 8;
+            return ( entries * Unsafe.SizeOf<Interval3Gram>() + 8 ) * 2; // The encoding and the decoding table size.
+        }
+
+        public static int GetEntriesTableSize(in TEncoderState state)
+        {
+            return MemoryMarshal.Cast<byte, int>(state.EncodingTable.Slice(0, 4))[0];
         }
 
         public void Train<TSampleEnumerator>(in TSampleEnumerator enumerator, int dictionarySize)
@@ -61,7 +66,7 @@ namespace Sparrow.Server.Compression
             var symbolSelector = new Encoder3GramSymbolSelector<TSampleEnumerator>();
             var frequencyList = symbolSelector.SelectSymbols(enumerator, dictionarySize);
 
-            var codeAssigner = new HuTuckerCodeAssigner();
+            var codeAssigner = new HuTuckerCodeAssigner();            
             var symbolCodes = codeAssigner.AssignCodes(frequencyList);
 
             BuildDictionary(symbolCodes);
@@ -363,7 +368,12 @@ namespace Sparrow.Server.Compression
             // We haven't stored it yet. So we are calculating it. 
             int numberOfEntriesInTable = (_state.EncodingTable.Length - 4) / Unsafe.SizeOf<Interval3Gram>();
             if (numberOfEntriesInTable < dictSize)
-                throw new ArgumentException("Not enough memory to store the dictionary");
+            {
+                if (_state.CanGrow)
+                    _state.Grow(dictSize);
+                else
+                    throw new ArgumentException("Not enough memory to store the dictionary");
+            }                
 
             int maxBitSequenceLength = 1;
             int minBitSequenceLength = int.MaxValue;
@@ -495,6 +505,11 @@ namespace Sparrow.Server.Compression
 
             symbol = ReadOnlySpan<byte>.Empty;
             return -1;
+        }
+
+        public void Dispose()
+        {
+            _state.Dispose();
         }
     }
 }

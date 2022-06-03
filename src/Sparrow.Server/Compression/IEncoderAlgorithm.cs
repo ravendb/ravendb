@@ -2,7 +2,7 @@
 
 namespace Sparrow.Server.Compression
 {
-    public interface IEncoderAlgorithm
+    public interface IEncoderAlgorithm : IDisposable
     {
         public int MaxBitSequenceLength { get; }
         public int MinBitSequenceLength { get; }
