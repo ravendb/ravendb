@@ -6,7 +6,6 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Nito.AsyncEx;
-using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
@@ -578,8 +577,7 @@ namespace Raven.Server.Documents
                     {
                         // If a database was unloaded, this is what we get from DatabasesCache.
                         // We want to keep the exception there until UnloadAndLockDatabase is disposed.
-                        var extractSingleInnerException = database.Exception.ExtractSingleInnerException();
-                        if (Equals(extractSingleInnerException.Data[DoNotRemove], true))
+                        if (IsLockedDatabase(database.Exception))
                             return database;
                     }
 
@@ -603,6 +601,14 @@ namespace Raven.Server.Documents
             {
                 release?.Dispose();
             }
+        }
+
+        internal static bool IsLockedDatabase(AggregateException exception)
+        {
+            if (exception == null)
+                return false;
+            var extractSingleInnerException = exception.ExtractSingleInnerException();
+            return Equals(extractSingleInnerException.Data[DoNotRemove], true);
         }
 
         private IDisposable EnterReadLockImmediately(StringSegment databaseName)
@@ -1140,13 +1146,13 @@ namespace Raven.Server.Documents
                     {
                         currentConfiguration = CreateDatabaseConfiguration(currRecord.DatabaseName, ignoreDisabledDatabase: true,
                             ignoreBeenDeleted: true, ignoreNotRelevant: true, databaseRecord: currRecord);
-    }
+                    }
                     catch (Exception e)
                     {
                         if (_logger.IsInfoEnabled)
                             _logger.Info("Could not create database configuration", e);
                         continue;
-}
+                    }
 
                     CheckConfigurationPaths(configuration, currentConfiguration, databaseName, currRecord.DatabaseName);
                 }
