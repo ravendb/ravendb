@@ -4,7 +4,6 @@ using JetBrains.Annotations;
 using Raven.Server.Documents.Commands.Studio;
 using Raven.Server.Documents.Handlers.Processors.Studio;
 using Raven.Server.Documents.Operations;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Studio
@@ -15,13 +14,13 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Studio
         {
         }
 
-        protected override void DeleteCollection(TransactionOperationContext context, IDisposable returnContextToPool, string collectionName, HashSet<string> excludeIds,
-            long operationId, OperationCancelToken token)
+        protected override void ScheduleDeleteCollection(TransactionOperationContext context, IDisposable returnToContextPool, string collectionName, HashSet<string> excludeIds,
+            long operationId)
         {
+            var token = RequestHandler.CreateTimeLimitedOperationToken();
+
             var shardToIds = ShardLocator.GetDocumentIdsByShards(context, RequestHandler.DatabaseContext, excludeIds);
-
-            var opToken = RequestHandler.CreateTimeLimitedOperationToken();
-
+            
             var task = RequestHandler.DatabaseContext.Operations.AddRemoteOperation(
                 operationId,
                 OperationType.DeleteByCollection,
@@ -37,9 +36,10 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Studio
 
             _ = task.ContinueWith(_ =>
             {
-                using (returnContextToPool)
-                    opToken.Dispose();
+                token.Dispose();
             });
+
+            returnToContextPool.Dispose();
         }
 
         protected override long GetNextOperationId()
