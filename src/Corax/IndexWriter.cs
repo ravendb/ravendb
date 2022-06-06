@@ -1,6 +1,5 @@
 using System;
 using System.Buffers;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -8,7 +7,6 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using Corax.Exceptions;
 using Corax.Pipeline;
 using Corax.Utils;
 using Sparrow.Json;
@@ -45,7 +43,7 @@ namespace Corax
         private JsonOperationContext _jsonOperationContext;
         public readonly Transaction Transaction;
         private readonly TransactionPersistentContext _transactionPersistentContext;
-        
+
         private readonly Token[] _tokensBufferHandler;
         private readonly byte[] _encodingBufferHandler;
 
@@ -54,8 +52,7 @@ namespace Corax
         // private readonly ConcurrentDictionary<Slice, Dictionary<Slice, ConcurrentQueue<long>>> _bufferConcurrent =
         //     new ConcurrentDictionary<Slice, ConcurrentDictionary<Slice, ConcurrentQueue<long>>>(SliceComparer.Instance);
 
-        private readonly Dictionary<Slice, List<long>>[] _buffer; 
-      //     = new Dictionary<Slice, List<long>>(SliceComparer.Instance);
+        private readonly Dictionary<Slice, List<long>>[] _buffer;
 
         private readonly List<long> _entriesToDelete = new List<long>();
 
@@ -71,7 +68,22 @@ namespace Corax
         // The reason why we want to have the transaction open for us is so that we avoid having
         // to explicitly provide the index writer with opening semantics and also every new
         // writer becomes essentially a unit of work which makes reusing assets tracking more explicit.
-        public IndexWriter([NotNull] StorageEnvironment environment, IndexFieldsMapping fieldsMapping)
+
+        private IndexWriter(IndexFieldsMapping fieldsMapping)
+        {
+            _fieldsMapping = fieldsMapping;
+            fieldsMapping.UpdateMaximumOutputAndTokenSize();
+            _encodingBufferHandler = ArrayPool<byte>.Shared.Rent(fieldsMapping.MaximumOutputSize);
+            _tokensBufferHandler = ArrayPool<Token>.Shared.Rent(fieldsMapping.MaximumTokenSize);
+
+
+            var bufferSize = fieldsMapping!.Count;
+            _buffer = new Dictionary<Slice, List<long>>[bufferSize];
+            for (int i = 0; i < bufferSize; ++i)
+                _buffer[i] = new Dictionary<Slice, List<long>>(SliceComparer.Instance);
+        }
+        
+        public IndexWriter([NotNull] StorageEnvironment environment, IndexFieldsMapping fieldsMapping) : this(fieldsMapping)
         {
             _environment = environment;
             _transactionPersistentContext = new TransactionPersistentContext(true);
@@ -81,49 +93,24 @@ namespace Corax
             _postingListContainerId = Transaction.OpenContainer(Constants.IndexWriter.PostingListsSlice);
             _entriesContainerId = Transaction.OpenContainer(Constants.IndexWriter.EntriesContainerSlice);
             _jsonOperationContext = JsonOperationContext.ShortTermSingleUse();
-            if (fieldsMapping != null)
-            {
-                fieldsMapping.UpdateMaximumOutputAndTokenSize();
-                _encodingBufferHandler = ArrayPool<byte>.Shared.Rent(fieldsMapping.MaximumOutputSize);
-                _tokensBufferHandler = ArrayPool<Token>.Shared.Rent(fieldsMapping.MaximumTokenSize);
-            }
-            _fieldsMapping = fieldsMapping ?? IndexFieldsMapping.Instance;
-            
-            var bufferSize = fieldsMapping?.Count ?? 1024;
-            _buffer = new Dictionary<Slice, List<long>>[bufferSize];
-            for (int i = 0; i < bufferSize; ++i)
-                _buffer[i] = new Dictionary<Slice, List<long>>(SliceComparer.Instance);
         }
 
-        public IndexWriter([NotNull] Transaction tx, IndexFieldsMapping fieldsMapping)
+        public IndexWriter([NotNull] Transaction tx, IndexFieldsMapping fieldsMapping) : this(fieldsMapping)
         {
             Transaction = tx;
 
             _ownsTransaction = false;
             _postingListContainerId = Transaction.OpenContainer(Constants.IndexWriter.PostingListsSlice);
             _entriesContainerId = Transaction.OpenContainer(Constants.IndexWriter.EntriesContainerSlice);
-
-            if (fieldsMapping != null)
-            {
-                _encodingBufferHandler = ArrayPool<byte>.Shared.Rent(fieldsMapping.MaximumOutputSize);
-                _tokensBufferHandler = ArrayPool<Token>.Shared.Rent(fieldsMapping.MaximumTokenSize);
-            }
-            
-            _fieldsMapping = fieldsMapping ?? IndexFieldsMapping.Instance;
-            
-            var bufferSize = fieldsMapping?.Count ?? 1024;
-            _buffer = new Dictionary<Slice, List<long>>[bufferSize];
-            for (int i = 0; i < bufferSize; ++i)
-                _buffer[i] = new Dictionary<Slice, List<long>>(SliceComparer.Instance);
         }
 
-        public long Index(string id, Span<byte> data, IndexFieldsMapping knownFields)
+        public long Index(string id, Span<byte> data)
         {
             using var _ = Slice.From(Transaction.Allocator, id, out var idSlice);
-            return Index(idSlice, data, knownFields);
+            return Index(idSlice, data);
         }
 
-        public long Index(Slice id, Span<byte> data, IndexFieldsMapping knownFields)
+        public long Index(Slice id, Span<byte> data)
         {
             long entriesCount = Transaction.LowLevelTransaction.RootObjects.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0;
             Transaction.LowLevelTransaction.RootObjects.Add(Constants.IndexWriter.NumberOfEntriesSlice, entriesCount + 1);
@@ -140,7 +127,7 @@ namespace Corax
             var context = Transaction.Allocator;
             var entryReader = new IndexEntryReader(data);
 
-            foreach (var binding in knownFields)
+            foreach (var binding in _fieldsMapping)
             {
                 if (binding.FieldIndexingMode is FieldIndexingMode.No)
                     continue;
@@ -216,13 +203,12 @@ namespace Corax
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         void AddMaybeAvoidDuplicate(List<long> term, long entryId)
         {
-            // TODO: Do we want to index nulls? If so, how do we do that?
             if (term.Count > 0 && term[^1] == entryId)
                 return;
 
             term.Add(entryId);
         }
-        
+
         [SkipLocalsInit]
         private unsafe void InsertToken(ByteStringContext context, ref IndexEntryReader entryReader, long entryId,
             IndexFieldBinding binding)
@@ -237,7 +223,7 @@ namespace Corax
                     var fieldName = fieldType == IndexEntryFieldType.Null ? Constants.NullValueSlice : Constants.EmptyStringSlice;
                     Insert(fieldName.AsReadOnlySpan());
                     break;
-                
+
                 case IndexEntryFieldType.TupleList:
                     if (entryReader.TryReadMany(binding.FieldId, out var iterator) == false)
                         break;
@@ -246,16 +232,16 @@ namespace Corax
                     {
                         ExactInsert(iterator.Sequence);
                     }
-                    
+
                     break;
-                
+
                 case IndexEntryFieldType.Tuple:
                     if (entryReader.Read(binding.FieldId, out Span<byte> valueInEntry) == false)
                         break;
-                    
+
                     ExactInsert(valueInEntry);
                     break;
-                
+
                 case IndexEntryFieldType.SpatialPointList:
                     if (entryReader.TryReadManySpatialPoint(binding.FieldId, out var spatialIterator) == false)
                         break;
@@ -265,17 +251,18 @@ namespace Corax
                         for (int i = 1; i <= spatialIterator.Geohash.Length; ++i)
                             ExactInsert(spatialIterator.Geohash.Slice(0, i));
                     }
+
                     break;
-                
+
                 case IndexEntryFieldType.SpatialPoint:
                     if (entryReader.Read(binding.FieldId, out valueInEntry) == false)
                         break;
-                    
+
                     for (int i = 1; i <= valueInEntry.Length; ++i)
                         ExactInsert(valueInEntry.Slice(0, i));
 
                     break;
-                
+
                 case IndexEntryFieldType.ListWithNulls:
                 case IndexEntryFieldType.List:
                     if (entryReader.TryReadMany(binding.FieldId, out iterator) == false)
@@ -293,6 +280,7 @@ namespace Corax
                             Insert(iterator.Sequence);
                         }
                     }
+
                     break;
                 case IndexEntryFieldType.Invalid:
                     break;
@@ -302,7 +290,7 @@ namespace Corax
                     Insert(value);
                     break;
             }
-            
+
             void Insert(ReadOnlySpan<byte> value)
             {
                 if (binding.IsAnalyzed)
@@ -310,7 +298,7 @@ namespace Corax
                 else
                     ExactInsert(value);
             }
-            
+
             void AnalyzeInsert(Span<byte> wordsBuffer, Span<Token> tokens, ReadOnlySpan<byte> value)
             {
                 binding.Analyzer.Execute(value, ref wordsBuffer, ref tokens);
@@ -319,12 +307,19 @@ namespace Corax
                     ref var token = ref tokens[i];
                     ExactInsert(wordsBuffer.Slice(token.Offset, (int)token.Length));
                 }
-                
             }
 
             void ExactInsert(ReadOnlySpan<byte> value)
             {
-                using var _ = Slice.From(context, value, ByteStringType.Mutable, out var slice);
+                Slice slice;
+                if (value.Length == 0)
+                {
+                    slice = Constants.EmptyStringSlice;
+                }
+                else
+                {
+                    using var _ = Slice.From(context, value, ByteStringType.Mutable, out slice);
+                }
                 if (field.TryGetValue(slice, out var term) == false)
                 {
                     var fieldName = slice.Clone(context);
@@ -337,7 +332,7 @@ namespace Corax
                     AddSuggestions(binding, slice);
             }
         }
-        
+
 
         private unsafe void DeleteCommit(Span<byte> tmpBuf, Tree fieldsTree)
         {
@@ -477,9 +472,9 @@ namespace Corax
 
                     Container.Delete(llt, _postingListContainerId, smallSetId);
                     fieldTree.TryRemove(termValue, out _);
-                    
-                    
-                    AddNewTerm(ids, fieldTree, termValue, tmpBuffer, default,  false);
+
+
+                    AddNewTerm(ids, fieldTree, termValue, tmpBuffer, default, false);
                 }
                 else
                 {
@@ -522,8 +517,8 @@ namespace Corax
                 var llt = Transaction.LowLevelTransaction;
                 var sortedTerms = _buffer[fieldId].Keys.ToArray();
                 Array.Sort(sortedTerms, SliceComparer.Instance);
-                
-                
+
+
                 foreach (var term in sortedTerms)
                 {
                     ReadOnlySpan<byte> termsSpan = term.AsSpan();
@@ -601,7 +596,8 @@ namespace Corax
             }
         }
 
-        private unsafe void AddNewTerm(List<long> entries, CompactTree fieldTree, ReadOnlySpan<byte> termsSpan, Span<byte> tmpBuf, CompactTree.EncodedKey encodedKey, bool validEncodedKey = true)
+        private unsafe void AddNewTerm(List<long> entries, CompactTree fieldTree, ReadOnlySpan<byte> termsSpan, Span<byte> tmpBuf, CompactTree.EncodedKey encodedKey,
+            bool validEncodedKey = true)
         {
             // common for unique values (guid, date, etc)
             if (entries.Count == 1)
@@ -664,7 +660,7 @@ namespace Corax
             _jsonOperationContext?.Dispose();
             if (_ownsTransaction)
                 Transaction?.Dispose();
-            
+
             if (_encodingBufferHandler != null)
                 ArrayPool<byte>.Shared.Return(_encodingBufferHandler);
             if (_tokensBufferHandler != null)

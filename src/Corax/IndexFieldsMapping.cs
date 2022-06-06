@@ -10,8 +10,6 @@ namespace Corax;
 
 public class IndexFieldsMapping : IEnumerable<IndexFieldBinding>
 {
-    public static readonly IndexFieldsMapping Instance = new IndexFieldsMapping(null);
-
     private readonly ByteStringContext _context;
     private readonly Dictionary<Slice, IndexFieldBinding> _fields;
     private readonly Dictionary<int, IndexFieldBinding> _fieldsById;
