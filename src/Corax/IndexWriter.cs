@@ -477,7 +477,9 @@ namespace Corax
 
                     Container.Delete(llt, _postingListContainerId, smallSetId);
                     fieldTree.TryRemove(termValue, out _);
-                    AddNewTerm(ids, fieldTree, termValue, tmpBuffer);
+                    
+                    
+                    AddNewTerm(ids, fieldTree, termValue, tmpBuffer, default,  false);
                 }
                 else
                 {
@@ -496,7 +498,7 @@ namespace Corax
             var entriesCount = Transaction.LowLevelTransaction.RootObjects.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0;
             Debug.Assert(entriesCount - _entriesToDelete.Count >= 0);
 
-            if (fieldTree.TryGetValue(term, out long id) == false)
+            if (fieldTree.TryGetValue(term, out long id, out var _) == false)
                 return false;
 
             if ((id & (long)TermIdMask.Set) != 0 || (id & (long)TermIdMask.Small) != 0)
@@ -526,9 +528,9 @@ namespace Corax
                 {
                     ReadOnlySpan<byte> termsSpan = term.AsSpan();
                     var entries = _buffer[fieldId][term];
-                    if (fieldTree.TryGetValue(termsSpan, out var existing) == false)
+                    if (fieldTree.TryGetValue(termsSpan, out var existing, out var encodedKey) == false)
                     {
-                        AddNewTerm(entries, fieldTree, termsSpan, tmpBuf);
+                        AddNewTerm(entries, fieldTree, termsSpan, tmpBuf, encodedKey);
                         continue;
                     }
 
@@ -558,7 +560,7 @@ namespace Corax
                         }
 
                         Container.Delete(llt, _postingListContainerId, id);
-                        AddNewTerm(entries, fieldTree, termsSpan, tmpBuf);
+                        AddNewTerm(entries, fieldTree, termsSpan, tmpBuf, encodedKey);
                     }
                     else // single
                     {
@@ -567,7 +569,7 @@ namespace Corax
                             continue;
 
                         entries.Add(existing);
-                        AddNewTerm(entries, fieldTree, termsSpan, tmpBuf);
+                        AddNewTerm(entries, fieldTree, termsSpan, tmpBuf, encodedKey);
                     }
                 }
             }
@@ -599,15 +601,19 @@ namespace Corax
             }
         }
 
-        private unsafe void AddNewTerm(List<long> entries, CompactTree fieldTree, ReadOnlySpan<byte> termsSpan, Span<byte> tmpBuf)
+        private unsafe void AddNewTerm(List<long> entries, CompactTree fieldTree, ReadOnlySpan<byte> termsSpan, Span<byte> tmpBuf, CompactTree.EncodedKey encodedKey, bool validEncodedKey = true)
         {
             // common for unique values (guid, date, etc)
             if (entries.Count == 1)
             {
-                Debug.Assert(fieldTree.TryGetValue(termsSpan, out var _) == false);
+                Debug.Assert(fieldTree.TryGetValue(termsSpan, out var _, out var _) == false);
 
                 // just a single entry, store the value inline
-                fieldTree.Add(termsSpan, entries[0] | (long)TermIdMask.Single);
+                if (validEncodedKey)
+                    fieldTree.Add(termsSpan, entries[0] | (long)TermIdMask.Single, encodedKey);
+                else
+                    fieldTree.Add(termsSpan, entries[0] | (long)TermIdMask.Single);
+
                 return;
             }
 
@@ -638,13 +644,19 @@ namespace Corax
                 entries.Sort();
                 set.Add(entries);
                 setState = set.State;
-                fieldTree.Add(termsSpan, setId | (long)TermIdMask.Set);
+                if (validEncodedKey)
+                    fieldTree.Add(termsSpan, setId | (long)TermIdMask.Set, encodedKey);
+                else
+                    fieldTree.Add(termsSpan, setId | (long)TermIdMask.Set);
                 return;
             }
 
             var termId = Container.Allocate(llt, _postingListContainerId, pos, out var space);
             tmpBuf.Slice(0, pos).CopyTo(space);
-            fieldTree.Add(termsSpan, termId | (long)TermIdMask.Small);
+            if (validEncodedKey)
+                fieldTree.Add(termsSpan, termId | (long)TermIdMask.Small, encodedKey);
+            else
+                fieldTree.Add(termsSpan, termId | (long)TermIdMask.Small);
         }
 
         public void Dispose()
