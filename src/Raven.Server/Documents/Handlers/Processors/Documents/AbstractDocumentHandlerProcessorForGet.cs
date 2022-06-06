@@ -43,7 +43,7 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
     {
         if (method != HttpMethod.Get && method != HttpMethod.Post)
             throw new InvalidOperationException($"The processor is supposed to handle GET and POST methods while '{method}' was specified");
-        
+
         _method = method;
     }
 
@@ -125,8 +125,14 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
 
         if (responseWriteStats != NoResults)
         {
-            AddPagingPerformanceHint(PagingOperationType.Documents, actionName, HttpContext.Request.QueryString.Value, responseWriteStats.NumberOfResults,
-                pageSize, sw.ElapsedMilliseconds, responseWriteStats.TotalDocumentsSizeInBytes);
+            RequestHandler.AddPagingPerformanceHint(
+                PagingOperationType.Documents,
+                actionName,
+                HttpContext.Request.QueryString.Value,
+                responseWriteStats.NumberOfResults,
+                pageSize,
+                sw.ElapsedMilliseconds,
+                responseWriteStats.TotalDocumentsSizeInBytes);
         }
     }
 
@@ -167,7 +173,7 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
             writer.WriteStartObject();
 
             (numberOfResults, totalDocumentsSizeInBytes) = await WriteDocumentsAsync(writer, context, nameof(GetDocumentsResult.Results), result.Documents, metadataOnly, CancellationToken);
-            
+
             writer.WriteComma();
 
             await WriteIncludesAsync(writer, context, nameof(GetDocumentsResult.Includes), result.Includes, CancellationToken);
@@ -256,8 +262,6 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
     }
 
     protected abstract ValueTask<DocumentsResult> GetDocumentsImplAsync(TOperationContext context, long? etag, StartsWithParams startsWith, string changeVector);
-
-    protected abstract void AddPagingPerformanceHint(PagingOperationType operation, string action, string details, long numberOfResults, int pageSize, long duration, long totalDocumentsSizeInBytes);
 
     private async Task<StringValues> GetIdsFromRequestBody(TOperationContext context)
     {
@@ -426,9 +430,9 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
         public string IdPrefix { get; set; }
 
         public string Matches { get; set; }
-        
+
         public string Exclude { get; set; }
-        
+
         public string StartAfterId { get; set; }
     }
 }
