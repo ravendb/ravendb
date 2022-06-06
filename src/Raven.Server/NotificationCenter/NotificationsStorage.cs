@@ -397,5 +397,20 @@ namespace Raven.Server.NotificationCenter
 
             return storage;
         }
+
+        public void DeleteStorageFor(string database)
+        {
+            if (database == null)
+                throw new ArgumentNullException(nameof(database));
+
+            var tableName = GetTableName(database);
+
+            using (var tx = _environment.WriteTransaction())
+            {
+                tx.DeleteTable(tableName);
+
+                tx.Commit();
+            }
+        }
     }
 }
