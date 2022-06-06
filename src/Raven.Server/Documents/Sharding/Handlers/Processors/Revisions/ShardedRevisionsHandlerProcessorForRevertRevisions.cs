@@ -13,7 +13,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Revisions
         {
         }
 
-        protected override void RevertRevisions(long operationId, RevertRevisionsRequest configuration, OperationCancelToken token)
+        protected override void ScheduleRevertRevisions(long operationId, RevertRevisionsRequest configuration, OperationCancelToken token)
         {
             var task = RequestHandler.DatabaseContext.Operations
                 .AddRemoteOperation(
