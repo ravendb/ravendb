@@ -15,14 +15,16 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Revisions
         {
         }
 
-        protected abstract void AddOperation(long operationId, OperationCancelToken addOpToken);
+        protected abstract long GetNextOperationId();
+
+        protected abstract void ScheduleEnforceConfigurationOperation(long operationId, OperationCancelToken token);
 
         public override async ValueTask ExecuteAsync()
         {
             var token = RequestHandler.CreateTimeLimitedOperationToken();
-            var operationId = RequestHandler.GetLongQueryString("operationId", false) ?? RequestHandler.ServerStore.Operations.GetNextOperationId();
+            var operationId = RequestHandler.GetLongQueryString("operationId", false) ?? GetNextOperationId();
 
-            AddOperation(operationId, token);
+            ScheduleEnforceConfigurationOperation(operationId, token);
 
             using (ClusterContextPool.AllocateOperationContext(out JsonOperationContext context))
             await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
