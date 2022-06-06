@@ -50,7 +50,7 @@ namespace Sparrow.LowMemory
             {
                 try
                 {
-                    if (_logger.IsOperationsEnabled)
+                    if (isLowMemory && _logger.IsOperationsEnabled)
                     {
                         _logger.Operations($"Running {_lowMemoryHandlers.Count} low memory handlers with severity: {lowMemorySeverity}. " +
                                            $"Commit charge: {memoryInfo.CurrentCommitCharge} / {memoryInfo.TotalCommittableMemory}, " +

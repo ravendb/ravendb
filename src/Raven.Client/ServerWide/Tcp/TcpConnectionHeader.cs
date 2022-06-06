@@ -73,7 +73,10 @@ namespace Raven.Client.ServerWide.Tcp
         public static readonly int ReplicationAttachmentMissing = 40_300;
         public static readonly int ReplicationAttachmentMissingVersion41 = 41_300;
         public static readonly int ReplicationWithPullOption = 42_300;
+        
         public static readonly int ReplicationWithTimeSeries = 50_000;
+        public static readonly int ReplicationWithDeduplicatedAttachments = 53_001;
+
         public static readonly int TcpConnectionsWithCompression = 53_000;
         public static readonly int SubscriptionBaseLine = 40;
         public static readonly int SubscriptionIncludes = 41_400;
@@ -83,7 +86,7 @@ namespace Raven.Client.ServerWide.Tcp
 
         public static readonly int ClusterTcpVersion = ClusterWithMultiTree;
         public static readonly int HeartbeatsTcpVersion = Heartbeats42000;
-        public static readonly int ReplicationTcpVersion = TcpConnectionsWithCompression;
+        public static readonly int ReplicationTcpVersion = ReplicationWithDeduplicatedAttachments;
         public static readonly int SubscriptionTcpVersion = TcpConnectionsWithCompression; 
         public static readonly int TestConnectionTcpVersion = TestConnectionBaseLine;
 
@@ -256,6 +259,7 @@ namespace Raven.Client.ServerWide.Tcp
                 public bool PullReplication;
                 public bool TimeSeries;
                 public bool IncrementalTimeSeries;
+                public bool DeduplicatedAttachments;
             }
         }
 
@@ -284,6 +288,7 @@ namespace Raven.Client.ServerWide.Tcp
                 },
                 [OperationTypes.Replication] = new List<int>
                 {
+                    ReplicationWithDeduplicatedAttachments,
                     TcpConnectionsWithCompression,
                     ReplicationWithTimeSeries,
                     ReplicationWithPullOption,
@@ -375,6 +380,21 @@ namespace Raven.Client.ServerWide.Tcp
                 },
                 [OperationTypes.Replication] = new Dictionary<int, SupportedFeatures>
                 {
+                    [ReplicationWithDeduplicatedAttachments] = new SupportedFeatures(ReplicationWithDeduplicatedAttachments)
+                    {
+                        DataCompression = true,
+                        Replication = new SupportedFeatures.ReplicationFeatures
+                        {
+                            DeduplicatedAttachments = true,
+                            MissingAttachments = true, 
+                            CountersBatch = true,
+                            PullReplication = true,
+                            TimeSeries = true,
+                            CaseInsensitiveCounters = true,
+                            ClusterTransaction = true,
+                            IncrementalTimeSeries = true
+                        }
+                    },
                     [TcpConnectionsWithCompression] = new SupportedFeatures(TcpConnectionsWithCompression)
                     {
                         DataCompression = true,
