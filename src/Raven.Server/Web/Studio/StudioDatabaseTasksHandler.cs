@@ -26,6 +26,7 @@ namespace Raven.Server.Web.Studio
             {
                 var autoIndexesDeploymentMode = Database.Configuration.Indexing.AutoIndexDeploymentMode;
                 var staticIndexesDeploymentMode = Database.Configuration.Indexing.StaticIndexDeploymentMode;
+                var staticIndexingEngineType = Database.Configuration.Indexing.StaticIndexingEngineType;
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
@@ -35,6 +36,9 @@ namespace Raven.Server.Web.Studio
                     writer.WriteComma();
                     writer.WritePropertyName(nameof(IndexDefaults.StaticIndexDeploymentMode));
                     writer.WriteString(staticIndexesDeploymentMode.ToString());
+                    writer.WriteComma();
+                    writer.WritePropertyName(nameof(IndexDefaults.StaticIndexingEngineType));
+                    writer.WriteString(staticIndexingEngineType.ToString());
                     writer.WriteEndObject();
                 }
             }
@@ -44,6 +48,7 @@ namespace Raven.Server.Web.Studio
         {
             public IndexDeploymentMode AutoIndexDeploymentMode { get; set; }
             public IndexDeploymentMode StaticIndexDeploymentMode { get; set; }
+            public SearchEngineType StaticIndexingEngineType { get; set; }
         }
     }
 }

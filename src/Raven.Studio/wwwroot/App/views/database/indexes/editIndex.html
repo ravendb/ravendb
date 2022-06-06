@@ -255,7 +255,28 @@
                                 <span>Add customized indexing configuration</span>
                             </button>
                         </div>
-                        <hr data-bind="visible: editedIndex().numberOfConfigurationFields()">
+                        <hr class="margin-bottom">
+                        <div class="row">
+                            <div class="col-lg-8">
+                                <div class="form-group">
+                                    <div class="flex-grow margin-left margin-left-lg">
+                                        <input class="form-control" data-bind="textInput: $root.constructor.searchEngineConfigurationLabel" disabled />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-3">
+                                <div class="btn-group properties-value">
+                                    <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                                        <span data-bind="text: effectiveSearchEngineText"></span> <i class="caret"></i>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li><a href="#" data-bind="click: searchEngine.bind(searchEngine, null)"><span data-bind="text: inheritSearchEngineText"></span></a></li>
+                                        <li><a href="#" data-bind="click: searchEngine.bind(searchEngine, 'Lucene')"><span data-bind="text: $root.constructor.formatEngine('Lucene')"></span></a></li>
+                                        <li><a href="#" data-bind="click: searchEngine.bind(searchEngine, 'Corax')"><span data-bind="text: $root.constructor.formatEngine('Corax')"></span></a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
                         <div data-bind="foreach: editedIndex().configuration">
                             <div class="row">
                                 <div class="col-lg-8" data-bind="validationElement: key">
@@ -281,10 +302,6 @@
                                     </button>
                                 </div>
                             </div>
-                        </div>
-                        <div class="text-center text-muted" data-bind="visible: !editedIndex().numberOfConfigurationFields()">
-                            <i class="icon-lg icon-empty-set"></i>
-                            <h2 class="margin-top margin-top-sm">No customized indexing configuration added</h2>
                         </div>
                     </div>
                     <div role="tabpanel" class="tab-pane fade" id="additionalAssemblies">
