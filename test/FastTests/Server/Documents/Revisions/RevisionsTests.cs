@@ -1698,7 +1698,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions, Skip = "Need to implement Operation.WaitForCompletionAsync() for sharded databases")]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
         public async Task EnforceRevisionsConfiguration(Options options)
         {
@@ -1727,7 +1727,11 @@ namespace FastTests.Server.Documents.Revisions
                 });
                 
                 var result = await store.Operations.SendAsync(new EnforceRevisionsConfigurationOperation());
-                await result.WaitForCompletionAsync();
+                var operationResult = (EnforceConfigurationResult)await result.WaitForCompletionAsync();
+
+                Assert.Equal(1, operationResult.ScannedDocuments);
+                Assert.Equal(5, operationResult.ScannedRevisions);
+                Assert.Equal(3, operationResult.RemovedRevisions);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -1739,7 +1743,6 @@ namespace FastTests.Server.Documents.Revisions
                 }
             }
         }
-
 
         [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]

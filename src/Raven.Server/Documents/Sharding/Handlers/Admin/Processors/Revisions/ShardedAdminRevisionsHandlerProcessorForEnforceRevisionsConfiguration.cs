@@ -14,18 +14,24 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin.Processors.Revisions
         {
         }
 
-        protected override void AddOperation(long operationId, OperationCancelToken addOpToken)
+        protected override long GetNextOperationId()
         {
-            //TODO stav: impl merge in EnforceConfigurationResult
-            var t = RequestHandler.DatabaseContext.Operations.AddRemoteOperation(operationId, OperationType.EnforceRevisionConfiguration,
-                $"Enforce revision configuration in database '{RequestHandler.DatabaseName}'.",
-                null,
-                onProgress => new EnforceRevisionsConfigurationOperation.EnforceRevisionsConfigurationCommand(operationId),
-                addOpToken);
+            return RequestHandler.DatabaseContext.Operations.GetNextOperationId();
+        }
 
-            _ = t.ContinueWith(_ =>
+        protected override void ScheduleEnforceConfigurationOperation(long operationId, OperationCancelToken token)
+        {
+            var task = RequestHandler.DatabaseContext.Operations.AddRemoteOperation(
+                operationId,
+                OperationType.EnforceRevisionConfiguration,
+                $"Enforce revision configuration in database '{RequestHandler.DatabaseName}'.",
+                detailedDescription: null,
+                (_, shardNumber) => new EnforceRevisionsConfigurationOperation.EnforceRevisionsConfigurationCommand(),
+                token: token);
+
+            _ = task.ContinueWith(_ =>
             {
-                addOpToken.Dispose();
+                task.Dispose();
             });
         }
     }

@@ -80,6 +80,39 @@ namespace Raven.Client.Documents.Operations.Revisions
     {
         public int RemovedRevisions { get; set; }
 
+        public override bool CanMerge => true;
+
+        public override void MergeWith(IOperationResult result)
+        {
+            if (result is not EnforceConfigurationResult r)
+                return;
+
+            RemovedRevisions += r.RemovedRevisions;
+
+            base.MergeWith(result);
+        }
+
+        public override void MergeWith(IOperationProgress progress)
+        {
+            if (progress is not EnforceConfigurationResult r)
+                return;
+
+            RemovedRevisions += r.RemovedRevisions;
+
+            base.MergeWith(progress);
+        }
+
+        public override IOperationProgress Clone()
+        {
+            return new EnforceConfigurationResult()
+            {
+                RemovedRevisions = RemovedRevisions,
+                ScannedDocuments = ScannedDocuments,
+                ScannedRevisions = ScannedRevisions,
+                Warnings = Warnings
+            };
+        }
+
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
