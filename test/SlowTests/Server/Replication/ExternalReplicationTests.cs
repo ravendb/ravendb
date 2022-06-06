@@ -7,6 +7,7 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Replication;
+using Raven.Client.Documents.Smuggler;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.ServerWide.Context;
@@ -301,14 +302,10 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Theory]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
-        public async Task Test(Options options)
+        [Fact]
+        public async Task ExternalReplicationFromNonShardedToShardedShouldWork()
         {
-            using (var store1 = GetDocumentStore(new Options
-                   {
-                       ModifyDatabaseName = s => $"{s}_FooBar-1"
-                   }))
+            using (var store1 = GetDocumentStore())
             using (var store2 = Sharding.GetDocumentStore())
             {
                 await SetupReplicationAsync(store1, store2);
@@ -322,36 +319,139 @@ namespace SlowTests.Server.Replication
                     
                     s1.SaveChanges();
                 }
-                // SlowTests uses the regular old value of 3000mSec. But if called from StressTests - needs more timeout
 
-                await EnsureReplicatingAsync(store1, store2);
-
-                var dbs = await Sharding.GetShardsDocumentDatabaseInstancesFor(store2);
-
-                foreach (var db  in dbs)
-                {
-                    using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
-                    {
-                        using (ctx.OpenReadTransaction())
-                        {
-                            var ids = db.DocumentsStorage.GetAllIds(ctx);
-                            Console.WriteLine($"Ids for shard {db.Name}: ");
-
-                            foreach (var id in ids)
-                            {
-                                Console.WriteLine($"{id}");
-                            }
-                        }
-                    }
-                    
-
-                }
                 for (int i = 0; i < 50; i++)
                 {
                     var id = $"foo/bar/{i}";
-                    Assert.True(WaitForDocument<User>(store2, id, predicate: null/*, database: ShardHelper.ToShardName(store2.Database, 2)*/));
+                    Assert.True(WaitForDocument<User>(store2, id, predicate: null, timeout: 30_000));
                 }
-                    
+            }
+        }
+
+        [Fact]
+        public async Task ExternalReplicationFromNonShardedToShardedShouldWork2()
+        {
+            using (var store1 = GetDocumentStore(new Options
+                   {
+                       ModifyDatabaseName = s => $"NonSharded_{s}"
+                   }))
+            using (var store2 = Sharding.GetDocumentStore(new Options
+                   {
+                       ModifyDatabaseName = s => $"Sharded_{s}"
+                   }))
+            {
+                await SetupReplicationAsync(store1, store2);
+
+                await store1.Maintenance.SendAsync(new CreateSampleDataOperation(DatabaseItemType.AllDatabaseItems));
+
+                await EnsureReplicatingAsync(store1, store2);
+
+                WaitForUserToContinueTheTest(store2);
+            }
+        }
+
+        [Fact]
+        public async Task ExternalReplicationFromShardedToShardedShouldWork()
+        {
+            using (var store1 = Sharding.GetDocumentStore(new Options
+                   {
+                       ModifyDatabaseName = s => $"Source_{s}"
+                   }))
+            using (var store2 = Sharding.GetDocumentStore(new Options
+                   {
+                       ModifyDatabaseName = s => $"Destination_{s}"
+                   }))
+            {
+                await SetupReplicationAsync(store1, store2);
+
+                using (var s1 = store1.OpenSession())
+                {
+                    for (int i = 0; i < 50; i++)
+                    {
+                        s1.Store(new User(), $"foo/bar/{i}");
+                    }
+
+                    s1.SaveChanges();
+                }
+
+                for (int i = 0; i < 50; i++)
+                {
+                    var id = $"foo/bar/{i}";
+                    Assert.True(WaitForDocument<User>(store2, id, predicate: null, timeout: 30_000));
+                }
+            }
+        }
+
+        [Fact]
+        public async Task ExternalReplicationFromShardedToShardedShouldWork2()
+        {
+            using (var store1 = Sharding.GetDocumentStore(new Options
+                   {
+                       ModifyDatabaseName = s => $"NonSharded_{s}"
+                   }))
+            using (var store2 = Sharding.GetDocumentStore(new Options
+                   {
+                       ModifyDatabaseName = s => $"Sharded_{s}"
+                   }))
+            {
+                await SetupReplicationAsync(store1, store2);
+
+                await store1.Maintenance.SendAsync(new CreateSampleDataOperation(DatabaseItemType.AllDatabaseItems));
+                WaitForUserToContinueTheTest(store2);
+
+                await EnsureReplicatingAsync(store1, store2);
+                await EnsureReplicatingAsync(store1, store2);
+                await EnsureReplicatingAsync(store1, store2);
+                await EnsureReplicatingAsync(store1, store2);
+                await EnsureReplicatingAsync(store1, store2);
+                await EnsureReplicatingAsync(store1, store2);
+                
+                WaitForUserToContinueTheTest(store2);
+            }
+        }
+
+        [Fact]
+        public async Task ExternalReplicationFromShardedToNonShardedShouldWork()
+        {
+            using (var store1 = Sharding.GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                await SetupReplicationAsync(store1, store2);
+
+                using (var s1 = store1.OpenSession())
+                {
+                    for (int i = 0; i < 50; i++)
+                    {
+                        s1.Store(new User(), $"foo/bar/{i}");
+                    }
+
+                    s1.SaveChanges();
+                }
+
+                for (int i = 0; i < 50; i++)
+                {
+                    var id = $"foo/bar/{i}";
+                    Assert.True(WaitForDocument<User>(store2, id, predicate: null, timeout: 30_000));
+                }
+            }
+        }
+
+        [Fact]
+        public async Task ExternalReplicationFromShardedToNonShardedShouldWork2()
+        {
+            using (var store1 = Sharding.GetDocumentStore(new Options
+                   {
+                       ModifyDatabaseName = s => $"Sharded_{s}"
+                   }))
+            using (var store2 = GetDocumentStore())
+            {
+                await SetupReplicationAsync(store1, store2);
+
+                await store1.Maintenance.SendAsync(new CreateSampleDataOperation(DatabaseItemType.AllDatabaseItems));
+
+                await EnsureReplicatingAsync(store1, store2);
+                
+                WaitForUserToContinueTheTest(store2);
             }
         }
     }
