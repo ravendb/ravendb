@@ -13,14 +13,14 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 await processor.ExecuteAsync();
         }
 
-        [RavenAction("/databases/*/notification-center/dismiss", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
+        [RavenShardedAction("/databases/*/notification-center/dismiss", "POST")]
         public async Task Dismiss()
         {
             using (var processor = new ShardedDatabaseNotificationCenterHandlerProcessorForDismiss(this))
                 await processor.ExecuteAsync();
         }
 
-        [RavenAction("/databases/*/notification-center/postpone", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
+        [RavenShardedAction("/databases/*/notification-center/postpone", "POST")]
         public async Task Postpone()
         {
             using (var processor = new ShardedDatabaseNotificationCenterHandlerProcessorForPostpone(this))
