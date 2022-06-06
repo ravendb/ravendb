@@ -1,6 +1,6 @@
 ﻿<Project>
   <PropertyGroup>
-    <Version>5.3.103-custom-53</Version>
+    <Version></Version>
     <LangVersion>latest</LangVersion>
     <DebugType>embedded</DebugType>
     <WarningsAsErrors>true</WarningsAsErrors>
