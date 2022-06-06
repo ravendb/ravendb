@@ -29,7 +29,7 @@ namespace FastTests.Corax
         public void CanDelete()
         {
             PrepareData();
-            IndexEntries();
+            IndexEntries(CreateKnownFields(_bsc));
 
             Span<long> ids = stackalloc long[1024];
             {
@@ -68,7 +68,7 @@ namespace FastTests.Corax
         public void CanDeleteOneElement()
         {
             PrepareData(DataType.Modulo);
-            IndexEntries();
+            IndexEntries(CreateKnownFields(_bsc));
             var count = _longList.Count(p => p.Content == 9);
             
             Span<long> ids = stackalloc long[1024];
@@ -123,13 +123,13 @@ namespace FastTests.Corax
             Modulo
         }
 
-        private void IndexEntries()
+        private void IndexEntries(IndexFieldsMapping knownFields)
         {
             const int bufferSize = 4096;
             using var _ = _bsc.Allocate(bufferSize, out ByteString buffer);
 
             {
-                using var indexWriter = new IndexWriter(Env);
+                using var indexWriter = new IndexWriter(Env, knownFields);
                 foreach (var entry in _longList)
                 {
                     var entryWriter = new IndexEntryWriter(buffer.ToSpan(), _analyzers);

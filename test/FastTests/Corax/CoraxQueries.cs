@@ -126,7 +126,7 @@ namespace FastTests.Corax
             using var _ = ctx.Allocate(bufferSize, out ByteString buffer);
 
             {
-                using var indexWriter = new IndexWriter(Env);
+                using var indexWriter = new IndexWriter(Env, _knownFields);
                 foreach (var entry in _entries)
                 {
                     var entryWriter = new IndexEntryWriter(buffer.ToSpan(), _knownFields);
