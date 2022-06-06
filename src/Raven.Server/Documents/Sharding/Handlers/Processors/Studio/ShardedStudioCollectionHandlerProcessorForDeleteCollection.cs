@@ -17,29 +17,30 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Studio
         protected override void ScheduleDeleteCollection(TransactionOperationContext context, IDisposable returnToContextPool, string collectionName, HashSet<string> excludeIds,
             long operationId)
         {
-            var token = RequestHandler.CreateTimeLimitedOperationToken();
-
-            var shardToIds = ShardLocator.GetDocumentIdsByShards(context, RequestHandler.DatabaseContext, excludeIds);
-            
-            var task = RequestHandler.DatabaseContext.Operations.AddRemoteOperation(
-                operationId,
-                OperationType.DeleteByCollection,
-                collectionName,
-                detailedDescription: null,
-                (_, shardNumber) =>
-                {
-                    if (shardToIds.ContainsKey(shardNumber) == false)
-                        return new DeleteStudioCollectionOperation.DeleteStudioCollectionCommand(operationId, collectionName, null);
-                    return new DeleteStudioCollectionOperation.DeleteStudioCollectionCommand(operationId, collectionName, shardToIds[shardNumber].Ids);
-                },
-                token: token);
-
-            _ = task.ContinueWith(_ =>
+            using (returnToContextPool)
             {
-                token.Dispose();
-            });
+                var token = RequestHandler.CreateTimeLimitedOperationToken();
 
-            returnToContextPool.Dispose();
+                var shardToIds = ShardLocator.GetDocumentIdsByShards(context, RequestHandler.DatabaseContext, excludeIds);
+
+                var task = RequestHandler.DatabaseContext.Operations.AddRemoteOperation(
+                    operationId,
+                    OperationType.DeleteByCollection,
+                    collectionName,
+                    detailedDescription: null,
+                    (_, shardNumber) =>
+                    {
+                        if (shardToIds.ContainsKey(shardNumber) == false)
+                            return new DeleteStudioCollectionOperation.DeleteStudioCollectionCommand(operationId, collectionName, null);
+                        return new DeleteStudioCollectionOperation.DeleteStudioCollectionCommand(operationId, collectionName, shardToIds[shardNumber].Ids);
+                    },
+                    token: token);
+
+                _ = task.ContinueWith(_ =>
+                {
+                    token.Dispose();
+                });
+            }
         }
 
         protected override long GetNextOperationId()

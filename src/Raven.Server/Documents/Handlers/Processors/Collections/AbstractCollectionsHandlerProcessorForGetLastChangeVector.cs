@@ -9,7 +9,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Collections
         where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
         where TOperationContext : JsonOperationContext
     {
-        public AbstractCollectionsHandlerProcessorForGetLastChangeVector([NotNull] TRequestHandler requestHandler) : base(requestHandler)
+        protected AbstractCollectionsHandlerProcessorForGetLastChangeVector([NotNull] TRequestHandler requestHandler) : base(requestHandler)
         {
         }
 
@@ -18,9 +18,11 @@ namespace Raven.Server.Documents.Handlers.Processors.Collections
             return RequestHandler.GetStringQueryString("name");
         }
 
+        protected override bool SupportsCurrentNode => false;
+
         protected override RavenCommand<LastChangeVectorForCollectionResult> CreateCommandForNode(string nodeTag)
         {
-            return new ShardedLastChangeVectorForCollectionOperation.LastChangeVectorForCollectionCommand(GetCollectionName());
+            return new ShardedLastChangeVectorForCollectionOperation.LastChangeVectorForCollectionCommand(GetCollectionName(), nodeTag);
         }
     }
 }
