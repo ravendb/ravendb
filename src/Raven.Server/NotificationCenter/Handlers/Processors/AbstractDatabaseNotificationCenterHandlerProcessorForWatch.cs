@@ -11,12 +11,12 @@ using Sparrow.Json;
 
 namespace Raven.Server.NotificationCenter.Handlers.Processors;
 
-internal abstract class AbstractDatabaseNotificationCenterHandlerProcessorForGet<TRequestHandler, TOperationContext, TOperation> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
+internal abstract class AbstractDatabaseNotificationCenterHandlerProcessorForWatch<TRequestHandler, TOperationContext, TOperation> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
     where TOperationContext : JsonOperationContext
     where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     where TOperation : AbstractOperation, new()
 {
-    protected AbstractDatabaseNotificationCenterHandlerProcessorForGet([NotNull] TRequestHandler requestHandler)
+    protected AbstractDatabaseNotificationCenterHandlerProcessorForWatch([NotNull] TRequestHandler requestHandler)
         : base(requestHandler)
     {
     }
