@@ -1,9 +1,7 @@
 import appUrl = require("common/appUrl");
 import router = require("plugins/router");
-import viewModelBase = require("viewmodels/viewModelBase");
 import database = require("models/resources/database");
 import ongoingTasksCommand = require("commands/database/tasks/getOngoingTasksCommand");
-import ongoingTaskReplicationHubDefinitionListModel = require("models/database/tasks/ongoingTaskReplicationHubDefinitionListModel");
 import ongoingTaskBackupListModel = require("models/database/tasks/ongoingTaskBackupListModel");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import ongoingTaskModel = require("models/database/tasks/ongoingTaskModel");
@@ -113,7 +111,7 @@ class backups extends shardViewModelBase {
 
     private fetchOngoingTasks(): JQueryPromise<Raven.Server.Web.System.OngoingTasksResult> {
         const db = this.db;
-        return new ongoingTasksCommand(db)
+        return new ongoingTasksCommand(db, null) //TODO:
             .execute()
             .done((info) => {
                 info.OngoingTasksList = info.OngoingTasksList.filter(x => x.TaskType === "Backup");
@@ -235,7 +233,7 @@ class backups extends shardViewModelBase {
             });
     }
 
-    confirmDisableOngoingTask(model: ongoingTaskModel | ongoingTaskReplicationHubDefinitionListModel) {
+    confirmDisableOngoingTask(model: ongoingTaskModel) {
         const db = this.db;
 
         this.confirmationMessage("Disable Task", "You're disabling task of type: " + model.taskType(), {

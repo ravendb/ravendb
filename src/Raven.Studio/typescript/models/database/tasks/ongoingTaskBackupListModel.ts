@@ -14,6 +14,7 @@ import accessManager = require("common/shell/accessManager");
 import moment = require("moment");
 import connectionStatus from "models/resources/connectionStatus";
 
+//TODO: remove
 class ongoingTaskBackupListModel extends ongoingTaskListModel {
     private static neverBackedUpText = "Never backed up";
     
