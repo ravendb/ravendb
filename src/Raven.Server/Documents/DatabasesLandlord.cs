@@ -420,6 +420,8 @@ namespace Raven.Server.Documents
                     }
                 }
 
+                DeleteDatabaseNotifications(dbName, throwOnError: true);
+
                 // delete the cache info
                 DeleteDatabaseCachedInfo(dbName, throwOnError: true);
             }
@@ -954,6 +956,23 @@ namespace Raven.Server.Documents
             finally
             {
                 InitLog.TryRemove(databaseName.Value, out var _);
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void DeleteDatabaseNotifications(string databaseName, bool throwOnError)
+        {
+            try
+            {
+                _serverStore.NotificationCenter.Storage.DeleteStorageFor(databaseName);
+            }
+            catch (Exception e)
+            {
+                if (throwOnError)
+                    throw;
+
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Failed to delete database notifications for '{databaseName}' database.", e);
             }
         }
 
