@@ -40,15 +40,16 @@ public readonly struct ShardedLastChangeVectorForCollectionOperation : IShardedO
         };
     }
 
-    public RavenCommand<LastChangeVectorForCollectionResult> CreateCommandForShard(int shardNumber) => new LastChangeVectorForCollectionCommand(_collection);
+    public RavenCommand<LastChangeVectorForCollectionResult> CreateCommandForShard(int shardNumber) => new LastChangeVectorForCollectionCommand(_collection, null);
 
     public class LastChangeVectorForCollectionCommand : RavenCommand<LastChangeVectorForCollectionResult>
     {
         private readonly string _collection;
 
-        public LastChangeVectorForCollectionCommand(string collection)
+        public LastChangeVectorForCollectionCommand(string collection, string nodeTag)
         {
             _collection = collection;
+            SelectedNodeTag = nodeTag;
         }
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)

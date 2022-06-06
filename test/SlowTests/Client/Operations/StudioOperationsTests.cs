@@ -72,9 +72,9 @@ namespace SlowTests.Client.Operations
                     var cv2 = session.Advanced.GetMetadataFor(user2)[Constants.Documents.Metadata.ChangeVector].ToString();
                     var cv3 = session.Advanced.GetMetadataFor(user3)[Constants.Documents.Metadata.ChangeVector].ToString();
 
-                    var res1 = await store.Maintenance.ForShard(shard1).SendAsync(new GetLastChangeVectorOperation("Users"));
-                    var res2 = await store.Maintenance.ForShard(shard2).SendAsync(new GetLastChangeVectorOperation("Users"));
-                    var res3 = await store.Maintenance.ForShard(shard3).SendAsync(new GetLastChangeVectorOperation("Users"));
+                    var res1 = await store.Maintenance.ForShard(shard1).SendAsync(new GetLastChangeVectorOperation("Users", null));
+                    var res2 = await store.Maintenance.ForShard(shard2).SendAsync(new GetLastChangeVectorOperation("Users", null));
+                    var res3 = await store.Maintenance.ForShard(shard3).SendAsync(new GetLastChangeVectorOperation("Users", null));
 
                     Assert.Equal(cv1, res1.LastChangeVector);
                     Assert.Equal(cv2, res2.LastChangeVector);
@@ -86,14 +86,16 @@ namespace SlowTests.Client.Operations
         internal class GetLastChangeVectorOperation : IMaintenanceOperation<LastChangeVectorForCollectionResult>
         {
             private readonly string _collection;
+            private readonly string _nodeTag;
 
-            public GetLastChangeVectorOperation(string collection)
+            public GetLastChangeVectorOperation(string collection, string nodeTag)
             {
                 _collection = collection;
+                _nodeTag = nodeTag;
             }
             public RavenCommand<LastChangeVectorForCollectionResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
             {
-                return new ShardedLastChangeVectorForCollectionOperation.LastChangeVectorForCollectionCommand(_collection);
+                return new ShardedLastChangeVectorForCollectionOperation.LastChangeVectorForCollectionCommand(_collection, _nodeTag);
             }
         }
 
