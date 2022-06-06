@@ -1,5 +1,4 @@
-﻿using System.Threading;
-using JetBrains.Annotations;
+﻿using JetBrains.Annotations;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Operations;
 using Raven.Server.ServerWide.Context;
@@ -17,5 +16,5 @@ internal class DatabaseNotificationCenterHandlerProcessorForWatch : AbstractData
 
     protected override AbstractOperations<Operation> GetOperations() => RequestHandler.Database.Operations;
 
-    protected override CancellationToken GetShutdownToken() => RequestHandler.Database.DatabaseShutdown;
+    protected override bool SupportsCurrentNode => true;
 }
