@@ -28,9 +28,6 @@
   <PropertyGroup Condition="'$(TargetFramework)' == 'netcoreapp3.1' OR '$(TargetFramework)' == 'net5.0' OR '$(TargetFramework)' == 'net6.0'">
     <DefineConstants>$(DefineConstants);NETCOREAPP</DefineConstants>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(TargetFramework)' == 'net6.0'">
-    <DefineConstants>FEATURE_DATEONLY_TIMEONLY_SUPPORT</DefineConstants>
-  </PropertyGroup>
   <PropertyGroup Condition="'$(RuntimeIdentifier)' == ''">
     <IsAnyOS>true</IsAnyOS>
     <IsLinux64>false</IsLinux64>
