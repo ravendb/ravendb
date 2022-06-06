@@ -1,5 +1,6 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 
+//TODO: remove?
 abstract class ongoingTaskModel { 
 
     taskId: number;

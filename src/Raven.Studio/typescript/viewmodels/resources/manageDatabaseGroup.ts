@@ -239,7 +239,7 @@ class manageDatabaseGroup extends viewModelBase {
 
     private fetchOngoingTasks(): JQueryPromise<Raven.Server.Web.System.OngoingTasksResult> {
         const db = this.activeDatabase();
-        return new ongoingTasksCommand(db)
+        return new ongoingTasksCommand(db, null) //tODO:
             .execute()
             .done((info) => {
                 this.graph.onTasksChanged(info);

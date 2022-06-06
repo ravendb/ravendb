@@ -5,6 +5,7 @@ import generalUtils = require("common/generalUtils");
 import getAllServerWideTasksCommand = require("commands/serverWide/tasks/getAllServerWideTasksCommand");
 import connectionStatus from "models/resources/connectionStatus";
 
+//TODO: remove
 class serverWideBackupListModel extends serverWideTaskListModel {
 
     backupType = ko.observable<Raven.Client.Documents.Operations.Backups.BackupType>();

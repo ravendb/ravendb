@@ -394,7 +394,7 @@ class appUrl {
         return "#databases/settings/integrations?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forConnectionStrings(db: database | databaseInfo, type?: string, name?: string): string {
+    static forConnectionStrings(db: database | databaseInfo, type?: "sql" | "ravendb" | "olap" | "elasticSearch", name?: string): string {
         const databaseUrlPart = appUrl.getEncodedDbPart(db);
         const typeUrlPart = type ? "&type=" + encodeURIComponent(type) : "";
         const nameUrlPart = name ? "&name=" + encodeURIComponent(name) : "";
