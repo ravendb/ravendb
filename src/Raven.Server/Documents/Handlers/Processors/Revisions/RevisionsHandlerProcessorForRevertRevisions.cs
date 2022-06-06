@@ -13,7 +13,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
         {
         }
 
-        protected override void RevertRevisions(long operationId, RevertRevisionsRequest configuration, OperationCancelToken token)
+        protected override void ScheduleRevertRevisions(long operationId, RevertRevisionsRequest configuration, OperationCancelToken token)
         {
             var t = RequestHandler.Database.Operations.AddLocalOperation(
                 operationId,
@@ -22,11 +22,16 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
                 detailedDescription: null,
                 onProgress => RequestHandler.Database.DocumentsStorage.RevisionsStorage.RevertRevisions(configuration.Time, TimeSpan.FromSeconds(configuration.WindowInSec), onProgress, token),
                 token: token);
+
+            _ = t.ContinueWith(_ =>
+            {
+                token.Dispose();
+            });
         }
 
         protected override long GetNextOperationId()
         {
-            return ServerStore.Operations.GetNextOperationId();
+            return RequestHandler.Database.Operations.GetNextOperationId();
         }
     }
 }

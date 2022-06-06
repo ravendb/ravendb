@@ -4,9 +4,10 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
 using Raven.Client.Json;
+using Raven.Server.Documents.Revisions;
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.Revisions
+namespace Raven.Server.Documents.Operations
 {
     public class RevertRevisionsOperation : IMaintenanceOperation<OperationIdResult>
     {
@@ -14,7 +15,7 @@ namespace Raven.Server.Documents.Revisions
 
         public RevertRevisionsOperation(DateTime time, long window)
         {
-            _request = new RevertRevisionsRequest() { Time = time, WindowInSec = window };
+            _request = new RevertRevisionsRequest() {Time = time, WindowInSec = window};
         }
 
         public RevertRevisionsOperation(RevertRevisionsRequest request)
@@ -50,7 +51,8 @@ namespace Raven.Server.Documents.Revisions
                 return new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
-                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_request, ctx)).ConfigureAwait(false))
+                    Content = new BlittableJsonContent(async stream =>
+                        await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_request, ctx)).ConfigureAwait(false))
                 };
             }
 

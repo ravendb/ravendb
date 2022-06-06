@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
         {
         }
 
-        protected abstract void RevertRevisions(long operationId, RevertRevisionsRequest configuration, OperationCancelToken token);
+        protected abstract void ScheduleRevertRevisions(long operationId, RevertRevisionsRequest configuration, OperationCancelToken token);
 
         protected abstract long GetNextOperationId();
 
@@ -33,13 +33,13 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
             var token = RequestHandler.CreateTimeLimitedOperationToken();
             var operationId = RequestHandler.GetLongQueryString("operationId", required: false) ?? GetNextOperationId();
 
+            ScheduleRevertRevisions(operationId, configuration, token);
+
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
             {
                 writer.WriteOperationIdAndNodeTag(context, operationId, ServerStore.NodeTag);
             }
-
-            RevertRevisions(operationId, configuration, token);
         }
     }
 }

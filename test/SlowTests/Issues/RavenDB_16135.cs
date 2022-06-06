@@ -1,15 +1,9 @@
 ﻿using System;
-using System.Net.Http;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Utils;
 using Orders;
-using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Operations;
-using Raven.Client.Http;
-using Raven.Client.Json;
-using Raven.Server.Documents.Revisions;
-using Sparrow.Json;
+using Raven.Server.Documents.Operations;
 using Xunit;
 using Xunit.Abstractions;
 
