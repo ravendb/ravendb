@@ -42,7 +42,7 @@ namespace Raven.Server.Documents.Sharding
 
             private readonly ShardedDatabaseContext _context;
 
-            private ServerStore _server;
+            private readonly ServerStore _server;
 
             private readonly ConcurrentDictionary<string, ShardedIncomingReplicationHandler> _incoming =
                 new ConcurrentDictionary<string, ShardedIncomingReplicationHandler>();
@@ -56,7 +56,6 @@ namespace Raven.Server.Documents.Sharding
             public ServerStore Server => _server;
             public ShardedDatabaseContext Context => _context;
             public string SourceDatabaseId { get; set; }
-            public DocumentsQueue Queue;
 
             public ShardedReplicationContext([NotNull] ShardedDatabaseContext context, ServerStore serverStore)
             {
@@ -66,10 +65,12 @@ namespace Raven.Server.Documents.Sharding
             }
 
             public void AcceptIncomingConnection(TcpConnectionOptions tcpConnectionOptions,
-         TcpConnectionHeaderMessage header,
-         X509Certificate2 certificate,
-         JsonOperationContext.MemoryBuffer buffer)
+                TcpConnectionHeaderMessage header,
+                X509Certificate2 certificate,
+                JsonOperationContext.MemoryBuffer buffer,
+                ReplicationQueue replicationQueue)
             {
+
                 var supportedVersions =
                     TcpConnectionHeaderMessage.GetSupportedFeaturesFor(TcpConnectionHeaderMessage.OperationTypes.Replication, tcpConnectionOptions.ProtocolVersion);
 
@@ -84,93 +85,14 @@ namespace Raven.Server.Documents.Sharding
                     }
                 }
 
-                string[] allowedPaths = default;
-                string pullDefinitionName = null;
-                PreventDeletionsMode preventDeletionsMode = PreventDeletionsMode.None;
-                switch (header.AuthorizeInfo?.AuthorizeAs)
-                {
-                    case TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PullReplication:
-                    case TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PushReplication:
-                        if (supportedVersions.Replication.PullReplication == false)
-                            throw new InvalidOperationException("Unable to use Pull Replication, because the other side doesn't have it as a supported feature");
-
-                        if (header.AuthorizeInfo.AuthorizationFor == null)
-                            throw new InvalidOperationException("Pull replication requires that the AuthorizationFor field will be set, but it wasn't provided");
-
-                        PullReplicationDefinition pullReplicationDefinition;
-                        using (_server.Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-                        using (ctx.OpenReadTransaction())
-                        {
-                            pullReplicationDefinition = _server.Cluster.ReadPullReplicationDefinition(DatabaseName, header.AuthorizeInfo.AuthorizationFor, ctx);
-
-                            if (pullReplicationDefinition.Disabled)
-                                throw new InvalidOperationException("The replication hub " + pullReplicationDefinition.Name + " is disabled and cannot be used currently");
-                        }
-
-                        pullDefinitionName = header.AuthorizeInfo.AuthorizationFor;
-
-                        /*switch (header.AuthorizeInfo.AuthorizeAs)
-                        {
-                            case TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PullReplication:
-                                if (pullReplicationDefinition.Mode.HasFlag(PullReplicationMode.HubToSink) == false)
-                                    throw new InvalidOperationException($"Replication hub {header.AuthorizeInfo.AuthorizationFor} does not support Pull Replication");
-                                CreatePullReplicationAsHub(tcpConnectionOptions, initialRequest, supportedVersions, pullReplicationDefinition, header);
-                                return;
-
-                            case TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PushReplication:
-                                if (pullReplicationDefinition.Mode.HasFlag(PullReplicationMode.SinkToHub) == false)
-                                    throw new InvalidOperationException($"Replication hub {header.AuthorizeInfo.AuthorizationFor} does not support Push Replication");
-                                if (certificate == null)
-                                    throw new InvalidOperationException("Incoming filtered replication is only supported when using a certificate");
-#pragma warning disable CS0618 // Type or member is obsolete
-                                if (pullReplicationDefinition.Certificates != null && pullReplicationDefinition.Certificates.Count > 0)
-#pragma warning restore CS0618 // Type or member is obsolete
-                                    throw new InvalidOperationException(
-                                        "Incoming filtered replication is not supported on legacy replication hub. Make sure that there are no inline certificates on the replication hub: " +
-                                        pullReplicationDefinition.Name);
-
-                                allowedPaths = DetailedReplicationHubAccess.Preferred(header.ReplicationHubAccess.AllowedSinkToHubPaths, header.ReplicationHubAccess.AllowedHubToSinkPaths);
-                                preventDeletionsMode = pullReplicationDefinition.PreventDeletionsMode;
-
-                                // same as normal incoming replication, just using the filtering
-                                break;
-
-                            default:
-                                throw new InvalidOperationException("Unknown AuthroizeAs value: " + header.AuthorizeInfo.AuthorizeAs);
-                        }*/
-                        break;
-
-                    case null:
-                        break;
-
-                    default:
-                        throw new InvalidOperationException("Unknown AuthroizeAs value" + header.AuthorizeInfo?.AuthorizeAs);
-                }
-
-                ReplicationLoader.PullReplicationParams pullReplicationParams = null;
-                if (pullDefinitionName != null)
-                {
-                    pullReplicationParams = new ReplicationLoader.PullReplicationParams()
-                    {
-                        Name = pullDefinitionName,
-                        AllowedPaths = allowedPaths,
-                        Mode = PullReplicationMode.SinkToHub,
-                        PreventDeletionsMode = preventDeletionsMode,
-                        Type = ReplicationLoader.PullReplicationParams.ConnectionType.Incoming
-                    };
-                }
-
-                CreateIncomingInstance(tcpConnectionOptions, buffer);
+                CreateIncomingInstance(tcpConnectionOptions, buffer, replicationQueue);
             }
 
 
-            private void CreateIncomingInstance(TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.MemoryBuffer buffer)
+            private void CreateIncomingInstance(TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.MemoryBuffer buffer, ReplicationQueue queue)
             {
-                var newIncoming = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer);
+                var newIncoming = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer, queue);
 
-                //newIncoming.Failed += OnIncomingReceiveFailed;
-
-                // need to safeguard against two concurrent connection attempts
                 var current = _incoming.AddOrUpdate(newIncoming.ConnectionInfo.SourceDatabaseId, newIncoming,
                     (_, val) => val.IsDisposed ? newIncoming : val);
 
@@ -189,15 +111,12 @@ namespace Raven.Server.Documents.Sharding
                 }
             }
 
-            protected ShardedIncomingReplicationHandler CreateIncomingReplicationHandler(
-                TcpConnectionOptions tcpConnectionOptions,
-                JsonOperationContext.MemoryBuffer buffer)
+            protected ShardedIncomingReplicationHandler CreateIncomingReplicationHandler(TcpConnectionOptions tcpConnectionOptions,
+                JsonOperationContext.MemoryBuffer buffer, ReplicationQueue replicationQueue)
             {
                 var getLatestEtagMessage = IncomingInitialHandshake(tcpConnectionOptions, buffer);
 
-                var newIncoming = new ShardedIncomingReplicationHandler(tcpConnectionOptions, this, buffer, getLatestEtagMessage);
-
-                //newIncoming.DocumentsReceived += OnIncomingReceiveSucceeded;
+                var newIncoming = new ShardedIncomingReplicationHandler(tcpConnectionOptions, this, buffer, getLatestEtagMessage, replicationQueue);
                 return newIncoming;
             }
 
@@ -252,8 +171,6 @@ namespace Raven.Server.Documents.Sharding
 
                         context.Write(writer, response);
                         writer.Flush();
-
-                        //TODO: get changeVector & last etag from all shards??...
                     }
                 }
                 catch (Exception)
@@ -286,7 +203,7 @@ namespace Raven.Server.Documents.Sharding
                 }
             }
 
-            public void AddAndStartOutgoingReplication(ShardReplicationNode node, int shard)
+            public void AddAndStartOutgoingReplication(ShardReplicationNode node, int shard, ReplicationQueue replicationQueue)
             {
                 var info = GetShardedReplicationTcpInfo(node, node.Database, shard);
 
@@ -304,7 +221,7 @@ namespace Raven.Server.Documents.Sharding
 
                 try
                 {
-                    var shardedOutgoingReplicationHandler = new ShardedOutgoingReplicationHandler(this, node, shard, info);
+                    var shardedOutgoingReplicationHandler = new ShardedOutgoingReplicationHandler(this, node, shard, info, replicationQueue);
 
                     if (_outgoing.TryAdd(shardedOutgoingReplicationHandler) == false)
                     {
@@ -317,10 +234,10 @@ namespace Raven.Server.Documents.Sharding
                 {
                     _locker.ExitReadLock();
                 }
-               
+
             }
 
-          private TcpConnectionInfo GetShardedReplicationTcpInfo(ShardReplicationNode exNode, string database, int shard)
+            private TcpConnectionInfo GetShardedReplicationTcpInfo(ShardReplicationNode exNode, string database, int shard)
             {
                 var shardExecutor = _context.ShardExecutor;
                 using (_context.AllocateContext(out JsonOperationContext ctx))
@@ -409,7 +326,6 @@ namespace Raven.Server.Documents.Sharding
                         catch
                         {
                             // ignored
-                            Console.WriteLine("Failed to dispose _incoming");
                         }
                     }
                     foreach (var outgoing in _outgoing)
@@ -421,16 +337,12 @@ namespace Raven.Server.Documents.Sharding
                         catch
                         {
                             // ignored
-                            Console.WriteLine("Failed to dispose _outgoing");
                         }
                     }
 
+
                     _outgoing.Clear();
                     _incoming.Clear();
-                    
-                    Queue.SendToShardCompletion.Dispose();
-                    Queue.BatchReadCompletion.Dispose();
-                    Queue = null;
                 }
                 finally
                 {
@@ -440,22 +352,20 @@ namespace Raven.Server.Documents.Sharding
         }
     }
 
-    public class DocumentsQueue
+    public class ReplicationQueue
     {
-        public ConcurrentDictionary<int, List<ReplicationBatchItem>> Items = new ConcurrentDictionary<int, List<ReplicationBatchItem>>();
-
-        public ManualResetEvent BatchReadCompletion = new ManualResetEvent(false);
+        public ConcurrentDictionary<int, BlockingCollection<List<ReplicationBatchItem>>> Items = new ConcurrentDictionary<int, BlockingCollection<List<ReplicationBatchItem>>>();
 
         public CountdownEvent SendToShardCompletion;
 
-        public Dictionary<int, Dictionary<Slice, AttachmentReplicationItem>> AttachmentsPerShard = new Dictionary<int, Dictionary<Slice, AttachmentReplicationItem>>();
+        public ConcurrentDictionary<int, Dictionary<Slice, AttachmentReplicationItem>> AttachmentsPerShard = new ConcurrentDictionary<int, Dictionary<Slice, AttachmentReplicationItem>>();
 
-        public DocumentsQueue(int numberOfShards)
+        public ReplicationQueue(int numberOfShards)
         {
             SendToShardCompletion = new CountdownEvent(numberOfShards);
             for (int i = 0; i < numberOfShards; i++)
             {
-                Items[i] = new List<ReplicationBatchItem>();
+                Items[i] = new BlockingCollection<List<ReplicationBatchItem>>();
                 AttachmentsPerShard[i] = new Dictionary<Slice, AttachmentReplicationItem>(SliceComparer.Instance);
             }
         }

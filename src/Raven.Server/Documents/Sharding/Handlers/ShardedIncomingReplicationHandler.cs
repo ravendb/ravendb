@@ -5,7 +5,6 @@ using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
-using System.Threading.Tasks;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Exceptions.Sharding;
 using Raven.Client.Extensions;
@@ -39,6 +38,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
         private readonly Stream _stream;
         private readonly Logger _log;
         private readonly ShardedDatabaseContext.ShardedReplicationContext _parent;
+        private readonly ReplicationQueue _replicationQueue;
         private readonly (IDisposable ReleaseBuffer, JsonOperationContext.MemoryBuffer Buffer) _copiedBuffer;
         private long _lastDocumentEtag;
         private PoolOfThreads.LongRunningWork _incomingWork;
@@ -54,7 +54,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                                               $"from {ConnectionInfo.SourceTag}-{ConnectionInfo.SourceDatabaseName} @ {ConnectionInfo.SourceUrl}";
 
         public ShardedIncomingReplicationHandler(TcpConnectionOptions tcpConnectionOptions, ShardedDatabaseContext.ShardedReplicationContext parent,
-            JsonOperationContext.MemoryBuffer buffer, ReplicationLatestEtagRequest replicatedLastEtag)
+            JsonOperationContext.MemoryBuffer buffer, ReplicationLatestEtagRequest replicatedLastEtag, ReplicationQueue replicationQueue)
         {
             _disposeOnce = new DisposeOnce<SingleAttempt>(DisposeInternal);
             _tcpConnectionOptions = tcpConnectionOptions;
@@ -63,6 +63,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
             _copiedBuffer = buffer.Clone(_tcpConnectionOptions.ContextPool);
             _parent = parent;
+            _replicationQueue = replicationQueue;
             _log = LoggingSource.Instance.GetLogger<ShardedIncomingReplicationHandler>(_parent.DatabaseName);
             _cts = CancellationTokenSource.CreateLinkedTokenSource(parent.Context.DatabaseShutdown);
             _attachmentStreamsTempFile = new StreamsTempFile("ShardedReplication" + Guid.NewGuid(), false);
@@ -104,7 +105,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
             NativeMemory.EnsureRegistered();
             try
             {
-                
+
                 using (_tcpConnectionOptions.ConnectionProcessingInProgress("Replication"))
                 using (_parent.Server.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (_stream)
@@ -113,8 +114,6 @@ namespace Raven.Server.Documents.Sharding.Handlers
                     {
                         try
                         {
-                            //AddReplicationPulse(ReplicationPulseDirection.IncomingInitiate);
-
                             using (var msg = context.Sync.ParseToMemory(
                                        _stream,
                                        "IncomingReplication/read-message",
@@ -123,16 +122,13 @@ namespace Raven.Server.Documents.Sharding.Handlers
                             {
                                 if (msg != null)
                                 {
-                                    using (_attachmentStreamsTempFile.Scope())
-                                    {
-                                        _parent.EnsureNotDeleted(_parent.Server.NodeTag);
+                                    _parent.EnsureNotDeleted(_parent.Server.NodeTag);
 
-                                        using (var writer = new BlittableJsonTextWriter(context, _stream))
-                                        {
-                                            HandleSingleReplicationBatch(context,
-                                                msg,
-                                                writer, out string messageType);
-                                        }
+                                    using (var writer = new BlittableJsonTextWriter(context, _stream))
+                                    {
+                                        HandleSingleReplicationBatch(context,
+                                            msg,
+                                            writer);
                                     }
                                 }
                                 else // notify peer about new change vector
@@ -150,8 +146,6 @@ namespace Raven.Server.Documents.Sharding.Handlers
                         }
                         catch (Exception e)
                         {
-                            //AddReplicationPulse(ReplicationPulseDirection.IncomingInitiateError, e.Message);
-
                             if (_log.IsInfoEnabled)
                             {
                                 if (e is AggregateException ae &&
@@ -191,24 +185,19 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 {
                     if (_log.IsInfoEnabled)
                         _log.Info($"Connection error {FromToString}: an exception was thrown during receiving incoming document replication batch.", e);
-
-                    //OnFailed(e, this);
                 }
             }
         }
 
-        private Task _prevChangeVectorUpdate;
-
         private void HandleSingleReplicationBatch(
-    TransactionOperationContext msgContext,
+    TransactionOperationContext context,
     BlittableJsonReaderObject message,
-    BlittableJsonTextWriter writer,
-    out string messageType)
+    BlittableJsonTextWriter writer)
         {
             message.BlittableValidation();
             //note: at this point, the valid messages are heartbeat and replication batch.
             _cts.Token.ThrowIfCancellationRequested();
-            messageType = null;
+            string messageType = null;
             try
             {
                 if (!message.TryGet(nameof(ReplicationMessageHeader.Type), out messageType))
@@ -230,26 +219,18 @@ namespace Raven.Server.Documents.Sharding.Handlers
                             throw new InvalidDataException($"Expected the '{nameof(ReplicationMessageHeader.AttachmentStreamsCount)}' field, " +
                                                            $"but had no numeric field of this value, this is likely a bug");
 
-                        ReceiveSingleDocumentsBatch(msgContext, itemsCount, attachmentStreamCount);
-
-                        if (messageType == ReplicationMessageType.Documents)
-                        {
-                            _parent.Queue.SendToShardCompletion.Wait();
-                            _parent.Queue.SendToShardCompletion = new CountdownEvent(3);
-                        }
+                        ReceiveSingleDocumentsBatch(context, itemsCount, attachmentStreamCount);
 
                         break;
 
                     case ReplicationMessageType.Heartbeat:
-                        //AddReplicationPulse(ReplicationPulseDirection.IncomingHeartbeat);
-
                         break;
 
                     default:
                         throw new ArgumentOutOfRangeException("Unknown message type: " + messageType);
                 }
 
-                SendHeartbeatStatusToSource(msgContext, writer, _lastDocumentEtag, messageType);
+                SendHeartbeatStatusToSource(context, writer, _lastDocumentEtag, messageType);
 
             }
             catch (ObjectDisposedException)
@@ -281,7 +262,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                         [nameof(ReplicationMessageReply.Exception)] = mae.ToString()
                     };
 
-                    msgContext.Write(writer, returnValue);
+                    context.Write(writer, returnValue);
                     writer.Flush();
 
                     return;
@@ -299,7 +280,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                     [nameof(ReplicationMessageReply.Exception)] = e.ToString()
                 };
 
-                msgContext.Write(writer, returnValue);
+                context.Write(writer, returnValue);
                 writer.Flush();
 
                 throw;
@@ -313,18 +294,24 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
             try
             {
-                //using (_attachmentStreamsTempFile.Scope())
-                using (var shardAllocator = new IncomingReplicationHandler.IncomingReplicationAllocator(context.Allocator, null))
+                using (_attachmentStreamsTempFile.Scope())
+                using (var shardAllocator = new IncomingReplicationHandler.IncomingReplicationAllocator(context.Allocator, maxSizeToSend: null))
                 {
                     using (var networkStats = stats.For(ReplicationOperation.Incoming.Network))
                     {
                         var reader = new Reader(_stream, _copiedBuffer, shardAllocator);
 
-                        ReadItemsFromSource(replicatedItemsCount, context, reader, stats);
+                        var dictionary = ReadItemsFromSource(replicatedItemsCount, context, reader, stats);
                         ReadAttachmentStreamsFromSource(attachmentStreamCount, context, reader, networkStats);
 
-                        _parent.Queue.BatchReadCompletion.Set();
-                        _parent.Queue.BatchReadCompletion.Reset();
+                        foreach (var kvp in dictionary)
+                        {
+                            var shard = kvp.Key;
+                            _replicationQueue.Items[shard].Add(kvp.Value);
+                        }
+
+                        _replicationQueue.SendToShardCompletion.Wait();
+                        _replicationQueue.SendToShardCompletion = new CountdownEvent(_parent.Context.ShardCount);
                     }
                 }
 
@@ -338,8 +325,15 @@ namespace Raven.Server.Documents.Sharding.Handlers
             }
         }
 
-        private void ReadItemsFromSource(int replicatedDocs, TransactionOperationContext context, Reader reader, IncomingReplicationStatsScope stats)
+        private Dictionary<int, List<ReplicationBatchItem>> ReadItemsFromSource(int replicatedDocs, TransactionOperationContext context, Reader reader, IncomingReplicationStatsScope stats)
         {
+            var dict = new Dictionary<int, List<ReplicationBatchItem>>();
+
+            for (var shard = 0; shard < _parent.Context.ShardCount; shard++)
+            {
+                dict[shard] = new List<ReplicationBatchItem>();
+            }
+
             for (var i = 0; i < replicatedDocs; i++)
             {
                 var item = ReplicationBatchItem.ReadTypeAndInstantiate(reader);
@@ -350,14 +344,17 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
                 if (item is AttachmentReplicationItem attachment)
                 {
-                    var shardAttachments = _parent.Queue.AttachmentsPerShard[shard] ??= new Dictionary<Slice, AttachmentReplicationItem>(SliceComparer.Instance);
+                    var shardAttachments = _replicationQueue.AttachmentsPerShard[shard] ??= new Dictionary<Slice, AttachmentReplicationItem>(SliceComparer.Instance);
 
                     if (shardAttachments.ContainsKey(attachment.Base64Hash) == false)
                         shardAttachments[attachment.Base64Hash] = attachment;
                 }
 
-                _parent.Queue.Items[shard].Add(item);
+                var list = dict[shard];
+                list.Add(item);
             }
+
+            return dict;
         }
 
         private void ReadAttachmentStreamsFromSource(int attachmentStreamCount, TransactionOperationContext context, Reader reader, IncomingReplicationStatsScope stats)
@@ -374,11 +371,9 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 {
                     attachment.ReadStream(context.Allocator, _attachmentStreamsTempFile);
 
-                    for (var j = 0; j < _parent.Context.ShardCount; j++)
+                    for (var shard = 0; shard < _parent.Context.ShardCount; shard++)
                     {
-                        var shard = j;
-
-                        var shardAttachments = _parent.Queue.AttachmentsPerShard[shard];
+                        var shardAttachments = _replicationQueue.AttachmentsPerShard[shard];
 
                         if (shardAttachments.ContainsKey(attachment.Base64Hash))
                         {
@@ -397,12 +392,8 @@ namespace Raven.Server.Documents.Sharding.Handlers
             }
         }
 
-
-
         private void SendHeartbeatStatusToSource(JsonOperationContext documentsContext, BlittableJsonTextWriter writer, long lastDocumentEtag, string handledMessageType)
         {
-            //AddReplicationPulse(ReplicationPulseDirection.IncomingHeartbeatAcknowledge);
-
             var heartbeat = new DynamicJsonValue
             {
                 [nameof(ReplicationMessageReply.Type)] = "Ok",
@@ -414,11 +405,10 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
             documentsContext.Write(writer, heartbeat);
             writer.Flush();
-
-            // LastHeartbeatTicks = _database.Time.GetUtcNow().Ticks;
         }
 
-        private DocumentInfoHelper _documentInfoHelper = new DocumentInfoHelper();
+
+        private readonly DocumentInfoHelper _documentInfoHelper = new DocumentInfoHelper();
         private LazyStringValue GetDocumentId(Slice key) => _documentInfoHelper.GetDocumentId(key);
         public string GetItemInformation(ReplicationBatchItem item) => _documentInfoHelper.GetItemInformation(item);
 
