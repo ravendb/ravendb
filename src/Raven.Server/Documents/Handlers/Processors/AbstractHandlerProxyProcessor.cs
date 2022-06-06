@@ -6,7 +6,7 @@ using Sparrow.Json;
 namespace Raven.Server.Documents.Handlers.Processors;
 
 internal abstract class AbstractHandlerProxyProcessor<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
-    where TOperationContext : JsonOperationContext 
+    where TOperationContext : JsonOperationContext
     where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
 {
     protected AbstractHandlerProxyProcessor([NotNull] TRequestHandler requestHandler) : base(requestHandler)
@@ -15,9 +15,18 @@ internal abstract class AbstractHandlerProxyProcessor<TRequestHandler, TOperatio
 
     protected abstract bool SupportsCurrentNode { get; }
 
-    protected int GetShardNumber()
+    protected int GetShardNumber() => RequestHandler.GetIntValueQueryString(Constants.QueryString.ShardNumber, required: true).Value;
+
+    protected bool TryGetShardNumber(out int shardNumber)
     {
-        return RequestHandler.GetIntValueQueryString(Constants.QueryString.ShardNumber, required: true).Value;
+        shardNumber = -1;
+
+        var value = RequestHandler.GetIntValueQueryString(Constants.QueryString.ShardNumber, required: false);
+        if (value == null)
+            return false;
+
+        shardNumber = value.Value;
+        return true;
     }
 
     protected bool IsCurrentNode(out string nodeTag)
