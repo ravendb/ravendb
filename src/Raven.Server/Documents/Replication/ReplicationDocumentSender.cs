@@ -674,7 +674,10 @@ namespace Raven.Server.Documents.Replication
                 // destination, so we need to send it again
                 return true;
             }
-                    
+
+            if (_parent.SupportedFeatures.Replication.DeduplicatedAttachments == false)
+                return true;
+
             // RavenDB does de-duplication of attachments on storage, but not over the wire
             // Here we implement the same idea, if (in the current connection), we already sent
             // an attachment, we will skip sending it to the other side since we _know_ it is 
