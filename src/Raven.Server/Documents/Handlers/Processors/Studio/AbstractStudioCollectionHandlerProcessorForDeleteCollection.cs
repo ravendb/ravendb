@@ -16,19 +16,19 @@ namespace Raven.Server.Documents.Handlers.Processors.Studio
         {
         }
 
-        protected abstract void DeleteCollection(TOperationContext context, IDisposable returnContextToPool, string collectionName, HashSet<string> excludeIds,
-            long operationId, OperationCancelToken token);
+        protected abstract void ScheduleDeleteCollection(TOperationContext context, IDisposable returnToContextPool, string collectionName, HashSet<string> excludeIds,
+            long operationId);
 
         protected abstract long GetNextOperationId();
 
         public override async ValueTask ExecuteAsync()
         {
-            var returnContextToPool = ContextPool.AllocateOperationContext(out TOperationContext context);
-
             var collectionName = RequestHandler.GetStringQueryString("name");
             var operationId = RequestHandler.GetLongQueryString("operationId", required: false) ?? GetNextOperationId();
             var excludeIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
+            var returnToContextPool = ContextPool.AllocateOperationContext(out TOperationContext context);
+            
             var reader = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), "ExcludeIds");
             if (reader.TryGet("ExcludeIds", out BlittableJsonReaderArray ids))
             {
@@ -41,16 +41,12 @@ namespace Raven.Server.Documents.Handlers.Processors.Studio
                 }
             }
 
-            using (ContextPool.AllocateOperationContext(out JsonOperationContext writeContext))
-            await using (var writer = new AsyncBlittableJsonTextWriter(writeContext, RequestHandler.ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
             {
-                writer.WriteOperationIdAndNodeTag(writeContext, operationId, ServerStore.NodeTag);
+                writer.WriteOperationIdAndNodeTag(context, operationId, ServerStore.NodeTag);
             }
 
-            using (var token = RequestHandler.CreateOperationToken())
-            {
-                DeleteCollection(context, returnContextToPool, collectionName, excludeIds, operationId, token);
-            }
+            ScheduleDeleteCollection(context, returnToContextPool, collectionName, excludeIds, operationId);
         }
     }
 }
