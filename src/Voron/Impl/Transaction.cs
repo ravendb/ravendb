@@ -587,7 +587,9 @@ namespace Voron.Impl
         public void DeleteTable(string name)
         {
             var tableTree = ReadTree(name, RootObjectType.Table);
-            
+            if (tableTree == null)
+                return;
+
             var writtenSchemaData = tableTree.DirectRead(TableSchema.SchemasSlice);
             var writtenSchemaDataSize = tableTree.GetDataSize(TableSchema.SchemasSlice);
             var schema = TableSchema.ReadFrom(Allocator, writtenSchemaData, writtenSchemaDataSize);
