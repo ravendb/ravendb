@@ -914,7 +914,7 @@ namespace FastTests.Corax
             using var _ = bsc.Allocate(bufferSize, out ByteString buffer);
 
             {
-                using var indexWriter = new IndexWriter(Env);
+                using var indexWriter = new IndexWriter(Env, knownFields);
                 foreach (var entry in list)
                 {
                     var entryWriter = new IndexEntryWriter(buffer.ToSpan(), knownFields);
