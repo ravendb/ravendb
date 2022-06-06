@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Server.Documents.ETL.Handlers.Processors;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Json;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -122,19 +122,8 @@ namespace Raven.Server.Documents.ETL.Handlers
         [RavenAction("/databases/*/etl/progress", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
         public async Task Progress()
         {
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-            using (context.OpenReadTransaction())
-            {
-                var performance = GetProcessesToReportOn().Select(x => new EtlTaskProgress
-                {
-                    TaskName = x.Key,
-                    EtlType = x.Value.First().EtlType,
-                    ProcessesProgress = x.Value.Select(y => y.GetProgress(context)).ToArray()
-                }).ToArray();
-
-                writer.WriteEtlTaskProgress(context, performance);
-            }
+            using (var processor = new EtlHandlerProcessorForProgress(this))
+                await processor.ExecuteAsync();
         }
 
         private Dictionary<string, List<EtlProcess>> GetProcessesToReportOn()

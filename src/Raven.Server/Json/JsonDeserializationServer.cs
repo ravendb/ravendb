@@ -26,6 +26,7 @@ using Raven.Client.ServerWide.Operations.Migration;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Commercial;
 using Raven.Server.Documents.Commands;
+using Raven.Server.Documents.Commands.ETL;
 using Raven.Server.Documents.Commands.Indexes;
 using Raven.Server.Documents.ETL.Providers.ElasticSearch.Test;
 using Raven.Server.Documents.ETL.Providers.OLAP.Test;
@@ -241,6 +242,8 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, GetConflictsPreviewResult> GetConflictResults = GenerateJsonDeserializationRoutine<GetConflictsPreviewResult>();
 
         public static readonly Func<BlittableJsonReaderObject, TermsQueryResultServerSide> TermsQueryResult = GenerateJsonDeserializationRoutine<TermsQueryResultServerSide>();
+
+        internal static readonly Func<BlittableJsonReaderObject, GetEtlTaskProgressCommand.EtlTaskProgressResponse> EtlTaskProgressResponse = GenerateJsonDeserializationRoutine<GetEtlTaskProgressCommand.EtlTaskProgressResponse>();
 
         public class Parameters
         {
