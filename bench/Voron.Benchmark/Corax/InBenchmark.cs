@@ -133,7 +133,7 @@ namespace Voron.Benchmark.Corax
                     entryWriter.Write(3, Encoding.UTF8.GetBytes("Dog"));
                     entryWriter.Finish(out var entry);
 
-                    writer.Index("dogs/arava", entry, fields);
+                    writer.Index("dogs/arava", entry);
                 }
 
                 {
@@ -144,7 +144,7 @@ namespace Voron.Benchmark.Corax
                     entryWriter.Write(3, Encoding.UTF8.GetBytes("Dog"));
                     entryWriter.Finish(out var entry);
 
-                    writer.Index("dogs/phoebe", entry, fields);
+                    writer.Index("dogs/phoebe", entry);
                 }
 
                 for (int i = 0; i < 10_000; i++)
@@ -157,7 +157,7 @@ namespace Voron.Benchmark.Corax
                     entryWriter.Write(3, Encoding.UTF8.GetBytes("Dog"));
                     entryWriter.Finish(out var entry);
 
-                    writer.Index("dogs/" + i, entry, fields);
+                    writer.Index("dogs/" + i, entry);
                 }
 
                 writer.Commit();

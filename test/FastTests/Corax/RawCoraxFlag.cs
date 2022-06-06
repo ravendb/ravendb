@@ -44,7 +44,7 @@ public class RawCoraxFlag : StorageTest
                 entry.Write(IndexId, Encodings.Utf8.GetBytes(id));
                 entry.WriteRaw(ContentId, new Span<byte>(item.BasePointer, item.Size));
                 entry.Finish(out var output);
-                writer.Index(id, output, _analyzers);
+                writer.Index(id, output);
             }
 
             writer.Commit();
@@ -104,7 +104,7 @@ public class RawCoraxFlag : StorageTest
                 }
 
                 entry.Finish(out var output);
-                writer.Index(id, output, _analyzers);
+                writer.Index(id, output);
             }
 
             writer.Commit();

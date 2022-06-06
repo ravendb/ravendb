@@ -401,7 +401,7 @@ namespace FastTests.Corax
                 {
                     var entryWriter = new IndexEntryWriter(buffer.ToSpan(), knownFields);
                     var data = CreateIndexEntry(ref entryWriter, entry);
-                    indexWriter.Index(entry.Id, data, knownFields);
+                    indexWriter.Index(entry.Id, data);
                 }
                 indexWriter.Commit();
             }
