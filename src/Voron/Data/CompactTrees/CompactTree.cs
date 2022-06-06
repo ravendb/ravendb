@@ -87,7 +87,7 @@ namespace Voron.Data.CompactTrees
             }
         }
 
-        private readonly ref struct EncodedKey
+        public readonly ref struct EncodedKey
         {
             public readonly ReadOnlySpan<byte> Key;
             public readonly ReadOnlySpan<byte> Encoded;
@@ -197,7 +197,7 @@ namespace Voron.Data.CompactTrees
             }
         }
 
-        private struct CursorState
+        internal struct CursorState
         {
             public Page Page;
             public int LastMatch;
@@ -393,17 +393,30 @@ namespace Voron.Data.CompactTrees
                 return true;
             }
         }
-
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool TryGetValue(string key, out long value)
+        {
+            return TryGetValue(key, out value, out var _);
+        }
+
+
+        public bool TryGetValue(string key, out long value, out EncodedKey encodedKey)
         {
             using var _ = Slice.From(_llt.Allocator, key, out var slice);
             var span = slice.AsReadOnlySpan();
-            return TryGetValue(span, out value);
+            return TryGetValue(span, out value, out encodedKey);
         }
-
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool TryGetValue(ReadOnlySpan<byte> key, out long value)
         {
-            var encodedKey = FindPageFor(key, ref _internalCursor);
+            return TryGetValue(key, out value, out var _);
+        }
+        
+        public bool TryGetValue(ReadOnlySpan<byte> key, out long value, out EncodedKey encodedKey)
+        {
+            encodedKey = FindPageFor(key, ref _internalCursor);
 
             ref var state = ref _internalCursor._stk[_internalCursor._pos];
 
@@ -719,6 +732,18 @@ namespace Voron.Data.CompactTrees
                 throw new ArgumentOutOfRangeException(nameof(key), Encoding.UTF8.GetString(key), "key must be at least 1 byte");
 
             var encodedKey = FindPageFor(key, ref _internalCursor);
+            AddToPage(encodedKey, value);
+        }
+        
+        public void Add(ReadOnlySpan<byte> key, long value, EncodedKey encodedKey)
+        {
+            if (value < 0)
+                throw new ArgumentOutOfRangeException(nameof(value), value, "Only positive values are allowed");
+            if (key.Length > 1024)
+                throw new ArgumentOutOfRangeException(nameof(key), Encoding.UTF8.GetString(key),"key must be less than 1024 bytes in size");
+            if(key.Length <= 0)
+                throw new ArgumentOutOfRangeException(nameof(key), Encoding.UTF8.GetString(key), "key must be at least 1 byte");
+
             AddToPage(encodedKey, value);
         }
 
