@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using JetBrains.Annotations;
 using Raven.Client.Util;
-using Raven.Server.Documents;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -13,7 +11,6 @@ using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Logging;
-using Sparrow.Server;
 using Voron;
 using Voron.Data.Tables;
 
@@ -29,7 +26,7 @@ namespace Raven.Server.NotificationCenter
 
         private TransactionContextPool _contextPool;
 
-        public NotificationsStorage(string resourceName)
+        public NotificationsStorage(string resourceName = null)
         {
             _tableName = GetTableName(resourceName);
 

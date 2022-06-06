@@ -163,7 +163,7 @@ namespace Raven.Server.ServerWide
 
             DatabasesLandlord = new DatabasesLandlord(this);
 
-            _notificationsStorage = new NotificationsStorage(ResourceName);
+            _notificationsStorage = new NotificationsStorage();
 
             NotificationCenter = new ServerNotificationCenter(this, _notificationsStorage);
 
