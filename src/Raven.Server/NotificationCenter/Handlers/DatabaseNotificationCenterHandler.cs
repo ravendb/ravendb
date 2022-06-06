@@ -10,36 +10,24 @@ namespace Raven.Server.NotificationCenter.Handlers
     public class DatabaseNotificationCenterHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/notification-center/watch", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, SkipUsagesCount = true)]
-        public async Task Get()
+        public async Task Watch()
         {
-            using (var processor = new DatabaseNotificationCenterHandlerProcessorForGet(this))
+            using (var processor = new DatabaseNotificationCenterHandlerProcessorForWatch(this))
                 await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/notification-center/dismiss", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
-        public Task DismissPost()
+        public async Task Dismiss()
         {
-            var id = GetStringQueryString("id");
-            var forever = GetBoolValueQueryString("forever", required: false);
-
-            if (forever == true)
-                Database.NotificationCenter.Postpone(id, DateTime.MaxValue);
-            else
-                Database.NotificationCenter.Dismiss(id);
-
-            return NoContent();
+            using (var processor = new DatabaseNotificationCenterHandlerProcessorForDismiss(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/notification-center/postpone", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
-        public Task PostponePost()
+        public async Task Postpone()
         {
-            var id = GetStringQueryString("id");
-            var timeInSec = GetLongQueryString("timeInSec");
-
-            var until = timeInSec == 0 ? DateTime.MaxValue : SystemTime.UtcNow.Add(TimeSpan.FromSeconds(timeInSec));
-            Database.NotificationCenter.Postpone(id, until);
-
-            return NoContent();
+            using (var processor = new DatabaseNotificationCenterHandlerProcessorForPostpone(this))
+                await processor.ExecuteAsync();
         }
     }
 }

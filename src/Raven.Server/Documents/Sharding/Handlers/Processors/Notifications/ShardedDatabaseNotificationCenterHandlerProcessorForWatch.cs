@@ -8,9 +8,9 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Notifications
 {
-    internal class ShardedDatabaseNotificationCenterHandlerProcessorForGet : AbstractDatabaseNotificationCenterHandlerProcessorForGet<ShardedDatabaseRequestHandler, TransactionOperationContext, ShardedOperation>
+    internal class ShardedDatabaseNotificationCenterHandlerProcessorForWatch : AbstractDatabaseNotificationCenterHandlerProcessorForWatch<ShardedDatabaseRequestHandler, TransactionOperationContext, ShardedOperation>
     {
-        public ShardedDatabaseNotificationCenterHandlerProcessorForGet([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
+        public ShardedDatabaseNotificationCenterHandlerProcessorForWatch([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {
         }
 
