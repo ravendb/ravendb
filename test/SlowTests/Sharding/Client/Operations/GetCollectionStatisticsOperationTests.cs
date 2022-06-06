@@ -57,7 +57,7 @@ namespace SlowTests.Sharding.Client.Operations
             }
         }
 
-        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Sharding)]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Sharding, Skip = "Sharded EP missing support for getting docs by collection name, RavenDB-18645")]
         public void GetShardedCollectionDocs()
         {
             using (var store = Sharding.GetDocumentStore())
@@ -74,44 +74,49 @@ namespace SlowTests.Sharding.Client.Operations
                     session.SaveChanges();
                 }
 
-                var collectionStats = store.Maintenance.Send(new GetCollectionOperation(start: 0, pageSize: 4));
-                Assert.Equal(4, collectionStats.Results.Count);
-
-                collectionStats = store.Maintenance.Send(new GetCollectionOperation(collectionStats.ContinuationToken));
+                var collectionStats = store.Maintenance.Send(new GetCollectionOperation(collectionName: "Users", start: 0, pageSize: 2));
                 Assert.Equal(2, collectionStats.Results.Count);
+
+                collectionStats = store.Maintenance.Send(new GetCollectionOperation("Users", collectionStats.ContinuationToken));
+                Assert.Equal(1, collectionStats.Results.Count);
             }
         }
 
         private class GetCollectionOperation : IMaintenanceOperation<CollectionResult>
         {
             private readonly string _continuation;
+            private readonly string _collectionName;
             private readonly int? _start;
             private readonly int? _pageSize;
 
-            public GetCollectionOperation(int start, int pageSize)
+            public GetCollectionOperation(string collectionName, int start, int pageSize)
             {
+                _collectionName = collectionName;
                 _start = start;
                 _pageSize = pageSize;
             }
 
-            public GetCollectionOperation(string continuation)
+            public GetCollectionOperation(string collectionName, string continuation)
             {
+                _collectionName = collectionName;
                 _continuation = continuation;
             }
 
             public RavenCommand<CollectionResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
             {
-                return new GetCollectionCommand(_start, _pageSize, _continuation);
+                return new GetCollectionCommand(_collectionName, _start, _pageSize, _continuation);
             }
 
             private class GetCollectionCommand : RavenCommand<CollectionResult>
             {
                 private readonly string _continuation;
+                private readonly string _collectionName;
                 private readonly int? _start;
                 private readonly int? _pageSize;
 
-                public GetCollectionCommand(int? start, int? pageSize, string continuation)
+                public GetCollectionCommand(string collectionName, int? start, int? pageSize, string continuation)
                 {
+                    _collectionName = collectionName;
                     _start = start;
                     _pageSize = pageSize;
                     _continuation = continuation ?? string.Empty;
@@ -124,6 +129,9 @@ namespace SlowTests.Sharding.Client.Operations
                     var sb = new StringBuilder();
                     sb.Append($"{node.Url}/databases/{node.Database}/collections/docs");
                     sb.Append($"?{ContinuationToken.ContinuationTokenQueryString}={Uri.EscapeDataString(_continuation)}");
+
+                    sb.Append($"&collectionName={Uri.EscapeDataString(_collectionName)}");
+
                     if (_start.HasValue)
                         sb.Append($"&start={_start}");
                     if (_pageSize.HasValue)
