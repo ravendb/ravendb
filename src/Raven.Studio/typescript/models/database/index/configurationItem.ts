@@ -1,9 +1,7 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
 import jsonUtil = require("common/jsonUtil");
-import configuration = require("configuration");
 
 class configurationItem {
-
     static readonly PerDatabaseIndexingConfigurationOptions: Array<string> = [
         "Indexing.Analyzers.Default",
         "Indexing.Analyzers.Exact.Default",
@@ -33,9 +31,9 @@ class configurationItem {
         "Indexing.Throttling.TimeIntervalInMs",
         "Indexing.TimeSinceLastQueryAfterWhichDeepCleanupCanBeExecutedInMin",
         "Indexing.TransactionSizeLimitInMb",
-        "Indexing.Static.SearchEngineType"
+        // "Indexing.Static.SearchEngineType" - ignoring as we have dedicated widget to set that
     ];
-    
+
     key = ko.observable<string>();
     value = ko.observable<string>();
 

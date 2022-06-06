@@ -42,6 +42,7 @@ import getServerWideCustomAnalyzersCommand = require("commands/serverWide/analyz
 import getIndexDefaultsCommand = require("commands/database/index/getIndexDefaultsCommand");
 import moment = require("moment");
 import { highlight, languages } from "prismjs";
+import configurationConstants from "configuration";
 
 class editIndex extends viewModelBase {
     
@@ -95,6 +96,14 @@ class editIndex extends viewModelBase {
         const deploymentMode = index.deploymentMode();
         return this.formatDeploymentMode(deploymentMode);
     });
+    
+    defaultSearchEngine = ko.observable<string>();
+    searchEngine = ko.observable<string>();
+
+    inheritSearchEngineText: KnockoutComputed<string>;
+    effectiveSearchEngineText: KnockoutComputed<string>;
+
+    static readonly searchEngineConfigurationLabel = configurationConstants.indexing.staticIndexingEngineType;
 
     constructor() {
         super();
@@ -187,6 +196,26 @@ class editIndex extends viewModelBase {
         this.previewItemNodes = ko.pureComputed<string[]>(() => {
             return this.previewItem() ? Object.keys(this.previewItem().RollingDeployment).reverse() : [];
         })
+
+        this.inheritSearchEngineText = ko.pureComputed(() => {
+            const engineFormatted = editIndex.formatEngine(this.defaultSearchEngine());
+            return `Inherit (${engineFormatted})`;
+        });
+
+        this.effectiveSearchEngineText = ko.pureComputed(() => {
+            if (this.searchEngine()) {
+                return editIndex.formatEngine(this.searchEngine());
+            }
+            
+            return this.inheritSearchEngineText();
+        });
+    }
+    
+    static formatEngine(engine: string) { 
+        if (engine === "Corax") {
+            return engine + " - experimantal";
+        }
+        return engine;
     }
 
     canActivate(indexToEdit: string): JQueryPromise<canActivateResultDto> {
@@ -233,12 +262,22 @@ class editIndex extends viewModelBase {
         if (!this.editedIndex().isAutoIndex() && !!indexToEditName) {
             this.showIndexHistory(true);
         }
-            
         return $.when<any>(this.fetchCustomAnalyzers(), this.fetchServerWideCustomAnalyzers(), this.fetchIndexDefaults())
             .done(([analyzers]: [Array<Raven.Client.Documents.Indexes.Analysis.AnalyzerDefinition>],
                    [serverWideAnalyzers]: [Array<Raven.Client.Documents.Indexes.Analysis.AnalyzerDefinition>],
                    [indexDefaults]: [Raven.Server.Web.Studio.StudioDatabaseTasksHandler.IndexDefaults]) => {
+                
                 const analyzersList = [...analyzers.map(x => x.Name), ...serverWideAnalyzers.map(x => x.Name)];
+
+                this.defaultDeploymentMode(indexDefaults.StaticIndexDeploymentMode);
+                this.defaultSearchEngine(indexDefaults.StaticIndexingEngineType === "None" ? "Lucene" : indexDefaults.StaticIndexingEngineType);
+                
+                const existingSearchConfig = this.editedIndex().configuration().find(x => x.key() === editIndex.searchEngineConfigurationLabel);
+                if (existingSearchConfig) {
+                    this.editedIndex().configuration.remove(existingSearchConfig);
+                    this.searchEngine(existingSearchConfig.value());
+                }
+                
                 this.editedIndex().registerCustomAnalyzers(analyzersList);
                 
                 this.defaultDeploymentMode(indexDefaults.StaticIndexDeploymentMode);
@@ -510,6 +549,7 @@ class editIndex extends viewModelBase {
             hasDefaultFieldOptions,
             hasAnyDirtyDefaultFieldOptions,
             hasAnyDirtyAdditionalAssembly,
+            this.searchEngine
         ], false, jsonUtil.newLineNormalizingHashFunction);
 
         this.isSaveEnabled = ko.pureComputed(() => {
@@ -747,6 +787,12 @@ class editIndex extends viewModelBase {
             }*/
 
             const indexDto = editedIndex.toDto();
+            
+            if (this.searchEngine()) {
+                indexDto.Configuration[editIndex.searchEngineConfigurationLabel] = this.searchEngine();
+            } else {
+                delete indexDto.Configuration[editIndex.searchEngineConfigurationLabel];
+            }
 
             this.saveIndex(indexDto)
                 .always(() => this.saveInProgress(false));
