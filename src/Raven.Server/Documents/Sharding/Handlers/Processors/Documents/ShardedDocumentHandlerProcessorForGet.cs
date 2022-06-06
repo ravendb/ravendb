@@ -14,7 +14,6 @@ using Raven.Server.Documents.Queries.Revisions;
 using Raven.Server.Documents.Sharding.Handlers.Processors.Collections;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.Json;
-using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -112,7 +111,7 @@ internal class ShardedDocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
             throw new NotSupportedException("Passing etag to a sharded database is not supported");
 
         ShardedStreamDocumentsOperation op;
-        
+
         if (startsWith != null)
         {
             op = new ShardedStreamDocumentsOperation(HttpContext, changeVector, startsWith.IdPrefix, startsWith.Matches, startsWith.Exclude,
@@ -136,11 +135,5 @@ internal class ShardedDocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
             ContinuationToken = token,
             Etag = results.CombinedEtag
         };
-    }
-
-    protected override void AddPagingPerformanceHint(PagingOperationType operation, string action, string details, long numberOfResults, int pageSize, long duration,
-        long totalDocumentsSizeInBytes)
-    {
-        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Arek, DevelopmentHelper.Severity.Normal, "Add paging performance hint");
     }
 }

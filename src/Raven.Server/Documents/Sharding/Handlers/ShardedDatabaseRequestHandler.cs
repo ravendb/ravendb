@@ -127,14 +127,14 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
         public override bool ShouldAddPagingPerformanceHint(long numberOfResults)
         {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "implement this");
-            return false;
+            return numberOfResults > DatabaseContext.Configuration.PerformanceHints.MaxNumberOfResults;
         }
 
         public override void AddPagingPerformanceHint(PagingOperationType operation, string action, string details, long numberOfResults, int pageSize, long duration,
             long totalDocumentsSizeInBytes)
         {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "implement this");
+            if (ShouldAddPagingPerformanceHint(numberOfResults))
+                DatabaseContext.NotificationCenter.Paging.Add(operation, action, details, numberOfResults, pageSize, duration, totalDocumentsSizeInBytes);
         }
     }
 }

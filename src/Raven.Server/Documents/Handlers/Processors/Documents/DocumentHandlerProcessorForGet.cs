@@ -4,7 +4,6 @@ using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using Google.Protobuf.WellKnownTypes;
 using JetBrains.Annotations;
 using Microsoft.Extensions.Primitives;
 using Raven.Client;
@@ -13,7 +12,6 @@ using Raven.Client.Http;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries.Revisions;
 using Raven.Server.Json;
-using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
@@ -162,12 +160,5 @@ internal class DocumentHandlerProcessorForGet : AbstractDocumentHandlerProcessor
             Documents = documents,
             Etag = databaseChangeVector
         });
-    }
-
-    protected override void AddPagingPerformanceHint(PagingOperationType operation, string action, string details, long numberOfResults, int pageSize, long duration,
-        long totalDocumentsSizeInBytes)
-    {
-        RequestHandler.AddPagingPerformanceHint(operation, action, details, numberOfResults,
-            pageSize, duration, totalDocumentsSizeInBytes);
     }
 }
