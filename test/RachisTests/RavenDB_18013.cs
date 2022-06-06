@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.ServerWide.Operations;
+using Raven.Server.ServerWide.Commands;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -42,14 +43,21 @@ public class RavenDB_18013 : ClusterTestBase
         server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().DeleteDatabaseWhileItBeingDeleted = new ManualResetEvent(false);
         server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().InsideHandleClusterDatabaseChanged += type =>
         {
-            if (type == "DeleteDatabaseCommand")
+            if (type == nameof(DeleteDatabaseCommand))
             {
                 deleteDatabaseCommandHasWaiterMre.Set();
                 deleteDatabaseCommandMre.WaitOne(_reasonableWaitTime);
             }
-            else if (type == "RemoveNodeFromDatabaseCommand")
+            else if (type == nameof(RemoveNodeFromDatabaseCommand))
             {
-                cde.Signal();
+                try
+                {
+                    cde.Signal();
+                }
+                catch (InvalidOperationException)
+                {
+       
+                }
                 removeNodeFromDatabaseCommandMre.WaitOne(_reasonableWaitTime);
                 removeNodeFromDatabaseCommandMre.Reset();
                 if (Interlocked.Increment(ref c) == 1)
