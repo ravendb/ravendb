@@ -818,7 +818,7 @@ class editIndex extends viewModelBase {
 
     cloneIndex() {
         this.isEditingExistingIndex(false);
-        this.editedIndex().name(null);
+        this.editedIndex().name(`CloneOf/${this.editedIndex().name()}`);
         this.editedIndex().reduceOutputCollectionName(null);
         this.editedIndex().patternForReferencesToReduceOutputCollection(null);
         this.editedIndex().collectionNameForReferenceDocuments(null);
