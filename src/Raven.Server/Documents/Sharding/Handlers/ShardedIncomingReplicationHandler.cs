@@ -2,13 +2,11 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Exceptions.Sharding;
 using Raven.Client.Extensions;
-using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.Incoming;
 using Raven.Server.Documents.Replication.Outgoing;
@@ -16,91 +14,34 @@ using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Exceptions;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Json.Sync;
-using Sparrow.Logging;
 using Sparrow.Server.Json.Sync;
-using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron;
 
 namespace Raven.Server.Documents.Sharding.Handlers
 {
-    public class ShardedIncomingReplicationHandler : IDisposable
+    public class ShardedIncomingReplicationHandler : AbstractIncomingReplicationHandler
     {
-        private readonly TcpConnectionOptions _tcpConnectionOptions;
-        private readonly DisposeOnce<SingleAttempt> _disposeOnce;
-        private readonly TcpClient _tcpClient;
-        private readonly Stream _stream;
-        private readonly Logger _log;
         private readonly ShardedDatabaseContext.ShardedReplicationContext _parent;
         private readonly ReplicationQueue _replicationQueue;
-        private readonly (IDisposable ReleaseBuffer, JsonOperationContext.MemoryBuffer Buffer) _copiedBuffer;
         private long _lastDocumentEtag;
-        private PoolOfThreads.LongRunningWork _incomingWork;
-        private readonly StreamsTempFile _attachmentStreamsTempFile;
-        private readonly CancellationTokenSource _cts;
 
-        public IncomingConnectionInfo ConnectionInfo { get; }
         public long LastDocumentEtag => _lastDocumentEtag;
-        public ServerStore Server => _parent.Server;
-        public TcpConnectionHeaderMessage.SupportedFeatures SupportedFeatures { get; set; }
-
-        public virtual string FromToString => $"In database {Server.NodeTag}-{_parent.DatabaseName} @ {Server.GetNodeTcpServerUrl()} " +
-                                              $"from {ConnectionInfo.SourceTag}-{ConnectionInfo.SourceDatabaseName} @ {ConnectionInfo.SourceUrl}";
 
         public ShardedIncomingReplicationHandler(TcpConnectionOptions tcpConnectionOptions, ShardedDatabaseContext.ShardedReplicationContext parent,
             JsonOperationContext.MemoryBuffer buffer, ReplicationLatestEtagRequest replicatedLastEtag, ReplicationQueue replicationQueue)
+            : base(tcpConnectionOptions, buffer, parent.Server, parent.DatabaseName, replicatedLastEtag, parent.Context.DatabaseShutdown)
         {
-            _disposeOnce = new DisposeOnce<SingleAttempt>(DisposeInternal);
-            _tcpConnectionOptions = tcpConnectionOptions;
-            _tcpClient = tcpConnectionOptions.TcpClient;
-            _stream = tcpConnectionOptions.Stream;
-
-            _copiedBuffer = buffer.Clone(_tcpConnectionOptions.ContextPool);
             _parent = parent;
             _replicationQueue = replicationQueue;
-            _log = LoggingSource.Instance.GetLogger<ShardedIncomingReplicationHandler>(_parent.DatabaseName);
-            _cts = CancellationTokenSource.CreateLinkedTokenSource(parent.Context.DatabaseShutdown);
             _attachmentStreamsTempFile = new StreamsTempFile("ShardedReplication" + Guid.NewGuid(), false);
-
-            ConnectionInfo = IncomingConnectionInfo.FromGetLatestEtag(replicatedLastEtag);
-            SupportedFeatures = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(tcpConnectionOptions.Operation, tcpConnectionOptions.ProtocolVersion);
-            ConnectionInfo.RemoteIp = ((IPEndPoint)_tcpClient.Client.RemoteEndPoint)?.Address.ToString();
         }
 
-        public void Start()
-        {
-            if (_incomingWork != null)
-                return;
-
-            lock (this)
-            {
-                if (_incomingWork != null)
-                    return; // already set by someone else, they can start it
-
-                _incomingWork = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => { DoIncomingReplication(); }, null, "IncomingReplicationThreadName");
-            }
-        }
-
-        public void DoIncomingReplication()
-        {
-            try
-            {
-                ReceiveReplicationBatches();
-            }
-            catch (Exception e)
-            {
-                if (_log.IsInfoEnabled)
-                    _log.Info($"Error in accepting replication request ({FromToString})", e);
-            }
-        }
-
-        private void ReceiveReplicationBatches()
+        protected override void ReceiveReplicationBatches()
         {
             NativeMemory.EnsureRegistered();
             try
@@ -295,7 +236,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
             try
             {
                 using (_attachmentStreamsTempFile.Scope())
-                using (var shardAllocator = new IncomingReplicationHandler.IncomingReplicationAllocator(context.Allocator, maxSizeToSend: null))
+                using (var shardAllocator = new IncomingReplicationAllocator(context.Allocator, maxSizeToSend: null))
                 {
                     using (var networkStats = stats.For(ReplicationOperation.Incoming.Network))
                     {
@@ -336,9 +277,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
             for (var i = 0; i < replicatedDocs; i++)
             {
-                var item = ReplicationBatchItem.ReadTypeAndInstantiate(reader);
-                item.ReadChangeVectorAndMarker();
-                item.Read(context, context.Allocator, stats);
+                var item = ReadItemFromSource(reader, context, context.Allocator, stats);
 
                 int shard = GetShardNumberForReplicationItem(context, item);
 
@@ -392,7 +331,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
             }
         }
 
-        private void SendHeartbeatStatusToSource(JsonOperationContext documentsContext, BlittableJsonTextWriter writer, long lastDocumentEtag, string handledMessageType)
+        private void SendHeartbeatStatusToSource(JsonOperationContext context, BlittableJsonTextWriter writer, long lastDocumentEtag, string handledMessageType)
         {
             var heartbeat = new DynamicJsonValue
             {
@@ -403,7 +342,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 [nameof(ReplicationMessageReply.NodeTag)] = _parent.Server.NodeTag
             };
 
-            documentsContext.Write(writer, heartbeat);
+            context.Write(writer, heartbeat);
             writer.Flush();
         }
 
@@ -425,76 +364,6 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 TimeSeriesReplicationItem t => _parent.Context.GetShardNumber(context, (GetDocumentId(t.Key))),
                 _ => throw new ArgumentOutOfRangeException($"{nameof(item)} - {item}")
             };
-        }
-
-        public bool IsDisposed => _disposeOnce.Disposed;
-
-        public void Dispose()
-        {
-            _disposeOnce.Dispose();
-        }
-
-        protected virtual void DisposeInternal()
-        {
-            var releaser = _copiedBuffer.ReleaseBuffer;
-            try
-            {
-                if (_log.IsInfoEnabled)
-                    _log.Info($"Disposing IncomingReplicationHandler ({FromToString})");
-                _cts.Cancel();
-
-                try
-                {
-                    _stream.Dispose();
-                }
-                catch (Exception)
-                {
-                }
-                try
-                {
-                    _tcpClient.Dispose();
-                }
-                catch (Exception)
-                {
-                }
-
-                try
-                {
-                    _tcpConnectionOptions.Dispose();
-                }
-                catch
-                {
-                    // do nothing
-                }
-
-                if (_incomingWork != PoolOfThreads.LongRunningWork.Current)
-                {
-                    try
-                    {
-                        _incomingWork?.Join(int.MaxValue);
-                    }
-                    catch (ThreadStateException)
-                    {
-                        // expected if the thread hasn't been started yet
-                    }
-                }
-                _incomingWork = null;
-
-                _cts.Dispose();
-
-                _attachmentStreamsTempFile.Dispose();
-            }
-            finally
-            {
-                try
-                {
-                    releaser?.Dispose();
-                }
-                catch (Exception)
-                {
-                    // can't do anything about it...
-                }
-            }
         }
     }
 }

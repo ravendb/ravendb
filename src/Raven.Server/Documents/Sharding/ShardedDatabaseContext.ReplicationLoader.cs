@@ -203,9 +203,9 @@ namespace Raven.Server.Documents.Sharding
                 }
             }
 
-            public void AddAndStartOutgoingReplication(ShardReplicationNode node, int shard, ReplicationQueue replicationQueue)
+            public void AddAndStartOutgoingReplication(ShardReplicationNode node)
             {
-                var info = GetShardedReplicationTcpInfo(node, node.Database, shard);
+                var info = GetShardedReplicationTcpInfo(node, node.Database, node.Shard);
 
                 if (info == null)
                 {
@@ -221,7 +221,7 @@ namespace Raven.Server.Documents.Sharding
 
                 try
                 {
-                    var shardedOutgoingReplicationHandler = new ShardedOutgoingReplicationHandler(this, node, shard, info, replicationQueue);
+                    var shardedOutgoingReplicationHandler = new ShardedOutgoingReplicationHandler(this, node, node.Shard, info, node.ReplicationQueue);
 
                     if (_outgoing.TryAdd(shardedOutgoingReplicationHandler) == false)
                     {
@@ -374,6 +374,8 @@ namespace Raven.Server.Documents.Sharding
     public class ShardReplicationNode : ExternalReplication
     {
         public int Shard;
+
+        public ReplicationQueue ReplicationQueue;
 
         public ShardReplicationNode()
         {

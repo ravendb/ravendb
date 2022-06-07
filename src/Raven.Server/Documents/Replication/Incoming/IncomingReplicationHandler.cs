@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
@@ -32,9 +31,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Json.Sync;
 using Sparrow.Logging;
-using Sparrow.Platform;
 using Sparrow.Server;
-using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron;
 using Reader = Raven.Server.Documents.Replication.ReplicationItems.Reader;
@@ -42,21 +39,15 @@ using Size = Sparrow.Size;
 
 namespace Raven.Server.Documents.Replication.Incoming
 {
-    public class IncomingReplicationHandler : IDisposable
+    public class IncomingReplicationHandler : AbstractIncomingReplicationHandler
     {
         private readonly DocumentDatabase _database;
-        private readonly TcpClient _tcpClient;
-        private readonly Stream _stream;
-        private readonly ReplicationLoader _parent;
-        private PoolOfThreads.LongRunningWork _incomingWork;
-        private readonly CancellationTokenSource _cts;
-        private readonly Logger _log;
 
         public event Action<IncomingReplicationHandler, Exception> Failed;
 
         public event Action<IncomingReplicationHandler> DocumentsReceived;
-        
-        public event Action<IncomingReplicationHandler,int> AttachmentStreamsReceived;
+
+        public event Action<IncomingReplicationHandler, int> AttachmentStreamsReceived;
 
         public event Action<LiveReplicationPulsesCollector.ReplicationPulse> HandleReplicationPulse;
 
@@ -74,8 +65,6 @@ namespace Raven.Server.Documents.Replication.Incoming
 
         private IncomingReplicationStatsAggregator _lastStats;
 
-        private readonly DisposeOnce<SingleAttempt> _disposeOnce;
-
         public readonly ReplicationLatestEtagRequest.ReplicationType ReplicationType;
 
         public IncomingReplicationHandler(
@@ -83,33 +72,16 @@ namespace Raven.Server.Documents.Replication.Incoming
             ReplicationLatestEtagRequest replicatedLastEtag,
             ReplicationLoader parent,
             JsonOperationContext.MemoryBuffer bufferToCopy,
-            ReplicationLatestEtagRequest.ReplicationType replicationType)
+            ReplicationLatestEtagRequest.ReplicationType replicationType) : base(options, bufferToCopy, parent._server, parent.Database.Name, replicatedLastEtag, options.DocumentDatabase.DatabaseShutdown)
         {
-            
-            _disposeOnce = new DisposeOnce<SingleAttempt>(DisposeInternal);
-
-            _connectionOptions = options;
-            ConnectionInfo = IncomingConnectionInfo.FromGetLatestEtag(replicatedLastEtag);
-
             _database = options.DocumentDatabase;
-
             _replicationFromAnotherSource = new AsyncManualResetEvent(_database.DatabaseShutdown);
-
-            _tcpClient = options.TcpClient;
-            _stream = options.Stream;
-            SupportedFeatures = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(options.Operation, options.ProtocolVersion);
-            ConnectionInfo.RemoteIp = ((IPEndPoint)_tcpClient.Client.RemoteEndPoint).Address.ToString();
             _parent = parent;
 
             ReplicationType = replicationType;
 
-            _log = LoggingSource.Instance.GetLogger<IncomingReplicationHandler>(_database.Name);
-            _cts = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
-
             _conflictManager = new ConflictManager(_database, _parent.ConflictResolver);
-
             _attachmentStreamsTempFile = _database.DocumentsStorage.AttachmentsStorage.GetTempFile("replication");
-            _copiedBuffer = bufferToCopy.Clone(_connectionOptions.ContextPool);
 
             LastHeartbeatTicks = _database.Time.GetUtcNow().Ticks;
         }
@@ -128,38 +100,6 @@ namespace Raven.Server.Documents.Replication.Incoming
             return _lastStats;
         }
 
-        private string IncomingReplicationThreadName => $"Incoming replication {FromToString}";
-
-        public void Start()
-        {
-            if (_incomingWork != null)
-                return;
-
-            lock (this)
-            {
-                if (_incomingWork != null)
-                    return; // already set by someone else, they can start it
-
-                _incomingWork = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => { DoIncomingReplication(); }, null, IncomingReplicationThreadName);
-            }
-
-            if (_log.IsInfoEnabled)
-                _log.Info($"Incoming replication thread started ({FromToString})");
-        }
-
-        public void DoIncomingReplication()
-        {
-            try
-            {
-                ReceiveReplicationBatches();
-            }
-            catch (Exception e)
-            {
-                if (_log.IsInfoEnabled)
-                    _log.Info($"Error in accepting replication request ({FromToString})", e);
-            }
-        }
-
         [ThreadStatic]
         public static bool IsIncomingReplication;
 
@@ -175,12 +115,12 @@ namespace Raven.Server.Documents.Replication.Incoming
             _replicationFromAnotherSource.Set();
         }
 
-        private void ReceiveReplicationBatches()
+        protected override void ReceiveReplicationBatches()
         {
             NativeMemory.EnsureRegistered();
             try
             {
-                using (_connectionOptionsDisposable = _connectionOptions.ConnectionProcessingInProgress("Replication"))
+                using (_connectionOptionsDisposable = _tcpConnectionOptions.ConnectionProcessingInProgress("Replication"))
                 using (_stream)
                 using (var interruptibleRead = new InterruptibleRead(_database.DocumentsStorage.ContextPool, _stream))
                 {
@@ -280,6 +220,7 @@ namespace Raven.Server.Documents.Replication.Incoming
 
         private void HandleSingleReplicationBatch(
             DocumentsOperationContext documentsContext,
+            /*ByteStringContext allocator,*/
             BlittableJsonReaderObject message,
             BlittableJsonTextWriter writer)
         {
@@ -467,7 +408,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                     DocumentsStorage.SetLastReplicatedEtagFrom(context, _sourceDatabaseId, _lastDocumentEtag);
                     operationsCount++;
                 }
-                
+
                 var current = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
                 var conflictStatus = ChangeVectorUtils.GetConflictStatus(_changeVector, current);
                 if (conflictStatus != ConflictStatus.Update)
@@ -475,7 +416,7 @@ namespace Raven.Server.Documents.Replication.Incoming
 
                 if (TryUpdateChangeVector(context))
                     operationsCount++;
-                
+
                 return operationsCount;
             }
 
@@ -586,7 +527,7 @@ namespace Raven.Server.Documents.Replication.Incoming
 
         protected Action<DataForReplicationCommand> AfterItemsReadFromStream;
 
-        private void ReceiveSingleDocumentsBatch(DocumentsOperationContext documentsContext, int replicatedItemsCount, int attachmentStreamCount, long lastEtag, IncomingReplicationStatsScope stats)
+        private void ReceiveSingleDocumentsBatch(DocumentsOperationContext documentsContext, /*ByteStringContext allocator,*/ int replicatedItemsCount, int attachmentStreamCount, long lastEtag, IncomingReplicationStatsScope stats)
         {
             if (_log.IsInfoEnabled)
             {
@@ -633,8 +574,8 @@ namespace Raven.Server.Documents.Replication.Incoming
                             $"took: {sw.ElapsedMilliseconds:#,#;;0}ms");
                     }
 
-                    _connectionOptions._lastEtagReceived = _lastDocumentEtag;
-                    _connectionOptions.RegisterBytesReceived(incomingReplicationAllocator.TotalDocumentsSizeInBytes);
+                    _tcpConnectionOptions._lastEtagReceived = _lastDocumentEtag;
+                    _tcpConnectionOptions.RegisterBytesReceived(incomingReplicationAllocator.TotalDocumentsSizeInBytes);
 
                     using (stats.For(ReplicationOperation.Incoming.Storage))
                     {
@@ -741,19 +682,10 @@ namespace Raven.Server.Documents.Replication.Incoming
 
         public string SourceFormatted => $"{ConnectionInfo.SourceUrl}/databases/{ConnectionInfo.SourceDatabaseName} ({ConnectionInfo.SourceDatabaseId})";
 
-        public virtual string FromToString => $"In database {_database.ServerStore.NodeTag}-{_database.Name} @ {_database.ServerStore.GetNodeTcpServerUrl()} " +
-                                              $"from {ConnectionInfo.SourceTag}-{ConnectionInfo.SourceDatabaseName} @ {ConnectionInfo.SourceUrl}";
-
-        public IncomingConnectionInfo ConnectionInfo { get; }
-
-        private readonly StreamsTempFile _attachmentStreamsTempFile;
         private long _lastDocumentEtag;
-        private readonly TcpConnectionOptions _connectionOptions;
         private readonly ConflictManager _conflictManager;
         private IDisposable _connectionOptionsDisposable;
-        private (IDisposable ReleaseBuffer, JsonOperationContext.MemoryBuffer Buffer) _copiedBuffer;
-        
-        public TcpConnectionHeaderMessage.SupportedFeatures SupportedFeatures { get; set; }
+        private readonly ReplicationLoader _parent;
 
         private void ReadItemsFromSource(int replicatedDocs, DocumentsOperationContext context, DataForReplicationCommand data, Reader reader,
             IncomingReplicationStatsScope stats)
@@ -763,11 +695,7 @@ namespace Raven.Server.Documents.Replication.Incoming
 
             for (var i = 0; i < replicatedDocs; i++)
             {
-                stats.RecordInputAttempt();
-
-                var item = ReplicationBatchItem.ReadTypeAndInstantiate(reader);
-                item.ReadChangeVectorAndMarker();
-                item.Read(context, context.Allocator, stats);
+                var item = ReadItemFromSource(reader, context, context.Allocator, stats);
                 data.ReplicatedItems[i] = item;
             }
         }
@@ -790,109 +718,8 @@ namespace Raven.Server.Documents.Replication.Incoming
             }
         }
 
-
-        public unsafe class IncomingReplicationAllocator : IDisposable
-        {
-            private readonly long _maxSizeForContextUseInBytes;
-            private readonly long _minSizeToAllocateNonContextUseInBytes;
-            public long TotalDocumentsSizeInBytes { get; private set; }
-
-            private List<Allocation> _nativeAllocationList;
-            private Allocation _currentAllocation;
-
-            protected ByteStringContext _allocator;
-
-            public IncomingReplicationAllocator(ByteStringContext allocator, Size? maxSizeToSend)
-            {
-                _allocator = allocator;
-                var maxSizeForContextUse = maxSizeToSend * 2 ?? new Size(128, SizeUnit.Megabytes);
-
-                _maxSizeForContextUseInBytes = maxSizeForContextUse.GetValue(SizeUnit.Bytes);
-                var minSizeToNonContextAllocationInMb = PlatformDetails.Is32Bits ? 4 : 16;
-                _minSizeToAllocateNonContextUseInBytes = new Size(minSizeToNonContextAllocationInMb, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes);
-            }
-
-            public byte* AllocateMemory(int size)
-            {
-                TotalDocumentsSizeInBytes += size;
-                if (TotalDocumentsSizeInBytes <= _maxSizeForContextUseInBytes)
-                {
-                    _allocator.Allocate(size, out var output);
-                    return output.Ptr;
-                }
-
-                if (_currentAllocation == null || _currentAllocation.Free < size)
-                {
-                    // first allocation or we don't have enough space on the currently allocated chunk
-
-                    // there can be a document that is larger than the minimum
-                    var sizeToAllocate = Math.Max(size, _minSizeToAllocateNonContextUseInBytes);
-
-                    var allocation = new Allocation(sizeToAllocate);
-                    if (_nativeAllocationList == null)
-                        _nativeAllocationList = new List<Allocation>();
-
-                    _nativeAllocationList.Add(allocation);
-                    _currentAllocation = allocation;
-                }
-
-                return _currentAllocation.GetMemory(size);
-            }
-
-            public void Dispose()
-            {
-                if (_nativeAllocationList == null)
-                    return;
-
-                foreach (var allocation in _nativeAllocationList)
-                {
-                    allocation.Dispose();
-                }
-            }
-
-            private class Allocation : IDisposable
-            {
-                private readonly byte* _ptr;
-                private readonly long _allocationSize;
-                private readonly NativeMemory.ThreadStats _threadStats;
-                private long _used;
-                public long Free => _allocationSize - _used;
-
-                public Allocation(long allocationSize)
-                {
-                    _ptr = NativeMemory.AllocateMemory(allocationSize, out var threadStats);
-                    _allocationSize = allocationSize;
-                    _threadStats = threadStats;
-                }
-
-                public byte* GetMemory(long size)
-                {
-                    ThrowOnPointerOutOfRange(size);
-
-                    var mem = _ptr + _used;
-                    _used += size;
-                    return mem;
-                }
-
-                [Conditional("DEBUG")]
-                private void ThrowOnPointerOutOfRange(long size)
-                {
-                    if (_used + size > _allocationSize)
-                        throw new InvalidOperationException(
-                            $"Not enough space to allocate the requested size: {new Size(size, SizeUnit.Bytes)}, " +
-                            $"used: {new Size(_used, SizeUnit.Bytes)}, " +
-                            $"total allocation size: {new Size(_allocationSize, SizeUnit.Bytes)}");
-                }
-
-                public void Dispose()
-                {
-                    NativeMemory.Free(_ptr, _allocationSize, _threadStats);
-                }
-            }
-        }
-
         private void ReadAttachmentStreamsFromSource(int attachmentStreamCount,
-            DocumentsOperationContext context, DataForReplicationCommand dataForReplicationCommand, Reader reader, IncomingReplicationStatsScope stats)
+            DocumentsOperationContext context, DataForReplicationCommand dataForReplicationCommand, Reader reader, IncomingReplicationStatsScope stats, Action<AttachmentReplicationItem> foo = null)
         {
             if (attachmentStreamCount == 0)
                 return;
@@ -909,6 +736,8 @@ namespace Raven.Server.Documents.Replication.Incoming
                     attachment.ReadStream(context.Allocator, _attachmentStreamsTempFile);
                     replicatedAttachmentStreams[attachment.Base64Hash] = attachment;
                 }
+
+                foo?.Invoke(attachment);
             }
 
             dataForReplicationCommand.ReplicatedAttachmentStreams = replicatedAttachmentStreams;
@@ -940,85 +769,6 @@ namespace Raven.Server.Documents.Replication.Incoming
                 : LiveReplicationPerformanceCollector.ReplicationPerformanceType.IncomingExternal;
         }
 
-        public bool IsDisposed => _disposeOnce.Disposed;
-
-        public void Dispose()
-        {
-            _disposeOnce.Dispose();
-        }
-
-        protected virtual void DisposeInternal()
-        {
-            var releaser = _copiedBuffer.ReleaseBuffer;
-            try
-            {
-                if (_log.IsInfoEnabled)
-                    _log.Info($"Disposing IncomingReplicationHandler ({FromToString})");
-                _cts.Cancel();
-                try
-                {
-                    _connectionOptionsDisposable?.Dispose();
-                }
-                catch (Exception)
-                {
-                }
-                try
-                {
-                    _stream.Dispose();
-                }
-                catch (Exception)
-                {
-                }
-                try
-                {
-                    _tcpClient.Dispose();
-                }
-                catch (Exception)
-                {
-                }
-
-                try
-                {
-                    _connectionOptions.Dispose();
-                }
-                catch
-                {
-                    // do nothing
-                }
-
-                _replicationFromAnotherSource.Set();
-
-                if (_incomingWork != PoolOfThreads.LongRunningWork.Current)
-                {
-                    try
-                    {
-                        _incomingWork?.Join(int.MaxValue);
-                    }
-                    catch (ThreadStateException)
-                    {
-                        // expected if the thread hasn't been started yet
-                    }
-                }
-                _incomingWork = null;
-
-                _cts.Dispose();
-
-                _attachmentStreamsTempFile.Dispose();
-                _replicationFromAnotherSource.Dispose();
-            }
-            finally
-            {
-                try
-                {
-                    releaser?.Dispose();
-                }
-                catch (Exception)
-                {
-                    // can't do anything about it...
-                }
-            }
-        }
-
         protected void OnFailed(Exception exception, IncomingReplicationHandler instance) => Failed?.Invoke(instance, exception);
 
         protected void OnDocumentsReceived(IncomingReplicationHandler instance) => DocumentsReceived?.Invoke(instance);
@@ -1035,7 +785,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                 _lastEtag = lastEtag;
             }
 
-            public MergedDocumentReplicationCommand(DataForReplicationCommand replicationInfo, long lastEtag, ReplicationLatestEtagRequest.ReplicationType replicationType) : this (replicationInfo, lastEtag)
+            public MergedDocumentReplicationCommand(DataForReplicationCommand replicationInfo, long lastEtag, ReplicationLatestEtagRequest.ReplicationType replicationType) : this(replicationInfo, lastEtag)
             {
                 _replicationType = replicationType;
             }
@@ -1092,9 +842,9 @@ namespace Raven.Server.Documents.Replication.Incoming
                                 {
                                     if (database.DocumentsStorage.AttachmentsStorage.AttachmentExists(context, attachment.Base64Hash) == false)
                                     {
-                                            Debug.Assert(localAttachment == null || AttachmentsStorage.GetAttachmentTypeByKey(attachment.Key) != AttachmentType.Revision,
-                                                "the stream should have been written when the revision was added by the document");
-                                            database.DocumentsStorage.AttachmentsStorage.PutAttachmentStream(context, attachment.Key, attachmentStream.Base64Hash, attachmentStream.Stream);
+                                        Debug.Assert(localAttachment == null || AttachmentsStorage.GetAttachmentTypeByKey(attachment.Key) != AttachmentType.Revision,
+                                            "the stream should have been written when the revision was added by the document");
+                                        database.DocumentsStorage.AttachmentsStorage.PutAttachmentStream(context, attachment.Key, attachmentStream.Base64Hash, attachmentStream.Stream);
                                     }
 
                                     handledAttachmentStreams.Add(attachment.Base64Hash);
@@ -1170,7 +920,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                                 {
                                     var msg = $"Detected an item of type Incremental-TimeSeries : '{segment.Name}' on document '{docId}', " +
                                               $"while replication protocol version '{_replicationInfo.SupportedFeatures.ProtocolVersion}' does not support Incremental-TimeSeries feature.";
-                                    
+
                                     database.NotificationCenter.Add(AlertRaised.Create(
                                         database.Name,
                                         "Incoming Replication",
@@ -1188,7 +938,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                                     context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(databaseChangeVector, segment.ChangeVector);
                                     continue;
                                 }
-                                
+
                                 var options = new TimeSeriesStorage.AppendOptions
                                 {
                                     VerifyName = false,
@@ -1366,7 +1116,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                     //context.LastDatabaseChangeVector being an empty string is valid in the case of receiving docs into
                     //an empty database via filtered pull replication, since it does not modify the db's change vector
                     Debug.Assert(context.LastDatabaseChangeVector != null, $"database: {context.DocumentDatabase.Name};");
-                    
+
                     // instead of : SetLastReplicatedEtagFrom -> _incoming.ConnectionInfo.SourceDatabaseId, _lastEtag , we will store in context and write once right before commit (one time instead of repeating on all docs in the same Tx)
                     SaveSourceEtag(context);
                     return operationsCount;
