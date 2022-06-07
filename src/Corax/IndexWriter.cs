@@ -216,12 +216,13 @@ namespace Corax
             var field = _buffer[binding.FieldId];
             int fieldId = binding.FieldId;
             var fieldType = entryReader.GetFieldType(fieldId, out var _);
+            var xd = fieldType;
             switch (fieldType)
             {
                 case IndexEntryFieldType.Empty:
                 case IndexEntryFieldType.Null:
                     var fieldName = fieldType == IndexEntryFieldType.Null ? Constants.NullValueSlice : Constants.EmptyStringSlice;
-                    Insert(fieldName.AsReadOnlySpan());
+                    ExactInsert(fieldName.AsReadOnlySpan());
                     break;
 
                 case IndexEntryFieldType.TupleList:
@@ -262,7 +263,8 @@ namespace Corax
                         ExactInsert(valueInEntry.Slice(0, i));
 
                     break;
-
+                
+                case IndexEntryFieldType.TupleListWithNulls:
                 case IndexEntryFieldType.ListWithNulls:
                 case IndexEntryFieldType.List:
                     if (entryReader.TryReadMany(binding.FieldId, out iterator) == false)
@@ -273,7 +275,7 @@ namespace Corax
                         if ((fieldType & IndexEntryFieldType.HasNulls) != 0 && (iterator.IsEmpty || iterator.IsNull))
                         {
                             var fieldValue = iterator.IsNull ? Constants.NullValueSlice : Constants.EmptyStringSlice;
-                            Insert(fieldValue.AsReadOnlySpan());
+                            ExactInsert(fieldValue.AsReadOnlySpan());
                         }
                         else
                         {
@@ -332,7 +334,6 @@ namespace Corax
                     AddSuggestions(binding, slice);
             }
         }
-
 
         private unsafe void DeleteCommit(Span<byte> tmpBuf, Tree fieldsTree)
         {
