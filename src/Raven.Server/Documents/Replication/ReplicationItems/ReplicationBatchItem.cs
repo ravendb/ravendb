@@ -186,9 +186,9 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
     {
         private readonly (IDisposable ReleaseBuffer, JsonOperationContext.MemoryBuffer Buffer) _copiedBuffer;
         private readonly Stream _stream;
-        private readonly AbstractIncomingReplicationHandler.IncomingReplicationAllocator _allocator;
+        private readonly IncomingReplicationAllocator _allocator;
 
-        public Reader(Stream stream, (IDisposable ReleaseBuffer, JsonOperationContext.MemoryBuffer Buffer) copiedBuffer, AbstractIncomingReplicationHandler.IncomingReplicationAllocator allocator)
+        public Reader(Stream stream, (IDisposable ReleaseBuffer, JsonOperationContext.MemoryBuffer Buffer) copiedBuffer, IncomingReplicationAllocator allocator)
         {
             _copiedBuffer = copiedBuffer;
             _stream = stream;

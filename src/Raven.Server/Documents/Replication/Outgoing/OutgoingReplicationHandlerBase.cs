@@ -68,7 +68,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
 
         public long LastHeartbeatTicks;
         private Stream _stream;
-        private InterruptibleRead _interruptibleRead;
+        private InterruptibleRead<DocumentsContextPool, DocumentsOperationContext> _interruptibleRead;
 
         public event Action<OutgoingReplicationHandlerBase, Exception> Failed;
 
@@ -194,7 +194,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
                 _log.Info($"Start pull replication as hub {FromToString}");
 
             using (_stream)
-            using (_interruptibleRead = new InterruptibleRead(_database.DocumentsStorage.ContextPool, _stream))
+            using (_interruptibleRead = new InterruptibleRead<DocumentsContextPool, DocumentsOperationContext>(_database.DocumentsStorage.ContextPool, _stream))
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (context.GetMemoryBuffer(out _buffer))
             {
@@ -250,7 +250,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
                     {
                         _stream = new ReadWriteCompressedStream(_stream, _buffer);
                         _tcpConnectionOptions.Stream = _stream;
-                        _interruptibleRead = new InterruptibleRead(_database.DocumentsStorage.ContextPool, _stream);
+                        _interruptibleRead = new InterruptibleRead<DocumentsContextPool, DocumentsOperationContext>(_database.DocumentsStorage.ContextPool, _stream);
                     }
 
                     if (socketResult.SupportedFeatures.Replication.PullReplication)
@@ -720,7 +720,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
                     }
                 };
 
-                _interruptibleRead = new InterruptibleRead(_database.DocumentsStorage.ContextPool, stream);
+                _interruptibleRead = new InterruptibleRead<DocumentsContextPool, DocumentsOperationContext>(_database.DocumentsStorage.ContextPool, stream);
 
                 try
                 {
