@@ -22,7 +22,6 @@ public class ShardedDocumentDatabase : DocumentDatabase
     {
         ShardNumber = ShardHelper.GetShardNumber(name);
         ShardedDatabaseName = ShardHelper.ToDatabaseName(name);
-        base.ReplicationLoader = new ReplicationLoader(this, serverStore);
     }
 
     protected override byte[] ReadSecretKey(TransactionOperationContext context) => ServerStore.GetSecretKey(context, ShardedDatabaseName);

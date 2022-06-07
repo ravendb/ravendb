@@ -2441,10 +2441,11 @@ namespace Raven.Server
                             var replicationNode = new ShardReplicationNode
                             {
                                 Database = ShardHelper.ToShardName(tcp.DatabaseContext.DatabaseName, i),
-                                Shard = i
+                                Shard = i,
+                                ReplicationQueue = queue
                             };
 
-                            shardedReplicationLoader.AddAndStartOutgoingReplication(replicationNode, i, queue);
+                            shardedReplicationLoader.AddAndStartOutgoingReplication(replicationNode);
                         }
                         break;
                     }
