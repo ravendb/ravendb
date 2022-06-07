@@ -700,7 +700,7 @@ namespace Corax
                 // too big, convert to a set
                 var setId = Container.Allocate(llt, _postingListContainerId, sizeof(SetState), out var setSpace);
                 ref var setState = ref MemoryMarshal.AsRef<SetState>(setSpace);
-                Set.Initialize(llt, ref setState);
+                Set.Create(llt, ref setState);
                 var set = new Set(llt, Slices.Empty, setState);
                 entries.Sort();
                 set.Add(entries);

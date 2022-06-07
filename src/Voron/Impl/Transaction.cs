@@ -183,7 +183,7 @@ namespace Voron.Impl
             if (existing == null)
             {
                 using var _ = LowLevelTransaction.RootObjects.DirectAdd(name, sizeof(SetState), out var p);
-                Set.Initialize(this.LowLevelTransaction, ref MemoryMarshal.AsRef<SetState>(new Span<byte>(p, sizeof(SetState))));
+                Set.Create(this.LowLevelTransaction, ref MemoryMarshal.AsRef<SetState>(new Span<byte>(p, sizeof(SetState))));
                 existing = LowLevelTransaction.RootObjects.Read(name);
             }
  
