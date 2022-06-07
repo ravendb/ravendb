@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Voron.Data;
 using Voron.Global;
@@ -8,10 +9,26 @@ namespace Voron
     public readonly unsafe struct Page
     {
         public readonly byte* Pointer;
-        
-        public readonly Span<byte> AsSpan(int numberOfPages) => new Span<byte>(Pointer, Constants.Storage.PageSize * numberOfPages);
-        
-        public readonly Span<byte> AsSpan() => new Span<byte>(Pointer, Constants.Storage.PageSize);
+
+        public readonly Span<byte> AsSpan() => new Span<byte>(Pointer, IsOverflow ? OverflowSize + PageHeader.SizeOf : Constants.Storage.PageSize);
+
+        public readonly Span<byte> AsSpan(int offset, int length)
+        {
+            Debug.Assert(offset + length <= (IsOverflow ? OverflowSize + PageHeader.SizeOf : Constants.Storage.PageSize));
+            return new Span<byte>(Pointer + offset, length);
+        }
+
+        public readonly Span<T> AsSpan<T>(int offset, int length) where T : struct
+        {
+            Debug.Assert(length < (IsOverflow ? OverflowSize + PageHeader.SizeOf : Constants.Storage.PageSize) - offset);
+            return new Span<T>(Pointer + offset, length);
+        }
+
+        public readonly Span<T> AsSpan<T>(int length = 1) where T : struct
+        {
+            Debug.Assert(length < (IsOverflow ? OverflowSize + PageHeader.SizeOf : Constants.Storage.PageSize));
+            return new Span<T>(DataPointer, length);
+        }
 
         public Page(byte* pointer)
         {
@@ -57,6 +74,11 @@ namespace Voron
             get { return ((PageHeader*)Pointer)->Flags; }
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             set { ((PageHeader*)Pointer)->Flags = value; }
+        }
+
+        public void CopyTo(in Page dest)
+        {
+            Unsafe.CopyBlock(dest.Pointer, Pointer, (uint)(IsOverflow ? OverflowSize : Constants.Storage.PageSize));
         }
     }
 }
