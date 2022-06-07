@@ -268,7 +268,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                     item.Dispose();
                 }
 
-                //_replicationQueue.Items[_shard].Clear();
+          
                 _replicationQueue.AttachmentsPerShard[_shard].Clear();
             }
 
