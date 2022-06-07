@@ -83,19 +83,22 @@ public partial class IndexSearcher
                 if (mode != Constants.Search.SearchMatchOptions.TermMatch)
                 {
                     if (mode is Constants.Search.SearchMatchOptions.Contains && termForTree.Length <= 2)
-                        throw new InvalidDataException("");
+                        throw new InvalidDataException(
+                            "You are looking for an empty term. Search doesn't support it. If you want to find empty strings, you have to write an equal inside WHERE clause.");
                     else if (termForTree.Length == 1)
-                        throw new InvalidDataException();
+                        throw new InvalidDataException("You are looking for all matches. To retrieve all matches you have to write `true` in WHERE clause.");
                 }
-                
+
                 termForTree = mode switch
                 {
                     Constants.Search.SearchMatchOptions.StartsWith => termForTree.Slice(1),
                     Constants.Search.SearchMatchOptions.EndsWith => termForTree.Slice(0, termForTree.Length - 1),
-                    Constants.Search.SearchMatchOptions.Contains => termForTree.Slice(1, termForTree.Length - 2)
+                    Constants.Search.SearchMatchOptions.Contains => termForTree.Slice(1, termForTree.Length - 2),
+                    Constants.Search.SearchMatchOptions.TermMatch => termForTree,
+                    _ => throw new InvalidExpressionException("Unknown flag inside Search match.")
                 };
             }
-            
+
             Slice.From(_transaction.Allocator, termForTree, ByteStringType.Immutable, out var encodedString);
             BuildExpression(mode, encodedString);
         }
