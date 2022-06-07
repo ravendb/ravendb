@@ -18,6 +18,7 @@ public enum IndexEntryFieldType : ushort
     Invalid = 1 << 15,
     
     ListWithNulls = List | HasNulls,
+    TupleListWithNulls = TupleList | HasNulls,
     SpatialPointList = List | SpatialPoint,
     TupleList = List | Tuple,
     RawList = List | Raw
