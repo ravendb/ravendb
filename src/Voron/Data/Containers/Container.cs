@@ -7,6 +7,7 @@ using System.Runtime.InteropServices;
 using Sparrow;
 using Sparrow.Server;
 using Voron.Data.Sets;
+using Voron.Debugging;
 using Voron.Global;
 using Voron.Impl;
 using Voron.Impl.Paging;
@@ -263,27 +264,28 @@ namespace Voron.Data.Containers
             var rootPage = llt.ModifyPage(containerId);
             var rootContainer = new Container(rootPage);
             
-            var freeListStateSpan = rootContainer.GetItem(ContainerPageHeader.FreeListOffset);
-            var freeList = new Set(llt, FreePagesSetName, MemoryMarshal.AsRef<SetState>(freeListStateSpan));
-            using (var it = freeList.Iterate())
+
+            while (true)
             {
-                if (it.Seek(0))
+                var freeListStateSpan = rootContainer.GetItem(ContainerPageHeader.FreeListOffset);
+                var freeList = new Set(llt, FreePagesSetName, MemoryMarshal.AsRef<SetState>(freeListStateSpan));
+                using (var it = freeList.Iterate())
                 {
-                    do
-                    {
-                        var page = llt.ModifyPage(it.Current);
-                        var maybe = new Container(page);
-                        // we want to ensure that the free list isn't too big...
-                        // if we don't have space here, we'll discard it from the free list
-                        maybe.Header.OnFreeList = false;
-                        ModifyMetadataList(llt,  rootContainer, FreePagesSetName, ContainerPageHeader.FreeListOffset, add: false, page.PageNumber);
-                        if (maybe.HasEnoughSpaceFor(size + MinimumAdditionalFreeSpaceToConsider) == false)
-                            continue;
-                        // we register it as the next free page
-                        rootContainer.Header.NextFreePage = page.PageNumber;
-                        container = maybe;
-                        return;
-                    } while (it.MoveNext());   
+                    if (it.Seek(0) == false)
+                        break;
+
+                    var page = llt.ModifyPage(it.Current);
+                    var maybe = new Container(page);
+                    // we want to ensure that the free list isn't too big...
+                    // if we don't have space here, we'll discard it from the free list
+                    maybe.Header.OnFreeList = false;
+                    ModifyMetadataList(llt, rootContainer, FreePagesSetName, ContainerPageHeader.FreeListOffset, add: false, page.PageNumber);
+                    if (maybe.HasEnoughSpaceFor(size + MinimumAdditionalFreeSpaceToConsider) == false)
+                        continue;
+                    // we register it as the next free page
+                    rootContainer.Header.NextFreePage = page.PageNumber;
+                    container = maybe;
+                    return;
                 }
             }
 
