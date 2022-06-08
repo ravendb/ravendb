@@ -1,25 +1,25 @@
 using System;
-using System.Runtime.CompilerServices;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
-using V8.Net;
+using System.Runtime.CompilerServices;
 using Lucene.Net.Store;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Queries.Results;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Json.Sync;
-using Raven.Server.Utils;
+using V8.Net;
 
 namespace Raven.Server.Documents.Patch.V8
 {
     [DebuggerDisplay("Blittable JS object")]
-    public class BlittableObjectInstanceV8 : IBlittableObjectInstance, IObjectInstance<JsHandleV8>
+    public class BlittableObjectInstanceV8 : IBlittableObjectInstance<JsHandleV8>
 #if DEBUG
     , IV8DebugInfo
 #endif
@@ -130,7 +130,20 @@ namespace Raven.Server.Documents.Patch.V8
 
         public V8Engine EngineV8 => _engine; 
         public V8EngineEx EngineExV8 => _engineEx;
-        public Dictionary<string, BlittableObjectProperty> OwnValues => _ownValues;
+        public Dictionary<string, IBlittableObjectProperty<JsHandleV8>> OwnValues
+        {
+            get
+            {
+                if (_ownValues == null)
+                    return null;
+                return _ownValues.ToDictionary(x => x.Key, x =>
+                {
+                    if (x.Value == null)
+                        return null;
+                    return (IBlittableObjectProperty<JsHandleV8>)x.Value;
+                });
+            }
+        }
 
         public bool Changed => _changed;
         public DateTime? LastModified => _lastModified;
@@ -668,7 +681,7 @@ namespace Raven.Server.Documents.Patch.V8
     , IV8DebugInfo
 #endif
         {
-            private bool _disposed = false;
+            private bool _disposed;
     
             private BlittableObjectInstanceV8 _parent;
             private string _propertyName;

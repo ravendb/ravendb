@@ -238,13 +238,13 @@ namespace Raven.Server.Documents.Patch.V8
             }
         }
 
-        public override IBlittableObjectInstance CreateBlittableObjectInstanceFromScratch(IBlittableObjectInstance parent, BlittableJsonReaderObject blittable,
+        public override IBlittableObjectInstance<JsHandleV8> CreateBlittableObjectInstanceFromScratch(IBlittableObjectInstance<JsHandleV8> parent, BlittableJsonReaderObject blittable,
             string id, DateTime? lastModified, string changeVector)
         {
             return new BlittableObjectInstanceV8(this, (BlittableObjectInstanceV8)parent, blittable, id, lastModified, changeVector);
         }
 
-        public override IBlittableObjectInstance CreateBlittableObjectInstanceFromDoc(IBlittableObjectInstance parent, BlittableJsonReaderObject blittable, Document doc)
+        public override IBlittableObjectInstance<JsHandleV8> CreateBlittableObjectInstanceFromDoc(IBlittableObjectInstance<JsHandleV8> parent, BlittableJsonReaderObject blittable, Document doc)
         {
             return new BlittableObjectInstanceV8(this, (BlittableObjectInstanceV8)parent, blittable, doc);
         }

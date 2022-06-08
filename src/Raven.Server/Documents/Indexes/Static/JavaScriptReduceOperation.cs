@@ -373,15 +373,12 @@ namespace Raven.Server.Documents.Indexes.Static
                             BlittableJsonReaderObject bjro => ((Func<BlittableJsonReaderObject, T>)((BlittableJsonReaderObject bjro) =>
                             {
                                 var boi = _jsUtils.CreateBlittableObjectInstanceFromScratch(null, bjro, null, null, null);
-                                return _jsIndexUtils.CreateJsHandleFromBoi(boi, keepAlive: true);
+                                return boi.CreateJsHandle(keepAlive: true);
                             }))(bjro),
                             Document doc => ((Func<Document, T>)((Document doc) =>
                             {
                                 var boi = _jsUtils.CreateBlittableObjectInstanceFromDoc(null, doc.Data, doc);
-
-
-                                //TODO: egor extension method for boi?
-                                return _jsIndexUtils.CreateJsHandleFromBoi(boi, keepAlive: true);
+                                return boi.CreateJsHandle(keepAlive: true);
                             }))(doc),
                             LazyNumberValue lnv => EngineHandle.CreateValue(lnv.ToDouble(CultureInfo.InvariantCulture)),
                             _ => _jsIndexUtils.GetValueOrThrow(value, isMapReduce: true)

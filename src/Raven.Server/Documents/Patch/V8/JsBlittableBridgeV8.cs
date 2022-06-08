@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.Patch.V8
             var target = jsObj.AsObject();
             if (target != null)
             {
-                if (target is IDictionary || target is IBlittableObjectInstance blittableJsObject)
+                if (target is IDictionary || target is IBlittableObjectInstance<JsHandleV8> blittableJsObject)
                 {
                     WriteValueInternal(target, jsObj, filterProperties);
                 }
@@ -97,22 +97,16 @@ namespace Raven.Server.Documents.Patch.V8
             }
         }
 
-        protected override unsafe void WriteBlittableInstance(JsHandleV8 jsObj, bool isRoot, bool filterProperties)
+        protected override unsafe void WriteBlittableInstance(IBlittableObjectInstance<JsHandleV8> jsObj, bool isRoot, bool filterProperties)
         {
-            var obj = jsObj.AsObject() as BlittableObjectInstanceV8;
+            var obj = jsObj;
             HashSet<string> modifiedProperties = null;
             if (obj.DocumentId != null && _usageMode == BlittableJsonDocumentBuilder.UsageMode.None)
             {
                 var metadata = obj.GetOrCreate(Constants.Documents.Metadata.Key);
-                if (metadata.AsObject() is IBlittableObjectInstance boi)
-                {
-                    using (var jsDocId = _scriptEngine.CreateValue(obj.DocumentId))
-                        obj.SetOwnProperty(Constants.Documents.Metadata.Id, jsDocId, toReturnCopy: false);
-                }
-                else
-                {
-                    metadata.SetProperty(Constants.Documents.Metadata.Id, _scriptEngine.CreateValue(obj.DocumentId));
-                }
+                var docId = obj.EngineHandle.CreateValue(obj.DocumentId);
+                //TODO: egor was:                   obj.SetOwnProperty(Constants.Documents.Metadata.Id, jsDocId, toReturnCopy: false);
+                metadata.SetProperty(Constants.Documents.Metadata.Id, docId, throwOnError: false);
             }
 
             if (obj.Blittable != null)
@@ -145,7 +139,7 @@ namespace Raven.Server.Documents.Patch.V8
 
                     if (existInObject && modifiedValue.Changed)
                     {
-                        WriteJsonValue(jsObj, isRoot, filterProperties, prop.Name, modifiedValue.ValueHandle);
+                        WriteJsonValue(jsObj.CreateJsHandle(), isRoot, filterProperties, prop.Name, modifiedValue.ValueHandle);
                     }
                     else
                     {
@@ -157,7 +151,7 @@ namespace Raven.Server.Documents.Patch.V8
             if (obj.OwnValues == null)
                 return;
 
-            foreach (KeyValuePair<string, BlittableObjectInstanceV8.BlittableObjectProperty> modificationKvp in obj.OwnValues)
+            foreach (KeyValuePair<string, IBlittableObjectProperty<JsHandleV8>> modificationKvp in obj.OwnValues)
             {
                 var propertyNameAsString = modificationKvp.Key;
                 //We already iterated through those properties while iterating the original properties set.
@@ -172,7 +166,7 @@ namespace Raven.Server.Documents.Patch.V8
 
                 _writer.WritePropertyName(propertyNameAsString);
                 IBlittableObjectProperty<JsHandleV8> blittableObjectProperty = modificationKvp.Value;
-                WriteJsonValue(jsObj, isRoot, filterProperties, propertyNameAsString, blittableObjectProperty.ValueHandle);
+                WriteJsonValue(jsObj.CreateJsHandle(), isRoot, filterProperties, propertyNameAsString, blittableObjectProperty.ValueHandle);
             }
         }
 

@@ -261,14 +261,14 @@ namespace Raven.Server.Documents.Patch.Jint
             return new JsHandleJint(value);
         }
 
-        public override IBlittableObjectInstance CreateBlittableObjectInstanceFromScratch(IBlittableObjectInstance parent, BlittableJsonReaderObject blittable,
+        public override IBlittableObjectInstance<JsHandleJint> CreateBlittableObjectInstanceFromScratch(IBlittableObjectInstance<JsHandleJint> parent, BlittableJsonReaderObject blittable,
             string id, DateTime? lastModified, string changeVector)
         {
             return new BlittableObjectInstanceJint(EngineEx, (BlittableObjectInstanceJint)parent, blittable, id, lastModified,
                 changeVector);
         }
 
-        public override IBlittableObjectInstance CreateBlittableObjectInstanceFromDoc(IBlittableObjectInstance parent, BlittableJsonReaderObject blittable,
+        public override IBlittableObjectInstance<JsHandleJint> CreateBlittableObjectInstanceFromDoc(IBlittableObjectInstance<JsHandleJint> parent, BlittableJsonReaderObject blittable,
             Document doc)
         {
             return new BlittableObjectInstanceJint(EngineEx, (BlittableObjectInstanceJint)parent, blittable, doc);

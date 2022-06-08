@@ -90,19 +90,6 @@ namespace Raven.Server.Documents.Patch.V8
             return new JsHandleV8(ref internalHandle);
         }
 
-        protected override bool TryGetValueFromBoi(IBlittableObjectInstance iboi, string propName, out IBlittableObjectProperty<JsHandleV8> blittableObjectProperty, out bool b)
-        {
-            var boi = (BlittableObjectInstanceV8)iboi;
-            if (boi.TryGetValue(propName, out blittableObjectProperty, out b))
-            {
-                return true;
-            }
-
-            blittableObjectProperty = default;
-            b = false;
-            return false;
-        }
-
         protected override string GetTypes(JsHandleV8 value)
         {
             return $"V8Type({value.ValueType}) .NETType({value.GetType().Name})";
@@ -263,12 +250,15 @@ namespace Raven.Server.Documents.Patch.V8
             return javaScriptException;
         }
 
-        protected override void SetArgs(JsHandleV8[] args, IBlittableObjectInstance boi)
+        protected override void SetArgs(JsHandleV8[] args, IBlittableObjectInstance<JsHandleV8> boi)
         {
             //TODO: egor check this in original implementation it was setting the _args 
             var global = ScriptEngineV8.GlobalObject;
             var boi2 = (BlittableObjectInstanceV8)boi;
+
+            //TODO: egor cehck which to use
             foreach (var propertyNameOrig in boi2.EnumerateOwnPropertiesUnordered())
+          //  foreach (var propertyNameOrig in boi2.EnumerateOwnProperties())
             {
                 var desc = boi2.GetOwnProperty(propertyNameOrig);
                 if (desc != null)

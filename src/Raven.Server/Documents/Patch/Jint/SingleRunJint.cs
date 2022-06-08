@@ -50,22 +50,9 @@ namespace Raven.Server.Documents.Patch.Jint
             }
         }
 
-        protected override bool TryGetValueFromBoi(IBlittableObjectInstance iboi, string propName, out IBlittableObjectProperty<JsHandleJint> blittableObjectProperty, out bool b)
-        {
-            var boi = (BlittableObjectInstanceJint)iboi;
-            if (boi.TryGetValue(propName, out blittableObjectProperty, out b))
-            {
-                return true;
-            }
-
-            blittableObjectProperty = default;
-            b = false;
-            return false;
-        }
-
         protected override string GetTypes(JsHandleJint value) => $"JintType({value.ValueType}) .NETType({value.GetType().Name})";
 
-        protected override void SetArgs(JsHandleJint[] args, IBlittableObjectInstance boi)
+        protected override void SetArgs(JsHandleJint[] args, IBlittableObjectInstance<JsHandleJint> boi)
         {
             //TODO: egor check this overload
             _refResolverJint.ExplodeArgsOn(args[0].Item, (BlittableObjectInstanceJint)boi);

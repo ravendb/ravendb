@@ -35,8 +35,8 @@ public abstract class JavaScriptUtilsBase<T> : IJavaScriptUtils<T> where T : str
         set { _readOnly = value; }
     }
 
-    public abstract IBlittableObjectInstance CreateBlittableObjectInstanceFromScratch(IBlittableObjectInstance parent, BlittableJsonReaderObject blittable, string id, DateTime? lastModified, string changeVector);
-    public abstract IBlittableObjectInstance CreateBlittableObjectInstanceFromDoc(IBlittableObjectInstance parent, BlittableJsonReaderObject blittable, Document doc);
+    public abstract IBlittableObjectInstance<T> CreateBlittableObjectInstanceFromScratch(IBlittableObjectInstance<T> parent, BlittableJsonReaderObject blittable, string id, DateTime? lastModified, string changeVector);
+    public abstract IBlittableObjectInstance<T> CreateBlittableObjectInstanceFromDoc(IBlittableObjectInstance<T> parent, BlittableJsonReaderObject blittable, Document doc);
     public abstract IObjectInstance<T> CreateTimeSeriesSegmentObjectInstance(DynamicTimeSeriesSegment segment);
     public abstract IObjectInstance<T> CreateCounterEntryObjectInstance(DynamicCounterEntry entry);
     public abstract T TranslateToJs(JsonOperationContext context, object o, bool keepAlive = false);

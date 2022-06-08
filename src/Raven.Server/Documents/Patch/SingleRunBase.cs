@@ -280,7 +280,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
             if (args[0].IsNull || args[1].IsUndefined)
                 return args[0];
 
-            if (args[0].AsObject() is IBlittableObjectInstance b)
+            if (args[0].AsObject() is IBlittableObjectInstance<T> b)
             {
                 var path = args[1].AsString;
                 if (_documentIds == null)
@@ -461,7 +461,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
             throw new InvalidOperationException($"{signature} must be called with exactly 2 arguments");
 
         string id;
-        if (args[0].IsObject && args[0].AsObject() is IBlittableObjectInstance doc)
+        if (args[0].IsObject && args[0].AsObject() is IBlittableObjectInstance<T> doc)
         {
             id = doc.DocumentId;
         }
@@ -541,7 +541,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
         BlittableJsonReaderObject docBlittable = null;
         string id = null;
 
-        if (args[0].IsObject && args[0].AsObject() is IBlittableObjectInstance doc)
+        if (args[0].IsObject && args[0].AsObject() is IBlittableObjectInstance<T> doc)
         {
             id = doc.DocumentId;
             docBlittable = doc.Blittable;
@@ -624,7 +624,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
         BlittableJsonReaderObject docBlittable = null;
 
         //args[0].TryGetDocumentIdAndBlittable
-        if (args[0].IsObject && args[0].AsObject() is IBlittableObjectInstance doc)
+        if (args[0].IsObject && args[0].AsObject() is IBlittableObjectInstance<T> doc)
         {
             id = doc.DocumentId;
             docBlittable = doc.Blittable;
@@ -678,7 +678,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
         if (args[0].IsObject == false)
             throw new InvalidOperationException("lastModified(doc) must be called with an object argument");
 
-        if (args[0].AsObject() is IBlittableObjectInstance doc)
+        if (args[0].AsObject() is IBlittableObjectInstance<T> doc)
         {
             if (doc.LastModified == null)
                 return ScriptEngineHandle.Undefined;
@@ -736,8 +736,8 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
         {
             if (args[0].IsNumber == false)
                 throw new InvalidOperationException("convertToTimeSpanString(ticks) must be called with a single long argument");
-            //TODO: egor how to make long? string then parse?
-            var ticks = Convert.ToInt64(args[0].AsInt32);
+
+            var ticks = Convert.ToInt64(args[0].AsDouble);
             var asTimeSpan = new TimeSpan(ticks);
             return ScriptEngineHandle.CreateValue(asTimeSpan.ToString());
         }
@@ -947,15 +947,15 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
             throw new InvalidOperationException("scalarToRawString(document, lambdaToField) may be called on with two parameters only");
 
         T firstParam = args[0];
-        if (firstParam.IsObject && args[0].AsObject() is IBlittableObjectInstance selfInstance)
+        if (firstParam.IsObject && args[0].AsObject() is IBlittableObjectInstance<T> selfInstance)
         {
             T secondParam = args[1];
             if (secondParam.IsObject && secondParam.AsObject() is ScriptFunctionInstance lambda)
             {
                 var functionAst = lambda.FunctionDeclaration;
                 var propName = functionAst.TryGetFieldFromSimpleLambdaExpression();
-
-                if (TryGetValueFromBoi(selfInstance, propName, out IBlittableObjectProperty<T> existingValue, out _) && existingValue != null)
+                
+                if (selfInstance.TryGetValue(propName, out IBlittableObjectProperty<T> existingValue, out _) && existingValue != null)
                 {
                     if (existingValue.Changed)
                     {
@@ -1004,8 +1004,6 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
     public abstract void SetContext();
     protected abstract T CreateObjectBinder(BlittableJsonToken type, object value);
 
-    protected abstract bool TryGetValueFromBoi(IBlittableObjectInstance iboi, string propName, out IBlittableObjectProperty<T> blittableObjectProperty, out bool b);
-
     public T OutputDebug(T self, T[] args)
     {
         if (DebugMode == false)
@@ -1041,7 +1039,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
         if (obj.IsObject)
         {
             //TODO: egor in jint it was: if (obj is BlittableObjectInstanceJint boi && boi.Changed == false)
-            if (obj.AsObject() is IBlittableObjectInstance boi && boi.Changed == false)
+            if (obj.AsObject() is IBlittableObjectInstance<T> boi && boi.Changed == false)
             {
                 return boi.Blittable.ToString();
             }
@@ -1333,7 +1331,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
 
     private string GetIdFromArg(T docArg, string signature)
     {
-        if (docArg.IsObject && docArg.AsObject() is IBlittableObjectInstance doc)
+        if (docArg.IsObject && docArg.AsObject() is IBlittableObjectInstance<T> doc)
             return doc.DocumentId;
 
         if (docArg.IsStringEx == false)
@@ -1640,7 +1638,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
 
     private (string Id, BlittableJsonReaderObject Doc) GetIdAndDocFromArg(T self, string signature)
     {
-        if (self.IsObject && self.AsObject() is IBlittableObjectInstance doc)
+        if (self.IsObject && self.AsObject() is IBlittableObjectInstance<T> doc)
             return (doc.DocumentId, doc.Blittable);
 
         if (self.IsStringEx)
@@ -1661,7 +1659,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
         if (args.Length != 2)
             throw new InvalidOperationException("Raven_ExplodeArgs(this, args) - must be called with 2 arguments");
 
-        if (args[1].IsObject && args[1].Object is IBlittableObjectInstance boi)
+        if (args[1].IsObject && args[1].Object is IBlittableObjectInstance<T> boi)
         {
             SetArgs(args, boi);
             return self;
@@ -1673,7 +1671,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
     }
 
     protected abstract string GetTypes(T value);
-    protected abstract void SetArgs(T[] args, IBlittableObjectInstance boi);
+    protected abstract void SetArgs(T[] args, IBlittableObjectInstance<T> boi);
     public T Raven_Min(T self, T[] args)
     {
         GenericSortTwoElementArray(args);
@@ -1788,7 +1786,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
             _args[i] = TranslateToJs(jsonCtx, args[i], keepAlive: false);
 
         if (method != QueryMetadata.SelectOutput && _args.Length == 2 && _args[1].IsObject &&
-            _args[1].AsObject() is IBlittableObjectInstance)
+            _args[1].AsObject() is IBlittableObjectInstance<T>)
         {
             SetArgsInternal();
         }
@@ -1816,7 +1814,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
 
         for (var index = 0; index < args.Length; index++)
         {
-            if (args[index].Object is IBlittableObjectInstance boi)
+            if (args[index].Object is IBlittableObjectInstance<T> boi)
             {
                 var lazyId = _docsCtx.GetLazyString(boi.DocumentId);
                 lazyIds.Add(lazyId);
@@ -1842,14 +1840,14 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
         if (docId == null)
         {
             if (_args[0].IsObject == false ||
-                !(_args[0].Object is IBlittableObjectInstance originalDoc))
+                !(_args[0].Object is IBlittableObjectInstance<T> originalDoc))
                 throw new InvalidOperationException($"Failed to invoke time series function '{name}'. Couldn't find the document ID to operate on. " +
                                                     "A Document instance argument was not provided to the time series function or to the ScriptRunner");
 
             docId = originalDoc.DocumentId;
         }
 
-        if (_args[_args.Length - 1].IsObject == false || !(_args[_args.Length - 1].Object is IBlittableObjectInstance queryParams))
+        if (_args[_args.Length - 1].IsObject == false || !(_args[_args.Length - 1].Object is IBlittableObjectInstance<T> queryParams))
             throw new InvalidOperationException($"Failed to invoke time series function '{name}'. ScriptRunner is missing QueryParameters argument");
 
         tsFunctionArgs[tsFunctionArgs.Length - 1] = new Document

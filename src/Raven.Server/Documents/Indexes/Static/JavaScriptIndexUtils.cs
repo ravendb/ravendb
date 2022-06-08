@@ -121,8 +121,6 @@ public abstract class JavaScriptIndexUtils<T>
         return jsValueHandle;
     }
 
-    public abstract T CreateJsHandleFromBoi(IBlittableObjectInstance boi, bool keepAlive);
-
     public bool GetValue(object item, out T jsItem, bool isMapReduce = false, bool keepAlive = false)
     {
         jsItem = EngineHandle.Empty;
@@ -147,8 +145,8 @@ public abstract class JavaScriptIndexUtils<T>
 
                     if (dbj.TryGetDocument(out var doc))
                     {
-                        IBlittableObjectInstance boi = JsUtils.CreateBlittableObjectInstanceFromDoc(null, dbj.BlittableJson, doc);
-                        jsItem = CreateJsHandleFromBoi(boi, keepAlive);
+                        IBlittableObjectInstance<T> boi = JsUtils.CreateBlittableObjectInstanceFromDoc(null, dbj.BlittableJson, doc);
+                        jsItem = boi.CreateJsHandle(keepAlive);
                     }
                     else
                     {
@@ -158,8 +156,8 @@ public abstract class JavaScriptIndexUtils<T>
                         if (dbj[Constants.Documents.Metadata.ChangeVector] is string cv)
                             changeVector = cv;
 
-                        IBlittableObjectInstance boi = JsUtils.CreateBlittableObjectInstanceFromScratch(null, dbj.BlittableJson, id, lastModified, changeVector);
-                        jsItem = CreateJsHandleFromBoi(boi, keepAlive);
+                        IBlittableObjectInstance<T> boi = JsUtils.CreateBlittableObjectInstanceFromScratch(null, dbj.BlittableJson, id, lastModified, changeVector);
+                        jsItem = boi.CreateJsHandle(keepAlive);
                     }
 
                     return true;
@@ -179,8 +177,8 @@ public abstract class JavaScriptIndexUtils<T>
             case BlittableJsonReaderObject bjro:
                 {
                     //This is the case for map-reduce
-                    IBlittableObjectInstance bo = JsUtils.CreateBlittableObjectInstanceFromScratch(null, bjro, null, null, null);
-                    jsItem = CreateJsHandleFromBoi(bo, keepAlive);
+                    IBlittableObjectInstance<T> boi = JsUtils.CreateBlittableObjectInstanceFromScratch(null, bjro, null, null, null);
+                    jsItem = boi.CreateJsHandle(keepAlive);
 
                     return true;
                 }
@@ -231,23 +229,11 @@ public class JavaScriptIndexUtilsJint : JavaScriptIndexUtils<JsHandleJint>
     public JavaScriptIndexUtilsJint(IJavaScriptUtils<JsHandleJint> jsUtils, Engine engineForParsing) : base(jsUtils, engineForParsing)
     {
     }
-
-    public override JsHandleJint CreateJsHandleFromBoi(IBlittableObjectInstance boi, bool keepAlive)
-    {
-        var jintBoi = (BlittableObjectInstanceJint)boi;
-        return jintBoi.CreateJsHandle(keepAlive);
-    }
 }
 
 public class JavaScriptIndexUtilsV8 : JavaScriptIndexUtils<JsHandleV8>
 {
     public JavaScriptIndexUtilsV8(IJavaScriptUtils<JsHandleV8> jsUtils, Engine engineForParsing) : base(jsUtils, engineForParsing)
     {
-    }
-
-    public override JsHandleV8 CreateJsHandleFromBoi(IBlittableObjectInstance boi, bool keepAlive)
-    {
-        var v8Boi = (BlittableObjectInstanceV8)boi;
-        return v8Boi.CreateJsHandle(keepAlive);
     }
 }

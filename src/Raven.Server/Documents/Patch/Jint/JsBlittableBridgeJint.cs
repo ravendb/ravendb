@@ -83,25 +83,15 @@ public class JsBlittableBridgeJint : JsBlittableBridge<JsHandleJint>
         }
     }
 
-    protected override unsafe void WriteBlittableInstance(JsHandleJint jsObj, bool isRoot, bool filterProperties)
+    protected override unsafe void WriteBlittableInstance(IBlittableObjectInstance<JsHandleJint> jsObj, bool isRoot, bool filterProperties)
     {
-        var obj = jsObj.AsObject() as BlittableObjectInstanceJint;
+        var obj = jsObj;
         HashSet<string> modifiedProperties = null;
-        if (obj.DocumentId != null &&
-            _usageMode == BlittableJsonDocumentBuilder.UsageMode.None)
+        if (obj.DocumentId != null && _usageMode == BlittableJsonDocumentBuilder.UsageMode.None)
         {
             var metadata = obj.GetOrCreate(Constants.Documents.Metadata.Key);
-            if (metadata.AsObject() is IBlittableObjectInstance boi)
-            {
-                using (var jsDocId = _scriptEngine.CreateValue(obj.DocumentId))
-                    obj.SetOwnProperty(Constants.Documents.Metadata.Id, jsDocId, toReturnCopy: false);
-            }
-            else
-            {
-                metadata.SetProperty(Constants.Documents.Metadata.Id, _scriptEngine.CreateValue(obj.DocumentId));
-            }
+            metadata.SetProperty(Constants.Documents.Metadata.Id, obj.DocumentId, throwOnError: false);
         }
-
         if (obj.Blittable != null)
         {
             using var propertiesByInsertionOrder = obj.Blittable.GetPropertiesByInsertionOrder();
@@ -132,7 +122,7 @@ public class JsBlittableBridgeJint : JsBlittableBridge<JsHandleJint>
 
                 if (existInObject && modifiedValue.Changed)
                 {
-                    WriteJsonValue(jsObj, isRoot, filterProperties, prop.Name, modifiedValue.ValueHandle);
+                    WriteJsonValue(jsObj.CreateJsHandle(), isRoot, filterProperties, prop.Name, modifiedValue.ValueHandle);
                 }
                 else
                 {
@@ -144,9 +134,9 @@ public class JsBlittableBridgeJint : JsBlittableBridge<JsHandleJint>
         if (obj.OwnValues == null)
             return;
 
-        foreach (KeyValuePair<JsValue, BlittableObjectInstanceJint.BlittableObjectProperty> modificationKvp in obj.OwnValues)
+        foreach (KeyValuePair<string, IBlittableObjectProperty<JsHandleJint>> modificationKvp in obj.OwnValues)
         {
-            var propertyNameAsString = modificationKvp.Key.AsString();
+            var propertyNameAsString = modificationKvp.Key;
             //We already iterated through those properties while iterating the original properties set.
             if (modifiedProperties != null && modifiedProperties.Contains(propertyNameAsString))
                 continue;
@@ -159,7 +149,7 @@ public class JsBlittableBridgeJint : JsBlittableBridge<JsHandleJint>
 
             _writer.WritePropertyName(propertyNameAsString);
             IBlittableObjectProperty<JsHandleJint> blittableObjectProperty = modificationKvp.Value;
-            WriteJsonValue(jsObj, isRoot, filterProperties, propertyNameAsString, blittableObjectProperty.ValueHandle);
+            WriteJsonValue(jsObj.CreateJsHandle(), isRoot, filterProperties, propertyNameAsString, blittableObjectProperty.ValueHandle);
         }
     }
 

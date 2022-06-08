@@ -51,8 +51,10 @@ public abstract class JsBlittableBridge<T>
 
         modifier?.Modify(jsObject, _scriptEngine);
         var boundObject = jsObject.AsObject();
-        if (boundObject is IBlittableObjectInstance)
-            WriteBlittableInstance(jsObject, isRoot, filterProperties);
+        if (boundObject is IBlittableObjectInstance<T> boi)
+        {
+            WriteBlittableInstance(boi, isRoot, filterProperties);
+        }
         else
             WriteJsInstance(jsObject, isRoot, filterProperties);
 
@@ -61,7 +63,7 @@ public abstract class JsBlittableBridge<T>
 
     protected abstract string GetDateValue(T jsValue, string propertyName);
 
-    protected void WriteJsonValue(T jsParent, bool isRoot, bool filterProperties, string propertyName, T jsValue)
+    protected void WriteJsonValue(object jsParent, bool isRoot, bool filterProperties, string propertyName, T jsValue)
     {
         jsValue.ThrowOnError();
 
@@ -74,9 +76,9 @@ public abstract class JsBlittableBridge<T>
         else if (jsValue.IsDate)
             _writer.WriteValue(GetDateValue(jsValue, propertyName));
         else if (jsValue.IsInt32)
-            WriteNumber(jsParent.AsObject(), propertyName, jsValue.AsInt32);
+            WriteNumber(jsParent, propertyName, jsValue.AsInt32);
         else if (jsValue.IsNumberEx)
-            WriteNumber(jsParent.AsObject(), propertyName, jsValue.AsDouble);
+            WriteNumber(jsParent, propertyName, jsValue.AsDouble);
         else if (jsValue.IsArray)
             WriteArray(jsValue);
         else if (jsValue.IsObject)
@@ -205,7 +207,7 @@ public abstract class JsBlittableBridge<T>
     private void WriteNumber(object parent, string propName, double d)
     {
          var writer = _writer;
-            var boi = parent as IBlittableObjectInstance;
+            var boi = parent as IBlittableObjectInstance<T>;
             if (boi == null || propName == null)
             {
                 GuessNumberType();
@@ -314,7 +316,7 @@ public abstract class JsBlittableBridge<T>
         }
     }
 
-    protected abstract unsafe void WriteBlittableInstance(T jsObj, bool isRoot, bool filterProperties);
+    protected abstract unsafe void WriteBlittableInstance(IBlittableObjectInstance<T> jsObj, bool isRoot, bool filterProperties);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     protected static bool ShouldFilterProperty(bool filterProperties, string property)
@@ -339,7 +341,7 @@ public abstract class JsBlittableBridge<T>
         if (objectInstance == null)
             return null;
 
-        if (objectInstance is IBlittableObjectInstance boi && boi.Changed == false && isRoot)
+        if (objectInstance is IBlittableObjectInstance<T> boi && boi.Changed == false && isRoot)
             return boi.Blittable.Clone(context);
 
         using (var writer = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))

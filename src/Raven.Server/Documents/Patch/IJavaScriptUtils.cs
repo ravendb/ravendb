@@ -13,20 +13,19 @@ namespace Raven.Server.Documents.Patch
         JsonOperationContext Context { get; }
         bool ReadOnly { get; set; }
 
-        IBlittableObjectInstance CreateBlittableObjectInstanceFromScratch(IBlittableObjectInstance parent,
+        IBlittableObjectInstance<T> CreateBlittableObjectInstanceFromScratch(IBlittableObjectInstance<T> parent,
             BlittableJsonReaderObject blittable,
             string id,
             DateTime? lastModified,
             string changeVector);
 
-        IBlittableObjectInstance CreateBlittableObjectInstanceFromDoc(IBlittableObjectInstance parent,
+        IBlittableObjectInstance<T> CreateBlittableObjectInstanceFromDoc(IBlittableObjectInstance<T> parent,
             BlittableJsonReaderObject blittable,
             Document doc);
 
         IObjectInstance<T> CreateTimeSeriesSegmentObjectInstance(DynamicTimeSeriesSegment segment);
 
         IObjectInstance<T> CreateCounterEntryObjectInstance(DynamicCounterEntry entry);
-
 
         T GetDocumentId(T self, T[] args);
         T AttachmentsFor(T self, T[] args);

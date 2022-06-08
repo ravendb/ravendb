@@ -399,7 +399,14 @@ public struct JsHandleJint : IJsHandle<JsHandleJint>
 
         return _obj.Set(name, value.Item, throwOnError);
     }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool SetProperty(string name, string value, bool throwOnError = false)
+    {
+        if (_obj == null)
+            throw new NotSupportedException($"Not supported for non object value.");
 
+        return _obj.Set(name, value, throwOnError);
+    }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool SetProperty(int index, JsHandleJint value, bool throwOnError = false)
     {

@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.Linq;
 using Jint;
 using Jint.Native;
 using Jint.Native.Array;
@@ -22,7 +23,7 @@ using TypeConverter = Raven.Server.Utils.TypeConverter;
 namespace Raven.Server.Documents.Patch.Jint
 {
     [DebuggerDisplay("Blittable JS object")]
-    public class BlittableObjectInstanceJint : ObjectInstance, IBlittableObjectInstance, IObjectInstance<JsHandleJint>
+    public class BlittableObjectInstanceJint : ObjectInstance, IBlittableObjectInstance<JsHandleJint>
     {
         private JintEngineEx _engineEx;
 
@@ -47,7 +48,21 @@ namespace Raven.Server.Documents.Patch.Jint
 
         public Engine EngineJint => _engine; 
         public JintEngineEx EngineExJint => _engineEx; 
-        public Dictionary<JsValue, BlittableObjectProperty> OwnValues => _ownValues;
+        public Dictionary<string, IBlittableObjectProperty<JsHandleJint>> OwnValues
+        {
+            get
+            {
+                if (_ownValues == null)
+                    return null;
+
+                return _ownValues.ToDictionary(x => x.Key.AsString(), x =>
+                {
+                    if (x.Value == null)
+                        return null;
+                    return (IBlittableObjectProperty<JsHandleJint>)x.Value;
+                });
+            }
+        }
 
         public IJsEngineHandle<JsHandleJint> EngineHandle => _engineEx;
         public bool Changed => _changed;
