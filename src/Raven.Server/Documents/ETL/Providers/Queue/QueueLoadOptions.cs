@@ -10,5 +10,5 @@ public class QueueLoadOptions
 
     public string PartitionKey { get; set; }
 
-    public string RoutingKey { get; set; }
+    public string ExchangeKey { get; set; }
 }

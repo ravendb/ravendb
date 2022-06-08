@@ -43,10 +43,9 @@ public static class QueueHelper
         return producer;
     }
 
-    public static IModel CreateRabbitMqClient(QueueConnectionString connectionString, string transactionalId,
-        X509Certificate2 certificate = null)
+    public static IModel CreateRabbitMqClient(QueueConnectionString connectionString, string transactionalId)
     {
-        var connectionFactory = new ConnectionFactory() { HostName = "localhost", Port = 5672, UserName = "guest", Password = "guest" };
+        var connectionFactory = new ConnectionFactory() { Uri = new Uri(connectionString.RabbitMqConnectionSettings.ConnectionString) };
         var connection = connectionFactory.CreateConnection();
         return connection.CreateModel();
     }
