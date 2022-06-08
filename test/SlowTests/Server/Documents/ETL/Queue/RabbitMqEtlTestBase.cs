@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using Confluent.Kafka;
+using RabbitMQ.Client;
+using RabbitMQ.Client.Events;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.Queue;
@@ -10,22 +12,23 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.Queue;
 
-public class KafkaEtlTestBase : QueueEtlTestBase
+public class RabbitMqEtlTestBase : QueueEtlTestBase
 {
     private readonly HashSet<string> _definedTopics = new HashSet<string>();
+    protected readonly string DefaultConnectionString = "amqp://guest:guest@localhost:5672/";
 
-    protected KafkaEtlTestBase(ITestOutputHelper output) : base(output)
+    protected RabbitMqEtlTestBase(ITestOutputHelper output) : base(output)
     {
-        TopicSuffix = Guid.NewGuid().ToString().Replace("-", string.Empty);
+        ExchangeSuffix = Guid.NewGuid().ToString().Replace("-", string.Empty);
     }
 
-    protected string TopicSuffix { get; }
+    protected string ExchangeSuffix { get; }
 
-    protected string OrdersTopicName => $"Orders{TopicSuffix}";
+    protected string OrdersExchangeName => $"Orders{ExchangeSuffix}";
 
     protected readonly string[] DefaultCollections = { "Orders" };
 
-    protected List<EtlQueue> DefaultTopics => new() { new EtlQueue { Name = OrdersTopicName } };
+    protected List<EtlQueue> DefaultExchanges => new() { new EtlQueue { Name = OrdersExchangeName } };
 
     protected string DefaultScript => @"
 var orderData = {
@@ -38,15 +41,15 @@ for (var i = 0; i < this.OrderLines.length; i++) {
     var line = this.OrderLines[i];
     orderData.TotalCost += line.Cost*line.Quantity;    
 }
-loadToOrders" + TopicSuffix + @"(orderData);
+loadToOrders" + ExchangeSuffix + @"(orderData);
 ";
 
-    protected QueueEtlConfiguration SetupQueueEtlToKafka(DocumentStore store, string script,
+    protected QueueEtlConfiguration SetupQueueEtlToRabbitMq(DocumentStore store, string script,
         IEnumerable<string> collections, IEnumerable<EtlQueue> queues = null, bool applyToAllDocuments = false, string configurationName = null,
         string transformationName = null,
         Dictionary<string, string> configuration = null)
     {
-        var connectionStringName = $"{store.Database}@{store.Urls.First()} to Kafka";
+        var connectionStringName = $"{store.Database}@{store.Urls.First()} to RabbitMq";
 
         Transformation transformation = new Transformation
         {
@@ -64,7 +67,7 @@ loadToOrders" + TopicSuffix + @"(orderData);
                 transformation
             },
             Queues = queues?.ToList(),
-            BrokerType = QueueBroker.Kafka
+            BrokerType = QueueBroker.RabbitMq
         };
 
         foreach (var queue in queues?.Select(x => x.Name).ToArray() ?? transformation.GetCollectionsFromScript())
@@ -76,49 +79,35 @@ loadToOrders" + TopicSuffix + @"(orderData);
             new QueueConnectionString
             {
                 Name = connectionStringName,
-                BrokerType = QueueBroker.Kafka,
-                KafkaConnectionSettings = new KafkaConnectionSettings() { ConnectionOptions = configuration, Url = KafkaConnectionString.Instance.VerifiedUrl.Value }
+                BrokerType = QueueBroker.RabbitMq,
+                RabbitMqConnectionSettings = new RabbitMqConnectionSettings(){ConnectionString = DefaultConnectionString}
             });
         return config;
     }
 
-    protected IConsumer<string, byte[]> CreateKafkaConsumer(IEnumerable<string> topics)
+    protected IModel CreateRabbitMqConsumer()
     {
-        var consumerConfig = new ConsumerConfig()
-        {
-            BootstrapServers = KafkaConnectionString.Instance.VerifiedUrl.Value,
-            GroupId = "test",
-            IsolationLevel = IsolationLevel.ReadCommitted,
-            EnablePartitionEof = true,
-            AutoOffsetReset = AutoOffsetReset.Earliest
-        };
+        var connectionFactory = new ConnectionFactory() { Uri = new Uri(DefaultConnectionString)};
+        var connection = connectionFactory.CreateConnection();
+        var channel = connection.CreateModel();
 
-        var consumer = new ConsumerBuilder<string, byte[]>(consumerConfig).Build();
-        consumer.Subscribe(topics);
-        return consumer;
+        return channel;
     }
-
-    private void CleanupTopic()
+    
+    private void CleanupQueues()
     {
-        if (_definedTopics.Count == 0)
-            return;
+        var channel = CreateRabbitMqConsumer();
+        var consumer = new EventingBasicConsumer(channel);
 
-        var config = new AdminClientConfig { BootstrapServers = KafkaConnectionString.Instance.VerifiedUrl.Value };
-        var adminClient = new AdminClientBuilder(config).Build();
-
-        try
+        foreach (string definedTopic in _definedTopics)
         {
-            adminClient.DeleteTopicsAsync(_definedTopics).Wait();
-        }
-        catch (Exception e)
-        {
-            throw new InvalidOperationException($"Failed to cleanup topics: {string.Join(", ", _definedTopics)}. Check inner exceptions for details", e);
+            consumer.Model.QueueDelete(definedTopic);
         }
     }
 
     public override void Dispose()
     {
         base.Dispose();
-        CleanupTopic();
+        CleanupQueues();
     }
 }

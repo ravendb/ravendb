@@ -34,9 +34,9 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithMessages, QueueEtlConfigu
     {
         Metrics = new EtlMetricsCountersManager();
     }
-    
+
     private const string DefaultType = "ravendb.etl.put";
-    
+
     public const string QueueEtlTag = "Queue ETL";
     private string TransactionalId => $"{Database.DbId}-{Name}";
 
@@ -118,7 +118,7 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithMessages, QueueEtlConfigu
                 {
                     CloudEvent eventMessage = CreateEventMessage(message);
 
-                    messages.Add(new QueueMessage { QueueName = queueName, Message = eventMessage});
+                    messages.Add(new QueueMessage { QueueName = queueName, Message = eventMessage });
 
                     if (queueItem.DeleteProcessedDocuments)
                         idsToDelete.Add(message.DocumentId);
@@ -131,7 +131,7 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithMessages, QueueEtlConfigu
                     count = ProcessKafka(messages, formatter);
                     break;
                 case QueueBroker.RabbitMq:
-                    count = ProcessRabbitMq(messages, formatter);
+                    count = ProcessRabbitMq(items, formatter);
                     break;
             }
         }
@@ -215,26 +215,50 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithMessages, QueueEtlConfigu
         return count;
     }
 
-    private int ProcessRabbitMq(List<QueueMessage> messages, BlittableJsonEventBinaryFormatter formatter)
+    private int ProcessRabbitMq(IEnumerable<QueueWithMessages> items, BlittableJsonEventBinaryFormatter formatter)
     {
         int count = 0;
 
-        if (messages.Count == 0)
-            return count;
+        var messages = new List<RabbitMqMessageEvent>();
+
+        foreach (QueueWithMessages queueItem in items)
+        {
+            var newMessage = new RabbitMqMessageEvent() { Queue = queueItem.Name };
+
+            foreach (var message in queueItem.Messages)
+            {
+                CloudEvent eventMessage = CreateEventMessage(message);
+                newMessage.Messages.Add(new RabbitMqMessage()
+                {
+                    ExchangeKey = message.Options?.ExchangeKey ?? "",
+                    Message = eventMessage.ToAmqpMessage(ContentMode.Binary, formatter)
+                });
+            }
+
+            messages.Add(newMessage);
+        }
+
+        if (messages.Count == 0) return count;
 
         if (_rabbitMqProducer == null)
         {
-            _rabbitMqProducer = QueueHelper.CreateRabbitMqClient(Configuration.Connection, TransactionalId,
-                Database.ServerStore.Server.Certificate.Certificate);
+            _rabbitMqProducer = QueueHelper.CreateRabbitMqClient(Configuration.Connection, TransactionalId);
         }
 
-        foreach (var @event in messages)
+        foreach (var message in messages)
         {
-            var ampqMessage = @event.Message.ToAmqpMessage(ContentMode.Binary, formatter);
+            _rabbitMqProducer.QueueDeclare(message.Queue, true, false, false, null); // todo: check override default config
+            foreach (var messageContent in message.Messages)
+            {
+                if (string.IsNullOrWhiteSpace(messageContent.ExchangeKey) == false)
+                {
+                    _rabbitMqProducer.ExchangeDeclare(messageContent.ExchangeKey, "topic", true, false, null);
+                    _rabbitMqProducer.QueueBind(message.Queue, messageContent.ExchangeKey, message.Queue);
+                }
 
-            //loadToOrders
-            //_rabbitMqProducer.QueueDeclare(@event.Topic, durable: false, exclusive: false, autoDelete: false, arguments: null);
-            _rabbitMqProducer.BasicPublish("Test-topic", "", null, ampqMessage.Encode().Buffer);
+                _rabbitMqProducer.BasicPublish(messageContent.ExchangeKey, message.Queue, null, (byte[])messageContent.Message.Body);
+                count++;
+            }
         }
 
         return count;
@@ -263,9 +287,10 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithMessages, QueueEtlConfigu
 
         foreach (var record in records)
         {
-            var commands = simulatedWriter.SimulateExecuteCommandText(record, context);
+            var messages = simulatedWriter.SimulateExecuteCommandText(record, context);
+            // message should have body (content) and options
 
-            summaries.Add(new TopicSummary { TopicName = record.Name, Commands = commands.ToArray() });
+            summaries.Add(new TopicSummary { TopicName = record.Name, Commands = messages.ToArray() });
         }
 
         return new QueueEtlTestScriptResult
