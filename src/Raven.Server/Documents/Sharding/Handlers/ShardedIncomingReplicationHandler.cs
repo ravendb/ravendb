@@ -1,21 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
-using System.Threading;
+using System.Threading.Tasks;
+using Nito.AsyncEx;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Exceptions.Sharding;
-using Raven.Client.Extensions;
+using Raven.Server.Config;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.Incoming;
 using Raven.Server.Documents.Replication.ReplicationItems;
-using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.Documents.TcpHandlers;
-using Raven.Server.Exceptions;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
-using Sparrow.Json.Sync;
+using Sparrow.Server;
 using Voron;
 
 namespace Raven.Server.Documents.Sharding.Handlers
@@ -52,60 +49,15 @@ namespace Raven.Server.Documents.Sharding.Handlers
         {
         }
 
-        protected override void ReceiveSingleDocumentsBatch(TransactionOperationContext context, int replicatedItemsCount, int attachmentStreamCount, long lastEtag, IncomingReplicationStatsScope stats)
+        protected override void HandleTaskCompleteIfNeeded()
         {
-            var sw = Stopwatch.StartNew();
+            _replicationQueue.SendToShardCompletion = new AsyncCountdownEvent(_parent.Context.ShardCount);
+        }
 
-            try
-            {
-                using (_attachmentStreamsTempFile.Scope())
-                using (var shardAllocator = new IncomingReplicationAllocator(context.Allocator, maxSizeToSend: null))
-                using (var dataForReplicationCommand = new IncomingReplicationHandler.DataForReplicationCommand
-                {
-                    SupportedFeatures = SupportedFeatures,
-                    Logger = Logger
-                })
-                {
-                    try
-                    {
-                        using (var networkStats = stats.For(ReplicationOperation.Incoming.Network))
-                        {
-                            var reader = new Reader(_stream, _copiedBuffer, shardAllocator);
-
-                            ReadItemsFromSource(replicatedItemsCount, context, context.Allocator, dataForReplicationCommand, reader, networkStats);
-                            ReadAttachmentStreamsFromSource(attachmentStreamCount, context, context.Allocator, dataForReplicationCommand, reader, networkStats);
-                            PrepareReplicationDataForShards(context, dataForReplicationCommand);
-                            
-                            _replicationQueue.SendToShardCompletion.Wait();
-                            _replicationQueue.SendToShardCompletion = new CountdownEvent(_parent.Context.ShardCount);
-                        }
-                    }
-                    catch (Exception e)
-                    {
-                        if (Logger.IsInfoEnabled)
-                        {
-                            //This is the case where we had a missing attachment, it is rare but expected.
-                            if (e.ExtractSingleInnerException() is MissingAttachmentException mae)
-                            {
-                                Logger.Info("Replication batch contained missing attachments will request the batch to be re-sent with those attachments.", mae);
-                            }
-                            else
-                            {
-                                Logger.Info("Failed to receive documents replication batch. This is not supposed to happen, and is likely a bug.", e);
-                            }
-                        }
-                        throw;
-                    }
-                }
-
-                sw.Stop();
-            }
-            catch (Exception)
-            {
-                // ignore this failure, if this failed, we are already
-                // in a bad state and likely in the process of shutting
-                // down
-            }
+        protected override Task HandleBatch(TransactionOperationContext context, IncomingReplicationHandler.DataForReplicationCommand dataForReplicationCommand, long lastEtag)
+        {
+            PrepareReplicationDataForShards(context, dataForReplicationCommand);
+            return _replicationQueue.SendToShardCompletion.WaitAsync();
         }
 
         private void PrepareReplicationDataForShards(TransactionOperationContext context, IncomingReplicationHandler.DataForReplicationCommand dataForReplicationCommand)
@@ -137,6 +89,9 @@ namespace Raven.Server.Documents.Sharding.Handlers
                     {
                         var shardAttachments = _replicationQueue.AttachmentsPerShard[shard];
 
+                        if (shardAttachments == null)
+                            continue;
+
                         if (shardAttachments.ContainsKey(attachment.Key))
                         {
                             var attachmentStream = new AttachmentReplicationItem
@@ -160,45 +115,32 @@ namespace Raven.Server.Documents.Sharding.Handlers
             }
         }
 
-        internal override void SendHeartbeatStatusToSource(TransactionOperationContext context, BlittableJsonTextWriter writer, long lastDocumentEtag, string handledMessageType)
-        {
-            var heartbeat = new DynamicJsonValue
-            {
-                [nameof(ReplicationMessageReply.Type)] = "Ok",
-                [nameof(ReplicationMessageReply.MessageType)] = handledMessageType,
-                [nameof(ReplicationMessageReply.LastEtagAccepted)] = lastDocumentEtag,
-                [nameof(ReplicationMessageReply.Exception)] = null,
-                [nameof(ReplicationMessageReply.NodeTag)] = _parent.Server.NodeTag
-            };
+        protected override ByteStringContext GetContextAllocator(TransactionOperationContext context) => context.Allocator;
 
-            context.Write(writer, heartbeat);
-            writer.Flush();
-        }
-
-        protected override void AddReplicationPulse(ReplicationPulseDirection direction, string exceptionMessage = null)
-        {
-        }
+        protected override RavenConfiguration GetConfiguration() => _parent.Context.Configuration;
 
         protected override int GetNextReplicationStatsId() => _parent.GetNextReplicationStatsId();
 
 
         private readonly DocumentInfoHelper _documentInfoHelper = new DocumentInfoHelper();
-        private LazyStringValue GetDocumentId(Slice key) => _documentInfoHelper.GetDocumentId(key);
-        public string GetItemInformation(ReplicationBatchItem item) => _documentInfoHelper.GetItemInformation(item);
 
-        public int GetShardNumberForReplicationItem(TransactionOperationContext context, ReplicationBatchItem item)
+        private int GetShardNumberForReplicationItem(TransactionOperationContext context, ReplicationBatchItem item)
         {
-            return item switch
+            switch (item)
             {
-                AttachmentReplicationItem a => _parent.Context.GetShardNumber(context, (GetDocumentId(a.Key))),
-                AttachmentTombstoneReplicationItem at => _parent.Context.GetShardNumber(context, (GetDocumentId(at.Key))),
-                CounterReplicationItem c => _parent.Context.GetShardNumber(context, c.Id),
-                DocumentReplicationItem d => _parent.Context.GetShardNumber(context, d.Id),
-                RevisionTombstoneReplicationItem _ => throw new NotSupportedInShardingException("TODO: implement for sharding"), // revision tombstones doesn't contain any info about the doc. The id here is the change-vector of the deleted revision
-                TimeSeriesDeletedRangeItem td => _parent.Context.GetShardNumber(context, (GetDocumentId(td.Key))),
-                TimeSeriesReplicationItem t => _parent.Context.GetShardNumber(context, (GetDocumentId(t.Key))),
-                _ => throw new ArgumentOutOfRangeException($"{nameof(item)} - {item}")
-            };
+                case AttachmentReplicationItem:
+                case AttachmentTombstoneReplicationItem:
+                case CounterReplicationItem:
+                case DocumentReplicationItem:
+                case TimeSeriesDeletedRangeItem:
+                case TimeSeriesReplicationItem:
+                    return _parent.Context.GetShardNumber(context, _documentInfoHelper.GetDocumentId(item));
+                case RevisionTombstoneReplicationItem:
+                    throw new NotSupportedInShardingException("TODO: implement for sharding"); // revision tombstones doesn't contain any info about the doc. The id here is the change-vector of the deleted revision
+                default:
+                    throw new ArgumentOutOfRangeException($"{nameof(item)} - {item}");
+
+            }
         }
     }
 }

@@ -1,8 +1,10 @@
 ﻿using System.IO;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Replication;
+using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.ServerWide.Commands;
 using Raven.Server.Documents.Replication.Senders;
+using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Replication.Outgoing
@@ -49,11 +51,28 @@ namespace Raven.Server.Documents.Replication.Outgoing
 
     public class OutgoingPullReplicationHandlerAsSink : OutgoingPullReplicationHandler
     {
+        private readonly PullReplicationAsSink _node;
+
         public OutgoingPullReplicationHandlerAsSink(ReplicationLoader parent, DocumentDatabase database, PullReplicationAsSink node, TcpConnectionInfo connectionInfo) : 
             base(parent, database, node, connectionInfo)
         {
+            _node = node;
             PathsToSend = DetailedReplicationHubAccess.Preferred(node.AllowedSinkToHubPaths, node.AllowedHubToSinkPaths);
             CertificateThumbprint = _parent.GetCertificateForReplication(node, out _)?.Thumbprint;
+        }
+
+        protected override DynamicJsonValue GetSendPreliminaryDataRequest()
+        {
+            var request = base.GetSendPreliminaryDataRequest();
+
+            request[nameof(ReplicationInitialRequest.Database)] = _parent.Database.Name; // my database
+            request[nameof(ReplicationInitialRequest.DatabaseGroupId)] = _parent.Database.DatabaseGroupId; // my database id
+            request[nameof(ReplicationInitialRequest.SourceUrl)] = _parent._server.GetNodeHttpServerUrl();
+            request[nameof(ReplicationInitialRequest.Info)] = _parent._server.GetTcpInfoAndCertificates(null); // my connection info
+            request[nameof(ReplicationInitialRequest.PullReplicationDefinitionName)] = _node.HubName;
+            request[nameof(ReplicationInitialRequest.PullReplicationSinkTaskName)] = _node.GetTaskName();
+
+            return request;
         }
 
         protected override void ProcessHandshakeResponse((ReplicationMessageReply.ReplyType ReplyType, ReplicationMessageReply Reply) response)
