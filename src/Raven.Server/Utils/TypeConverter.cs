@@ -280,7 +280,7 @@ namespace Raven.Server.Utils
                     }
 
                     if (js.IsUndefined())
-                        return null;
+                        return DynamicNullObject.Null;
                     if (js.IsString())
                         return js.AsString();
                     if (js.IsBoolean())
