@@ -152,7 +152,7 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
             }
             catch (Exception ex)
             {
-                reason = $"Criteria script threw exception for revision id {item.Current.Id} with change vector current: {item.Current.ChangeVector}, previous: {item.Previous?.ChangeVector}, exception: \n-----------------------------------------------------\n{ex.ToString()}";
+                reason = $"Criteria script threw exception for revision id {item.Current.Id} with change vector current: {item.Current.ChangeVector}, previous: {item.Previous?.ChangeVector}";
                 exception = ex;
                 return false;
             }

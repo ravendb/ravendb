@@ -18,7 +18,8 @@ namespace Raven.Server.Documents.Patch.Jint
             var name = reference.GetReferencedName()?.AsString();
             if (_args == null || name == null || name.StartsWith('$') == false)
             {
-                value = name == "length" ? 0 : reference.GetBase();
+                value = name == "length" ? 0 : Null.Instance;
+             //   value = name == "length" ? 0 : reference.GetBase();
                 return true;
             }
 

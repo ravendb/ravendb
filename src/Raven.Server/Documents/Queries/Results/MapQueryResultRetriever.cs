@@ -12,7 +12,7 @@ namespace Raven.Server.Documents.Queries.Results
 {
     public class MapQueryResultRetriever : QueryResultRetrieverBase
     {
-        private new readonly DocumentsOperationContext _context;
+        private readonly DocumentsOperationContext _context;
         private QueryTimingsScope _storageScope;
 
         public MapQueryResultRetriever(DocumentDatabase database, IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsStorage documentsStorage, DocumentsOperationContext context, SearchEngineType searchEngineType, FieldsToFetch fieldsToFetch, IncludeDocumentsCommand includeDocumentsCommand, IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, IncludeRevisionsCommand includeRevisionsCommand)

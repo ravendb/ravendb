@@ -40,27 +40,7 @@ public abstract class AbstractJavaScriptIndexJint : AbstractJavaScriptIndex<JsHa
     {
         return EngineHandle.DisableConstraints();
     }
-    //{
-    //    return new JavaScriptReduceOperation(this, JsIndexUtils, groupByKeyForParsingJint, _engineForParsing, reduce, groupByKey, _indexVersion)
-    //        { ReduceString = Definition.Reduce };
-    //}
-    //public override ObjectInstance GetDefinitionsForParsingJint()
-    //{
-    //    var definitionsObj = _engineForParsing.GetValue(GlobalDefinitions);
-
-    //    if (definitionsObj.IsNull() || definitionsObj.IsUndefined() || definitionsObj.IsObject() == false)
-    //        ThrowIndexCreationException($"is missing its '{GlobalDefinitions}' global variable, are you modifying it in your script?");
-
-    //    var definitions = definitionsObj.AsObject();
-    //    if (definitions.HasProperty(MapsProperty) == false)
-    //        ThrowIndexCreationException("is missing its 'globalDefinition.maps' property, are you modifying it in your script?");
-
-    //    return definitions;
-    //}
-
-    //protected abstract override void ProcessMaps(List<string> mapList, List<MapMetadata> mapReferencedCollections,
-    //    out Dictionary<string, Dictionary<string, List<JavaScriptMapOperation<JsHandleJint>>>> collectionFunctions);
-
+    
     public override JavaScriptReduceOperation<JsHandleJint> CreateJavaScriptReduceOperation(ScriptFunctionInstance groupByKeyForParsingJint, JsHandleJint reduce, JsHandleJint groupByKey, long indexVersion)
     {
         return new JavaScriptReduceOperationJint(this, JsIndexUtils, groupByKeyForParsingJint, Engine, reduce, groupByKey, indexVersion)

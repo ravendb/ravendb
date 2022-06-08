@@ -46,16 +46,6 @@ namespace Raven.Server.Utils
         private static readonly ConcurrentDictionary<Type, IPropertyAccessor> PropertyAccessorForMapReduceOutputCache = new ConcurrentDictionary<Type, IPropertyAccessor>();
 
         private static readonly TypeCache<bool> _isSupportedTypeCache = new (512);
-
-        public static JavaScriptEngineType GetJsEngineType(IJavaScriptOptions jsOptions)
-        { 
-            return GetJsEngineType(jsOptions?.EngineType); 
-        }
-        
-        public static JavaScriptEngineType GetJsEngineType(JavaScriptEngineType? jsEngineType)
-        { 
-            return jsEngineType ?? JavaScriptEngineType.Jint; 
-        }
         
         private static bool IsSupportedTypeInternal(object value)
         {
@@ -911,7 +901,7 @@ namespace Raven.Server.Utils
         where T: struct, IJsHandle<T>
         {
             var result =resultBase;
-            var ms = new MemoryStream();
+            using var ms = new MemoryStream();
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
             using (var writer = new BlittableJsonTextWriter(ctx, ms))
             {

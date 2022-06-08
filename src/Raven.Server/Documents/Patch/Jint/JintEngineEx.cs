@@ -317,26 +317,6 @@ var process = {
             return jsHandleJint;
         }
 
-        //public JsHandleJint CreateArray(System.Array items)
-        //{
-        //    if (items.Length == 0)
-        //        return CreateEmptyArray();
-        //    var f1 = items[0];
-        //    var f2 = items.First();
-
-        //   foreach (JsHandleJint item in items)
-        //   {
-               
-        //   }
-
-        //    int arrayLength = items.Length;
-        //    var jsItems = new JsValue[arrayLength];
-        //    for (int i = 0; i < arrayLength; ++i)
-        //    {
-        //        jsItems[i] = Engine.FromObject(items.GetValue(i));
-        //    }
-        //    return new JsHandleJint(JintExtensions.CreateArray(Engine, jsItems));
-        //}
         public JsHandleJint CreateArray(IEnumerable<object> items)
         {
             var list = Engine.CreateEmptyArray();

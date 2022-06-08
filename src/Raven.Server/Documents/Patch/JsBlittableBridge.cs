@@ -365,12 +365,6 @@ public interface IBlittableObjectProperty<T> : IDisposable
     T ValueHandle { get; }
 }
 
-//public interface IBlittableObjectProperty : IDisposable
-//{
-//    bool Changed { get; }
-//    T ValueHandle { get; set; }
-//}
-
 public interface IResultModifier
 {
     void Modify<T>(T json, IJsEngineHandle<T> engine) where T : struct, IJsHandle<T>;

@@ -582,29 +582,22 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                         if (_propertyQueue.Count > 0)
                             _propertyQueue.Clear();
 
-                        try
+                        foreach (var property in accessor.GetPropertiesInOrder(output))
                         {
-                            foreach (var property in accessor.GetPropertiesInOrder(output))
-                            {
-                                var value = property.Value;
-                                var blittableValue = TypeConverter.ToBlittableSupportedType(value, context: _parent._indexContext, isRoot: false);
-                                //TODO: egor redundant?
+                            var value = property.Value;
+                            var blittableValue = TypeConverter.ToBlittableSupportedType(value, context: _parent._indexContext, isRoot: false);
+                            //TODO: egor redundant?
                             //    V8EngineEx.DisposeJsObjectsIfNeeded(value);
 
-                                _propertyQueue.Enqueue((property.Key, blittableValue));
+                            _propertyQueue.Enqueue((property.Key, blittableValue));
 
-                                if (property.IsGroupByField)
-                                {
-                                    var valueForProcessor = property.GroupByField.GetValue(value, blittableValue);
-                                    _reduceKeyProcessor.Process(_parent._indexContext.Allocator, valueForProcessor);
-                                }
+                            if (property.IsGroupByField)
+                            {
+                                var valueForProcessor = property.GroupByField.GetValue(value, blittableValue);
+                                _reduceKeyProcessor.Process(_parent._indexContext.Allocator, valueForProcessor);
                             }
                         }
-                        catch (Exception e)
-                        {
-                            Console.WriteLine(e);
-                            throw;
-                        }
+
 
                         _parent._indexContext.CachedProperties.NewDocument();
 
@@ -790,6 +783,5 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                 }
             }
         }
-        
     }
 }
