@@ -1,7 +1,5 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Orders;
@@ -41,16 +39,6 @@ namespace SlowTests.Issues
                     await session.Query<Employee>().ToListAsync(); // this will generate performance hint
                 }
 
-                var database = await GetDatabase(store.Database);
-                var outcome = database.NotificationCenter.Paging.UpdatePagingInternal(null, out string reason);
-                Assert.True(outcome, reason);
-
-                int beforeBackupAlertCount;
-                using (database.NotificationCenter.GetStored(out var actions))
-                    beforeBackupAlertCount = actions.Count();
-
-                Assert.True(beforeBackupAlertCount > 0);
-
                 var beforeBackupStats = store.Maintenance.Send(new GetStatisticsOperation());
 
                 var config = Backup.CreateBackupConfiguration(backupPath, backupType: BackupType.Snapshot);
@@ -72,13 +60,7 @@ namespace SlowTests.Issues
                     var afterRestoreStats = store.Maintenance.ForDatabase(restoredDatabaseName).Send(new GetStatisticsOperation());
 
                     var restoredDatabase = await GetDatabase(restoredDatabaseName);
-                
-                    int afterRestoreAlertCount;
-                    using (restoredDatabase.NotificationCenter.GetStored(out var actions))
-                        afterRestoreAlertCount = actions.Count();
-
-                    Assert.True(afterRestoreAlertCount > 0);
-
+                    
                     var indexesPath = restoredDatabase.Configuration.Indexing.StoragePath;
                     var indexesDirectory = new DirectoryInfo(indexesPath.FullPath);
                     Assert.True(indexesDirectory.Exists);
