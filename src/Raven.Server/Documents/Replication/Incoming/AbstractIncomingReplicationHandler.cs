@@ -7,10 +7,13 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Tcp;
+using Raven.Client.Util;
+using Raven.Server.Config;
 using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Replication.Stats;
@@ -18,6 +21,7 @@ using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Exceptions;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Json.Sync;
@@ -26,6 +30,7 @@ using Sparrow.Server;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron;
+using Size = Sparrow.Size;
 
 namespace Raven.Server.Documents.Replication.Incoming
 {
@@ -50,11 +55,13 @@ namespace Raven.Server.Documents.Replication.Incoming
         protected StreamsTempFile _attachmentStreamsTempFile;
         protected long _lastDocumentEtag;
         protected AsyncManualResetEvent _replicationFromAnotherSource;
-
         protected Logger Logger;
 
+        protected Action<IncomingReplicationHandler.DataForReplicationCommand> AfterItemsReadFromStream;
+        public event Action<LiveReplicationPulsesCollector.ReplicationPulse> HandleReplicationPulse;
         public IncomingConnectionInfo ConnectionInfo { get; protected set; }
         public TcpConnectionHeaderMessage.SupportedFeatures SupportedFeatures { get; set; }
+
         protected string IncomingReplicationThreadName => $"Incoming replication {FromToString}";
         public virtual string FromToString => $"In database {_server.NodeTag}-{_databaseName} @ {_server.GetNodeTcpServerUrl()} " +
                                               $"from {ConnectionInfo.SourceTag}-{ConnectionInfo.SourceDatabaseName} @ {ConnectionInfo.SourceUrl}";
@@ -78,6 +85,11 @@ namespace Raven.Server.Documents.Replication.Incoming
             ConnectionInfo = IncomingConnectionInfo.FromGetLatestEtag(replicatedLastEtag);
             SupportedFeatures = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(tcpConnectionOptions.Operation, tcpConnectionOptions.ProtocolVersion);
             ConnectionInfo.RemoteIp = ((IPEndPoint)_tcpClient.Client.RemoteEndPoint)?.Address.ToString();
+        }
+
+        public virtual void ClearEvents()
+        {
+            HandleReplicationPulse = null;
         }
 
         public void Start()
@@ -406,6 +418,155 @@ namespace Raven.Server.Documents.Replication.Incoming
             dataForReplicationCommand.ReplicatedAttachmentStreams = replicatedAttachmentStreams;
         }
 
+        protected void ReceiveSingleDocumentsBatch(TOperationContext context, int replicatedItemsCount, int attachmentStreamCount, long lastEtag, IncomingReplicationStatsScope stats)
+        {
+            if (Logger.IsInfoEnabled)
+            {
+                Logger.Info($"Receiving replication batch with {replicatedItemsCount} documents starting with {lastEtag} from {ConnectionInfo}");
+            }
+
+            var sw = Stopwatch.StartNew();
+            Task task = null;
+
+            var allocator = GetContextAllocator(context);
+            var configuration = GetConfiguration();
+
+            using (_attachmentStreamsTempFile.Scope())
+            using (var incomingReplicationAllocator = new IncomingReplicationAllocator(allocator, configuration.Replication.MaxSizeToSend))
+            using (var dataForReplicationCommand = new IncomingReplicationHandler.DataForReplicationCommand
+            {
+                SourceDatabaseId = ConnectionInfo.SourceDatabaseId,
+                SupportedFeatures = SupportedFeatures,
+                Logger = Logger
+            })
+            {
+                try
+                {
+                    using (var networkStats = stats.For(ReplicationOperation.Incoming.Network))
+                    {
+                        // this will read the documents to memory from the network
+                        // without holding the write tx open
+                        var reader = new Reader(_stream, _copiedBuffer, incomingReplicationAllocator);
+
+                        ReadItemsFromSource(replicatedItemsCount, context, allocator, dataForReplicationCommand, reader, networkStats);
+                        ReadAttachmentStreamsFromSource(attachmentStreamCount, context, allocator, dataForReplicationCommand, reader, networkStats);
+                    }
+
+                    AfterItemsReadFromStream?.Invoke(dataForReplicationCommand);
+
+                    if (Logger.IsInfoEnabled)
+                    {
+                        Logger.Info(
+                            $"Replication connection {FromToString}: " +
+                            $"received {replicatedItemsCount:#,#;;0} items, " +
+                            $"{attachmentStreamCount:#,#;;0} attachment streams, " +
+                            $"total size: {new Size(incomingReplicationAllocator.TotalDocumentsSizeInBytes, SizeUnit.Bytes)}, " +
+                            $"took: {sw.ElapsedMilliseconds:#,#;;0}ms");
+                    }
+
+                    _tcpConnectionOptions._lastEtagReceived = _lastDocumentEtag;
+                    _tcpConnectionOptions.RegisterBytesReceived(incomingReplicationAllocator.TotalDocumentsSizeInBytes);
+
+
+                    using (stats.For(ReplicationOperation.Incoming.Storage))
+                    {
+                        task = HandleBatch(context, dataForReplicationCommand, lastEtag);
+                        //We need a new context here
+                        using (_contextPool.AllocateOperationContext(out JsonOperationContext msgContext))
+                        using (var writer = new BlittableJsonTextWriter(msgContext, _stream))
+                        using (var msg = msgContext.ReadObject(new DynamicJsonValue
+                        {
+                            [nameof(ReplicationMessageReply.MessageType)] = "Processing"
+                        }, "heartbeat message"))
+                        {
+                            while (task.Wait(Math.Min(3000, (int)(configuration.Replication.ActiveConnectionTimeout.AsTimeSpan.TotalMilliseconds * 2 / 3))) ==
+                                   false)
+                            {
+                                // send heartbeats while batch is processed in TxMerger. We wait until merger finishes with this command without timeouts
+                                msgContext.Write(writer, msg);
+                                writer.Flush();
+                            }
+
+                            HandleTaskCompleteIfNeeded();
+                            task = null;
+                        }
+                    }
+
+                    sw.Stop();
+
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info($"Replication connection {FromToString}: " +
+                                  $"received and written {replicatedItemsCount:#,#;;0} items to database in {sw.ElapsedMilliseconds:#,#;;0}ms, " +
+                                  $"with last etag = {lastEtag}.");
+                }
+                catch (Exception e)
+                {
+                    if (Logger.IsInfoEnabled)
+                    {
+                        //This is the case where we had a missing attachment, it is rare but expected.
+                        if (e.ExtractSingleInnerException() is MissingAttachmentException mae)
+                        {
+                            Logger.Info("Replication batch contained missing attachments will request the batch to be re-sent with those attachments.", mae);
+                        }
+                        else
+                        {
+                            Logger.Info("Failed to receive documents replication batch. This is not supposed to happen, and is likely a bug.", e);
+                        }
+                    }
+                    throw;
+                }
+                finally
+                {
+                    // before we dispose the buffer we must ensure it is not being processed in TxMerger, so we wait for it
+                    try
+                    {
+                        task?.Wait();
+                    }
+                    catch (Exception)
+                    {
+                        // ignore this failure, if this failed, we are already
+                        // in a bad state and likely in the process of shutting
+                        // down
+                    }
+                }
+            }
+        }
+
+        protected virtual DynamicJsonValue GetHeartbeatStatusMessage(TOperationContext context, long lastDocumentEtag, string handledMessageType)
+        {
+            var heartbeat = new DynamicJsonValue
+            {
+                [nameof(ReplicationMessageReply.Type)] = "Ok",
+                [nameof(ReplicationMessageReply.MessageType)] = handledMessageType,
+                [nameof(ReplicationMessageReply.LastEtagAccepted)] = lastDocumentEtag,
+                [nameof(ReplicationMessageReply.Exception)] = null,
+                [nameof(ReplicationMessageReply.NodeTag)] = _server.NodeTag
+            };
+
+            return heartbeat;
+        }
+
+        internal void SendHeartbeatStatusToSource(TOperationContext context, BlittableJsonTextWriter writer, long lastDocumentEtag, string handledMessageType)
+        {
+            AddReplicationPulse(ReplicationPulseDirection.IncomingHeartbeatAcknowledge);
+
+            var heartbeat = GetHeartbeatStatusMessage(context, lastDocumentEtag, handledMessageType);
+
+            context.Write(writer, heartbeat);
+            writer.Flush();
+        }
+
+        protected void AddReplicationPulse(ReplicationPulseDirection direction, string exceptionMessage = null)
+        {
+            HandleReplicationPulse?.Invoke(new LiveReplicationPulsesCollector.ReplicationPulse
+            {
+                OccurredAt = SystemTime.UtcNow,
+                Direction = direction,
+                From = ConnectionInfo,
+                ExceptionMessage = exceptionMessage
+            });
+        }
+
         protected abstract void EnsureNotDeleted(string nodeTag);
 
         protected abstract void OnDocumentsReceived();
@@ -414,13 +575,15 @@ namespace Raven.Server.Documents.Replication.Incoming
 
         protected abstract void OnFailed(Exception exception);
 
-        protected abstract void ReceiveSingleDocumentsBatch(TOperationContext context, int itemsCount, int attachmentStreamCount, long lastDocumentEtag, IncomingReplicationStatsScope stats);
+        protected abstract Task HandleBatch(TOperationContext context, IncomingReplicationHandler.DataForReplicationCommand batch, long lastEtag);
+
+        protected abstract void HandleTaskCompleteIfNeeded();
+
+        protected abstract RavenConfiguration GetConfiguration();
+
+        protected abstract ByteStringContext GetContextAllocator(TOperationContext context);
 
         protected abstract int GetNextReplicationStatsId();
-
-        internal abstract void SendHeartbeatStatusToSource(TOperationContext context, BlittableJsonTextWriter writer, long lastDocumentEtag, string notify);
-
-        protected abstract void AddReplicationPulse(ReplicationPulseDirection direction, string exceptionMessage = null);
 
         protected abstract void HandleHeartbeatMessage(TOperationContext jsonOperationContext, BlittableJsonReaderObject blittableJsonReaderObject);
 

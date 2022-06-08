@@ -2431,7 +2431,6 @@ namespace Raven.Server
                     if (result.DatabaseStatus == DatabasesLandlord.DatabaseSearchResult.Status.Sharded)
                     {
                         var shardedReplicationLoader = tcp.DatabaseContext.ReplicationContext;
-
                         var queue = new ReplicationQueue(result.DatabaseContext.ShardCount);
 
                         shardedReplicationLoader.AcceptIncomingConnection(tcp, header, cert, bufferToCopy, queue);

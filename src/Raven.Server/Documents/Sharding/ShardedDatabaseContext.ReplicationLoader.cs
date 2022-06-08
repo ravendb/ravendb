@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using JetBrains.Annotations;
+using Nito.AsyncEx;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
@@ -116,8 +117,7 @@ namespace Raven.Server.Documents.Sharding
             {
                 var getLatestEtagMessage = IncomingInitialHandshake(tcpConnectionOptions, buffer);
 
-                var newIncoming = new ShardedIncomingReplicationHandler(tcpConnectionOptions, this, buffer, getLatestEtagMessage, replicationQueue);
-                return newIncoming;
+                return new ShardedIncomingReplicationHandler(tcpConnectionOptions, this, buffer, getLatestEtagMessage, replicationQueue);
             }
 
             private ReplicationLatestEtagRequest IncomingInitialHandshake(TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.MemoryBuffer buffer)
@@ -158,7 +158,7 @@ namespace Raven.Server.Documents.Sharding
 
                 try
                 {
-                    using (_context._serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (_context.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     using (var writer = new BlittableJsonTextWriter(context, tcpConnectionOptions.Stream))
                     using (context.OpenReadTransaction())
                     {
@@ -352,22 +352,42 @@ namespace Raven.Server.Documents.Sharding
         }
     }
 
-    public class ReplicationQueue
+    public class ReplicationQueue : IDisposable
     {
-        public ConcurrentDictionary<int, BlockingCollection<List<ReplicationBatchItem>>> Items = new ConcurrentDictionary<int, BlockingCollection<List<ReplicationBatchItem>>>();
+        public Dictionary<int, BlockingCollection<List<ReplicationBatchItem>>> Items = new Dictionary<int, BlockingCollection<List<ReplicationBatchItem>>>();
 
-        public CountdownEvent SendToShardCompletion;
+        public AsyncCountdownEvent SendToShardCompletion;
 
-        public ConcurrentDictionary<int, Dictionary<Slice, AttachmentReplicationItem>> AttachmentsPerShard = new ConcurrentDictionary<int, Dictionary<Slice, AttachmentReplicationItem>>();
+        public Dictionary<int, Dictionary<Slice, AttachmentReplicationItem>> AttachmentsPerShard = new Dictionary<int, Dictionary<Slice, AttachmentReplicationItem>>();
 
         public ReplicationQueue(int numberOfShards)
         {
-            SendToShardCompletion = new CountdownEvent(numberOfShards);
+            SendToShardCompletion = new AsyncCountdownEvent(numberOfShards);
             for (int i = 0; i < numberOfShards; i++)
             {
                 Items[i] = new BlockingCollection<List<ReplicationBatchItem>>();
                 AttachmentsPerShard[i] = new Dictionary<Slice, AttachmentReplicationItem>(SliceComparer.Instance);
             }
+        }
+
+        public void Dispose()
+        {
+            foreach (var item in Items)
+            {
+                item.Value?.Dispose();
+            }
+
+            foreach (var item in AttachmentsPerShard.Values)
+            {
+                foreach (var value in item.Values)
+                {
+                    value.Dispose();
+                }
+            }
+
+            Items = null;
+            AttachmentsPerShard = null;
+            SendToShardCompletion = null;
         }
     }
 
