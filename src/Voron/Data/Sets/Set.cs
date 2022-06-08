@@ -545,10 +545,9 @@ namespace Voron.Data.Sets
                 _it.Dispose();
 
                 _it = leafPage.GetIterator(_parent._llt);
-                if (from == long.MinValue)
-                    return true;
-
-                _it.SkipTo(from);
+                if (from != long.MinValue)
+                    _it.SkipTo(from);
+                
                 while (_it.MoveNext(out long v))
                 {
                     if (v < from)
