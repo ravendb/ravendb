@@ -29,6 +29,7 @@ namespace SlowTests.Issues
             var initialMaxDurationForScript = new TimeSetting(20, TimeUnit.Milliseconds);
             options.ModifyDatabaseRecord +=record =>
             {
+                //TODO: egor make this work
                 //record.Settings[RavenConfiguration.GetKey(x => x.Indexing.JsStrictMode)] = initialStrictModeForScript.ToString();
                 //record.Settings[RavenConfiguration.GetKey(x => x.Indexing.JsMaxSteps)] = initialMaxStepsForScript.ToString();
                 //record.Settings[RavenConfiguration.GetKey(x => x.Indexing.JsMaxDuration)] = initialMaxDurationForScript.GetValue(TimeUnit.Milliseconds).ToString();

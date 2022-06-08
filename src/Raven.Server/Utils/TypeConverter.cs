@@ -493,7 +493,7 @@ namespace Raven.Server.Utils
                 return true;
             }
 
-            if (js.IsStringEx || js.IsRegExp)
+            if (js.IsStringEx)
             {
                 obj = js.AsString;
                 return true;

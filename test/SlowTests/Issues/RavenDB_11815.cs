@@ -1,8 +1,8 @@
-﻿using Tests.Infrastructure;
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -205,11 +205,12 @@ groupBy(x => x.Total.Currency)
         {
             using (var store = GetDocumentStore(options))
             {
-                /*new MapReduceIndexWithNestedField().Execute(store);
-                new MapReduceIndexWithNestedField2().Execute(store);
-                new MapReduceIndexWithNestedFieldJs().Execute(store);*/
-                new MapReduceIndexWithNestedFieldJs2().Execute(store);
-                //new MultiMapReduceIndexWithNestedField().Execute(store);
+       
+                    new MapReduceIndexWithNestedField().Execute(store);
+                    new MapReduceIndexWithNestedField2().Execute(store);
+                    new MapReduceIndexWithNestedFieldJs().Execute(store);
+                    new MapReduceIndexWithNestedFieldJs2().Execute(store);
+                    new MultiMapReduceIndexWithNestedField().Execute(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -266,26 +267,26 @@ groupBy(x => x.Total.Currency)
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
-                using (var session = store.OpenSession())
-                {
-                    /*AssertResults<MapReduceIndexWithNestedField>(session);
+                    using (var session = store.OpenSession())
+                    {
+                        AssertResults<MapReduceIndexWithNestedField>(session);
 
-                    AssertResults<MapReduceIndexWithNestedField2>(session);
+                         AssertResults<MapReduceIndexWithNestedField2>(session);
 
-                    AssertResults<MapReduceIndexWithNestedFieldJs>(session);*/
+                        AssertResults<MapReduceIndexWithNestedFieldJs>(session);
 
-                    AssertResults<MapReduceIndexWithNestedFieldJs2>(session);
+                        AssertResults<MapReduceIndexWithNestedFieldJs2>(session);
 
-                    //AssertResults<MultiMapReduceIndexWithNestedField>(session);
+                        AssertResults<MultiMapReduceIndexWithNestedField>(session);
+                    }
                 }
-            }
 
-            void AssertResults<TIndex>(IDocumentSession session) where TIndex : AbstractIndexCreationTask, new()
-            {
-                var results1 = session.Query<Result, TIndex>()
-                    .ToList();
+                void AssertResults<TIndex>(IDocumentSession session) where TIndex : AbstractIndexCreationTask, new()
+                {
+                    var results1 = session.Query<Result, TIndex>()
+                        .ToList();
 
                 Assert.Equal(2, results1.Count);
                 Assert.True(results1.Any(x => x.Total.Currency == "PLN"));

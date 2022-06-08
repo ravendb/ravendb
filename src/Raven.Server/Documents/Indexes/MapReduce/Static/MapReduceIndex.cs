@@ -544,7 +544,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
             private class Enumerator : IEnumerator<MapResult>
             {
-                private readonly IJavaScriptOptions _jsOptions;
                 private readonly IEnumerator _enumerator;
                 private readonly AnonymousObjectToBlittableMapResultsEnumerableWrapper _parent;
                 private readonly IndexingStatsScope _createBlittableResult;

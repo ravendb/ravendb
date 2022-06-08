@@ -50,7 +50,7 @@ namespace SlowTests.Issues
         [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void JavascriptIndexShouldThrowOnExceptionInReduceStage(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using var session = store.OpenSession();
                 for (int i = 0; i < 500; i++)

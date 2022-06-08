@@ -266,7 +266,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 return null;
             if (jsValue.IsUndefined)
                 return null;
-            if (jsValue.IsStringEx || jsValue.IsRegExp)
+            if (jsValue.IsStringEx)
                 return jsValue.AsString;
             if (jsValue.IsBoolean)
                 return jsValue.AsBoolean;
