@@ -4,6 +4,7 @@ import database from "models/resources/database";
 import getOngoingTasksCommand from "commands/database/tasks/getOngoingTasksCommand";
 import deleteOngoingTaskCommand from "commands/database/tasks/deleteOngoingTaskCommand";
 import toggleOngoingTaskCommand from "commands/database/tasks/toggleOngoingTaskCommand";
+import etlProgressCommand from "commands/database/tasks/etlProgressCommand";
 
 export default class TasksService {
     async getOngoingTasks(db: database, location: databaseLocationSpecifier) {
@@ -27,5 +28,9 @@ export default class TasksService {
         enable: boolean
     ) {
         return new toggleOngoingTaskCommand(db, taskType, taskId, taskName, !enable).execute();
+    }
+
+    async getProgress(db: database, location: databaseLocationSpecifier) {
+        return new etlProgressCommand(db, location, false).execute();
     }
 }

@@ -33,18 +33,16 @@ export interface IndexNodeInfo {
 
 export interface IndexProgressInfo {
     collections: IndexCollectionProgress[];
-    global: Progress;
+    global: IndexingProgress;
 }
 
 export interface IndexCollectionProgress {
     name: string;
-    documents: Progress;
-    tombstones: Progress;
+    documents: IndexingProgress;
+    tombstones: IndexingProgress;
 }
 
-export interface Progress {
-    processed: number;
-    total: number;
+export interface IndexingProgress extends Progress {
     processedPerSecond: number;
 }
 

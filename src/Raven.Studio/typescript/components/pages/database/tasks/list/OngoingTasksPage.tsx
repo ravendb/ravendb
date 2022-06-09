@@ -1,5 +1,5 @@
 ﻿import database from "models/resources/database";
-import React, { useCallback, useEffect, useReducer } from "react";
+import React, { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import { useServices } from "hooks/useServices";
 import { ongoingTasksReducer, ongoingTasksReducerInitializer } from "./OngoingTasksReducer";
@@ -28,12 +28,19 @@ import { OlapEtlPanel } from "./panels/OlapEtlPanel";
 import { ElasticSearchEtlPanel } from "./panels/ElasticSearchEtlPanel";
 import { PeriodicBackupPanel } from "./panels/PeriodicBackupPanel";
 import { SubscriptionPanel } from "./panels/SubscriptionPanel";
-import { ReplicationHubPanel } from "./panels/ReplicationHubPanel";
 import { ReplicationSinkPanel } from "./panels/ReplicationSinkPanel";
 import viewHelpers from "common/helpers/view/viewHelpers";
 import genUtils from "common/generalUtils";
 import ongoingTaskModel from "models/database/tasks/ongoingTaskModel";
 import { ReplicationHubDefinitionPanel } from "./panels/ReplicationHubDefinitionPanel";
+import useBoolean from "hooks/useBoolean";
+import { OngoingTaskProgressProvider } from "./OngoingTaskProgressProvider";
+import { BaseOngoingTaskPanelProps } from "./shared";
+import EtlTaskProgress = Raven.Server.Documents.ETL.Stats.EtlTaskProgress;
+
+import "./OngoingTaskPage.scss";
+import etlScriptDefinitionCache from "models/database/stats/etlScriptDefinitionCache";
+import TaskUtils from "../../../../utils/TaskUtils";
 
 interface OngoingTasksPageProps {
     database: database;
@@ -46,7 +53,11 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
 
     const { canReadWriteDatabase, isClusterAdminOrClusterNode } = useAccessManager();
 
+    const { value: progressEnabled, setTrue: startTrackingProgress } = useBoolean(false);
+
     const { tasksService } = useServices();
+
+    const [definitionCache] = useState(() => new etlScriptDefinitionCache(database));
 
     const [tasks, dispatch] = useReducer(ongoingTasksReducer, locations, ongoingTasksReducerInitializer);
 
@@ -150,6 +161,25 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
         [toggleOngoingTask]
     );
 
+    const onEtlProgress = useCallback(
+        (progress: EtlTaskProgress[], location: databaseLocationSpecifier) => {
+            dispatch({
+                type: "ProgressLoaded",
+                progress,
+                location,
+            });
+        },
+        [dispatch]
+    );
+
+    const showItemPreview = useCallback((task: OngoingTaskInfo, scriptName: string) => {
+        definitionCache.showDefinitionFor(
+            TaskUtils.taskTypeToEtlType(task.shared.taskType),
+            task.shared.taskId,
+            scriptName
+        );
+    }, []);
+
     const canNavigateToServerWideTasks = isClusterAdminOrClusterNode();
     const serverWideTasksUrl = appUrl.forServerWideTasks();
 
@@ -175,8 +205,15 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
 
     const hubDefinitions = tasks.replicationHubs;
 
+    const sharedPanelProps: Omit<BaseOngoingTaskPanelProps<OngoingTaskInfo>, "data"> = {
+        db: database,
+        onDelete: onDeleteConfirmation,
+        toggleState: onToggleStateConfirmation,
+    };
+
     return (
         <div>
+            {progressEnabled && <OngoingTaskProgressProvider db={database} onEtlProgress={onEtlProgress} />}
             <div className="flex-vertical">
                 <div className="flex-header flex-horizontal">
                     {canReadWriteDatabase(database) && (
@@ -217,13 +254,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                             </div>
                             <div>
                                 {externalReplications.map((x) => (
-                                    <ExternalReplicationPanel
-                                        db={database}
-                                        key={taskKey(x.shared)}
-                                        data={x}
-                                        onDelete={onDeleteConfirmation}
-                                        toggleState={onToggleStateConfirmation}
-                                    />
+                                    <ExternalReplicationPanel {...sharedPanelProps} key={taskKey(x.shared)} data={x} />
                                 ))}
                             </div>
                         </div>
@@ -241,11 +272,11 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                             <div>
                                 {ravenEtls.map((x) => (
                                     <RavenEtlPanel
-                                        db={database}
+                                        {...sharedPanelProps}
                                         key={taskKey(x.shared)}
                                         data={x}
-                                        onDelete={onDeleteConfirmation}
-                                        toggleState={onToggleStateConfirmation}
+                                        onToggleDetails={startTrackingProgress}
+                                        showItemPreview={showItemPreview}
                                     />
                                 ))}
                             </div>
@@ -264,11 +295,10 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                             <div>
                                 {sqlEtls.map((x) => (
                                     <SqlEtlPanel
-                                        db={database}
+                                        {...sharedPanelProps}
                                         key={taskKey(x.shared)}
                                         data={x}
-                                        onDelete={onDeleteConfirmation}
-                                        toggleState={onToggleStateConfirmation}
+                                        onToggleDetails={startTrackingProgress}
                                     />
                                 ))}
                             </div>
@@ -287,11 +317,10 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                             <div>
                                 {olapEtls.map((x) => (
                                     <OlapEtlPanel
-                                        db={database}
+                                        {...sharedPanelProps}
                                         key={taskKey(x.shared)}
                                         data={x}
-                                        onDelete={onDeleteConfirmation}
-                                        toggleState={onToggleStateConfirmation}
+                                        onToggleDetails={startTrackingProgress}
                                     />
                                 ))}
                             </div>
@@ -310,11 +339,10 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                             <div>
                                 {elasticSearchEtls.map((x) => (
                                     <ElasticSearchEtlPanel
-                                        db={database}
+                                        {...sharedPanelProps}
                                         key={taskKey(x.shared)}
                                         data={x}
-                                        onDelete={onDeleteConfirmation}
-                                        toggleState={onToggleStateConfirmation}
+                                        onToggleDetails={startTrackingProgress}
                                     />
                                 ))}
                             </div>
@@ -332,13 +360,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                             </div>
                             <div>
                                 {backups.map((x) => (
-                                    <PeriodicBackupPanel
-                                        db={database}
-                                        key={taskKey(x.shared)}
-                                        data={x}
-                                        onDelete={onDeleteConfirmation}
-                                        toggleState={onToggleStateConfirmation}
-                                    />
+                                    <PeriodicBackupPanel {...sharedPanelProps} key={taskKey(x.shared)} data={x} />
                                 ))}
                             </div>
                         </div>
@@ -355,13 +377,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                             </div>
                             <div>
                                 {subscriptions.map((x) => (
-                                    <SubscriptionPanel
-                                        db={database}
-                                        key={taskKey(x.shared)}
-                                        data={x}
-                                        onDelete={onDeleteConfirmation}
-                                        toggleState={onToggleStateConfirmation}
-                                    />
+                                    <SubscriptionPanel {...sharedPanelProps} key={taskKey(x.shared)} data={x} />
                                 ))}
                             </div>
                         </div>
@@ -379,11 +395,9 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                             <div>
                                 {hubDefinitions.map((def) => (
                                     <ReplicationHubDefinitionPanel
-                                        db={database}
+                                        {...sharedPanelProps}
                                         key={taskKey(def.shared)}
                                         data={def}
-                                        onDelete={onDeleteConfirmation}
-                                        toggleState={onToggleStateConfirmation}
                                         connectedHubs={replicationHubs.filter(
                                             (x) => x.shared.taskName === def.shared.taskName
                                         )}
@@ -404,20 +418,11 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                             </div>
                             <div>
                                 {replicationSinks.map((x) => (
-                                    <ReplicationSinkPanel
-                                        db={database}
-                                        key={taskKey(x.shared)}
-                                        data={x}
-                                        onDelete={onDeleteConfirmation}
-                                        toggleState={onToggleStateConfirmation}
-                                    />
+                                    <ReplicationSinkPanel {...sharedPanelProps} key={taskKey(x.shared)} data={x} />
                                 ))}
                             </div>
                         </div>
                     )}
-
-                    <h3>DEBUG:</h3>
-                    <pre style={{ fontSize: "10px" }}>{JSON.stringify(tasks, null, 2)}</pre>
                 </div>
             </div>
         </div>

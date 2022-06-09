@@ -5,6 +5,22 @@ export interface OngoingTaskHubDefinitionSharedInfo extends OngoingTaskSharedInf
     delayReplicationTime: number;
 }
 
+interface Progress {
+    total: number;
+    processed: number;
+}
+
+export interface OngoingTaskNodeProgressDetails {
+    global: Progress;
+    documents: Progress;
+    documentTombstones: Progress;
+    counterGroups: Progress;
+    transformationName: string;
+    disabled: boolean;
+    completed: boolean;
+    processedPerSecond: number;
+}
+
 export interface OngoingTaskNodeInfoDetails {
     taskConnectionStatus: OngoingTaskConnectionStatus;
     responsibleNode: string;
@@ -15,6 +31,7 @@ export interface OngoingTaskNodeInfo<TNodeInfo extends OngoingTaskNodeInfoDetail
     location: databaseLocationSpecifier;
     status: loadStatus;
     details: TNodeInfo;
+    progress: OngoingTaskNodeProgressDetails[];
 }
 
 export interface OngoingTaskSharedInfo {

@@ -1,93 +1,13 @@
 ﻿/*
 class ongoingTasks extends shardViewModelBase {
     private watchedBackups = new Map<number, number>();
-    private etlProgressWatch: ReturnType<typeof setTimeout>;
-    private definitionsCache: etlScriptDefinitionCache;
 
-    activate(args: any): JQueryPromise<any> {
-        super.activate(args);
-
-        return $.when<any>(this.fetchDatabaseInfo(), this.fetchOngoingTasks());
-    }
-
-    attached() {
-        super.attached();
-
-        this.addNotification(this.changesContext.serverNotifications()
+ this.addNotification(this.changesContext.serverNotifications()
             .watchClusterTopologyChanges(() => this.refresh()));
         this.addNotification(this.changesContext.serverNotifications()
             .watchDatabaseChange(this.db?.name, () => this.refresh()));
         this.addNotification(this.changesContext.serverNotifications().watchReconnect(() => this.refresh()));
-    }
 
-    compositionComplete(): void {
-        super.compositionComplete();
-
-        this.definitionsCache = new etlScriptDefinitionCache(this.db);
-    }
-
-    private fetchEtlProcess() {
-        return new etlProgressCommand(this.db)
-            .execute()
-            .done(results => {
-                results.Results.forEach(taskProgress => {
-                    switch (taskProgress.EtlType) {
-                        case "Sql":
-                            const matchingSqlTask = this.sqlEtlTasks().find(x => x.taskName() === taskProgress.TaskName);
-                            if (matchingSqlTask) {
-                                matchingSqlTask.updateProgress(taskProgress);
-                            }
-                            break;
-                        case "Olap":
-                            const matchingOlapTask = this.olapEtlTasks().find(x => x.taskName() === taskProgress.TaskName);
-                            if (matchingOlapTask) {
-                                matchingOlapTask.updateProgress(taskProgress);
-                            }
-                            break;
-                        case "Raven":
-                            const matchingRavenTask = this.ravenEtlTasks().find(x => x.taskName() === taskProgress.TaskName);
-                            if (matchingRavenTask) {
-                                matchingRavenTask.updateProgress(taskProgress);
-                            }
-                            break;
-                        case "ElasticSearch":
-                            const matchingElasticSearchTask = this.ravenEtlTasks().find(x => x.taskName() === taskProgress.TaskName);
-                            if (matchingElasticSearchTask) {
-                                matchingElasticSearchTask.updateProgress(taskProgress);
-                            }
-                            break;
-                    }
-                });
-
-                // tasks w/o defined connection string won't get progress update - update them manually 
-
-                this.sqlEtlTasks().forEach(task => {
-                    if (task.loadingProgress()) {
-                        task.loadingProgress(false);
-                    }
-                });
-
-                this.olapEtlTasks().forEach(task => {
-                    if (task.loadingProgress()) {
-                        task.loadingProgress(false);
-                    }
-                });
-
-                this.ravenEtlTasks().forEach(task => {
-                    if (task.loadingProgress()) {
-                        task.loadingProgress(false);
-                    }
-                });
-
-                this.elasticSearchEtlTasks().forEach(task => {
-                    if (task.loadingProgress()) {
-                        task.loadingProgress(false);
-                    }
-                });
-            });
-    }
-
-   
     createResponsibleNodeUrl(task: ongoingTaskListModel) {
         return ko.pureComputed(() => {
             const node = task.responsibleNode();
@@ -106,28 +26,6 @@ class ongoingTasks extends shardViewModelBase {
             return;
         }
         return $.when<any>(this.fetchDatabaseInfo(), this.fetchOngoingTasks());
-    }
-
-    private fetchOngoingTasks(): JQueryPromise<Raven.Server.Web.System.OngoingTasksResult> {
-        const db = this.db;
-        return new ongoingTasksCommand(db)
-            .execute()
-            .done((info) => {
-
-                console.warn("USING TEMPORARY VALUES");
-                info.OngoingTasksList.forEach(task => {
-                    task.ResponsibleNode = { //TODO: temp!
-                        NodeTag: "A",
-                        NodeUrl: window.location.hostname,
-                        ResponsibleNode: "A"
-                    }
-
-                    if (task.TaskType === "OlapEtl") {
-                        (task as any).Destination = "TODO - temporary description";
-                    }
-                })
-                this.processTasksResult(info);
-            });
     }
 
     private watchBackupCompletion(task: ongoingTaskBackupListModel) {
@@ -153,37 +51,6 @@ class ongoingTasks extends shardViewModelBase {
                     }
                 }
             });
-        }
-    }
-
-    private watchEtlProgress() {
-        if (!this.etlProgressWatch) {
-            this.fetchEtlProcess();
-
-            let intervalId = setInterval(() => {
-                this.fetchEtlProcess();
-            }, 3000);
-
-            this.etlProgressWatch = intervalId;
-
-            this.registerDisposable({
-                dispose: () => {
-                    if (intervalId) {
-                        clearInterval(intervalId);
-                        intervalId = null;
-                        this.etlProgressWatch = null;
-                    }
-                }
-            })
-        }
-    }
-
-    toggleDetails(item: ongoingTaskListModel) {
-        item.toggleDetails();
-
-        const isEtl = item.taskType() === "RavenEtl" || item.taskType() === "SqlEtl" || item.taskType() === "OlapEtl" || item.taskType() === "ElasticSearchEtl";
-        if (item.showDetails() && isEtl) {
-            this.watchEtlProgress();
         }
     }
 
@@ -259,19 +126,6 @@ class ongoingTasks extends shardViewModelBase {
         return appUrl.forManageDatabaseGroup(dbInfo);
     }
 
-    showItemPreview(item: ongoingTaskListModel, scriptName: string) {
-        //const type: Raven.Client.Documents.Operations.ETL.EtlType = item.taskType() === "RavenEtl" ? "Raven" : item.taskType() === "SqlEtl" ? "Sql" : "Olap";
-        let type:Raven.Client.Documents.Operations.ETL.EtlType;
-
-        switch (item.taskType()) {
-            case "RavenEtl": type = "Raven"; break;
-            case "SqlEtl": type = "Sql"; break;
-            case "OlapEtl": type = "Olap"; break;
-            case "ElasticSearchEtl": type = "ElasticSearch"; break;
-        }
-
-        this.definitionsCache.showDefinitionFor(type, item.taskId, scriptName);
-    }
 }
 
 TODO: this become node spefic
@@ -293,9 +147,7 @@ TODO: this become node spefic
 </script>
 
 <script type="text/html" id="etl-progress-template">
-    <div data-bind="visible: suggestNavigationToResponsibleNodeForProgress">
-        <small><i class="icon-info"></i> Navigate to <a target="_blank" href="#" data-bind="attr: { href: $root.createResponsibleNodeUrl($data) }">responsible node</a> to see task progress.</small>
-    </div>
+    
     <div data-bind="if: showProgress">
         <div data-bind="visible: loadingProgress">
             <i class="global-spinner spinner-xs"></i> Loading progress ...
@@ -304,9 +156,6 @@ TODO: this become node spefic
         <div class="etl-progress">
             <div class="overall-container">
                 <div class="text-info flex-horizontal">
-                    <span data-bind="text: name"></span>
-                    <a title="Show script preview" href="#" data-bind="click: _.partial($root.showItemPreview, $parent, name())"><i class="icon-preview margin-left margin-left-xs"></i></a>
-                    <div class="flex-separator"></div>
                     <div class="text-warning" data-bind="visible: !globalProgress.total()">
                         <small>
                             <i class="icon-warning"></i>
@@ -327,7 +176,7 @@ TODO: this become node spefic
                             <span class="sr-only" data-bind="text: percentageFormatted() + ' Completed'"></span>
                         </div>
                     </div>
-                </div>f
+                </div>
             </div>
             <div data-bind="foreach: innerProgresses" class="etl-progress-details">
                 <div class="etl-progress-item" data-bind="with: progress, visible: visible">
@@ -356,26 +205,6 @@ TODO: this become node spefic
 class ongoingTaskReplicationHubListModel extends ongoingTaskListModel {
     
     uniqueName: string;
-    
-    constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsHub) {
-        super();
-
-        this.update(dto); 
-        this.initializeObservables();
-    }
-    
-    update(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsHub) {
-        super.update(dto);
-
-        this.destinationDB(dto.DestinationDatabase);
-        this.destinationURL(dto.DestinationUrl || "N/A");
-        
-        this.uniqueName = ongoingTaskReplicationHubListModel.generateUniqueName(dto);
-    }
-    
-    toggleDetails(): void {
-        throw new Error("Use toggleDetails on pullReplicationHub definition level");
-    }
     
     static generateUniqueName(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsHub) { 
         return dto.TaskName + ":" + dto.DestinationDatabase + ":" + dto.DestinationUrl;
@@ -494,64 +323,6 @@ class ongoingTaskSubscriptionListModel extends ongoingTaskListModel {
 
 export = ongoingTaskSubscriptionListModel;
 
-
-//TODO remove
-
-
-class progressItem {
-    name = ko.observable<string>();
-
-    globalProgress: etlProgress = new etlProgress(0, 0, x => x.toLocaleString());
-
-    documents = new genericProgress(0, 0, x => x.toLocaleString());
-    documentTombstones = new genericProgress(0, 0, x => x.toLocaleString());
-    counterGroups = new genericProgress(0, 0, x => x.toLocaleString());
-    
-    countersVisible = ko.pureComputed(() => {
-        const countersCount = this.counterGroups.total();
-        return countersCount > 0;
-    });
-
-    innerProgresses = [
-        { name: "Documents", progress: this.documents, visible: true },
-        { name: "Document Tombstones", progress: this.documentTombstones, visible: true },
-        { name: "Counter Groups", progress: this.counterGroups, visible: this.countersVisible }
-    ]; 
-    
-    constructor(dto: Raven.Server.Documents.ETL.Stats.EtlProcessProgress) {
-        this.update(dto);
-    }
-    
-    update(dto: Raven.Server.Documents.ETL.Stats.EtlProcessProgress) {
-        this.name(dto.TransformationName);
-        
-        this.documents.total(dto.TotalNumberOfDocuments);
-        this.documents.processed(dto.TotalNumberOfDocuments - dto.NumberOfDocumentsToProcess);
-        
-        this.documentTombstones.total(dto.TotalNumberOfDocumentTombstones);
-        this.documentTombstones.processed(dto.TotalNumberOfDocumentTombstones - dto.NumberOfDocumentTombstonesToProcess);
-        
-        this.counterGroups.total(dto.TotalNumberOfCounterGroups);
-        this.counterGroups.processed(dto.TotalNumberOfCounterGroups - dto.NumberOfCounterGroupsToProcess);
-        
-        this.globalProgress.processedPerSecond(dto.AverageProcessedPerSecond);
-        this.globalProgress.total(
-            this.documents.total() +
-            this.documentTombstones.total() +
-            this.counterGroups.total()
-        );
-        
-        this.globalProgress.completed(dto.Completed);
-        this.globalProgress.disabled(dto.Disabled);
-        
-        this.globalProgress.processed(
-            this.documents.processed() +
-            this.documentTombstones.processed() +
-            this.counterGroups.processed()
-        );
-    }
-}
-
 //TODO: remove
 abstract class abstractOngoingTaskEtlListModel extends ongoingTaskListModel {
     showProgress = ko.observable(false); // we use separate property for progress and details to smooth toggle animation, first we show progress then expand details 
@@ -575,29 +346,7 @@ abstract class abstractOngoingTaskEtlListModel extends ongoingTaskListModel {
         this.showDetails.toggle();
     }
     
-    updateProgress(incomingProgress: Raven.Server.Documents.ETL.Stats.EtlTaskProgress) {
-        const existingNames = this.scriptProgress().map(x => x.name());
-        
-        incomingProgress.ProcessesProgress.forEach(incomingScriptProgress => {
-            const existingItem = this.scriptProgress().find(x => x.name() === incomingScriptProgress.TransformationName);
-            if (existingItem) {
-                existingItem.update(incomingScriptProgress);
-                _.pull(existingNames, incomingScriptProgress.TransformationName);
-            } else {
-                this.scriptProgress.push(new progressItem(incomingScriptProgress));
-            }
-        });
-        
-        if (existingNames.length) {
-            // remove those scripts
-            existingNames.forEach(toDelete => {
-                const item = this.scriptProgress().find(x => x.name() === toDelete);
-                this.scriptProgress.remove(item);
-            })
-        }
-        
-        this.loadingProgress(false);
-    }
+   
 }
 
 export = abstractOngoingTaskEtlListModel;
@@ -606,30 +355,11 @@ export = abstractOngoingTaskEtlListModel;
 
 class etlProgress extends genericProgress {
     
-    disabled = ko.observable<boolean>(false);
-    
     constructor(processed: number,
                 total: number,
                 numberFormatter: (number: number) => string,
                 processedPerSecond: number = 0) {
         super(processed, total, numberFormatter, processedPerSecond);
-        
-        this.completed = ko.observable<boolean>(false); //override property - here we have explicit complete 
-        
-        this.percentage = ko.pureComputed(() => {
-            const percentage = this.defaultPercentage();
-            return percentage === 100 && !this.completed() ? 99.9 : percentage;
-        });
-        
-        this.formattedTimeLeftToProcess = ko.pureComputed(() => {
-            if (this.disabled()) {
-                return "Overall progress";
-            }
-            if (this.completed()) {
-                return "ETL completed";
-            }
-            return this.defaultFormattedTimeLeftToProcess();
-        });
         
         this.textualProgress = ko.pureComputed(() => {
             if (this.total() === this.processed() && !this.completed()) {
@@ -648,10 +378,7 @@ class etlProgress extends genericProgress {
     }
 }
 
-
 export = etlProgress; 
-
-
 
 class ongoingTaskReplicationHubDefinitionListModel {
     
@@ -729,7 +456,5 @@ class ongoingTaskReplicationHubDefinitionListModel {
 
 
 export = ongoingTaskReplicationHubDefinitionListModel;
-
-
 
 */

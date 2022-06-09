@@ -1,0 +1,73 @@
+﻿@use "Content/scss/colors";
+@use "Content/scss/sizes";
+
+.location-specific-details-tooltip {
+    background-color: colors.$gray-700;
+    border-radius: sizes.$gutter-xs;
+    display: grid;
+    grid-template-columns: auto auto;
+    z-index: 1000;
+
+    .location-specific-details-location {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: sizes.$gutter-xs sizes.$gutter-xs;
+        margin-right: 1px;
+        background-color: colors.$gray-600;
+        border-top-left-radius: sizes.$gutter-xs;
+        width: 135px;
+
+        & > div:first-of-type {
+            font-size: 36px;
+            margin-bottom: sizes.$gutter-sm;
+        }
+
+        .shard-id, .node-id {
+            font-size: 26px;
+            font-weight: bold;
+            color: colors.$white;
+            text-align: center;
+            line-height: 1.3em;
+
+            .small-label {
+                line-height: 1.4em;
+            }
+
+            img {
+                width: 1.4em;
+            }
+        }
+    }
+
+    .details {
+        line-height: 1em;
+        border-top-right-radius: sizes.$gutter-xs;
+        background-color: colors.$gray-600;
+        display: flex;
+        flex-direction: column;
+
+        .details-item {
+            padding: sizes.$gutter-xs sizes.$gutter-sm;
+            font-size: 12px;
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+
+            & + .details-item {
+                border-top: 1px solid colors.$gray-700;
+            }
+
+            i {
+                margin-right: sizes.$gutter-xxs;
+            }
+
+            &.status.updating {
+                color: colors.$progress-color;
+            }
+        }
+    }
+
+
+    
+}
