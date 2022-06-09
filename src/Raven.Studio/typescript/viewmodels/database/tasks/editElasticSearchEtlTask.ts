@@ -606,7 +606,7 @@ class editElasticSearchEtlTask extends viewModelBase {
     }
     
     private makeSureSandboxIsVisible() {
-        const $editArea = $(".edit-raven-sql-task");
+        const $editArea = $(".edit-elastic-search-task");
         if ($editArea.scrollTop() > 300) {
             $editArea.scrollTop(0);
         }

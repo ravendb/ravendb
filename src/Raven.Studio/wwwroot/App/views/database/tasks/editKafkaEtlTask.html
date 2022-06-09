@@ -1,7 +1,7 @@
-<div class="content-margin edit-raven-etl-task" data-bind="css: { 'test-mode': enableTestArea }">
+<div class="content-margin edit-kafka-etl-task" data-bind="css: { 'test-mode': enableTestArea }">
     <div class="row flex-row absolute-fill">
         <div class="col-xs-12 col-lg-6 flex-vertical">
-            <form class="flex-form" data-bind="submit: saveRavenEtl" autocomplete="off">
+            <form class="flex-form" data-bind="submit: saveKafkaEtl" autocomplete="off">
                 <div class="flex-header">
                     <button type="submit" class="btn btn-primary" data-bind="disable: $root.spinners.save() || !$root.dirtyFlag().isDirty(), css: { 'btn-spinner': $root.spinners.save }">
                         <i class="icon-save"></i><span>Save</span>
@@ -11,12 +11,12 @@
                     </button>
                 </div>
                 <div class="panel">
-                    <div class="panel-body" data-bind="with: editedRavenEtl">
-                        <h3 data-bind="text: $parent.isAddingNewRavenEtlTask() ? `New RavenDB ETL` : `Edit RavenDB ETL`"></h3>
+                    <div class="panel-body" data-bind="with: editedKafkaEtl">
+                        <h3 data-bind="text: $parent.isAddingNewKafkaEtlTask() ? `New Kafka ETL` : `Edit Kafka ETL`"></h3>
                         <div class="form-group margin-top margin-top-lg">
                             <label for="taskName" class="control-label">Task Name</label>
                             <div class="flex-grow">
-                                <input type="text" class="form-control" id="taskName" placeholder="Enter a descriptive name for the RavenDB ETL task (optional)" data-bind="textInput: taskName">
+                                <input type="text" class="form-control" id="taskName" placeholder="Enter a descriptive name for the Kafka ETL task (optional)" data-bind="textInput: taskName">
                             </div>
                         </div>
                         <div class="form-group">
@@ -76,7 +76,7 @@
                             <label class="control-label">&nbsp;</label>
                             <div class="toggle">
                                 <input id="createNewString" type="checkbox" data-bind="checked: $root.createNewConnectionString">
-                                <label for="createNewString">Create new RavenDB connection string</label>
+                                <label for="createNewString">Create new Kafka connection string</label>
                             </div>
                         </div>
                         <div data-bind="collapse: $root.createNewConnectionString, with: $root.newConnectionString">
@@ -88,19 +88,19 @@
                             <label class="control-label">Connection String</label>
                             <div class="flex-grow">
                                 <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown"
-                                        data-bind="textInput: connectionStringName, disable: $root.ravenEtlConnectionStringsDetails().length === 0,
-                                                   attr: { 'title': $root.ravenEtlConnectionStringsDetails().length === 0 ? 'No connection strings were defined' : 'Select a connection string' }">
+                                        data-bind="textInput: connectionStringName, disable: $root.kafkaEtlConnectionStringsDetails().length === 0,
+                                                   attr: { 'title': $root.kafkaEtlConnectionStringsDetails().length === 0 ? 'No connection strings were defined' : 'Select a connection string' }">
                                     <span data-bind="text: connectionStringName() || 'Select a connection string'"></span>
                                     <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
                                 </button>
                                 <ul class="dropdown-menu"
-                                    data-bind="foreach: $root.ravenEtlConnectionStringsDetails">
+                                    data-bind="foreach: $root.kafkaEtlConnectionStringsDetails">
                                     <li data-bind="click: _.partial($root.useConnectionString, $data.Name)">
                                         <a href="#">
                                             <div class="row">
                                                 <strong class="col-xs-7" data-bind="text: $data.Name"></strong>
-                                                <small class="col-xs-2">Destination DB:</small>
-                                                <small class="col-xs-3" data-bind="text: $data.Database"></small>
+                                                <small class="col-xs-2">Kafka server URL:</small>
+                                                <small class="col-xs-3" data-bind="text: $data.KafkaConnectionSettings.Url"></small>
                                             </div>
                                         </a>
                                     </li>
@@ -110,7 +110,7 @@
                         </div>
                         <div class="flex-horizontal">
                             <div class="flex-grow margin-top">
-                                <button type="button" class="btn btn-info" data-bind="click: $root.toggleAdvancedArea">
+                                <button type="button" class="btn btn-info pull-right margin-right" data-bind="click: $root.toggleAdvancedArea">
                                     <i class="icon-settings"></i>
                                     <span data-bind="text: $root.showAdvancedOptions() ? 'Close Advanced' : 'Advanced'"></span>
                                 </button>
@@ -118,52 +118,44 @@
                         </div>
                         <div data-bind="collapse: $root.showAdvancedOptions">
                             <div class="panel-body">
-                                <div class="form-group" data-bind="validationElement: loadRequestTimeout">
-                                    <label for="loadTimeout" class="control-label">Http Request Timeout</label>
-                                    <div class="flex-grow">
-                                        <div class="input-group">
-                                            <input type="number" min="0" class="form-control" placeholder="Use default timeout (100s)" id="loadTimeout" data-bind="numericInput: loadRequestTimeout">
-                                            <div class="input-group-addon">seconds</div>
-                                        </div>
-                                    </div>
-                                </div>
+                                <div data-bind="compose: $root.optionsPerQueueEtlView"></div>
                             </div>
                         </div>
                     </div>
                     <div>
                         <div data-bind="if: createNewConnectionString">
-                            <div class="panel-addon" data-bind="with: testConnectionResult">
-                                <div class="padding bg-success small" data-bind="visible: Success">
-                                    <div>Successfully connected to the node</div>
-                                </div>
-                                <div data-bind="if: !Success">
-                                    <div class="padding bg-danger small">
-                                        <h2>Connection test failed!</h2>
-                                        <span data-bind="text: $root.fullErrorDetailsVisible() ? Error : $root.shortErrorText()"></span>
-                                        <div>
-                                            <a href="#" data-bind="click: $root.fullErrorDetailsVisible.toggle.bind($root.fullErrorDetailsVisible), text: $root.fullErrorDetailsVisible() ? 'hide details' : 'show details'"></a>
-                                        </div>
-                                    </div>
-                                    <div class="padding bg-info small">
-                                        <h2>About this error</h2>
-                                        <div>Each RavenDB server has both HTTP and TCP endpoints. While the first one is used for system management and client-server rest request, the second is used for inter-server and advanced client-server communications.</div>
-                                        <div>The connection tests the TCP endpoint only after a successful HTTP connection.</div>
-                                        <div data-bind="visible: HTTPSuccess">It appears that the current server was able to connect to the desired server through HTTP, but failed connecting to it using TCP.</div>
-                                        <div data-bind="visible: !HTTPSuccess">It appears that the current server could not connect to the desired node through HTTP.</div>
-                                        <div>
-                                            Please verify that:
-                                            <ul>
-                                                <li>The URL is correct</li>
-                                                <li>Both RavenDB and the target machine are up and running</li>
-                                                <li>There are no firewall settings on either machine blocking usage of that URL</li>
-                                                <li>There are no network configurations that prevent communication</li>
-                                            </ul>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+<!--                            <div class="panel-addon" data-bind="with: testConnectionResult">-->
+<!--                                <div class="padding bg-success small" data-bind="visible: Success">-->
+<!--                                    <div>Successfully connected to the node</div>-->
+<!--                                </div>-->
+<!--                                <div data-bind="if: !Success">-->
+<!--                                    <div class="padding bg-danger small">-->
+<!--                                        <h2>Connection test failed!</h2>-->
+<!--                                        <span data-bind="text: $root.fullErrorDetailsVisible() ? Error : $root.shortErrorText()"></span>-->
+<!--                                        <div>-->
+<!--                                            <a href="#" data-bind="click: $root.fullErrorDetailsVisible.toggle.bind($root.fullErrorDetailsVisible), text: $root.fullErrorDetailsVisible() ? 'hide details' : 'show details'"></a>-->
+<!--                                        </div>-->
+<!--                                    </div>-->
+<!--                                    <div class="padding bg-info small">-->
+<!--                                        <h2>About this error</h2>-->
+<!--                                        <div>Each RavenDB server has both HTTP and TCP endpoints. While the first one is used for system management and client-server rest request, the second is used for inter-server and advanced client-server communications.</div>-->
+<!--                                        <div>The connection tests the TCP endpoint only after a successful HTTP connection.</div>-->
+<!--                                        <div data-bind="visible: HTTPSuccess">It appears that the current server was able to connect to the desired server through HTTP, but failed connecting to it using TCP.</div>-->
+<!--                                        <div data-bind="visible: !HTTPSuccess">It appears that the current server could not connect to the desired node through HTTP.</div>-->
+<!--                                        <div>-->
+<!--                                            Please verify that:-->
+<!--                                            <ul>-->
+<!--                                                <li>The URL is correct</li>-->
+<!--                                                <li>Both RavenDB and the target machine are up and running</li>-->
+<!--                                                <li>There are no firewall settings on either machine blocking usage of that URL</li>-->
+<!--                                                <li>There are no network configurations that prevent communication</li>-->
+<!--                                            </ul>-->
+<!--                                        </div>-->
+<!--                                    </div>-->
+<!--                                </div>-->
+<!--                            </div>-->
                         </div>
-                        <div class="panel-addon" data-bind="visible: ravenEtlConnectionStringsDetails().length === 0 && !createNewConnectionString()">
+                        <div class="panel-addon" data-bind="visible: kafkaEtlConnectionStringsDetails().length === 0 && !createNewConnectionString()">
                             <div class="padding bg-warning text-warning small">
                                 <i class="icon-warning"></i>&nbsp;&nbsp;No connection strings have been defined yet
                             </div>
@@ -173,13 +165,13 @@
                 <div class="flex-header">
                     <div class="flex-row margin-top margin-top-lg">
                         <h3>Transform Scripts</h3>
-                        <button type="button" id="addNewScript" data-bind="click: addNewTransformation, disable: editedRavenEtl().showEditTransformationArea" class="btn btn-info pull-right">
+                        <button type="button" id="addNewScript" data-bind="click: addNewTransformation, disable: editedKafkaEtl().showEditTransformationArea" class="btn btn-info pull-right">
                             <i class="icon-plus"></i><span>Add Transformation Script</span>
                         </button>
                     </div>
                 </div>
                 <div class="scroll">
-                    <div class="etl-list" id="transformsList" data-bind="with: editedRavenEtl">
+                    <div class="etl-list" id="transformsList" data-bind="with: editedKafkaEtl">
                         <div data-bind="if: transformationScripts().length === 0 && !editedTransformationScriptSandbox()">
                             <div class="text-center text-muted">
                                 <i class="icon-lg icon-empty-set"></i>
@@ -222,7 +214,7 @@
                 </div>
             </form>
         </div>
-        <div class="col-xs-12 col-lg-6 flex-vertical" data-bind="with: editedRavenEtl()">
+        <div class="col-xs-12 col-lg-6 flex-vertical" data-bind="with: editedKafkaEtl()">
             <div class="flex-grow" data-bind="if: showEditTransformationArea">
                 <div id="editTransform" class="panel padding">
                     <div data-bind="with: editedTransformationScriptSandbox">
@@ -238,7 +230,6 @@
                         <div data-bind="validationElement: script">
                             <pre class="form-control editor"
                                  data-bind="aceEditor: { code: script, fontSize: '14px', lang: 'ace/mode/javascript' }, validationOptions: { errorsAsTitle: false }, validationElement: script" style="height: 250px;"></pre>
-
                             <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: script">
                                 <div class="help-block" data-bind="validationMessage: script"></div>
                             </div>
@@ -290,119 +281,12 @@
                                 <button title="Cancel" class="btn btn-default" data-bind="click: $root.cancelEditedTransformation"><i class="icon-cancel"></i> <span>Cancel</span></button>
                             </div>
                             <div class="flex-separator"></div>
-                            <button type="button" class="btn btn-info" data-bind="click: $root.toggleTestArea, visible: !$root.enableTestArea()" title="Click to open the test area">
+                            <button type="button" class="btn btn-info" data-bind="click: $root.toggleTestArea, visible: !$root.enableTestArea()" title="Click to open the test area" disabled>
                                 <i class="icon-rocket"></i> <span>Test script</span>
                             </button>
                         </div>
                     </div>
                 </div>
-                <div class="js-test-area" data-bind="collapse: $root.enableTestArea()">
-                    <div class="panel">
-                        <div class="panel-body flex-form" data-bind="with: $root.test">
-                            <div class="form-group flex-horizontal margin-top">
-                                <label class="control-label">Document ID</label>
-                                <div class="flex-grow" data-bind="validationElement: documentId">
-                                    <input type="text" id="documentId" data-bind="textInput: documentId" class="form-control" placeholder="Document ID" autocomplete="off"
-                                           title="This field is required." data-orig-title=""/><span class="help-block" style="display: none;"></span>
-                                    <ul class="documentIdAutocomplete dropdown-menu autocomplete-list" role="menu"
-                                        data-bind="autoComplete: '#documentId', foreach: docsIdsAutocompleteResults">
-                                        <li role="presentation" data-bind="click: _.partial($parent.onAutocompleteOptionSelected, $data)">
-                                            <a role="menuitem" tabindex="-1" href="#">
-                                                <span data-bind="text: $data"></span>
-                                            </a>
-                                        </li>
-                                    </ul>
-                                </div>
-                                <button class="btn btn-default" type="button"
-                                        data-bind="click: previewDocument, css: { 'btn-spinner': spinners.preview }, disable: spinners.preview() || !documentId()" title="Show document preview">
-                                    <i class="icon-import"></i> <span>Load document</span>
-                                </button>
-                            </div>
-                            <div class="form-group">
-                                <label class="control-label">Mode:</label>
-                                <div class="flex-grow">
-                                    <button class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown">
-                                        <span data-bind="text: testDelete() ? 'Document delete' : 'Document put / update'"></span>
-                                        <span class="caret"></span>
-                                    </button>
-                                    <ul class="dropdown-menu">
-                                        <li><a href="#" data-bind="click: _.partial(testDelete, false)">Document put / update</a></li>
-                                        <li><a href="#" data-bind="click: _.partial(testDelete, true)">Document delete</a></li>
-                                    </ul>
-                                </div>
-                            </div>
-                            <div class="flex-horizontal">
-                                <div class="flex-separator"></div>
-                                <button type="button" class="btn btn-primary margin-right margin-right-sm" data-bind="click: runTest, css: { 'btn-spinner': spinners.test }, disable: spinners.test()">
-                                    <i class="icon-rocket"></i>
-                                    <span>Test</span>
-                                </button>
-                                <button type="button" class="btn btn-info" data-bind="click: $root.toggleTestArea">
-                                    <i class="icon-cancel"></i> <span>Close Test Area</span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="test-container flex-grow flex-vertical" data-bind="with: test">
-        <div class="absolute-center text-center" data-bind="visible: !testAlreadyExecuted() && !loadedDocument()">
-            <i class="icon-info icon-xl"></i>
-            Choose <strong>Document ID</strong> used for test and click <strong>Test</strong> button.
-        </div>
-        <div class="tabs">
-            <ul class="nav nav-tabs" role="tablist">
-                <li role="presentation" data-bind="visible: loadedDocument">
-                    <a href="#documentPreview" role="tab" data-toggle="tab">
-                        <i class="icon-preview"></i><span>Document Preview</span>
-                    </a>
-                </li>
-                <li role="presentation" data-bind="visible: testAlreadyExecuted">
-                    <a href="#testResults" role="tab" data-toggle="tab">
-                        <i class="icon-admin-logs"></i><span>Test Results</span>
-                    </a>
-                </li>
-                <li role="presentation" data-bind="visible: warningsCount">
-                    <a href="#warnings" role="tab" data-toggle="tab">
-                        <i class="icon-exclamation"></i><span>Warnings</span><span class="label label-warning margin-left margin-left-sm" data-bind="text: warningsCount || ''"></span>
-                    </a>
-                </li>
-                <li role="presentation" data-bind="visible: debugOutput().length">
-                    <a href="#debugOutput" role="tab" data-toggle="tab">
-                        <i class="icon-administrator-js-console"></i><span>Debug output</span><span class="label label-info margin-left margin-left-sm" data-bind="text: debugOutput().length || ''"></span>
-                    </a>
-                </li>
-            </ul>
-        </div>
-        <div class="tab-content flex-grow">
-            <div role="tabpanel" class="tab-pane fade" id="documentPreview">
-                <div class="margin-bottom margin-bottom-sm">Document ID: <strong data-bind="text: loadedDocumentId"></strong></div>
-                <pre data-bind="html: loadedDocument"></pre>
-            </div>
-            <div role="tabpanel" class="tab-pane fade" id="warnings">
-                <div class="transformation-errors" data-bind="visible: transformationErrors().length">
-                    <h3>Transformation Script Errors:</h3>
-                    <div data-bind="foreach: transformationErrors">
-                        <pre class="margin-left margin-bottom margin-bottom-sm" data-bind="text: Error"></pre>
-                    </div>
-                </div>
-            </div>
-            <div role="tabpanel" class="tab-pane fade" id="testResults">
-                <div data-bind="foreach: testResults">
-                    <div class="result-item margin-bottom">
-                        <div class="header" data-bind="text: header">
-                        </div>
-                        <pre data-bind="html: payload"></pre>
-                    </div>
-                </div>
-                <div data-bind="visible: !testResults().length">
-                    <i class="icon-info"></i> <span>Simulation returned empty result.</span>
-                </div>
-            </div>
-            <div role="tabpanel" class="tab-pane fade" id="debugOutput">
-                <pre class="absolute-fill" data-bind="text: debugOutput().join('\r\n')"></pre>
             </div>
         </div>
     </div>

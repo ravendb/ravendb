@@ -17,15 +17,19 @@ class ongoingTaskReplicationListModel extends ongoingTaskListModel {
     delayHumane: KnockoutComputed<string>;
 
     connectionStringDefined: KnockoutComputed<boolean>;
-    connectionStringsUrl: string; 
+    connectionStringsUrl: string;
   
+    get studioTaskType(): StudioTaskType {
+        return "Replication";
+    }
+    
     constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskReplication) {
         super();
 
         this.update(dto);
         this.initializeObservables();
 
-        this.connectionStringsUrl = appUrl.forConnectionStrings(activeDatabaseTracker.default.database(), "raven", this.connectionStringName());
+        this.connectionStringsUrl = appUrl.forConnectionStrings(activeDatabaseTracker.default.database(), "Raven", this.connectionStringName());
     }
     
     initializeObservables() {

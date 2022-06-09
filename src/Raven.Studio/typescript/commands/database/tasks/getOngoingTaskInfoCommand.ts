@@ -9,9 +9,10 @@ class getOngoingTaskInfoCommand<T extends Raven.Client.Documents.Operations.Ongo
                                           Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtlDetails |
                                           Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtlDetails |
                                           Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtlDetails |
-                                          Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtlDetails> extends commandBase {
+                                          Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtlDetails |
+                                          Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtlDetails> extends commandBase {
 
-      private constructor(private db: database, private taskType: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType, 
+      private constructor(private db: database, private taskType: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType,
                           private taskId: number, private taskName?: string, private reportFailure: boolean = true) {
           super();
     }
@@ -63,6 +64,10 @@ class getOngoingTaskInfoCommand<T extends Raven.Client.Documents.Operations.Ongo
 
     static forElasticSearchEtl(db: database, taskId: number) {
         return new getOngoingTaskInfoCommand<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtlDetails>(db, "ElasticSearchEtl", taskId);
+    }
+
+    static forQueueEtl(db: database, taskId: number) {
+        return new getOngoingTaskInfoCommand<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtlDetails>(db, "QueueEtl", taskId);
     }
 }
 

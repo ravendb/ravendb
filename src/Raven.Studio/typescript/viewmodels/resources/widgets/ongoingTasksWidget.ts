@@ -65,6 +65,8 @@ class ongoingTaskItem {
             case "ElasticSearchEtlCount": return "Elasticsearch ETL";
             case "PeriodicBackupCount": return "Backup";
             case "SubscriptionCount": return "Subscription";
+            
+            // TODO: Add Kafka & RabbitMQ - RavenDB-18758
         }
     }
 }

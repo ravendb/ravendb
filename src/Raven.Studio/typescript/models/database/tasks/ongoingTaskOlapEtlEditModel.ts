@@ -21,7 +21,11 @@ class ongoingTaskOlapEtlEditModel extends ongoingTaskEditModel {
     dirtyFlag: () => DirtyFlag;
 
     static readonly defaultRunFrequency = "0 * * * *"; // every hour
-   
+
+    get studioTaskType(): StudioTaskType {
+        return "OlapEtl";
+    }
+    
     constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtlDetails) {
         super();
 

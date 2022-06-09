@@ -1,0 +1,46 @@
+<div class="form-group" data-bind="validationElement: connectionStringName">
+    <label class="control-label">Name<i class="required"></i></label>
+    <div class="flex-grow">
+        <input class="form-control" data-bind="textInput: connectionStringName, enable: isNew, attr: { 'title': isNew() ? 'Enter any name of your choice for this connection string' : '' }"
+               placeholder="Enter a name for the connection string" />
+    </div>
+</div>
+<div class="form-group" data-bind="validationElement: kafkaServerUrl">
+    <label class="control-label">URL<i class="required"></i></label>
+    <div class="flex-grow">
+        <input class="form-control" data-bind="textInput: kafkaServerUrl" placeholder="Enter the Kafka server URL" />
+    </div>
+</div>
+<div class="form-group">
+    <label class="control-label">&nbsp;</label>
+    <div class="toggle">
+        <input id="useRavenCert" type="checkbox" data-bind="checked: useRavenCertificate">
+        <label for="useRavenCert">Use RavenDB Certificate</label>
+    </div>
+</div>
+<div class="form-group">
+    <label class="control-label">Connection Options</label>
+    <div class="flex-grow">
+        <div data-bind="foreach: connectionOptions">
+            <div class="flex-horizontal margin-bottom-xs">
+                <input class="form-control margin-right-sm" placeholder="Option key" data-bind="textInput: key" />
+                <input class="form-control margin-right-sm" placeholder="Option value" data-bind="textInput: value" />
+                <a title="Remove this connection option" href="#" class="btn" data-bind="click: $parent.removeConnectionOption.bind($parent, $data)">
+                    <i class="icon-trash"></i>
+                </a>
+            </div>
+            <div data-bind="validationElement: isValidKeyValue">
+                <div class="help-block margin-bottom-sm" data-bind="validationMessage: isValidKeyValue"></div>
+            </div>
+        </div>
+        <div class="margin-top-sm">
+            <button class="btn btn-default" data-bind="click: addNewConnectionOption">
+                <i class="icon-plus"></i><span>Add new connection option</span>
+            </button>
+        </div>
+        <div class="text-center text-muted margin-top" data-bind="visible: connectionOptions().length === 0">
+            <i class="icon-lg icon-empty-set"></i>
+            <h3 class="margin-top margin-top-sm">No connection options added</h3>
+        </div>
+    </div>
+</div>

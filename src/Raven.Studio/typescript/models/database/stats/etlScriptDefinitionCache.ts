@@ -12,7 +12,7 @@ class etlScriptDefinitionCache {
         this.db = db;
     }
 
-    showDefinitionFor(etlType: Raven.Client.Documents.Operations.ETL.EtlType, taskId: number, transformationName: string) {
+    showDefinitionFor(etlType: Raven.Client.Documents.Operations.ETL.EtlType | StudioEtlType, taskId: number, transformationName: string) { // todo - handle etlType 
         let cachedItem = this.taskInfoCache.get(taskId);
 
         if (!cachedItem || cachedItem.task.state() === "rejected") {
@@ -21,7 +21,8 @@ class etlScriptDefinitionCache {
             let command: getOngoingTaskInfoCommand<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtlDetails |
                                                    Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtlDetails |
                                                    Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtlDetails |
-                                                   Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtlDetails>;
+                                                   Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtlDetails |
+                                                   Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtlDetails>;
             switch (etlType) {
                 case "Raven":
                     command = getOngoingTaskInfoCommand.forRavenEtl(this.db, taskId);
@@ -34,6 +35,10 @@ class etlScriptDefinitionCache {
                     break;
                 case "ElasticSearch":
                     command = getOngoingTaskInfoCommand.forElasticSearchEtl(this.db, taskId);
+                    break;
+                case "Kafka":
+                case "RabbitMQ":
+                    command = getOngoingTaskInfoCommand.forQueueEtl(this.db, taskId);
                     break;
             }
 

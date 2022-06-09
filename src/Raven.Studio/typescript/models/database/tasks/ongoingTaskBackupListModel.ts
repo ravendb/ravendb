@@ -51,6 +51,10 @@ class ongoingTaskBackupListModel extends ongoingTaskListModel {
     onGoingBackupHumanized: KnockoutComputed<string>;
     retentionPolicyHumanized: KnockoutComputed<string>;
     throttledRefreshBackupInfo: () => void;
+
+    get studioTaskType(): StudioTaskType {
+        return "Backup";
+    }
     
     constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup, watchProvider: (task: ongoingTaskBackupListModel) => void) {
         super();
