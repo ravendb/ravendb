@@ -1,7 +1,8 @@
-﻿import React from "react";
+﻿import React, { useCallback } from "react";
 import {
     BaseOngoingTaskPanelProps,
     ConnectionStringItem,
+    ICanShowTransformationScriptPreview,
     OngoingTaskActions,
     OngoingTaskName,
     OngoingTaskStatus,
@@ -11,6 +12,7 @@ import { OngoingTaskOlapEtlInfo } from "../../../../../models/tasks";
 import { useAccessManager } from "hooks/useAccessManager";
 import { useAppUrls } from "hooks/useAppUrls";
 import { RichPanel, RichPanelDetailItem, RichPanelDetails, RichPanelHeader } from "../../../../../common/RichPanel";
+import { OngoingTaskDistribution } from "./OngoingTaskDistribution";
 
 type OlapEtlPanelProps = BaseOngoingTaskPanelProps<OngoingTaskOlapEtlInfo>;
 
@@ -18,8 +20,6 @@ function Details(props: OlapEtlPanelProps & { canEdit: boolean }) {
     const { data, canEdit, db } = props;
     const { appUrl } = useAppUrls();
     const connectionStringsUrl = appUrl.forConnectionStrings(db, "olap", data.shared.connectionStringName);
-    //TODO: task status
-    //TODO: progress
     return (
         <RichPanelDetails>
             {data.shared.destinations.map((dst) => (
@@ -38,8 +38,8 @@ function Details(props: OlapEtlPanelProps & { canEdit: boolean }) {
     );
 }
 
-export function OlapEtlPanel(props: OlapEtlPanelProps) {
-    const { db, data } = props;
+export function OlapEtlPanel(props: OlapEtlPanelProps & ICanShowTransformationScriptPreview) {
+    const { db, data, showItemPreview } = props;
 
     const { isAdminAccessOrAbove } = useAccessManager();
     const { forCurrentDatabase } = useAppUrls();
@@ -50,6 +50,13 @@ export function OlapEtlPanel(props: OlapEtlPanelProps) {
     const { detailsVisible, toggleDetails, toggleStateHandler, onEdit, onDeleteHandler } = useTasksOperations(
         editUrl,
         props
+    );
+
+    const showPreview = useCallback(
+        (transformationName: string) => {
+            showItemPreview(data, transformationName);
+        },
+        [data]
     );
 
     return (
@@ -66,6 +73,7 @@ export function OlapEtlPanel(props: OlapEtlPanelProps) {
                 />
             </RichPanelHeader>
             {detailsVisible && <Details {...props} canEdit={canEdit} />}
+            {detailsVisible && <OngoingTaskDistribution task={data} showPreview={showPreview} />}
         </RichPanel>
     );
 }

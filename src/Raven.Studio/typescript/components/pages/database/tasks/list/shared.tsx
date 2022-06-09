@@ -162,3 +162,39 @@ export function ConnectionStringItem(props: {
         </RichPanelDetailItem>
     );
 }
+
+export function EmptyScriptsWarning(props: { task: OngoingTaskInfo }) {
+    const emptyScripts = findScriptsWithOutMatchingDocuments(props.task);
+
+    if (!emptyScripts.length) {
+        return null;
+    }
+
+    return (
+        <RichPanelDetailItem className="text-warning">
+            <small>
+                <i className="icon-warning" />
+                Following scripts don't match any documents: {emptyScripts.join(", ")}
+            </small>
+        </RichPanelDetailItem>
+    );
+}
+
+function findScriptsWithOutMatchingDocuments(data: OngoingTaskInfo): string[] {
+    const perScriptCounts = new Map<string, number>();
+    data.nodesInfo.forEach((node) => {
+        if (node.progress) {
+            node.progress.forEach((progress) => {
+                const transformationName = progress.transformationName;
+                perScriptCounts.set(
+                    transformationName,
+                    (perScriptCounts.get(transformationName) ?? 0) + progress.global.total
+                );
+            });
+        }
+    });
+
+    return Array.from(perScriptCounts.entries())
+        .filter((x) => x[1] === 0)
+        .map((x) => x[0]);
+}

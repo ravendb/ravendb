@@ -299,6 +299,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                                         key={taskKey(x.shared)}
                                         data={x}
                                         onToggleDetails={startTrackingProgress}
+                                        showItemPreview={showItemPreview}
                                     />
                                 ))}
                             </div>
@@ -321,6 +322,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                                         key={taskKey(x.shared)}
                                         data={x}
                                         onToggleDetails={startTrackingProgress}
+                                        showItemPreview={showItemPreview}
                                     />
                                 ))}
                             </div>

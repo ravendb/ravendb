@@ -49,7 +49,7 @@ export function OngoingTaskDistribution(props: OngoingTaskDistributionProps) {
                         </div>
                         <div>{nodeInfo.status === "loaded" ? nodeInfo.details.taskConnectionStatus : ""}</div>
                         <div>{hasError ? "error" : "-"}</div>
-                        <OngoingTaskProgress nodeInfo={nodeInfo} />
+                        <OngoingTaskProgress task={task} nodeInfo={nodeInfo} />
                         <OngoingTaskProgressTooltip
                             target={id}
                             nodeInfo={nodeInfo}
@@ -89,15 +89,16 @@ export function OngoingTaskDistribution(props: OngoingTaskDistributionProps) {
 
 interface OngoingTaskProgressProps {
     nodeInfo: OngoingTaskNodeInfo;
+    task: OngoingTaskInfo;
 }
 
 export function OngoingTaskProgress(props: OngoingTaskProgressProps) {
-    const { nodeInfo } = props;
+    const { nodeInfo, task } = props;
     if (!nodeInfo.progress) {
         return <ProgressCircle state="running" />;
     }
 
-    if (nodeInfo.progress.every((x) => x.completed)) {
+    if (nodeInfo.progress.every((x) => x.completed) && task.shared.taskState === "Enabled") {
         return (
             <ProgressCircle state="success" icon="icon-check">
                 up to date
