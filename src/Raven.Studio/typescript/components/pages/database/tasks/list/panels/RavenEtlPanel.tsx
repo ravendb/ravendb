@@ -9,12 +9,7 @@ import {
     OngoingTaskStatus,
 } from "../shared";
 import { useAppUrls } from "hooks/useAppUrls";
-import {
-    OngoingTaskInfo,
-    OngoingTaskRavenEtlInfo,
-    OngoingTaskRavenEtlNodeInfoDetails,
-    OngoingTaskRavenEtlSharedInfo,
-} from "../../../../../models/tasks";
+import { OngoingTaskInfo, OngoingTaskRavenEtlInfo } from "../../../../../models/tasks";
 import { BaseOngoingTaskPanelProps, useTasksOperations } from "../shared";
 import { OngoingTaskDistribution } from "./OngoingTaskDistribution";
 
@@ -92,7 +87,7 @@ function Details(props: RavenEtlPanelProps & { canEdit: boolean }) {
 }
 
 export function RavenEtlPanel(props: RavenEtlPanelProps & ICanShowTransformationScriptPreview) {
-    const { db, data, showItemPreview, ...restProps } = props;
+    const { db, data, showItemPreview } = props;
 
     const { isAdminAccessOrAbove } = useAccessManager();
     const { forCurrentDatabase } = useAppUrls();
