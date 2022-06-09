@@ -446,8 +446,8 @@ namespace Voron.Data.Containers
                     continue;
                 count++;
                 totalSize += entriesOffsets[i].Size;
-            }            
-            
+            }
+
             var averageSize = count == 0 ? 0 : totalSize / count;
             container._page.AsSpan(metadata.Offset, metadata.Size).Clear();
             entriesOffsets[index] = default;

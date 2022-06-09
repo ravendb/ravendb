@@ -110,12 +110,11 @@ namespace Micro.Benchmark.Benchmarks
 
             public void Dispose()
             {
-                throw new NotImplementedException();
             }
 
             public void Grow(int minimumSize)
             {
-                throw new NotImplementedException();
+                throw new NotSupportedException();
             }
         }
 
