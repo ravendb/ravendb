@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using Sparrow;
@@ -32,7 +32,7 @@ namespace FastTests.Sparrow
 
             public void Grow(int minimumSize)
             {
-                throw new NotSupportedException();
+                throw new NotSupportedException("This state table does not support growing.");
             }
         }
 
@@ -99,7 +99,7 @@ namespace FastTests.Sparrow
         {
             public int Length => 0;
 
-            public ReadOnlySpan<byte> this[int i] => throw new NotImplementedException();
+            public ReadOnlySpan<byte> this[int i] => throw new IndexOutOfRangeException();
 
             public void Reset()
             {}
@@ -110,7 +110,7 @@ namespace FastTests.Sparrow
                 return false;
             }
 
-            public bool IsNull(int i) => throw new NotImplementedException();
+            public bool IsNull(int i) => throw new IndexOutOfRangeException();
         }
 
         [Fact]
@@ -284,34 +284,19 @@ namespace FastTests.Sparrow
             Span<byte> value = new byte[128];
             Span<byte> decoded = new byte[128];
 
-            //int totalLength = 0;
             for (int i = 0; i < keys.Length; i++)
             {
-                var encodedBitLength = encoder.Encode(keys[i], value);
+                encoder.Encode(keys[i], value);
                 var decodedBytes = encoder.Decode(value, decoded);
 
                 if (keys[i].SequenceCompareTo(decoded.Slice(0, decodedBytes)) != 0)
                 {
-                    encodedBitLength = encoder.Encode(keys[i], value);
+                    encoder.Encode(keys[i], value);
                     decodedBytes = encoder.Decode(value, decoded);
                 }
 
-                //if (keys[i].SequenceCompareTo(decoded.Slice(0, decodedBytes)) != 0)
-                //{
-                //    Console.WriteLine($"{dictSize},{Encoding.ASCII.GetString(keys[i])}");
-                //}
-
                 Assert.Equal(0, keys[i].SequenceCompareTo(decoded.Slice(0, decodedBytes)));
-
-                //totalLength += encodedBitLength;
             }
-
-            // totalLength /= 8; // Convert to bytes
-            // Console.WriteLine($"{dictSize}: {totalLength / 8:f2}, {(float)totalLength / rawLength:f2}x, {Encoder3Gram.GetDictionarySize(state)} bytes");
-
-
-            //Console.WriteLine($"Memory Usage: {Encoder3Gram.GetDictionarySize(state)}.");
-            //Console.WriteLine($"Key Size: {rawLength} (raw) vs {totalLength / 8:f2} (encoded).");
         }
     }
 }

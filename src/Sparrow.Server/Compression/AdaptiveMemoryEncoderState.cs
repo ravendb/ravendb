@@ -23,6 +23,12 @@ namespace Sparrow.Server.Compression
 
         public void Grow(int minimumSize)
         {
+            // PERF: The encoder knows the size of the encoder state before starting and the initial size may not be big enough.
+            // The implementation of the encoder will call Grow() if the encoder state signals that it can grow to the desired size.
+            // Since the encoder hasnt started yet to work, there is nothing of interest into the encoding & decoding buffers,
+            // therefore, there is no need to spend time copying the content at the moment of growth. This could change in the
+            // future and would require adjusting the implementation of this method.           
+
             if (_encodingBuffer.Length < minimumSize)
             {
                 ArrayPool<byte>.Shared.Return(_encodingBuffer);
@@ -34,13 +40,7 @@ namespace Sparrow.Server.Compression
                 ArrayPool<byte>.Shared.Return(_decodingBuffer);
                 _decodingBuffer = ArrayPool<byte>.Shared.Rent(minimumSize);
             }
-
-            // PERF: The encoder knows the size of the encoder state before starting and the initial size may not be big enough.
-            // The implementation of the encoder will call Grow() if the encoder state signals that it can grow to the desired size.
-            // Since the encoder hasnt started yet to work, there is nothing of interest into the encoding & decoding buffers,
-            // therefore, there is no need to spend time copying the content at the moment of growth. This could change in the
-            // future and would require adjusting the implementation of this method.             
-
+  
             _size = minimumSize;
         }
         public void Dispose()

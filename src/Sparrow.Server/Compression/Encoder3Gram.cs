@@ -372,7 +372,7 @@ namespace Sparrow.Server.Compression
                 if (_state.CanGrow)
                     _state.Grow(dictSize);
                 else
-                    throw new ArgumentException("Not enough memory to store the dictionary");
+                    throw new InsufficientMemoryException("Not enough memory for the table and the table supplied does not support growing.");
             }                
 
             int maxBitSequenceLength = 1;
