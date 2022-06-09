@@ -19,7 +19,11 @@ class ongoingTaskSqlEtlEditModel extends ongoingTaskEditModel {
     validationGroup: KnockoutValidationGroup;
     enterTestModeValidationGroup: KnockoutValidationGroup;
     dirtyFlag: () => DirtyFlag;
-   
+    
+    get studioTaskType(): StudioTaskType {
+        return "SqlEtl";
+    }
+    
     constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtlDetails) {
         super();
 

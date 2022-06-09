@@ -8,6 +8,10 @@ class ongoingTaskReplicationHubListModel extends ongoingTaskListModel {
     destinationURL = ko.observable<string>();
     
     uniqueName: string;
+
+    get studioTaskType(): StudioTaskType {
+        return "PullReplicationAsHub";
+    }
     
     constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsHub) {
         super();

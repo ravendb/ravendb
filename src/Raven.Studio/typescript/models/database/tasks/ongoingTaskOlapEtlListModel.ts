@@ -10,14 +10,18 @@ class ongoingTaskOlapEtlListModel extends abstractOngoingTaskEtlListModel {
     destinations = ko.observableArray<string>();
     
     connectionStringDefined = ko.observable<boolean>(true); // needed for template in the ongoing tasks list view
-        
+
+    get studioTaskType(): StudioTaskType {
+        return "OlapEtl";
+    }
+    
     constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtlListView) {
         super();
 
         this.update(dto);
         this.initializeObservables();
 
-        this.connectionStringsUrl = appUrl.forConnectionStrings(activeDatabaseTracker.default.database(), "olap", this.connectionStringName());
+        this.connectionStringsUrl = appUrl.forConnectionStrings(activeDatabaseTracker.default.database(), "Olap", this.connectionStringName());
     }
 
     initializeObservables() {

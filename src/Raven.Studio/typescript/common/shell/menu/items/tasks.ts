@@ -118,6 +118,22 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
             nav: false,
             dynamicHash: appUrls.editElasticSearchEtlTaskUrl,
             itemRouteToHighlight: 'databases/tasks/ongoingTasks'
+        }),
+        new leafMenuItem({
+            route: 'databases/tasks/editKafkaEtlTask',
+            moduleId: require('viewmodels/database/tasks/editKafkaEtlTask'),
+            title: 'Kafka ETL Task',
+            nav: false,
+            dynamicHash: appUrls.editKafkaEtlTaskUrl,
+            itemRouteToHighlight: 'databases/tasks/ongoingTasks'
+        }),
+        new leafMenuItem({
+            route: 'databases/tasks/editRabbitMqEtlTask',
+            moduleId: require('viewmodels/database/tasks/editRabbitMqEtlTask'),
+            title: 'RabbitMQ ETL Task',
+            nav: false,
+            dynamicHash: appUrls.editRabbitMqEtlTaskUrl,
+            itemRouteToHighlight: 'databases/tasks/ongoingTasks'
         })
     ];
 

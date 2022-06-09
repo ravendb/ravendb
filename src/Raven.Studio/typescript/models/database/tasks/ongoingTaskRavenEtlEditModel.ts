@@ -18,6 +18,10 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
     
     validationGroup: KnockoutValidationGroup;
     dirtyFlag: () => DirtyFlag;
+
+    get studioTaskType(): StudioTaskType {
+        return "RavenEtl";
+    }
     
     constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtlDetails) {
         super();

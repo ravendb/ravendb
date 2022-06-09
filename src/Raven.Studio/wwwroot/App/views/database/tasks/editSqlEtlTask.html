@@ -106,7 +106,8 @@
                             <div class="flex-horizontal">
                                 <div class="flex-grow margin-top">
                                     <button type="button" class="btn btn-info" data-bind="click: $root.toggleAdvancedArea">
-                                            <i class="icon-settings"></i><span>Advanced</span>
+                                        <i class="icon-settings"></i>
+                                        <span data-bind="text: $root.showAdvancedOptions() ? 'Close Advanced' : 'Advanced'"></span>
                                     </button>
                                 </div>
                                 <div>

@@ -43,7 +43,9 @@ class icomoonHelpers {
         "waiting": 0xf124,
         "cluster-member": 0xf125,
         "cluster-promotable": 0xf126,
-        "cluster-watcher": 0xf127
+        "cluster-watcher": 0xf127,
+        "kafka-etl": 0xf128,
+        "rabbitmq-etl": 0xf129
         
     } as const;
     

@@ -49,6 +49,8 @@ class transformationScriptSyntax extends dialogViewModelBase {
                         break;
                 }
                 break;
+            case "Queue": // TODO
+                break;
         }
         
         copyToClipboard.copy(sampleText, "Sample has been copied to clipboard", this.dialogContainer);

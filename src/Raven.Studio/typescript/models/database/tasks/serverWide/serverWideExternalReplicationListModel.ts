@@ -8,7 +8,11 @@ import connectionStatus from "models/resources/connectionStatus";
 class serverWideExternalReplicationListModel extends serverWideTaskListModel {
     
     delayTimeText = ko.observable<string>();
-
+    
+    get studioTaskType(): StudioTaskType {
+        return "Replication";
+    }
+    
     constructor(dto: Raven.Server.Web.System.AdminStudioServerWideHandler.ServerWideTasksResult.ServerWideExternalReplicationTask) {
         super();
         

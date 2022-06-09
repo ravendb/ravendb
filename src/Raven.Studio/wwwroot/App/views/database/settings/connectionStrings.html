@@ -111,7 +111,7 @@
                 <div data-bind="foreach: elasticSearchEtlConnectionStringsNames">
                     <div class="panel padding padding-sm flex-horizontal destination-item panel-hover"
                          data-bind="css: { 'active': $root.editedElasticSearchEtlConnectionString() && $data === $root.editedElasticSearchEtlConnectionString().connectionStringName() }">
-                        <a href="#" class="connection-string-title flex-grow text-elipsis" data-bind="click: $parent.onEditElsticSearchEtl, attr: { title: $data }">
+                        <a href="#" class="connection-string-title flex-grow text-elipsis" data-bind="click: $parent.onEditElasticSearchEtl, attr: { title: $data }">
                             <h4 class="text-elipsis">
                                 <span data-bind="text: $data"></span>
                             </h4>
@@ -129,14 +129,80 @@
                         </div>
                     </div>
                 </div>
+                <div class="hr-title on-base-background">
+                    <h5><strong>Kafka</strong> Connection Strings</h5><hr>
+                    <button class="btn btn-sm btn-primary" data-bind="click: onAddKafkaEtl" title="Add a new Kafka ETL connection string"><i class="icon-plus"></i><span>Add</span></button>
+                </div>
+                <div data-bind="if: kafkaEtlConnectionStringsNames().length === 0">
+                    <div class="text-center">
+                        <i class="icon-lg icon-empty-set text-muted"></i>
+                        <h3 class="text-center text-muted margin-top">No Kafka ETL connection strings have been defined</h3>
+                    </div>
+                </div>
+                <div data-bind="foreach: kafkaEtlConnectionStringsNames">
+                    <div class="panel padding padding-sm flex-horizontal destination-item panel-hover"
+                         data-bind="css: { 'active': $root.editedKafkaEtlConnectionString() && $data === $root.editedKafkaEtlConnectionString().connectionStringName() }">
+                        <a href="#" class="connection-string-title flex-grow text-elipsis" data-bind="click: $parent.onEditKafkaEtl, attr: { title: $data }">
+                            <h4 class="text-elipsis">
+                                <span data-bind="text: $data"></span>
+                            </h4>
+                        </a>
+                        <div class="actions">
+                            <button class="btn btn-default" data-bind="click: $parent.onEditKafkaEtl" title="Edit connection string"><i class="icon-edit"></i></button>
+                            <span class="has-disable-reason" data-placement="right"
+                                  data-bind="attr: { 'data-original-title': $root.isConnectionStringInUse($data, 'Kafka') ? 'Connection string is being used by an ongoing task !' : '' }">
+                                <button class="btn btn-danger"  
+                                        data-bind="click: $parent.confirmDelete.bind($parent, $data,'Raven'), disable: $root.isConnectionStringInUse($data, 'Kafka'),
+                                                   attr: { 'title': !$root.isConnectionStringInUse($data, 'Kafka') ? 'Remove connection string' : '' }">
+                                    <i class="icon-trash"></i>
+                                </button>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="hr-title on-base-background">
+                    <h5><strong>RabbitMQ</strong> Connection Strings</h5><hr>
+                    <button class="btn btn-sm btn-primary" data-bind="click: onAddRabbitMqEtl" title="Add a new RabbitMQ ETL connection string"><i class="icon-plus"></i><span>Add</span></button>
+                </div>
+                <div data-bind="if: rabbitMqEtlConnectionStringsNames().length === 0">
+                    <div class="text-center">
+                        <i class="icon-lg icon-empty-set text-muted"></i>
+                        <h3 class="text-center text-muted margin-top">No RabbitMQ ETL connection strings have been defined</h3>
+                    </div>
+                </div>
+                <div data-bind="foreach: rabbitMqEtlConnectionStringsNames">
+                    <div class="panel padding padding-sm flex-horizontal destination-item panel-hover"
+                         data-bind="css: { 'active': $root.editedRabbitMqEtlConnectionString() && $data === $root.editedRabbitMqEtlConnectionString().connectionStringName() }">
+                        <a href="#" class="connection-string-title flex-grow text-elipsis" data-bind="click: $parent.onEditRabbitMqEtl, attr: { title: $data }">
+                            <h4 class="text-elipsis">
+                                <span data-bind="text: $data"></span>
+                            </h4>
+                        </a>
+                        <div class="actions">
+                            <button class="btn btn-default" data-bind="click: $parent.onEditRabbitMqEtl" title="Edit connection string"><i class="icon-edit"></i></button>
+                            <span class="has-disable-reason" data-placement="right"
+                                  data-bind="attr: { 'data-original-title': $root.isConnectionStringInUse($data, 'RabbitMQ') ? 'Connection string is being used by an ongoing task !' : '' }">
+                                <button class="btn btn-danger"
+                                        data-bind="click: $parent.confirmDelete.bind($parent, $data,'Raven'), disable: $root.isConnectionStringInUse($data, 'RabbitMQ'),
+                                                   attr: { 'title': !$root.isConnectionStringInUse($data, 'RabbitMQ') ? 'Remove connection string' : '' }">
+                                    <i class="icon-trash"></i>
+                                </button>
+                            </span>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
-        <div class="col-sm-12 col-lg-6 flex-vertical" data-bind="visible: editedRavenEtlConnectionString() || editedSqlEtlConnectionString() || editedElasticSearchEtlConnectionString()">
+        <div class="col-sm-12 col-lg-6 flex-vertical"
+             data-bind="visible: editedRavenEtlConnectionString() || editedSqlEtlConnectionString() || editedElasticSearchEtlConnectionString() ||
+                                 editedKafkaEtlConnectionString() || editedRabbitMqEtlConnectionString">
             <div class="panel slidein-style">
                 <div class="flex-horizontal padding">
                     <h3 class="flex-grow" data-bind="visible: editedRavenEtlConnectionString">RavenDB Connection String</h3>
                     <h3 class="flex-grow" data-bind="visible: editedSqlEtlConnectionString">SQL Connection String</h3>
                     <h3 class="flex-grow" data-bind="visible: editedElasticSearchEtlConnectionString">Elasticsearch Connection String</h3>
+                    <h3 class="flex-grow" data-bind="visible: editedKafkaEtlConnectionString">Kafka Connection String</h3>
+                    <h3 class="flex-grow" data-bind="visible: editedRabbitMqEtlConnectionString">RabbitMQ Connection String</h3>
                     <button class="close flex-start" data-bind="click: onCloseEdit"><i class="icon-cancel"></i></button>
                 </div>
                 <form class="flex-form padding" autocomplete="off">
@@ -166,6 +232,30 @@
                     </div>
                     <div data-bind="with: editedSqlEtlConnectionString">
                         <div data-bind="compose: $root.connectionStringSqlView"></div>
+                        <div class="form-group" data-bind="if: tasksThatAreUsingThisConnectionString().length > 0">
+                            <label class="control-label">Used in Tasks</label>
+                            <div data-bind="foreach: tasksThatAreUsingThisConnectionString">
+                                <div class="task">
+                                    <a data-bind="attr: { 'href': $root.taskEditLink($data.taskId, $parent.connectionStringName()) }"
+                                       title="Click to edit task.."><span class="text-info small" data-bind="text: $data.taskName"></span></a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div data-bind="with: editedKafkaEtlConnectionString">
+                        <div data-bind="compose: $root.connectionStringKafkaView"></div>
+                        <div class="form-group" data-bind="if: tasksThatAreUsingThisConnectionString().length > 0">
+                            <label class="control-label">Used in Tasks</label>
+                            <div data-bind="foreach: tasksThatAreUsingThisConnectionString">
+                                <div class="task">
+                                    <a data-bind="attr: { 'href': $root.taskEditLink($data.taskId, $parent.connectionStringName()) }"
+                                       title="Click to edit task.."><span class="text-info small" data-bind="text: $data.taskName"></span></a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div data-bind="with: editedRabbitMqEtlConnectionString">
+                        <div data-bind="compose: $root.connectionStringRabbitMqView"></div>
                         <div class="form-group" data-bind="if: tasksThatAreUsingThisConnectionString().length > 0">
                             <label class="control-label">Used in Tasks</label>
                             <div data-bind="foreach: tasksThatAreUsingThisConnectionString">
@@ -234,7 +324,7 @@
                 <form class="flex-form padding" autocomplete="off">
                     <div data-bind="with: editedOlapEtlConnectionString">
                         <div class="form-group" data-bind="validationElement: connectionStringName">
-                            <label class="control-label">Name</label>
+                            <label class="control-label">Name<i class="required"></i></label>
                             <div class="flex-grow">
                                 <input class="form-control" placeholder="Enter a name for the connection string"
                                        data-bind="textInput: connectionStringName, enable: isNew, 

@@ -1,0 +1,33 @@
+<div class="flex-horizontal flex-header margin-top-sm">
+    <div class="flex-grow"><h3>Options Per Queue</h3></div>
+    <div>
+        <button type="button" class="btn btn-info" data-bind="click: addNewQueueOptions">
+            <i class="icon-plus"></i><span>Add queue options</span>
+        </button>
+    </div>
+</div>
+<div class="margin-bottom">
+    <div class="text-center text-muted" data-bind="if: optionsPerQueue().length === 0">
+        <i class="icon-lg icon-empty-set"></i>
+        <h3 class="margin-top margin-top-sm">No queue options have been defined</h3>
+    </div>
+    <div data-bind="foreach: optionsPerQueue">
+        <div class="flex-horizontal margin-bottom-sm item">
+            <div class="flex-grow margin-right" data-bind="validationElement: queueName">
+                <input type="text" class="form-control" placeholder="Queue name" data-bind="textInput: queueName"/>
+            </div>
+            <div class="toggle input-sm flex-noshrink">
+                <input id="toggleMode" class="styled" type="checkbox" data-bind="checked: deleteProcessedDocuments">
+                <label for="toggleMode">Delete processed documents</label>
+            </div>
+            <div class="">
+                <a title="Remove this queue option" href="#" class="btn" data-bind="click: $parent.removeQueueOptions.bind($parent, $data)">
+                    <i class="icon-trash"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+    <div data-bind="validationElement: optionsPerQueue">
+        <div class="help-block margin-bottom-sm" data-bind="validationMessage: optionsPerQueue"></div>
+    </div>
+</div>

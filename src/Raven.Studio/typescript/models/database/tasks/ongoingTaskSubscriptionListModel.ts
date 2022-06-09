@@ -30,6 +30,10 @@ class ongoingTaskSubscriptionListModel extends ongoingTaskListModel {
     textClass = ko.observable<string>("text-details");
 
     validationGroup: KnockoutValidationGroup;
+
+    get studioTaskType(): StudioTaskType {
+        return "Subscription";
+    }
     
     constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSubscription) {
         super();

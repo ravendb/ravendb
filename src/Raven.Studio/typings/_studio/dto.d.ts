@@ -720,11 +720,12 @@ interface scrollColorConfig {
 }
 
 type etlScriptDefinitionCacheItem = {
-    etlType: Raven.Client.Documents.Operations.ETL.EtlType;
+    etlType: Raven.Client.Documents.Operations.ETL.EtlType | StudioEtlType; // todo - handle etlType
     task: JQueryPromise<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtlDetails |
                         Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtlDetails |
                         Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtlDetails |
-                        Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtlDetails>;
+                        Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtlDetails |
+                        Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtlDetails>;
 }
 
 type addressType = "ipv4" | "ipv6" | "hostname" | "invalid";
@@ -820,7 +821,13 @@ interface TimeSeriesOperation extends Raven.Client.Documents.Operations.TimeSeri
     Increments: Raven.Client.Documents.Operations.TimeSeries.TimeSeriesOperation.IncrementOperation[];
 }
 
-type TasksNamesInUI = "External Replication" | "RavenDB ETL" | "SQL ETL" | "OLAP ETL" | "Backup" | "Subscription" | "Replication Hub" | "Replication Sink" | "Elasticsearch ETL";
+type TasksNamesInUI = "External Replication" |  "Replication Hub" | "Replication Sink" | "Backup" | "Subscription" | 
+                      "RavenDB ETL" | "SQL ETL" | "OLAP ETL" | "Elasticsearch ETL" | "Kafka ETL" | "RabbitMQ ETL";
+
+type StudioTaskType =  "Replication" | "PullReplicationAsHub" | "PullReplicationAsSink" | "Backup" | "Subscription" |
+                       "RavenEtl" | "SqlEtl" | "OlapEtl" | "ElasticSearchEtl" | "KafkaQueueEtl" | "RabbitQueueEtl";
+    
+type StudioEtlType = "Raven" | "Sql" | "Olap" | "ElasticSearch" | "Kafka" | "RabbitMQ";
 
 interface sampleCode {
     title: string;

@@ -11,6 +11,8 @@ import ongoingTaskRavenEtlListModel = require("models/database/tasks/ongoingTask
 import ongoingTaskSqlEtlListModel = require("models/database/tasks/ongoingTaskSqlEtlListModel");
 import ongoingTaskOlapEtlListModel = require("models/database/tasks/ongoingTaskOlapEtlListModel");
 import ongoingTaskElasticSearchEtlListModel = require("models/database/tasks/ongoingTaskElasticSearchEtlListModel");
+import ongoingTaskKafkaEtlListModel = require("models/database/tasks/ongoingTaskKafkaEtlListModel");
+import ongoingTaskRabbitMqEtlListModel = require("models/database/tasks/ongoingTaskRabbitMqEtlListModel");
 import ongoingTaskSubscriptionListModel = require("models/database/tasks/ongoingTaskSubscriptionListModel");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import createOngoingTask = require("viewmodels/database/tasks/createOngoingTask");
@@ -47,25 +49,34 @@ class ongoingTasks extends viewModelBase {
     sqlEtlTasks = ko.observableArray<ongoingTaskSqlEtlListModel>();
     olapEtlTasks = ko.observableArray<ongoingTaskOlapEtlListModel>();
     elasticSearchEtlTasks = ko.observableArray<ongoingTaskElasticSearchEtlListModel>();
+    
+    kafkaEtlTasks = ko.observableArray<ongoingTaskKafkaEtlListModel>();
+    rabbitMqEtlTasks = ko.observableArray<ongoingTaskRabbitMqEtlListModel>();
+    
     backupTasks = ko.observableArray<ongoingTaskBackupListModel>();
     subscriptionTasks = ko.observableArray<ongoingTaskSubscriptionListModel>();
     replicationHubTasks = ko.observableArray<ongoingTaskReplicationHubDefinitionListModel>();
     replicationSinkTasks = ko.observableArray<ongoingTaskReplicationSinkListModel>();
     
-    showReplicationSection = this.createShowSectionComputed(this.replicationTasks, "External Replication");
-    showEtlSection = this.createShowSectionComputed(this.ravenEtlTasks, "RavenDB ETL");
-    showSqlSection = this.createShowSectionComputed(this.sqlEtlTasks, "SQL ETL");
-    showOlapSection = this.createShowSectionComputed(this.olapEtlTasks, "OLAP ETL");
-    showElasticSearchSection = this.createShowSectionComputed(this.elasticSearchEtlTasks, "Elasticsearch ETL");
+    showReplicationSection = this.createShowSectionComputed(this.replicationTasks, "Replication");
+    showEtlSection = this.createShowSectionComputed(this.ravenEtlTasks, "RavenEtl");
+    showSqlSection = this.createShowSectionComputed(this.sqlEtlTasks, "SqlEtl");
+    showOlapSection = this.createShowSectionComputed(this.olapEtlTasks, "OlapEtl");
+    showElasticSearchSection = this.createShowSectionComputed(this.elasticSearchEtlTasks, "ElasticSearchEtl");
+    
+    showKafkaSection = this.createShowSectionComputed(this.kafkaEtlTasks, "KafkaQueueEtl");
+    showRabbitMqSection = this.createShowSectionComputed(this.rabbitMqEtlTasks, "RabbitQueueEtl");
+    
     showBackupSection = this.createShowSectionComputed(this.backupTasks, "Backup");
     showSubscriptionsSection = this.createShowSectionComputed(this.subscriptionTasks, "Subscription");
     showReplicationHubSection = this.createShowSectionComputedForPullHub(this.replicationHubTasks);
-    showReplicationSinkSection = this.createShowSectionComputed(this.replicationSinkTasks, "Replication Sink");
-
-    tasksTypesOrderForUI = ["Replication", "RavenEtl", "SqlEtl", "OlapEtl", "ElasticSearchEtl",
-                            "Backup", "Subscription", "PullReplicationAsHub", "PullReplicationAsSink"] as Array<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType>;
-    existingTaskTypes = ko.observableArray<TasksNamesInUI | "All tasks">();
-    selectedTaskType = ko.observable<TasksNamesInUI | "All tasks">();
+    showReplicationSinkSection = this.createShowSectionComputed(this.replicationSinkTasks, "PullReplicationAsSink");
+    
+    tasksTypesOrderForUI = ["Replication", "RavenEtl", "SqlEtl", "OlapEtl", "ElasticSearchEtl", "KafkaQueueEtl", "RabbitQueueEtl",
+                            "Backup", "Subscription", "PullReplicationAsHub", "PullReplicationAsSink"] as Array<StudioTaskType>;
+       
+    existingTaskTypes = ko.observableArray<StudioTaskType | "All tasks">(); 
+    selectedTaskType = ko.observable<StudioTaskType | "All tasks">(); 
     
     taskNameToCount: KnockoutComputed<dictionary<number>>;
     
@@ -87,17 +98,19 @@ class ongoingTasks extends viewModelBase {
         this.myNodeTag(this.clusterManager.localNodeTag());
         this.serverWideTasksUrl = appUrl.forServerWideTasks();
         this.canNavigateToServerWideTasks = accessManager.default.isClusterAdminOrClusterNode;
-        this.taskNameToCount = ko.pureComputed<Record<TasksNamesInUI, number>>(() => {
+        this.taskNameToCount = ko.pureComputed<Record<StudioTaskType, number>>(() => {
             return {
-                "External Replication": this.replicationTasks().length,
-                "RavenDB ETL": this.ravenEtlTasks().length,
-                "SQL ETL": this.sqlEtlTasks().length,
-                "OLAP ETL": this.olapEtlTasks().length,
-                "Elasticsearch ETL": this.elasticSearchEtlTasks().length,
+                "Replication": this.replicationTasks().length,
+                "RavenEtl": this.ravenEtlTasks().length,
+                "SqlEtl": this.sqlEtlTasks().length,
+                "OlapEtl": this.olapEtlTasks().length,
+                "ElasticSearchEtl": this.elasticSearchEtlTasks().length,
                 "Backup": this.backupTasks().length,
                 "Subscription": this.subscriptionTasks().length,
-                "Replication Hub": this.replicationHubTasks().length,
-                "Replication Sink": this.replicationSinkTasks().length
+                "PullReplicationAsHub": this.replicationHubTasks().length,
+                "PullReplicationAsSink": this.replicationSinkTasks().length,
+                "KafkaQueueEtl": this.kafkaEtlTasks().length,
+                "RabbitQueueEtl": this.rabbitMqEtlTasks().length
             }
         });
     }
@@ -163,9 +176,19 @@ class ongoingTasks extends viewModelBase {
                             }
                             break;
                         case "ElasticSearch":
-                            const matchingElasticSearchTask = this.ravenEtlTasks().find(x => x.taskName() === taskProgress.TaskName);
+                            const matchingElasticSearchTask = this.elasticSearchEtlTasks().find(x => x.taskName() === taskProgress.TaskName);
                             if (matchingElasticSearchTask) {
                                 matchingElasticSearchTask.updateProgress(taskProgress);
+                            }
+                            break;
+                        case "Queue":
+                            const matchingKafkaTask = this.kafkaEtlTasks().find(x => x.taskName() === taskProgress.TaskName);
+                            if (matchingKafkaTask) {
+                                matchingKafkaTask.updateProgress(taskProgress);
+                            }
+                            const matchingRabbitMqTask = this.rabbitMqEtlTasks().find(x => x.taskName() === taskProgress.TaskName);
+                            if (matchingRabbitMqTask) {
+                                matchingRabbitMqTask.updateProgress(taskProgress);
                             }
                             break;
                     }
@@ -196,10 +219,22 @@ class ongoingTasks extends viewModelBase {
                         task.loadingProgress(false);
                     }
                 });
+                
+                this.kafkaEtlTasks().forEach(task => {
+                    if (task.loadingProgress()) {
+                        task.loadingProgress(false);
+                    }
+                });
+
+                this.rabbitMqEtlTasks().forEach(task => {
+                    if (task.loadingProgress()) {
+                        task.loadingProgress(false);
+                    }
+                });
             });
     }
     
-    private createShowSectionComputed(tasksContainer: KnockoutObservableArray<{ responsibleNode: KnockoutObservable<Raven.Client.ServerWide.Operations.NodeId> }>, taskType: TasksNamesInUI) {
+    private createShowSectionComputed(tasksContainer: KnockoutObservableArray<{ responsibleNode: KnockoutObservable<Raven.Client.ServerWide.Operations.NodeId> }>, taskType: StudioTaskType) {
         return ko.pureComputed(() => {
             const hasAnyTask = tasksContainer().length > 0;
             const matchesSelectTaskType = this.selectedTaskType() === taskType || this.selectedTaskType() === "All tasks";
@@ -216,7 +251,7 @@ class ongoingTasks extends viewModelBase {
     private createShowSectionComputedForPullHub(tasksContainer: KnockoutObservableArray<ongoingTaskReplicationHubDefinitionListModel>) {
         return ko.pureComputed(() => {
             const hasAnyTask = tasksContainer().length > 0;
-            const matchesSelectTaskType = this.selectedTaskType() === "Replication Hub" || this.selectedTaskType() === "All tasks";
+            const matchesSelectTaskType = this.selectedTaskType() === "PullReplicationAsHub" || this.selectedTaskType() === "All tasks";
 
             let nodeMatch = true;
             if (this.selectedNode() !== "All nodes") {
@@ -317,8 +352,12 @@ class ongoingTasks extends viewModelBase {
     
     toggleDetails(item: ongoingTaskListModel) {
         item.toggleDetails();
+
+        const studioTaskType = item.studioTaskType;
         
-        const isEtl = item.taskType() === "RavenEtl" || item.taskType() === "SqlEtl" || item.taskType() === "OlapEtl" || item.taskType() === "ElasticSearchEtl";
+        const isEtl = studioTaskType === "RavenEtl" || studioTaskType === "SqlEtl" || studioTaskType === "OlapEtl" || studioTaskType === "ElasticSearchEtl" ||
+                      studioTaskType === "KafkaQueueEtl" || studioTaskType === "RabbitQueueEtl";
+        
         if (item.showDetails() && isEtl) {
             this.watchEtlProgress();
         }
@@ -332,6 +371,8 @@ class ongoingTasks extends viewModelBase {
             ...this.sqlEtlTasks(),
             ...this.olapEtlTasks(),
             ...this.elasticSearchEtlTasks(),
+            ...this.kafkaEtlTasks(),
+            ...this.rabbitMqEtlTasks(),
             ...this.replicationSinkTasks(),
             ...this.replicationHubTasks(),
             ...this.subscriptionTasks()] as Array<{ taskId: number }>;
@@ -341,12 +382,12 @@ class ongoingTasks extends viewModelBase {
         const newTaskIds = result.OngoingTasksList.map(x => x.TaskId);
         newTaskIds.push(...result.PullReplications.map(x => x.TaskId));
 
-        const toDeleteIds = _.without(oldTaskIds, ...newTaskIds);
-
-        const groupedTasks = _.groupBy(result.OngoingTasksList, x => x.TaskType);
+        const toDeleteIds = _.without(oldTaskIds, ...newTaskIds); 
+        
+        const groupedTasks = _.groupBy(result.OngoingTasksList, x => ongoingTaskModel.getStudioTaskType(x));
 
         this.mergeTasks(this.replicationTasks, 
-            groupedTasks["Replication" as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType],
+            groupedTasks["Replication" as StudioTaskType],
             toDeleteIds,
             (dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskReplication) => new ongoingTaskReplicationListModel(dto));
         
@@ -361,8 +402,8 @@ class ongoingTasks extends viewModelBase {
             this.replicationTasks(serverWideReplicationTasks);
         }
         
-        this.mergeTasks(this.backupTasks, 
-            groupedTasks["Backup" as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType],
+        this.mergeTasks(this.backupTasks,
+            groupedTasks["Backup" as StudioTaskType],
             toDeleteIds,
             (dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup) => new ongoingTaskBackupListModel(dto, task => this.watchBackupCompletion(task)));
         
@@ -377,37 +418,47 @@ class ongoingTasks extends viewModelBase {
             this.backupTasks(serverWideBackupTasks);
         }
         
-        this.mergeTasks(this.ravenEtlTasks, 
-            groupedTasks["RavenEtl" as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType],
+        this.mergeTasks(this.ravenEtlTasks,
+            groupedTasks["RavenEtl" as StudioTaskType],
             toDeleteIds,
             (dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtlListView) => new ongoingTaskRavenEtlListModel(dto));
         
-        this.mergeTasks(this.sqlEtlTasks, 
-            groupedTasks["SqlEtl" as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType],
+        this.mergeTasks(this.sqlEtlTasks,
+            groupedTasks["SqlEtl" as StudioTaskType],
             toDeleteIds,
             (dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtlListView) => new ongoingTaskSqlEtlListModel(dto));
 
         this.mergeTasks(this.olapEtlTasks,
-            groupedTasks["OlapEtl" as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType],
+            groupedTasks["OlapEtl" as StudioTaskType],
             toDeleteIds,
             (dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtlListView) => new ongoingTaskOlapEtlListModel(dto));
 
         this.mergeTasks(this.elasticSearchEtlTasks,
-            groupedTasks["ElasticSearchEtl" as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType],
+            groupedTasks["ElasticSearchEtl" as StudioTaskType],
             toDeleteIds,
             (dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtlListView) => new ongoingTaskElasticSearchEtlListModel(dto));
         
+        this.mergeTasks(this.kafkaEtlTasks,
+            groupedTasks["KafkaQueueEtl" as StudioTaskType],
+            toDeleteIds,
+            (dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtlListView) => new ongoingTaskKafkaEtlListModel(dto));
+
+        this.mergeTasks(this.rabbitMqEtlTasks,
+            groupedTasks["RabbitQueueEtl" as StudioTaskType],
+            toDeleteIds,
+            (dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtlListView) => new ongoingTaskRabbitMqEtlListModel(dto));
+                
         this.mergeTasks(this.subscriptionTasks, 
-            groupedTasks["Subscription" as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType],
+            groupedTasks["Subscription" as StudioTaskType],
             toDeleteIds, 
             (dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSubscription) => new ongoingTaskSubscriptionListModel(dto));
         
         this.mergeTasks(this.replicationSinkTasks,
-            groupedTasks["PullReplicationAsSink" as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType],
+            groupedTasks["PullReplicationAsSink" as StudioTaskType],
             toDeleteIds,
             (dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsSink) => new ongoingTaskReplicationSinkListModel(dto));
         
-        const hubOngoingTasks = groupedTasks["PullReplicationAsHub" as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType] as unknown as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsHub[];
+        const hubOngoingTasks = groupedTasks["PullReplicationAsHub" as StudioTaskType] as unknown as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsHub[];
         this.mergeReplicationHubs(result.PullReplications, hubOngoingTasks || [], toDeleteIds);
         
         const taskTypes = Object.keys(groupedTasks);
@@ -417,8 +468,7 @@ class ongoingTasks extends viewModelBase {
             taskTypes.push("PullReplicationAsHub" as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType);
         }
 
-        this.existingTaskTypes(this.tasksTypesOrderForUI.filter(x => _.includes(taskTypes, x))
-            .map(ongoingTaskModel.mapTaskType));
+        this.existingTaskTypes(this.tasksTypesOrderForUI.filter(x => _.includes(taskTypes, x)));
         
         this.existingNodes(_.uniq(result
             .OngoingTasksList
@@ -516,7 +566,7 @@ class ongoingTasks extends viewModelBase {
     confirmRemoveOngoingTask(model: ongoingTaskListModel) {
         const db = this.activeDatabase();
         
-        const taskType = ongoingTaskModel.mapTaskType(model.taskType());
+        const taskType = ongoingTaskModel.mapTaskType(model.studioTaskType);
         
         this.confirmationMessage("Delete Ongoing Task?", 
             `You're deleting ${taskType} task: <br><ul><li><strong>${generalUtils.escapeHtml(model.taskName())}</strong></li></ul>`, {
@@ -541,7 +591,7 @@ class ongoingTasks extends viewModelBase {
         app.showBootstrapDialog(addOngoingTaskView);
     }
 
-    setSelectedTaskType(taskName: TasksNamesInUI | "All tasks") {
+    setSelectedTaskType(taskName: StudioTaskType | "All tasks") {
         this.selectedTaskType(taskName);
     }
 
@@ -550,17 +600,27 @@ class ongoingTasks extends viewModelBase {
     }
 
     showItemPreview(item: ongoingTaskListModel, scriptName: string) {
-        //const type: Raven.Client.Documents.Operations.ETL.EtlType = item.taskType() === "RavenEtl" ? "Raven" : item.taskType() === "SqlEtl" ? "Sql" : "Olap";
-        let type:Raven.Client.Documents.Operations.ETL.EtlType;
+        let type: StudioEtlType;
         
-        switch (item.taskType()) {
+        let studioTaskType = item.studioTaskType;
+        
+        switch (studioTaskType) {
             case "RavenEtl": type = "Raven"; break;
             case "SqlEtl": type = "Sql"; break;
             case "OlapEtl": type = "Olap"; break;
             case "ElasticSearchEtl": type = "ElasticSearch"; break;
+            case "KafkaQueueEtl": type = "Kafka"; break;
+            case "RabbitQueueEtl": type = "RabbitMQ"; break;
         } 
         
         this.definitionsCache.showDefinitionFor(type, item.taskId, scriptName);
+    }
+    
+    // todo refactor.. shorter..
+    getTaskNameForUI(taskType: StudioTaskType) {
+        return ko.pureComputed(() => {
+           return ongoingTaskModel.mapTaskType(taskType); 
+        });
     }
 }
 

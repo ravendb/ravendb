@@ -40,6 +40,12 @@
                    <pre class="copy-area"><a href="#" class="copy-button-hidden" title="Copy code sample" data-bind="click: _.partial($root.copySample, 'olapEtlSampleCustomPartition')"><i class="icon-copy"></i></a><span data-bind="html: olapEtlSampleCustomPartitionHtml"></span></pre>
                </div>
            </div>
+           <div data-bind="if: etlType() === 'Queue'" class="copy-area">
+               <h3 class="margin-bottom margin-bottom-lg margin-top">Sample Queue ETL Transformation Script</h3>
+               <div class="margin-bottom">
+                   TODO...
+               </div>
+           </div>
        </div>
        <div class="modal-footer margin-bottom">
            <div class="text-left bg-info text-info padding padding-sm">

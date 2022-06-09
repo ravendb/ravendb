@@ -22,6 +22,7 @@ using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
+using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Operations.Indexes;
@@ -59,6 +60,7 @@ using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.ElasticSearch.Test;
 using Raven.Server.Documents.ETL.Providers.OLAP;
 using Raven.Server.Documents.ETL.Providers.OLAP.Test;
+using Raven.Server.Documents.ETL.Providers.Queue.Test;
 using Raven.Server.Documents.ETL.Providers.Raven.Test;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 using Raven.Server.Documents.ETL.Providers.SQL.Test;
@@ -484,12 +486,20 @@ namespace TypingsGenerator
             scripter.AddType(typeof(ElasticSearchEtlConfiguration));
             scripter.AddType(typeof(ElasticSearchEtlTestScriptResult));
             scripter.AddType(typeof(TestElasticSearchEtlScript));
+            
+            // ongoing tasks - Queue ETL
+            scripter.AddType(typeof(OngoingTaskQueueEtlDetails));
+            scripter.AddType(typeof(OngoingTaskQueueEtlListView));
+            scripter.AddType(typeof(QueueEtlConfiguration));
+            scripter.AddType(typeof(QueueEtlTestScriptResult));
+            scripter.AddType(typeof(TestQueueEtlScript));
 
             // connection strings
             scripter.AddType(typeof(ConnectionString));
             scripter.AddType(typeof(RavenConnectionString));
             scripter.AddType(typeof(SqlConnectionString));
             scripter.AddType(typeof(ElasticSearchConnectionString));
+            scripter.AddType(typeof(QueueConnectionString));
             scripter.AddType(typeof(ConnectionStringType));
             scripter.AddType(typeof(GetConnectionStringsResult));
 

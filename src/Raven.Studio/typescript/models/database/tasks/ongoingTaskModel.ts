@@ -4,7 +4,8 @@ abstract class ongoingTaskModel {
 
     taskId: number;
     taskName = ko.observable<string>();
-    taskType = ko.observable<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType>();
+    
+    taskType = ko.observable<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType>();   // raw type from server
     taskState = ko.observable<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskState>();
 
     mentorNode = ko.observable<string>();
@@ -22,8 +23,19 @@ abstract class ongoingTaskModel {
         
         return (preferredMentor && currentNode) ? preferredMentor !== currentNode : false;
     });
+    
+    abstract get studioTaskType(): StudioTaskType;
 
-    static mapTaskType(taskType: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType): TasksNamesInUI {
+    static getStudioTaskType(taskListItem: Raven.Client.Documents.Operations.OngoingTasks.OngoingTask): StudioTaskType {
+        if (taskListItem.TaskType === "QueueEtl") {
+            const task = (taskListItem as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtlListView);
+            return task.BrokerType === "Kafka" ? "KafkaQueueEtl" : "RabbitQueueEtl";
+        }
+
+        return taskListItem.TaskType;
+    }
+    
+    static mapTaskType(taskType: StudioTaskType): TasksNamesInUI {
         switch (taskType) {
             case "RavenEtl":
                 return "RavenDB ETL";
@@ -39,6 +51,10 @@ abstract class ongoingTaskModel {
                 return "Replication Hub";
             case "PullReplicationAsSink":
                 return "Replication Sink";
+            case "KafkaQueueEtl":
+                return "Kafka ETL";
+            case "RabbitQueueEtl":
+                return "RabbitMQ ETL";
             default:
                 return taskType;
         }

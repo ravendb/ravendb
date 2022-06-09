@@ -9,6 +9,10 @@ class ongoingTaskSqlEtlListModel extends abstractOngoingTaskEtlListModel {
     
     connectionStringDefined = ko.observable<boolean>();
     destinationDescription: KnockoutComputed<string>;
+
+    get studioTaskType(): StudioTaskType {
+        return "SqlEtl";
+    }
     
     constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtlListView) {
         super();
@@ -16,7 +20,7 @@ class ongoingTaskSqlEtlListModel extends abstractOngoingTaskEtlListModel {
         this.update(dto);
         this.initializeObservables();
 
-        this.connectionStringsUrl = appUrl.forConnectionStrings(activeDatabaseTracker.default.database(), "sql", this.connectionStringName());
+        this.connectionStringsUrl = appUrl.forConnectionStrings(activeDatabaseTracker.default.database(), "Sql", this.connectionStringName());
     }
 
     initializeObservables() {

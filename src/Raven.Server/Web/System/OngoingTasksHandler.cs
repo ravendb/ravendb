@@ -990,6 +990,7 @@ namespace Raven.Server.Web.System
                             NodeTag = tag,
                             NodeUrl = clusterTopology.GetUrlFromTag(tag)
                         },
+                        BrokerType = queueEtl.BrokerType,
                         ConnectionStringName = queueEtl.ConnectionStringName,
                         Url = connection?.GetUrl(),
                         Error = error
