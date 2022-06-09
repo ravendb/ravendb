@@ -1,0 +1,46 @@
+﻿@use "Content/scss/colors";
+@use "Content/scss/sizes";
+
+.named-progress-container {
+    display: contents;
+}
+
+.progress-name, .named-progress {
+    padding: sizes.$gutter-xs sizes.$gutter-sm;
+}
+
+.progress-name {
+    font-size: 12px;
+    text-align: center;
+}
+
+.named-progress {
+    display: flex;
+
+    .progress-item {
+        font-size: 9px;
+        text-transform: uppercase;
+        letter-spacing: .15em;
+
+        .progress-percentage {
+            font-size: 11px;
+        }
+
+        .progress {
+            margin-top: 0;
+            height: 3px;
+            margin-bottom: 0;
+
+            .progress-bar {
+                background-color: colors.$progress-color;
+                &.completed {
+                    background-color: colors.$brand-success;
+                }
+            }
+        }
+
+        & + .progress-item {
+            margin-left: sizes.$gutter-xs;
+        }
+    }
+}

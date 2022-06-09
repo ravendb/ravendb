@@ -10,17 +10,14 @@ interface PopoverWithHoverProps extends PopoverUtilsOptions {
 export function PopoverWithHover(props: PopoverWithHoverProps) {
     const { target, children, ...rest } = props;
 
-    const textRef = useRef<string>();
+    const textRef = useRef<HTMLDivElement>();
 
     useEffect(() => {
-        const container = document.createElement("div");
-        ReactDOM.render(children, container, () => {
-            textRef.current = container.innerHTML;
-        });
+        textRef.current = document.createElement("div");
+    }, []);
 
-        return () => {
-            ReactDOM.unmountComponentAtNode(container);
-        };
+    useEffect(() => {
+        ReactDOM.render(children, textRef.current);
     }, [children]);
 
     useEffect(() => {

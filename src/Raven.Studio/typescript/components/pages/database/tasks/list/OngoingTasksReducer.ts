@@ -6,6 +6,7 @@ import {
     OngoingTaskInfo,
     OngoingTaskNodeInfo,
     OngoingTaskNodeInfoDetails,
+    OngoingTaskNodeProgressDetails,
     OngoingTaskOlapEtlSharedInfo,
     OngoingTaskRavenEtlSharedInfo,
     OngoingTaskReplicationHubSharedInfo,
@@ -25,11 +26,22 @@ import OngoingTaskElasticSearchEtlListView = Raven.Client.Documents.Operations.O
 import OngoingTaskOlapEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtlListView;
 import OngoingTaskPullReplicationAsSink = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsSink;
 import OngoingTaskPullReplicationAsHub = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsHub;
+import EtlTaskProgress = Raven.Server.Documents.ETL.Stats.EtlTaskProgress;
+import EtlProcessProgress = Raven.Server.Documents.ETL.Stats.EtlProcessProgress;
+import EtlType = Raven.Client.Documents.Operations.ETL.EtlType;
+import OngoingTaskType = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType;
+import TaskUtils from "../../../../utils/TaskUtils";
 
 interface ActionTasksLoaded {
     location: databaseLocationSpecifier;
     tasks: OngoingTasksResult;
     type: "TasksLoaded";
+}
+
+interface ActionProgressLoaded {
+    location: databaseLocationSpecifier;
+    progress: EtlTaskProgress[];
+    type: "ProgressLoaded";
 }
 
 interface OngoingTasksState {
@@ -38,10 +50,43 @@ interface OngoingTasksState {
     replicationHubs: OngoingTaskHubDefinitionInfo[];
 }
 
-type OngoingTaskReducerAction = ActionTasksLoaded;
+type OngoingTaskReducerAction = ActionTasksLoaded | ActionProgressLoaded;
 
 const serverWidePrefix = "Server Wide";
 
+function mapProgress(taskProgress: EtlProcessProgress): OngoingTaskNodeProgressDetails {
+    const totalItems =
+        taskProgress.TotalNumberOfDocuments +
+        taskProgress.TotalNumberOfDocumentTombstones +
+        taskProgress.TotalNumberOfCounterGroups;
+
+    return {
+        documents: {
+            processed: taskProgress.TotalNumberOfDocuments - taskProgress.NumberOfDocumentsToProcess,
+            total: taskProgress.TotalNumberOfDocuments,
+        },
+        documentTombstones: {
+            processed: taskProgress.TotalNumberOfDocumentTombstones - taskProgress.NumberOfDocumentTombstonesToProcess,
+            total: taskProgress.TotalNumberOfDocumentTombstones,
+        },
+        counterGroups: {
+            processed: taskProgress.TotalNumberOfCounterGroups - taskProgress.NumberOfCounterGroupsToProcess,
+            total: taskProgress.TotalNumberOfCounterGroups,
+        },
+        global: {
+            processed:
+                totalItems -
+                taskProgress.NumberOfDocumentsToProcess -
+                taskProgress.NumberOfDocumentTombstonesToProcess -
+                taskProgress.NumberOfCounterGroupsToProcess,
+            total: totalItems,
+        },
+        transformationName: taskProgress.TransformationName,
+        completed: taskProgress.Completed,
+        disabled: taskProgress.Disabled,
+        processedPerSecond: taskProgress.AverageProcessedPerSecond,
+    };
+}
 function mapSharedInfo(task: OngoingTask): OngoingTaskSharedInfo {
     const taskType = task.TaskType;
 
@@ -161,6 +206,7 @@ function initNodesInfo(locations: databaseLocationSpecifier[]): OngoingTaskNodeI
         location: l,
         status: "notLoaded",
         details: null,
+        progress: null,
     }));
 }
 
@@ -168,9 +214,7 @@ export const ongoingTasksReducer: Reducer<OngoingTasksState, OngoingTaskReducerA
     state: OngoingTasksState,
     action: OngoingTaskReducerAction
 ): OngoingTasksState => {
-    const actionType = action.type;
-
-    switch (actionType) {
+    switch (action.type) {
         case "TasksLoaded": {
             const incomingLocation = action.location;
             const incomingTasks = action.tasks;
@@ -187,6 +231,7 @@ export const ongoingTasksReducer: Reducer<OngoingTasksState, OngoingTaskReducerA
                         location: incomingLocation,
                         status: "loaded",
                         details: mapNodeInfo(incomingTask),
+                        progress: null,
                     };
 
                     return {
@@ -214,6 +259,26 @@ export const ongoingTasksReducer: Reducer<OngoingTasksState, OngoingTaskReducerA
                         },
                         nodesInfo: undefined,
                     };
+                });
+            });
+        }
+        case "ProgressLoaded": {
+            const incomingProgress = action.progress;
+            const incomingLocation = action.location;
+
+            return produce(state, (draft) => {
+                draft.tasks.forEach((task) => {
+                    const perLocationDraft = task.nodesInfo.find((x) =>
+                        databaseLocationComparator(x.location, incomingLocation)
+                    );
+                    const progressToApply = incomingProgress.find(
+                        (x) =>
+                            TaskUtils.etlTypeToTaskType(x.EtlType) === task.shared.taskType &&
+                            x.TaskName === task.shared.taskName
+                    );
+                    perLocationDraft.progress = progressToApply
+                        ? progressToApply.ProcessesProgress.map(mapProgress)
+                        : null;
                 });
             });
         }

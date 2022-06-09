@@ -2,7 +2,7 @@
 
 export interface ProgressCircleProps {
     state: "success" | "failed" | "running";
-    children: ReactNode;
+    children?: ReactNode;
     icon?: string;
     progress?: number | null;
     inline?: boolean;

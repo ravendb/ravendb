@@ -117,8 +117,11 @@
             background-size: 350% 100%;
             animation: loadingAnimation $loading-animation-duration linear infinite;
 
-            .entries, .errors, .state {
-                opacity: 0;
+            & > div {
+               opacity: 0; 
+            }
+            .shard, .node {
+                opacity: 1;
             }
         }
 

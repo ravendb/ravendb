@@ -1,0 +1,11 @@
+﻿@use "Content/scss/colors";
+@use "Content/scss/sizes";
+
+
+.ongoing-tasks-details-tooltip {
+    background-color: colors.$gray-700;
+    border-radius: sizes.$gutter-xs;
+    display: grid;
+    grid-template-columns: auto auto;
+    z-index: 1000;
+}

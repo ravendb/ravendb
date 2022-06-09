@@ -1,10 +1,17 @@
-﻿import React from "react";
+﻿import React, { useCallback } from "react";
 import { useAccessManager } from "hooks/useAccessManager";
 import { RichPanel, RichPanelDetailItem, RichPanelDetails, RichPanelHeader } from "../../../../../common/RichPanel";
-import { ConnectionStringItem, OngoingTaskActions, OngoingTaskName, OngoingTaskStatus } from "../shared";
+import {
+    ConnectionStringItem,
+    ICanShowTransformationScriptPreview,
+    OngoingTaskActions,
+    OngoingTaskName,
+    OngoingTaskStatus,
+} from "../shared";
 import { useAppUrls } from "hooks/useAppUrls";
 import { OngoingTaskRavenEtlInfo } from "../../../../../models/tasks";
 import { BaseOngoingTaskPanelProps, useTasksOperations } from "../shared";
+import { OngoingTaskDistribution } from "./OngoingTaskDistribution";
 
 type RavenEtlPanelProps = BaseOngoingTaskPanelProps<OngoingTaskRavenEtlInfo>;
 
@@ -14,7 +21,6 @@ function Details(props: RavenEtlPanelProps & { canEdit: boolean }) {
     const { appUrl } = useAppUrls();
     const connectionStringsUrl = appUrl.forConnectionStrings(db, "ravendb", data.shared.connectionStringName);
     //TODO: task status
-    //TODO: progress template!
 
     return (
         <RichPanelDetails>
@@ -52,8 +58,8 @@ function Details(props: RavenEtlPanelProps & { canEdit: boolean }) {
     );
 }
 
-export function RavenEtlPanel(props: RavenEtlPanelProps) {
-    const { db, data, ...restProps } = props;
+export function RavenEtlPanel(props: RavenEtlPanelProps & ICanShowTransformationScriptPreview) {
+    const { db, data, showItemPreview, ...restProps } = props;
 
     const { isAdminAccessOrAbove } = useAccessManager();
     const { forCurrentDatabase } = useAppUrls();
@@ -64,6 +70,13 @@ export function RavenEtlPanel(props: RavenEtlPanelProps) {
     const { detailsVisible, toggleDetails, toggleStateHandler, onEdit, onDeleteHandler } = useTasksOperations(
         editUrl,
         props
+    );
+
+    const showPreview = useCallback(
+        (transformationName: string) => {
+            showItemPreview(data, transformationName);
+        },
+        [data]
     );
 
     return (
@@ -80,6 +93,7 @@ export function RavenEtlPanel(props: RavenEtlPanelProps) {
                 />
             </RichPanelHeader>
             {detailsVisible && <Details {...props} canEdit={canEdit} />}
+            {detailsVisible && <OngoingTaskDistribution task={data} showPreview={showPreview} />}
         </RichPanel>
     );
 }
