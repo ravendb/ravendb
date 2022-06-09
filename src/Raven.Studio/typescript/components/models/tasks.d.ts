@@ -114,9 +114,7 @@ export interface OngoingTaskPeriodicBackupNodeInfoDetails extends OngoingTaskNod
     //TODO: LastExecutingNodeTag - is local?
 }
 
-export interface OngoingTaskRavenEtlNodeInfoDetails extends OngoingTaskNodeInfoDetails {
-    //TODO:
-}
+export interface OngoingTaskRavenEtlNodeInfoDetails extends OngoingTaskNodeInfoDetails {}
 
 export interface OngoingTaskReplicationHubNodeInfoDetails extends OngoingTaskNodeInfoDetails {
     //TODO:
