@@ -1,7 +1,9 @@
-﻿import React from "react";
+﻿import React, { useCallback } from "react";
 import {
     BaseOngoingTaskPanelProps,
     ConnectionStringItem,
+    EmptyScriptsWarning,
+    ICanShowTransformationScriptPreview,
     OngoingTaskActions,
     OngoingTaskName,
     OngoingTaskStatus,
@@ -11,6 +13,7 @@ import { OngoingTaskSqlEtlInfo } from "../../../../../models/tasks";
 import { useAccessManager } from "hooks/useAccessManager";
 import { useAppUrls } from "hooks/useAppUrls";
 import { RichPanel, RichPanelDetailItem, RichPanelDetails, RichPanelHeader } from "../../../../../common/RichPanel";
+import { OngoingTaskDistribution } from "./OngoingTaskDistribution";
 
 type SqlEtlPanelProps = BaseOngoingTaskPanelProps<OngoingTaskSqlEtlInfo>;
 
@@ -19,9 +22,6 @@ function Details(props: SqlEtlPanelProps & { canEdit: boolean }) {
     const { appUrl } = useAppUrls();
     const connectionStringDefined = !!data.shared.destinationDatabase;
     const connectionStringsUrl = appUrl.forConnectionStrings(db, "sql", data.shared.connectionStringName);
-
-    //TODO: task status
-    //TODO: progress
 
     return (
         <RichPanelDetails>
@@ -39,12 +39,13 @@ function Details(props: SqlEtlPanelProps & { canEdit: boolean }) {
                 connectionStringName={data.shared.connectionStringName}
                 connectionStringsUrl={connectionStringsUrl}
             />
+            <EmptyScriptsWarning task={data} />
         </RichPanelDetails>
     );
 }
 
-export function SqlEtlPanel(props: SqlEtlPanelProps) {
-    const { db, data } = props;
+export function SqlEtlPanel(props: SqlEtlPanelProps & ICanShowTransformationScriptPreview) {
+    const { db, data, showItemPreview } = props;
 
     const { isAdminAccessOrAbove } = useAccessManager();
     const { forCurrentDatabase } = useAppUrls();
@@ -55,6 +56,13 @@ export function SqlEtlPanel(props: SqlEtlPanelProps) {
     const { detailsVisible, toggleDetails, toggleStateHandler, onEdit, onDeleteHandler } = useTasksOperations(
         editUrl,
         props
+    );
+
+    const showPreview = useCallback(
+        (transformationName: string) => {
+            showItemPreview(data, transformationName);
+        },
+        [data]
     );
 
     return (
@@ -71,6 +79,7 @@ export function SqlEtlPanel(props: SqlEtlPanelProps) {
                 />
             </RichPanelHeader>
             {detailsVisible && <Details {...props} canEdit={canEdit} />}
+            {detailsVisible && <OngoingTaskDistribution task={data} showPreview={showPreview} />}
         </RichPanel>
     );
 }
