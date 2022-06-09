@@ -9,18 +9,43 @@ import {
     OngoingTaskStatus,
 } from "../shared";
 import { useAppUrls } from "hooks/useAppUrls";
-import { OngoingTaskRavenEtlInfo } from "../../../../../models/tasks";
+import {
+    OngoingTaskInfo,
+    OngoingTaskRavenEtlInfo,
+    OngoingTaskRavenEtlNodeInfoDetails,
+    OngoingTaskRavenEtlSharedInfo,
+} from "../../../../../models/tasks";
 import { BaseOngoingTaskPanelProps, useTasksOperations } from "../shared";
 import { OngoingTaskDistribution } from "./OngoingTaskDistribution";
 
 type RavenEtlPanelProps = BaseOngoingTaskPanelProps<OngoingTaskRavenEtlInfo>;
+
+function findScriptsWithOutMatchingDocuments(data: OngoingTaskInfo): string[] {
+    const perScriptCounts = new Map<string, number>();
+    data.nodesInfo.forEach((node) => {
+        if (node.progress) {
+            node.progress.forEach((progress) => {
+                const transformationName = progress.transformationName;
+                perScriptCounts.set(
+                    transformationName,
+                    (perScriptCounts.get(transformationName) ?? 0) + progress.global.total
+                );
+            });
+        }
+    });
+
+    return Array.from(perScriptCounts.entries())
+        .filter((x) => x[1] === 0)
+        .map((x) => x[0]);
+}
 
 function Details(props: RavenEtlPanelProps & { canEdit: boolean }) {
     const { data, canEdit, db } = props;
     const connectionStringDefined = !!data.shared.destinationDatabase;
     const { appUrl } = useAppUrls();
     const connectionStringsUrl = appUrl.forConnectionStrings(db, "ravendb", data.shared.connectionStringName);
-    //TODO: task status
+
+    const emptyScripts = findScriptsWithOutMatchingDocuments(data);
 
     return (
         <RichPanelDetails>
@@ -52,6 +77,14 @@ function Details(props: RavenEtlPanelProps & { canEdit: boolean }) {
                 <RichPanelDetailItem>
                     Topology Discovery URLs:
                     <div className="value">{data.shared.topologyDiscoveryUrls.join(", ")}</div>
+                </RichPanelDetailItem>
+            )}
+            {emptyScripts.length > 0 && (
+                <RichPanelDetailItem className="text-warning">
+                    <small>
+                        <i className="icon-warning" />
+                        Following scripts don't match any documents: {emptyScripts.join(", ")}
+                    </small>
                 </RichPanelDetailItem>
             )}
         </RichPanelDetails>

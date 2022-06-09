@@ -24,7 +24,7 @@ export function NamedProgressItem(props: {
     const completed = !incomplete && progress.total === progress.processed;
     return (
         <div className="progress-item">
-            <strong className="progress-percentage">{progressFormatted}</strong> {children}
+            <strong className="progress-percentage">{progressFormatted}%</strong> {children}
             <div className="progress">
                 <div className={classNames("progress-bar", { completed })} style={{ width: progressFormatted + "%" }} />
             </div>

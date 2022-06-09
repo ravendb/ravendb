@@ -155,15 +155,6 @@ TODO: this become node spefic
         <!-- ko foreach: scriptProgress -->
         <div class="etl-progress">
             <div class="overall-container">
-                <div class="text-info flex-horizontal">
-                    <div class="text-warning" data-bind="visible: !globalProgress.total()">
-                        <small>
-                            <i class="icon-warning"></i>
-                            This script doesn't match any documents.
-                        </small>
-                    </div>
-                </div>
-                <div class="flex-grow"></div>
                 <div class="progress-overall">
                     <div class="flex-horizontal" data-bind="with: globalProgress">
                         <div class="flex-grow"><span data-bind="text: formattedTimeLeftToProcess"></span></div>
