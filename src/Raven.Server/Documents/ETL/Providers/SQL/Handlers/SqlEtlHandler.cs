@@ -27,9 +27,9 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.Handlers
         }
 
         [RavenAction("/databases/*/admin/etl/sql/test", "POST", AuthorizationStatus.DatabaseAdmin)]
-        public async Task PostScriptTest()
+        public async Task Test()
         {
-            using (var processor = new SqlEtlHandlerProcessorForTestSqlEtl(this))
+            using (var processor = new SqlEtlHandlerProcessorForTestEtl(this))
                 await processor.ExecuteAsync();
         }
     }
