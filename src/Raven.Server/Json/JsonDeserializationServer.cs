@@ -246,6 +246,8 @@ namespace Raven.Server.Json
 
         internal static readonly Func<BlittableJsonReaderObject, GetEtlTaskDebugStatsCommand.EtlTaskDebugStatsResponse> EtlTaskDebugStatsResponse = GenerateJsonDeserializationRoutine<GetEtlTaskDebugStatsCommand.EtlTaskDebugStatsResponse>();
 
+        internal static readonly Func<BlittableJsonReaderObject, GetEtlTaskPerformanceStatsCommand.EtlTaskPerformanceStatsResponse> EtlTaskPerformanceStatsResponse = GenerateJsonDeserializationRoutine<GetEtlTaskPerformanceStatsCommand.EtlTaskPerformanceStatsResponse>();
+
         public class Parameters
         {
             private Parameters()
