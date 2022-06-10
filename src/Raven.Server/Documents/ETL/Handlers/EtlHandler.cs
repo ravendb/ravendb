@@ -1,14 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
 using Raven.Server.Documents.ETL.Handlers.Processors;
-using Raven.Server.Documents.ETL.Stats;
-using Raven.Server.Json;
 using Raven.Server.Routing;
-using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.ETL.Handlers
 {
@@ -40,7 +34,8 @@ namespace Raven.Server.Documents.ETL.Handlers
         {
             using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
             {
-                var etls = GetProcessesToReportOn();
+                var names = GetStringValuesQueryString("name", required: false);
+                var etls = EtlHandlerProcessorForStats.GetProcessesToReportOn(Database, names);
 
                 var receiveBuffer = new ArraySegment<byte>(new byte[1024]);
                 var receive = webSocket.ReceiveAsync(receiveBuffer, Database.DatabaseShutdown);
@@ -68,28 +63,6 @@ namespace Raven.Server.Documents.ETL.Handlers
         {
             using (var processor = new EtlHandlerProcessorForProgress(this))
                 await processor.ExecuteAsync();
-        }
-
-        private Dictionary<string, List<EtlProcess>> GetProcessesToReportOn()
-        {
-            Dictionary<string, List<EtlProcess>> etls;
-            var names = HttpContext.Request.Query["name"];
-
-            if (names.Count == 0)
-                etls = Database.EtlLoader.Processes
-                    .GroupBy(x => x.ConfigurationName)
-                    .OrderBy(x => x.Key)
-                    .ToDictionary(x => x.Key, x => x.OrderBy(y => y.TransformationName).ToList());
-            else
-            {
-                etls = Database.EtlLoader.Processes
-                    .Where(x => names.Contains(x.ConfigurationName, StringComparer.OrdinalIgnoreCase) || names.Contains(x.Name, StringComparer.OrdinalIgnoreCase))
-                    .GroupBy(x => x.ConfigurationName)
-                    .OrderBy(x => x.Key)
-                    .ToDictionary(x => x.Key, x => x.OrderBy(y => y.TransformationName).ToList());
-            }
-
-            return etls;
         }
     }
 }
