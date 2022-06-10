@@ -16,9 +16,9 @@ namespace Raven.Server.Documents.Sharding.Handlers
         }
 
         [RavenShardedAction("/databases/*/admin/etl/sql/test", "POST")]
-        public async Task PostScriptTest()
+        public async Task Test()
         {
-            using (var processor = new ShardedSqlEtlHandlerProcessorForTestSqlEtl(this))
+            using (var processor = new ShardedSqlEtlHandlerProcessorForTestEtl(this))
                 await processor.ExecuteAsync();
         }
     }
