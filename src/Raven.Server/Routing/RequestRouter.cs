@@ -18,7 +18,6 @@ using Raven.Client.Exceptions.Routing;
 using Raven.Client.Properties;
 using Raven.Client.Util;
 using Raven.Server.Config;
-using Raven.Server.Documents;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
@@ -94,7 +93,7 @@ namespace Raven.Server.Routing
             return tryMatch.Value;
         }
 
-        internal async ValueTask<(bool Authorized, RavenServer.AuthenticationStatus Status)> TryAuthorizeAsync(RouteInformation route, HttpContext context, DocumentDatabase database)
+        internal async ValueTask<(bool Authorized, RavenServer.AuthenticationStatus Status)> TryAuthorizeAsync(RouteInformation route, HttpContext context, string databaseName)
         {
             var feature = context.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
 
@@ -139,9 +138,9 @@ namespace Raven.Server.Routing
                 }
             }
 
-            if (CanAccessRoute(route, context, database?.Name, feature, out var authenticationStatus) == false)
+            if (CanAccessRoute(route, context, databaseName, feature, out var authenticationStatus) == false)
             {
-                await UnlikelyFailAuthorizationAsync(context, database?.Name, feature, route.AuthorizationStatus);
+                await UnlikelyFailAuthorizationAsync(context, databaseName, feature, route.AuthorizationStatus);
                 return (false, authenticationStatus);
             }
 
@@ -284,7 +283,7 @@ namespace Raven.Server.Routing
                 {
                     if (_ravenServer.Configuration.Security.AuthenticationEnabled && skipAuthorization == false)
                     {
-                        var (authorized, authorizationStatus) = await TryAuthorizeAsync(tryMatch.Value, context, reqCtx.Database);
+                        var (authorized, authorizationStatus) = await TryAuthorizeAsync(tryMatch.Value, context, reqCtx.Database?.Name);
                         status = authorizationStatus;
 
                         if (authorized == false)

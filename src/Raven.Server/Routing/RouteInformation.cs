@@ -263,6 +263,11 @@ namespace Raven.Server.Routing
             return _request;
         }
 
+        public HandleRequest GetShardedRequestHandler()
+        {
+            return _shardedRequest;
+        }
+
         public override string ToString()
         {
             return $"{nameof(Method)}: {Method}, {nameof(Path)}: {Path}, {nameof(AuthorizationStatus)}: {AuthorizationStatus}";
