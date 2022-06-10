@@ -715,6 +715,17 @@ namespace Voron.Data.CompactTrees
             }
         }
 
+
+        private void AssertValueAndKeySize(ReadOnlySpan<byte> key, long value)
+        {
+            if (value < 0)
+                throw new ArgumentOutOfRangeException(nameof(value), value, "Only positive values are allowed");
+            if (key.Length > Constants.CompactTree.MaximumKeySize)
+                throw new ArgumentOutOfRangeException(nameof(key), Encoding.UTF8.GetString(key),$"key must be less than {Constants.CompactTree.MaximumKeySize} bytes in size");
+            if(key.Length <= 0)
+                throw new ArgumentOutOfRangeException(nameof(key), Encoding.UTF8.GetString(key), "key must be at least 1 byte");
+        }
+        
         public void Add(string key, long value)
         {
             using var _ = Slice.From(_llt.Allocator, key, out var slice);
@@ -724,25 +735,15 @@ namespace Voron.Data.CompactTrees
 
         public void Add(ReadOnlySpan<byte> key, long value)
         {
-            if (value < 0)
-                throw new ArgumentOutOfRangeException(nameof(value), value, "Only positive values are allowed");
-            if (key.Length > 1024)
-                throw new ArgumentOutOfRangeException(nameof(key), Encoding.UTF8.GetString(key),"key must be less than 1024 bytes in size");
-            if(key.Length <= 0)
-                throw new ArgumentOutOfRangeException(nameof(key), Encoding.UTF8.GetString(key), "key must be at least 1 byte");
-
+            AssertValueAndKeySize(key, value);
+            
             var encodedKey = FindPageFor(key, ref _internalCursor);
             AddToPage(encodedKey, value);
         }
         
         public void Add(ReadOnlySpan<byte> key, long value, EncodedKey encodedKey)
         {
-            if (value < 0)
-                throw new ArgumentOutOfRangeException(nameof(value), value, "Only positive values are allowed");
-            if (key.Length > 1024)
-                throw new ArgumentOutOfRangeException(nameof(key), Encoding.UTF8.GetString(key),"key must be less than 1024 bytes in size");
-            if(key.Length <= 0)
-                throw new ArgumentOutOfRangeException(nameof(key), Encoding.UTF8.GetString(key), "key must be at least 1 byte");
+            AssertValueAndKeySize(key, value);
 
             AddToPage(encodedKey, value);
         }

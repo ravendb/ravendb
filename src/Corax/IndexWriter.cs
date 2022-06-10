@@ -597,6 +597,8 @@ namespace Corax
             }
         }
 
+        //Rationale behind passing in the validEncodedKey: because encodedKey could be out of date (due to deletion) so we have to generate it before we add the term.
+        //We cannot make EncodedKey nullable either because it is a read-only ref struct
         private unsafe void AddNewTerm(List<long> entries, CompactTree fieldTree, ReadOnlySpan<byte> termsSpan, Span<byte> tmpBuf, CompactTree.EncodedKey encodedKey,
             bool validEncodedKey = true)
         {
