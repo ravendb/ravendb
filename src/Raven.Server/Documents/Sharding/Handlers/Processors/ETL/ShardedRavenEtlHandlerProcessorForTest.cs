@@ -8,9 +8,9 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.ETL
 {
-    internal class ShardedRavenEtlHandlerProcessorForTestEtl : AbstractShardedEtlHandlerProcessorForTestEtl<TestRavenEtlScript, RavenEtlConfiguration, RavenConnectionString>
+    internal class ShardedRavenEtlHandlerProcessorForTest : AbstractShardedEtlHandlerProcessorForTest<TestRavenEtlScript, RavenEtlConfiguration, RavenConnectionString>
     {
-        public ShardedRavenEtlHandlerProcessorForTestEtl([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
+        public ShardedRavenEtlHandlerProcessorForTest([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {
         }
 

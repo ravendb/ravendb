@@ -9,7 +9,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven.Handlers
         [RavenAction("/databases/*/admin/etl/raven/test", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task PostScriptTest()
         {
-            using (var processor = new EtlHandlerProcessorForTestEtl(this))
+            using (var processor = new EtlHandlerProcessorForTest(this))
                 await processor.ExecuteAsync();
         }
     }
