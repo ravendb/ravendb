@@ -13,12 +13,12 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.ETL;
 
-internal abstract class AbstractShardedEtlHandlerProcessorForTestEtl<TTestEtlScript, TConfiguration, TConnectionString> : AbstractEtlHandlerProcessorForTestEtl<ShardedDatabaseRequestHandler, TransactionOperationContext, TTestEtlScript, TConfiguration, TConnectionString>
+internal abstract class AbstractShardedEtlHandlerProcessorForTest<TTestEtlScript, TConfiguration, TConnectionString> : AbstractEtlHandlerProcessorForTest<ShardedDatabaseRequestHandler, TransactionOperationContext, TTestEtlScript, TConfiguration, TConnectionString>
     where TTestEtlScript : TestEtlScript<TConfiguration, TConnectionString>
     where TConfiguration : EtlConfiguration<TConnectionString>
     where TConnectionString : ConnectionString
 {
-    protected AbstractShardedEtlHandlerProcessorForTestEtl([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
+    protected AbstractShardedEtlHandlerProcessorForTest([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {
     }
 

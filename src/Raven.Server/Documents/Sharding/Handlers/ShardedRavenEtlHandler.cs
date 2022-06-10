@@ -9,7 +9,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
         [RavenShardedAction("/databases/*/admin/etl/raven/test", "POST")]
         public async Task PostScriptTest()
         {
-            using (var processor = new ShardedRavenEtlHandlerProcessorForTestEtl(this))
+            using (var processor = new ShardedRavenEtlHandlerProcessorForTest(this))
                 await processor.ExecuteAsync();
         }
     }

@@ -11,14 +11,14 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.ETL.Providers.Raven.Handlers.Processors
 {
-    internal abstract class AbstractEtlHandlerProcessorForTestEtl<TRequestHandler, TOperationContext, TTestEtlScript, TConfiguration, TConnectionString> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
+    internal abstract class AbstractEtlHandlerProcessorForTest<TRequestHandler, TOperationContext, TTestEtlScript, TConfiguration, TConnectionString> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
         where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
         where TOperationContext : JsonOperationContext
         where TTestEtlScript : TestEtlScript<TConfiguration, TConnectionString>
         where TConfiguration : EtlConfiguration<TConnectionString>
         where TConnectionString : ConnectionString
     {
-        protected AbstractEtlHandlerProcessorForTestEtl([NotNull] TRequestHandler requestHandler) : base(requestHandler)
+        protected AbstractEtlHandlerProcessorForTest([NotNull] TRequestHandler requestHandler) : base(requestHandler)
         {
         }
 

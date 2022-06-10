@@ -985,8 +985,14 @@ namespace Raven.Server.Documents.ETL
             return OngoingTaskConnectionStatus.NotActive;
         }
 
-        public static IDisposable TestScript(TestEtlScript<TConfiguration, TConnectionString> testScript, DocumentDatabase database, ServerStore serverStore,
-            DocumentsOperationContext context, out TestEtlScriptResult result)
+        public static IDisposable TestScript<TC, TCS>(
+                TestEtlScript<TC, TCS> testScript, 
+                DocumentDatabase database, 
+                ServerStore serverStore,
+                DocumentsOperationContext context, 
+                out TestEtlScriptResult result)
+            where TC : EtlConfiguration<TCS>
+            where TCS : ConnectionString
         {
             result = null;
             var tx = testScript.IsDelete ? context.OpenWriteTransaction() : context.OpenReadTransaction(); // we open write tx to test deletion but we won't commit it
@@ -997,7 +1003,7 @@ namespace Raven.Server.Documents.ETL
                 if (document == null)
                     throw new InvalidOperationException($"Document {testScript.DocumentId} does not exist");
 
-                TConnectionString connection = null;
+                TCS connection = null;
 
                 var sqlTestScript = testScript as TestSqlEtlScript;
 
@@ -1013,7 +1019,7 @@ namespace Raven.Server.Documents.ETL
                         if (sqlTestScript.Connection.Validate(ref csErrors) == false)
                             throw new InvalidOperationException($"Invalid connection string due to {string.Join(";", csErrors)}");
 
-                        connection = sqlTestScript.Connection as TConnectionString;
+                        connection = sqlTestScript.Connection as TCS;
                     }
                     else
                     {
@@ -1037,7 +1043,7 @@ namespace Raven.Server.Documents.ETL
                             throw new InvalidOperationException(
                                 $"Invalid '{testScript.Configuration.ConnectionStringName}' connection string due to {string.Join(";", csErrors)}");
 
-                        connection = sqlConnection as TConnectionString;
+                        connection = sqlConnection as TCS;
                     }
                 }
 
