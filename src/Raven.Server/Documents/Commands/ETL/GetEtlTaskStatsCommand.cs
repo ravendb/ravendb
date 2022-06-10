@@ -7,11 +7,11 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Commands.ETL;
 
-internal class GetEtlTaskProgressCommand : RavenCommand<EtlTaskProgress[]>
+internal class GetEtlTaskStatsCommand : RavenCommand<EtlTaskStats[]>
 {
     private readonly string[] _names;
 
-    public GetEtlTaskProgressCommand(string[] names, string nodeTag)
+    public GetEtlTaskStatsCommand(string[] names, string nodeTag)
     {
         _names = names;
         SelectedNodeTag = nodeTag;
@@ -21,7 +21,7 @@ internal class GetEtlTaskProgressCommand : RavenCommand<EtlTaskProgress[]>
 
     public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
     {
-        url = $"{node.Url}/databases/{node.Database}/etl/progress";
+        url = $"{node.Url}/databases/{node.Database}/etl/stats";
 
         if (_names is { Length: > 0 })
         {
@@ -29,10 +29,9 @@ internal class GetEtlTaskProgressCommand : RavenCommand<EtlTaskProgress[]>
                 url += $"{(i == 0 ? "?" : "&")}name={Uri.EscapeDataString(_names[i])}";
         }
 
-        return new HttpRequestMessage
-        {
-            Method = HttpMethod.Get
-        };
+        var request = new HttpRequestMessage { Method = HttpMethod.Get };
+
+        return request;
     }
 
     public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
@@ -40,11 +39,11 @@ internal class GetEtlTaskProgressCommand : RavenCommand<EtlTaskProgress[]>
         if (response == null)
             return;
 
-        Result = JsonDeserializationServer.EtlTaskProgressResponse(response).Results;
+        Result = JsonDeserializationServer.EtlTaskStatsResponse(response).Results;
     }
 
-    internal class EtlTaskProgressResponse
+    internal class EtlTaskStatsResponse
     {
-        public EtlTaskProgress[] Results { get; set; }
+        public EtlTaskStats[] Results { get; set; }
     }
 }

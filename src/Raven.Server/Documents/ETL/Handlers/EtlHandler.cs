@@ -15,27 +15,10 @@ namespace Raven.Server.Documents.ETL.Handlers
     public class EtlHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/etl/stats", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
-        public async Task GetStats()
+        public async Task Stats()
         {
-            var etlStats = GetProcessesToReportOn().Select(x => new EtlTaskStats
-            {
-                TaskName = x.Key,
-                Stats = x.Value.Select(y => new EtlProcessTransformationStats
-                {
-                    TransformationName = y.TransformationName,
-                    Statistics = y.Statistics
-                }).ToArray()
-            }).ToArray();
-
-            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            {
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    writer.WriteStartObject();
-                    writer.WriteArray(context, "Results", etlStats, (w, c, stats) => w.WriteObject(context.ReadObject(stats.ToJson(), "etl/stats")));
-                    writer.WriteEndObject();
-                }
-            }
+            using (var processor = new EtlHandlerProcessorForStats(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/etl/debug/stats", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]

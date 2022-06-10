@@ -26,7 +26,8 @@ internal class EtlHandlerProcessorForProgress : AbstractEtlHandlerProcessorForPr
         await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
         using (context.OpenReadTransaction())
         {
-            var performance = GetProcessesToReportOn().Select(x => new EtlTaskProgress
+            var names = GetNames();
+            var performance = EtlHandlerProcessorForStats.GetProcessesToReportOn(RequestHandler.Database, names).Select(x => new EtlTaskProgress
             {
                 TaskName = x.Key,
                 EtlType = x.Value.First().EtlType,
@@ -38,26 +39,4 @@ internal class EtlHandlerProcessorForProgress : AbstractEtlHandlerProcessorForPr
     }
 
     protected override Task HandleRemoteNodeAsync(ProxyCommand<EtlTaskProgress[]> command, OperationCancelToken token) => RequestHandler.ExecuteRemoteAsync(command, token.Token);
-
-    private Dictionary<string, List<EtlProcess>> GetProcessesToReportOn()
-    {
-        Dictionary<string, List<EtlProcess>> etls;
-        var names = HttpContext.Request.Query["name"];
-
-        if (names.Count == 0)
-            etls = RequestHandler.Database.EtlLoader.Processes
-                .GroupBy(x => x.ConfigurationName)
-                .OrderBy(x => x.Key)
-                .ToDictionary(x => x.Key, x => x.OrderBy(y => y.TransformationName).ToList());
-        else
-        {
-            etls = RequestHandler.Database.EtlLoader.Processes
-                .Where(x => names.Contains(x.ConfigurationName, StringComparer.OrdinalIgnoreCase) || names.Contains(x.Name, StringComparer.OrdinalIgnoreCase))
-                .GroupBy(x => x.ConfigurationName)
-                .OrderBy(x => x.Key)
-                .ToDictionary(x => x.Key, x => x.OrderBy(y => y.TransformationName).ToList());
-        }
-
-        return etls;
-    }
 }
