@@ -22,34 +22,10 @@ namespace Raven.Server.Documents.ETL.Handlers
         }
 
         [RavenAction("/databases/*/etl/debug/stats", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
-        public async Task GetDebugStats()
+        public async Task DebugStats()
         {
-            var debugStats = GetProcessesToReportOn().Select(x => new DynamicJsonValue()
-            {
-                ["TaskName"] = x.Key,
-                ["Stats"] = x.Value.Select(y =>
-                {
-                    var stats = new EtlProcessTransformationStats
-                    {
-                        TransformationName = y.TransformationName,
-                        Statistics = y.Statistics
-                    }.ToJson();
-
-                    stats[nameof(y.Metrics)] = y.Metrics.ToJson();
-
-                    return stats;
-                }).ToArray()
-            }).ToArray();
-
-            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            {
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    writer.WriteStartObject();
-                    writer.WriteArray(context, "Results", debugStats, (w, c, stats) => w.WriteObject(c.ReadObject(stats, "etl/debug/stats")));
-                    writer.WriteEndObject();
-                }
-            }
+            using (var processor = new EtlHandlerProcessorForDebugStats(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/etl/performance", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
