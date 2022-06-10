@@ -102,8 +102,11 @@ internal class QueueDocumentTransformer : EtlTransformer<QueueItem, QueueWithMes
             if (TryGetOptionValue(nameof(QueueLoadOptions.PartitionKey), out var partitionKey))
                 loadOptions.PartitionKey = partitionKey;
 
-            if (TryGetOptionValue(nameof(QueueLoadOptions.ExchangeKey), out var exchangeKey))
-                loadOptions.ExchangeKey = exchangeKey;
+            if (TryGetOptionValue(nameof(QueueLoadOptions.Exchange), out var exchange))
+                loadOptions.Exchange = exchange;
+            
+            if (TryGetOptionValue(nameof(QueueLoadOptions.ExchangeType), out var exchangeType))
+                loadOptions.ExchangeType = exchangeType;
         }
 
         LoadToFunction(name, result, loadOptions);

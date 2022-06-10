@@ -12,7 +12,6 @@ using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Server.Documents.ETL.Providers.Queue;
 using Raven.Server.Documents.ETL.Providers.Queue.Test;
 using Raven.Server.ServerWide.Context;
-using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -124,7 +123,7 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
         channel.BasicConsume(queue: DefaultExchanges.First().Name, autoAck: true, consumer: consumer);
     }
 
-    [RequiresKafkaFact()]
+    [Fact]
     public void Docs_from_two_collections_loaded_to_single_one()
     {
         using var store = GetDocumentStore();
@@ -277,7 +276,8 @@ output('test output')"
                                                             PartitionKey: id(this),
                                                             Type: 'com.github.users',
                                                             Source: '/registrations/direct-signup',
-                                                            ExchangeKey: 'users-topic'
+                                                            Exchange: 'users-topic',
+                                                            ExchangeType: 'topic',
                                                      }})", new[] { "Users" });
 
             var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);

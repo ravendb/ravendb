@@ -12,7 +12,9 @@ public class RabbitMqMessageEvent
 
 public class RabbitMqMessage
 {
-    public string ExchangeKey { get; set; }
+    public string Exchange { get; set; }
+
+    public string ExchangeType { get; set; }
 
     public Message Message { get; set; }
 }
