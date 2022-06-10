@@ -6,6 +6,13 @@ namespace Raven.Server.Documents.Sharding.Handlers;
 
 public class ShardedEtlHandler : ShardedDatabaseRequestHandler
 {
+    [RavenShardedAction("/databases/*/etl/stats", "GET")]
+    public async Task Stats()
+    {
+        using (var processor = new ShardedEtlHandlerProcessorForStats(this))
+            await processor.ExecuteAsync();
+    }
+
     [RavenShardedAction("/databases/*/etl/progress", "GET")]
     public async Task Progress()
     {
