@@ -1,6 +1,5 @@
 ﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.Documents.ETL.Providers.SQL.Test;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
@@ -8,7 +7,7 @@ using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
-namespace Raven.Server.Documents.Handlers.Processors.ETL
+namespace Raven.Server.Documents.ETL.Providers.SQL.Handlers.Processors
 {
     internal class SqlEtlHandlerProcessorForTestSqlEtl : AbstractSqlEtlHandlerProcessorForTestSqlEtl<DatabaseRequestHandler, DocumentsOperationContext>
     {

@@ -1,8 +1,9 @@
 ﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Server.Documents.Handlers.Processors;
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.Handlers.Processors.ETL
+namespace Raven.Server.Documents.ETL.Providers.Raven.Handlers.Processors
 {
     internal abstract class AbstractEtlHandlerProcessorForTestEtl<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
         where TOperationContext : JsonOperationContext

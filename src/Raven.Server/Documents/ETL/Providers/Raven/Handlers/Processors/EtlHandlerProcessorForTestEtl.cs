@@ -2,14 +2,13 @@
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Conventions;
-using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.ETL.Providers.Raven.Test;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
-namespace Raven.Server.Documents.Handlers.Processors.ETL
+namespace Raven.Server.Documents.ETL.Providers.Raven.Handlers.Processors
 {
     internal class EtlHandlerProcessorForTestEtl : AbstractEtlHandlerProcessorForTestEtl<DatabaseRequestHandler, DocumentsOperationContext>
     {
