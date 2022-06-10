@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.ETL.Stats
 
         public EtlProcessStatistics Statistics { get; set; }
 
-        public DynamicJsonValue ToJson()
+        public virtual DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
