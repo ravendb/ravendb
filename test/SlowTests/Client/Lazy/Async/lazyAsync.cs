@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,8 +16,9 @@ namespace SlowTests.Client.Lazy.Async
         {
         }
 
-        [Fact]
-        public async Task CanLazilyLoadEntity()
+        [Theory]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanLazilyLoadEntity(Options options)
         {
             const string COMPANY1_ID = "companies/1";
             const string COMPANY2_ID = "companies/2";
@@ -25,7 +27,7 @@ namespace SlowTests.Client.Lazy.Async
             const string COMPANY5_ID = "companies/5";
             const string COMPANY6_ID = "companies/6";
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -75,13 +77,14 @@ namespace SlowTests.Client.Lazy.Async
             }
         }
 
-        [Fact]
-        public async Task CanExecuteAllPendingLazyOperations()
+        [Theory]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanExecuteAllPendingLazyOperations(Options options)
         {
             const string COMPANY1_ID = "companies/1";
             const string COMPANY2_ID = "companies/2";
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -110,10 +113,11 @@ namespace SlowTests.Client.Lazy.Async
             }
         }
 
-        [Fact]
-        public async Task WithQueuedActions_Load()
+        [Theory]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task WithQueuedActions_Load(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -132,11 +136,12 @@ namespace SlowTests.Client.Lazy.Async
             }
         }
 
-        [Fact]
-        public async Task LazyLoadById()
+        [Theory]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public async Task LazyLoadById(Options options)
         {
-            var store = GetDocumentStore();
-            new Contact_ByName().Execute(store);
+            using var store = GetDocumentStore(options);
+            await new Contact_ByName().ExecuteAsync(store);
 
             using (var session = store.OpenSession())
             {
@@ -194,7 +199,7 @@ select {
             }
         }
 
-        public class ContactDto
+        private class ContactDto
         {
             public string ContactId { get; set; }
             public string ContactName { get; set; }
@@ -203,7 +208,7 @@ select {
         }
 
 
-        public class Contact_ByName : AbstractIndexCreationTask<Contact>
+        private class Contact_ByName : AbstractIndexCreationTask<Contact>
         {
             public Contact_ByName()
             {
@@ -213,7 +218,7 @@ select {
             }
         }
 
-        public class Detail
+        private class Detail
         {
             public Detail()
             {
@@ -223,7 +228,7 @@ select {
             public string Name { get; set; }
         }
 
-        public class Contact
+        private class Contact
         {
             public Contact()
             {
@@ -235,12 +240,12 @@ select {
             public List<string> DetailIds { get; set; }
         }
 
-        [Fact]
-        public async Task WithTransformer()
+        [Theory]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public async Task WithTransformer(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
-
                 using (var session = store.OpenSession())
                 {
                     session.Store(new Item { Position = 1 }, "items/1");
