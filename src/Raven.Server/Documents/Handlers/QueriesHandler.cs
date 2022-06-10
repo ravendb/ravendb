@@ -22,11 +22,8 @@ using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
 using Raven.Server.TrafficWatch;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
-using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -48,6 +45,13 @@ namespace Raven.Server.Documents.Handlers
         public async Task Patch()
         {
             using (var processor = new DatabaseQueriesHandlerProcessorForPatch(this)) 
+                await processor.ExecuteAsync();
+        }
+
+        [RavenAction("/databases/*/queries/test", "PATCH", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]
+        public async Task PatchTest()
+        {
+            using (var processor = new DatabaseQueriesHandlerProcessorForPatchTest(this))
                 await processor.ExecuteAsync();
         }
 
@@ -267,105 +271,6 @@ namespace Raven.Server.Documents.Handlers
                 writer.WriteStartObject();
                 writer.WritePropertyName(nameof(indexQuery.ServerSideQuery));
                 writer.WriteString(indexQuery.ServerSideQuery);
-
-                writer.WriteEndObject();
-            }
-        }
-
-        [RavenAction("/databases/*/queries/test", "PATCH", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]
-        public async Task PatchTest()
-        {
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            {
-                var reader = await context.ReadForMemoryAsync(RequestBodyStream(), "queries/patch");
-                if (reader == null)
-                    throw new BadRequestException("Missing JSON content.");
-                if (reader.TryGet("Query", out BlittableJsonReaderObject queryJson) == false || queryJson == null)
-                    throw new BadRequestException("Missing 'Query' property.");
-
-                var query = IndexQueryServerSide.Create(HttpContext, queryJson, Database.QueryMetadataCache, null, queryType: QueryType.Update);
-
-                if (TrafficWatchManager.HasRegisteredClients)
-                    TrafficWatchQuery(query);
-
-                var patch = new PatchRequest(query.Metadata.GetUpdateBody(query.QueryParameters), PatchRequestType.Patch, query.Metadata.DeclaredFunctions);
-
-                var docId = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
-
-                var command = new PatchDocumentCommand(context, docId,
-                    expectedChangeVector: null,
-                    skipPatchIfChangeVectorMismatch: false,
-                    patch: (patch, query.QueryParameters),
-                    patchIfMissing: (null, null),
-                    identityPartsSeparator: context.DocumentDatabase.IdentityPartsSeparator,
-                    createIfMissing: null,
-                    debugMode: true,
-                    isTest: true,
-                    collectResultsNeeded: true,
-                    returnDocument: false
-
-                );
-
-                using (context.OpenWriteTransaction())
-                {
-                    command.Execute(context, null);
-                }
-
-                switch (command.PatchResult.Status)
-                {
-                    case PatchStatus.DocumentDoesNotExist:
-                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                        return;
-
-
-                    case PatchStatus.Created:
-                        HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
-                        break;
-
-                    case PatchStatus.Skipped:
-                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
-                        return;
-
-
-                    case PatchStatus.Patched:
-                    case PatchStatus.NotModified:
-                        HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-                        break;
-
-                    default:
-                        throw new ArgumentOutOfRangeException();
-                }
-
-                await WritePatchResultToResponseAsync(context, command);
-            }
-        }
-
-        private async ValueTask WritePatchResultToResponseAsync(DocumentsOperationContext context, PatchDocumentCommand command)
-        {
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                writer.WriteStartObject();
-
-                writer.WritePropertyName(nameof(command.PatchResult.Status));
-                writer.WriteString(command.PatchResult.Status.ToString());
-                writer.WriteComma();
-
-                writer.WritePropertyName(nameof(command.PatchResult.ModifiedDocument));
-                writer.WriteObject(command.PatchResult.ModifiedDocument);
-
-                writer.WriteComma();
-                writer.WritePropertyName(nameof(command.PatchResult.OriginalDocument));
-                writer.WriteObject(command.PatchResult.OriginalDocument);
-
-                writer.WriteComma();
-
-                writer.WritePropertyName(nameof(command.PatchResult.Debug));
-
-                context.Write(writer, new DynamicJsonValue
-                {
-                    ["Output"] = new DynamicJsonArray(command.DebugOutput),
-                    ["Actions"] = command.DebugActions
-                });
 
                 writer.WriteEndObject();
             }

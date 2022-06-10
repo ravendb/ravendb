@@ -1,16 +1,12 @@
 ﻿using System;
 using System.Net.Http;
-using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Http;
-using Raven.Server.Documents.Handlers.Processors.Queries;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Queries;
-using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Queries;

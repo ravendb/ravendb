@@ -30,7 +30,7 @@ internal abstract class AbstractQueriesHandlerProcessor<TRequestHandler, TOperat
         _queryMetadataCache = queryMetadataCache;
     }
 
-    public async ValueTask<IndexQueryServerSide> GetIndexQueryAsync(JsonOperationContext context, HttpMethod method, RequestTimeTracker tracker, bool addSpatialProperties)
+    public async ValueTask<IndexQueryServerSide> GetIndexQueryAsync(JsonOperationContext context, HttpMethod method, RequestTimeTracker tracker, bool addSpatialProperties = false)
     {
         if (method == HttpMethod.Get)
             return await ReadIndexQueryAsync(context, tracker, addSpatialProperties);
