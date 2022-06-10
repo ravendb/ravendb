@@ -40,6 +40,13 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 await processor.ExecuteAsync();
         }
 
+        [RavenShardedAction("/databases/*/queries/test", "PATCH")]
+        public async Task PatchTest()
+        {
+            using (var processor = new ShardedQueriesHandlerProcessorForPatchTest(this))
+                await processor.ExecuteAsync();
+        }
+
         [RavenShardedAction("/databases/*/queries", "DELETE")]
         public async Task Delete()
         {
