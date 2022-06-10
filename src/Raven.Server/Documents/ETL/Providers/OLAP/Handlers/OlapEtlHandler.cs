@@ -1,11 +1,6 @@
 ﻿using System.Threading.Tasks;
-using Raven.Server.Documents.ETL.Providers.OLAP.Test;
-using Raven.Server.Json;
+using Raven.Server.Documents.ETL.Providers.OLAP.Handlers.Processors;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
-using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.ETL.Providers.OLAP.Handlers
 {
@@ -14,23 +9,8 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP.Handlers
         [RavenAction("/databases/*/admin/etl/olap/test", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task PostScriptTest()
         {
-            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            {
-                var testConfig = await context.ReadForMemoryAsync(RequestBodyStream(), "ola-etl-test");
-
-                var testScript = JsonDeserializationServer.TestOlapEtlScript(testConfig);
-
-                using (OlapEtl.TestScript(testScript, Database, ServerStore, context, out var testResult))
-                {
-                    var result = (OlapEtlTestScriptResult)testResult;
-                    
-                    await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                    {
-                        var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(result);
-                        writer.WriteObject(context.ReadObject(djv, "olap-etl-test"));
-                    }
-                }
-            }
+            using (var processor = new OlapEtlHandlerProcessorForTest(this))
+                await processor.ExecuteAsync();
         }
     }
 }
