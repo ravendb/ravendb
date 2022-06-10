@@ -20,7 +20,7 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public void Query_IncludeAllQueryFunctionality()
+        public async Task Query_IncludeAllQueryFunctionality()
         {
             using (var store = GetDocumentStore())
             {
@@ -28,7 +28,7 @@ namespace SlowTests.Tests.Linq
 
                 const string id = "users/rhino";
 
-                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database).Wait();
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
 
                 using (var session = store.OpenSession())
                 {
@@ -179,12 +179,12 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public void Load_IncludeBuilder_IncludeRevisionByChangeVector()
+        public async Task Load_IncludeBuilder_IncludeRevisionByChangeVector()
         {
             using (var store = GetDocumentStore())
             {
                 const string id = "users/rhino";
-                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database).Wait();
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
                 string changeVector;
                 using (var session = store.OpenSession())
                 {
@@ -244,14 +244,14 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public void Load_IncludeBuilder_IncludeRevisionByChangeVectors()
+        public async Task Load_IncludeBuilder_IncludeRevisionByChangeVectors()
         {
             using (var store = GetDocumentStore())
             {
                 const string id = "users/rhino";
                 var cvList = new List<string>();
 
-                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database).Wait();
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
 
                 using (var session = store.OpenSession())
                 {
@@ -366,7 +366,7 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public void Load_IncludeBuilder_IncludeRevisionsByProperty_ChangeVectorAndChangeVectors()
+        public async Task Load_IncludeBuilder_IncludeRevisionsByProperty_ChangeVectorAndChangeVectors()
         {
             using (var store = GetDocumentStore())
             {
@@ -374,7 +374,7 @@ namespace SlowTests.Tests.Linq
 
                 const string id = "users/rhino";
 
-                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database).Wait();
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
 
                 using (var session = store.OpenSession())
                 {
@@ -519,13 +519,13 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public void Load_IncludeBuilder_IncludeRevisionByDateTime_VerifyUtc()
+        public async Task Load_IncludeBuilder_IncludeRevisionByDateTime_VerifyUtc()
         {
             string changeVector;
             using (var store = GetDocumentStore())
             {
                 const string id = "users/rhino";
-                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database).Wait();
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User { Name = "Omer", },
@@ -595,13 +595,13 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public void Query_IncludeBuilder_IncludeRevisionBefore()
+        public async Task Query_IncludeBuilder_IncludeRevisionBefore()
         {
             string changeVector;
             using (var store = GetDocumentStore())
             {
                 const string id = "users/rhino";
-                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database).Wait();
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User { Name = "Omer", },
@@ -669,13 +669,13 @@ namespace SlowTests.Tests.Linq
 
 
         [Fact]
-        public void Query_RawQueryChangeVectorInsidePropertyWithIndex()
+        public async Task Query_RawQueryChangeVectorInsidePropertyWithIndex()
         {
             using (var store = GetDocumentStore())
             {
                 const string id = "users/rhino";
 
-                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database).Wait();
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
 
                 using (var session = store.OpenSession())
                 {
@@ -758,13 +758,13 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public void Query_RawQueryGetRevisionBeforeDateTime()
+        public async Task Query_RawQueryGetRevisionBeforeDateTime()
         {
             using (var store = GetDocumentStore())
             {
                 const string id = "users/rhino";
 
-                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database).Wait();
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
 
                 string changeVector;
                 using (var session = store.OpenSession())
@@ -836,7 +836,7 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public void Query_RawQuery_IncludeRevisions_Jint_StaticIndexQuery()
+        public async Task Query_RawQuery_IncludeRevisions_Jint_StaticIndexQuery()
         {
             using (var store = GetDocumentStore())
             {
@@ -845,7 +845,7 @@ namespace SlowTests.Tests.Linq
 
                 const string id = "users/rhino";
 
-                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database).Wait();
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
 
                 using (var session = store.OpenSession())
                 {
@@ -947,13 +947,13 @@ select Foo(u)"
         }
 
         [Fact]
-        public void Query_RawQuery_IncludeRevisions_Jint_IndexQuery()
+        public async Task Query_RawQuery_IncludeRevisions_Jint_IndexQuery()
         {
             using (var store = GetDocumentStore())
             {
                 const string id = "users/rhino";
 
-                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database).Wait();
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
 
                 using (var session = store.OpenSession())
                 {
@@ -999,13 +999,13 @@ select Foo(u)"
         }
 
         [Fact]
-        public void Query_RawQuery_IncludeRevisions_beforeDateTime_Jint()
+        public async Task Query_RawQuery_IncludeRevisions_beforeDateTime_Jint()
         {
             using (var store = GetDocumentStore())
             {
                 const string id = "users/rhino";
 
-                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database).Wait();
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
                 string changeVector;
                 using (var session = store.OpenSession())
                 {
@@ -1097,13 +1097,13 @@ select Foo(u)"
         }
 
         [Fact]
-        public void Query_RawQuery_IncludeRevisions_Jint()
+        public async Task Query_RawQuery_IncludeRevisions_Jint()
         {
             using (var store = GetDocumentStore())
             {
                 const string id = "users/Rhino";
 
-                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database).Wait();
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
 
                 using (var session = store.OpenSession())
                 {
@@ -1378,13 +1378,13 @@ select Foo(u)"
         }
 
         [Fact]
-        public void Query_RawQuery_IncludeRevisionsWithoutAlias()
+        public async Task Query_RawQuery_IncludeRevisionsWithoutAlias()
         {
             using (var store = GetDocumentStore())
             {
                 const string id = "users/Rhino";
 
-                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database).Wait();
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
 
                 using (var session = store.OpenSession())
                 {
@@ -1468,7 +1468,7 @@ select Foo(u)"
         }
 
         [Fact]
-        public void Query_RawQueryWithParameters_IncludeRevisions_Array()
+        public async Task Query_RawQueryWithParameters_IncludeRevisions_Array()
         {
             using (var store = GetDocumentStore())
             {
@@ -1476,7 +1476,7 @@ select Foo(u)"
 
                 const string id = "users/Rhino";
 
-                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database).Wait();
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
 
                 using (var session = store.OpenSession())
                 {
@@ -1545,7 +1545,7 @@ select Foo(u)"
         }
 
         [Fact]
-        public void Query_RawQueryWithParameters_IncludeRevisions_Array_SecondOption()
+        public async Task Query_RawQueryWithParameters_IncludeRevisions_Array_SecondOption()
         {
             using (var store = GetDocumentStore())
             {
@@ -1553,7 +1553,7 @@ select Foo(u)"
 
                 const string id = "users/Rhino";
 
-                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database).Wait();
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
 
                 using (var session = store.OpenSession())
                 {
@@ -1692,7 +1692,7 @@ select Foo(u)"
         }
 
         [Fact]
-        public void Query_RawQueryWithParameters_AliasSyntaxError()
+        public async Task Query_RawQueryWithParameters_AliasSyntaxError()
         {
             using (var store = GetDocumentStore())
             {
@@ -1700,7 +1700,7 @@ select Foo(u)"
 
                 const string id = "users/Rhino";
 
-                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database).Wait();
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
 
                 using (var session = store.OpenSession())
                 {
@@ -1794,7 +1794,7 @@ select Foo(u)"
             public NameIndex()
             {
                 Map = users => from u in users
-                    select new { Name = u.Name, };
+                               select new { Name = u.Name, };
             }
         }
     }
