@@ -1,71 +1,17 @@
-﻿using System;
-using System.IO;
-using System.Threading.Tasks;
-using Nest;
-using Newtonsoft.Json;
-using Raven.Client.Documents.Operations.ETL.ElasticSearch;
+﻿using System.Threading.Tasks;
+using Raven.Server.Documents.ETL.Providers.ElasticSearch.Handlers.Processors;
 using Raven.Server.Routing;
-using Raven.Server.Web.System;
-using Sparrow.Json;
-using Sparrow.Json.Parsing;
-using Authentication = Raven.Client.Documents.Operations.ETL.ElasticSearch.Authentication;
+using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.ETL.Providers.ElasticSearch.Handlers
 {
     public class ElasticSearchEtlConnectionHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/admin/etl/elasticsearch/test-connection", "POST", AuthorizationStatus.DatabaseAdmin)]
-        public async Task GetTestElasticSearchConnectionResult()
+        public async Task TestConnection()
         {
-            try
-            {
-                string url = GetQueryStringValueAndAssertIfSingleAndNotEmpty("url");
-                string authenticationJson = await new StreamReader(HttpContext.Request.Body).ReadToEndAsync();
-                Authentication authentication = JsonConvert.DeserializeObject<Authentication>(authenticationJson);
-
-                ElasticClient client = ElasticSearchHelper.CreateClient(new ElasticSearchConnectionString { Nodes = new[] { url }, Authentication = authentication });
-
-                PingResponse pingResult = await client.PingAsync();
-
-                if (pingResult.IsValid)
-                {
-                    DynamicJsonValue result = new() { [nameof(NodeConnectionTestResult.Success)] = true, [nameof(NodeConnectionTestResult.TcpServerUrl)] = url, };
-
-                    using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-                    await using (AsyncBlittableJsonTextWriter writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                    {
-                        context.Write(writer, result);
-                    }
-                }
-                else
-                {
-                    using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-                    {
-                        await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                        {
-                            context.Write(writer, new DynamicJsonValue
-                            {
-                                [nameof(NodeConnectionTestResult.Success)] = false,
-                                [nameof(NodeConnectionTestResult.Error)] = pingResult.DebugInformation
-                            });
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-                {
-                    await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                    {
-                        context.Write(writer, new DynamicJsonValue
-                        {
-                            [nameof(NodeConnectionTestResult.Success)] = false,
-                            [nameof(NodeConnectionTestResult.Error)] = ex.ToString()
-                        });
-                    }
-                }
-            }
+            using (var processor = new ElasticSearchEtlConnectionHandlerForTestConnection<DocumentsOperationContext>(this))
+                await processor.ExecuteAsync();
         }
     }
 }
