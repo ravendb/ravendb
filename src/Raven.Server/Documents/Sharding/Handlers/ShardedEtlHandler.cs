@@ -20,6 +20,13 @@ public class ShardedEtlHandler : ShardedDatabaseRequestHandler
             await processor.ExecuteAsync();
     }
 
+    [RavenShardedAction("/databases/*/etl/performance", "GET")]
+    public async Task Performance()
+    {
+        using (var processor = new ShardedEtlHandlerProcessorForPerformance(this))
+            await processor.ExecuteAsync();
+    }
+
     [RavenShardedAction("/databases/*/etl/progress", "GET")]
     public async Task Progress()
     {

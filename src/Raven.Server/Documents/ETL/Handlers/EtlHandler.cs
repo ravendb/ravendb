@@ -31,23 +31,8 @@ namespace Raven.Server.Documents.ETL.Handlers
         [RavenAction("/databases/*/etl/performance", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Performance()
         {
-            var stats = GetProcessesToReportOn().Select(x => new EtlTaskPerformanceStats
-            {
-                TaskName = x.Key,
-                TaskId = x.Value.First().TaskId, // since we grouped by task name it implies each task id inside group is the same
-                EtlType = x.Value.First().EtlType,
-                Stats = x.Value.Select(y => new EtlProcessPerformanceStats
-                {
-                    TransformationName = y.TransformationName,
-                    Performance = y.GetPerformanceStats()
-                }).ToArray()
-            }).ToArray();
-
-            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                writer.WriteEtlTaskPerformanceStats(context, stats);
-            }
+            using (var processor = new EtlHandlerProcessorForPerformance(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/etl/performance/live", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, SkipUsagesCount = true)]
