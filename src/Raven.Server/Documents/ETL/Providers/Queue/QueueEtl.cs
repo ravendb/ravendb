@@ -1,15 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
-using Amqp;
 using CloudNative.CloudEvents;
 using CloudNative.CloudEvents.Amqp;
 using CloudNative.CloudEvents.Extensions;
 using CloudNative.CloudEvents.Kafka;
 using Confluent.Kafka;
-using EasyNetQ;
 using RabbitMQ.Client;
+using RabbitMQ.Client.Exceptions;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.Queue;
@@ -38,7 +36,10 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithMessages, QueueEtlConfigu
     private const string DefaultType = "ravendb.etl.put";
 
     public const string QueueEtlTag = "Queue ETL";
+    public const string DefaultExchangeType = "direct";
     private string TransactionalId => $"{Database.DbId}-{Name}";
+    private readonly HashSet<string> _existingQueues = new();
+    private readonly HashSet<Tuple<string, string>> _existingExchanges = new();
 
     private string DefaultSource =>
         $"{Database.Configuration.Core.PublicServerUrl?.UriValue ?? Database.ServerStore.Server.WebUrl}/{Database.Name}/{Name}";
@@ -230,7 +231,8 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithMessages, QueueEtlConfigu
                 CloudEvent eventMessage = CreateEventMessage(message);
                 newMessage.Messages.Add(new RabbitMqMessage()
                 {
-                    ExchangeKey = message.Options?.ExchangeKey ?? "",
+                    Exchange = message.Options?.Exchange ?? "",
+                    ExchangeType = message.Options?.ExchangeType ?? DefaultExchangeType,
                     Message = eventMessage.ToAmqpMessage(ContentMode.Binary, formatter)
                 });
             }
@@ -245,23 +247,61 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithMessages, QueueEtlConfigu
             _rabbitMqProducer = QueueHelper.CreateRabbitMqClient(Configuration.Connection, TransactionalId);
         }
 
+        // todo: check application properties, _rabbitMqProducer.CreateBasicProperties();
+
+        SetUpExchangesAndQueues(messages);
+
+        var batch = _rabbitMqProducer.CreateBasicPublishBatch();
         foreach (var message in messages)
         {
-            _rabbitMqProducer.QueueDeclare(message.Queue, true, false, false, null); // todo: check override default config
             foreach (var messageContent in message.Messages)
             {
-                if (string.IsNullOrWhiteSpace(messageContent.ExchangeKey) == false)
-                {
-                    _rabbitMqProducer.ExchangeDeclare(messageContent.ExchangeKey, "topic", true, false, null);
-                    _rabbitMqProducer.QueueBind(message.Queue, messageContent.ExchangeKey, message.Queue);
-                }
-
-                _rabbitMqProducer.BasicPublish(messageContent.ExchangeKey, message.Queue, null, (byte[])messageContent.Message.Body);
+                batch.Add(messageContent.Exchange, message.Queue, true, null,
+                    new ReadOnlyMemory<byte>((byte[])messageContent.Message.Body));
                 count++;
             }
         }
-
+        batch.Publish();
         return count;
+    }
+
+    private void SetUpExchangesAndQueues(List<RabbitMqMessageEvent> messages)
+    {
+        foreach (var message in messages)
+        {
+            try
+            {
+                if (_existingQueues.Contains(message.Queue) == false)
+                {
+                    _rabbitMqProducer.QueueDeclare(message.Queue, true, false, false, null);
+                    _existingQueues.Add(message.Queue);
+                }
+
+                foreach (var messageContent in message.Messages)
+                {
+                    if (string.IsNullOrWhiteSpace(messageContent.Exchange) == false)
+                    {
+                        if (_existingExchanges.Contains(Tuple.Create(messageContent.Exchange, message.Queue)) == false)
+                        {
+                            _rabbitMqProducer.ExchangeDeclare(messageContent.Exchange, messageContent.ExchangeType, true, false, null);
+                            _rabbitMqProducer.QueueBind(message.Queue, messageContent.Exchange, message.Queue);
+                            _existingExchanges.Add(Tuple.Create(messageContent.Exchange, message.Queue));
+                        }
+                    }
+                }
+            }
+            catch (OperationInterruptedException e)
+            {
+                if (e.ShutdownReason.ReplyCode != 406)
+                {
+                    throw;
+                }
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
     }
 
     private CloudEvent CreateEventMessage(QueueItem item)
@@ -288,7 +328,7 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithMessages, QueueEtlConfigu
         foreach (var record in records)
         {
             var messages = simulatedWriter.SimulateExecuteCommandText(record, context);
-            // message should have body (content) and options
+            // todo: message should have body (content) and options
 
             summaries.Add(new TopicSummary { TopicName = record.Name, Commands = messages.ToArray() });
         }
@@ -303,6 +343,7 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithMessages, QueueEtlConfigu
     {
         base.Dispose();
         _kafkaProducer?.Dispose();
+        _rabbitMqProducer?.Dispose();
     }
 
     private class QueueMessage
