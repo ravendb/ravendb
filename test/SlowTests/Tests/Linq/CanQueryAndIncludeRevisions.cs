@@ -22,7 +22,7 @@ namespace SlowTests.Tests.Linq
 
         [Theory]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        public void Query_IncludeAllQueryFunctionality(Options options)
+        public async Task Query_IncludeAllQueryFunctionality(Options options)
         {
             using (var store = GetDocumentStore(options))
             {
@@ -30,7 +30,7 @@ namespace SlowTests.Tests.Linq
 
                 const string id = "users/rhino";
 
-                RevisionsHelper.SetupRevisionsAsync(store).Wait();
+                await RevisionsHelper.SetupRevisionsAsync(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -183,12 +183,12 @@ namespace SlowTests.Tests.Linq
 
         [Theory]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        public void Load_IncludeBuilder_IncludeRevisionByChangeVector(Options options)
+        public async Task Load_IncludeBuilder_IncludeRevisionByChangeVector(Options options)
         {
             using (var store = GetDocumentStore(options))
             {
                 const string id = "users/rhino";
-                RevisionsHelper.SetupRevisionsAsync(store).Wait();
+                await RevisionsHelper.SetupRevisionsAsync(store);
                 string changeVector;
                 using (var session = store.OpenSession())
                 {
@@ -250,14 +250,14 @@ namespace SlowTests.Tests.Linq
 
         [Theory]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        public void Load_IncludeBuilder_IncludeRevisionByChangeVectors(Options options)
+        public async Task Load_IncludeBuilder_IncludeRevisionByChangeVectors(Options options)
         {
             using (var store = GetDocumentStore(options))
             {
                 const string id = "users/rhino";
                 var cvList = new List<string>();
 
-                RevisionsHelper.SetupRevisionsAsync(store).Wait();
+                await RevisionsHelper.SetupRevisionsAsync(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -374,7 +374,7 @@ namespace SlowTests.Tests.Linq
 
         [Theory]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        public void Load_IncludeBuilder_IncludeRevisionsByProperty_ChangeVectorAndChangeVectors(Options options)
+        public async Task Load_IncludeBuilder_IncludeRevisionsByProperty_ChangeVectorAndChangeVectors(Options options)
         {
             using (var store = GetDocumentStore(options))
             {
@@ -382,7 +382,7 @@ namespace SlowTests.Tests.Linq
 
                 const string id = "users/rhino";
 
-                RevisionsHelper.SetupRevisionsAsync(store).Wait();
+                await RevisionsHelper.SetupRevisionsAsync(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -529,13 +529,13 @@ namespace SlowTests.Tests.Linq
 
         [Theory]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        public void Load_IncludeBuilder_IncludeRevisionByDateTime_VerifyUtc(Options options)
+        public async Task Load_IncludeBuilder_IncludeRevisionByDateTime_VerifyUtc(Options options)
         {
             string changeVector;
             using (var store = GetDocumentStore(options))
             {
                 const string id = "users/rhino";
-                RevisionsHelper.SetupRevisionsAsync(store).Wait();
+                await RevisionsHelper.SetupRevisionsAsync(store);
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User { Name = "Omer", },
@@ -607,13 +607,13 @@ namespace SlowTests.Tests.Linq
 
         [Theory]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        public void Query_IncludeBuilder_IncludeRevisionBefore(Options options)
+        public async Task Query_IncludeBuilder_IncludeRevisionBefore(Options options)
         {
             string changeVector;
             using (var store = GetDocumentStore(options))
             {
                 const string id = "users/rhino";
-                RevisionsHelper.SetupRevisionsAsync(store).Wait();
+                await RevisionsHelper.SetupRevisionsAsync(store);
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User { Name = "Omer", },
@@ -683,13 +683,13 @@ namespace SlowTests.Tests.Linq
 
         [Theory]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        public void Query_RawQueryChangeVectorInsidePropertyWithIndex(Options options)
+        public async Task Query_RawQueryChangeVectorInsidePropertyWithIndex(Options options)
         {
             using (var store = GetDocumentStore(options))
             {
                 const string id = "users/rhino";
 
-                RevisionsHelper.SetupRevisionsAsync(store).Wait();
+                await RevisionsHelper.SetupRevisionsAsync(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -774,13 +774,13 @@ namespace SlowTests.Tests.Linq
 
         [Theory]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        public void Query_RawQueryGetRevisionBeforeDateTime(Options options)
+        public async Task Query_RawQueryGetRevisionBeforeDateTime(Options options)
         {
             using (var store = GetDocumentStore(options))
             {
                 const string id = "users/rhino";
 
-                RevisionsHelper.SetupRevisionsAsync(store).Wait();
+                await RevisionsHelper.SetupRevisionsAsync(store);
 
                 string changeVector;
                 using (var session = store.OpenSession())
@@ -854,7 +854,7 @@ namespace SlowTests.Tests.Linq
 
         [Theory]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        public void Query_RawQuery_IncludeRevisions_Jint_StaticIndexQuery(Options options)
+        public async Task Query_RawQuery_IncludeRevisions_Jint_StaticIndexQuery(Options options)
         {
             using (var store = GetDocumentStore(options))
             {
@@ -863,7 +863,7 @@ namespace SlowTests.Tests.Linq
 
                 const string id = "users/rhino";
 
-                RevisionsHelper.SetupRevisionsAsync(store).Wait();
+                await RevisionsHelper.SetupRevisionsAsync(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -967,13 +967,13 @@ select Foo(u)"
 
         [Theory]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        public void Query_RawQuery_IncludeRevisions_Jint_IndexQuery(Options options)
+        public async Task Query_RawQuery_IncludeRevisions_Jint_IndexQuery(Options options)
         {
             using (var store = GetDocumentStore(options))
             {
                 const string id = "users/rhino";
 
-                RevisionsHelper.SetupRevisionsAsync(store).Wait();
+                await RevisionsHelper.SetupRevisionsAsync(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -1020,13 +1020,13 @@ select Foo(u)"
 
         [Theory]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        public void Query_RawQuery_IncludeRevisions_beforeDateTime_Jint(Options options)
+        public async Task Query_RawQuery_IncludeRevisions_beforeDateTime_Jint(Options options)
         {
             using (var store = GetDocumentStore(options))
             {
                 const string id = "users/rhino";
 
-                RevisionsHelper.SetupRevisionsAsync(store).Wait();
+                await RevisionsHelper.SetupRevisionsAsync(store);
                 string changeVector;
                 using (var session = store.OpenSession())
                 {
@@ -1120,13 +1120,13 @@ select Foo(u)"
 
         [Theory]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        public void Query_RawQuery_IncludeRevisions_Jint(Options options)
+        public async Task Query_RawQuery_IncludeRevisions_Jint(Options options)
         {
             using (var store = GetDocumentStore(options))
             {
                 const string id = "users/Rhino";
 
-                RevisionsHelper.SetupRevisionsAsync(store).Wait();
+                await RevisionsHelper.SetupRevisionsAsync(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -1405,13 +1405,13 @@ select Foo(u)"
 
         [Theory]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        public void Query_RawQuery_IncludeRevisionsWithoutAlias(Options options)
+        public async Task Query_RawQuery_IncludeRevisionsWithoutAlias(Options options)
         {
             using (var store = GetDocumentStore(options))
             {
                 const string id = "users/Rhino";
 
-                RevisionsHelper.SetupRevisionsAsync(store).Wait();
+                await RevisionsHelper.SetupRevisionsAsync(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -1497,7 +1497,7 @@ select Foo(u)"
 
         [Theory]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        public void Query_RawQueryWithParameters_IncludeRevisions_Array(Options options)
+        public async Task Query_RawQueryWithParameters_IncludeRevisions_Array(Options options)
         {
             using (var store = GetDocumentStore(options))
             {
@@ -1505,7 +1505,7 @@ select Foo(u)"
 
                 const string id = "users/Rhino";
 
-                RevisionsHelper.SetupRevisionsAsync(store).Wait();
+                await RevisionsHelper.SetupRevisionsAsync(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -1575,7 +1575,7 @@ select Foo(u)"
 
         [Theory]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        public void Query_RawQueryWithParameters_IncludeRevisions_Array_SecondOption(Options options)
+        public async Task Query_RawQueryWithParameters_IncludeRevisions_Array_SecondOption(Options options)
         {
             using (var store = GetDocumentStore(options))
             {
@@ -1583,7 +1583,7 @@ select Foo(u)"
 
                 const string id = "users/Rhino";
 
-                RevisionsHelper.SetupRevisionsAsync(store).Wait();
+                await RevisionsHelper.SetupRevisionsAsync(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -1724,7 +1724,7 @@ select Foo(u)"
 
         [Theory]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        public void Query_RawQueryWithParameters_AliasSyntaxError(Options options)
+        public async Task Query_RawQueryWithParameters_AliasSyntaxError(Options options)
         {
             using (var store = GetDocumentStore(options))
             {
@@ -1732,7 +1732,7 @@ select Foo(u)"
 
                 const string id = "users/Rhino";
 
-                RevisionsHelper.SetupRevisionsAsync(store).Wait();
+                await RevisionsHelper.SetupRevisionsAsync(store);
 
                 using (var session = store.OpenSession())
                 {
