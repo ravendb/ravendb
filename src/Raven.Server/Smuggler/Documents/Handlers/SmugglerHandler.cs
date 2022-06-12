@@ -169,7 +169,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 
             while (results.TryDequeue(out SmugglerResult importResult))
             {
-                GetOperationStateOperation.GetOperationStateCommand.CombineSmugglerResults(finalResult, importResult);
+                finalResult.MergeWith(importResult);
             }
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext finalContext))

@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Smuggler;
 using Raven.Client.Http;
 using Sparrow.Json;
 
@@ -56,61 +54,8 @@ namespace Raven.Client.Documents.Operations
             {
                 if (response == null)
                     return;
-
+                
                 Result = DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable<OperationState>(response);
-            }
-
-            internal static void CombineSmugglerResults(IOperationResult finalResult, IOperationResult result)
-            {
-                switch (result)
-                {
-                    case SmugglerResult smugglerResult:
-                        CombineSmugglerResults((SmugglerResult)finalResult, smugglerResult);
-                        break;
-                    default:
-                        throw new ArgumentException($"Not supported type {result.GetType()}");
-                }
-            }
-
-            private static void CombineSmugglerResults(SmugglerResult finalResult, SmugglerResult smugglerResult)
-            {
-                finalResult.Documents.SkippedCount += smugglerResult.Documents.SkippedCount;
-                finalResult.Documents.ReadCount += smugglerResult.Documents.ReadCount;
-                finalResult.Documents.ErroredCount += smugglerResult.Documents.ErroredCount;
-                finalResult.Documents.LastEtag = Math.Max(finalResult.Documents.LastEtag, smugglerResult.Documents.LastEtag);
-                finalResult.Documents.Attachments.ReadCount += smugglerResult.Documents.Attachments.ReadCount;
-
-                finalResult.Tombstones.ReadCount += smugglerResult.Tombstones.ReadCount;
-                finalResult.Tombstones.ErroredCount += smugglerResult.Tombstones.ErroredCount;
-                finalResult.Tombstones.LastEtag = Math.Max(finalResult.Tombstones.LastEtag, smugglerResult.Tombstones.LastEtag);
-
-                finalResult.RevisionDocuments.ReadCount += smugglerResult.RevisionDocuments.ReadCount;
-                finalResult.RevisionDocuments.ErroredCount += smugglerResult.RevisionDocuments.ErroredCount;
-                finalResult.RevisionDocuments.LastEtag = Math.Max(finalResult.RevisionDocuments.LastEtag, smugglerResult.RevisionDocuments.LastEtag);
-                finalResult.RevisionDocuments.Attachments = smugglerResult.RevisionDocuments.Attachments;
-
-                finalResult.Counters.ReadCount += smugglerResult.Counters.ReadCount;
-                finalResult.Counters.ErroredCount += smugglerResult.Counters.ErroredCount;
-                finalResult.Counters.LastEtag = Math.Max(finalResult.Counters.LastEtag, smugglerResult.Counters.LastEtag);
-
-                finalResult.TimeSeries.ReadCount += smugglerResult.TimeSeries.ReadCount;
-                finalResult.TimeSeries.ErroredCount += smugglerResult.TimeSeries.ErroredCount;
-                finalResult.TimeSeries.LastEtag = Math.Max(finalResult.TimeSeries.LastEtag, smugglerResult.TimeSeries.LastEtag);
-
-                finalResult.Identities.ReadCount += smugglerResult.Identities.ReadCount;
-                finalResult.Identities.ErroredCount += smugglerResult.Identities.ErroredCount;
-
-                finalResult.CompareExchange.ReadCount += smugglerResult.CompareExchange.ReadCount;
-                finalResult.CompareExchange.ErroredCount += smugglerResult.CompareExchange.ErroredCount;
-
-                finalResult.Subscriptions.ReadCount += smugglerResult.Subscriptions.ReadCount;
-                finalResult.Subscriptions.ErroredCount += smugglerResult.Subscriptions.ErroredCount;
-
-                finalResult.Indexes.ReadCount += smugglerResult.Indexes.ReadCount;
-                finalResult.Indexes.ErroredCount += smugglerResult.Indexes.ErroredCount;
-
-                foreach (var message in smugglerResult.Messages)
-                    finalResult.AddMessage(message);
             }
         }
     }

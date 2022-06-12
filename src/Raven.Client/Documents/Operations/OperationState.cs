@@ -36,6 +36,20 @@ namespace Raven.Client.Documents.Operations
         void MergeWith(IOperationResult result);
     }
 
+    public interface IShardedOperationResult : IOperationResult
+    {
+        IShardNodeIdentifier[] Results { get; set; }
+
+        void CombineWith(IOperationResult result, int shardNumber, string nodeTag);
+    }
+
+    public interface IShardNodeIdentifier : IOperationResult
+    {
+        public int ShardNumber { get; set; }
+        public string NodeTag { get; set; }
+        public IOperationResult ShardResult { get; set; }
+    }
+
     public interface IOperationDetailedDescription
     {
         DynamicJsonValue ToJson();

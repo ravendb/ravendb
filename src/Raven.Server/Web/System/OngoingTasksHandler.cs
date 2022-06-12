@@ -19,6 +19,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers.Processors.OngoingTasks;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.PeriodicBackup;
+using Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -97,56 +98,8 @@ namespace Raven.Server.Web.System
         [RavenAction("/databases/*/admin/backup/database", "POST", AuthorizationStatus.DatabaseAdmin, CorsMode = CorsMode.Cluster)]
         public async Task BackupDatabase()
         {
-            var taskId = GetLongQueryString("taskId");
-            var isFullBackup = GetBoolValueQueryString("isFullBackup", required: false);
-
-            // task id == raft index
-            // we must wait here to ensure that the task was actually created on this node
-            await ServerStore.Cluster.WaitForIndexNotification(taskId);
-
-            var nodeTag = Database.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
-            if (nodeTag == null)
-                throw new InvalidOperationException($"Couldn't find a node which is responsible for backup task id: {taskId}");
-
-            if (nodeTag == ServerStore.NodeTag)
-            {
-                var operationId = Database.PeriodicBackupRunner.StartBackupTask(taskId, isFullBackup ?? true);
-                using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    writer.WriteStartObject();
-                    writer.WritePropertyName(nameof(StartBackupOperationResult.ResponsibleNode));
-                    writer.WriteString(ServerStore.NodeTag);
-                    writer.WriteComma();
-                    writer.WritePropertyName(nameof(StartBackupOperationResult.OperationId));
-                    writer.WriteInteger(operationId);
-                    writer.WriteEndObject();
-                }
-
-                return;
-            }
-
-            RedirectToRelevantNode(nodeTag);
-        }
-
-        private void RedirectToRelevantNode(string nodeTag)
-        {
-            ClusterTopology topology;
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                topology = ServerStore.GetClusterTopology(context);
-            }
-            var url = topology.GetUrlFromTag(nodeTag);
-            if (url == null)
-            {
-                throw new InvalidOperationException($"Couldn't find the node url for node tag: {nodeTag}");
-            }
-
-            var location = url + HttpContext.Request.Path + HttpContext.Request.QueryString;
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.TemporaryRedirect;
-            HttpContext.Response.Headers.Remove(Constants.Headers.ContentType);
-            HttpContext.Response.Headers.Add("Location", location);
+            using (var processor = new OngoingTasksHandlerProcessorForBackupDatabaseNow(this))
+                await processor.ExecuteAsync();
         }
 
         private static int _oneTimeBackupCounter;

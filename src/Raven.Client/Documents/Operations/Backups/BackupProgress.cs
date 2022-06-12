@@ -19,7 +19,23 @@ namespace Raven.Client.Documents.Operations.Backups
 
         public BackupProgress(BackupResult result) : base(result)
         {
+        }
 
+        public override bool CanMerge => true;
+
+        public override void MergeWith(IOperationProgress progress)
+        {
+            if (progress is not BackupProgress bp)
+                return;
+
+            base.MergeWith(bp);
+        }
+
+        public override IOperationProgress Clone()
+        {
+            var result = new BackupProgress(new BackupResult());
+            result.MergeWith(this);
+            return result;
         }
 
         public override DynamicJsonValue ToJson()

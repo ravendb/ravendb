@@ -14,7 +14,6 @@ using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Platform;
 using Sparrow.Utils;
-using Voron.Util.Conversion;
 using Operation = Raven.Client.Documents.Operations.Operation;
 
 namespace Raven.Server.Documents.Sharding;
@@ -63,25 +62,29 @@ public partial class ShardedDatabaseContext
 
             return AddOperationInternalAsync(operation, taskFactory);
         }
-
-        public Task AddRemoteOperation(
+        
+        public Task AddRemoteOperation<TResult, TOrchestratorResult>(
             long id,
             OperationType operationType,
             string description,
             IOperationDetailedDescription detailedDescription,
-            Func<JsonOperationContext, int, RavenCommand<OperationIdResult>> commandFactory,
-            OperationCancelToken token = null)
+            Func<JsonOperationContext, int, RavenCommand<TResult>> commandFactory,
+            OperationCancelToken token = null) 
+            where TResult : OperationIdResult
+            where TOrchestratorResult : IOperationResult, new()
         {
             var operation = CreateOperationInstance(id, _context.DatabaseName, operationType, description, detailedDescription, token);
 
-            return AddOperationInternalAsync(operation, onProgress => CreateTaskAsync(operation, commandFactory, onProgress, token));
+            return AddOperationInternalAsync(operation, onProgress => CreateTaskAsync<TResult, TOrchestratorResult>(operation, commandFactory, onProgress, token));
         }
 
-        private async Task<IOperationResult> CreateTaskAsync(
+        private async Task<IOperationResult> CreateTaskAsync<TResult, TOrchestratorResult>(
             ShardedOperation operation,
-            Func<JsonOperationContext, int, RavenCommand<OperationIdResult>> commandFactory,
+            Func<JsonOperationContext, int, RavenCommand<TResult>> commandFactory,
             Action<IOperationProgress> onProgress,
-            OperationCancelToken token)
+            OperationCancelToken token) 
+            where TResult : OperationIdResult
+            where TOrchestratorResult : IOperationResult, new()
         {
             var t = token?.Token ?? default;
 
@@ -108,9 +111,9 @@ public partial class ShardedDatabaseContext
                     await operation.KillAsync(waitForCompletion: true, t);
             }
 
-            return await operation.Operation.WaitForCompletionAsync(t);
+            return await operation.Operation.WaitForCompletionAsync<TOrchestratorResult>(t);
 
-            async Task ConnectAsync(ShardedDatabaseContext context, MultiOperation operation, RavenCommand<OperationIdResult> command, int shardNumber, CancellationToken token)
+            async Task ConnectAsync(ShardedDatabaseContext context, MultiOperation operation, RavenCommand<TResult> command, int shardNumber, CancellationToken token)
             {
                 await context.ShardExecutor.ExecuteSingleShardAsync(command, shardNumber, token);
 

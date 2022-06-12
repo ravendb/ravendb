@@ -22,22 +22,36 @@ namespace Raven.Client.Documents.Operations.Backups
             return new StartBackupCommand(_isFullBackup, _taskId);
         }
 
-        private class StartBackupCommand : RavenCommand<OperationIdResult<StartBackupOperationResult>>
+        internal class StartBackupCommand : RavenCommand<OperationIdResult<StartBackupOperationResult>>
         {
             public override bool IsReadRequest => true;
 
-            private readonly bool _isFullBackup;
+            private readonly bool? _isFullBackup;
             private readonly long _taskId;
+            private readonly long? _operationId;
 
-            public StartBackupCommand(bool isFullBackup, long taskId)
+            public StartBackupCommand(bool? isFullBackup, long taskId)
             {
                 _isFullBackup = isFullBackup;
                 _taskId = taskId;
             }
 
+            internal StartBackupCommand(bool? isFullBackup, long taskId, long operationId) : this(isFullBackup, taskId)
+            {
+                _isFullBackup = isFullBackup;
+                _taskId = taskId;
+                _operationId = operationId;
+            }
+
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/admin/backup/database?isFullBackup={_isFullBackup}&taskId={_taskId}";
+                url = $"{node.Url}/databases/{node.Database}/admin/backup/database?taskId={_taskId}";
+
+                if (_isFullBackup.HasValue)
+                    url += $"&isFullBackup={_isFullBackup}";
+                if (_operationId.HasValue)
+                    url += $"&operationId={_operationId}";
+
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Post
@@ -64,6 +78,6 @@ namespace Raven.Client.Documents.Operations.Backups
     {
         public string ResponsibleNode { get; set; }
 
-        public int OperationId { get; set; }
+        public long OperationId { get; set; }
     }
 }

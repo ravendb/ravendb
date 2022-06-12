@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Extensions;
 
 namespace Raven.Server.Documents.Sharding.Operations;
@@ -82,36 +83,38 @@ public class MultiOperation
         _onProgress(progress);
     }
 
-    public async Task<IOperationResult> WaitForCompletionAsync(CancellationToken token)
+    public async Task<IOperationResult> WaitForCompletionAsync<TOrchestratorResult>(CancellationToken token)
+        where TOrchestratorResult : IOperationResult, new()
     {
         _progresses = new IOperationProgress[_operations.Count];
 
-        var tasks = new List<Task<IOperationResult>>(_progresses.Length);
+        var tasks = new Dictionary<ShardedDatabaseIdentifier, Task<IOperationResult>>(_progresses.Length);
 
-        foreach (var operation in _operations.Values)
-            tasks.Add(operation.WaitForCompletionAsync());
+        foreach (var operation in _operations)
+        {
+            tasks.Add(operation.Key, operation.Value.WaitForCompletionAsync());
+        }
 
-        await Task.WhenAll(tasks).WithCancellation(token);
+        await Task.WhenAll(tasks.Values).WithCancellation(token);
 
-        return CreateOperationResult(tasks);
-    }
+        var result = new TOrchestratorResult();
+        if (result is IShardedOperationResult shardedResult)
+        {
+            shardedResult.Results = new IShardNodeIdentifier[_operations.Count]; //TODO stav: change to dict in case of shard numbers not matching count
+            foreach (var task in tasks)
+            {
+                shardedResult.CombineWith(task.Value.Result, task.Key.ShardNumber, task.Key.NodeTag);
+            }
+        }
 
-    private static IOperationResult CreateOperationResult(IEnumerable<Task<IOperationResult>> tasks)
-    {
-        IOperationResult result = null;
         foreach (var task in tasks)
         {
-            var r = task.Result;
-            if (result == null)
-            {
-                if (r.CanMerge == false)
-                    throw new NotSupportedException();
-
-                result = r;
-                continue;
-            }
-
-            result.MergeWith(r);
+            var r = task.Value.Result;
+            
+            if(r.CanMerge == false)
+                throw new NotSupportedException();
+            else
+                result.MergeWith(r);
         }
 
         return result;

@@ -1,4 +1,5 @@
 ﻿using JetBrains.Annotations;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Server.Documents.Handlers.Admin.Processors.Revisions;
 using Raven.Server.Documents.Operations;
@@ -21,7 +22,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin.Processors.Revisions
 
         protected override void ScheduleEnforceConfigurationOperation(long operationId, OperationCancelToken token)
         {
-            var task = RequestHandler.DatabaseContext.Operations.AddRemoteOperation(
+            var task = RequestHandler.DatabaseContext.Operations.AddRemoteOperation<OperationIdResult, EnforceConfigurationResult>(
                 operationId,
                 OperationType.EnforceRevisionConfiguration,
                 $"Enforce revision configuration in database '{RequestHandler.DatabaseName}'.",
