@@ -6,6 +6,7 @@ using Orders;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,7 +18,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.CompareExchange)]
         public void CompareExchangeValueTrackingInSession()
         {
             using (var store = GetDocumentStore())
@@ -123,7 +124,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.CompareExchange)]
         public void CompareExchangeValueTrackingInSession_NoTracking()
         {
             using (var store = GetDocumentStore())
@@ -205,10 +206,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanUseCompareExchangeValueIncludesInLoad()
+        [RavenTheory(RavenTestCategory.CompareExchange)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CanUseCompareExchangeValueIncludesInLoad(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                 {
@@ -272,10 +274,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task CanUseCompareExchangeValueIncludesInLoad_Async()
+        [RavenTheory(RavenTestCategory.CompareExchange)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanUseCompareExchangeValueIncludesInLoad_Async(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                 {
@@ -339,10 +342,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanUseCompareExchangeValueIncludesInQueries_Dynamic()
+        [RavenTheory(RavenTestCategory.CompareExchange)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CanUseCompareExchangeValueIncludesInQueries_Dynamic(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                 {
@@ -411,10 +415,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanUseCompareExchangeValueIncludesInQueries_Dynamic_JavaScript()
+        [RavenTheory(RavenTestCategory.CompareExchange)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CanUseCompareExchangeValueIncludesInQueries_Dynamic_JavaScript(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                 {
@@ -507,10 +512,11 @@ select incl(c)"
             }
         }
 
-        [Fact]
-        public void CanUseCompareExchangeValueIncludesInQueries_Static()
+        [RavenTheory(RavenTestCategory.CompareExchange)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CanUseCompareExchangeValueIncludesInQueries_Static(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new Companies_ByName().Execute(store);
 
@@ -585,10 +591,11 @@ select incl(c)"
             }
         }
 
-        [Fact]
-        public async Task CanUseCompareExchangeValueIncludesInQueries_Static_Async()
+        [RavenTheory(RavenTestCategory.CompareExchange)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanUseCompareExchangeValueIncludesInQueries_Static_Async(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 await new Companies_ByName().ExecuteAsync(store);
 
@@ -663,10 +670,11 @@ select incl(c)"
             }
         }
 
-        [Fact]
-        public void CanUseCompareExchangeValueIncludesInQueries_Static_JavaScript()
+        [RavenTheory(RavenTestCategory.CompareExchange)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CanUseCompareExchangeValueIncludesInQueries_Static_JavaScript(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new Companies_ByName().Execute(store);
 
@@ -765,7 +773,7 @@ select incl(c)"
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.CompareExchange)]
         public void CompareExchangeValueTrackingInSessionStartsWith()
         {
             using (var store = GetDocumentStore())
@@ -819,7 +827,7 @@ select incl(c)"
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.CompareExchange)]
         public async Task CompareExchangeValueTrackingInSessionStartsWithAsync()
         {
             using (var store = GetDocumentStore())

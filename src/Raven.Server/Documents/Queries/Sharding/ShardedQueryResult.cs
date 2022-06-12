@@ -13,6 +13,8 @@ namespace Raven.Server.Documents.Queries.Sharding;
 
 public class ShardedQueryResult : QueryResultServerSide<BlittableJsonReaderObject>
 {
+    private IncludeCompareExchangeValuesCommand _includeCompareExchangeValues;
+
     public override ValueTask AddResultAsync(BlittableJsonReaderObject result, CancellationToken token)
     {
         throw new NotSupportedException();
@@ -60,13 +62,10 @@ public class ShardedQueryResult : QueryResultServerSide<BlittableJsonReaderObjec
 
     public override void AddCompareExchangeValueIncludes(IncludeCompareExchangeValuesCommand command)
     {
-        throw new NotSupportedException();
+        _includeCompareExchangeValues = command;
     }
 
-    public override Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> GetCompareExchangeValueIncludes()
-    {
-        return null;
-    }
+    public override Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> GetCompareExchangeValueIncludes() => _includeCompareExchangeValues?.Results;
 
     public override void AddRevisionIncludes(IncludeRevisionsCommand command)
     {

@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -12,7 +14,10 @@ namespace Raven.Server.Documents.Includes
 {
     public class IncludeCompareExchangeValuesCommand : IDisposable
     {
-        private readonly DocumentDatabase _database;
+        private readonly ServerStore _serverStore;
+        private readonly string _databaseName;
+        private readonly char _identityPartsSeparator;
+
         private readonly string[] _includes;
 
         private HashSet<string> _includedKeys;
@@ -22,9 +27,24 @@ namespace Raven.Server.Documents.Includes
         private readonly bool _throwWhenServerContextIsAllocated;
         public Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> Results;
 
-        private IncludeCompareExchangeValuesCommand(DocumentDatabase database, ClusterOperationContext serverContext, bool throwWhenServerContextIsAllocated, string[] compareExchangeValues)
+        private long? _resultsEtag;
+
+        private IncludeCompareExchangeValuesCommand([NotNull] DocumentDatabase database, ClusterOperationContext serverContext, bool throwWhenServerContextIsAllocated, string[] compareExchangeValues)
+            : this(database.Name, database.ServerStore, database.IdentityPartsSeparator, serverContext, throwWhenServerContextIsAllocated, compareExchangeValues)
         {
-            _database = database ?? throw new ArgumentNullException(nameof(database));
+        }
+
+        private IncludeCompareExchangeValuesCommand([NotNull] ShardedDatabaseContext database, ClusterOperationContext serverContext, bool throwWhenServerContextIsAllocated, string[] compareExchangeValues)
+            : this(database.DatabaseName, database.ServerStore, database.IdentityPartsSeparator, serverContext, throwWhenServerContextIsAllocated, compareExchangeValues)
+        {
+        }
+
+        private IncludeCompareExchangeValuesCommand(string databaseName, ServerStore serverStore, char identityPartsSeparator, ClusterOperationContext serverContext, bool throwWhenServerContextIsAllocated, string[] compareExchangeValues)
+        {
+            _databaseName = databaseName;
+            _identityPartsSeparator = identityPartsSeparator;
+            _serverStore = serverStore;
+
             _serverContext = serverContext;
             _throwWhenServerContextIsAllocated = throwWhenServerContextIsAllocated;
             _includes = compareExchangeValues;
@@ -35,9 +55,35 @@ namespace Raven.Server.Documents.Includes
             return new IncludeCompareExchangeValuesCommand(context.Documents.DocumentDatabase, context.Server, throwWhenServerContextIsAllocated: true, compareExchangeValues);
         }
 
+        public static IncludeCompareExchangeValuesCommand ExternalScope(ShardedDatabaseContext databaseContext, ClusterOperationContext serverContext, string[] compareExchangeValues)
+        {
+            return new IncludeCompareExchangeValuesCommand(databaseContext, serverContext, throwWhenServerContextIsAllocated: true, compareExchangeValues);
+        }
+
         public static IncludeCompareExchangeValuesCommand InternalScope(DocumentDatabase database, string[] compareExchangeValues)
         {
             return new IncludeCompareExchangeValuesCommand(database, serverContext: null, throwWhenServerContextIsAllocated: false, compareExchangeValues);
+        }
+
+        public static IncludeCompareExchangeValuesCommand InternalScope(ShardedDatabaseContext databaseContext, string[] compareExchangeValues)
+        {
+            return new IncludeCompareExchangeValuesCommand(databaseContext, serverContext: null, throwWhenServerContextIsAllocated: false, compareExchangeValues);
+        }
+
+        internal long ResultsEtag
+        {
+            get
+            {
+                if (_resultsEtag == null)
+                {
+                    if (_serverContext == null)
+                        throw new InvalidOperationException($"Execute '{nameof(Materialize)}' method first.");
+
+                    _resultsEtag = _serverStore.Cluster.GetLastCompareExchangeIndexForDatabase(_serverContext, _databaseName);
+                }
+
+                return _resultsEtag.Value;
+            }
         }
 
         internal void AddRange(HashSet<string> keys)
@@ -57,6 +103,11 @@ namespace Raven.Server.Documents.Includes
 
         internal void Gather(Document document)
         {
+            Gather(document?.Data);
+        }
+
+        internal void Gather(BlittableJsonReaderObject document)
+        {
             if (document == null)
                 return;
 
@@ -66,7 +117,7 @@ namespace Raven.Server.Documents.Includes
             _includedKeys ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var include in _includes)
-                IncludeUtil.GetDocIdFromInclude(document.Data, new StringSegment(include), _includedKeys, _database.IdentityPartsSeparator);
+                IncludeUtil.GetDocIdFromInclude(document, new StringSegment(include), _includedKeys, _identityPartsSeparator);
         }
 
         internal void Materialize()
@@ -79,7 +130,7 @@ namespace Raven.Server.Documents.Includes
                 if (_throwWhenServerContextIsAllocated)
                     throw new InvalidOperationException("Cannot allocate new server context during materialization of compare exchange includes.");
 
-                _releaseContext = _database.ServerStore.Engine.ContextPool.AllocateOperationContext(out _serverContext);
+                _releaseContext = _serverStore.Engine.ContextPool.AllocateOperationContext(out _serverContext);
                 _serverContext.OpenReadTransaction();
             }
 
@@ -88,7 +139,7 @@ namespace Raven.Server.Documents.Includes
                 if (string.IsNullOrEmpty(includedKey))
                     continue;
 
-                var value = _database.ServerStore.Cluster.GetCompareExchangeValue(_serverContext, CompareExchangeKey.GetStorageKey(_database.Name, includedKey));
+                var value = _serverStore.Cluster.GetCompareExchangeValue(_serverContext, CompareExchangeKey.GetStorageKey(_databaseName, includedKey));
 
                 if (Results == null)
                     Results = new Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>>(StringComparer.OrdinalIgnoreCase);
