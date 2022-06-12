@@ -127,5 +127,12 @@ namespace Raven.Server.Documents.Sharding.Handlers
             using (var processor = new ShardedOngoingTasksHandlerProcessorForGetPullReplicationHubTasksInfo(this))
                 await processor.ExecuteAsync();
         }
+
+        [RavenShardedAction("/databases/*/admin/backup/database", "POST")]
+        public async Task BackupDatabase()
+        {
+            using (var processor = new ShardedOngoingTasksHandlerProcessorForBackupDatabaseNow(this))
+                await processor.ExecuteAsync();
+        }
     }
 }

@@ -1,4 +1,6 @@
 ﻿using JetBrains.Annotations;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Revisions;
 using Raven.Server.Documents.Handlers.Processors.Revisions;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Revisions;
@@ -16,7 +18,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Revisions
         protected override void ScheduleRevertRevisions(long operationId, RevertRevisionsRequest configuration, OperationCancelToken token)
         {
             var task = RequestHandler.DatabaseContext.Operations
-                .AddRemoteOperation(
+                .AddRemoteOperation<OperationIdResult, RevertResult>(
                     operationId,
                     OperationType.DatabaseRevert,
                     $"Revert database '{RequestHandler.DatabaseName}' to {configuration.Time} UTC.",

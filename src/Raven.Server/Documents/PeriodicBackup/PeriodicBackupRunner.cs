@@ -311,14 +311,14 @@ namespace Raven.Server.Documents.PeriodicBackup
             return _database.WhoseTaskIsIt(topology, periodicBackup.Configuration, backupStatus, keepTaskOnOriginalMemberNode: true);
         }
 
-        public long StartBackupTask(long taskId, bool isFullBackup)
+        public long StartBackupTask(long taskId, bool isFullBackup, long? operationId = null)
         {
             if (_periodicBackups.TryGetValue(taskId, out var periodicBackup) == false)
             {
                 throw new InvalidOperationException($"Backup task id: {taskId} doesn't exist");
             }
 
-            return CreateBackupTask(periodicBackup, isFullBackup, SystemTime.UtcNow);
+            return CreateBackupTask(periodicBackup, isFullBackup, SystemTime.UtcNow, operationId);
         }
 
         public DateTime? GetWakeDatabaseTimeUtc(string databaseName)
@@ -360,7 +360,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             return wakeupDatabase?.ToUniversalTime();
         }
 
-        private long CreateBackupTask(PeriodicBackup periodicBackup, bool isFullBackup, DateTime startTimeInUtc)
+        private long CreateBackupTask(PeriodicBackup periodicBackup, bool isFullBackup, DateTime startTimeInUtc, long? operationId = null)
         {
             using (periodicBackup.UpdateBackupTask())
             {
@@ -397,7 +397,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                         isFullBackup = true;
                     }
 
-                    var operationId = _database.Operations.GetNextOperationId();
+                    operationId ??= _database.Operations.GetNextOperationId();
                     var backupTypeText = GetBackupTypeText(isFullBackup, periodicBackup.Configuration.BackupType);
 
                     periodicBackup.StartTimeInUtc = startTimeInUtc;
@@ -411,7 +411,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                         IsFullBackup = isFullBackup,
                         BackupToLocalFolder = backupToLocalFolder,
                         TempBackupPath = _tempBackupPath,
-                        OperationId = operationId,
+                        OperationId = operationId.Value,
                         Name = periodicBackup.Configuration.Name
                     };
 
@@ -420,12 +420,12 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                     periodicBackup.RunningTask = new PeriodicBackup.RunningBackupTask
                     {
-                        Id = operationId,
+                        Id = operationId.Value,
                         Task = tcs.Task
                     };
 
                     var task = _database.Operations.AddLocalOperation(
-                        operationId,
+                        operationId.Value,
                         OperationType.DatabaseBackup,
                         $"{backupTypeText} backup task: '{periodicBackup.Configuration.Name}'. Database: '{_database.Name}'",
                         detailedDescription: null,
@@ -434,7 +434,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                     task.ContinueWith(_ => backupTask.TaskCancelToken.Dispose());
 
-                    return operationId;
+                    return operationId.Value;
                 }
                 catch (Exception e)
                 {

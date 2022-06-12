@@ -58,7 +58,7 @@ namespace Raven.Server.Documents.Sharding.Operations
                             combined.Result = smugglerResult;
                         }
 
-                        GetOperationStateOperation.GetOperationStateCommand.CombineSmugglerResults(combined.Result, smuggler);
+                        combined.Result.MergeWith(smuggler);
                         break;
                     case BulkOperationResult bulk:
                         if (bulkResult == null)

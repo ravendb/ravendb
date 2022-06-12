@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using JetBrains.Annotations;
+using Raven.Client.Documents.Operations;
 using Raven.Server.Documents.Commands.Studio;
 using Raven.Server.Documents.Handlers.Processors.Studio;
 using Raven.Server.Documents.Operations;
@@ -23,7 +24,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Studio
 
                 var shardToIds = ShardLocator.GetDocumentIdsByShards(context, RequestHandler.DatabaseContext, excludeIds);
 
-                var task = RequestHandler.DatabaseContext.Operations.AddRemoteOperation(
+                var task = RequestHandler.DatabaseContext.Operations.AddRemoteOperation<OperationIdResult, BulkOperationResult>(
                     operationId,
                     OperationType.DeleteByCollection,
                     collectionName,
