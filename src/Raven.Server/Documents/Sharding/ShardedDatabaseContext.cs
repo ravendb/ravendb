@@ -22,7 +22,7 @@ namespace Raven.Server.Documents.Sharding
         private readonly CancellationTokenSource _databaseShutdown = new CancellationTokenSource();
         public CancellationToken DatabaseShutdown => _databaseShutdown.Token;
 
-        private readonly ServerStore _serverStore;
+        public readonly ServerStore ServerStore;
 
         private DatabaseRecord _record;
         public QueryMetadataCache QueryMetadataCache = new();
@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.Sharding
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "reduce the record to the needed fields");
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "Need to refresh all this in case we will add/remove new shard");
 
-            _serverStore = serverStore;
+            ServerStore = serverStore;
             _record = record;
             _logger = LoggingSource.Instance.GetLogger<ShardedDatabaseContext>(DatabaseName);
 
@@ -53,8 +53,8 @@ namespace Raven.Server.Documents.Sharding
 
             Indexes = new ShardedIndexesContext(this, serverStore);
 
-            ShardExecutor = new ShardExecutor(_serverStore, this);
-            AllNodesExecutor = new AllNodesExecutor(_serverStore, DatabaseName);
+            ShardExecutor = new ShardExecutor(ServerStore, this);
+            AllNodesExecutor = new AllNodesExecutor(ServerStore, DatabaseName);
 
             NotificationCenter = new ShardedDatabaseNotificationCenter(this);
             Streaming = new ShardedStreaming();
@@ -64,7 +64,7 @@ namespace Raven.Server.Documents.Sharding
             RachisLogIndexNotifications = new RachisLogIndexNotifications(_databaseShutdown.Token);
         }
 
-        public IDisposable AllocateContext(out JsonOperationContext context) => _serverStore.ContextPool.AllocateOperationContext(out context);
+        public IDisposable AllocateContext(out JsonOperationContext context) => ServerStore.ContextPool.AllocateOperationContext(out context);
 
 
         public void UpdateDatabaseRecord(RawDatabaseRecord record, long index)
@@ -107,7 +107,7 @@ namespace Raven.Server.Documents.Sharding
 
         private void UpdateConfiguration(Dictionary<string, string> settings)
         {
-            Configuration = DatabasesLandlord.CreateDatabaseConfiguration(_serverStore, DatabaseName, settings);
+            Configuration = DatabasesLandlord.CreateDatabaseConfiguration(ServerStore, DatabaseName, settings);
         }
 
         public void Dispose()

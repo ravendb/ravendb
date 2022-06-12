@@ -98,6 +98,34 @@ namespace Raven.Server.Documents
             return FinalizeHash(size, state);
         }
 
+        public static unsafe string ComputeEtagForIncludeCommands(
+            IncludeCountersCommand includeCounters,
+            IncludeTimeSeriesCommand includeTimeSeries,
+            IncludeCompareExchangeValuesCommand includeCompareExchangeValues)
+        {
+            if (includeCounters == null && includeTimeSeries == null && includeCompareExchangeValues == null)
+                return string.Empty;
+
+            var size = Sodium.crypto_generichash_bytes();
+            Debug.Assert((int)size == 32);
+            var cryptoGenerichashStatebytes = (int)Sodium.crypto_generichash_statebytes();
+            byte* state = stackalloc byte[cryptoGenerichashStatebytes];
+            if (Sodium.crypto_generichash_init(state, null, UIntPtr.Zero, size) != 0)
+                ThrowFailToInitHash();
+
+            if (includeCompareExchangeValues.Results == null || includeCompareExchangeValues.Results.Count == 0)
+                HashNumber(state, 0);
+            else
+            {
+                HashNumber(state, includeCompareExchangeValues.Results.Count);
+
+                foreach (var compareExchangeValueInclude in includeCompareExchangeValues.Results)
+                    HashNumber(state, compareExchangeValueInclude.Value.Index);
+            }
+
+            return FinalizeHash(size, state);
+        }
+
         public static unsafe string ComputeEtagForRevisions(List<Document> revisions)
         {
             // This method is efficient because we aren't materializing any values
@@ -120,10 +148,9 @@ namespace Raven.Server.Documents
 
             return FinalizeHash(size, state);
         }
-        
+
         public static unsafe string CombineEtags(IEnumerable<string> etags)
         {
-
             var size = Sodium.crypto_generichash_bytes();
             Debug.Assert((int)size == 32);
             var cryptoGenerichashStatebytes = (int)Sodium.crypto_generichash_statebytes();

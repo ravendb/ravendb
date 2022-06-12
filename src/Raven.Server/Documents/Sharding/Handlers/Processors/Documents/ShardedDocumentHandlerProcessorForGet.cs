@@ -10,6 +10,7 @@ using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Exceptions.Sharding;
 using Raven.Server.Documents.Handlers.Processors.Documents;
+using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries.Revisions;
 using Raven.Server.Documents.Sharding.Handlers.Processors.Collections;
 using Raven.Server.Documents.Sharding.Operations;
@@ -39,7 +40,7 @@ internal class ShardedDocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
     {
         DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "make sure we maintain the order of returned results");
 
-        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Arek, DevelopmentHelper.Severity.Normal, "Includes of revisions / counters / time series / compare exchanges");
+        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Arek, DevelopmentHelper.Severity.Normal, "Includes of revisions / counters / time series");
 
         if (counters.Count > 0)
             throw new NotSupportedInShardingException("Include of counters is not supported");
@@ -49,9 +50,6 @@ internal class ShardedDocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
 
         if (timeSeries != null)
             throw new NotSupportedInShardingException("Include of time series is not supported");
-
-        if (compareExchangeValues.Count > 0)
-            throw new NotSupportedInShardingException("Include of compare exchange is not supported");
 
         var idsByShard = ShardLocator.GetDocumentIdsByShards(context, RequestHandler.DatabaseContext, ids);
         var op = new FetchDocumentsFromShardsOperation(context, RequestHandler, idsByShard, includePaths, etag, metadataOnly);
@@ -65,6 +63,8 @@ internal class ShardedDocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
             MissingIncludes = shardedReadResult.Result?.MissingIncludes,
             StatusCode = (HttpStatusCode)shardedReadResult.StatusCode
         };
+
+        List<string> etagsToCombine = null;
 
         if (result.MissingIncludes?.Count > 0)
         {
@@ -82,10 +82,57 @@ internal class ShardedDocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
                 result.Includes.Add(missing);
             }
 
-            result.Etag = ComputeHttpEtags.CombineEtags(new[] { result.Etag, missingResult.CombinedEtag });
+            AddEtagToCombine(missingResult.CombinedEtag);
         }
 
+        if (result.Documents is { Count: > 0 })
+        {
+            IncludeCompareExchangeValuesCommand includeCompareExchangeValues = null;
+
+            if (compareExchangeValues.Count > 0)
+            {
+                includeCompareExchangeValues = IncludeCompareExchangeValuesCommand.InternalScope(RequestHandler.DatabaseContext, compareExchangeValues);
+                Disposables.Add(includeCompareExchangeValues);
+            }
+
+            if (includeCompareExchangeValues != null)
+            {
+                foreach (var document in result.Documents)
+                {
+                    includeCompareExchangeValues.Gather(document);
+                }
+
+                includeCompareExchangeValues.Materialize();
+
+                result.CompareExchangeIncludes = includeCompareExchangeValues.Results;
+            }
+
+            AddEtagToCombine(ComputeHttpEtags.ComputeEtagForIncludeCommands(includeCounters: null, includeTimeSeries: null, includeCompareExchangeValues));
+        }
+
+        result.Etag = CombineEtags();
+
         return result;
+
+        void AddEtagToCombine(string etagToCombine)
+        {
+            if (string.IsNullOrEmpty(etagToCombine))
+                return;
+
+            etagsToCombine ??= new List<string> { result.Etag };
+            etagsToCombine.Add(etagToCombine);
+        }
+
+        string CombineEtags()
+        {
+            if (etagsToCombine == null)
+                return result.Etag;
+
+            if (etagsToCombine.Count == 1)
+                return etagsToCombine[0];
+
+            return ComputeHttpEtags.CombineEtags(etagsToCombine);
+        }
     }
 
     protected override async ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteDocumentsAsync(AsyncBlittableJsonTextWriter writer, TransactionOperationContext context, string propertyName, List<BlittableJsonReaderObject> documentsToWrite,

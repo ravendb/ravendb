@@ -3,7 +3,9 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Raven.Client;
 using Raven.Client.Documents.Changes;
+using Raven.Client.Extensions;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Sharding.Handlers.Processors.Queries;
 using Raven.Server.Documents.Sharding.Queries;
@@ -82,7 +84,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                             queryProcessor.Initialize();
                             await queryProcessor.ExecuteShardedOperations();
 
-                            var existingResultEtag = GetLongFromHeaders("If-None-Match");
+                            var existingResultEtag = GetLongFromHeaders(Constants.Headers.IfNoneMatch);
                             if (existingResultEtag != null && indexQuery.Metadata.HasOrderByRandom == false)
                             {
                                 if (existingResultEtag == queryProcessor.ResultsEtag)
@@ -113,6 +115,9 @@ namespace Raven.Server.Documents.Sharding.Handlers
                             queryProcessor.ProjectAfterMapReduce();
 
                             var result = queryProcessor.GetResult();
+
+                            HttpContext.Response.Headers[Constants.Headers.Etag] = CharExtensions.ToInvariantString(result.ResultEtag);
+
                             await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), HttpContext.RequestAborted))
                             {
                                 result.Timings = indexQuery.Timings?.ToTimings();

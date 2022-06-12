@@ -39,9 +39,9 @@ public partial class ShardedDatabaseContext
 
         public override long GetNextOperationId()
         {
-            var nextId = _context._serverStore.Operations.GetNextOperationId();
+            var nextId = _context.ServerStore.Operations.GetNextOperationId();
 
-            return OperationIdEncoder.EncodeOperationId(nextId, _context._serverStore.NodeTag);
+            return OperationIdEncoder.EncodeOperationId(nextId, _context.ServerStore.NodeTag);
         }
 
         protected override void RaiseNotifications(OperationStatusChange change, AbstractOperation operation)
@@ -88,7 +88,7 @@ public partial class ShardedDatabaseContext
             operation.Operation = new MultiOperation(operation.Id, _context, onProgress);
 
             var tasks = new Task[_context.NumberOfShardNodes];
-            using (_context._serverStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            using (_context.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
                 for (var shardNumber = 0; shardNumber < tasks.Length; shardNumber++)
                 {

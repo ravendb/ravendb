@@ -9,7 +9,7 @@ public partial class ShardedDatabaseContext
     public class ShardedDatabaseNotificationCenter : AbstractDatabaseNotificationCenter
     {
         public ShardedDatabaseNotificationCenter(ShardedDatabaseContext context)
-            : base(context._serverStore, context.DatabaseName, context.Configuration, context.DatabaseShutdown)
+            : base(context.ServerStore, context.DatabaseName, context.Configuration, context.DatabaseShutdown)
         {
         }
     }

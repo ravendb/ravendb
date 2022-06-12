@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions.Sharding;
+using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Results;
@@ -39,6 +40,8 @@ public class ShardedQueryProcessor : IDisposable
     //private readonly HashSet<int> _filteredShardIndexes;
     private readonly ShardedQueryResult _result;
     private readonly List<IDisposable> _disposables = new();
+
+    private IncludeCompareExchangeValuesCommand _includeCompareExchangeValues;
 
     // User should also be able to define a query parameter ("Sharding.Context") which is an array
     // that contains the ids whose shards the query should be limited to. Advanced: Optimization if user
@@ -257,6 +260,17 @@ public class ShardedQueryProcessor : IDisposable
             }
         }
 
+        if (_query.Metadata.HasCmpXchgIncludes)
+        {
+            _disposables.Add(_parent.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext serverContext));
+            serverContext.OpenReadTransaction(); // will be closed when processor is disposed
+
+            _includeCompareExchangeValues = IncludeCompareExchangeValuesCommand.ExternalScope(_parent.DatabaseContext, serverContext, _query.Metadata.CompareExchangeValueIncludes);
+            _disposables.Add(_includeCompareExchangeValues);
+
+            _result.ResultEtag = Hashing.Combine(_result.ResultEtag, _includeCompareExchangeValues.ResultsEtag);
+        }
+
         if (_isAutoMapReduceQuery && index.HasValue)
         {
             // we are waiting here for all nodes, we should wait for all of the orchestrators at least to apply that
@@ -270,21 +284,37 @@ public class ShardedQueryProcessor : IDisposable
         HashSet<string> missing = null;
         foreach (var (_, cmd) in _commands)
         {
-            if (cmd.Result.Includes == null || cmd.Result.Includes.Count == 0)
-                continue;
-
-            _result.Includes ??= new List<BlittableJsonReaderObject>();
-            foreach (var id in cmd.Result.Includes.GetPropertyNames())
+            if (cmd.Result.Includes is { Count: > 0 })
             {
-                if (cmd.Result.Includes.TryGet(id, out BlittableJsonReaderObject include) && include != null)
+                _result.Includes ??= new List<BlittableJsonReaderObject>();
+                foreach (var id in cmd.Result.Includes.GetPropertyNames())
                 {
-                    _result.Includes.Add(include);
-                }
-                else
-                {
-                    (missing ??= new HashSet<string>()).Add(id);
+                    if (cmd.Result.Includes.TryGet(id, out BlittableJsonReaderObject include) && include != null)
+                    {
+                        _result.Includes.Add(include);
+                    }
+                    else
+                    {
+                        (missing ??= new HashSet<string>()).Add(id);
+                    }
                 }
             }
+
+            if (cmd.Result.Results is { Length: > 0 })
+            {
+                if (_includeCompareExchangeValues != null)
+                {
+                    foreach (BlittableJsonReaderObject document in cmd.Result.Results)
+                        _includeCompareExchangeValues.Gather(document);
+                }
+            }
+        }
+
+        if (_includeCompareExchangeValues != null)
+        {
+            _includeCompareExchangeValues.Materialize();
+
+            _result.AddCompareExchangeValueIncludes(_includeCompareExchangeValues);
         }
 
         if (missing == null || missing.Count == 0)
