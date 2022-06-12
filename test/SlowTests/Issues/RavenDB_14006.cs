@@ -464,9 +464,9 @@ select incl(c)"
 
                     Assert.Equal(numberOfRequests, session.Advanced.NumberOfRequests);
 
-                    companies = companies = session.Advanced
+                    companies = session.Advanced
                         .RawQuery<Company>(
-                        @"
+                            @"
 declare function incl(c) {
     includes.cmpxchg(c.ExternalId);
     return c;
@@ -489,9 +489,9 @@ select incl(c)"
                         innerSession.SaveChanges();
                     }
 
-                    companies = companies = session.Advanced
+                    companies = session.Advanced
                         .RawQuery<Company>(
-                        @"
+                            @"
 declare function incl(c) {
     includes.cmpxchg(c.ExternalId);
     return c;

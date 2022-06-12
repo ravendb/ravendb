@@ -3702,8 +3702,8 @@ namespace Raven.Server.Documents.Indexes
 
             long GetLastCompareExchangeEtag()
             {
-                var lastCompareExchangeEtag = queryContext.Documents.DocumentDatabase.ServerStore.Cluster.GetLastCompareExchangeIndexForDatabase(queryContext.Server, queryContext.Documents.DocumentDatabase.Name);
-                var lastCompareExchangeTombstoneEtag = queryContext.Documents.DocumentDatabase.ServerStore.Cluster.GetLastCompareExchangeTombstoneIndexForDatabase(queryContext.Server, queryContext.Documents.DocumentDatabase.Name);
+                var lastCompareExchangeEtag = queryContext.Documents.DocumentDatabase.CompareExchangeStorage.GetLastCompareExchangeIndex(queryContext.Server);
+                var lastCompareExchangeTombstoneEtag = queryContext.Documents.DocumentDatabase.CompareExchangeStorage.GetLastCompareExchangeTombstoneIndex(queryContext.Server);
 
                 return Math.Max(lastCompareExchangeEtag, lastCompareExchangeTombstoneEtag);
             }
@@ -3974,9 +3974,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 Debug.Assert(length > sizeof(long) * 5, "The index-etag buffer does not have enough space for last compare exchange index");
 
-                *(long*)(indexEtagBytes + length - sizeof(long)) =
-                    queryContext.Documents.DocumentDatabase.ServerStore.Cluster
-                        .GetLastCompareExchangeIndexForDatabase(queryContext.Server, queryContext.Documents.DocumentDatabase.Name);
+                *(long*)(indexEtagBytes + length - sizeof(long)) = queryContext.Documents.DocumentDatabase.CompareExchangeStorage.GetLastCompareExchangeIndex(queryContext.Server);
             }
         }
 

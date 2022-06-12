@@ -27,8 +27,6 @@ namespace Raven.Server.Documents.Includes
         private readonly bool _throwWhenServerContextIsAllocated;
         public Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> Results;
 
-        private long? _resultsEtag;
-
         private IncludeCompareExchangeValuesCommand([NotNull] DocumentDatabase database, ClusterOperationContext serverContext, bool throwWhenServerContextIsAllocated, string[] compareExchangeValues)
             : this(database.Name, database.ServerStore, database.IdentityPartsSeparator, serverContext, throwWhenServerContextIsAllocated, compareExchangeValues)
         {
@@ -55,9 +53,9 @@ namespace Raven.Server.Documents.Includes
             return new IncludeCompareExchangeValuesCommand(context.Documents.DocumentDatabase, context.Server, throwWhenServerContextIsAllocated: true, compareExchangeValues);
         }
 
-        public static IncludeCompareExchangeValuesCommand ExternalScope(ShardedDatabaseContext databaseContext, ClusterOperationContext serverContext, string[] compareExchangeValues)
+        public static IncludeCompareExchangeValuesCommand ExternalScope(ShardedDatabaseContext databaseContext, string[] compareExchangeValues)
         {
-            return new IncludeCompareExchangeValuesCommand(databaseContext, serverContext, throwWhenServerContextIsAllocated: true, compareExchangeValues);
+            return new IncludeCompareExchangeValuesCommand(databaseContext, serverContext: null, throwWhenServerContextIsAllocated: true, compareExchangeValues);
         }
 
         public static IncludeCompareExchangeValuesCommand InternalScope(DocumentDatabase database, string[] compareExchangeValues)
@@ -65,24 +63,27 @@ namespace Raven.Server.Documents.Includes
             return new IncludeCompareExchangeValuesCommand(database, serverContext: null, throwWhenServerContextIsAllocated: false, compareExchangeValues);
         }
 
-        public static IncludeCompareExchangeValuesCommand InternalScope(ShardedDatabaseContext databaseContext, string[] compareExchangeValues)
+        internal void AddResults(BlittableJsonReaderObject results, JsonOperationContext context = null)
         {
-            return new IncludeCompareExchangeValuesCommand(databaseContext, serverContext: null, throwWhenServerContextIsAllocated: false, compareExchangeValues);
-        }
+            if (results == null)
+                return;
 
-        internal long ResultsEtag
-        {
-            get
+            Results ??= new Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>>(StringComparer.OrdinalIgnoreCase);
+
+            var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
+            for (var i = 0; i < results.Count; i++)
             {
-                if (_resultsEtag == null)
-                {
-                    if (_serverContext == null)
-                        throw new InvalidOperationException($"Execute '{nameof(Materialize)}' method first.");
+                results.GetPropertyByIndex(i, ref propertyDetails);
 
-                    _resultsEtag = _serverStore.Cluster.GetLastCompareExchangeIndexForDatabase(_serverContext, _databaseName);
-                }
+                var value = CompareExchangeValue<BlittableJsonReaderObject>.CreateFrom(propertyDetails.Value as BlittableJsonReaderObject);
 
-                return _resultsEtag.Value;
+                if (Results.TryGetValue(value.Key, out var existing) && existing.Index > value.Index)
+                    continue; // always pick newest
+
+                if (context != null && value.Value != null)
+                    value.Value = value.Value.Clone(context);
+
+                Results[value.Key] = value;
             }
         }
 
@@ -103,11 +104,6 @@ namespace Raven.Server.Documents.Includes
 
         internal void Gather(Document document)
         {
-            Gather(document?.Data);
-        }
-
-        internal void Gather(BlittableJsonReaderObject document)
-        {
             if (document == null)
                 return;
 
@@ -117,7 +113,7 @@ namespace Raven.Server.Documents.Includes
             _includedKeys ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var include in _includes)
-                IncludeUtil.GetDocIdFromInclude(document, new StringSegment(include), _includedKeys, _identityPartsSeparator);
+                IncludeUtil.GetDocIdFromInclude(document.Data, new StringSegment(include), _includedKeys, _identityPartsSeparator);
         }
 
         internal void Materialize()
@@ -141,8 +137,7 @@ namespace Raven.Server.Documents.Includes
 
                 var value = _serverStore.Cluster.GetCompareExchangeValue(_serverContext, CompareExchangeKey.GetStorageKey(_databaseName, includedKey));
 
-                if (Results == null)
-                    Results = new Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>>(StringComparer.OrdinalIgnoreCase);
+                Results ??= new Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>>(StringComparer.OrdinalIgnoreCase);
 
                 Results.Add(includedKey, new CompareExchangeValue<BlittableJsonReaderObject>(includedKey, value.Index, value.Value));
             }

@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
+using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -20,6 +22,7 @@ namespace Raven.Server.Documents.Sharding.Operations
         private readonly ShardedDatabaseContext _databaseContext;
         private readonly Dictionary<int, ShardLocator.IdsByShard<string>> _idsByShards;
         private readonly string[] _includePaths;
+        private readonly string[] _compareExchangeValueIncludes;
         private readonly bool _metadataOnly;
 
         public FetchDocumentsFromShardsOperation(
@@ -27,6 +30,7 @@ namespace Raven.Server.Documents.Sharding.Operations
             ShardedDatabaseRequestHandler handler,
             Dictionary<int, ShardLocator.IdsByShard<string>> idsByShards,
             string[] includePaths,
+            string[] compareExchangeValueIncludes,
             string etag,
             bool metadataOnly)
         {
@@ -36,6 +40,7 @@ namespace Raven.Server.Documents.Sharding.Operations
             _idsByShards = idsByShards;
             ExpectedEtag = etag;
             _includePaths = includePaths;
+            _compareExchangeValueIncludes = compareExchangeValueIncludes;
             _metadataOnly = metadataOnly;
         }
 
@@ -48,6 +53,10 @@ namespace Raven.Server.Documents.Sharding.Operations
             var includesMap = new Dictionary<string, BlittableJsonReaderObject>(StringComparer.OrdinalIgnoreCase);
             var missingIncludes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
+            using var includeCompareExchangeValues = _compareExchangeValueIncludes != null 
+                ? IncludeCompareExchangeValuesCommand.ExternalScope(_databaseContext, _compareExchangeValueIncludes) 
+                : null;
+
             foreach (var cmd in span)
             {
                 if (cmd == null)
@@ -56,6 +65,7 @@ namespace Raven.Server.Documents.Sharding.Operations
                 var cmdResults = cmd.Results;
                 var cmdIncludes = cmd.Includes;
                 var cmdCounterIncludes = cmd.CounterIncludes;
+                var cmdCompareExchangeValueIncludes = cmd.CompareExchangeValueIncludes;
 
                 if (cmdIncludes != null)
                 {
@@ -77,7 +87,7 @@ namespace Raven.Server.Documents.Sharding.Operations
                         }
                     }
 
-                    if(cmdResult == null)
+                    if (cmdResult == null)
                         continue;
 
                     var docId = cmdResult.GetMetadata().GetId();
@@ -93,6 +103,9 @@ namespace Raven.Server.Documents.Sharding.Operations
                         includesMap[prop.Name] = ((BlittableJsonReaderObject)prop.Value).Clone(_context);
                     }
                 }
+
+                if (cmdCompareExchangeValueIncludes != null)
+                    includeCompareExchangeValues.AddResults(cmdCompareExchangeValueIncludes, _context);
             }
 
             foreach (var kvp in includesMap) // remove the items we already have
@@ -106,13 +119,14 @@ namespace Raven.Server.Documents.Sharding.Operations
             {
                 Documents = docs,
                 Includes = includesMap.Values.ToList(),
-                MissingIncludes = missingIncludes
+                MissingIncludes = missingIncludes,
+                CompareExchangeValueIncludes = includeCompareExchangeValues?.Results
             };
         }
 
         public HttpRequest HttpRequest => _handler.HttpContext.Request;
 
-        public RavenCommand<GetDocumentsResult> CreateCommandForShard(int shardNumber) => new GetDocumentsCommand(_idsByShards[shardNumber].Ids.ToArray(), _includePaths, _metadataOnly);
+        public RavenCommand<GetDocumentsResult> CreateCommandForShard(int shardNumber) => new GetDocumentsCommand(_idsByShards[shardNumber].Ids.ToArray(), _includePaths, includeAllCounters: false, timeSeriesIncludes: null, _compareExchangeValueIncludes, _metadataOnly);
     }
 
     public class GetShardedDocumentsResult
@@ -121,5 +135,6 @@ namespace Raven.Server.Documents.Sharding.Operations
         public Dictionary<string, BlittableJsonReaderObject> Documents;
 
         public HashSet<string> MissingIncludes;
+        public Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> CompareExchangeValueIncludes;
     }
 }

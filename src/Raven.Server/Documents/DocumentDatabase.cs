@@ -138,6 +138,7 @@ namespace Raven.Server.Documents
                 Changes = new DocumentsChanges();
                 TombstoneCleaner = new TombstoneCleaner(this);
                 DocumentsStorage = new DocumentsStorage(this, addToInitLog);
+                CompareExchangeStorage = new CompareExchangeStorage(this);
                 IndexStore = new IndexStore(this, serverStore);
                 QueryRunner = new QueryRunner(this);
                 EtlLoader = new EtlLoader(this, serverStore);
@@ -276,6 +277,8 @@ namespace Raven.Server.Documents
 
         public StudioConfiguration StudioConfiguration { get; private set; }
 
+        public CompareExchangeStorage CompareExchangeStorage { get; private set; }
+
         public bool Is32Bits { get; }
 
         private long _lastDatabaseRecordChangeIndex;
@@ -303,6 +306,11 @@ namespace Raven.Server.Documents
         protected virtual void InitializeSubscriptionStorage()
         {
             SubscriptionStorage.Initialize(Name);
+        }
+
+        protected virtual void InitializeCompareExchangeStorage()
+        {
+            CompareExchangeStorage.Initialize(Name);
         }
 
         public void Initialize(InitializeOptions options = InitializeOptions.None, DateTime? wakeup = null)
@@ -367,6 +375,7 @@ namespace Raven.Server.Documents
 
                 DatabaseShutdown.ThrowIfCancellationRequested();
                 InitializeSubscriptionStorage();
+                InitializeCompareExchangeStorage();
                 _addToInitLog("Initializing SubscriptionStorage completed");
 
                 _serverStore.StorageSpaceMonitor.Subscribe(this);

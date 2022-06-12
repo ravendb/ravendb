@@ -262,13 +262,10 @@ public class ShardedQueryProcessor : IDisposable
 
         if (_query.Metadata.HasCmpXchgIncludes)
         {
-            _disposables.Add(_parent.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext serverContext));
-            serverContext.OpenReadTransaction(); // will be closed when processor is disposed
-
-            _includeCompareExchangeValues = IncludeCompareExchangeValuesCommand.ExternalScope(_parent.DatabaseContext, serverContext, _query.Metadata.CompareExchangeValueIncludes);
+            _includeCompareExchangeValues = IncludeCompareExchangeValuesCommand.ExternalScope(_parent.DatabaseContext, _query.Metadata.CompareExchangeValueIncludes);
             _disposables.Add(_includeCompareExchangeValues);
 
-            _result.ResultEtag = Hashing.Combine(_result.ResultEtag, _includeCompareExchangeValues.ResultsEtag);
+            _result.AddCompareExchangeValueIncludes(_includeCompareExchangeValues);
         }
 
         if (_isAutoMapReduceQuery && index.HasValue)
@@ -300,21 +297,8 @@ public class ShardedQueryProcessor : IDisposable
                 }
             }
 
-            if (cmd.Result.Results is { Length: > 0 })
-            {
-                if (_includeCompareExchangeValues != null)
-                {
-                    foreach (BlittableJsonReaderObject document in cmd.Result.Results)
-                        _includeCompareExchangeValues.Gather(document);
-                }
-            }
-        }
-
-        if (_includeCompareExchangeValues != null)
-        {
-            _includeCompareExchangeValues.Materialize();
-
-            _result.AddCompareExchangeValueIncludes(_includeCompareExchangeValues);
+            if (_includeCompareExchangeValues != null && cmd.Result.CompareExchangeValueIncludes != null)
+                _includeCompareExchangeValues.AddResults(cmd.Result.CompareExchangeValueIncludes);
         }
 
         if (missing == null || missing.Count == 0)

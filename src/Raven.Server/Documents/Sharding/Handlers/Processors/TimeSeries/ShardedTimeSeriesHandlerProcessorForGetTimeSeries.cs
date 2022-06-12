@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.TimeSeries
                 }
 
                 var idsByShards = ShardLocator.GetDocumentIdsByShards(context, RequestHandler.DatabaseContext, nonLocalIncludes);
-                var fetchDocsOp = new FetchDocumentsFromShardsOperation(context, RequestHandler, idsByShards, etag: null, includePaths: null, metadataOnly: false);
+                var fetchDocsOp = new FetchDocumentsFromShardsOperation(context, RequestHandler, idsByShards, etag: null, includePaths: null, compareExchangeValueIncludes: null, metadataOnly: false);
 
                 ShardedReadResult<GetShardedDocumentsResult> result;
                 using (var token = RequestHandler.CreateOperationToken())
