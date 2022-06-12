@@ -30,6 +30,11 @@ public class ShardedDocumentDatabase : DocumentDatabase
         SubscriptionStorage.Initialize(ShardedDatabaseName);
     }
 
+    protected override void InitializeCompareExchangeStorage()
+    {
+        CompareExchangeStorage.Initialize(ShardedDatabaseName);
+    }
+
     protected override void SetIds(DatabaseTopology topology, string shardedDatabaseId)
     {
         base.SetIds(topology, shardedDatabaseId);

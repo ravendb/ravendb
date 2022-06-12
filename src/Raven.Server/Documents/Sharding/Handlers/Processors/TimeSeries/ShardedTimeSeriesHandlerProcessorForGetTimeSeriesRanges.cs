@@ -76,7 +76,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.TimeSeries
                 }
 
                 var idsByShards = ShardLocator.GetDocumentIdsByShards(context, RequestHandler.DatabaseContext, nonLocalMissingIncludes);
-                var fetchDocsOp = new FetchDocumentsFromShardsOperation(context, RequestHandler, idsByShards, etag: null, includePaths: null, metadataOnly: false);
+                var fetchDocsOp = new FetchDocumentsFromShardsOperation(context, RequestHandler, idsByShards, etag: null, includePaths: null, compareExchangeValueIncludes: null, metadataOnly: false);
                 var result = await RequestHandler.ShardExecutor.ExecuteParallelForShardsAsync(idsByShards.Keys.ToArray(), fetchDocsOp, token);
 
                 var includesDocId = $"TimeSeriesRangeIncludes/{documentId}";

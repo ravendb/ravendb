@@ -1,6 +1,7 @@
 ﻿using System;
 using Raven.Client.Documents.Session;
 using Raven.Client.Json;
+using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.CompareExchange
 {
@@ -31,6 +32,23 @@ namespace Raven.Client.Documents.Operations.CompareExchange
             Index = index;
             Value = value;
             _metadataAsDictionary = metadata;
+        }
+
+        internal static CompareExchangeValue<BlittableJsonReaderObject> CreateFrom(BlittableJsonReaderObject json)
+        {
+            if (json == null)
+                return null;
+
+            if (json.TryGet(nameof(Key), out string key) == false)
+                throw new InvalidOperationException("");
+
+            if (json.TryGet(nameof(Index), out long index) == false)
+                throw new InvalidOperationException("");
+
+            if (json.TryGet(nameof(Value), out BlittableJsonReaderObject value) == false)
+                throw new InvalidOperationException("");
+
+            return new CompareExchangeValue<BlittableJsonReaderObject>(key, index, value);
         }
     }
 

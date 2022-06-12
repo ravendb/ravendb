@@ -330,7 +330,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             }
 
             if (hasCmpXchg)
-                buffer[bufferSize - 1] = Database.ServerStore.Cluster.GetLastCompareExchangeIndexForDatabase(context.Server, Database.Name);
+                buffer[bufferSize - 1] = Database.CompareExchangeStorage.GetLastCompareExchangeIndex(context.Server);
 
             resultToFill.ResultEtag = (long)Hashing.XXHash64.Calculate((byte*)buffer, sizeof(long) * (uint)bufferSize);
             resultToFill.NodeTag = Database.ServerStore.NodeTag;
