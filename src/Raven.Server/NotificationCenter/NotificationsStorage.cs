@@ -139,6 +139,8 @@ namespace Raven.Server.NotificationCenter
         private IEnumerable<NotificationTableValue> ReadActionsByCreatedAtIndex(TransactionOperationContext context)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(Documents.Schemas.Notifications.Current, _tableName);
+            if (table == null)
+                yield break;
 
             foreach (var tvr in table.SeekForwardFrom(Documents.Schemas.Notifications.Current.Indexes[Documents.Schemas.Notifications.ByCreatedAt], Slices.BeforeAllKeys, 0))
             {
@@ -150,7 +152,6 @@ namespace Raven.Server.NotificationCenter
         {
             using (var scope = new DisposableScope())
             {
-
                 scope.EnsureDispose(_contextPool.AllocateOperationContext(out TransactionOperationContext context));
                 scope.EnsureDispose(context.OpenReadTransaction());
 
@@ -163,6 +164,8 @@ namespace Raven.Server.NotificationCenter
         private IEnumerable<NotificationTableValue> ReadPostponedActionsByPostponedUntilIndex(TransactionOperationContext context, DateTime cutoff)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(Documents.Schemas.Notifications.Current, _tableName);
+            if (table == null)
+                yield break;
 
             foreach (var tvr in table.SeekForwardFrom(Documents.Schemas.Notifications.Current.Indexes[Documents.Schemas.Notifications.ByPostponedUntil], Slices.BeforeAllKeys, 0))
             {
@@ -184,6 +187,8 @@ namespace Raven.Server.NotificationCenter
         private NotificationTableValue Get(string id, JsonOperationContext context, RavenTransaction tx)
         {
             var table = tx.InnerTransaction.OpenTable(Documents.Schemas.Notifications.Current, _tableName);
+            if (table == null)
+                return null;
 
             using (Slice.From(tx.InnerTransaction.Allocator, id, out Slice slice))
             {
@@ -235,6 +240,9 @@ namespace Raven.Server.NotificationCenter
             using (Slice.From(tx.InnerTransaction.Allocator, id, out Slice slice))
             {
                 var table = tx.InnerTransaction.OpenTable(Documents.Schemas.Notifications.Current, _tableName);
+                if (table == null)
+                    return false;
+
                 return table.ReadByKey(slice, out _);
             }
         }
@@ -334,7 +342,7 @@ namespace Raven.Server.NotificationCenter
 
         private static string GetTableName(string resourceName)
         {
-            return string.IsNullOrEmpty(resourceName) 
+            return string.IsNullOrEmpty(resourceName)
                 ? Documents.Schemas.Notifications.NotificationsTree
                 : $"{Documents.Schemas.Notifications.NotificationsTree}.{resourceName.ToLowerInvariant()}";
         }
@@ -389,7 +397,7 @@ namespace Raven.Server.NotificationCenter
 
         public NotificationsStorage GetStorageFor(string database)
         {
-            if (database == null) 
+            if (database == null)
                 throw new ArgumentNullException(nameof(database));
 
             var storage = new NotificationsStorage(database);
