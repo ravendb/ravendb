@@ -14,7 +14,7 @@ namespace SlowTests.Server.Documents.ETL.Queue;
 
 public class RabbitMqEtlTestBase : QueueEtlTestBase
 {
-    private readonly HashSet<string> _definedTopics = new HashSet<string>();
+    private readonly HashSet<string> _definedTopics = new();
     protected readonly string DefaultConnectionString = "amqp://guest:guest@localhost:5672/";
 
     protected RabbitMqEtlTestBase(ITestOutputHelper output) : base(output)
