@@ -210,7 +210,7 @@ namespace Raven.Server.Documents
                 });
             }
 
-            if (current.IsFaulted && current.Exception?.Data.Contains(DatabasesLandlord.DoNotRemove) == false)
+            if (current.IsFaulted && DatabasesLandlord.IsLockedDatabase(current.Exception) == false)
             {
                 // some real exception occurred, but we still want to remove / unload the faulty database
                 resource = default; 
