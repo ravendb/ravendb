@@ -37,17 +37,17 @@ public readonly struct CoraxBooleanItem : IQueryMatch
         Term = term;
         Operation = operation;
         _indexSearcher = searcher;
-        
+
         Unsafe.SkipInit(out Term2);
         Unsafe.SkipInit(out BetweenLeft);
         Unsafe.SkipInit(out BetweenRight);
 
-        if (operation is UnaryMatchOperation.Equals)
+        if (operation is UnaryMatchOperation.Equals or UnaryMatchOperation.NotEquals)
             TermAsString = QueryBuilderHelper.CoraxGetValueAsString(term);
         else
             Unsafe.SkipInit(out TermAsString);
-        
-        Count = operation == UnaryMatchOperation.Equals
+
+        Count = operation is UnaryMatchOperation.Equals or UnaryMatchOperation.NotEquals
             ? searcher.TermAmount(name, TermAsString)
             : searcher.GetEntriesAmountInField(name);
     }
@@ -84,12 +84,14 @@ public readonly struct CoraxBooleanItem : IQueryMatch
 
     public IQueryMatch Materialize()
     {
-        if (Operation is UnaryMatchOperation.Equals)
+        if (Operation is UnaryMatchOperation.Equals or UnaryMatchOperation.NotEquals)
         {
-            var termMatch = _indexSearcher.TermQuery(Name, TermAsString, FieldId);
+            IQueryMatch match = _indexSearcher.TermQuery(Name, TermAsString, FieldId);
+            if (Operation is UnaryMatchOperation.NotEquals)
+                match = _indexSearcher.AndNot(_indexSearcher.ExistsQuery(Name), match);
             if (_scoreFunction is NullScoreFunction)
-                return termMatch;
-            return _indexSearcher.Boost(termMatch, _scoreFunction);
+                return match;
+            return _indexSearcher.Boost(match, _scoreFunction);
         }
 
         IQueryMatch baseMatch;
@@ -182,10 +184,16 @@ public class CoraxBooleanQuery : IQueryMatch
         int reduced = 0;
         foreach (var query in stack)
         {
-            if (query.Operation != UnaryMatchOperation.Equals)
+            if (query.Operation is not (UnaryMatchOperation.Equals or UnaryMatchOperation.NotEquals))
                 break;
-
-            TermMatch second = _indexSearcher.TermQuery(query.Name, query.Term as string);
+            
+            IQueryMatch second = _indexSearcher.TermQuery(query.Name, query.TermAsString);
+                if (query.Operation is UnaryMatchOperation.NotEquals)
+                    second = _indexSearcher.AndNot(
+                        _indexSearcher.ExistsQuery(query.Name),
+                        second
+                    );
+                ;
 
             if (baseMatch == null)
                 baseMatch = second;

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
+using Sparrow;
 using Voron;
 
 namespace Corax.Queries
@@ -32,7 +33,6 @@ namespace Corax.Queries
                 if (results == 0)
                     return totalResults;
 
-                int currentIdx = 0;
                 int storeIdx = 0;
                 for (int i = 0; i < results; i++)
                 {
@@ -41,10 +41,9 @@ namespace Corax.Queries
                     if (read && leftSideComparer!.Compare(currentType1, resultX) && rightSideComparer!.Compare(currentType2, resultX))
                     {
                         // We found a match.
-                        currentMatches[currentIdx] = currentMatches[storeIdx];
+                        currentMatches[storeIdx] = currentMatches[i];
                         storeIdx++;
                     }
-                    currentIdx++;
                 }
 
                 totalResults += storeIdx;
@@ -194,19 +193,18 @@ namespace Corax.Queries
                 if (results == 0)
                     return totalResults;
 
-                int currentIdx = 0;
                 int storeIdx = 0;
                 for (int i = 0; i < results; i++)
                 {
                     var reader = searcher.GetReaderFor(currentMatches[i]);
                     var read = reader.Read(match._fieldId, out var resultX);
-                    if ((read && leftSideComparer!.Compare(currentType1, resultX) && rightSideComparer!.Compare(currentType2, resultX)) == false)
+                    if (read && leftSideComparer!.Compare(currentType1, resultX) && rightSideComparer!.Compare(currentType2, resultX))
                     {
-                        // We found a match.
-                        currentMatches[currentIdx] = currentMatches[storeIdx];
-                        storeIdx++;
+                        // We found a match so we have to skip it.
+                       continue;
                     }
-                    currentIdx++;
+                    currentMatches[storeIdx] = currentMatches[i];
+                    storeIdx++;
                 }
 
                 totalResults += storeIdx;
