@@ -537,11 +537,10 @@ select incl(c)"
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
-
                 using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                 {
                     var companies = session.Query<Company, Companies_ByName>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Statistics(out var stats)
                         .Include(builder => builder.IncludeCompareExchangeValue(x => x.ExternalId))
                         .ToList();
@@ -558,6 +557,7 @@ select incl(c)"
                     Assert.Equal(numberOfRequests, session.Advanced.NumberOfRequests);
 
                     companies = session.Query<Company, Companies_ByName>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Statistics(out stats)
                         .Include(builder => builder.IncludeCompareExchangeValue(x => x.ExternalId))
                         .ToList();
@@ -572,11 +572,10 @@ select incl(c)"
                         value.Value.City = "Bydgoszcz";
 
                         innerSession.SaveChanges();
-
-                        Indexes.WaitForIndexing(store);
                     }
 
                     companies = session.Query<Company, Companies_ByName>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Statistics(out stats)
                         .Include(builder => builder.IncludeCompareExchangeValue(x => x.ExternalId))
                         .ToList();
@@ -616,11 +615,10 @@ select incl(c)"
                     await session.SaveChangesAsync();
                 }
 
-                Indexes.WaitForIndexing(store);
-
                 using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                 {
                     var companies = await session.Query<Company, Companies_ByName>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Statistics(out var stats)
                         .Include(builder => builder.IncludeCompareExchangeValue(x => x.ExternalId))
                         .ToListAsync();
@@ -637,6 +635,7 @@ select incl(c)"
                     Assert.Equal(numberOfRequests, session.Advanced.NumberOfRequests);
 
                     companies = await session.Query<Company, Companies_ByName>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Statistics(out stats)
                         .Include(builder => builder.IncludeCompareExchangeValue(x => x.ExternalId))
                         .ToListAsync();
@@ -651,11 +650,10 @@ select incl(c)"
                         value.Value.City = "Bydgoszcz";
 
                         await innerSession.SaveChangesAsync();
-
-                        Indexes.WaitForIndexing(store);
                     }
 
                     companies = await session.Query<Company, Companies_ByName>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Statistics(out stats)
                         .Include(builder => builder.IncludeCompareExchangeValue(x => x.ExternalId))
                         .ToListAsync();
@@ -695,8 +693,6 @@ select incl(c)"
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
-
                 using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                 {
                     var companies = session.Advanced
@@ -709,6 +705,7 @@ declare function incl(c) {
 from index 'Companies/ByName' as c
 select incl(c)"
     )
+                        .WaitForNonStaleResults()
                         .Statistics(out var stats)
                         .ToList();
 
@@ -733,6 +730,7 @@ declare function incl(c) {
 from index 'Companies/ByName' as c
 select incl(c)"
     )
+                        .WaitForNonStaleResults()
                         .Statistics(out stats)
                         .ToList();
 
@@ -746,8 +744,6 @@ select incl(c)"
                         value.Value.City = "Bydgoszcz";
 
                         innerSession.SaveChanges();
-
-                        Indexes.WaitForIndexing(store);
                     }
 
                     companies = session.Advanced
@@ -760,6 +756,7 @@ declare function incl(c) {
 from index 'Companies/ByName' as c
 select incl(c)"
     )
+                        .WaitForNonStaleResults()
                         .Statistics(out stats)
                         .ToList();
 
