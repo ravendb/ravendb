@@ -40,6 +40,8 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithMessages, QueueEtlConfigu
     private readonly HashSet<string> _existingQueues = new();
     private readonly List<QueueDeclare> _queuesForDeclare = new();
 
+    public override string EtlSubType => Configuration.BrokerType.ToString();
+
     private string DefaultSource =>
         $"{Database.Configuration.Core.PublicServerUrl?.UriValue ?? Database.ServerStore.Server.WebUrl}/{Database.Name}/{Name}";
 

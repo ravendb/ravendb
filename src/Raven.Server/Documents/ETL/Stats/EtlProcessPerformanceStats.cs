@@ -9,6 +9,8 @@ namespace Raven.Server.Documents.ETL.Stats
         public string TaskName { get; set; }
 
         public EtlType EtlType { get; set; }
+        
+        public string EtlSubType { get; set; }
 
         public EtlProcessPerformanceStats[] Stats { get; set; }
     }

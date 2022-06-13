@@ -52,6 +52,8 @@ namespace Raven.Server.Documents.ETL
         public string Tag { get; protected set; }
 
         public abstract EtlType EtlType { get; }
+        
+        public virtual string EtlSubType { get; }
 
         public abstract long TaskId { get; }
 
