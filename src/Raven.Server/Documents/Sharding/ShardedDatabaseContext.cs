@@ -8,9 +8,11 @@ using Raven.Server.Config;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Sharding.Executors;
 using Raven.Server.Documents.Sharding.Subscriptions;
+using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Utils;
@@ -36,7 +38,9 @@ namespace Raven.Server.Documents.Sharding
 
         public readonly SystemTime Time;
 
-        public RachisLogIndexNotifications RachisLogIndexNotifications;
+        public readonly RachisLogIndexNotifications RachisLogIndexNotifications;
+
+        public readonly ConcurrentSet<TcpConnectionOptions> RunningTcpConnections = new ConcurrentSet<TcpConnectionOptions>();
 
         public ShardedDatabaseContext(ServerStore serverStore, DatabaseRecord record)
         {

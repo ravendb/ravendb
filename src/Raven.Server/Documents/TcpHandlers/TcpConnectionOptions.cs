@@ -31,7 +31,6 @@ namespace Raven.Server.Documents.TcpHandlers
         public DocumentDatabase DocumentDatabase;
 
         public ShardedDatabaseContext DatabaseContext;
-        public bool IsSharded => DatabaseContext != null && DocumentDatabase == null;
 
         public TcpConnectionHeaderMessage.OperationTypes Operation;
 
@@ -72,6 +71,10 @@ namespace Raven.Server.Documents.TcpHandlers
             var database = DocumentDatabase;
             if (database != null)
                 sb.Append($" for database '{database.Name}'");
+
+            var databaseContext = DatabaseContext;
+            if (databaseContext != null)
+                sb.Append($" for database '{databaseContext.DatabaseName}'");
 
             return sb.ToString();
         }
@@ -116,6 +119,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 SafelyDispose(TcpClient);
 
                 DocumentDatabase?.RunningTcpConnections.TryRemove(this);
+                DatabaseContext?.RunningTcpConnections.TryRemove(this);
 
                 Stream = null;
                 TcpClient = null;
@@ -219,7 +223,7 @@ namespace Raven.Server.Documents.TcpHandlers
             if (Stream is ReadWriteCompressedStream rwcs)
             {
                 var compressionInfo = new DynamicJsonValue();
-                
+
                 var totalBytes = rwcs.GetTotalBytesSent();
                 compressionInfo["TotalCompressedBytesSent"] = totalBytes.Compressed;
                 compressionInfo["HumaneTotalCompressedBytesSent"] = Sizes.Humane(totalBytes.Compressed);
