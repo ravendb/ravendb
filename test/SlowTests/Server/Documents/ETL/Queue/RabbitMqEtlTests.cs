@@ -12,6 +12,7 @@ using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Server.Documents.ETL.Providers.Queue;
 using Raven.Server.Documents.ETL.Providers.Queue.Test;
 using Raven.Server.ServerWide.Context;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -23,7 +24,7 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
     {
     }
 
-    [Fact]
+    [RequiresRabbitMqFact]
     public void SimpleScript()
     {
         using (var store = GetDocumentStore())
@@ -71,7 +72,7 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
         }
     }
 
-    [Fact]
+    [RequiresRabbitMqFact]
     public void SimpleScriptWithManyDocuments()
     {
         using var store = GetDocumentStore();
@@ -123,7 +124,7 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
         channel.BasicConsume(queue: DefaultExchanges.First().Name, autoAck: true, consumer: consumer);
     }
 
-    [Fact]
+    [RequiresRabbitMqFact]
     public void Docs_from_two_collections_loaded_to_single_one()
     {
         using var store = GetDocumentStore();
@@ -176,7 +177,7 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
             Name = "Foo",
             BrokerType = QueueBroker.RabbitMq,
             RabbitMqConnectionSettings = 
-                new RabbitMqConnectionSettings() { ConnectionString = DefaultConnectionString }
+                new RabbitMqConnectionSettings() { ConnectionString = "amqp://guest:guest@localhost:5672/" }
         });
 
         List<string> errors;
@@ -209,7 +210,7 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
             {
                 Name = "simulate",
                 BrokerType = QueueBroker.Kafka,
-                KafkaConnectionSettings = new KafkaConnectionSettings() { Url = DefaultConnectionString }
+                KafkaConnectionSettings = new KafkaConnectionSettings() { Url = "amqp://guest:guest@localhost:5672/" }
             }));
             Assert.NotNull(result1.RaftCommandIndex);
 
@@ -272,7 +273,7 @@ output('test output')"
         }
     }
 
-    [Fact]
+    [RequiresRabbitMqFact]
     public void CanPassOptionsToLoadToMethod()
     {
         using (var store = GetDocumentStore())
@@ -315,7 +316,7 @@ output('test output')"
         }
     }
 
-    [Fact]
+    [RequiresRabbitMqFact]
     public void ShouldDeleteDocumentsAfterProcessing()
     {
         using (var store = GetDocumentStore())

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Confluent.Kafka;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using Raven.Client.Documents;
@@ -15,7 +14,6 @@ namespace SlowTests.Server.Documents.ETL.Queue;
 public class RabbitMqEtlTestBase : QueueEtlTestBase
 {
     private readonly HashSet<string> _definedTopics = new();
-    protected readonly string DefaultConnectionString = "amqp://guest:guest@localhost:5672/";
 
     protected RabbitMqEtlTestBase(ITestOutputHelper output) : base(output)
     {
@@ -80,14 +78,14 @@ loadToOrders" + ExchangeSuffix + @"(orderData);
             {
                 Name = connectionStringName,
                 BrokerType = QueueBroker.RabbitMq,
-                RabbitMqConnectionSettings = new RabbitMqConnectionSettings(){ConnectionString = DefaultConnectionString}
+                RabbitMqConnectionSettings = new RabbitMqConnectionSettings(){ConnectionString = RabbitMqConnectionString.Instance.VerifiedConnectionString.Value}
             });
         return config;
     }
 
     protected IModel CreateRabbitMqConsumer()
     {
-        var connectionFactory = new ConnectionFactory() { Uri = new Uri(DefaultConnectionString)};
+        var connectionFactory = new ConnectionFactory() { Uri = new Uri(RabbitMqConnectionString.Instance.VerifiedConnectionString.Value) };
         var connection = connectionFactory.CreateConnection();
         var channel = connection.CreateModel();
 
@@ -96,6 +94,9 @@ loadToOrders" + ExchangeSuffix + @"(orderData);
     
     private void CleanupQueues()
     {
+        if (_definedTopics.Count == 0)
+            return;
+
         var channel = CreateRabbitMqConsumer();
         var consumer = new EventingBasicConsumer(channel);
 
