@@ -33,7 +33,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         private readonly IndexSearcher _indexSearcher;
         private readonly ByteStringContext _allocator;
         private long _entriesCount = 0;
-        private const int BufferSize = 4096;
         
         public CoraxIndexReadOperation(Index index, Logger logger, Transaction readTransaction, QueryBuilderFactories queryBuilderFactories) : base(index, logger, queryBuilderFactories)
         {
@@ -80,7 +79,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     yield break;
             }
 
-            var ids = ArrayPool<long>.Shared.Rent(CoraxGetPageSize(_indexSearcher, BufferSize, query));
+            var ids = ArrayPool<long>.Shared.Rent(CoraxGetPageSize(_indexSearcher, pageSize, query));
             int docsToLoad = pageSize;
             int queryStart = query.Start;
             bool hasHighlights = query.Metadata.HasHighlightings;
@@ -149,7 +148,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         }
                     }
                 }
-
+                
+                
                 if ((read = queryMatch.Fill(ids)) == 0)
                     break;
                 totalResults.Value += read;
@@ -490,7 +490,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     _fieldMappings, take: take)) is null)
                 yield break;
 
-            var ids = ArrayPool<long>.Shared.Rent(CoraxGetPageSize(_indexSearcher, BufferSize, query));
+            var ids = ArrayPool<long>.Shared.Rent(CoraxGetPageSize(_indexSearcher, pageSize, query));
 
             HashSet<string> itemList = new(32);
             var bufferSizes = GetMaximumSizeOfBuffer();

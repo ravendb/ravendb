@@ -22,6 +22,12 @@ namespace Corax.Queries
              
         public int Fill(Span<long> matches)
         {
+            if (_inner.ReplayCounter == 1)
+            {
+                //We tried to pass around memoized version of TInner but there is no need to persist it 
+                return _inner.Fill(matches);
+            }
+            
             // If it has never be initialized, acquire all the data from inner. 
             // PERF: In case we need to improve performance, we can initialize lazily on demand. 
             var memoizedMatches = _inner.FillAndRetrieve().Slice(_bufferCurrentIdx);
