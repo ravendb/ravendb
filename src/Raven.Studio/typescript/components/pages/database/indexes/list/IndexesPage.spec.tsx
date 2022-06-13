@@ -1,10 +1,11 @@
 import { rtlRender } from "../../../../../test/rtlTestUtils";
 import { DatabasesStubs } from "../../../../../test/stubs/DatabasesStubs";
-import accessManager from "common/shell/accessManager";
-import clusterTopologyManager from "common/shell/clusterTopologyManager";
-import { mockServices } from "../../../../../test/mocks/MockServices";
 import { IndexesPage } from "./IndexesPage";
 import React from "react";
+import { composeStories } from "@storybook/testing-react";
+
+import * as stories from "./IndexesPage.stories";
+const { EmptyView, SampleDataCluster } = composeStories(stories);
 
 function render() {
     const db = DatabasesStubs.shardedDatabase();
@@ -16,29 +17,14 @@ function render() {
 }
 
 describe("IndexesPage", function () {
-    beforeEach(() => {
-        accessManager.default.securityClearance("ClusterAdmin");
-        clusterTopologyManager.default.localNodeTag = ko.pureComputed(() => "A");
-    });
-
     it("can render empty view", async () => {
-        const { indexesService } = mockServices;
-
-        indexesService.withGetSampleStats([]);
-        indexesService.withGetProgress([]);
-
-        const { screen } = render();
+        const { screen } = rtlRender(<EmptyView />);
 
         await screen.findByText(/No indexes have been created for this database/i);
     });
 
     it("can render", async () => {
-        const { indexesService } = mockServices;
-
-        indexesService.withGetSampleStats();
-        indexesService.withGetProgress();
-
-        const { screen } = render();
+        const { screen } = rtlRender(<SampleDataCluster />);
 
         await screen.findByText("Orders/ByCompany");
         await screen.findByText("ReplacementOf/Orders/ByCompany");

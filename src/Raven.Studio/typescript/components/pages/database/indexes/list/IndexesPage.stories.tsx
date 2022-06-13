@@ -22,11 +22,32 @@ export default {
     decorators: [withStorybookContexts, indexesHolder],
 } as ComponentMeta<typeof IndexesPage>;
 
+function commonInit() {
+    accessManager.default.securityClearance("ClusterAdmin");
+    clusterTopologyManager.default.localNodeTag = ko.pureComputed(() => "A");
+}
+
+export const EmptyView: ComponentStory<typeof IndexesPage> = () => {
+    const db = DatabasesStubs.nonShardedSingleNodeDatabase();
+
+    commonInit();
+
+    const { indexesService } = mockServices;
+
+    indexesService.withGetSampleStats((dto) => {
+        dto.length = 0;
+    });
+    indexesService.withGetProgress((dto) => {
+        dto.length = 0;
+    });
+
+    return <IndexesPage database={db} />;
+};
+
 export const SampleDataSingleNode: ComponentStory<typeof IndexesPage> = () => {
     const db = DatabasesStubs.nonShardedSingleNodeDatabase();
 
-    accessManager.default.securityClearance("ClusterAdmin");
-    clusterTopologyManager.default.localNodeTag = ko.pureComputed(() => "A");
+    commonInit();
 
     const { indexesService } = mockServices;
 
@@ -39,8 +60,7 @@ export const SampleDataSingleNode: ComponentStory<typeof IndexesPage> = () => {
 export const SampleDataCluster: ComponentStory<typeof IndexesPage> = () => {
     const db = DatabasesStubs.nonShardedClusterDatabase();
 
-    accessManager.default.securityClearance("ClusterAdmin");
-    clusterTopologyManager.default.localNodeTag = ko.pureComputed(() => "A");
+    commonInit();
 
     const { indexesService } = mockServices;
 
@@ -53,8 +73,7 @@ export const SampleDataCluster: ComponentStory<typeof IndexesPage> = () => {
 export const SampleDataSharded: ComponentStory<typeof IndexesPage> = () => {
     const db = DatabasesStubs.shardedDatabase();
 
-    accessManager.default.securityClearance("ClusterAdmin");
-    clusterTopologyManager.default.localNodeTag = ko.pureComputed(() => "A");
+    commonInit();
 
     const { indexesService } = mockServices;
 
@@ -67,8 +86,7 @@ export const SampleDataSharded: ComponentStory<typeof IndexesPage> = () => {
 export const DifferentIndexNodeStatesSingleNode: ComponentStory<typeof IndexesPage> = () => {
     const db = DatabasesStubs.nonShardedSingleNodeDatabase();
 
-    accessManager.default.securityClearance("ClusterAdmin");
-    clusterTopologyManager.default.localNodeTag = ko.pureComputed(() => "A");
+    commonInit();
 
     const { indexesService } = mockServices;
 
@@ -115,8 +133,7 @@ export const DifferentIndexNodeStatesSingleNode: ComponentStory<typeof IndexesPa
 export const DifferentIndexNodeStatesSharded: ComponentStory<typeof IndexesPage> = () => {
     const db = DatabasesStubs.shardedDatabase();
 
-    accessManager.default.securityClearance("ClusterAdmin");
-    clusterTopologyManager.default.localNodeTag = ko.pureComputed(() => "A");
+    commonInit();
 
     const { indexesService } = mockServices;
 

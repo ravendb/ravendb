@@ -86,6 +86,7 @@ export const RavenEtlTemplate = (args: {
             dto.Results.forEach((x) => {
                 x.ProcessesProgress.forEach((progress) => {
                     progress.Completed = true;
+                    progress.Disabled = args.disabled;
                     progress.NumberOfDocumentsToProcess = 0;
                     progress.NumberOfTimeSeriesSegmentsToProcess = 0;
                     progress.NumberOfTimeSeriesDeletedRangesToProcess = 0;
@@ -95,7 +96,13 @@ export const RavenEtlTemplate = (args: {
             });
         });
     } else {
-        tasksService.withGetProgress();
+        tasksService.withGetProgress((dto) => {
+            dto.Results.forEach((x) => {
+                x.ProcessesProgress.forEach((progress) => {
+                    progress.Disabled = args.disabled;
+                });
+            });
+        });
     }
 
     return <OngoingTasksPage {...forceStoryRerender()} database={db} />;
