@@ -2372,6 +2372,13 @@ namespace Raven.Server
             {
                 case DatabasesLandlord.DatabaseSearchResult.Status.Sharded:
                     tcp.DatabaseContext = result.DatabaseContext;
+
+                    Debug.Assert(tcp.DatabaseContext != null);
+
+                    if (tcp.DatabaseContext.DatabaseShutdown.IsCancellationRequested)
+                        ThrowDatabaseShutdown(tcp.DatabaseContext.DatabaseName);
+
+                    tcp.DatabaseContext.RunningTcpConnections.Add(tcp);
                     break;
                 case DatabasesLandlord.DatabaseSearchResult.Status.Database:
                     var databaseLoadingTask = result.DatabaseTask;
@@ -2398,7 +2405,7 @@ namespace Raven.Server
                     Debug.Assert(tcp.DocumentDatabase != null);
 
                     if (tcp.DocumentDatabase.DatabaseShutdown.IsCancellationRequested)
-                        ThrowDatabaseShutdown(tcp.DocumentDatabase);
+                        ThrowDatabaseShutdown(tcp.DocumentDatabase.Name);
 
                     tcp.DocumentDatabase.RunningTcpConnections.Add(tcp);
                     break;
@@ -2639,9 +2646,9 @@ namespace Raven.Server
                     header.Operation == TcpConnectionHeaderMessage.OperationTypes.Subscription);
         }
 
-        private static void ThrowDatabaseShutdown(DocumentDatabase database)
+        private static void ThrowDatabaseShutdown(string databaseName)
         {
-            throw new DatabaseDisabledException($"Database {database.Name} was shutdown.");
+            throw new DatabaseDisabledException($"Database {databaseName} was shutdown.");
         }
 
         private static void ThrowTimeoutOnDatabaseLoad(TcpConnectionHeaderMessage header)
