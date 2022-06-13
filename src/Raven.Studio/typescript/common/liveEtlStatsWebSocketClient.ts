@@ -74,13 +74,15 @@ class liveEtlStatsWebSocketClient extends abstractWebSocketClient<resultsDto<Rav
         e.forEach(etlStatsFromEndpoint => {
             const etlType = etlStatsFromEndpoint.EtlType;
             const etlTaskName = etlStatsFromEndpoint.TaskName;
+            const etlSubType = etlStatsFromEndpoint.EtlSubType;
             
-            let existingEtlStats = this.mergedData.find(x => x.EtlType === etlType && x.TaskName === etlTaskName);
+            let existingEtlStats = this.mergedData.find(x => x.EtlType === etlType && x.TaskName === etlTaskName && x.EtlSubType === etlSubType);
             
             if (!existingEtlStats) {
                 existingEtlStats = {
                     TaskName: etlTaskName,
                     EtlType: etlType,
+                    EtlSubType: etlSubType,
                     TaskId: etlStatsFromEndpoint.TaskId,
                     Stats: []
                 };
