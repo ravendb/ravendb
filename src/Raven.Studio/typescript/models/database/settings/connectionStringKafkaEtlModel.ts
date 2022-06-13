@@ -2,7 +2,9 @@
 import database = require("models/resources/database");
 import connectionStringModel = require("models/database/settings/connectionStringModel");
 import saveConnectionStringCommand = require("commands/database/settings/saveConnectionStringCommand");
+import testKafkaServerConnectionCommand from "commands/database/cluster/testKafkaServerConnectionCommand";
 import jsonUtil = require("common/jsonUtil");
+import discoveryUrl from "models/database/settings/discoveryUrl";
 
 class connectionOptionModel {
     key = ko.observable<string>();
@@ -47,13 +49,17 @@ class connectionOptionModel {
 
 class connectionStringKafkaEtlModel extends connectionStringModel {
     
-    kafkaServerUrl = ko.observable<string>();
+    kafkaServerUrl = ko.observable<discoveryUrl>(new discoveryUrl(""));
     useRavenCertificate = ko.observable<boolean>();
     connectionOptions = ko.observableArray<connectionOptionModel>();
     
     validationGroup: KnockoutValidationGroup;
     
     dirtyFlag: () => DirtyFlag;
+
+    spinners = {
+        testUrl: ko.observable<boolean>(false)
+    };
     
     constructor(dto: Raven.Client.Documents.Operations.ETL.Queue.QueueConnectionString, isNew: boolean, tasks: { taskName: string; taskId: number }[]) {
         super(isNew, tasks);
@@ -73,7 +79,7 @@ class connectionStringKafkaEtlModel extends connectionStringModel {
         super.update(dto);
         
         const kafkaSettings = dto.KafkaConnectionSettings;
-        this.kafkaServerUrl(kafkaSettings.Url);
+        this.kafkaServerUrl().discoveryUrlName(kafkaSettings.Url);
         this.useRavenCertificate(kafkaSettings.UseRavenCertificate);
 
         _.forIn(kafkaSettings.ConnectionOptions, (value, key) => {
@@ -117,7 +123,7 @@ class connectionStringKafkaEtlModel extends connectionStringModel {
             Name: this.connectionStringName(),
             
             KafkaConnectionSettings: {
-                Url: this.kafkaServerUrl(),
+                Url: this.kafkaServerUrl().discoveryUrlName(),
                 UseRavenCertificate: this.useRavenCertificate(),
                 ConnectionOptions: this.connectionOptionsToDto()
             },
@@ -147,6 +153,16 @@ class connectionStringKafkaEtlModel extends connectionStringModel {
 
     addNewConnectionOption() {
         this.connectionOptions.push(connectionOptionModel.empty());
+    }
+
+    testConnection(db: database): JQueryPromise<Raven.Server.Web.System.NodeConnectionTestResult> {
+        return new testKafkaServerConnectionCommand(db, this.kafkaServerUrl().discoveryUrlName(), this.useRavenCertificate(), this.connectionOptionsToDto())
+            .execute()
+            .done((result) => {
+                if (result.Error) {
+                    this.kafkaServerUrl().hasTestError(true);
+                }
+            });
     }
 }
 

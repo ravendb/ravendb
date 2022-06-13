@@ -2,7 +2,6 @@ import app = require("durandal/app");
 import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
 import router = require("plugins/router");
-import database = require("models/resources/database");
 import getOngoingTaskInfoCommand = require("commands/database/tasks/getOngoingTaskInfoCommand");
 import eventsCollector = require("common/eventsCollector");
 import getConnectionStringsCommand = require("commands/database/settings/getConnectionStringsCommand");
@@ -14,16 +13,10 @@ import connectionStringKafkaEtlModel = require("models/database/settings/connect
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import transformationScriptSyntax = require("viewmodels/database/tasks/transformationScriptSyntax");
 import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleMentorsCommand");
-import getDocumentsMetadataByIDPrefixCommand = require("commands/database/documents/getDocumentsMetadataByIDPrefixCommand");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import jsonUtil = require("common/jsonUtil");
-import viewHelpers = require("common/helpers/view/viewHelpers");
-import documentMetadata = require("models/database/documents/documentMetadata");
-import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
-import document = require("models/database/documents/document");
 import popoverUtils = require("common/popoverUtils");
 import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
-import { highlight, languages } from "prismjs";
 
 type resultItem = {
     header: string;
@@ -74,7 +67,7 @@ class editKafkaEtlTask extends viewModelBase {
         super();
         
         aceEditorBindingHandler.install();
-        this.bindToCurrentInstance("useConnectionString", "removeTransformationScript",
+        this.bindToCurrentInstance("useConnectionString", "onTestConnectionKafka", "removeTransformationScript",
                                    "cancelEditedTransformation", "saveEditedTransformation", "syntaxHelp",
                                    "toggleTestArea", "toggleAdvancedArea", "setState");
     }
@@ -198,6 +191,20 @@ class editKafkaEtlTask extends viewModelBase {
 
     useConnectionString(connectionStringToUse: string) {
         this.editedKafkaEtl().connectionStringName(connectionStringToUse);
+    }
+
+    onTestConnectionKafka() {
+        eventsCollector.default.reportEvent("kafka-connection-string", "test-connection");
+        this.spinners.test(true);
+        this.testConnectionResult(null);
+
+        this.newConnectionString()
+            .testConnection(this.activeDatabase())
+            .done(result => this.testConnectionResult(result))
+            .always(() => {
+                this.spinners.test(false);
+                this.fullErrorDetailsVisible(false);
+            });
     }
 
     saveKafkaEtl() {
