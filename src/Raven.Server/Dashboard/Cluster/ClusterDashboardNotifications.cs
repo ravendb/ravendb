@@ -26,6 +26,8 @@ namespace Raven.Server.Dashboard.Cluster
 
             switch (type)
             {
+                case ClusterDashboardNotificationType.ClusterOverview:
+                    return new ClusterOverviewNotificationSender(topicId, _server, watcher, _shutdown);
                 case ClusterDashboardNotificationType.CpuUsage:
                     return new CpuUsageNotificationSender(topicId, _server, watcher, _shutdown);
                 case ClusterDashboardNotificationType.MemoryUsage:

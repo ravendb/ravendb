@@ -5,7 +5,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
-using Raven.Client.Json;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using SlowTests.Server.Documents.PeriodicBackup.Restore;
@@ -37,7 +36,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 var value1 = Guid.NewGuid().ToString();
                 var value2 = Guid.NewGuid().ToString();
-                client.PutObject(key, new MemoryStream(Encoding.UTF8.GetBytes("231")), new Dictionary<string, string>
+                await client.PutObjectAsync(key, new MemoryStream(Encoding.UTF8.GetBytes("231")), new Dictionary<string, string>
                     {
                         {"property1", value1},
                         {"property2", value2}
@@ -47,7 +46,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Assert.NotNull(@object);
 
                 using (var reader = new StreamReader(@object.Data))
-                    Assert.Equal("231", reader.ReadToEnd());
+                    Assert.Equal("231", await reader.ReadToEndAsync());
 
                 var property1 = @object.Metadata.Keys.Single(x => x.Contains("property1"));
                 var property2 = @object.Metadata.Keys.Single(x => x.Contains("property2"));
@@ -58,7 +57,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         }
 
         [AmazonS3Fact]
-        public void can_get_correct_error_s3()
+        public async Task can_get_correct_error_s3()
         {
             var settings = GetS3Settings();
             string region1 = settings.AwsRegionName;
@@ -74,11 +73,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var blobs = GenerateBlobNames(settings, 1, out _);
                 Assert.Equal(1, blobs.Count);
                 var key = blobs[0];
-                var error2 = Assert.Throws<InvalidOperationException>(() =>
+                var error2 = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
                     {
                         using (var memoryStream = new MemoryStream(Encoding.UTF8.GetBytes(sb.ToString())))
                         {
-                            clientRegion2.PutObject(key,
+                            await clientRegion2.PutObjectAsync(key,
                                 memoryStream,
                                 new Dictionary<string, string>());
                         }
@@ -145,16 +144,16 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 using (var memoryStream = new MemoryStream(Encoding.UTF8.GetBytes(sb.ToString())))
                 {
                     streamLength = memoryStream.Length;
-                    client.PutObject(key,
+                    await client.PutObjectAsync(key,
                         memoryStream,
-                        new Dictionary<string, string> {{property1, value1}, {property2, value2}});
+                        new Dictionary<string, string> { { property1, value1 }, { property2, value2 } });
                 }
 
                 var @object = await client.GetObjectAsync(key);
                 Assert.NotNull(@object);
 
                 using (var reader = new StreamReader(@object.Data))
-                    Assert.Equal(sb.ToString(), reader.ReadToEnd());
+                    Assert.Equal(sb.ToString(), await reader.ReadToEndAsync());
 
                 var property1check = @object.Metadata.Keys.Single(x => x.Contains(Uri.EscapeDataString(property1).ToLower()));
                 var property2check = @object.Metadata.Keys.Single(x => x.Contains(property2));

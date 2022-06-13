@@ -31,6 +31,14 @@ $TARGET_SPECS = (
         "NativeBinExtension" = "dylib";
     },
     @{
+        "Name"      = "macos-arm64";
+        "Runtime"   = "osx-arm64";
+        "PkgType"   = "tar.bz2";
+        "IsUnix"    = $True;
+        "TargetId" = "macos-arm64";
+        "NativeBinExtension" = "dylib";
+    },
+    @{
         "Name"      = "raspberry-pi";
         "Runtime"   = "linux-arm";
         "PkgType"   = "tar.bz2";

@@ -15,7 +15,7 @@
                 <div class="nodes-container nodes-storage" data-bind="foreach: nodeStats">
                     <div data-bind="attr: { class: 'nodes-item node-' + tag }">
                         <div class="nodes-item-header">
-                            <div class="node-label" data-bind="text: tag"></div>
+                            <div class="node-label" data-bind="text: tag, css: { 'no-data': !hasData() }"></div>
                         </div>
                         <div class="global-spinner spinner-sm" data-bind="visible: !hasData()"></div>
                         <div class="details-list" data-bind="foreach: mountPoints">

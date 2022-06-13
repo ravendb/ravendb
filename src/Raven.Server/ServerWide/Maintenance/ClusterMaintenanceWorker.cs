@@ -202,8 +202,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
                 if (dbTask.IsFaulted)
                 {
-                    var extractSingleInnerException = dbTask.Exception.ExtractSingleInnerException();
-                    if (Equals(extractSingleInnerException.Data[DatabasesLandlord.DoNotRemove], true))
+                    if (DatabasesLandlord.IsLockedDatabase(dbTask.Exception))
                     {
                         report.Status = DatabaseStatus.Unloaded;
                         result[dbName] = report;

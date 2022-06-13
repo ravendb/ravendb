@@ -16,12 +16,20 @@ class addWidgetModal extends dialogViewModelBase {
     widgets: widgetToAdd[] = [
         {
             name: "Welcome Screen",
-            type: "Welcome",
-            icon: require("../../../wwwroot/Content/img/widgets/welcome-icon.svg")
+            icon: require("../../../wwwroot/Content/img/widgets/welcome-icon.svg"),
+            type: "Welcome"
         }, {
             name: "License info",
-            type: "License",
-            icon: require("../../../wwwroot/Content/img/widgets/text-icon.svg")
+            icon: require("../../../wwwroot/Content/img/widgets/text-icon.svg"),
+            type: "License"
+        }, {
+            name: "Cluster Overview",
+            icon: require("../../../wwwroot/Content/img/widgets/chart-icon.svg"),
+            type: "ClusterOverview"            
+        }, {
+            name: "Storage",
+            icon: require("../../../wwwroot/Content/img/widgets/chart-icon.svg"),
+            type: "StorageUsage"
         }, {
             name: "CPU",
             icon: require("../../../wwwroot/Content/img/widgets/graph-icon.svg"),
@@ -35,21 +43,17 @@ class addWidgetModal extends dialogViewModelBase {
             icon: require("../../../wwwroot/Content/img/widgets/graph-icon.svg"),
             type: "Indexing"
         }, {
-            name: "Indexing per Database",
-            icon: require("../../../wwwroot/Content/img/widgets/list-icon.svg"),
-            type: "DatabaseIndexing"
-        }, {
             name: "Traffic",
             icon: require("../../../wwwroot/Content/img/widgets/list-icon.svg"),
             type: "Traffic"
         }, {
+            name: "Indexing per Database",
+            icon: require("../../../wwwroot/Content/img/widgets/list-icon.svg"),
+            type: "DatabaseIndexing"
+        }, {
             name: "Traffic per Database",
             icon: require("../../../wwwroot/Content/img/widgets/list-icon.svg"),
             type: "DatabaseTraffic"
-        }, {
-            name: "Storage",
-            icon: require("../../../wwwroot/Content/img/widgets/chart-icon.svg"),
-            type: "StorageUsage"
         }, {
             name: "Storage per Database",
             icon: require("../../../wwwroot/Content/img/widgets/list-icon.svg"),

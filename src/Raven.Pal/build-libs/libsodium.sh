@@ -2,6 +2,7 @@
 
 export LIBSODIUM_VER=1.0.17
 export SODIUM_LOG=${PWD}/build_sodium.log
+export LOG="$SODIUM_LOG"
 
 function install_build_deps_libsodium {
     echo -e "${C_YELLOW}[`date`] ${C_L_MAGENTA}Install libsodium build dependencies... ${NC}"
@@ -167,6 +168,54 @@ function build_libsodium_osx64 {
 	RC=${SUCCESS}
 }
 
+function build_libsodium_osx_arm64 {
+	SUCCESS=0
+	reset_before_build_libsodium
+
+	export CC="${PWD}/../osxcross/target/bin/oa64-clang"
+	export PREFIX="$(pwd)/libsodium-osx-arm64"
+	export OSX_VERSION_MIN=${OSX_VERSION_MIN-"10.8"}
+	export OSX_CPU_ARCH=${OSX_CPU_ARCH-"core2"}
+	export CFLAGS="-arch arm64 -mmacosx-version-min=${OSX_VERSION_MIN} -O2 -g"
+	export LDFLAGS="-arch arm64 -mmacosx-version-min=${OSX_VERSION_MIN} "
+
+	mkdir -p $PREFIX >> ${SODIUM_LOG} 2>&1
+	make distclean >> ${SODIUM_LOG} 2>&1
+	if [ -z "$LIBSODIUM_FULL_BUILD" ]; then
+		export LIBSODIUM_ENABLE_MINIMAL_FLAG="--enable-minimal"
+	else
+		export LIBSODIUM_ENABLE_MINIMAL_FLAG=""
+	fi
+
+	echo -ne "${C_YELLOW}[`date`] ${C_L_MAGENTA}Building for ${C_L_BLUE}osx-arm64${C_L_MAGENTA}... "
+	
+	./configure ${LIBSODIUM_ENABLE_MINIMAL_FLAG} \
+				--build=aarch64-unknown-linux-gnu --host=aarch64-apple-darwin --target=aarch64-apple-darwin \
+				--prefix="${PREFIX}" >> ${SODIUM_LOG} 2>&1
+
+	if [ $? -ne 0 ]; then
+		echo -e "${ERR_STRING}Failed to configure."
+	else
+		NPROCESSORS=$(getconf NPROCESSORS_ONLN 2>/dev/null || getconf _NPROCESSORS_ONLN 2>/dev/null)
+		PROCESSORS=${NPROCESSORS:-3}
+
+		make -j${PROCESSORS} install >> ${SODIUM_LOG} 2>&1
+		cp libsodium-osx-arm64/lib/libsodium.dylib ../artifacts/libsodium.mac.arm64.dylib
+		if [ $? -eq 0 ]; then 
+			echo -e "${C_GREEN}ok."
+			SUCCESS=1;
+		else
+			echo -e "${ERR_STRING}Failed. See ${SODIUM_LOG} for details.${NC}";
+		fi
+
+		# Cleanup
+		make distclean >> ${SODIUM_LOG} 2>&1		
+	fi
+
+	popd >> ${SODIUM_LOG} 2>&1
+	RC=${SUCCESS}
+}
+
 function build_libsodium_local_linux_x64 {
 	SUCCESS=0
 	reset_before_build_libsodium
@@ -205,6 +254,7 @@ function libsodium_cross_build () {
 	SUM_WIN64=0
 	SUM_LINUX64=0
 	SUM_OSX_64=0
+	SUM_OSX_ARM64=0
 
 	echo -e "${C_L_GREEN}${T_BOLD}Build libsodium${NC}${NT}"
 	echo -e "${C_D_GRAY}===============${NC}"
@@ -214,6 +264,12 @@ function libsodium_cross_build () {
 
     install_build_deps_libsodium
 
+	# build_libsodium_osx64
+	# if [[ ${RC} -eq 1 ]]; then SUM_OSX_64=1; fi
+
+	build_libsodium_osx_arm64
+	if [[ ${RC} -eq 1 ]]; then SUM_OSX_ARM64=1; fi
+exit 1
 	build_libsodium_arm_and_arm64
 	if [[ ${RC} -eq 1 ]]; then SUM_ARM64=1; fi
 	if [[ ${RC} -eq 2 ]]; then SUM_ARM=1; fi
@@ -224,8 +280,6 @@ function libsodium_cross_build () {
 	if [[ ${RC} -eq 2 ]]; then SUM_WIN32=1; fi
 	if [[ ${RC} -eq 3 ]]; then SUM_WIN64=1; SUM_WIN32=1; fi
 	
-	build_libsodium_osx64
-	if [[ ${RC} -eq 1 ]]; then SUM_OSX_64=1; fi
 
 	build_libsodium_local_linux_x64
 	if [[ ${RC} -eq 1 ]]; then SUM_LINUX64=1; fi
@@ -242,6 +296,7 @@ function libsodium_cross_build () {
 		[ ${SUM_WIN32} -eq 1 ] && \
 		[ ${SUM_WIN64} -eq 1 ] && \
 		[ ${SUM_LINUX64} -eq 1 ] && \
+		[ ${SUM_OSX_ARM64} -eq 1 ] && \
 		[ ${SUM_OSX_64} -eq 1 ]; 
 	then
 			echo -e "${C_L_GREEN}All platform's ${C_D_GREEN} libsodium Successfully cross compiled. Check artifacts for results.${NC}"
@@ -256,6 +311,7 @@ function libsodium_cross_build () {
 	sumArray["win-x64"]=${SUM_WIN64}
 	sumArray["linux-x64"]=${SUM_LINUX64}
 	sumArray["osx-x64"]=${SUM_OSX_64}
+	sumArray["osx-arm64"]=${SUM_OSX_ARM64}
 
 	for sum in "${!sumArray[@]}"; do
 		if [ ${sumArray[${sum}]} -eq 1 ]; then

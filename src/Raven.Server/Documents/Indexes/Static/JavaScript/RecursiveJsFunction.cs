@@ -13,7 +13,7 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
         private readonly Engine _engine;
         private readonly JsValue _item;
         private readonly ScriptFunctionInstance _func;
-        private readonly HashSet<JsValue> _results = new HashSet<JsValue>();
+        private readonly HashSet<JsValue> _results = new HashSet<JsValue>(JsValueComparer.Instance);
         private readonly Queue<object> _queue = new Queue<object>();
 
         public RecursiveJsFunction(Engine engine, JsValue item, ScriptFunctionInstance func)
@@ -55,6 +55,9 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
 
         private void AddItem(JsValue current)
         {
+            if (current.IsUndefined())
+                return;
+
             if (_results.Add(current) == false)
                 return;
 
@@ -80,6 +83,39 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
         {
             foreach (var item in array)
                 yield return item;
+        }
+
+        private class JsValueComparer : IEqualityComparer<JsValue>
+        {
+            public static readonly JsValueComparer Instance = new ();
+
+            private JsValueComparer()
+            {
+            }
+
+            public bool Equals(JsValue x, JsValue y)
+            {
+                if (ReferenceEquals(x, y)) return true;
+
+                if (x is DynamicJsNull dx)
+                    return dx.Equals(y);
+
+                if (y is DynamicJsNull dy) 
+                    return dy.Equals(x);
+
+                if (x is null)
+                    return y.Equals(null);
+
+                if (y is null)
+                    return x.Equals(null);
+
+                return x.Equals(y);
+            }
+
+            public int GetHashCode(JsValue obj)
+            {
+                return obj.GetHashCode();
+            }
         }
     }
 }

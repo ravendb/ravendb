@@ -45,22 +45,28 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
 
         public bool Equals(JsNull other)
         {
-            if (ReferenceEquals(null, other))
-            {
-                return false;
-            }
-
             return true;
         }
 
         public bool Equals(DynamicJsNull other)
         {
-            if (ReferenceEquals(null, other))
-            {
-                return false;
-            }
-
             return true;
+        }
+
+        public override bool Equals(object other)
+        {
+            if (other == null)
+                return true;
+
+            if (other is JsValue jsValue)
+                return Equals(jsValue);
+
+            return false;
+        }
+
+        public override int GetHashCode()
+        {
+            return Null.GetHashCode();
         }
     }
 }
