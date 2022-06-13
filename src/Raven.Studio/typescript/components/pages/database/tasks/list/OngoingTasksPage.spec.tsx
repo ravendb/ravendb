@@ -23,9 +23,10 @@ describe("OngoingTasksPage", function () {
     });
 
     describe("RavenETL", function () {
-        it("can render disabled", async () => {
+        it("can render disabled and not completed", async () => {
             const View = boundCopy(stories.RavenEtlTemplate, {
                 disabled: true,
+                completed: false,
             });
 
             const Story = composeStory(View, stories.default);
@@ -42,7 +43,7 @@ describe("OngoingTasksPage", function () {
             expect(await screen.findByText(/Topology Discovery URLs/)).toBeInTheDocument();
 
             //wait for progress
-            await screen.findAllByText(/Running/i);
+            await screen.findAllByText(/Disabled/i);
         });
 
         it("can render completed", async () => {
@@ -53,13 +54,27 @@ describe("OngoingTasksPage", function () {
             const Story = composeStory(View, stories.default);
 
             const { screen, fireClick } = rtlRender(<Story />);
-            expect(await screen.findByText(/RavenDB ETL/)).toBeInTheDocument();
             const detailsBtn = await screen.findByTitle(/Click for details/);
             await fireClick(detailsBtn);
-            expect(await screen.findByText(/Topology Discovery URLs/)).toBeInTheDocument();
 
             //wait for progress
             await screen.findAllByText(/Up to date/i);
+        });
+
+        it("can render enabled and not completed", async () => {
+            const View = boundCopy(stories.RavenEtlTemplate, {
+                completed: false,
+                disabled: false,
+            });
+
+            const Story = composeStory(View, stories.default);
+
+            const { screen, fireClick } = rtlRender(<Story />);
+            const detailsBtn = await screen.findByTitle(/Click for details/);
+            await fireClick(detailsBtn);
+
+            //wait for progress
+            await screen.findAllByText("Running");
         });
     });
 });
