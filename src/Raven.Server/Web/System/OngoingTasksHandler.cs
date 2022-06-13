@@ -29,7 +29,6 @@ using Raven.Client.Util;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.Documents.ETL;
-using Raven.Server.Documents.ETL.Providers.ElasticSearch;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.Replication;
