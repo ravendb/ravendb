@@ -3,9 +3,9 @@ using Amqp;
 
 namespace Raven.Server.Documents.ETL.Providers.Queue;
 
-public class RabbitMqMessageEvent
+public class RabbitMqQueueWithMessages
 {
-    public string Queue { get; set; }
+    public string QueueName { get; set; }
     
     public List<RabbitMqMessage> Messages { get; set; } = new();
 }

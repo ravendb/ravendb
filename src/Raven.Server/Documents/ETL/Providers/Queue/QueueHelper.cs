@@ -13,7 +13,7 @@ public static class QueueHelper
     public static IProducer<string, byte[]> CreateKafkaClient(QueueConnectionString connectionString, string transactionalId, Logger logger,
         X509Certificate2 certificate = null)
     {
-        ProducerConfig config = new ProducerConfig()
+        ProducerConfig config = new()
         {
             BootstrapServers = connectionString.KafkaConnectionSettings.Url,
             TransactionalId = transactionalId,
@@ -33,7 +33,7 @@ public static class QueueHelper
             config.Set(option.Key, option.Value);
         }
 
-        IProducer<string, byte[]> producer = new ProducerBuilder<string?, byte[]>(config)
+        IProducer<string, byte[]> producer = new ProducerBuilder<string, byte[]>(config)
             .SetErrorHandler((producer, error) =>
             {
                 logger.Info($"Kafka producer error: {error.Reason}");
@@ -43,7 +43,7 @@ public static class QueueHelper
         return producer;
     }
 
-    public static IModel CreateRabbitMqClient(QueueConnectionString connectionString, string transactionalId)
+    public static IModel CreateRabbitMqClient(QueueConnectionString connectionString)
     {
         var connectionFactory = new ConnectionFactory() { Uri = new Uri(connectionString.RabbitMqConnectionSettings.ConnectionString) };
         var connection = connectionFactory.CreateConnection();
