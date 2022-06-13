@@ -35,7 +35,11 @@ class iconsPlusTextColumn<T> implements virtualColumn {
         if (_.isArray(data)) {
             for (let i = 0; i < data.length; i++) {
                 const iconAndText = data[i];
-                innerHtml += `<span title="${genUtils.escapeHtml(iconAndText.title)}" class="${genUtils.escapeHtml(iconAndText.textClass)} margin-right margin-right-sm">
+                
+                const titleToUse = iconAndText.title ?? "";
+                const textClassToUse = iconAndText.textClass ?? "";
+                
+                innerHtml += `<span title="${genUtils.escapeHtml(titleToUse)}" class="${genUtils.escapeHtml(textClassToUse)} margin-right margin-right-sm">
                                   <i class="${genUtils.escapeHtml(iconAndText.iconClass)} margin-right margin-right-xs"></i>${genUtils.escapeHtml(iconAndText.text)}
                               </span>`;
             }

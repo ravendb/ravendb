@@ -868,8 +868,8 @@ type accessLevel = databaseAccessLevel | securityClearance;
 interface iconPlusText {
     iconClass: string;
     text: string;
-    textClass: string;
-    title: string;
+    textClass?: string;
+    title?: string;
 }
 
 interface columnPreviewFeature {
