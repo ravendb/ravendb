@@ -209,7 +209,7 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
             {
                 Name = "simulate",
                 BrokerType = QueueBroker.Kafka,
-                KafkaConnectionSettings = new KafkaConnectionSettings() { Url = "localhost:29092" }
+                KafkaConnectionSettings = new KafkaConnectionSettings() { Url = DefaultConnectionString }
             }));
             Assert.NotNull(result1.RaftCommandIndex);
 
@@ -245,7 +245,14 @@ for (var i = 0; i < this.OrderLines.length; i++) {
     orderData.TotalCost += line.Cost * line.Quantity;    
 }
 
-loadToOrders(orderData);
+loadToOrders(orderData, {
+                                                            Id: id(this),
+                                                            PartitionKey: id(this),
+                                                            Type: 'com.github.users',
+                                                            Source: '/registrations/direct-signup',
+                                                            Exchange: 'users-topic',
+                                                            ExchangeType: 'topic',
+                                                     });
 
 output('test output')"
                                        }
@@ -350,7 +357,7 @@ output('test output')"
             }
         }
     }
-
+    
     private class Order
     {
         public string Id { get; set; }

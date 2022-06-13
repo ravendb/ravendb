@@ -36,10 +36,9 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithMessages, QueueEtlConfigu
     private const string DefaultType = "ravendb.etl.put";
 
     public const string QueueEtlTag = "Queue ETL";
-    public const string DefaultExchangeType = "direct";
     private string TransactionalId => $"{Database.DbId}-{Name}";
     private readonly HashSet<string> _existingQueues = new();
-    private readonly HashSet<Tuple<string, string>> _existingExchanges = new();
+    private readonly List<QueueDeclare> _queuesForDeclare = new();
 
     private string DefaultSource =>
         $"{Database.Configuration.Core.PublicServerUrl?.UriValue ?? Database.ServerStore.Server.WebUrl}/{Database.Name}/{Name}";
@@ -226,13 +225,32 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithMessages, QueueEtlConfigu
         {
             var newMessage = new RabbitMqMessageEvent() { Queue = queueItem.Name };
 
+            if (_queuesForDeclare.Any(x => x.QueueName == queueItem.Name) == false)
+            {
+                _queuesForDeclare.Add(new QueueDeclare() { QueueName = queueItem.Name });
+            }
+
             foreach (var message in queueItem.Messages)
             {
+                if (string.IsNullOrWhiteSpace(message.Options?.Exchange) == false)
+                {
+                    var queue = _queuesForDeclare.First(x => x.QueueName == queueItem.Name);
+
+                    if (queue.Exchanges.Any(x => x.ExchangeName == message.Options.ExchangeType) == false)
+                    {
+                        queue.Exchanges.Add(new ExchangeDeclare()
+                        {
+                            ExchangeName = message.Options?.Exchange,
+                            ExchangeType = message.Options?.ExchangeType ?? ExchangeType.Direct,
+                        });
+                    }
+                }
+
                 CloudEvent eventMessage = CreateEventMessage(message);
                 newMessage.Messages.Add(new RabbitMqMessage()
                 {
                     Exchange = message.Options?.Exchange ?? "",
-                    ExchangeType = message.Options?.ExchangeType ?? DefaultExchangeType,
+                    ExchangeType = message.Options?.ExchangeType ?? ExchangeType.Direct,
                     Message = eventMessage.ToAmqpMessage(ContentMode.Binary, formatter)
                 });
             }
@@ -247,58 +265,57 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithMessages, QueueEtlConfigu
             _rabbitMqProducer = QueueHelper.CreateRabbitMqClient(Configuration.Connection, TransactionalId);
         }
 
-        // todo: check application properties, _rabbitMqProducer.CreateBasicProperties();
+        // todo: check application properties, _rabbitMqProducer.CreateBasicProperties()
+        // todo: try to manually populate properties
 
         SetUpExchangesAndQueues(messages);
-
-        var batch = _rabbitMqProducer.CreateBasicPublishBatch();
+        
         foreach (var message in messages)
         {
+            _rabbitMqProducer.TxSelect();
+            var batch = _rabbitMqProducer.CreateBasicPublishBatch();
+            
             foreach (var messageContent in message.Messages)
             {
                 batch.Add(messageContent.Exchange, message.Queue, true, null,
                     new ReadOnlyMemory<byte>((byte[])messageContent.Message.Body));
                 count++;
             }
+        
+            batch.Publish();
+            _rabbitMqProducer.TxCommit();
+            // todo: how to handle tx fail?
         }
-        batch.Publish();
+
         return count;
     }
 
     private void SetUpExchangesAndQueues(List<RabbitMqMessageEvent> messages)
     {
-        foreach (var message in messages)
+        foreach (var queueDeclare in _queuesForDeclare)
         {
             try
             {
-                if (_existingQueues.Contains(message.Queue) == false)
+                if (_existingQueues.Contains(queueDeclare.QueueName) == false)
                 {
-                    _rabbitMqProducer.QueueDeclare(message.Queue, true, false, false, null);
-                    _existingQueues.Add(message.Queue);
-                }
-
-                foreach (var messageContent in message.Messages)
-                {
-                    if (string.IsNullOrWhiteSpace(messageContent.Exchange) == false)
+                    _rabbitMqProducer.QueueDeclare(queueDeclare.QueueName, true, false, false, null);
+                    foreach (ExchangeDeclare exchangeDeclare in queueDeclare.Exchanges)
                     {
-                        if (_existingExchanges.Contains(Tuple.Create(messageContent.Exchange, message.Queue)) == false)
-                        {
-                            _rabbitMqProducer.ExchangeDeclare(messageContent.Exchange, messageContent.ExchangeType, true, false, null);
-                            _rabbitMqProducer.QueueBind(message.Queue, messageContent.Exchange, message.Queue);
-                            _existingExchanges.Add(Tuple.Create(messageContent.Exchange, message.Queue));
-                        }
+                        _rabbitMqProducer.ExchangeDeclare(exchangeDeclare.ExchangeName, exchangeDeclare.ExchangeType, true, false, null);
+                        _rabbitMqProducer.QueueBind(queueDeclare.QueueName, exchangeDeclare.ExchangeName, queueDeclare.QueueName);
                     }
+
+                    _existingQueues.Add(queueDeclare.QueueName);
                 }
             }
             catch (OperationInterruptedException e)
             {
-                if (e.ShutdownReason.ReplyCode != 406)
+                if (e.ShutdownReason.ReplyCode == 406)
                 {
-                    throw;
+                    // queue already exists
+                    continue;
                 }
-            }
-            catch (Exception)
-            {
+
                 throw;
             }
         }
@@ -323,14 +340,14 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithMessages, QueueEtlConfigu
     public QueueEtlTestScriptResult RunTest(IEnumerable<QueueWithMessages> records, DocumentsOperationContext context)
     {
         var simulatedWriter = new QueueWriterSimulator();
-        var summaries = new List<TopicSummary>();
+        var summaries = new List<QueueSummary>();
 
         foreach (var record in records)
         {
-            var messages = simulatedWriter.SimulateExecuteCommandText(record, context);
+            var messages = simulatedWriter.SimulateExecuteMessages(record, context);
             // todo: message should have body (content) and options
 
-            summaries.Add(new TopicSummary { TopicName = record.Name, Commands = messages.ToArray() });
+            summaries.Add(new QueueSummary { QueueName = record.Name, Messages = messages });
         }
 
         return new QueueEtlTestScriptResult
@@ -351,5 +368,19 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithMessages, QueueEtlConfigu
         public string QueueName { get; set; }
 
         public CloudEvent Message { get; set; }
+    }
+
+    private class QueueDeclare
+    {
+        public string QueueName { get; set; }
+
+        public List<ExchangeDeclare> Exchanges { get; set; } = new();
+    }
+
+    private class ExchangeDeclare
+    {
+        public string ExchangeName { get; set; }
+
+        public string ExchangeType { get; set; }
     }
 }
