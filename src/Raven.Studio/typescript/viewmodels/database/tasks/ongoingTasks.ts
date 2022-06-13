@@ -566,10 +566,10 @@ class ongoingTasks extends viewModelBase {
     confirmRemoveOngoingTask(model: ongoingTaskListModel) {
         const db = this.activeDatabase();
         
-        const taskType = ongoingTaskModel.mapTaskType(model.studioTaskType);
+        const formattedTaskType = ongoingTaskModel.formatStudioTaskType(model.studioTaskType);
         
         this.confirmationMessage("Delete Ongoing Task?", 
-            `You're deleting ${taskType} task: <br><ul><li><strong>${generalUtils.escapeHtml(model.taskName())}</strong></li></ul>`, {
+            `You're deleting ${formattedTaskType} task: <br><ul><li><strong>${generalUtils.escapeHtml(model.taskName())}</strong></li></ul>`, {
              buttons: ["Cancel", "Delete"],
              html: true
         })
@@ -600,27 +600,24 @@ class ongoingTasks extends viewModelBase {
     }
 
     showItemPreview(item: ongoingTaskListModel, scriptName: string) {
-        let type: StudioEtlType;
-        
+        let serverEtlType: Raven.Client.Documents.Operations.ETL.EtlType;
         let studioTaskType = item.studioTaskType;
-        
+        let studioEtlType: StudioEtlType;
+
         switch (studioTaskType) {
-            case "RavenEtl": type = "Raven"; break;
-            case "SqlEtl": type = "Sql"; break;
-            case "OlapEtl": type = "Olap"; break;
-            case "ElasticSearchEtl": type = "ElasticSearch"; break;
-            case "KafkaQueueEtl": type = "Kafka"; break;
-            case "RabbitQueueEtl": type = "RabbitMQ"; break;
-        } 
+            case "RavenEtl": serverEtlType = "Raven"; break;
+            case "SqlEtl": serverEtlType = "Sql"; break;
+            case "OlapEtl": serverEtlType = "Olap"; break;
+            case "ElasticSearchEtl": serverEtlType = "ElasticSearch"; break;
+            case "KafkaQueueEtl": serverEtlType = "Queue"; break;
+            case "RabbitQueueEtl": serverEtlType = "Queue"; break;
+        }
         
-        this.definitionsCache.showDefinitionFor(type, item.taskId, scriptName);
+        this.definitionsCache.showDefinitionFor(serverEtlType, item.taskId, scriptName, ongoingTaskModel.getStudioEtlTypeFromTaskType(studioTaskType));
     }
     
-    // todo refactor.. shorter..
     getTaskNameForUI(taskType: StudioTaskType) {
-        return ko.pureComputed(() => {
-           return ongoingTaskModel.mapTaskType(taskType); 
-        });
+        return ko.pureComputed(() => ongoingTaskModel.formatStudioTaskType(taskType));
     }
 }
 

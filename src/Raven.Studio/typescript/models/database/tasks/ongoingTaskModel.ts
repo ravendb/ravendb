@@ -1,5 +1,7 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 
+import genUtils from "common/generalUtils";
+
 abstract class ongoingTaskModel { 
 
     taskId: number;
@@ -29,13 +31,20 @@ abstract class ongoingTaskModel {
     static getStudioTaskType(taskListItem: Raven.Client.Documents.Operations.OngoingTasks.OngoingTask): StudioTaskType {
         if (taskListItem.TaskType === "QueueEtl") {
             const task = (taskListItem as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtlListView);
-            return task.BrokerType === "Kafka" ? "KafkaQueueEtl" : "RabbitQueueEtl";
-        }
 
+            switch (task.BrokerType) {
+                case "Kafka":
+                    return "KafkaQueueEtl";
+                case "RabbitMq":
+                    return "RabbitQueueEtl";
+                default:
+                    genUtils.assertUnreachable(task.BrokerType, "Unknown BrokerType: " + task.BrokerType);
+            }
+        }
         return taskListItem.TaskType;
     }
     
-    static mapTaskType(taskType: StudioTaskType): TasksNamesInUI {
+    static formatStudioTaskType(taskType: StudioTaskType): string {
         switch (taskType) {
             case "RavenEtl":
                 return "RavenDB ETL";
@@ -58,6 +67,27 @@ abstract class ongoingTaskModel {
             default:
                 return taskType;
         }
+    }
+
+    static getServerEtlType(studioEtlType: StudioEtlType): Raven.Client.Documents.Operations.ETL.EtlType {
+        if (studioEtlType === "Kafka" || studioEtlType === "RabbitMQ") {
+            return "Queue";
+        }
+        
+        return studioEtlType;
+    }
+    
+    static getStudioEtlTypeFromTaskType(studioTaskType: StudioTaskType): StudioEtlType | null {
+        switch (studioTaskType) {
+            case "RavenEtl": return "Raven"; break;
+            case "SqlEtl": return "Sql"; break;
+            case "OlapEtl": return "Olap"; break;
+            case "ElasticSearchEtl": return "ElasticSearch"; break;
+            case "KafkaQueueEtl": return "Kafka"; break;
+            case "RabbitQueueEtl": return "RabbitMQ"; break;
+        }
+        
+        return null;
     }
 
     protected initializeObservables() {

@@ -1,23 +1,20 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import endpoints = require("endpoints");
+import ongoingTaskModel from "models/database/tasks/ongoingTaskModel";
 
 class deleteConnectionStringCommand extends commandBase {
-
-    connectionStringType: Raven.Client.Documents.Operations.ConnectionStrings.ConnectionStringType;
     
     constructor(private db: database, private type: StudioEtlType, private connectionStringName: string) {
         super();
-        
-        if (type === "Kafka" || type === "RabbitMQ") {
-            this.connectionStringType = "Queue";
-        } else {
-            this.connectionStringType = type;
-        }
     }
 
     execute(): JQueryPromise<void> {
-        const args = { type: this.connectionStringType, connectionString: this.connectionStringName };
+        const args = {
+            type: ongoingTaskModel.getServerEtlType(this.type),
+            connectionString: this.connectionStringName
+        };
+        
         const url = endpoints.databases.ongoingTasks.adminConnectionStrings + this.urlEncodeArgs(args);
 
         return this.del<void>(url, null, this.db)

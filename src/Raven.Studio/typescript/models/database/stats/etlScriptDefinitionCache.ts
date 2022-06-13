@@ -3,6 +3,7 @@ import database = require("models/resources/database");
 import getOngoingTaskInfoCommand = require("commands/database/tasks/getOngoingTaskInfoCommand");
 import app = require("durandal/app");
 import etlScriptDefinitionPreview = require("viewmodels/database/status/etlScriptDefinitionPreview");
+import genUtils from "common/generalUtils";
 
 class etlScriptDefinitionCache {
     private readonly taskInfoCache = new Map<number, etlScriptDefinitionCacheItem>();
@@ -12,7 +13,7 @@ class etlScriptDefinitionCache {
         this.db = db;
     }
 
-    showDefinitionFor(etlType: Raven.Client.Documents.Operations.ETL.EtlType | StudioEtlType, taskId: number, transformationName: string) { // todo - handle etlType 
+    showDefinitionFor(etlType: Raven.Client.Documents.Operations.ETL.EtlType, taskId: number, transformationName: string, studioEtlType?: StudioEtlType) {
         let cachedItem = this.taskInfoCache.get(taskId);
 
         if (!cachedItem || cachedItem.task.state() === "rejected") {
@@ -36,10 +37,11 @@ class etlScriptDefinitionCache {
                 case "ElasticSearch":
                     command = getOngoingTaskInfoCommand.forElasticSearchEtl(this.db, taskId);
                     break;
-                case "Kafka":
-                case "RabbitMQ":
+                case "Queue":
                     command = getOngoingTaskInfoCommand.forQueueEtl(this.db, taskId);
                     break;
+                default: 
+                    genUtils.assertUnreachable(etlType, "Unknown EtlType: " + etlType);
             }
 
             cachedItem = {
@@ -50,7 +52,7 @@ class etlScriptDefinitionCache {
             this.taskInfoCache.set(taskId, cachedItem);
         }
 
-        const dialog = new etlScriptDefinitionPreview(cachedItem.etlType, transformationName, cachedItem.task);
+        const dialog = new etlScriptDefinitionPreview(studioEtlType || cachedItem.etlType, transformationName, cachedItem.task);
         app.showBootstrapDialog(dialog);
     }
 }

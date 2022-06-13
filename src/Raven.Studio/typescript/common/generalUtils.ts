@@ -711,6 +711,11 @@ class genUtils {
             $(containerSelector).scrollTop(elementTop);
         }
     }
+    
+    // this works on enums only
+    static assertUnreachable(x: never, msg?: string): never {
+        throw new Error("Didn't expect to get here. " + msg);
+    }
 } 
 
 export = genUtils;

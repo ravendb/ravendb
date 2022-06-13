@@ -289,7 +289,7 @@ class connectionStrings extends viewModelBase {
     }
 
     confirmDelete(connectionStringName: string, connectionStringType: StudioEtlType) {
-        let stringName;
+        let stringName: string;
         switch (connectionStringType) {
             case "Raven":
                 stringName = "RavenDB"; 
