@@ -4,8 +4,6 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Corax;
 using Corax.Queries;
-using Nest;
-using Lucene.Net.Spatial.Queries;
 using Corax.Utils;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Indexes.Static.Spatial;
@@ -19,7 +17,6 @@ using RavenConstants = Raven.Client.Constants;
 using IndexSearcher = Corax.IndexSearcher;
 using Query = Raven.Server.Documents.Queries.AST.Query;
 using CoraxConstants = Corax.Constants;
-using SpatialRelation = Spatial4n.Shapes.SpatialRelation;
 using SpatialUnits = Raven.Client.Documents.Indexes.Spatial.SpatialUnits;
 
 
@@ -31,25 +28,33 @@ public static class CoraxQueryBuilder
 
     public static IQueryMatch BuildQuery(IndexSearcher indexSearcher, TransactionOperationContext serverContext, DocumentsOperationContext context,
         IndexQueryServerSide query,
-        Index index, BlittableJsonReaderObject parameters, QueryBuilderFactories factories, IndexFieldsMapping indexMapping = null, FieldsToFetch queryMapping = null, Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms = null,
+        Index index, BlittableJsonReaderObject parameters, QueryBuilderFactories factories, IndexFieldsMapping indexMapping = null, FieldsToFetch queryMapping = null,
+        Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms = null,
         List<string> buildSteps = null, int take = TakeAll)
     {
         using (CultureHelper.EnsureInvariantCulture())
         {
             IQueryMatch coraxQuery;
             var metadata = query.Metadata;
+            var allEntries = indexSearcher.Memoize(indexSearcher.AllEntries());
             if (metadata.Query.Where is not null)
             {
                 coraxQuery = ToCoraxQuery<NullScoreFunction>(indexSearcher, serverContext, context, metadata.Query, metadata.Query.Where, metadata, index, parameters,
-                    factories, default, false,
+                    factories, default,
+                    allEntries: allEntries,
                     queryMapping: queryMapping,
                     buildSteps: buildSteps,
                     indexMapping: indexMapping,
                     highlightingTerms: highlightingTerms);
+
+                if (coraxQuery is CoraxBooleanQuery cbq)
+                    coraxQuery = cbq.Materialize();
+                if (coraxQuery is CoraxBooleanItem cbi)
+                    coraxQuery = cbi.Materialize();
             }
             else
             {
-                coraxQuery = indexSearcher.AllEntries();
+                coraxQuery = allEntries.Replay();
             }
 
             if (metadata.Query.OrderBy is not null)
@@ -64,12 +69,71 @@ public static class CoraxQueryBuilder
         }
     }
 
+    private static bool TryMergeTwoNodes<TScoreFunction>(IndexSearcher indexSearcher, MemoizationMatchProvider<AllEntriesMatch> allEntries, ref IQueryMatch lhs,
+        ref IQueryMatch rhs, out CoraxBooleanQuery merged, TScoreFunction scoreFunction, bool reruiredMaterialization = false)
+        where TScoreFunction : IQueryScoreFunction
+    {
+        merged = null;
+        switch (lhs, rhs, reruiredMaterialization)
+        {
+            case (CoraxBooleanQuery lhsBq, CoraxBooleanQuery rhsBq, false):
+                if (lhsBq.TryMerge(rhsBq))
+                {
+                    merged = lhsBq;
+                    return true;
+                }
+
+                lhs = lhsBq.Materialize();
+                rhs = rhsBq.Materialize();
+                return false;
+
+            case (CoraxBooleanQuery lhsBq, CoraxBooleanItem rhsBq, false):
+                if (lhsBq.TryAnd(rhsBq))
+                {
+                    merged = lhsBq;
+                    return true;
+                }
+
+                lhs = lhsBq.Materialize();
+                return false;
+            case (CoraxBooleanItem lhsBq, CoraxBooleanQuery rhsBq, false):
+                if (rhsBq.TryAnd(lhsBq))
+                {
+                    merged = rhsBq;
+                    return true;
+                }
+
+                rhs = rhsBq.Materialize();
+                return false;
+
+            case (CoraxBooleanItem lhsBq, CoraxBooleanItem rhsBq, false):
+                if (CoraxBooleanItem.CanBeMerged(lhsBq, rhsBq))
+                {
+                    merged = new CoraxBooleanQuery(indexSearcher, allEntries, lhsBq, rhsBq, scoreFunction);
+                    return true;
+                }
+
+                return false;
+            default:
+                if (lhs is CoraxBooleanItem cbi)
+                    lhs = cbi.Materialize();
+                else if (lhs is CoraxBooleanQuery cbq)
+                    lhs = cbq.Materialize();
+                if (rhs is CoraxBooleanItem cbi1)
+                    rhs = cbi1.Materialize();
+                else if (rhs is CoraxBooleanQuery cbq1)
+                    rhs = cbq1.Materialize();
+                return false;
+        }
+    }
+
     private static IQueryMatch ToCoraxQuery<TScoreFunction>(IndexSearcher indexSearcher, TransactionOperationContext serverContext,
         DocumentsOperationContext documentsContext,
         Query query,
         QueryExpression expression, QueryMetadata metadata, Index index,
-        BlittableJsonReaderObject parameters, QueryBuilderFactories factories, TScoreFunction scoreFunction, bool isNegated, IndexFieldsMapping indexMapping, Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms,
-        FieldsToFetch queryMapping, bool exact = false, int? proximity = null, bool secondary = false,
+        BlittableJsonReaderObject parameters, QueryBuilderFactories factories, TScoreFunction scoreFunction, IndexFieldsMapping indexMapping,
+        Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms,
+        FieldsToFetch queryMapping, MemoizationMatchProvider<AllEntriesMatch> allEntries, bool exact = false, int? proximity = null,
         List<string> buildSteps = null, int take = TakeAll)
         where TScoreFunction : IQueryScoreFunction
     {
@@ -77,7 +141,7 @@ public static class CoraxQueryBuilder
             QueryBuilderHelper.ThrowQueryTooComplexException(metadata, parameters);
 
         if (expression is null)
-            return indexSearcher.AllEntries();
+            return allEntries.Replay();
 
         if (expression is BinaryExpression where)
         {
@@ -88,56 +152,97 @@ public static class CoraxQueryBuilder
                 {
                     IQueryMatch left = null;
                     IQueryMatch right = null;
+                    
+                    // translate ((Foo >= $p1) and (Foo <= $p2)) to a more efficient between query
+                    if (@where.Left is BinaryExpression lbe && lbe.IsRangeOperation &&
+                        @where.Right is BinaryExpression rbe && rbe.IsRangeOperation && lbe.Left.Equals(rbe.Left) &&
+                        lbe.Right is ValueExpression leftVal && rbe.Right is ValueExpression rightVal)
+                    {
+                        BetweenExpression bq = null;
+                        if (lbe.IsGreaterThan && rbe.IsLessThan)
+                        {
+                            bq = new BetweenExpression(lbe.Left, leftVal, rightVal)
+                            {
+                                MinInclusive = lbe.Operator == OperatorType.GreaterThanEqual, MaxInclusive = rbe.Operator == OperatorType.LessThanEqual,
+                            };
+                        }
+
+                        if (lbe.IsLessThan && rbe.IsGreaterThan)
+                        {
+                            bq = new BetweenExpression(lbe.Left, rightVal, leftVal)
+                            {
+                                MinInclusive = rbe.Operator == OperatorType.GreaterThanEqual, MaxInclusive = lbe.Operator == OperatorType.LessThanEqual
+                            };
+                        }
+
+                        if (bq != null)
+                            return TranslateBetweenQuery(indexSearcher, query, metadata, index, parameters, exact, bq, scoreFunction, indexMapping, queryMapping, allEntries, highlightingTerms, take);
+                    }
+                    
                     switch (@where.Left, @where.Right)
                     {
                         case (NegatedExpression ne1, NegatedExpression ne2):
                             left = ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, ne1.Expression, metadata, index, parameters,
-                                factories, scoreFunction, isNegated, indexMapping, highlightingTerms, queryMapping, exact, secondary: secondary, buildSteps: buildSteps, take: take);
+                                factories, scoreFunction, indexMapping, highlightingTerms, queryMapping, allEntries, exact, buildSteps: buildSteps,
+                                take: take);
                             right = ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, ne2.Expression, metadata, index, parameters,
-                                factories, scoreFunction, isNegated, indexMapping, highlightingTerms, queryMapping, exact, secondary: secondary, buildSteps: buildSteps, take: take);
+                                factories, scoreFunction, indexMapping, highlightingTerms, queryMapping, allEntries, exact, buildSteps: buildSteps,
+                                take: take);
 
-                            return indexSearcher.AndNot(indexSearcher.AllEntries(), indexSearcher.Or(left, right));
+
+                            TryMergeTwoNodes(indexSearcher, allEntries, ref left, ref right, out var merged, scoreFunction, true);
+
+                            return indexSearcher.AndNot(allEntries.Replay(), indexSearcher.Or(left, right));
 
                         case (NegatedExpression ne1, _):
                             left = ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, @where.Right, metadata, index, parameters,
-                                factories, scoreFunction, !isNegated, indexMapping, highlightingTerms, queryMapping, exact, secondary: secondary, buildSteps: buildSteps, take: take);
+                                factories, scoreFunction, indexMapping, highlightingTerms, queryMapping, allEntries, exact, buildSteps: buildSteps,
+                                take: take);
                             right = ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, ne1.Expression, metadata, index, parameters,
-                                factories, scoreFunction, isNegated, indexMapping, highlightingTerms, queryMapping, exact, secondary: secondary, buildSteps: buildSteps, take: take);
+                                factories, scoreFunction, indexMapping, highlightingTerms, queryMapping, allEntries, exact, buildSteps: buildSteps,
+                                take: take);
+
+                            TryMergeTwoNodes(indexSearcher, allEntries, ref left, ref right, out merged, scoreFunction, true);
 
                             return indexSearcher.AndNot(right, left);
 
                         case (_, NegatedExpression ne1):
                             left = ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, @where.Left, metadata, index, parameters,
-                                factories, scoreFunction, isNegated, indexMapping, highlightingTerms, queryMapping, exact, secondary: secondary, buildSteps: buildSteps, take: take);
+                                factories, scoreFunction, indexMapping, highlightingTerms, queryMapping, allEntries, exact, buildSteps: buildSteps,
+                                take: take);
                             right = ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, ne1.Expression, metadata, index, parameters,
-                                factories, scoreFunction, isNegated, indexMapping, highlightingTerms, queryMapping, exact, secondary: secondary, buildSteps: buildSteps, take: take);
+                                factories, scoreFunction, indexMapping, highlightingTerms, queryMapping, allEntries, exact, buildSteps: buildSteps,
+                                take: take);
 
+                            TryMergeTwoNodes(indexSearcher, allEntries, ref left, ref right, out merged, scoreFunction, true);
                             return indexSearcher.AndNot(left, right);
 
                         default:
                             left = ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, @where.Left, metadata, index, parameters,
-                                factories, scoreFunction, isNegated, indexMapping, highlightingTerms, queryMapping, exact, secondary: secondary, buildSteps: buildSteps, take: take);
+                                factories, scoreFunction, indexMapping, highlightingTerms, queryMapping, allEntries, exact, buildSteps: buildSteps,
+                                take: take);
                             right = ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, @where.Right, metadata, index, parameters,
-                                factories, scoreFunction, isNegated, indexMapping, highlightingTerms, queryMapping, exact, secondary: secondary, buildSteps: buildSteps, take: take);
+                                factories, scoreFunction, indexMapping, highlightingTerms, queryMapping, allEntries, exact, buildSteps: buildSteps,
+                                take: take);
 
-                            return isNegated == false
-                                ? indexSearcher.And(left, right)
-                                : indexSearcher.Or(left, right);
+                            if (TryMergeTwoNodes(indexSearcher, allEntries, ref left, ref right, out merged, scoreFunction))
+                                return merged;
+                            return indexSearcher.And(left, right);
                     }
                 }
                 case OperatorType.Or:
                 {
                     var left = ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, @where.Left, metadata, index, parameters,
-                        factories, scoreFunction, isNegated, indexMapping, highlightingTerms, queryMapping, exact, secondary: secondary, buildSteps: buildSteps, take: take);
+                        factories, scoreFunction, indexMapping, highlightingTerms, queryMapping, allEntries, exact, buildSteps: buildSteps,
+                        take: take);
                     var right = ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, @where.Right, metadata, index, parameters,
-                        factories, scoreFunction, isNegated, indexMapping, highlightingTerms, queryMapping, exact, secondary: true, buildSteps: buildSteps, take: take);
+                        factories, scoreFunction, indexMapping, highlightingTerms, queryMapping, allEntries, exact, buildSteps: buildSteps, take: take);
 
                     buildSteps?.Add(
                         $"OR operator: left - {left.GetType().FullName} ({left}) assembly: {left.GetType().Assembly.FullName} assemby location: {left.GetType().Assembly.Location} , right - {right.GetType().FullName} ({right}) assemlby: {right.GetType().Assembly.FullName} assemby location: {right.GetType().Assembly.Location}");
 
-                    return isNegated == false
-                        ? indexSearcher.Or(left, right)
-                        : indexSearcher.And(left, right);
+                    TryMergeTwoNodes(indexSearcher, allEntries, ref left, ref right, out var _, scoreFunction, true);
+                    return indexSearcher.Or(left, right);
                 }
                 default:
                 {
@@ -163,7 +268,7 @@ public static class CoraxQueryBuilder
                     bool? isHighlighting = highlightingTerms?.TryGetValue(fieldName, out highlightingTerm);
                     if (isHighlighting.HasValue && isHighlighting.Value == false)
                     {
-                        highlightingTerm = new CoraxHighlightingTermIndex { FieldName = fieldName };
+                        highlightingTerm = new CoraxHighlightingTermIndex {FieldName = fieldName};
                         highlightingTerms.TryAdd(fieldName, highlightingTerm);
                     }
 
@@ -185,14 +290,15 @@ public static class CoraxQueryBuilder
 
                     var match = valueType switch
                     {
-                        ValueTokenType.Double => indexSearcher.UnaryQuery(indexSearcher.AllEntries(), fieldId, (double)value, operation, take),
-                        ValueTokenType.Long => indexSearcher.UnaryQuery(indexSearcher.AllEntries(), fieldId, (long)value, operation, take),
+                        ValueTokenType.Double => new CoraxBooleanItem(indexSearcher, fieldName.Value, fieldId, value, operation, scoreFunction),
+                        ValueTokenType.Long => new CoraxBooleanItem(indexSearcher, fieldName.Value, fieldId, value, operation, scoreFunction),
                         ValueTokenType.True or
                             ValueTokenType.False or
                             ValueTokenType.Null or
                             ValueTokenType.String or
                             ValueTokenType.Parameter => HandleStringUnaryMatch(),
-                        _ => null
+                        _ => throw new NotSupportedException($"Unhandled token type: {valueType}")
+
                     };
 
                     if (highlightingTerm != null && valueType is ValueTokenType.Double or ValueTokenType.Long)
@@ -200,12 +306,10 @@ public static class CoraxQueryBuilder
                         highlightingTerm.Values = value.ToString();
                     }
 
-                    if (match is null)
-                        QueryBuilderHelper.ThrowUnhandledValueTokenType(valueType);
-
                     return match;
 
-                    IQueryMatch HandleStringUnaryMatch()
+
+                    CoraxBooleanItem HandleStringUnaryMatch()
                     {
                         if (exact && metadata.IsDynamic)
                         {
@@ -215,16 +319,14 @@ public static class CoraxQueryBuilder
 
                         if (value == null)
                         {
-                            return indexSearcher.EqualsNull(indexSearcher.AllEntries(), fieldId, operation, take);
+                            return new CoraxBooleanItem(indexSearcher, fieldName, fieldId, null, UnaryMatchOperation.Equals, scoreFunction);
                         }
-                        else
-                        {
-                            var valueAsString = QueryBuilderHelper.CoraxGetValueAsString(value);
-                            if (highlightingTerm != null)
-                                highlightingTerm.Values = valueAsString;
-                            
-                            return indexSearcher.UnaryQuery(indexSearcher.AllEntries(), fieldId, valueAsString, operation, take);
-                        }
+
+                        var valueAsString = QueryBuilderHelper.CoraxGetValueAsString(value);
+                        if (highlightingTerm != null)
+                            highlightingTerm.Values = valueAsString;
+
+                        return new CoraxBooleanItem(indexSearcher, fieldName.Value, fieldId, valueAsString, operation, scoreFunction);
                     }
                 }
             }
@@ -243,13 +345,13 @@ public static class CoraxQueryBuilder
             {
                 var newExpr = new BinaryExpression(new NegatedExpression(nbe.Left),
                     nbe.Right, nbe.Operator);
-                return ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, newExpr, metadata, index, parameters, factories, scoreFunction, isNegated,
-                    indexMapping, highlightingTerms, queryMapping, exact,
+                return ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, newExpr, metadata, index, parameters, factories, scoreFunction,
+                    indexMapping, highlightingTerms, queryMapping, allEntries, exact,
                     buildSteps: buildSteps, take: take);
             }
 
-            return ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, ne.Expression, metadata, index, parameters, factories, scoreFunction, !isNegated,
-                indexMapping, highlightingTerms, queryMapping, exact,
+            return ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, ne.Expression, metadata, index, parameters, factories, scoreFunction,
+                indexMapping, highlightingTerms, queryMapping, allEntries, exact,
                 buildSteps: buildSteps, take: take);
         }
 
@@ -257,7 +359,8 @@ public static class CoraxQueryBuilder
         {
             buildSteps?.Add($"Between: {expression.Type} - {be}");
 
-            return TranslateBetweenQuery(indexSearcher, query, metadata, index, parameters, exact, be, secondary, scoreFunction, isNegated, indexMapping, queryMapping, highlightingTerms,
+            return TranslateBetweenQuery(indexSearcher, query, metadata, index, parameters, exact, be, scoreFunction, indexMapping, queryMapping, allEntries,
+                highlightingTerms,
                 take);
         }
 
@@ -266,11 +369,11 @@ public static class CoraxQueryBuilder
             buildSteps?.Add($"In: {expression.Type} - {ie}");
 
             var fieldName = QueryBuilderHelper.ExtractIndexFieldName(query, parameters, ie.Source, metadata);
-            
+
             CoraxHighlightingTermIndex highlightingTerm = null;
             if (highlightingTerms != null)
             {
-                highlightingTerm = new CoraxHighlightingTermIndex { FieldName = fieldName };
+                highlightingTerm = new CoraxHighlightingTermIndex {FieldName = fieldName};
                 highlightingTerms[fieldName] = highlightingTerm;
             }
 
@@ -286,7 +389,7 @@ public static class CoraxQueryBuilder
             }
 
             var fieldId = QueryBuilderHelper.GetFieldId(fieldName, index, indexMapping, queryMapping, exact);
-            
+
             if (ie.All)
             {
                 var uniqueMatches = new HashSet<string>();
@@ -299,24 +402,21 @@ public static class CoraxQueryBuilder
                 }
 
                 return indexSearcher.AllInQuery(fieldName, uniqueMatches, fieldId);
-
             }
-            
+
             var matches = new List<string>();
             foreach (var tuple in QueryBuilderHelper.GetValuesForIn(query, ie, metadata, parameters))
             {
                 matches.Add(QueryBuilderHelper.CoraxGetValueAsString(tuple.Value));
             }
 
-            if (highlightingTerm != null )
+            if (highlightingTerm != null)
                 highlightingTerm.Values = matches;
 
-            return (isNegated, scoreFunction) switch
+            return (scoreFunction) switch
             {
-                (false, NullScoreFunction) => indexSearcher.InQuery(fieldName, matches, fieldId),
-                (true, NullScoreFunction) => indexSearcher.InQuery(fieldName, matches, fieldId),
-                (false, _) => indexSearcher.InQuery(fieldName, matches, scoreFunction, fieldId),
-                (true, _) => indexSearcher.InQuery(fieldName, matches, fieldId)
+                (NullScoreFunction) => indexSearcher.InQuery(fieldName, matches, fieldId),
+                (_) => indexSearcher.InQuery(fieldName, matches, fieldId)
             };
         }
 
@@ -324,7 +424,7 @@ public static class CoraxQueryBuilder
         {
             buildSteps?.Add($"True: {expression.Type} - {expression}");
 
-            return indexSearcher.AllEntries();
+            return allEntries.Replay();
         }
 
         if (expression is MethodExpression me)
@@ -337,18 +437,22 @@ public static class CoraxQueryBuilder
             switch (methodType)
             {
                 case MethodType.Search:
-                    return HandleSearch(indexSearcher, query, me, metadata, parameters, proximity, scoreFunction, isNegated, indexMapping, queryMapping, index, highlightingTerms, take);
+                    return HandleSearch(indexSearcher, query, me, metadata, parameters, proximity, scoreFunction, indexMapping, queryMapping, index, highlightingTerms,
+                        take);
                 case MethodType.Boost:
-                    return HandleBoost(indexSearcher, serverContext, documentsContext, query, me, metadata, index, parameters, factories, exact, isNegated,
-                        indexMapping, queryMapping, highlightingTerms, take, buildSteps);
+                    return HandleBoost(indexSearcher, serverContext, documentsContext, query, me, metadata, index, parameters, factories, exact,
+                        indexMapping, queryMapping, allEntries, highlightingTerms, take, buildSteps);
                 case MethodType.StartsWith:
-                    return HandleStartsWith(indexSearcher, query, me, metadata, index, parameters, exact, isNegated, scoreFunction, indexMapping, queryMapping, highlightingTerms, take);
+                    return HandleStartsWith(indexSearcher, query, me, metadata, index, parameters, exact, scoreFunction, indexMapping, queryMapping, highlightingTerms,
+                        take);
                 case MethodType.EndsWith:
-                    return HandleEndsWith(indexSearcher, query, me, metadata, index, parameters, exact, isNegated, scoreFunction, indexMapping, queryMapping, highlightingTerms, take);
+                    return HandleEndsWith(indexSearcher, query, me, metadata, index, parameters, exact, scoreFunction, indexMapping, queryMapping, highlightingTerms,
+                        take);
                 case MethodType.Exists:
                     return HandleExists(indexSearcher, query, parameters, me, metadata, scoreFunction);
                 case MethodType.Exact:
-                    return HandleExact(indexSearcher, serverContext, documentsContext, query, me, metadata, index, parameters, factories, scoreFunction, isNegated, indexMapping, queryMapping, proximity, secondary, buildSteps, highlightingTerms, take);
+                    return HandleExact(indexSearcher, serverContext, documentsContext, query, me, metadata, index, parameters, factories, scoreFunction, indexMapping,
+                        queryMapping, allEntries, proximity, buildSteps, highlightingTerms, take);
                 case MethodType.Spatial_Within:
                 case MethodType.Spatial_Contains:
                 case MethodType.Spatial_Disjoint:
@@ -367,19 +471,20 @@ public static class CoraxQueryBuilder
         DocumentsOperationContext documentsContext,
         Query query,
         MethodExpression expression, QueryMetadata metadata, Index index,
-        BlittableJsonReaderObject parameters, QueryBuilderFactories factories, TScoreFunction scoreFunction, bool isNegated, IndexFieldsMapping indexMapping,
-        FieldsToFetch queryMapping, int? proximity = null, bool secondary = false,
+        BlittableJsonReaderObject parameters, QueryBuilderFactories factories, TScoreFunction scoreFunction, IndexFieldsMapping indexMapping,
+        FieldsToFetch queryMapping, MemoizationMatchProvider<AllEntriesMatch> allEntries, int? proximity = null,
         List<string> buildSteps = null, Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms = null, int take = TakeAll)
         where TScoreFunction : IQueryScoreFunction
     {
         return ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, expression.Arguments[0], metadata, index, parameters, factories, scoreFunction,
-            isNegated, indexMapping, highlightingTerms, queryMapping, true, proximity, secondary, buildSteps);
+            indexMapping, highlightingTerms, queryMapping, allEntries: allEntries, true, proximity, buildSteps);
     }
-
-    private static IQueryMatch TranslateBetweenQuery<TScoreFunction>(IndexSearcher indexSearcher, Query query, QueryMetadata metadata, Index index,
+    
+    private static CoraxBooleanItem TranslateBetweenQuery<TScoreFunction>(IndexSearcher indexSearcher, Query query, QueryMetadata metadata, Index index,
         BlittableJsonReaderObject parameters,
         bool exact,
-        BetweenExpression be, bool secondary, TScoreFunction scoreFunction, bool isNegated, IndexFieldsMapping indexMapping, FieldsToFetch queryMapping,
+        BetweenExpression be, TScoreFunction scoreFunction, IndexFieldsMapping indexMapping, FieldsToFetch queryMapping,
+        MemoizationMatchProvider<AllEntriesMatch> allEntries,
         Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms = null,
         int take = TakeAll)
         where TScoreFunction : IQueryScoreFunction
@@ -388,31 +493,26 @@ public static class CoraxQueryBuilder
         var (valueFirst, valueFirstType) = QueryBuilderHelper.GetValue(query, metadata, parameters, be.Min);
         var (valueSecond, valueSecondType) = QueryBuilderHelper.GetValue(query, metadata, parameters, be.Max);
         var fieldId = QueryBuilderHelper.GetFieldId(fieldName, index, indexMapping, queryMapping, exact);
-
-        var match = (valueFirstType, valueSecondType) switch
-        {
-            (ValueTokenType.Long, ValueTokenType.Long) => indexSearcher.Between(indexSearcher.AllEntries(), fieldId, (long)valueFirst,
-                (long)valueSecond, isNegated, take),
-            (ValueTokenType.Double, ValueTokenType.Double) => indexSearcher.Between(indexSearcher.AllEntries(), fieldId, (double)valueFirst,
-                (double)valueSecond, isNegated, take),
-            (ValueTokenType.String, ValueTokenType.String) => HandleStringBetween(),
-            _ => throw new ArgumentOutOfRangeException()
-        };
+        var leftSideOperation = be.MinInclusive ? UnaryMatchOperation.GreaterThanOrEqual : UnaryMatchOperation.GreaterThan;
+        var rightSideOperation = be.MaxInclusive ? UnaryMatchOperation.LessThanOrEqual : UnaryMatchOperation.LessThan;
+        
+        
 
         if ((valueFirstType, valueSecondType) is (ValueTokenType.Double, ValueTokenType.Double) or (ValueTokenType.Long, ValueTokenType.Long))
         {
             if (highlightingTerms != null)
             {
-                var highlightingTerm = new CoraxHighlightingTermIndex { FieldName = fieldName, Values = (valueFirst, valueSecond) };
+                var highlightingTerm = new CoraxHighlightingTermIndex {FieldName = fieldName, Values = (valueFirst, valueSecond)};
                 highlightingTerms[fieldName] = highlightingTerm;
             }
         }
+        return (valueFirstType, valueSecondType) switch
+        {
+            (ValueTokenType.String, ValueTokenType.String) => HandleStringBetween(),
+            _ => new CoraxBooleanItem(indexSearcher, fieldName, fieldId, valueFirst, valueSecond, UnaryMatchOperation.Between, leftSideOperation, rightSideOperation, scoreFunction)
+        };
 
-        return scoreFunction is NullScoreFunction
-            ? match
-            : indexSearcher.Boost(match, scoreFunction);
-
-        IQueryMatch HandleStringBetween()
+        CoraxBooleanItem HandleStringBetween()
         {
             exact = QueryBuilderHelper.IsExact(index, exact, fieldName);
             var valueFirstAsString = QueryBuilderHelper.CoraxGetValueAsString(valueFirst);
@@ -420,11 +520,11 @@ public static class CoraxQueryBuilder
 
             if (highlightingTerms != null)
             {
-                var highlightingTerm = new CoraxHighlightingTermIndex { FieldName = fieldName, Values = (valueFirst, valueSecond) };
+                var highlightingTerm = new CoraxHighlightingTermIndex {FieldName = fieldName, Values = (valueFirst, valueSecond)};
                 highlightingTerms[fieldName] = highlightingTerm;
             }
 
-            return indexSearcher.Between(indexSearcher.AllEntries(), fieldId, valueFirstAsString, valueSecondAsString, isNegated, take);
+            return new CoraxBooleanItem(indexSearcher, fieldName, fieldId, valueFirstAsString, valueSecondAsString, UnaryMatchOperation.Between, leftSideOperation, rightSideOperation, scoreFunction);
         }
     }
 
@@ -439,7 +539,7 @@ public static class CoraxQueryBuilder
 
     private static IQueryMatch HandleStartsWith<TScoreFunction>(IndexSearcher indexSearcher, Query query, MethodExpression expression, QueryMetadata metadata,
         Index index,
-        BlittableJsonReaderObject parameters, bool exact, bool isNegated, TScoreFunction scoreFunction, IndexFieldsMapping indexMapping, FieldsToFetch queryMapping,
+        BlittableJsonReaderObject parameters, bool exact, TScoreFunction scoreFunction, IndexFieldsMapping indexMapping, FieldsToFetch queryMapping,
         Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms = null,
         int take = TakeAll)
         where TScoreFunction : IQueryScoreFunction
@@ -453,7 +553,7 @@ public static class CoraxQueryBuilder
         CoraxHighlightingTermIndex highlightingTerm = null;
         if (highlightingTerms != null)
         {
-            highlightingTerm = new CoraxHighlightingTermIndex { FieldName = fieldName, Values = valueAsString };
+            highlightingTerm = new CoraxHighlightingTermIndex {FieldName = fieldName, Values = valueAsString};
             highlightingTerms[fieldName] = highlightingTerm;
         }
 
@@ -466,14 +566,14 @@ public static class CoraxQueryBuilder
                 highlightingTerm.DynamicFieldName = fieldName;
                 highlightingTerms[fieldName] = highlightingTerm;
             }
-        }            
+        }
 
-        var fieldId = QueryBuilderHelper.GetFieldId(fieldName, index, indexMapping, queryMapping, exact);        
-        return indexSearcher.StartWithQuery(fieldName, valueAsString, scoreFunction, isNegated, fieldId);
+        var fieldId = QueryBuilderHelper.GetFieldId(fieldName, index, indexMapping, queryMapping, exact);
+        return indexSearcher.StartWithQuery(fieldName, valueAsString, scoreFunction: scoreFunction, fieldId: fieldId);
     }
 
     private static IQueryMatch HandleEndsWith<TScoreFunction>(IndexSearcher indexSearcher, Query query, MethodExpression expression, QueryMetadata metadata, Index index,
-        BlittableJsonReaderObject parameters, bool exact, bool isNegated, TScoreFunction scoreFunction, IndexFieldsMapping indexMapping, FieldsToFetch queryMapping,
+        BlittableJsonReaderObject parameters, bool exact, TScoreFunction scoreFunction, IndexFieldsMapping indexMapping, FieldsToFetch queryMapping,
         Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms = null,
         int take = TakeAll)
         where TScoreFunction : IQueryScoreFunction
@@ -488,7 +588,7 @@ public static class CoraxQueryBuilder
         CoraxHighlightingTermIndex highlightingTerm = null;
         if (highlightingTerms != null)
         {
-            highlightingTerm = new CoraxHighlightingTermIndex { FieldName = fieldName, Values = valueAsString };
+            highlightingTerm = new CoraxHighlightingTermIndex {FieldName = fieldName, Values = valueAsString};
             highlightingTerms[fieldName] = highlightingTerm;
         }
 
@@ -502,14 +602,15 @@ public static class CoraxQueryBuilder
                 highlightingTerms[fieldName] = highlightingTerm;
             }
         }
-           
+
         var fieldId = QueryBuilderHelper.GetFieldId(fieldName, index, indexMapping, queryMapping, exact);
-        return indexSearcher.EndsWithQuery(fieldName, valueAsString, scoreFunction, isNegated, fieldId);
+        return indexSearcher.EndsWithQuery(fieldName, valueAsString, scoreFunction: scoreFunction, fieldId: fieldId);
     }
 
     private static IQueryMatch HandleBoost(IndexSearcher indexSearcher, TransactionOperationContext serverContext, DocumentsOperationContext context, Query query,
         MethodExpression expression, QueryMetadata metadata, Index index,
-        BlittableJsonReaderObject parameters, QueryBuilderFactories factories, bool exact, bool isNegated, IndexFieldsMapping indexMapping, FieldsToFetch queryMapping,
+        BlittableJsonReaderObject parameters, QueryBuilderFactories factories, bool exact, IndexFieldsMapping indexMapping, FieldsToFetch queryMapping,
+        MemoizationMatchProvider<AllEntriesMatch> allEntries,
         Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms = null,
         int take = TakeAll,
         List<string> buildSteps = null)
@@ -552,14 +653,14 @@ public static class CoraxQueryBuilder
 
         var scoreFunction = new ConstantScoreFunction(boost);
 
-        return ToCoraxQuery(indexSearcher, serverContext, context, query, expression.Arguments[0], metadata, index, parameters, factories, scoreFunction, isNegated,
-            indexMapping, highlightingTerms, queryMapping, exact,
+        return ToCoraxQuery(indexSearcher, serverContext, context, query, expression.Arguments[0], metadata, index, parameters, factories, scoreFunction,
+            indexMapping, highlightingTerms, queryMapping, allEntries, exact,
             buildSteps: buildSteps,
             take: take);
     }
 
     private static IQueryMatch HandleSearch<TScoreFunction>(IndexSearcher indexSearcher, Query query, MethodExpression expression, QueryMetadata metadata,
-        BlittableJsonReaderObject parameters, int? proximity, TScoreFunction scoreFunction, bool isNegated, IndexFieldsMapping indexMapping, FieldsToFetch queryMapping,
+        BlittableJsonReaderObject parameters, int? proximity, TScoreFunction scoreFunction, IndexFieldsMapping indexMapping, FieldsToFetch queryMapping,
         Index index,
         Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms = null,
         int take = TakeAll)
@@ -593,15 +694,12 @@ public static class CoraxQueryBuilder
         var valueAsString = QueryBuilderHelper.CoraxGetValueAsString(value);
         if (highlightingTerms != null && highlightingTerms.TryGetValue(fieldName, out var highlightingTerm) == false)
         {
-            highlightingTerm = new CoraxHighlightingTermIndex
-            {
-                Values = valueAsString,
-            };
-            
+            highlightingTerm = new CoraxHighlightingTermIndex {Values = valueAsString,};
+
             highlightingTerm.FieldName = fieldName;
             highlightingTerms?.TryAdd(fieldName, highlightingTerm);
 
-            
+
             if (metadata.IsDynamic && isDocumentId == false)
             {
                 fieldName = new QueryFieldName(AutoIndexField.GetSearchAutoIndexFieldName(fieldName.Value), fieldName.IsQuoted);
@@ -639,12 +737,12 @@ public static class CoraxQueryBuilder
         }
 
 
-        if (indexMapping.TryGetByFieldId(fieldId, out var binding) && binding.Analyzer is not LuceneAnalyzerAdapter )
+        if (indexMapping.TryGetByFieldId(fieldId, out var binding) && binding.Analyzer is not LuceneAnalyzerAdapter)
         {
-            return indexSearcher.SearchQuery(fieldName, valueAsString, scoreFunction, @operator, fieldId, isNegated, true);
+            return indexSearcher.SearchQuery(fieldName, valueAsString, scoreFunction, @operator, fieldId, false, true);
         }
-        
-        return indexSearcher.SearchQuery(fieldName, valueAsString, scoreFunction, @operator, fieldId, isNegated);
+
+        return indexSearcher.SearchQuery(fieldName, valueAsString, scoreFunction, @operator, fieldId);
     }
 
     private static IQueryMatch HandleSpatial(IndexSearcher indexSearcher, Query query, MethodExpression expression, QueryMetadata metadata,
@@ -827,7 +925,7 @@ public static class CoraxQueryBuilder
             {
                 var order = orderMetadata[0];
                 if (order.HasBoost)
-                    return indexSearcher.OrderByScore(match, take);
+                    return indexSearcher.OrderByScore(match, take: take);
 
                 return (order.FieldType, order.Ascending) switch
                 {

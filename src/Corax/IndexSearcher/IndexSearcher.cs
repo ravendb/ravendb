@@ -154,6 +154,14 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     {
         return new AllEntriesMatch(_transaction);
     }
+
+    public long GetEntriesAmountInField(string name)
+    {
+        var fields = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
+        var terms = fields?.CompactTreeFor(name);
+
+        return terms?.NumberOfEntries ?? 0;
+    }
     
     public bool TryGetTermsOfField(string field, out ExistsTermProvider existsTermProvider)
     {
