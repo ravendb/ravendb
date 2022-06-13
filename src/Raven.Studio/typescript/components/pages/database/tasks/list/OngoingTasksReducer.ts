@@ -28,9 +28,8 @@ import OngoingTaskPullReplicationAsSink = Raven.Client.Documents.Operations.Ongo
 import OngoingTaskPullReplicationAsHub = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsHub;
 import EtlTaskProgress = Raven.Server.Documents.ETL.Stats.EtlTaskProgress;
 import EtlProcessProgress = Raven.Server.Documents.ETL.Stats.EtlProcessProgress;
-import EtlType = Raven.Client.Documents.Operations.ETL.EtlType;
-import OngoingTaskType = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType;
 import TaskUtils from "../../../../utils/TaskUtils";
+import OngoingTaskType = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType;
 
 interface ActionTasksLoaded {
     location: databaseLocationSpecifier;
@@ -219,10 +218,8 @@ export const ongoingTasksReducer: Reducer<OngoingTasksState, OngoingTaskReducerA
             const incomingLocation = action.location;
             const incomingTasks = action.tasks;
 
-            //TODO: any sorting? generalUtils.sortedAlphaNumericIndex(container(), newItem, x => x.taskName().toLocaleLowerCase());
-
             return produce(state, (draft) => {
-                draft.tasks = incomingTasks.OngoingTasksList.map((incomingTask) => {
+                const newTasks = incomingTasks.OngoingTasksList.map((incomingTask) => {
                     const existingTask = state.tasks.find(
                         (x) => x.shared.taskType === incomingTask.TaskType && x.shared.taskId === incomingTask.TaskId
                     );
@@ -243,6 +240,12 @@ export const ongoingTasksReducer: Reducer<OngoingTasksState, OngoingTaskReducerA
                         ],
                     };
                 });
+
+                newTasks.sort((a: OngoingTaskInfo, b: OngoingTaskInfo) =>
+                    genUtils.sortAlphaNumeric(a.shared.taskName, b.shared.taskName)
+                );
+
+                draft.tasks = newTasks;
 
                 draft.replicationHubs = incomingTasks.PullReplications.map((incomingTask) => {
                     return {

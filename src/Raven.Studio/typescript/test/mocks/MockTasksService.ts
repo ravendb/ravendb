@@ -1,14 +1,19 @@
 import { AutoMockService, MockedValue } from "./AutoMockService";
-import DatabasesService from "../../components/services/DatabasesService";
-import { IndexesStubs } from "../stubs/IndexesStubs";
-import EssentialDatabaseStatistics = Raven.Client.Documents.Operations.EssentialDatabaseStatistics;
-import { DatabaseStubs } from "../DatabaseStubs";
-import DetailedDatabaseStatistics = Raven.Client.Documents.Operations.DetailedDatabaseStatistics;
-import DatabasesInfo = Raven.Client.ServerWide.Operations.DatabasesInfo;
 import TasksService from "../../components/services/TasksService";
+import OngoingTasksResult = Raven.Server.Web.System.OngoingTasksResult;
+import { TasksStubs } from "../stubs/TasksStubs";
+import EtlTaskProgress = Raven.Server.Documents.ETL.Stats.EtlTaskProgress;
 
 export default class MockTasksService extends AutoMockService<TasksService> {
     constructor() {
         super(new TasksService());
+    }
+
+    withGetTasks(dto?: MockedValue<OngoingTasksResult>) {
+        return this.mockResolvedValue(this.mocks.getOngoingTasks, dto, TasksStubs.getTasksList());
+    }
+
+    withGetProgress(dto?: MockedValue<resultsDto<EtlTaskProgress>>) {
+        return this.mockResolvedValue(this.mocks.getProgress, dto, TasksStubs.getTasksProgress());
     }
 }

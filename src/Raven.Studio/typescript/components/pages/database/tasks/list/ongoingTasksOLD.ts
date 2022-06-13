@@ -146,62 +146,6 @@ TODO: this become node spefic
     </div>
 </script>
 
-<script type="text/html" id="etl-progress-template">
-    
-    <div data-bind="if: showProgress">
-        <div data-bind="visible: loadingProgress">
-            <i class="global-spinner spinner-xs"></i> Loading progress ...
-        </div>
-        <!-- ko foreach: scriptProgress -->
-        <div class="etl-progress">
-            <div class="overall-container">
-                <div class="progress-overall">
-                    <div class="flex-horizontal" data-bind="with: globalProgress">
-                        <div class="flex-grow"><span data-bind="text: formattedTimeLeftToProcess"></span></div>
-                        <div class="percentage" data-bind="text: percentageFormatted,  css: { 'text-success': completed }, attr: { title: textualProgress }"></div>
-                    </div>
-                    <div class="progress" data-bind="with: globalProgress">
-                        <div data-bind="css: { 'progress-bar-striped': !completed() && !disabled(), 'progress-bar-primary': !completed(), 'active': !completed() && !disabled(), 'progress-bar-success': completed },
-                                        style: { width: percentageFormatted }, attr: { 'aria-valuenow': percentage, title: textualProgress }"
-                             class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100">
-                            <span class="sr-only" data-bind="text: percentageFormatted() + ' Completed'"></span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div data-bind="foreach: innerProgresses" class="etl-progress-details">
-                <div class="etl-progress-item" data-bind="with: progress, visible: visible">
-                    <div class="etl-label">
-                        <small class="name" data-bind="text: $parent.name"></small>
-                        <small class="percentage" data-bind="text: percentageFormatted(), css: { 'text-success': completed }, attr: { title: textualProgress }"></small>
-                    </div>
-                    <div class="progress">
-                        <div data-bind="css: { 'progress-bar-striped': !completed() && !$parents[1].globalProgress.disabled(), 'progress-bar-primary': !completed(), 'active': !completed() && !$parents[1].globalProgress.disabled(), 'progress-bar-success': completed() },
-                                        style: { width: percentageFormatted }, attr: { 'aria-valuenow': percentage, title: textualProgress }"
-                             class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100">
-                            <span class="sr-only" data-bind="text: percentageFormatted() + ' Completed'"></span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <!-- /ko -->
-    </div>
-</script>
-
-
-
-//TODO: remove
-// this class represents connection between current node (hub) and remote node (sink)
-class ongoingTaskReplicationHubListModel extends ongoingTaskListModel {
-    
-    uniqueName: string;
-    
-    static generateUniqueName(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsHub) { 
-        return dto.TaskName + ":" + dto.DestinationDatabase + ":" + dto.DestinationUrl;
-    }
-}
-
 type PerConnectionStats = {
     clientUri: string;
     workerId: string;
@@ -314,62 +258,7 @@ class ongoingTaskSubscriptionListModel extends ongoingTaskListModel {
 
 export = ongoingTaskSubscriptionListModel;
 
-//TODO: remove
-abstract class abstractOngoingTaskEtlListModel extends ongoingTaskListModel {
-    showProgress = ko.observable(false); // we use separate property for progress and details to smooth toggle animation, first we show progress then expand details 
-    
-    loadingProgress = ko.observable<boolean>(true);
 
-    canShowProgress = ko.pureComputed(() => {
-        const status = this.taskConnectionStatus();
-        return status === "Active" || status === "NotActive" || status === "Reconnect";
-    });
-    
-    suggestNavigationToResponsibleNodeForProgress = ko.pureComputed(() => this.taskConnectionStatus() === "NotOnThisNode");
-    
-    connectionStringsUrl: string;
-    connectionStringName = ko.observable<string>();
-    
-    scriptProgress = ko.observableArray<progressItem>([]);
-
-    toggleDetails() {
-        this.showProgress(!this.showDetails() && this.canShowProgress());
-        this.showDetails.toggle();
-    }
-    
-   
-}
-
-export = abstractOngoingTaskEtlListModel;
-
-
-
-class etlProgress extends genericProgress {
-    
-    constructor(processed: number,
-                total: number,
-                numberFormatter: (number: number) => string,
-                processedPerSecond: number = 0) {
-        super(processed, total, numberFormatter, processedPerSecond);
-        
-        this.textualProgress = ko.pureComputed(() => {
-            if (this.total() === this.processed() && !this.completed()) {
-                return "Processed all documents and tombstones, load in progress";
-            }
-            return this.defaultTextualProgress();
-        })
-    }
-
-    protected getDefaultTimeLeftMessage() {
-        if (this.total() === this.processed() && !this.completed()) {
-            return "Processed all documents and tombstones, load in progress";
-        }
-
-        return this.disabled() ? `Task is disabled` : "Overall progress";
-    }
-}
-
-export = etlProgress; 
 
 class ongoingTaskReplicationHubDefinitionListModel {
     
@@ -444,8 +333,6 @@ class ongoingTaskReplicationHubDefinitionListModel {
             }
         });
     }
-
-
 export = ongoingTaskReplicationHubDefinitionListModel;
 
 */

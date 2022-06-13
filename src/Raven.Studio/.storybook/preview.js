@@ -44,6 +44,11 @@ pluginWidget.install({});
 import { ModuleMocker } from 'jest-mock';
 window.jest = new ModuleMocker(window);
 
+// mock ace
+window.ace = {
+    require: () => ({})
+}
+
 
 export const decorators = [
     (Story) => {

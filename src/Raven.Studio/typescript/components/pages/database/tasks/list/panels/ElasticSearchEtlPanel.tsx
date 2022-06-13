@@ -1,7 +1,8 @@
-﻿import React from "react";
+﻿import React, { useCallback } from "react";
 import {
     BaseOngoingTaskPanelProps,
     ConnectionStringItem,
+    ICanShowTransformationScriptPreview,
     OngoingTaskActions,
     OngoingTaskName,
     OngoingTaskStatus,
@@ -11,6 +12,7 @@ import { OngoingTaskElasticSearchEtlInfo } from "../../../../../models/tasks";
 import { useAccessManager } from "hooks/useAccessManager";
 import { useAppUrls } from "hooks/useAppUrls";
 import { RichPanel, RichPanelDetailItem, RichPanelDetails, RichPanelHeader } from "../../../../../common/RichPanel";
+import { OngoingTaskDistribution } from "./OngoingTaskDistribution";
 
 type ElasticSearchEtlPanelProps = BaseOngoingTaskPanelProps<OngoingTaskElasticSearchEtlInfo>;
 
@@ -18,8 +20,6 @@ function Details(props: ElasticSearchEtlPanelProps & { canEdit: boolean }) {
     const { data, canEdit, db } = props;
     const { appUrl } = useAppUrls();
     const connectionStringsUrl = appUrl.forConnectionStrings(db, "elasticSearch", data.shared.connectionStringName);
-    //TODO: task status
-    //TODO: task progress
 
     return (
         <RichPanelDetails>
@@ -39,8 +39,8 @@ function Details(props: ElasticSearchEtlPanelProps & { canEdit: boolean }) {
     );
 }
 
-export function ElasticSearchEtlPanel(props: ElasticSearchEtlPanelProps) {
-    const { db, data } = props;
+export function ElasticSearchEtlPanel(props: ElasticSearchEtlPanelProps & ICanShowTransformationScriptPreview) {
+    const { db, data, showItemPreview } = props;
 
     const { isAdminAccessOrAbove } = useAccessManager();
     const { forCurrentDatabase } = useAppUrls();
@@ -51,6 +51,13 @@ export function ElasticSearchEtlPanel(props: ElasticSearchEtlPanelProps) {
     const { detailsVisible, toggleDetails, toggleStateHandler, onEdit, onDeleteHandler } = useTasksOperations(
         editUrl,
         props
+    );
+
+    const showPreview = useCallback(
+        (transformationName: string) => {
+            showItemPreview(data, transformationName);
+        },
+        [data]
     );
 
     return (
@@ -67,6 +74,7 @@ export function ElasticSearchEtlPanel(props: ElasticSearchEtlPanelProps) {
                 />
             </RichPanelHeader>
             {detailsVisible && <Details {...props} canEdit={canEdit} />}
+            {detailsVisible && <OngoingTaskDistribution task={data} showPreview={showPreview} />}
         </RichPanel>
     );
 }

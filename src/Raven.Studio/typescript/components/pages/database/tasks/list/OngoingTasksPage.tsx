@@ -70,8 +70,13 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                 tasks,
             });
         },
-        [database]
+        [database, tasksService, dispatch]
     );
+
+    const reload = useCallback(async () => {
+        const loadTasks = tasks.locations.map((location) => fetchTasks(location));
+        await Promise.all(loadTasks);
+    }, [database]);
 
     const loadMissing = async () => {
         const loadTasks = tasks.tasks[0].nodesInfo.map(async (nodeInfo) => {
@@ -101,7 +106,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
         async (task: OngoingTaskSharedInfo) => {
             await tasksService.deleteOngoingTask(database, task.taskType, task.taskId, task.taskName);
 
-            //TODO: fetchOngoingTasks - reload!
+            await reload();
         },
         [tasksService]
     );
@@ -132,8 +137,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
     const toggleOngoingTask = useCallback(
         async (task: OngoingTaskSharedInfo, enable: boolean) => {
             await tasksService.toggleOngoingTask(database, task.taskType, task.taskId, task.taskName, enable);
-            //TODO: lazy update?
-            //TODO: fetch ongoing tasks
+            await reload();
         },
         [database, tasksService]
     );
@@ -345,6 +349,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                                         key={taskKey(x.shared)}
                                         data={x}
                                         onToggleDetails={startTrackingProgress}
+                                        showItemPreview={showItemPreview}
                                     />
                                 ))}
                             </div>
