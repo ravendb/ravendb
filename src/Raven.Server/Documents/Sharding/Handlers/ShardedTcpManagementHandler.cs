@@ -12,4 +12,11 @@ public class ShardedTcpManagementHandler : ShardedDatabaseRequestHandler
         using (var processor = new ShardedTcpManagementHandlerProcessorForGetAll(this))
             await processor.ExecuteAsync();
     }
+
+    [RavenShardedAction("/databases/*/tcp", "DELETE")]
+    public async Task Delete()
+    {
+        using (var processor = new ShardedTcpManagementHandlerProcessorForDelete(this))
+            await processor.ExecuteAsync();
+    }
 }
