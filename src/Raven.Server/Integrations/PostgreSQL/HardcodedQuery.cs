@@ -51,6 +51,12 @@ namespace Raven.Server.Integrations.PostgreSQL
 
             else if (normalizedQuery.Replace("\n", "").Equals(NpgsqlConfig.VersionQuery, StringComparison.OrdinalIgnoreCase))
                 result = NpgsqlConfig.VersionResponse;
+                
+            else if (normalizedQuery.Equals(NpgsqlConfig.VersionCurrentSettingQuery, StringComparison.OrdinalIgnoreCase))
+                result = NpgsqlConfig.VersionCurrentSettingResponse;
+            
+            else if (normalizedQuery.Equals(NpgsqlConfig.CurrentSettingQuery, StringComparison.OrdinalIgnoreCase))
+                result = NpgsqlConfig.CurrentSettingResponse;
 
             else if (normalizedQuery.Equals(NpgsqlConfig.Npgsql5TypesQuery, StringComparison.OrdinalIgnoreCase))
                 result = NpgsqlConfig.Npgsql5TypesResponse;

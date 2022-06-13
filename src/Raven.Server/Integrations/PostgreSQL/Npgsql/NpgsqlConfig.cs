@@ -18,6 +18,25 @@ namespace Raven.Server.Integrations.PostgreSQL.Npgsql
                 {"version", new PgColumn("version", 0, PgText.Default, PgFormat.Text)}
             });
 
+        public static readonly string VersionCurrentSettingQuery = "select version();select current_setting('max_index_keys')";
+        public static readonly PgTable VersionCurrentSettingResponse = CsvToPg.Convert(
+            @"current_setting_query.csv",
+            new Dictionary<string, PgColumn> 
+                {
+                    {"version", new PgColumn("version", 0,PgText.Default, PgFormat.Text)},
+                    {"current_setting", new PgColumn("current_setting",1,PgText.Default, PgFormat.Text)}
+                });
+
+        public static readonly string CurrentSettingQuery = "select current_setting('max_index_keys')";
+        public static readonly PgTable CurrentSettingResponse = CsvToPg.Convert(
+            @"current_setting_query.csv",
+            new Dictionary<string, PgColumn> 
+                {
+                    {"current_setting", new PgColumn("current_setting",0,PgText.Default, PgFormat.Text)}
+                }
+        );
+
+        
         // 5.0.0 - current
         public static readonly string Npgsql5TypesQuery = "SELECT ns.nspname, typ_and_elem_type.*,\n   CASE\n       WHEN typtype IN ('b', 'e', 'p') THEN 0           -- First base types, enums, pseudo-types\n       WHEN typtype = 'r' THEN 1                        -- Ranges after\n       WHEN typtype = 'c' THEN 2                        -- Composites after\n       WHEN typtype = 'd' AND elemtyptype <> 'a' THEN 3 -- Domains over non-arrays after\n       WHEN typtype = 'a' THEN 4                        -- Arrays before\n       WHEN typtype = 'd' AND elemtyptype = 'a' THEN 5  -- Domains over arrays last\n    END AS ord\nFROM (\n    -- Arrays have typtype=b - this subquery identifies them by their typreceive and converts their typtype to a\n    -- We first do this for the type (innerest-most subquery), and then for its element type\n    -- This also returns the array element, range subtype and domain base type as elemtypoid\n    SELECT\n        typ.oid, typ.typnamespace, typ.typname, typ.typtype, typ.typrelid, typ.typnotnull, typ.relkind,\n        elemtyp.oid AS elemtypoid, elemtyp.typname AS elemtypname, elemcls.relkind AS elemrelkind,\n        CASE WHEN elemproc.proname='array_recv' THEN 'a' ELSE elemtyp.typtype END AS elemtyptype\n    FROM (\n        SELECT typ.oid, typnamespace, typname, typrelid, typnotnull, relkind, typelem AS elemoid,\n            CASE WHEN proc.proname='array_recv' THEN 'a' ELSE typ.typtype END AS typtype,\n            CASE\n                WHEN proc.proname='array_recv' THEN typ.typelem\n                WHEN typ.typtype='r' THEN rngsubtype\n                WHEN typ.typtype='d' THEN typ.typbasetype\n            END AS elemtypoid\n        FROM pg_type AS typ\n        LEFT JOIN pg_class AS cls ON (cls.oid = typ.typrelid)\n        LEFT JOIN pg_proc AS proc ON proc.oid = typ.typreceive\n        LEFT JOIN pg_range ON (pg_range.rngtypid = typ.oid)\n    ) AS typ\n    LEFT JOIN pg_type AS elemtyp ON elemtyp.oid = elemtypoid\n    LEFT JOIN pg_class AS elemcls ON (elemcls.oid = elemtyp.typrelid)\n    LEFT JOIN pg_proc AS elemproc ON elemproc.oid = elemtyp.typreceive\n) AS typ_and_elem_type\nJOIN pg_namespace AS ns ON (ns.oid = typnamespace)\nWHERE\n    typtype IN ('b', 'r', 'e', 'd') OR -- Base, range, enum, domain\n    (typtype = 'c' AND relkind='c') OR -- User-defined free-standing composites (not table composites) by default\n    (typtype = 'p' AND typname IN ('record', 'void')) OR -- Some special supported pseudo-types\n    (typtype = 'a' AND (  -- Array of...\n        elemtyptype IN ('b', 'r', 'e', 'd') OR -- Array of base, range, enum, domain\n        (elemtyptype = 'p' AND elemtypname IN ('record', 'void')) OR -- Arrays of special supported pseudo-types\n        (elemtyptype = 'c' AND elemrelkind='c') -- Array of user-defined free-standing composites (not table composites) by default\n    ))\nORDER BY ord";
         public static readonly PgTable Npgsql5TypesResponse = CsvToPg.Convert(
