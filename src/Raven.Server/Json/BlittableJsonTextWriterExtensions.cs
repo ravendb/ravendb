@@ -107,6 +107,10 @@ namespace Raven.Server.Json
                 w.WritePropertyName(nameof(taskStats.EtlType));
                 w.WriteString(taskStats.EtlType.ToString());
                 w.WriteComma();
+                
+                w.WritePropertyName(nameof(taskStats.EtlSubType));
+                w.WriteString(taskStats.EtlSubType?.ToString());
+                w.WriteComma();
 
                 w.WriteArray(c, nameof(taskStats.Stats), taskStats.Stats, (wp, cp, scriptStats) =>
                 {
