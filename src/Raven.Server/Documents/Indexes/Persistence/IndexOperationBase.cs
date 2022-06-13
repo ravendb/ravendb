@@ -113,19 +113,20 @@ public abstract class IndexOperationBase : IDisposable
         return (int)pageSize;
     }
 
-    protected static int CoraxGetPageSize(global::Corax.IndexSearcher searcher, int bufferSize, IndexQueryServerSide query)
+    protected static int CoraxGetPageSize(global::Corax.IndexSearcher searcher, int pageSize, IndexQueryServerSide query)
     {
-        var size = searcher.NumberOfEntries;
-        if (size == 0)
-            return 2 << 10;
+        var numberOfEntries = searcher.NumberOfEntries;
+        if (numberOfEntries == 0)
+            return 2 << 4;
         
-        if (size > int.MaxValue)
+        if (numberOfEntries > int.MaxValue)
             return int.MaxValue;
 
-        if (size < bufferSize || query.Metadata.OrderBy is not null)
-            return (int)size;
-
-        return bufferSize == 0 ? 2 << 10 : bufferSize;
+        if (query.Metadata.OrderBy is not null)
+            return (int)numberOfEntries;
+        
+        
+        return pageSize == 0 ? 2 << 10 : pageSize;
     }
     
     //

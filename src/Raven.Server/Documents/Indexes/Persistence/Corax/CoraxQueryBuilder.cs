@@ -319,7 +319,13 @@ public static class CoraxQueryBuilder
 
                         if (value == null)
                         {
-                            return new CoraxBooleanItem(indexSearcher, fieldName, fieldId, null, UnaryMatchOperation.Equals, scoreFunction);
+                            if (operation is UnaryMatchOperation.Equals)
+                                return new CoraxBooleanItem(indexSearcher, fieldName, fieldId, null, UnaryMatchOperation.Equals, scoreFunction);
+                            else if (operation is UnaryMatchOperation.NotEquals)
+                                //Please consider if we ever need to support this.
+                                return new CoraxBooleanItem(indexSearcher, fieldName, fieldId, null, UnaryMatchOperation.NotEquals, scoreFunction);
+                            else
+                                throw new NotSupportedException($"Unhandled operation: {operation}");
                         }
 
                         var valueAsString = QueryBuilderHelper.CoraxGetValueAsString(value);
@@ -804,7 +810,7 @@ public static class CoraxQueryBuilder
 
         //var args = new SpatialArgs(operation, shape) {DistErrPct = distanceErrorPct};
 
-        return indexSearcher.SpatialQuery(fieldName, fieldId, Double.Epsilon, shape, spatialField.GetContext(), operation);
+        return indexSearcher.SpatialQuery(fieldName, fieldId, distanceErrorPct, shape, spatialField.GetContext(), operation);
     }
 
     public static ReadOnlySpan<OrderMetadata> GetSortMetadata(IndexQueryServerSide query, Index index, Func<string, SpatialField> getSpatialField,
