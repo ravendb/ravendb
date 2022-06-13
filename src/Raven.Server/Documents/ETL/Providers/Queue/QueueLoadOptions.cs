@@ -11,6 +11,6 @@ public class QueueLoadOptions
     public string PartitionKey { get; set; }
 
     public string Exchange { get; set; }
-    
+
     public string ExchangeType { get; set; }
 }

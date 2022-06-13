@@ -5,6 +5,6 @@ namespace Raven.Server.Documents.ETL.Providers.Queue.Test
 {
     public class QueueEtlTestScriptResult : TestEtlScriptResult
     {
-        public List<TopicSummary> Summary { get; set; }
+        public List<QueueSummary> Summary { get; set; }
     }
 }
