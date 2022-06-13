@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -179,6 +179,56 @@ namespace FastTests.Voron
                 }
                 wtx.Commit();
             }
+            using (var rtx = Env.ReadTransaction())
+            {
+                var tree = CompactTree.Create(rtx.LowLevelTransaction, "test");
+                Assert.Equal(0, tree.State.NumberOfEntries);
+                Assert.Equal(0, tree.State.BranchPages);
+                Assert.Equal(1, tree.State.LeafPages);
+                Assert.Equal(1, tree.State.Depth);
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Voron)]
+        [InlineData(400000)]
+        public void CanDeleteLargeNumberOfItemsInRandomInsertionOrder(int size, int random = 1337)
+        {
+            HashSet<int> keys = new HashSet<int>();
+            Random rnd = new Random(random);
+            using (var wtx = Env.WriteTransaction())
+            {
+                var tree = CompactTree.Create(wtx.LowLevelTransaction, "test");
+                for (int i = 0; i < size; i++)
+                {
+                    int k = rnd.Next();
+                    if (!keys.Contains(k))
+                    {
+                        tree.Add("hi" + k, i);
+                        keys.Add(k);
+                    }
+                }
+                wtx.Commit();                
+            }
+
+            keys = new HashSet<int>();
+            rnd = new Random(random);
+            using (var wtx = Env.WriteTransaction())
+            {
+                var tree = CompactTree.Create(wtx.LowLevelTransaction, "test");
+                for (int i = 0; i < size; i++)
+                {
+                    int k = rnd.Next();
+                    if (!keys.Contains(k))
+                    {
+                        Assert.True(tree.TryRemove("hi" + k, out var v));
+                        Assert.Equal(i, v);
+
+                        keys.Add(k);
+                    }
+                }
+                wtx.Commit();
+            }
+
             using (var rtx = Env.ReadTransaction())
             {
                 var tree = CompactTree.Create(rtx.LowLevelTransaction, "test");

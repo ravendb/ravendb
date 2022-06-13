@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Tests.Infrastructure;
 using FastTests.Client.Subscriptions;
+using FastTests.Voron;
 
 namespace Tryouts;
 
@@ -25,9 +26,34 @@ public static class Program
             try
             {
                 using (var testOutputHelper = new ConsoleTestOutputHelper())
-                    //using (var test = new RollingIndexesClusterTests(testOutputHelper))
-                await using (var test = new SubscriptionsBasic(testOutputHelper))
                 {
+
+                    int minFailure = int.MaxValue;
+                    int failureRandom = -1;
+
+                    var rnd = new Random();
+                    int number = 500000;
+                    while (number > 0)
+                    {
+                        int seed = rnd.Next(100000);
+                        try
+                        {
+                            new CompactTreeTests(testOutputHelper).CanDeleteLargeNumberOfItemsInRandomInsertionOrder(number, seed);
+                        }
+                        catch
+                        {
+                            if (number < minFailure)
+                            {
+                                minFailure = number;
+                                failureRandom = seed;
+                                Console.WriteLine($"[N:{minFailure}, Rnd:{failureRandom}]");
+                            }
+                        }
+
+                        number = rnd.Next(Math.Min(500000, minFailure));
+                    }
+
+                    Console.ReadLine();
                 }
             }
             catch (Exception e)

@@ -491,6 +491,11 @@ namespace Voron.Data.CompactTrees
                 _internalCursor._pos > 0 && // nothing to do for a single leaf node
                 state.Header->FreeSpace > Constants.Storage.PageSize / 3)
             {
+                // If there is less than half of the size available, it is in our best interest to defrag the receiving page to avoid having to
+                // try again and again without achieving any gain.
+                if (state.Header->Upper - state.Header->Lower < state.Header->FreeSpace / 2)
+                    DefragPage(_llt, ref state);
+
                 MaybeMergeEntries(ref state);
             }
 
@@ -543,7 +548,7 @@ namespace Voron.Data.CompactTrees
             }
         }
 
-        private void MaybeMergeEntries(ref CursorState destinationState)
+        private bool MaybeMergeEntries(ref CursorState destinationState)
         {
             CursorState sourceState;
             ref var parent = ref _internalCursor._stk[_internalCursor._pos - 1];
@@ -562,8 +567,10 @@ namespace Voron.Data.CompactTrees
                         Page = _llt.GetPage(sibling)
                     };
                     FreePageFor(ref sourceState, ref destinationState);
+
+                    return true;
                 }
-                return;
+                return false;
             }
 
             var siblingPage = GetValue(ref parent, parent.LastSearchPosition + 1);
@@ -573,7 +580,7 @@ namespace Voron.Data.CompactTrees
             };
 
             if (sourceState.Header->PageFlags != destinationState.Header->PageFlags)
-                return; // cannot merge leaf & branch pages
+                return false; // cannot merge leaf & branch pages
 
             using var __ = _llt.Allocator.Allocate(4096, out var buffer);
             var decodeBuffer = new Span<byte>(buffer.Ptr, 2048);
@@ -586,7 +593,7 @@ namespace Voron.Data.CompactTrees
 
             // the new entries size is composed of entries from _both_ pages            
             var entries = new Span<ushort>(destinationPage.Pointer + PageHeader.SizeOf, destinationHeader->NumberOfEntries + sourceHeader->NumberOfEntries)
-                .Slice(destinationHeader->NumberOfEntries);
+                                .Slice(destinationHeader->NumberOfEntries);
 
             var srcDictionary = GetEncodingDictionary(sourceHeader->DictionaryId);
             var destDictionary = GetEncodingDictionary(destinationHeader->DictionaryId);
@@ -640,21 +647,24 @@ namespace Voron.Data.CompactTrees
                 Debug.Assert(destinationHeader->Upper >= destinationHeader->Lower);
             }
 
+            if (sourceKeysCopied == 0)
+                return false;
+
             Memory.Move(sourcePage.Pointer + PageHeader.SizeOf,
                         sourcePage.Pointer + PageHeader.SizeOf + (sourceKeysCopied * sizeof(ushort)),
                         (sourceHeader->NumberOfEntries - sourceKeysCopied) * sizeof(ushort));
             
             // We update the entries offsets on the source page, now that we have moved the entries.
             var oldLower = sourceHeader->Lower;
-            sourceHeader->Lower -= (ushort)(sourceKeysCopied * sizeof(ushort));
-            sourceHeader->FreeSpace += (ushort)(sourceEncodedKeysLenght + (sourceKeysCopied * sizeof(ushort)));
+            sourceHeader->Lower -= (ushort)(sourceKeysCopied * sizeof(ushort));            
             if (sourceHeader->NumberOfEntries == 0) // emptied the sibling entries
             {
                 parent.LastSearchPosition++;
                 FreePageFor(ref destinationState, ref sourceState);
-                return;
+                return true;
             }
-            
+
+            sourceHeader->FreeSpace += (ushort)(sourceEncodedKeysLenght + (sourceKeysCopied * sizeof(ushort)));
             Memory.Set(sourcePage.Pointer + sourceHeader->Lower, 0, (oldLower - sourceHeader->Lower));
 
             // now re-wire the new splitted page key
@@ -670,6 +680,8 @@ namespace Voron.Data.CompactTrees
             newKey = EncodedKey.Get(newKey, this, _internalCursor._stk[_internalCursor._pos].Header->DictionaryId);
             SearchInCurrentPage(newKey, ref _internalCursor._stk[_internalCursor._pos]);// positions changed, re-search
             AddToPage(newKey, siblingPage);
+
+            return true;
         }
 
         private void FreePageFor(ref CursorState stateToKeep, ref CursorState stateToDelete)
@@ -819,7 +831,7 @@ namespace Voron.Data.CompactTrees
                     // by rearranging unused space.
                     if (state.Header->FreeSpace >= requiredSize + sizeof(short))
                     {
-                        DefragPage();
+                        DefragPage(_llt, ref state);
                         splitAnyways = false;
                     }
                 }
@@ -1076,11 +1088,9 @@ namespace Voron.Data.CompactTrees
             _internalCursor._pos++;
         }
 
-        private void DefragPage()
+        private static void DefragPage(LowLevelTransaction llt, ref CursorState state)
         {                     
-            ref var state = ref _internalCursor._stk[_internalCursor._pos];
-
-            using (_llt.Environment.GetTemporaryPage(_llt, out var tmp))
+            using (llt.Environment.GetTemporaryPage(llt, out var tmp))
             {
                 // Ensure we clean up the page.               
                 Unsafe.InitBlock(tmp.TempPagePointer, 0, Constants.Storage.PageSize);

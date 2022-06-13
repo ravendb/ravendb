@@ -310,7 +310,7 @@ namespace Voron.Debugging
         {
             var header = (CompactPageHeader*)page.Pointer;
             sw.WriteLine(
-                string.Format("<ul><li><input type='checkbox' id='page-{0}' {3} /><label for='page-{0}'>{4}: Page {0:#,#;;0} - {1} - {2:#,#;;0} entries - Dictionary: {5} - Usable space: {7} of {6}</label><ul>",
+                string.Format("<ul><li><input type='checkbox' id='page-{0}' {3} /><label for='page-{0}'>{4}: Page {0:#,#;;0} - {1} - {2:#,#;;0} entries - Dictionary: {5} - Usable space: {7} of {6} [Free Space]</label><ul>",
                     page.PageNumber, header->PageFlags, header->NumberOfEntries, open ? "checked" : "", text, header->DictionaryId, header->FreeSpace, header->Upper - header->Lower));
 
             var entries = new Span<ushort>(page.Pointer + PageHeader.SizeOf, header->NumberOfEntries);
