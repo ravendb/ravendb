@@ -167,9 +167,29 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithMessages, QueueEtlConfigu
 
         if (_kafkaProducer == null)
         {
-            _kafkaProducer = QueueHelper.CreateKafkaClient(Configuration.Connection, TransactionalId, Logger,
+            var producer = QueueHelper.CreateKafkaClient(Configuration.Connection, TransactionalId, Logger,
                 Database.ServerStore.Server.Certificate.Certificate);
-            _kafkaProducer.InitTransactions(TimeSpan.FromSeconds(60));
+
+            try
+            {
+                producer.InitTransactions(TimeSpan.FromSeconds(60));
+            }
+            catch (Exception e)
+            {
+                string msg = $" ETL process: {Name}. Failed to initialize transactions for the producer instance. " +
+                             $"If you are using a single node Kafka cluster then the following settings might be required:{Environment.NewLine}" +
+                             $"- transaction.state.log.replication.factor: 1 {Environment.NewLine}" +
+                             "- transaction.state.log.min.isr: 1";
+
+                if (Logger.IsOperationsEnabled)
+                {
+                    Logger.Operations(msg, e);
+                }
+
+                throw new QueueLoadException(msg, e);
+            }
+
+            _kafkaProducer = producer;
         }
 
         void ReportHandler(DeliveryReport<string?, byte[]> report)
@@ -180,8 +200,18 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithMessages, QueueEtlConfigu
             }
             else
             {
-                Logger.Info($"Failed to deliver message: {report.Error.Reason}");
-                _kafkaProducer.AbortTransaction();
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations($"Failed to deliver message: {report.Error.Reason}");
+
+                try
+                {
+                    _kafkaProducer.AbortTransaction();
+                }
+                catch (Exception e)
+                {
+                    if (Logger.IsOperationsEnabled)
+                        Logger.Operations($"ETL process: {Name}. Aborting Kafka transaction failed after getting deliver report with error.", e);
+                }
             }
         }
 
@@ -206,7 +236,8 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithMessages, QueueEtlConfigu
             }
             catch (Exception e)
             {
-                Logger.Info("Aborting kafka transaction failed.", e);
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations($" ETL process: {Name}. Aborting Kafka transaction failed.", e);
             }
 
             throw new QueueLoadException(ex.Message, ex);
