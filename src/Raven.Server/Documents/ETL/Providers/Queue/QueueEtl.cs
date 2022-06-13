@@ -210,7 +210,8 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithMessages, QueueEtlConfigu
                 catch (Exception e)
                 {
                     if (Logger.IsOperationsEnabled)
-                        Logger.Operations($"ETL process: {Name}. Aborting Kafka transaction failed after getting deliver report with error.", e);
+                        Logger.Operations(
+                            $"ETL process: {Name}. Aborting Kafka transaction failed after getting deliver report with error.", e);
                 }
             }
         }
@@ -249,12 +250,11 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithMessages, QueueEtlConfigu
     private int ProcessRabbitMq(IEnumerable<QueueWithMessages> items, BlittableJsonEventBinaryFormatter formatter)
     {
         int count = 0;
-
-        var messages = new List<RabbitMqMessageEvent>();
+        var queues = new List<RabbitMqQueueWithMessages>();
 
         foreach (QueueWithMessages queueItem in items)
         {
-            var newMessage = new RabbitMqMessageEvent() { Queue = queueItem.Name };
+            var newQueue = new RabbitMqQueueWithMessages { QueueName = queueItem.Name };
 
             if (_queuesForDeclare.Any(x => x.QueueName == queueItem.Name) == false)
             {
@@ -278,7 +278,7 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithMessages, QueueEtlConfigu
                 }
 
                 CloudEvent eventMessage = CreateEventMessage(message);
-                newMessage.Messages.Add(new RabbitMqMessage()
+                newQueue.Messages.Add(new RabbitMqMessage()
                 {
                     Exchange = message.Options?.Exchange ?? "",
                     ExchangeType = message.Options?.ExchangeType ?? ExchangeType.Direct,
@@ -286,42 +286,59 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithMessages, QueueEtlConfigu
                 });
             }
 
-            messages.Add(newMessage);
+            queues.Add(newQueue);
         }
 
-        if (messages.Count == 0) return count;
+        if (queues.Count == 0) return count;
 
         if (_rabbitMqProducer == null)
         {
-            _rabbitMqProducer = QueueHelper.CreateRabbitMqClient(Configuration.Connection, TransactionalId);
+            _rabbitMqProducer = QueueHelper.CreateRabbitMqClient(Configuration.Connection);
         }
 
-        // todo: check application properties, _rabbitMqProducer.CreateBasicProperties()
-        // todo: try to manually populate properties
+        DeclareExchangesAndQueues();
 
-        SetUpExchangesAndQueues(messages);
-        
-        foreach (var message in messages)
+        foreach (var queue in queues)
         {
             _rabbitMqProducer.TxSelect();
             var batch = _rabbitMqProducer.CreateBasicPublishBatch();
-            
-            foreach (var messageContent in message.Messages)
+
+            foreach (var message in queue.Messages)
             {
-                batch.Add(messageContent.Exchange, message.Queue, true, null,
-                    new ReadOnlyMemory<byte>((byte[])messageContent.Message.Body));
+                var properties = _rabbitMqProducer.CreateBasicProperties();
+                properties.Headers = new Dictionary<string, object>();
+                
+                foreach (var appProperty in message.Message.ApplicationProperties.Map.ToList())
+                {
+                    string key = appProperty.Key.ToString()?.Split(':')[1];
+                    string value = appProperty.Value.ToString();
+                    
+                    if (key != null)
+                    {
+                        properties.Headers.Add(key, value);
+                    }
+                }
+                
+                batch.Add(message.Exchange, queue.QueueName, true, properties, new ReadOnlyMemory<byte>((byte[])message.Message.Body));
                 count++;
             }
-        
+            
             batch.Publish();
-            _rabbitMqProducer.TxCommit();
-            // todo: how to handle tx fail?
+            try
+            {
+                _rabbitMqProducer.TxCommit();
+            }
+            catch (Exception ex)
+            {
+                _rabbitMqProducer.TxRollback();
+                throw new QueueLoadException(ex.Message, ex);
+            }
         }
 
         return count;
     }
 
-    private void SetUpExchangesAndQueues(List<RabbitMqMessageEvent> messages)
+    private void DeclareExchangesAndQueues()
     {
         foreach (var queueDeclare in _queuesForDeclare)
         {
