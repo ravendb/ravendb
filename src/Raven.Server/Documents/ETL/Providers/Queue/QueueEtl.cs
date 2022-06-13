@@ -376,8 +376,6 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithMessages, QueueEtlConfigu
         foreach (var record in records)
         {
             var messages = simulatedWriter.SimulateExecuteMessages(record, context);
-            // todo: message should have body (content) and options
-
             summaries.Add(new QueueSummary { QueueName = record.Name, Messages = messages });
         }
 
