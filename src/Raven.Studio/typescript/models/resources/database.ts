@@ -31,8 +31,17 @@ abstract class database {
 
     abstract getLocations(): databaseLocationSpecifier[];
 
-    getFirstLocation(nodeTag: string): databaseLocationSpecifier {
-        return this.getLocations().find(x => x.nodeTag === nodeTag);
+    /**
+     * Gets first location - but prefers local node tag
+     * @param preferredNodeTag
+     */
+    getFirstLocation(preferredNodeTag: string): databaseLocationSpecifier {
+        const preferredMatch = this.getLocations().find(x => x.nodeTag === preferredNodeTag);
+        if (preferredMatch) {
+            return preferredMatch;
+        }
+        
+        return this.getLocations()[0];
     }
     
     constructor(dbInfo: Raven.Client.ServerWide.Operations.DatabaseInfo, clusterNodeTag: KnockoutObservable<string>) {

@@ -13,6 +13,8 @@ require("bootstrap/dist/js/bootstrap");
 require("../typescript/test/mocks");
 
 jest.mock("../typescript/components/hooks/useEventsCollector");
+jest.mock("../typescript/common/eventsCollector");
+jest.mock("../typescript/common/bindingHelpers/aceEditorBindingHandler");
 
 jest.mock('plugins/router', () => ({
     activate: jest.fn()

@@ -12,6 +12,12 @@ export function storybookContainerPublicContainer(storyFn: any) {
     );
 }
 
+export function forceStoryRerender() {
+    return {
+        key: new Date().toISOString(),
+    };
+}
+
 export function withStorybookContexts(storyFn: any) {
     return (
         <div style={{ margin: "50px" }}>

@@ -12,6 +12,8 @@ export function databaseLocationComparator(lhs: databaseLocationSpecifier, rhs: 
     return lhs.nodeTag === rhs.nodeTag && lhs.shardNumber === rhs.shardNumber;
 }
 
-export function boundCopy<TArgs>(story: StoryFn<TArgs>): Story<TArgs> {
-    return story.bind({});
+export function boundCopy<TArgs>(story: StoryFn<TArgs>, args?: TArgs): Story<TArgs> {
+    const copy = story.bind({});
+    copy.args = args;
+    return copy;
 }
