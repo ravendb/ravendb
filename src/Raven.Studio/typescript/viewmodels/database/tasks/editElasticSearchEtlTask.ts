@@ -26,6 +26,7 @@ import popoverUtils = require("common/popoverUtils");
 import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 import testElasticSearchEtlCommand = require("commands/database/tasks/testElasticSearchEtlCommand");
 import ongoingTaskElasticSearchTransformationModel = require("models/database/tasks/ongoingTaskElasticSearchEtlTransformationModel");
+import discoveryUrl = require("models/database/settings/discoveryUrl");
 import { highlight, languages } from "prismjs";
 
 class elasticSearchTaskTestMode {
@@ -210,6 +211,7 @@ class editElasticSearchEtlTask extends viewModelBase {
     constructor() {
         super();
         this.bindToCurrentInstance("useConnectionString",
+            "onTestConnectionElasticSearch",
             "removeTransformationScript",
             "cancelEditedTransformation",
             "cancelEditedElasticSearchIndex",
@@ -405,6 +407,21 @@ class editElasticSearchEtlTask extends viewModelBase {
     
     useConnectionString(connectionStringToUse: string) {
         this.editedElasticSearchEtl().connectionStringName(connectionStringToUse);
+    }
+
+    onTestConnectionElasticSearch(urlToTest: discoveryUrl) {
+        eventsCollector.default.reportEvent("elastic-search-connection-string", "test-connection");
+        this.spinners.test(true);
+        this.testConnectionResult(null);
+        this.newConnectionString().selectedUrlToTest(urlToTest.discoveryUrlName());
+
+        this.newConnectionString()
+            .testConnection(this.activeDatabase(), urlToTest)
+            .done(result => this.testConnectionResult(result))
+            .always(() => {
+                this.spinners.test(false);
+                this.fullErrorDetailsVisible(false);
+            });
     }
 
     saveElasticSearchEtl() {

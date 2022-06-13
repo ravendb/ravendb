@@ -68,7 +68,7 @@ class connectionStrings extends viewModelBase {
         super();
         this.bindToCurrentInstance("onEditSqlEtl", "onEditRavenEtl", "onEditOlapEtl", "onEditElasticSearchEtl", "onEditKafkaEtl", "onEditRabbitMqEtl",
                                    "confirmDelete", "isConnectionStringInUse", 
-                                   "onTestConnectionRaven", "onTestConnectionElasticSearch", "testCredentials");
+                                   "onTestConnectionRaven", "onTestConnectionElasticSearch", "onTestConnectionKafka", "testCredentials");
         this.initObservables();
     }
     
@@ -632,6 +632,21 @@ class connectionStrings extends viewModelBase {
         elasticConnectionString.selectedUrlToTest(urlToTest.discoveryUrlName());
 
         elasticConnectionString.testConnection(this.activeDatabase(), urlToTest)
+            .done(result => this.testConnectionResult(result))
+            .always(() => {
+                this.spinners.test(false);
+                this.fullErrorDetailsVisible(false);
+            });
+    }
+
+    onTestConnectionKafka() {
+        this.clearTestResult();
+        const kafkaConnectionString = this.editedKafkaEtlConnectionString();
+        eventsCollector.default.reportEvent("kafka-connection-string", "test-connection");
+
+        this.spinners.test(true);
+
+        kafkaConnectionString.testConnection(this.activeDatabase())
             .done(result => this.testConnectionResult(result))
             .always(() => {
                 this.spinners.test(false);
