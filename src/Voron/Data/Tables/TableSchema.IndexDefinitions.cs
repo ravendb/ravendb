@@ -234,30 +234,30 @@ namespace Voron.Data.Tables
                 };
 
                 var methodNameBytes = Encodings.Utf8.GetBytes(GenerateKey.Method.Name);
-                fixed (byte* ptr = methodNameBytes)
+                fixed (byte* methodNamePtr = methodNameBytes)
                 {
-                    serializer.Add(ptr, methodNameBytes.Length);
+                    serializer.Add(methodNamePtr, methodNameBytes.Length);
+
+                    Debug.Assert(GenerateKey.Method.DeclaringType?.FullName != null && GenerateKey.Method.DeclaringType.Assembly.FullName != null,
+                        $"Invalid {nameof(GenerateKey)} '{GenerateKey.Method.Name}'");
+
+                    var assemblyName = new AssemblyName(GenerateKey.Method.DeclaringType.Assembly.FullName);
+                    var declaringType = $"{GenerateKey.Method.DeclaringType.FullName}, {assemblyName.Name}";
+                    var declaringTypeBytes = Encodings.Utf8.GetBytes(declaringType);
+                    fixed (byte* declaringTypePtr = declaringTypeBytes)
+                    {
+                        serializer.Add(declaringTypePtr, declaringTypeBytes.Length);
+
+                        byte[] serialized = new byte[serializer.Size];
+
+                        fixed (byte* destination = serialized)
+                        {
+                            serializer.CopyTo(destination);
+                        }
+
+                        return serialized;
+                    }
                 }
-
-                Debug.Assert(GenerateKey.Method.DeclaringType?.FullName != null && GenerateKey.Method.DeclaringType.Assembly.FullName != null,
-                    $"Invalid {nameof(GenerateKey)} '{GenerateKey.Method.Name}'");
-
-                var assemblyName = new AssemblyName(GenerateKey.Method.DeclaringType.Assembly.FullName);
-                var declaringType = $"{GenerateKey.Method.DeclaringType.FullName}, {assemblyName.Name}";
-                var declaringTypeBytes = Encodings.Utf8.GetBytes(declaringType);
-                fixed (byte* ptr = declaringTypeBytes)
-                {
-                    serializer.Add(ptr, declaringTypeBytes.Length);
-                }
-
-                byte[] serialized = new byte[serializer.Size];
-
-                fixed (byte* destination = serialized)
-                {
-                    serializer.CopyTo(destination);
-                }
-
-                return serialized;
             }
 
             public static DynamicKeyIndexDef ReadFrom(ByteStringContext context, ref TableValueReader input)
@@ -351,7 +351,7 @@ namespace Voron.Data.Tables
             }
         }
 
-        public class FixedSizeKeyIndexDef 
+        public class FixedSizeKeyIndexDef
         {
             public bool IsGlobal;
 
