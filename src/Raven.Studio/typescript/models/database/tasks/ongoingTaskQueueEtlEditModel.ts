@@ -54,10 +54,6 @@ abstract class ongoingTaskQueueEtlEditModel extends ongoingTaskEditModel {
     
     validationGroup: KnockoutValidationGroup;
     dirtyFlag: () => DirtyFlag;
-
-    get studioTaskType(): StudioTaskType {
-        return "KafkaQueueEtl";
-    }
     
     constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtlDetails) {
         super();
@@ -153,7 +149,7 @@ abstract class ongoingTaskQueueEtlEditModel extends ongoingTaskEditModel {
         }
     }
 
-    toDto(broker: QueueBroker): Raven.Client.Documents.Operations.ETL.Queue.QueueEtlConfiguration { 
+    protected toDto(broker: QueueBroker): Raven.Client.Documents.Operations.ETL.Queue.QueueEtlConfiguration {
         return {
             Name: this.taskName(),
             ConnectionStringName: this.connectionStringName(),

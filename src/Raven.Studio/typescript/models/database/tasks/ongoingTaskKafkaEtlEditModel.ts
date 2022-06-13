@@ -6,10 +6,6 @@ class ongoingTaskKafkaEtlEditModel extends ongoingTaskQueueEtlEditModel {
     get studioTaskType(): StudioTaskType {
         return "KafkaQueueEtl";
     }
-    
-    constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtlDetails) {
-        super(dto);
-    }
 
     toDto(): Raven.Client.Documents.Operations.ETL.Queue.QueueEtlConfiguration { 
         return super.toDto("Kafka");
@@ -20,13 +16,13 @@ class ongoingTaskKafkaEtlEditModel extends ongoingTaskQueueEtlEditModel {
             {
                 TaskName: "",
                 TaskType: "QueueEtl",
-                TaskState: "Enabled",
+                TaskState: "Enabled", 
                 TaskConnectionStatus: "Active",
                 Configuration: {
                     EtlType: "Queue",
                     Transforms: [],
                     ConnectionStringName: "",
-                    Name: "",
+                    Name: ""
                 },
             } as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtlDetails);
     }

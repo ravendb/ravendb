@@ -6,10 +6,6 @@ class ongoingTaskRabbitMqEtlEditModel extends ongoingTaskQueueEtlEditModel {
     get studioTaskType(): StudioTaskType {
         return "RabbitQueueEtl";
     }
-    
-    constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtlDetails) {
-        super(dto);
-    }
 
     toDto(): Raven.Client.Documents.Operations.ETL.Queue.QueueEtlConfiguration {
         return super.toDto("RabbitMq");
@@ -26,7 +22,7 @@ class ongoingTaskRabbitMqEtlEditModel extends ongoingTaskQueueEtlEditModel {
                     EtlType: "Queue",
                     Transforms: [],
                     ConnectionStringName: "",
-                    Name: "",
+                    Name: ""
                 },
             } as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtlDetails);
     }

@@ -54,7 +54,7 @@ class ongoingTaskItem {
         this.iconClass(iconClass);
     }
 
-    getTaskNameForUI(): TasksNamesInUI {
+    getFormattedTaskName(): string {
         switch (this.taskName()) {
             case "ExternalReplicationCount": return "External Replication";
             case "ReplicationHubCount": return "Replication Hub";

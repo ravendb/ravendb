@@ -594,7 +594,7 @@ class databaseGroupGraph {
 
         selection
             .select(".task-desc")
-            .text(x => ongoingTaskModel.mapTaskType(x.type as StudioTaskType));
+            .text(x => ongoingTaskModel.formatStudioTaskType(x.type));
 
         selection
             .select(".task-name")
