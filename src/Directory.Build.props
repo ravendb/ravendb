@@ -25,11 +25,11 @@
 
     <NoWarn>CS0419,CS1591,CS1572,CS1573,CS1574,CS1723</NoWarn>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(TargetFramework)' == 'netcoreapp3.1' OR '$(TargetFramework)' == 'net5.0' OR '$(TargetFramework)' == 'net6.0'">
+  <PropertyGroup Condition="'$(TargetFramework)' == 'netcoreapp3.1' OR '$(TargetFramework)' == 'net5.0'">
     <DefineConstants>$(DefineConstants);NETCOREAPP</DefineConstants>
   </PropertyGroup>
-    <PropertyGroup Condition="'$(TargetFramework)' == 'net6.0'">
-    <DefineConstants>FEATURE_DATEONLY_TIMEONLY_SUPPORT</DefineConstants>
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net6.0'">
+    <DefineConstants>$(DefineConstants);NETCOREAPP;FEATURE_DATEONLY_TIMEONLY_SUPPORT</DefineConstants>
   </PropertyGroup>
   <PropertyGroup Condition="'$(RuntimeIdentifier)' == ''">
     <IsAnyOS>true</IsAnyOS>
@@ -38,7 +38,8 @@
     <IsLinuxArm64>false</IsLinuxArm64>
     <IsWindows32>false</IsWindows32>
     <IsWindows64>false</IsWindows64>
-    <IsMacOS>false</IsMacOS>
+    <IsMacOS64>false</IsMacOS64>
+    <IsMacOSArm64>false</IsMacOSArm64>
   </PropertyGroup>
   <PropertyGroup Condition="'$(RuntimeIdentifier)' == 'linux-x64'">
     <IsAnyOS>false</IsAnyOS>
@@ -47,7 +48,8 @@
     <IsLinuxArm64>false</IsLinuxArm64>
     <IsWindows32>false</IsWindows32>
     <IsWindows64>false</IsWindows64>
-    <IsMacOS>false</IsMacOS>
+    <IsMacOS64>false</IsMacOS64>
+    <IsMacOSArm64>false</IsMacOSArm64>
   </PropertyGroup>
   <PropertyGroup Condition="'$(RuntimeIdentifier)' == 'win-x64'">
     <IsAnyOS>false</IsAnyOS>
@@ -56,7 +58,8 @@
     <IsLinuxArm64>false</IsLinuxArm64>
     <IsWindows32>false</IsWindows32>
     <IsWindows64>true</IsWindows64>
-    <IsMacOS>false</IsMacOS>
+    <IsMacOS64>false</IsMacOS64>
+    <IsMacOSArm64>false</IsMacOSArm64>
   </PropertyGroup>
   <PropertyGroup Condition="'$(RuntimeIdentifier)' == 'win-x86'">
     <IsAnyOS>false</IsAnyOS>
@@ -65,7 +68,8 @@
     <IsLinuxArm64>false</IsLinuxArm64>
     <IsWindows32>true</IsWindows32>
     <IsWindows64>false</IsWindows64>
-    <IsMacOS>false</IsMacOS>
+    <IsMacOS64>false</IsMacOS64>
+    <IsMacOSArm64>false</IsMacOSArm64>
   </PropertyGroup>
   <PropertyGroup Condition="'$(RuntimeIdentifier)' == 'osx-x64'">
     <IsAnyOS>false</IsAnyOS>
@@ -74,7 +78,18 @@
     <IsLinuxArm64>false</IsLinuxArm64>
     <IsWindows32>false</IsWindows32>
     <IsWindows64>false</IsWindows64>
-    <IsMacOS>true</IsMacOS>
+    <IsMacOS64>true</IsMacOS64>
+    <IsMacOSArm64>false</IsMacOSArm64>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' == 'osx-arm64'">
+    <IsAnyOS>false</IsAnyOS>
+    <IsLinux64>false</IsLinux64>
+    <IsLinuxArm32>false</IsLinuxArm32>
+    <IsLinuxArm64>false</IsLinuxArm64>
+    <IsWindows32>false</IsWindows32>
+    <IsWindows64>false</IsWindows64>
+    <IsMacOS64>false</IsMacOS64>
+    <IsMacOSArm64>true</IsMacOSArm64>
   </PropertyGroup>
   <PropertyGroup Condition="'$(RuntimeIdentifier)' == 'linux-arm'">
     <IsAnyOS>false</IsAnyOS>
@@ -83,7 +98,8 @@
     <IsLinuxArm64>false</IsLinuxArm64>
     <IsWindows32>false</IsWindows32>
     <IsWindows64>false</IsWindows64>
-    <IsMacOS>false</IsMacOS>
+    <IsMacOS64>false</IsMacOS64>
+    <IsMacOSArm64>false</IsMacOSArm64>
   </PropertyGroup>
   <PropertyGroup Condition="'$(RuntimeIdentifier)' == 'linux-arm64'">
     <IsAnyOS>false</IsAnyOS>
@@ -92,7 +108,8 @@
     <IsLinuxArm64>true</IsLinuxArm64>
     <IsWindows32>false</IsWindows32>
     <IsWindows64>false</IsWindows64>
-    <IsMacOS>false</IsMacOS>
+    <IsMacOS64>false</IsMacOS64>
+    <IsMacOSArm64>false</IsMacOSArm64>
   </PropertyGroup>
   <ItemGroup>
     <None Include="..\..\scripts\assets\icon.png" Pack="true" Visible="false" PackagePath="" />

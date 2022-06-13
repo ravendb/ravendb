@@ -9,7 +9,7 @@ using Sparrow.Json;
 namespace Raven.Server.Web.Studio.Processors;
 
 internal abstract class AbstractStudioDatabaseTasksHandlerProcessorForGetIndexDefaults<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
-    where TOperationContext : JsonOperationContext 
+    where TOperationContext : JsonOperationContext
     where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
 {
     protected AbstractStudioDatabaseTasksHandlerProcessorForGetIndexDefaults([NotNull] TRequestHandler requestHandler)
@@ -25,6 +25,7 @@ internal abstract class AbstractStudioDatabaseTasksHandlerProcessorForGetIndexDe
 
         var autoIndexesDeploymentMode = configuration.Indexing.AutoIndexDeploymentMode;
         var staticIndexesDeploymentMode = configuration.Indexing.StaticIndexDeploymentMode;
+        var staticIndexingEngineType = configuration.Indexing.StaticIndexingEngineType;
 
         using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
         await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
@@ -35,6 +36,9 @@ internal abstract class AbstractStudioDatabaseTasksHandlerProcessorForGetIndexDe
             writer.WriteComma();
             writer.WritePropertyName(nameof(IndexDefaults.StaticIndexDeploymentMode));
             writer.WriteString(staticIndexesDeploymentMode.ToString());
+            writer.WriteComma();
+            writer.WritePropertyName(nameof(IndexDefaults.StaticIndexingEngineType));
+            writer.WriteString(staticIndexingEngineType.ToString());
             writer.WriteEndObject();
         }
     }
@@ -44,4 +48,5 @@ public class IndexDefaults
 {
     public IndexDeploymentMode AutoIndexDeploymentMode { get; set; }
     public IndexDeploymentMode StaticIndexDeploymentMode { get; set; }
+    public SearchEngineType StaticIndexingEngineType { get; set; }
 }

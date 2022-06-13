@@ -286,13 +286,22 @@ public static class CoraxQueryBuilder
             }
 
             var fieldId = QueryBuilderHelper.GetFieldId(fieldName, index, indexMapping, queryMapping, exact);
-
-
+            
             if (ie.All)
             {
-                throw new NotImplementedException($"{nameof(Corax)} doesn't support AllIn");
-            }
+                var uniqueMatches = new HashSet<string>();
+                foreach (var tuple in QueryBuilderHelper.GetValuesForIn(query, ie, metadata, parameters))
+                {
+                    if (exact && metadata.IsDynamic)
+                        fieldName = new QueryFieldName(AutoIndexField.GetExactAutoIndexFieldName(fieldName.Value), fieldName.IsQuoted);
 
+                    uniqueMatches.Add(QueryBuilderHelper.CoraxGetValueAsString(tuple.Value));
+                }
+
+                return indexSearcher.AllInQuery(fieldName, uniqueMatches, fieldId);
+
+            }
+            
             var matches = new List<string>();
             foreach (var tuple in QueryBuilderHelper.GetValuesForIn(query, ie, metadata, parameters))
             {
@@ -627,6 +636,12 @@ public static class CoraxQueryBuilder
                 @operator = Constants.Search.Operator.Or;
             else
                 QueryBuilderHelper.ThrowInvalidOperatorInSearch(metadata, parameters, fieldExpression);
+        }
+
+
+        if (indexMapping.TryGetByFieldId(fieldId, out var binding) && binding.Analyzer is not LuceneAnalyzerAdapter )
+        {
+            return indexSearcher.SearchQuery(fieldName, valueAsString, scoreFunction, @operator, fieldId, isNegated, true);
         }
         
         return indexSearcher.SearchQuery(fieldName, valueAsString, scoreFunction, @operator, fieldId, isNegated);

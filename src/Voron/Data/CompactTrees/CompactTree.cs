@@ -87,7 +87,7 @@ namespace Voron.Data.CompactTrees
             }
         }
 
-        private readonly ref struct EncodedKey
+        public readonly ref struct EncodedKey
         {
             public readonly ReadOnlySpan<byte> Key;
             public readonly ReadOnlySpan<byte> Encoded;
@@ -197,7 +197,7 @@ namespace Voron.Data.CompactTrees
             }
         }
 
-        private struct CursorState
+        internal struct CursorState
         {
             public Page Page;
             public int LastMatch;
@@ -393,17 +393,30 @@ namespace Voron.Data.CompactTrees
                 return true;
             }
         }
-
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool TryGetValue(string key, out long value)
+        {
+            return TryGetValue(key, out value, out var _);
+        }
+
+
+        public bool TryGetValue(string key, out long value, out EncodedKey encodedKey)
         {
             using var _ = Slice.From(_llt.Allocator, key, out var slice);
             var span = slice.AsReadOnlySpan();
-            return TryGetValue(span, out value);
+            return TryGetValue(span, out value, out encodedKey);
         }
-
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool TryGetValue(ReadOnlySpan<byte> key, out long value)
         {
-            var encodedKey = FindPageFor(key, ref _internalCursor);
+            return TryGetValue(key, out value, out var _);
+        }
+        
+        public bool TryGetValue(ReadOnlySpan<byte> key, out long value, out EncodedKey encodedKey)
+        {
+            encodedKey = FindPageFor(key, ref _internalCursor);
 
             ref var state = ref _internalCursor._stk[_internalCursor._pos];
 
@@ -702,6 +715,17 @@ namespace Voron.Data.CompactTrees
             }
         }
 
+
+        private void AssertValueAndKeySize(ReadOnlySpan<byte> key, long value)
+        {
+            if (value < 0)
+                throw new ArgumentOutOfRangeException(nameof(value), value, "Only positive values are allowed");
+            if (key.Length > Constants.CompactTree.MaximumKeySize)
+                throw new ArgumentOutOfRangeException(nameof(key), Encoding.UTF8.GetString(key),$"key must be less than {Constants.CompactTree.MaximumKeySize} bytes in size");
+            if(key.Length <= 0)
+                throw new ArgumentOutOfRangeException(nameof(key), Encoding.UTF8.GetString(key), "key must be at least 1 byte");
+        }
+        
         public void Add(string key, long value)
         {
             using var _ = Slice.From(_llt.Allocator, key, out var slice);
@@ -711,14 +735,16 @@ namespace Voron.Data.CompactTrees
 
         public void Add(ReadOnlySpan<byte> key, long value)
         {
-            if (value < 0)
-                throw new ArgumentOutOfRangeException(nameof(value), value, "Only positive values are allowed");
-            if (key.Length > 1024)
-                throw new ArgumentOutOfRangeException(nameof(key), Encoding.UTF8.GetString(key),"key must be less than 1024 bytes in size");
-            if(key.Length <= 0)
-                throw new ArgumentOutOfRangeException(nameof(key), Encoding.UTF8.GetString(key), "key must be at least 1 byte");
-
+            AssertValueAndKeySize(key, value);
+            
             var encodedKey = FindPageFor(key, ref _internalCursor);
+            AddToPage(encodedKey, value);
+        }
+        
+        public void Add(ReadOnlySpan<byte> key, long value, EncodedKey encodedKey)
+        {
+            AssertValueAndKeySize(key, value);
+
             AddToPage(encodedKey, value);
         }
 
@@ -995,9 +1021,7 @@ namespace Voron.Data.CompactTrees
             return true;
 
             Failure:
-            // We will free the page, we will no longer use it.
             // TODO: Probably it is best to just not allocate and copy the page afterwards if we use it. 
-            Llt.FreePage(newDictionary.PageNumber);
             Memory.Copy(state.Page.Pointer, tmp.TempPagePointer, Constants.Storage.PageSize);
             return false;
         }
@@ -1062,29 +1086,42 @@ namespace Voron.Data.CompactTrees
 
             using (_llt.Environment.GetTemporaryPage(_llt, out var tmp))
             {
-                Memory.Copy(tmp.TempPagePointer, state.Page.Pointer, Constants.Storage.PageSize);
-
                 var tmpHeader = (CompactPageHeader*)tmp.TempPagePointer;
+
+                // Ensure we clean up the page.
+                Memory.Set(tmp.TempPagePointer, 0, Constants.Storage.PageSize);
+                // We copy just the pointer and start working from there.
+                Memory.Copy(tmp.TempPagePointer, state.Page.Pointer, sizeof(CompactPageHeader));
+                                
+                int currentSpace = tmpHeader->Upper - tmpHeader->Lower;
+
+                Debug.Assert(tmpHeader->Upper - tmpHeader->Lower >= 0);
+                Debug.Assert(tmpHeader->FreeSpace < Constants.Storage.PageSize - PageHeader.SizeOf);
+                
+                // We reset the data pointer                
                 tmpHeader->Upper = Constants.Storage.PageSize;
 
-                var entriesOffsets = new Span<ushort>(tmp.TempPagePointer + PageHeader.SizeOf, state.Header->NumberOfEntries); 
+                var entriesOffsets = new Span<ushort>(tmp.TempPagePointer + PageHeader.SizeOf, state.Header->NumberOfEntries);
+                
+                // For each entry in the source page, we copy it to the temporary page.
                 for (int i = 0; i < state.Header->NumberOfEntries; i++)
                 {
-                    GetEntryBuffer(state.Page, state.EntriesOffsets[i], out var b, out var len);
-
+                    // Retrieve the entry data from the source page
+                    GetEntryBuffer(state.Page, state.EntriesOffsets[i], out var entryBuffer, out var len);
                     Debug.Assert((tmpHeader->Upper - len) > 0);
-                    tmpHeader->Upper -= (ushort)len;
+
+                    ushort lowerIndex = (ushort)(tmpHeader->Upper - len);
                     
-                    // Note: FreeSpace doesn't change here
-                    Memory.Copy(tmp.TempPagePointer + tmpHeader->Upper, b, len);
-                    entriesOffsets[i] = tmpHeader->Upper;
+                    // Note: Since we are just defragmentating, FreeSpace doesn't change.
+                    Memory.Copy(tmp.TempPagePointer + lowerIndex, entryBuffer, len);
+                    entriesOffsets[i] = lowerIndex;
+                    tmpHeader->Upper = lowerIndex;
                 }
                 // We have consolidated everything therefore we need to update the new free space value.
                 tmpHeader->FreeSpace = (ushort)(tmpHeader->Upper - tmpHeader->Lower);
-                
-                Memory.Copy(state.Page.Pointer, tmp.TempPagePointer, Constants.Storage.PageSize);
-                Memory.Set(state.Page.Pointer + tmpHeader->Lower, 0, tmpHeader->Upper - tmpHeader->Lower);
 
+                // We copy back the defragmented structure on the temporary page to the actual page.
+                Memory.Copy(state.Page.Pointer, tmp.TempPagePointer, Constants.Storage.PageSize);
                 Debug.Assert(state.Header->FreeSpace == (state.Header->Upper - state.Header->Lower));
             }
         }

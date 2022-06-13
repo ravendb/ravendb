@@ -1,3 +1,5 @@
+using System;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using Corax.Queries;
@@ -51,9 +53,15 @@ public unsafe partial class IndexSearcher
         return TermQuery(terms, term);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal TermMatch TermQuery(CompactTree tree, Slice term, int fieldId = Constants.IndexSearcher.NonAnalyzer)
     {
-        if (tree.TryGetValue(term.AsReadOnlySpan(), out var value) == false)
+        return TermQuery(tree, term.AsReadOnlySpan(), fieldId);
+    }
+
+    internal TermMatch TermQuery(CompactTree tree, ReadOnlySpan<byte> term, int fieldId = Constants.IndexSearcher.NonAnalyzer)
+    {
+        if (tree.TryGetValue(term, out var value) == false)
             return TermMatch.CreateEmpty();
 
         TermMatch matches;
@@ -81,10 +89,15 @@ public unsafe partial class IndexSearcher
         return matches;
     }
 
-
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal long TermAmount(CompactTree tree, Slice term)
     {
-        if (tree.TryGetValue(term.AsReadOnlySpan(), out var value) == false)
+        return TermAmount(tree, term.AsReadOnlySpan());
+    }
+    
+    internal long TermAmount(CompactTree tree, ReadOnlySpan<byte> term)
+    {
+        if (tree.TryGetValue(term, out var value) == false)
             return 0;
 
         if ((value & (long)TermIdMask.Set) != 0)

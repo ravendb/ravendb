@@ -155,7 +155,6 @@ class databaseOverviewItem implements databaseAndNodeAwareStats {
         if (this.disabled) {
             if (!nodeTag) {
                 return [{
-                    title: "",
                     text: "Disabled",
                     iconClass: "icon-database-cutout icon-addon-cancel",
                     textClass: "text-danger"
@@ -164,14 +163,12 @@ class databaseOverviewItem implements databaseAndNodeAwareStats {
         } else if (nodeTag) {
             if (!this.online) {
                 return [{
-                    title: "",
                     text: "Offline",
                     iconClass: "icon-database-cutout icon-addon-clock",
                     textClass: "text-warning"
                 }];
            } else {
                 return [{
-                    title: "",
                     text: "Online",
                     iconClass: "icon-database-cutout icon-addon-check",
                     textClass: "text-success"

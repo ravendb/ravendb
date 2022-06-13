@@ -9,15 +9,15 @@ namespace Corax.Queries
     {
         private readonly CompactTree _tree;
         private readonly IndexSearcher _searcher;
-        private readonly string _field;
+        private readonly Slice _fieldName;
         private readonly Slice _endsWith;
-
+        
         private CompactTree.Iterator _iterator;
-        public EndsWithTermProvider(IndexSearcher searcher, ByteStringContext context, CompactTree tree, string field, int fieldId, Slice endsWith)
+        public EndsWithTermProvider(IndexSearcher searcher, ByteStringContext context, CompactTree tree, Slice fieldName, int fieldId, Slice endsWith)
         {
             _tree = tree;
             _searcher = searcher;
-            _field = field;
+            _fieldName = fieldName;
             _iterator = tree.Iterate();
             _iterator.Reset();
             _endsWith = endsWith;
@@ -37,7 +37,7 @@ namespace Corax.Queries
                 if (termSlice.EndsWith(suffix) == false)
                     continue;
 
-                term = _searcher.TermQuery(_field, termSlice);
+                term = _searcher.TermQuery(_tree, termSlice);
                 return true;
             }
 
@@ -50,7 +50,7 @@ namespace Corax.Queries
             return new QueryInspectionNode($"{nameof(EndsWithTermProvider)}",
                 parameters: new Dictionary<string, string>()
                 {
-                    { "Field", _field },
+                    { "Field", _fieldName.ToString() },
                     { "Suffix", _endsWith.ToString()}
                 });
         }

@@ -44,6 +44,7 @@ import shardViewModelBase from "viewmodels/shardViewModelBase";
 import database from "models/resources/database";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import viewModelBase from "viewmodels/viewModelBase";
+import configurationConstants from "configuration";
 
 class editIndex extends shardViewModelBase {
     
@@ -99,6 +100,16 @@ class editIndex extends shardViewModelBase {
     });
 
     localNodeTag = clusterTopologyManager.default.localNodeTag();
+    defaultSearchEngine = ko.observable<string>();
+    searchEngine = ko.observable<string>();
+
+    inheritSearchEngineText: KnockoutComputed<string>;
+    effectiveSearchEngineText: KnockoutComputed<string>;
+
+    static readonly searchEngineConfigurationLabel = configurationConstants.indexing.staticIndexingEngineType;
+
+    constructor() {
+        super();
 
     constructor(db: database) {
         super(db);
@@ -191,6 +202,26 @@ class editIndex extends shardViewModelBase {
         this.previewItemNodes = ko.pureComputed<string[]>(() => {
             return this.previewItem() ? Object.keys(this.previewItem().RollingDeployment).reverse() : [];
         })
+
+        this.inheritSearchEngineText = ko.pureComputed(() => {
+            const engineFormatted = editIndex.formatEngine(this.defaultSearchEngine());
+            return `Inherit (${engineFormatted})`;
+        });
+
+        this.effectiveSearchEngineText = ko.pureComputed(() => {
+            if (this.searchEngine()) {
+                return editIndex.formatEngine(this.searchEngine());
+    }
+
+            return this.inheritSearchEngineText();
+        });
+    }
+    
+    static formatEngine(engine: string) { 
+        if (engine === "Corax") {
+            return engine + " - experimantal";
+        }
+        return engine;
     }
 
     canActivate(indexToEdit: string): JQueryPromise<canActivateResultDto> {
@@ -237,12 +268,22 @@ class editIndex extends shardViewModelBase {
         if (!this.editedIndex().isAutoIndex() && !!indexToEditName) {
             this.showIndexHistory(true);
         }
-            
         return $.when<any>(this.fetchCustomAnalyzers(), this.fetchServerWideCustomAnalyzers(), this.fetchIndexDefaults())
             .done(([analyzers]: [Array<Raven.Client.Documents.Indexes.Analysis.AnalyzerDefinition>],
                    [serverWideAnalyzers]: [Array<Raven.Client.Documents.Indexes.Analysis.AnalyzerDefinition>],
                    [indexDefaults]: [Raven.Server.Web.Studio.Processors.IndexDefaults]) => {
+                
                 const analyzersList = [...analyzers.map(x => x.Name), ...serverWideAnalyzers.map(x => x.Name)];
+
+                this.defaultDeploymentMode(indexDefaults.StaticIndexDeploymentMode);
+                this.defaultSearchEngine(indexDefaults.StaticIndexingEngineType === "None" ? "Lucene" : indexDefaults.StaticIndexingEngineType);
+                
+                const existingSearchConfig = this.editedIndex().configuration().find(x => x.key() === editIndex.searchEngineConfigurationLabel);
+                if (existingSearchConfig) {
+                    this.editedIndex().configuration.remove(existingSearchConfig);
+                    this.searchEngine(existingSearchConfig.value());
+                }
+                
                 this.editedIndex().registerCustomAnalyzers(analyzersList);
                 
                 this.defaultDeploymentMode(indexDefaults.StaticIndexDeploymentMode);
@@ -514,6 +555,7 @@ class editIndex extends shardViewModelBase {
             hasDefaultFieldOptions,
             hasAnyDirtyDefaultFieldOptions,
             hasAnyDirtyAdditionalAssembly,
+            this.searchEngine
         ], false, jsonUtil.newLineNormalizingHashFunction);
 
         this.isSaveEnabled = ko.pureComputed(() => {
@@ -752,6 +794,12 @@ class editIndex extends shardViewModelBase {
 
             const indexDto = editedIndex.toDto();
 
+            if (this.searchEngine()) {
+                indexDto.Configuration[editIndex.searchEngineConfigurationLabel] = this.searchEngine();
+            } else {
+                delete indexDto.Configuration[editIndex.searchEngineConfigurationLabel];
+            }
+
             this.saveIndex(indexDto)
                 .always(() => this.saveInProgress(false));
         });
@@ -822,7 +870,7 @@ class editIndex extends shardViewModelBase {
 
     cloneIndex() {
         this.isEditingExistingIndex(false);
-        this.editedIndex().name(null);
+        this.editedIndex().name(`CloneOf/${this.editedIndex().name()}`);
         this.editedIndex().reduceOutputCollectionName(null);
         this.editedIndex().patternForReferencesToReduceOutputCollection(null);
         this.editedIndex().collectionNameForReferenceDocuments(null);

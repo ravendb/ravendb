@@ -1,0 +1,23 @@
+<div class="cluster-overview-widget">
+    <div class="cluster-dashboard-item-header">
+        <h3> <i class="icon-cluster"></i> <span>Cluster Overview</span></h3>
+        <button class="btn btn-warning btn-sm" data-bind="click: remove" title="Remove widget from board">
+            <i class="icon-trash"></i>
+        </button>
+        <button class="btn btn-default btn-sm" data-bind="click: toggleFullscreen">
+            <i data-bind="css: { 'icon-fullscreen': !fullscreen(), 'icon-exit-fullscreen': fullscreen },
+                          attr: { title: fullscreen() ? 'Minimize widget' : 'Maximize widget' }"></i>
+        </button>
+    </div>
+    <div class="databases-list" style="position: relative;">
+        <div class="list-container">
+            <div class="list absolute-fill">
+                <virtual-grid class="resizable no-margin cluster-overview-grid" params="controller: gridController, condensed: true"></virtual-grid>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="tooltip json-preview js-cluster-overview-preview" style="opacity: 0">
+    <pre><code></code></pre>
+</div>
+

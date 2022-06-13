@@ -71,7 +71,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 return;
             
             using (Stats.AddStats.Start())
-                _indexWriter.Index(lowerId, data, _knownFields);
+            {
+                _indexWriter.Index(lowerId, data);
+            }
 
             stats.RecordIndexingOutput();
         }

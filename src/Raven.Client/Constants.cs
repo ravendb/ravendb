@@ -480,5 +480,14 @@ namespace Raven.Client
                 public const string DestinationDocumentChangeVector = null;
             }
         }
+
+        internal class Obsolete
+        {
+            private Obsolete()
+            {
+            }
+
+            public const string GraphApi = "Graph API will be removed in next major version of the product.";
+        }
     }
 }

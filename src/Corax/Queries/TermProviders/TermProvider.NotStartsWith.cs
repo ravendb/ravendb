@@ -1,9 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Sparrow.Server;
 using Voron;
 using Voron.Data.CompactTrees;
@@ -15,21 +11,22 @@ namespace Corax.Queries
     {
         private readonly IndexSearcher _searcher;
         private readonly CompactTree.Iterator _iterator;
-        private readonly string _field;
+        private readonly Slice _fieldName;
         private readonly Slice _startWith;
+        private readonly CompactTree _tree;
 
-        public NotStartWithTermProvider(IndexSearcher searcher, ByteStringContext context, CompactTree tree, string field, int fieldId, Slice startWith)
+        public NotStartWithTermProvider(IndexSearcher searcher, ByteStringContext context, CompactTree tree, Slice fieldName, int fieldId, Slice startWith)
         {
             _searcher = searcher;
-            _field = field;
+            _fieldName = fieldName;
             _iterator = tree.Iterate();
             _iterator.Reset();
             _startWith = startWith;
+            _tree = tree;
         }
 
         public void Reset()
         {
-
             _iterator.Reset();
         }
 
@@ -41,7 +38,7 @@ namespace Corax.Queries
                 if (termSlice.StartWith(_startWith))
                     continue;
 
-                term = _searcher.TermQuery(_field, termSlice);
+                term = _searcher.TermQuery(_tree, termSlice);
                 return true;
             }
             
@@ -54,7 +51,7 @@ namespace Corax.Queries
             return new QueryInspectionNode($"{nameof(NotStartWithTermProvider)}",
                             parameters: new Dictionary<string, string>()
                             {
-                                { "Field", _field },
+                                { "Field", _fieldName.ToString() },
                                 { "Terms", _startWith.ToString()}
                             });
         }

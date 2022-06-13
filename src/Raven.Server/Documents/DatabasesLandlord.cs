@@ -83,10 +83,12 @@ namespace Raven.Server.Documents
         internal class TestingStuff
         {
             internal Action<ServerStore> BeforeHandleClusterDatabaseChanged;
+            internal Action<string> InsideHandleClusterDatabaseChanged;
             internal Action<(DocumentDatabase Database, string caller)> AfterDatabaseCreation;
             internal Action<CancellationToken> DelayIncomingReplication;
             internal int? HoldDocumentDatabaseCreation = null;
             internal bool PreventedRehabOfIdleDatabase = false;
+            internal ManualResetEvent DeleteDatabaseWhileItBeingDeleted = null;
             internal Action<DocumentDatabase> OnBeforeDocumentDatabaseInitialization;
             internal ManualResetEventSlim RescheduleDatabaseWakeupMre = null;
         }
@@ -190,6 +192,8 @@ namespace Raven.Server.Documents
          TransactionOperationContext context,
          RawDatabaseRecord rawRecord)
         {
+            ForTestingPurposes?.InsideHandleClusterDatabaseChanged?.Invoke(type);
+
             if (ShouldDeleteDatabase(context, databaseName, rawRecord))
                 return;
 
@@ -371,6 +375,7 @@ namespace Raven.Server.Documents
                 catch (AggregateException ae) when (nameof(DeleteDatabase).Equals(ae.InnerException?.Data["Source"]))
                 {
                     // this is already in the process of being deleted, we can just exit and let another thread handle it
+                    ForTestingPurposes?.DeleteDatabaseWhileItBeingDeleted?.Set();
                     return;
                 }
                 catch (DatabaseConcurrentLoadTimeoutException e)
@@ -701,8 +706,7 @@ namespace Raven.Server.Documents
                     {
                         // If a database was unloaded, this is what we get from DatabasesCache.
                         // We want to keep the exception there until UnloadAndLockDatabase is disposed.
-                        var extractSingleInnerException = database.Exception.ExtractSingleInnerException();
-                        if (Equals(extractSingleInnerException.Data[DoNotRemove], true))
+                        if (IsLockedDatabase(database.Exception))
                             return database;
                     }
 
@@ -726,6 +730,14 @@ namespace Raven.Server.Documents
             {
                 release?.Dispose();
             }
+        }
+
+        internal static bool IsLockedDatabase(AggregateException exception)
+        {
+            if (exception == null)
+                return false;
+            var extractSingleInnerException = exception.ExtractSingleInnerException();
+            return Equals(extractSingleInnerException.Data[DoNotRemove], true);
         }
 
         private IDisposable EnterReadLockImmediately(StringSegment databaseName)

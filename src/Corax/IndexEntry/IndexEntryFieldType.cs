@@ -17,6 +17,8 @@ public enum IndexEntryFieldType : ushort
     HasNulls = 1 << 14, // Helper for list writer.
     Invalid = 1 << 15,
     
+    ListWithNulls = List | HasNulls,
+    TupleListWithNulls = TupleList | HasNulls,
     SpatialPointList = List | SpatialPoint,
     TupleList = List | Tuple,
     RawList = List | Raw

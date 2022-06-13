@@ -1118,7 +1118,7 @@ namespace SlowTests.Client.TimeSeries.BulkInsert
         [InlineData(8)]
         [InlineData(16)]
         [InlineData(32)]
-        public void CanAppendALotOfValuesAndTimeSeriesInParallel(int numberOfValues)
+        public async Task CanAppendALotOfValuesAndTimeSeriesInParallel(int numberOfValues)
         {
             using (var store = GetDocumentStore())
             {
@@ -1127,13 +1127,13 @@ namespace SlowTests.Client.TimeSeries.BulkInsert
                 var numberOfMeasures = 10_000;
                 var numberOfTimeSeries = 10;
 
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
-                    session.Store(new { Name = "Oren" }, documentId);
-                    session.SaveChanges();
+                    await session.StoreAsync(new { Name = "Oren" }, documentId);
+                    await session.SaveChangesAsync();
                 }
-                var count = new CountdownEvent(numberOfTimeSeries);
-                Parallel.For(0, numberOfTimeSeries, async (i) =>
+
+                await Parallel.ForEachAsync(Enumerable.Range(0, numberOfTimeSeries), async (i, token) =>
                 {
                     var rand = new Random();
                     var offset = 0;
@@ -1152,15 +1152,11 @@ namespace SlowTests.Client.TimeSeries.BulkInsert
                             await timeSeriesBulkInsert.AppendAsync(baseline.AddSeconds(offset), values);
                         }
                     }
-
-                    count.Signal();
                 });
 
-                Assert.True(count.Wait(TimeSpan.FromMinutes(5)));
-
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
-                    var user = session.Load<User>("users/ayende");
+                    var user = await session.LoadAsync<User>("users/ayende");
                     var tsNames = session.Advanced.GetTimeSeriesFor(user);
                     Assert.Equal(numberOfTimeSeries, tsNames.Count);
                 }
