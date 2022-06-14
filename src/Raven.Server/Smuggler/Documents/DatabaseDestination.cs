@@ -1202,6 +1202,37 @@ namespace Raven.Server.Smuggler.Documents
                     progress.ElasticSearchEtlsUpdated = true;
                 }
 
+                if (databaseRecord.QueueConnectionStrings.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.QueueConnectionStrings))
+                {
+                    if (_log.IsInfoEnabled)
+                        _log.Info("Configuring Queue ETL connection strings from smuggler");
+                    foreach (var connectionString in databaseRecord.QueueConnectionStrings)
+                    {
+                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new PutQueueConnectionStringCommand(connectionString.Value, _database.Name, RaftIdGenerator.DontCareId)));
+                    }
+                    progress.QueueConnectionStringsUpdated = true;
+                }
+
+                if (databaseRecord.QueueEtls.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.QueueEtls))
+                {
+                    if (_log.IsInfoEnabled)
+                        _log.Info("Configuring Queue ETLs configuration from smuggler");
+                    foreach (var etl in databaseRecord.QueueEtls)
+                    {
+                        currentDatabaseRecord?.QueueEtls.ForEach(x =>
+                        {
+                            if (x.Name.Equals(etl.Name, StringComparison.OrdinalIgnoreCase))
+                            {
+                                tasks.Add(_database.ServerStore.SendToLeaderAsync(new DeleteOngoingTaskCommand(x.TaskId, OngoingTaskType.QueueEtl, _database.Name, RaftIdGenerator.DontCareId)));
+                            }
+                        });
+                        etl.TaskId = 0;
+                        etl.Disabled = true;
+                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new AddQueueEtlCommand(etl, _database.Name, RaftIdGenerator.DontCareId)));
+                    }
+                    progress.QueueEtlsUpdated = true;
+                }
+
                 if (tasks.Count == 0)
                     return;
 

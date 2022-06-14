@@ -8,6 +8,8 @@ using Newtonsoft.Json;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.Queue;
+using Raven.Client.Documents.Smuggler;
+using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents.ETL.Providers.Queue;
 using Raven.Server.Documents.ETL.Providers.Queue.Test;
 using Raven.Server.ServerWide.Context;
@@ -348,6 +350,29 @@ output('test output')"
                 var entity = session.Load<User>("users/1");
                 Assert.Null(entity);
             }
+        }
+    }
+
+    [Fact]
+    public async Task ShouldImportTask()
+    {
+        using (var srcStore = GetDocumentStore())
+        using (var dstStore = GetDocumentStore())
+        {
+            var config = SetupQueueEtlToKafka(srcStore,
+                DefaultScript, DefaultCollections, url: "http://localhost:1234");
+
+            var exportFile = GetTempFileName();
+
+            var exportOperation = await srcStore.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), exportFile);
+            await exportOperation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+            var operation = await dstStore.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), exportFile);
+            await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+            var destinationRecord = await dstStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(dstStore.Database));
+            Assert.Equal(1, destinationRecord.QueueConnectionStrings.Count);
+            Assert.Equal(1, destinationRecord.QueueEtls.Count);
         }
     }
 

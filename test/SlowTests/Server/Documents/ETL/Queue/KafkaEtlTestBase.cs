@@ -2,9 +2,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using Confluent.Kafka;
+using Confluent.Kafka.Admin;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.Queue;
+using Tests.Infrastructure;
 using Tests.Infrastructure.ConnectionString;
 using Xunit.Abstractions;
 
@@ -44,7 +46,7 @@ loadToOrders" + TopicSuffix + @"(orderData);
     protected QueueEtlConfiguration SetupQueueEtlToKafka(DocumentStore store, string script,
         IEnumerable<string> collections, IEnumerable<EtlQueue> queues = null, bool applyToAllDocuments = false, string configurationName = null,
         string transformationName = null,
-        Dictionary<string, string> configuration = null)
+        Dictionary<string, string> configuration = null, string url = null)
     {
         var connectionStringName = $"{store.Database}@{store.Urls.First()} to Kafka";
 
@@ -77,7 +79,7 @@ loadToOrders" + TopicSuffix + @"(orderData);
             {
                 Name = connectionStringName,
                 BrokerType = QueueBroker.Kafka,
-                KafkaConnectionSettings = new KafkaConnectionSettings() { ConnectionOptions = configuration, Url = KafkaConnectionString.Instance.VerifiedUrl.Value }
+                KafkaConnectionSettings = new KafkaConnectionSettings() { ConnectionOptions = configuration, Url = url ?? KafkaConnectionString.Instance.VerifiedUrl.Value }
             });
         return config;
     }
@@ -100,7 +102,7 @@ loadToOrders" + TopicSuffix + @"(orderData);
 
     private void CleanupTopic()
     {
-        if (_definedTopics.Count == 0)
+        if (_definedTopics.Count == 0 || RequiresKafkaFactAttribute.CanConnect == false)
             return;
 
         var config = new AdminClientConfig { BootstrapServers = KafkaConnectionString.Instance.VerifiedUrl.Value };
@@ -112,6 +114,12 @@ loadToOrders" + TopicSuffix + @"(orderData);
         }
         catch (Exception e)
         {
+            if (e.InnerException is DeleteTopicsException deleteEx)
+            {
+                if (deleteEx.Results.All(x => x.Error.Code == ErrorCode.UnknownTopicOrPart)) // topic does not exist
+                    return;
+            }
+
             throw new InvalidOperationException($"Failed to cleanup topics: {string.Join(", ", _definedTopics)}. Check inner exceptions for details", e);
         }
     }

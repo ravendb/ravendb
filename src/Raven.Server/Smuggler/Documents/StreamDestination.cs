@@ -14,6 +14,7 @@ using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
+using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Operations.Replication;
@@ -385,6 +386,20 @@ namespace Raven.Server.Smuggler.Documents
                             WriteElasticSearchEtls(databaseRecord.ElasticSearchEtls);
                         }
 
+                        if (databaseRecordItemType.Contain(DatabaseRecordItemType.QueueConnectionStrings))
+                        {
+                            _writer.WriteComma();
+                            _writer.WritePropertyName(nameof(databaseRecord.QueueConnectionStrings));
+                            WriteQueueConnectionStrings(databaseRecord.QueueConnectionStrings);
+                        }
+
+                        if (databaseRecordItemType.Contain(DatabaseRecordItemType.QueueEtls))
+                        {
+                            _writer.WriteComma();
+                            _writer.WritePropertyName(nameof(databaseRecord.QueueEtls));
+                            WriteQueueEtls(databaseRecord.QueueEtls);
+                        }
+
                         if (databaseRecord.Integrations != null)
                         {
                             _writer.WriteComma();
@@ -618,6 +633,27 @@ namespace Raven.Server.Smuggler.Documents
                 _writer.WriteEndArray();
             }
 
+            private void WriteQueueEtls(List<QueueEtlConfiguration> queueEtlConfiguration)
+            {
+                if (queueEtlConfiguration == null)
+                {
+                    _writer.WriteNull();
+                    return;
+                }
+                _writer.WriteStartArray();
+
+                var first = true;
+                foreach (var etl in queueEtlConfiguration)
+                {
+                    if (first == false)
+                        _writer.WriteComma();
+                    first = false;
+                    _context.Write(_writer, etl.ToJson());
+                }
+
+                _writer.WriteEndArray();
+            }
+
             private void WriteExternalReplications(List<ExternalReplication> externalReplication)
             {
                 if (externalReplication == null)
@@ -793,6 +829,25 @@ namespace Raven.Server.Smuggler.Documents
                     _writer.WritePropertyName(elasticSearchConnectionString.Key);
 
                     _context.Write(_writer, elasticSearchConnectionString.Value.ToJson());
+                }
+
+                _writer.WriteEndObject();
+            }
+
+            private void WriteQueueConnectionStrings(Dictionary<string, QueueConnectionString> connections)
+            {
+                _writer.WriteStartObject();
+
+                var first = true;
+                foreach (var queueConnectionString in connections)
+                {
+                    if (first == false)
+                        _writer.WriteComma();
+                    first = false;
+
+                    _writer.WritePropertyName(queueConnectionString.Key);
+
+                    _context.Write(_writer, queueConnectionString.Value.ToJson());
                 }
 
                 _writer.WriteEndObject();
