@@ -43,10 +43,9 @@ public static class QueueHelper
         return producer;
     }
 
-    public static IModel CreateRabbitMqClient(QueueConnectionString connectionString)
+    public static IConnection CreateRabbitMqClient(QueueConnectionString connectionString)
     {
         var connectionFactory = new ConnectionFactory() { Uri = new Uri(connectionString.RabbitMqConnectionSettings.ConnectionString) };
-        var connection = connectionFactory.CreateConnection();
-        return connection.CreateModel();
+        return connectionFactory.CreateConnection();
     }
 }
