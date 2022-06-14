@@ -78,7 +78,7 @@ namespace Raven.Server.Documents.ETL.Providers.Queue.Handlers
 
                 DynamicJsonValue result = new()
                 {
-                    [nameof(NodeConnectionTestResult.Success)] = true, [nameof(NodeConnectionTestResult.TcpServerUrl)] = co,
+                    [nameof(NodeConnectionTestResult.Success)] = true, [nameof(NodeConnectionTestResult.TcpServerUrl)] = config.ConnectionString,
                 };
 
                 using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
