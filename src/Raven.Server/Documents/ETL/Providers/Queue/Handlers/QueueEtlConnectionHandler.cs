@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Confluent.Kafka;
 using Newtonsoft.Json;
 using RabbitMQ.Client;
+using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Server.Routing;
 using Raven.Server.Web.System;
 using Sparrow.Json;
@@ -19,14 +20,13 @@ namespace Raven.Server.Documents.ETL.Providers.Queue.Handlers
         {
             try
             {
-                string bootstrapServers = GetQueryStringValueAndAssertIfSingleAndNotEmpty("bootstrap-servers");
                 string jsonConfig = await new StreamReader(HttpContext.Request.Body).ReadToEndAsync();
-                var config = JsonConvert.DeserializeObject<KafkaConnectionConfiguration>(jsonConfig);
+                var config = JsonConvert.DeserializeObject<KafkaConnectionSettings>(jsonConfig);
 
-                var adminConfig = new AdminClientConfig() { BootstrapServers = bootstrapServers };
-                if (config != null && config.Configuration != null)
+                var adminConfig = new AdminClientConfig() { BootstrapServers = config.BootstrapServers };
+                if (config.ConnectionOptions != null)
                 {
-                    foreach (KeyValuePair<string, string> option in config.Configuration)
+                    foreach (KeyValuePair<string, string> option in config.ConnectionOptions)
                     {
                         adminConfig.Set(option.Key, option.Value);
                     }    
@@ -37,7 +37,7 @@ namespace Raven.Server.Documents.ETL.Providers.Queue.Handlers
 
                 DynamicJsonValue result = new()
                 {
-                    [nameof(NodeConnectionTestResult.Success)] = true, [nameof(NodeConnectionTestResult.TcpServerUrl)] = bootstrapServers,
+                    [nameof(NodeConnectionTestResult.Success)] = true, [nameof(NodeConnectionTestResult.TcpServerUrl)] = config.BootstrapServers,
                 };
 
                 using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -68,16 +68,17 @@ namespace Raven.Server.Documents.ETL.Providers.Queue.Handlers
         {
             try
             {
-                string url = GetQueryStringValueAndAssertIfSingleAndNotEmpty("url");
+                string jsonConfig = await new StreamReader(HttpContext.Request.Body).ReadToEndAsync();
+                var config = JsonConvert.DeserializeObject<RabbitMqConnectionSettings>(jsonConfig);
 
-                var connectionFactory = new ConnectionFactory() { Uri = new Uri(url) };
+                var connectionFactory = new ConnectionFactory() { Uri = new Uri(config.ConnectionString) };
                 using (connectionFactory.CreateConnection())
                 {
                 }
 
                 DynamicJsonValue result = new()
                 {
-                    [nameof(NodeConnectionTestResult.Success)] = true, [nameof(NodeConnectionTestResult.TcpServerUrl)] = url,
+                    [nameof(NodeConnectionTestResult.Success)] = true, [nameof(NodeConnectionTestResult.TcpServerUrl)] = co,
                 };
 
                 using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -103,10 +104,4 @@ namespace Raven.Server.Documents.ETL.Providers.Queue.Handlers
             }
         }
     }
-}
-
-public class KafkaConnectionConfiguration
-{
-    public Dictionary<string, string> Configuration { get; set; }
-    public bool UseRavenCertificate { get; set; }
 }
