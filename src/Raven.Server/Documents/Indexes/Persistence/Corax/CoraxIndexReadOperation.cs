@@ -1,15 +1,12 @@
 ﻿using System;
 using System.Buffers;
-using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using Corax;
 using Corax.Pipeline;
 using Corax.Queries;
 using Raven.Client.Documents.Queries.Explanation;
-using Raven.Client.Documents.Queries.Highlighting;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Highlightings;
@@ -29,6 +26,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 {
     public class CoraxIndexReadOperation : IndexReadOperationBase
     {
+        private static readonly ArrayPool<long> QueryPool = ArrayPool<long>.Create();
         private readonly IndexFieldsMapping _fieldMappings;
         private readonly IndexSearcher _indexSearcher;
         private readonly ByteStringContext _allocator;
@@ -79,7 +77,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     yield break;
             }
 
-            var ids = ArrayPool<long>.Shared.Rent(CoraxGetPageSize(_indexSearcher, take, query));
+            
+            var ids = QueryPool.Rent(CoraxGetPageSize(_indexSearcher, take, query, queryMatch.GetType() == typeof(BinaryMatch)));
             int docsToLoad = pageSize;
             int queryStart = query.Start;
             bool hasHighlights = query.Metadata.HasHighlightings;
@@ -282,7 +281,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 return default;
             }
 
-            ArrayPool<long>.Shared.Return(ids);
+            QueryPool.Return(ids);
         }
 
         private static int ProcessHighlightings(HighlightingField current, CoraxHighlightingTermIndex highlightingTerm, ReadOnlySpan<char> fieldFragment, List<string> fragments, int maxFragmentCount)
