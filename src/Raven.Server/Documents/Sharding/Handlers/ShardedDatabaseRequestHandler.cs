@@ -14,7 +14,6 @@ using Raven.Server.Utils.Configuration;
 using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Logging;
-using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Handlers
 {
@@ -29,7 +28,12 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
         public ShardedContinuationTokensHandler ContinuationTokens;
 
-        public static List<string> HeadersToCopy = new List<string> { Constants.Headers.LastKnownClusterTransactionIndex };
+        public static readonly List<string> HeadersToCopy = new()
+        {
+            Constants.Headers.IfMatch,
+            Constants.Headers.IfNoneMatch, 
+            Constants.Headers.LastKnownClusterTransactionIndex
+        };
 
         protected ShardedDatabaseRequestHandler()
         {

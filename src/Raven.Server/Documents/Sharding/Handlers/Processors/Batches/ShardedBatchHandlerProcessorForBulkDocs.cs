@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client.Documents.Commands.Batches;
 using Raven.Server.Documents.Handlers.Batches;
 using Raven.Server.Documents.Handlers.Processors.Batches;
+using Raven.Server.Documents.Sharding.Commands;
 using Raven.Server.Documents.Sharding.Handlers.Batches;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.ServerWide.Context;
@@ -20,15 +22,15 @@ internal class ShardedBatchHandlerProcessorForBulkDocs : AbstractBatchHandlerPro
     {
     }
 
-    protected override async ValueTask<DynamicJsonArray> HandleTransactionAsync(JsonOperationContext context, ShardedBatchCommand command)
+    protected override async ValueTask<DynamicJsonArray> HandleTransactionAsync(JsonOperationContext context, ShardedBatchCommand command, IndexBatchOptions indexBatchOptions, ReplicationBatchOptions replicationBatchOptions)
     {
-        var shardedBatchCommands = new Dictionary<int, SingleNodeShardedBatchCommand>(); // TODO sharding : consider cache those
+        var shardedBatchCommands = new Dictionary<int, ShardedSingleNodeBatchCommand>(); // TODO sharding : consider cache those
         foreach (var c in command)
         {
             var shardNumber = c.ShardNumber;
             if (shardedBatchCommands.TryGetValue(shardNumber, out var shardedBatchCommand) == false)
             {
-                shardedBatchCommand = new SingleNodeShardedBatchCommand(RequestHandler);
+                shardedBatchCommand = new ShardedSingleNodeBatchCommand(indexBatchOptions, replicationBatchOptions);
                 shardedBatchCommands.Add(shardNumber, shardedBatchCommand);
             }
             shardedBatchCommand.AddCommand(c);
@@ -38,14 +40,15 @@ internal class ShardedBatchHandlerProcessorForBulkDocs : AbstractBatchHandlerPro
         return await RequestHandler.ShardExecutor.ExecuteParallelForShardsAsync(shardedBatchCommands.Keys.ToArray(), op);
     }
 
-    protected override ValueTask WaitForIndexesAsync(TimeSpan timeout, List<string> specifiedIndexesQueryString, bool throwOnTimeout, string lastChangeVector, long lastTombstoneEtag,
+    protected override ValueTask WaitForIndexesAsync(IndexBatchOptions options, string lastChangeVector, long lastTombstoneEtag,
         HashSet<string> modifiedCollections)
     {
-        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "Implement WaitForIndexesAsync");
-        throw new NotImplementedException();
+        // no-op
+        // this is passed as a parameter when we execute transaction on each shard
+        return ValueTask.CompletedTask;
     }
 
-    protected override ValueTask WaitForReplicationAsync(TimeSpan waitForReplicasTimeout, string numberOfReplicasStr, bool throwOnTimeoutInWaitForReplicas, string lastChangeVector)
+    protected override ValueTask WaitForReplicationAsync(ReplicationBatchOptions options, string lastChangeVector)
     {
         DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "Implement WaitForReplicationAsync");
         throw new NotImplementedException();

@@ -53,7 +53,7 @@ public abstract class AbstractClusterTransactionRequestProcessor<TRequestHandler
             {
                 WaitForIndexesTimeout = waitForIndexesTimeout,
                 WaitForIndexThrow = waitForIndexThrow,
-                SpecifiedIndexesQueryString = specifiedIndexesQueryString.Count > 0 ? specifiedIndexesQueryString.ToList() : null
+                SpecifiedIndexesQueryString = specifiedIndexesQueryString.Count > 0 ? specifiedIndexesQueryString.ToArray() : null
             };
 
             var raftRequestId = RequestHandler.GetRaftRequestIdFromQuery();

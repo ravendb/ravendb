@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Http;
-using Raven.Server.Documents.Sharding.Handlers.Batches;
+using Raven.Server.Documents.Sharding.Commands;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -12,11 +12,11 @@ namespace Raven.Server.Documents.Sharding.Operations
     {
         private readonly HttpContext _httpContext;
         private readonly JsonOperationContext _resultContext;
-        private readonly Dictionary<int, SingleNodeShardedBatchCommand> _commands;
+        private readonly Dictionary<int, ShardedSingleNodeBatchCommand> _commands;
         private readonly int _totalCommands;
 
         public SingleNodeShardedBatchOperation(HttpContext httpContext, JsonOperationContext resultContext,
-            Dictionary<int, SingleNodeShardedBatchCommand> commands, int totalCommands)
+            Dictionary<int, ShardedSingleNodeBatchCommand> commands, int totalCommands)
         {
             _httpContext = httpContext;
             _resultContext = resultContext;

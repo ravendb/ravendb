@@ -59,6 +59,8 @@ namespace Raven.Client
 
             public const string StudioVersion = "Raven-Studio-Version";
 
+            public const string IfMatch = "If-Match";
+
             public const string IfNoneMatch = "If-None-Match";
 
             public const string TransferEncoding = "Transfer-Encoding";
