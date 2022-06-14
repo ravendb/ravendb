@@ -109,6 +109,9 @@ namespace Raven.Client.Exceptions
                     throw RavenException.Generic(schema.Error, json);
                 }
 
+                if (type == typeof(TimeoutException))
+                    throw exception;
+
                 if (typeof(RavenException).IsAssignableFrom(type) == false)
                     throw new RavenException(schema.Error, exception);
 
