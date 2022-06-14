@@ -18,7 +18,7 @@ namespace Raven.Client.Documents.Commands.Batches
         public bool? DisableAtomicDocumentWrites { get; }
         public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
 
-        public ClusterWideBatchCommand(DocumentConventions conventions, IList<ICommandData> commands, BatchOptions options = null, bool? disableAtomicDocumentsWrites = null) : 
+        public ClusterWideBatchCommand(DocumentConventions conventions, IList<ICommandData> commands, BatchOptions options = null, bool? disableAtomicDocumentsWrites = null) :
             base(conventions, context: null, commands, options, TransactionMode.ClusterWide)
         {
             DisableAtomicDocumentWrites = disableAtomicDocumentsWrites;
@@ -70,7 +70,7 @@ namespace Raven.Client.Documents.Commands.Batches
                     _attachmentStreams.Add(stream);
                 }
             }
-            
+
             Timeout = options?.RequestTimeout;
         }
 
@@ -83,7 +83,7 @@ namespace Raven.Client.Documents.Commands.Batches
                 for (var i = 0; i < _commands.Count; i++)
                 {
                     var command = _commands[i];
-                  
+
                     var json = command.ToJson(_conventions, ctx);
 
                     if (node.SupportsAtomicClusterWrites == false)
@@ -93,7 +93,7 @@ namespace Raven.Client.Documents.Commands.Batches
                     _commandsAsJson[i] = ctx.ReadObject(json, "command");
                 }
             }
-            
+
             var request = new HttpRequestMessage
             {
                 Method = HttpMethod.Post,
@@ -155,7 +155,11 @@ namespace Raven.Client.Documents.Commands.Batches
             if (_options == null)
                 return;
 
-            var replicationOptions = _options.ReplicationOptions;
+            AppendOptions(sb, _options.IndexOptions, _options.ReplicationOptions);
+        }
+
+        internal static void AppendOptions(StringBuilder sb, IndexBatchOptions indexOptions, ReplicationBatchOptions replicationOptions)
+        {
             if (replicationOptions != null)
             {
                 sb.Append("&waitForReplicasTimeout=").Append(replicationOptions.WaitForReplicasTimeout);
@@ -168,7 +172,6 @@ namespace Raven.Client.Documents.Commands.Batches
                     : replicationOptions.NumberOfReplicasToWaitFor.ToString());
             }
 
-            var indexOptions = _options.IndexOptions;
             if (indexOptions != null)
             {
                 sb.Append("&waitForIndexesTimeout=").Append(indexOptions.WaitForIndexesTimeout);

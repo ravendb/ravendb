@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
@@ -11,7 +10,6 @@ using Raven.Client.Json;
 using Raven.Server.Documents.Handlers.Batches;
 using Raven.Server.Documents.Handlers.Batches.Commands;
 using Raven.Server.TrafficWatch;
-using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -26,11 +24,11 @@ internal abstract class AbstractBatchHandlerProcessorForBulkDocs<TBatchCommand, 
     {
     }
 
-    protected abstract ValueTask<DynamicJsonArray> HandleTransactionAsync(JsonOperationContext context, TBatchCommand command);
+    protected abstract ValueTask<DynamicJsonArray> HandleTransactionAsync(JsonOperationContext context, TBatchCommand command, IndexBatchOptions indexBatchOptions, ReplicationBatchOptions replicationBatchOptions);
 
-    protected abstract ValueTask WaitForIndexesAsync(TimeSpan timeout, List<string> specifiedIndexesQueryString, bool throwOnTimeout, string lastChangeVector, long lastTombstoneEtag, HashSet<string> modifiedCollections);
+    protected abstract ValueTask WaitForIndexesAsync(IndexBatchOptions options, string lastChangeVector, long lastTombstoneEtag, HashSet<string> modifiedCollections);
 
-    protected abstract ValueTask WaitForReplicationAsync(TimeSpan waitForReplicasTimeout, string numberOfReplicasStr, bool throwOnTimeoutInWaitForReplicas, string lastChangeVector);
+    protected abstract ValueTask WaitForReplicationAsync(ReplicationBatchOptions options, string lastChangeVector);
 
     protected abstract char GetIdentityPartsSeparator();
 
@@ -40,9 +38,8 @@ internal abstract class AbstractBatchHandlerProcessorForBulkDocs<TBatchCommand, 
 
     public override async ValueTask ExecuteAsync()
     {
-        var waitForIndexesTimeout = RequestHandler.GetTimeSpanQueryString("waitForIndexesTimeout", required: false);
-        var waitForIndexThrow = RequestHandler.GetBoolValueQueryString("waitForIndexThrow", required: false) ?? true;
-        var specifiedIndexesQueryString = HttpContext.Request.Query["waitForSpecificIndex"];
+        var indexBatchOptions = GetIndexBatchOptions();
+        var replicationBatchOptions = GetReplicationBatchOptions();
 
         var commandsReader = GetCommandsReader();
 
@@ -95,23 +92,19 @@ internal abstract class AbstractBatchHandlerProcessorForBulkDocs<TBatchCommand, 
                     return;
                 }
 
-                if (waitForIndexesTimeout != null)
+                if (indexBatchOptions != null)
                     command.ModifiedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-                var results = await HandleTransactionAsync(context, command);
+                var results = await HandleTransactionAsync(context, command, indexBatchOptions, replicationBatchOptions);
 
-                var waitForReplicasTimeout = RequestHandler.GetTimeSpanQueryString("waitForReplicasTimeout", required: false);
-                if (waitForReplicasTimeout != null)
+                if (replicationBatchOptions != null)
                 {
-                    var numberOfReplicasStr = RequestHandler.GetStringQueryString("numberOfReplicasToWaitFor", required: false) ?? "1";
-                    var throwOnTimeoutInWaitForReplicas = RequestHandler.GetBoolValueQueryString("throwOnTimeoutInWaitForReplicas", required: false) ?? true;
-
-                    await WaitForReplicationAsync(waitForReplicasTimeout.Value, numberOfReplicasStr, throwOnTimeoutInWaitForReplicas, command.LastChangeVector);
+                    await WaitForReplicationAsync(replicationBatchOptions, command.LastChangeVector);
                 }
 
-                if (waitForIndexesTimeout != null)
+                if (indexBatchOptions != null)
                 {
-                    await WaitForIndexesAsync(waitForIndexesTimeout.Value, specifiedIndexesQueryString.ToList(), waitForIndexThrow, command.LastChangeVector, command.LastTombstoneEtag, command.ModifiedCollections);
+                    await WaitForIndexesAsync(indexBatchOptions, command.LastChangeVector, command.LastTombstoneEtag, command.ModifiedCollections);
                 }
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
@@ -125,6 +118,46 @@ internal abstract class AbstractBatchHandlerProcessorForBulkDocs<TBatchCommand, 
                 }
             }
         }
+    }
+
+    private IndexBatchOptions GetIndexBatchOptions()
+    {
+        var waitForIndexesTimeout = RequestHandler.GetTimeSpanQueryString("waitForIndexesTimeout", required: false);
+        if (waitForIndexesTimeout == null)
+            return null;
+
+        return new IndexBatchOptions
+        {
+            WaitForIndexes = true,
+            WaitForIndexesTimeout = waitForIndexesTimeout.Value,
+            ThrowOnTimeoutInWaitForIndexes = RequestHandler.GetBoolValueQueryString("waitForIndexThrow", required: false) ?? true,
+            WaitForSpecificIndexes = RequestHandler.GetStringValuesQueryString("waitForSpecificIndex", required: false)
+        };
+    }
+
+    private ReplicationBatchOptions GetReplicationBatchOptions()
+    {
+        var waitForReplicasTimeout = RequestHandler.GetTimeSpanQueryString("waitForReplicasTimeout", required: false);
+        if (waitForReplicasTimeout == null)
+            return null;
+
+        var numberOfReplicasStr = RequestHandler.GetStringQueryString("numberOfReplicasToWaitFor", required: false);
+        var numberOfReplicas = 1;
+        var majority = numberOfReplicasStr == "majority";
+        if (majority == false)
+        {
+            if (int.TryParse(numberOfReplicasStr, out numberOfReplicas) == false)
+                RequestHandler.ThrowInvalidInteger("numberOfReplicasToWaitFor", numberOfReplicasStr);
+        }
+
+        return new ReplicationBatchOptions
+        {
+            WaitForReplicas = true,
+            Majority = majority,
+            NumberOfReplicasToWaitFor = numberOfReplicas,
+            ThrowOnTimeoutInWaitForReplicas = RequestHandler.GetBoolValueQueryString("throwOnTimeoutInWaitForReplicas", required: false) ?? true,
+            WaitForReplicasTimeout = waitForReplicasTimeout.Value
+        };
     }
 
     private static string BatchTrafficWatch(ArraySegment<BatchRequestParser.CommandData> parsedCommands)

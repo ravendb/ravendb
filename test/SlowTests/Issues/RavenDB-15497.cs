@@ -6,10 +6,10 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
-using Raven.Client.Exceptions;
 using Raven.Server;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -21,10 +21,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task WaitForIndexesAfterSaveChangesCanExitWhenThrowOnTimeoutIsFalse()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task WaitForIndexesAfterSaveChangesCanExitWhenThrowOnTimeoutIsFalse(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var index = new Index();
                 await index.ExecuteAsync(store);
@@ -42,7 +43,9 @@ namespace SlowTests.Issues
 
                 Indexes.WaitForIndexing(store);
 
-                await store.Maintenance.SendAsync(new StopIndexOperation(index.IndexName));
+                await store.Maintenance
+                    .ForTesting(() => new StopIndexOperation(index.IndexName))
+                    .ExecuteOnAllAsync();
 
                 using (var session = store.OpenSession())
                 {

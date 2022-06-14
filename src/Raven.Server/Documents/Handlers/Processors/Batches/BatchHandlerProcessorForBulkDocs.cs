@@ -6,6 +6,7 @@ using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client;
+using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
@@ -27,7 +28,7 @@ internal class BatchHandlerProcessorForBulkDocs : AbstractBatchHandlerProcessorF
     {
     }
 
-    protected override async ValueTask<DynamicJsonArray> HandleTransactionAsync(JsonOperationContext context, MergedBatchCommand command)
+    protected override async ValueTask<DynamicJsonArray> HandleTransactionAsync(JsonOperationContext context, MergedBatchCommand command, IndexBatchOptions indexBatchOptions, ReplicationBatchOptions replicationBatchOptions)
     {
         try
         {
@@ -42,13 +43,13 @@ internal class BatchHandlerProcessorForBulkDocs : AbstractBatchHandlerProcessorF
         return command.Reply;
     }
 
-    protected override async ValueTask WaitForIndexesAsync(TimeSpan timeout, List<string> specifiedIndexesQueryString, bool throwOnTimeout, string lastChangeVector, long lastTombstoneEtag,
+    protected override async ValueTask WaitForIndexesAsync(IndexBatchOptions options, string lastChangeVector, long lastTombstoneEtag,
         HashSet<string> modifiedCollections)
     {
-        await WaitForIndexesAsync(RequestHandler.Database, timeout, specifiedIndexesQueryString, throwOnTimeout, lastChangeVector, lastTombstoneEtag, modifiedCollections);
+        await WaitForIndexesAsync(RequestHandler.Database, options.WaitForIndexesTimeout, options.WaitForSpecificIndexes, options.ThrowOnTimeoutInWaitForIndexes, lastChangeVector, lastTombstoneEtag, modifiedCollections);
     }
 
-    public static async Task WaitForIndexesAsync(DocumentDatabase database, TimeSpan timeout, List<string> specifiedIndexesQueryString, bool throwOnTimeout, string lastChangeVector, long lastTombstoneEtag, HashSet<string> modifiedCollections)
+    public static async Task WaitForIndexesAsync(DocumentDatabase database, TimeSpan timeout, string[] specifiedIndexesQueryString, bool throwOnTimeout, string lastChangeVector, long lastTombstoneEtag, HashSet<string> modifiedCollections)
     {
         // waitForIndexesTimeout=timespan & waitForIndexThrow=false (default true)
         // waitForSpecificIndex=specific index1 & waitForSpecificIndex=specific index 2
@@ -120,29 +121,21 @@ internal class BatchHandlerProcessorForBulkDocs : AbstractBatchHandlerProcessorF
         }
     }
 
-    protected override async ValueTask WaitForReplicationAsync(TimeSpan waitForReplicasTimeout, string numberOfReplicasStr, bool throwOnTimeoutInWaitForReplicas, string lastChangeVector)
+    protected override async ValueTask WaitForReplicationAsync(ReplicationBatchOptions options, string lastChangeVector)
     {
-        int numberOfReplicasToWaitFor;
-
-        if (numberOfReplicasStr == "majority")
-        {
-            numberOfReplicasToWaitFor = RequestHandler.Database.ReplicationLoader.GetSizeOfMajority();
-        }
-        else
-        {
-            if (int.TryParse(numberOfReplicasStr, out numberOfReplicasToWaitFor) == false)
-                RequestHandler.ThrowInvalidInteger("numberOfReplicasToWaitFor", numberOfReplicasStr);
-        }
+        var numberOfReplicasToWaitFor = options.Majority
+            ? RequestHandler.Database.ReplicationLoader.GetSizeOfMajority()
+            : options.NumberOfReplicasToWaitFor;
 
         var replicatedPast = await RequestHandler.Database.ReplicationLoader.WaitForReplicationAsync(
             numberOfReplicasToWaitFor,
-            waitForReplicasTimeout,
+            options.WaitForReplicasTimeout,
             lastChangeVector);
 
-        if (replicatedPast < numberOfReplicasToWaitFor && throwOnTimeoutInWaitForReplicas)
+        if (replicatedPast < numberOfReplicasToWaitFor && options.ThrowOnTimeoutInWaitForReplicas)
         {
             var message = $"Could not verify that etag {lastChangeVector} was replicated " +
-                          $"to {numberOfReplicasToWaitFor} servers in {waitForReplicasTimeout}. " +
+                          $"to {numberOfReplicasToWaitFor} servers in {options.WaitForReplicasTimeout}. " +
                           $"So far, it only replicated to {replicatedPast}";
 
             throw new RavenTimeoutException(message)
@@ -207,11 +200,11 @@ internal class BatchHandlerProcessorForBulkDocs : AbstractBatchHandlerProcessorF
         };
     }
 
-    private static List<Index> GetImpactedIndexesToWaitForToBecomeNonStale(DocumentDatabase database, List<string> specifiedIndexesQueryString, HashSet<string> modifiedCollections)
+    private static List<Index> GetImpactedIndexesToWaitForToBecomeNonStale(DocumentDatabase database, string[] specifiedIndexesQueryString, HashSet<string> modifiedCollections)
     {
         var indexesToCheck = new List<Index>();
 
-        if (specifiedIndexesQueryString.Count > 0)
+        if (specifiedIndexesQueryString is { Length: > 0 })
         {
             var specificIndexes = specifiedIndexesQueryString.ToHashSet();
             foreach (var index in database.IndexStore.GetIndexes())

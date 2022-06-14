@@ -57,6 +57,9 @@ namespace Raven.Client.Exceptions
                 return new RavenException(error);
             }
 
+            if (type == typeof(TimeoutException))
+                return exception;
+
             if (typeof(RavenException).IsAssignableFrom(type) == false)
                 return new RavenException(error, exception);
 

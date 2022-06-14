@@ -97,7 +97,7 @@ namespace Raven.Server.ServerWide.Commands
             public string TaskId;
             public TimeSpan? WaitForIndexesTimeout;
             public bool WaitForIndexThrow;
-            public List<string> SpecifiedIndexesQueryString;
+            public string[] SpecifiedIndexesQueryString;
             public bool? DisableAtomicDocumentWrites;
 
             public ClusterTransactionOptions() { }
