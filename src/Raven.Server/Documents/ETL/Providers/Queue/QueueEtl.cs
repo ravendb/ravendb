@@ -58,7 +58,7 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithMessages, QueueEtlConfigu
     protected override bool ShouldFilterOutHiLoDocument() => true;
 
     private IProducer<string, byte[]> _kafkaProducer;
-    private IModel _rabbitMqProducer;
+    private IConnection _rabbitMqConnection;
 
     protected override IEnumerator<QueueItem> ConvertDocsEnumerator(DocumentsOperationContext context, IEnumerator<Document> docs,
         string collection)
@@ -293,21 +293,23 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithMessages, QueueEtlConfigu
 
         if (queues.Count == 0) return count;
 
-        if (_rabbitMqProducer == null)
+        if (_rabbitMqConnection == null)
         {
-            _rabbitMqProducer = QueueHelper.CreateRabbitMqClient(Configuration.Connection);
+            _rabbitMqConnection = QueueHelper.CreateRabbitMqClient(Configuration.Connection);
         }
 
         DeclareExchangesAndQueues();
 
         foreach (var queue in queues)
         {
-            _rabbitMqProducer.TxSelect();
-            var batch = _rabbitMqProducer.CreateBasicPublishBatch();
+            var rabbitMqProducer = _rabbitMqConnection.CreateModel();
+            
+            rabbitMqProducer.TxSelect();
+            var batch = rabbitMqProducer.CreateBasicPublishBatch();
 
             foreach (var message in queue.Messages)
             {
-                var properties = _rabbitMqProducer.CreateBasicProperties();
+                var properties = rabbitMqProducer.CreateBasicProperties();
                 properties.Headers = new Dictionary<string, object>();
                 
                 foreach (var appProperty in message.Message.ApplicationProperties.Map.ToList())
@@ -328,13 +330,15 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithMessages, QueueEtlConfigu
             batch.Publish();
             try
             {
-                _rabbitMqProducer.TxCommit();
+                rabbitMqProducer.TxCommit();
             }
             catch (Exception ex)
             {
-                _rabbitMqProducer.TxRollback();
+                rabbitMqProducer.TxRollback();
                 throw new QueueLoadException(ex.Message, ex);
             }
+            
+            rabbitMqProducer.Dispose();
         }
 
         return count;
@@ -342,17 +346,19 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithMessages, QueueEtlConfigu
 
     private void DeclareExchangesAndQueues()
     {
+        var rabbitMqProducer = _rabbitMqConnection.CreateModel();
+        
         foreach (var queueDeclare in _queuesForDeclare)
         {
             try
             {
                 if (_existingQueues.Contains(queueDeclare.QueueName) == false)
                 {
-                    _rabbitMqProducer.QueueDeclare(queueDeclare.QueueName, true, false, false, null);
+                    rabbitMqProducer.QueueDeclare(queueDeclare.QueueName, true, false, false, null);
                     foreach (ExchangeDeclare exchangeDeclare in queueDeclare.Exchanges)
                     {
-                        _rabbitMqProducer.ExchangeDeclare(exchangeDeclare.ExchangeName, exchangeDeclare.ExchangeType, true, false, null);
-                        _rabbitMqProducer.QueueBind(queueDeclare.QueueName, exchangeDeclare.ExchangeName, queueDeclare.QueueName);
+                        rabbitMqProducer.ExchangeDeclare(exchangeDeclare.ExchangeName, exchangeDeclare.ExchangeType, true, false, null);
+                        rabbitMqProducer.QueueBind(queueDeclare.QueueName, exchangeDeclare.ExchangeName, queueDeclare.QueueName);
                     }
 
                     _existingQueues.Add(queueDeclare.QueueName);
@@ -368,6 +374,8 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithMessages, QueueEtlConfigu
 
                 throw;
             }
+            
+            rabbitMqProducer.Dispose();
         }
     }
 
@@ -408,7 +416,7 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithMessages, QueueEtlConfigu
     {
         base.Dispose();
         _kafkaProducer?.Dispose();
-        _rabbitMqProducer?.Dispose();
+        _rabbitMqConnection?.Dispose();
     }
 
     private class QueueMessage
