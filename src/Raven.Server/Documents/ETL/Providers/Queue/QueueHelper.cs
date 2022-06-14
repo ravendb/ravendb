@@ -18,7 +18,7 @@ public static class QueueHelper
             BootstrapServers = connectionString.KafkaConnectionSettings.Url,
             TransactionalId = transactionalId,
             ClientId = transactionalId,
-            EnableIdempotence = true,
+            EnableIdempotence = true,SecurityProtocol = SecurityProtocol.Ssl
         };
 
         if (connectionString.KafkaConnectionSettings.UseRavenCertificate && certificate != null)
@@ -43,7 +43,7 @@ public static class QueueHelper
         return producer;
     }
 
-    public static IConnection CreateRabbitMqClient(QueueConnectionString connectionString)
+    public static IConnection CreateRabbitMqConnection(QueueConnectionString connectionString)
     {
         var connectionFactory = new ConnectionFactory() { Uri = new Uri(connectionString.RabbitMqConnectionSettings.ConnectionString) };
         return connectionFactory.CreateConnection();

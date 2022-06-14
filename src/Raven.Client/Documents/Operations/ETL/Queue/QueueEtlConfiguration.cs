@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Sparrow.Json.Parsing;
 
@@ -34,10 +35,23 @@ namespace Raven.Client.Documents.Operations.ETL.Queue
         public override EtlType EtlType => EtlType.Queue;
         
         public override bool UsingEncryptedCommunicationChannel()
-        {            
-            //return !Connection.Url.StartsWith("http:", StringComparison.OrdinalIgnoreCase);
-            //todo: check with arek what should we do with this
-            return true;
+        {
+            switch (BrokerType)
+            {
+                case QueueBroker.Kafka:
+                    if (Connection.KafkaConnectionSettings.ConnectionOptions.ContainsKey("SecurityProtocol"))
+                    {
+                        string protocol = Connection.KafkaConnectionSettings.ConnectionOptions["SecurityProtocol"];
+                        return protocol.ToLower() == "ssl";
+                    }
+                    break;
+                case QueueBroker.RabbitMq:
+                    return Connection.RabbitMqConnectionSettings.ConnectionString.StartsWith("amqp", StringComparison.OrdinalIgnoreCase);
+                default:
+                    return false;
+            }
+
+            return false;
         }
 
         public override string GetDefaultTaskName()

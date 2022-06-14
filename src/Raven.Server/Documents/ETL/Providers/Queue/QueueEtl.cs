@@ -295,14 +295,14 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithMessages, QueueEtlConfigu
 
         if (_rabbitMqConnection == null)
         {
-            _rabbitMqConnection = QueueHelper.CreateRabbitMqClient(Configuration.Connection);
+            _rabbitMqConnection = QueueHelper.CreateRabbitMqConnection(Configuration.Connection);
         }
 
         DeclareExchangesAndQueues();
 
         foreach (var queue in queues)
         {
-            var rabbitMqProducer = _rabbitMqConnection.CreateModel();
+            using var rabbitMqProducer = _rabbitMqConnection.CreateModel();
             
             rabbitMqProducer.TxSelect();
             var batch = rabbitMqProducer.CreateBasicPublishBatch();
@@ -334,11 +334,17 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithMessages, QueueEtlConfigu
             }
             catch (Exception ex)
             {
-                rabbitMqProducer.TxRollback();
+                try
+                {
+                    rabbitMqProducer.TxRollback();
+                }
+                catch (Exception e)
+                {
+                    if (Logger.IsOperationsEnabled)
+                        Logger.Operations($" ETL process: {Name}. Aborting RabbitMQ transaction failed.", e);
+                }
                 throw new QueueLoadException(ex.Message, ex);
             }
-            
-            rabbitMqProducer.Dispose();
         }
 
         return count;
@@ -346,7 +352,7 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithMessages, QueueEtlConfigu
 
     private void DeclareExchangesAndQueues()
     {
-        var rabbitMqProducer = _rabbitMqConnection.CreateModel();
+        using var rabbitMqProducer = _rabbitMqConnection.CreateModel();
         
         foreach (var queueDeclare in _queuesForDeclare)
         {
@@ -374,8 +380,6 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithMessages, QueueEtlConfigu
 
                 throw;
             }
-            
-            rabbitMqProducer.Dispose();
         }
     }
 

@@ -45,7 +45,7 @@ namespace Raven.Server.Documents.ETL.Providers.Queue
             return buffer;
         }
 
-        public override CloudEvent DecodeStructuredModeMessage(ReadOnlyMemory<byte> body, ContentType? contentType, IEnumerable<CloudEventAttribute>? extensionAttributes)
+        public override CloudEvent DecodeStructuredModeMessage(ReadOnlyMemory<byte> body, ContentType contentType, IEnumerable<CloudEventAttribute> extensionAttributes)
         {
             throw new NotImplementedException();
         }
