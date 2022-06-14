@@ -119,7 +119,9 @@ public abstract class IndexOperationBase : IDisposable
         
         if (numberOfEntries == 0)
             return 2 << 4;
-        
+
+        if (pageSize <= 0)
+            return (int)numberOfEntries;
         
         if (numberOfEntries > int.MaxValue)
             return int.MaxValue;

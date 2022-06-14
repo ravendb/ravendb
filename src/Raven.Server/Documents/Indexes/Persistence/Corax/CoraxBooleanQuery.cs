@@ -63,7 +63,7 @@ public readonly struct CoraxBooleanItem : IQueryMatch
     }
 
     public QueryCountConfidence Confidence => throw new InvalidOperationException(IQueryMatchUsageException);
-    public bool IsBoosting => throw new InvalidOperationException(IQueryMatchUsageException);
+    public bool IsBoosting => _scoreFunction is not NullScoreFunction;
     public int Fill(Span<long> matches) => throw new InvalidOperationException(IQueryMatchUsageException);
 
     public int AndWith(Span<long> buffer, int matches) => throw new InvalidOperationException(IQueryMatchUsageException);
@@ -240,8 +240,7 @@ public class CoraxBooleanQuery : IQueryMatch
 
     public QueryCountConfidence Confidence => throw new InvalidOperationException(QueryMatchUsageException);
 
-    public bool IsBoosting => throw new InvalidOperationException(QueryMatchUsageException);
-
+    public bool IsBoosting => _scoreFunction is not NullScoreFunction;
     public int Fill(Span<long> matches) => throw new InvalidOperationException(QueryMatchUsageException);
 
     public int AndWith(Span<long> buffer, int matches) => throw new InvalidOperationException(QueryMatchUsageException);
