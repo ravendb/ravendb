@@ -18,7 +18,7 @@ public static class QueueHelper
             BootstrapServers = connectionString.KafkaConnectionSettings.BootstrapServers,
             TransactionalId = transactionalId,
             ClientId = transactionalId,
-            EnableIdempotence = true,SecurityProtocol = SecurityProtocol.Ssl
+            EnableIdempotence = true
         };
 
         if (connectionString.KafkaConnectionSettings.UseRavenCertificate && certificate != null)
