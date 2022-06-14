@@ -108,9 +108,6 @@ class editIndex extends shardViewModelBase {
 
     static readonly searchEngineConfigurationLabel = configurationConstants.indexing.staticIndexingEngineType;
 
-    constructor() {
-        super();
-
     constructor(db: database) {
         super(db);
 
