@@ -152,7 +152,7 @@
                             <span class="has-disable-reason" data-placement="right"
                                   data-bind="attr: { 'data-original-title': $root.isConnectionStringInUse($data, 'Kafka') ? 'Connection string is being used by an ongoing task !' : '' }">
                                 <button class="btn btn-danger"  
-                                        data-bind="click: $parent.confirmDelete.bind($parent, $data,'Raven'), disable: $root.isConnectionStringInUse($data, 'Kafka'),
+                                        data-bind="click: $parent.confirmDelete.bind($parent, $data,'Kafka'), disable: $root.isConnectionStringInUse($data, 'Kafka'),
                                                    attr: { 'title': !$root.isConnectionStringInUse($data, 'Kafka') ? 'Remove connection string' : '' }">
                                     <i class="icon-trash"></i>
                                 </button>
@@ -183,7 +183,7 @@
                             <span class="has-disable-reason" data-placement="right"
                                   data-bind="attr: { 'data-original-title': $root.isConnectionStringInUse($data, 'RabbitMQ') ? 'Connection string is being used by an ongoing task !' : '' }">
                                 <button class="btn btn-danger"
-                                        data-bind="click: $parent.confirmDelete.bind($parent, $data,'Raven'), disable: $root.isConnectionStringInUse($data, 'RabbitMQ'),
+                                        data-bind="click: $parent.confirmDelete.bind($parent, $data,'RabbitMQ'), disable: $root.isConnectionStringInUse($data, 'RabbitMQ'),
                                                    attr: { 'title': !$root.isConnectionStringInUse($data, 'RabbitMQ') ? 'Remove connection string' : '' }">
                                     <i class="icon-trash"></i>
                                 </button>
