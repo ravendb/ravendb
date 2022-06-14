@@ -46,7 +46,7 @@ loadToOrders" + TopicSuffix + @"(orderData);
     protected QueueEtlConfiguration SetupQueueEtlToKafka(DocumentStore store, string script,
         IEnumerable<string> collections, IEnumerable<EtlQueue> queues = null, bool applyToAllDocuments = false, string configurationName = null,
         string transformationName = null,
-        Dictionary<string, string> configuration = null, string url = null)
+        Dictionary<string, string> configuration = null, string bootstrapServers = null)
     {
         var connectionStringName = $"{store.Database}@{store.Urls.First()} to Kafka";
 
@@ -79,7 +79,7 @@ loadToOrders" + TopicSuffix + @"(orderData);
             {
                 Name = connectionStringName,
                 BrokerType = QueueBroker.Kafka,
-                KafkaConnectionSettings = new KafkaConnectionSettings() { ConnectionOptions = configuration, Url = url ?? KafkaConnectionString.Instance.VerifiedUrl.Value }
+                KafkaConnectionSettings = new KafkaConnectionSettings() { ConnectionOptions = configuration, BootstrapServers = bootstrapServers ?? KafkaConnectionString.Instance.VerifiedUrl.Value }
             });
         return config;
     }

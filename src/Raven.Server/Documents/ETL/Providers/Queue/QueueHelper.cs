@@ -15,7 +15,7 @@ public static class QueueHelper
     {
         ProducerConfig config = new()
         {
-            BootstrapServers = connectionString.KafkaConnectionSettings.Url,
+            BootstrapServers = connectionString.KafkaConnectionSettings.BootstrapServers,
             TransactionalId = transactionalId,
             ClientId = transactionalId,
             EnableIdempotence = true,SecurityProtocol = SecurityProtocol.Ssl

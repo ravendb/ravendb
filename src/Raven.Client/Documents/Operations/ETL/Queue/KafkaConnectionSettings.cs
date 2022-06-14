@@ -5,7 +5,7 @@ namespace Raven.Client.Documents.Operations.ETL.Queue;
 
 public class KafkaConnectionSettings
 {
-    public string Url { get; set; }
+    public string BootstrapServers { get; set; }
         
     public Dictionary<string, string> ConnectionOptions { get; set; }
 
@@ -15,7 +15,7 @@ public class KafkaConnectionSettings
     {
         var json = new DynamicJsonValue
         {
-            [nameof(Url)] = Url,
+            [nameof(BootstrapServers)] = BootstrapServers,
             [nameof(UseRavenCertificate)] = UseRavenCertificate
         };
         

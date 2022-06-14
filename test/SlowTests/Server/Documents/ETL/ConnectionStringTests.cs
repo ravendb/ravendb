@@ -55,7 +55,7 @@ namespace SlowTests.Server.Documents.ETL
                 {
                     Name = "QueueEtlConnectionString-Kafka",
                     BrokerType = QueueBroker.Kafka,
-                    KafkaConnectionSettings = new KafkaConnectionSettings(){Url = "localhost:9092" }
+                    KafkaConnectionSettings = new KafkaConnectionSettings(){BootstrapServers = "localhost:9092" }
                 };
 
                 var resultQueue = store.Maintenance.Send(new PutConnectionStringOperation<QueueConnectionString>(queueConnectionString));
@@ -83,7 +83,7 @@ namespace SlowTests.Server.Documents.ETL
                 
                 Assert.True(record.QueueConnectionStrings.ContainsKey("QueueEtlConnectionString-Kafka"));
                 Assert.Equal(queueConnectionString.Name , record.QueueConnectionStrings["QueueEtlConnectionString-Kafka"].Name);
-                Assert.Equal(queueConnectionString.KafkaConnectionSettings.Url, record.QueueConnectionStrings["QueueEtlConnectionString-Kafka"].KafkaConnectionSettings.Url);
+                Assert.Equal(queueConnectionString.KafkaConnectionSettings.BootstrapServers, record.QueueConnectionStrings["QueueEtlConnectionString-Kafka"].KafkaConnectionSettings.BootstrapServers);
 
                 var result3 = store.Maintenance.Send(new RemoveConnectionStringOperation<RavenConnectionString>(ravenConnectionString));
                 Assert.NotNull(result3.RaftCommandIndex);
