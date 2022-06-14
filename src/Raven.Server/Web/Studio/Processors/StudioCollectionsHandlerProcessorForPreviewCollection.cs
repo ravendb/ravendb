@@ -78,7 +78,7 @@ public class StudioCollectionsHandlerProcessorForPreviewCollection : AbstractStu
         if (etag == null)
             return false;
 
-        if (etag == RequestHandler.GetStringFromHeaders("If-None-Match"))
+        if (etag == RequestHandler.GetStringFromHeaders(Constants.Headers.IfNoneMatch))
             return true;
 
         return false;

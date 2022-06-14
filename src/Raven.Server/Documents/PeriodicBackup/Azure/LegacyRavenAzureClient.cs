@@ -19,6 +19,7 @@ using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
 using Microsoft.AspNetCore.WebUtilities;
+using Raven.Client;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Util;
 using Raven.Server.Documents.PeriodicBackup.Restore;
@@ -661,7 +662,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                 {
                     Headers =
                     {
-                        { "Content-Type", "application/http" },
+                        { Constants.Headers.ContentType, "application/http" },
                         { "Content-Transfer-Encoding", "binary" },
                         { "Content-ID", $"{i}" }
                     }
@@ -857,7 +858,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                 if (httpContentHeaders.TryGetValues("Content-Length", out IEnumerable<string> lengthValues))
                     contentLength = lengthValues.First();
 
-                if (httpContentHeaders.TryGetValues("Content-Type", out IEnumerable<string> typeValues))
+                if (httpContentHeaders.TryGetValues(Constants.Headers.ContentType, out IEnumerable<string> typeValues))
                     contentType = typeValues.First();
             }
             else
@@ -865,7 +866,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                 if (httpHeaders.TryGetValues("Content-Length", out IEnumerable<string> lengthValues))
                     contentLength = lengthValues.First();
 
-                if (httpHeaders.TryGetValues("Content-Type", out IEnumerable<string> typeValues))
+                if (httpHeaders.TryGetValues(Constants.Headers.ContentType, out IEnumerable<string> typeValues))
                     contentType = typeValues.First();
             }
 

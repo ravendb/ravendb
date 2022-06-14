@@ -36,8 +36,8 @@ namespace Raven.Server.Documents.Handlers
         {
             var encodedCsvFileName = Uri.EscapeDataString($"{csvFileNamePrefix}_{SystemTime.UtcNow.ToString("yyyyMMdd_HHmm", CultureInfo.InvariantCulture)}.csv");
 
-            response.Headers["Content-Disposition"] = $"attachment; filename=\"{encodedCsvFileName}\"; filename*=UTF-8''{encodedCsvFileName}";
-            response.Headers["Content-Type"] = "text/csv";
+            response.Headers[Constants.Headers.ContentDisposition] = $"attachment; filename=\"{encodedCsvFileName}\"; filename*=UTF-8''{encodedCsvFileName}";
+            response.Headers[Constants.Headers.ContentType] = "text/csv";
 
             _writer = new StreamWriter(stream, Encoding.UTF8);
             _csvWriter = new CsvWriter(_writer, new CsvConfiguration(CultureInfo.InvariantCulture)

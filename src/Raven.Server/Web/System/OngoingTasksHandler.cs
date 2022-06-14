@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
@@ -144,7 +145,7 @@ namespace Raven.Server.Web.System
 
             var location = url + HttpContext.Request.Path + HttpContext.Request.QueryString;
             HttpContext.Response.StatusCode = (int)HttpStatusCode.TemporaryRedirect;
-            HttpContext.Response.Headers.Remove("Content-Type");
+            HttpContext.Response.Headers.Remove(Constants.Headers.ContentType);
             HttpContext.Response.Headers.Add("Location", location);
         }
 

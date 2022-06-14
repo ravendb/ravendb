@@ -4,6 +4,7 @@ using System.Net.Http;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
+using Raven.Client;
 
 namespace Raven.Server.Utils;
 
@@ -14,7 +15,7 @@ public static class HttpResponseHelper
         "Vary",
         "Date",
         "Server",
-        "Transfer-Encoding"
+        Constants.Headers.TransferEncoding
     };
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

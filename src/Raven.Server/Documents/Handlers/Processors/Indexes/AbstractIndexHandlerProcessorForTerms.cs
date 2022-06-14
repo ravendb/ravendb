@@ -2,6 +2,7 @@
 using System.Net.Http;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Http;
 using Raven.Server.Documents.Queries;
@@ -32,7 +33,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Indexes
                 var indexName = RequestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
                 var fromValue = RequestHandler.GetStringQueryString("fromValue", required: false) ?? "";
                 var pageSize = RequestHandler.GetIntValueQueryString("pageSize", required: false) ?? int.MaxValue;
-                var resultEtag = RequestHandler.GetLongFromHeaders("If-None-Match");
+                var resultEtag = RequestHandler.GetLongFromHeaders(Constants.Headers.IfNoneMatch);
 
                 var terms = await GetTermsAsync(indexName, field, fromValue, pageSize, resultEtag, token);
 

@@ -101,12 +101,12 @@ namespace Raven.Server
 
             if (IsHtmlAcceptable(context))
             {
-                context.Response.Headers["Content-Type"] = "text/html; charset=utf-8";
+                context.Response.Headers[Constants.Headers.ContentType] = "text/html; charset=utf-8";
                 await context.Response.WriteAsync(HtmlUtil.RenderUnsafePage());
                 return;
             }
 
-            context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
+            context.Response.Headers[Constants.Headers.ContentType] = "application/json; charset=utf-8";
             using (_server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
             await using (var writer = new AsyncBlittableJsonTextWriter(ctx, context.Response.Body))
             {
@@ -165,7 +165,7 @@ namespace Raven.Server
             try
             {
                 context.Response.StatusCode = (int)HttpStatusCode.OK;
-                context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
+                context.Response.Headers[Constants.Headers.ContentType] = "application/json; charset=utf-8";
                 context.Response.Headers[Constants.Headers.ServerVersion] = RavenVersionAttribute.Instance.AssemblyVersion;
 
                 if (_server.ServerStore.Initialized == false)

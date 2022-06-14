@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Documents;
@@ -31,7 +32,7 @@ internal abstract class AbstractDocumentHandlerProcessorForPut
                 id = clusterId;
             }
 
-            var changeVector = RequestHandler.GetStringFromHeaders("If-Match");
+            var changeVector = RequestHandler.GetStringFromHeaders(Constants.Headers.IfMatch);
 
             await HandleDocumentPutAsync(id, changeVector, doc, context);
         }

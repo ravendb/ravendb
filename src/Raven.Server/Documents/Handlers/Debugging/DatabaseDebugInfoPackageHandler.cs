@@ -4,6 +4,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Client;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Sparrow.Json;
@@ -17,7 +18,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         public async Task GetInfoPackage()
         {
             var contentDisposition = $"attachment; filename={DateTime.UtcNow:yyyy-MM-dd H:mm:ss} - Database [{Database.Name}].zip";
-            HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
+            HttpContext.Response.Headers[Constants.Headers.ContentDisposition] = contentDisposition;
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
                 await using (var ms = new MemoryStream())

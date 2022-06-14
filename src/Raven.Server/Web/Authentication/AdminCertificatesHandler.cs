@@ -7,6 +7,7 @@ using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Features.Authentication;
+using Raven.Client;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Http;
@@ -72,7 +73,7 @@ namespace Raven.Server.Web.Authentication
                         });
 
                 var contentDisposition = "attachment; filename=" + Uri.EscapeDataString(certificate.Name) + ".zip";
-                HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
+                HttpContext.Response.Headers[Constants.Headers.ContentDisposition] = contentDisposition;
                 HttpContext.Response.ContentType = "application/octet-stream";
 
                 await HttpContext.Response.Body.WriteAsync(certs, 0, certs.Length);
@@ -714,7 +715,7 @@ namespace Raven.Server.Web.Authentication
             var pfx = collection.Export(X509ContentType.Pfx);
 
             var contentDisposition = "attachment; filename=ServerCertificatesCollection.pfx";
-            HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
+            HttpContext.Response.Headers[Constants.Headers.ContentDisposition] = contentDisposition;
             HttpContext.Response.ContentType = "application/octet-stream";
 
             await HttpContext.Response.Body.WriteAsync(pfx, 0, pfx.Length);

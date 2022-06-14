@@ -30,8 +30,6 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
         public static readonly List<string> HeadersToCopy = new()
         {
-            Constants.Headers.IfMatch,
-            Constants.Headers.IfNoneMatch, 
             Constants.Headers.LastKnownClusterTransactionIndex
         };
 

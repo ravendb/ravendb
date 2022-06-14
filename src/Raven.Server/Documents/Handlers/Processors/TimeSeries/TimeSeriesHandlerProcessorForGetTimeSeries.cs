@@ -41,7 +41,7 @@ namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
                 
                 var hash = rangeResult?.Hash ?? string.Empty;
 
-                var etag = RequestHandler.GetStringFromHeaders("If-None-Match");
+                var etag = RequestHandler.GetStringFromHeaders(Constants.Headers.IfNoneMatch);
                 if (etag == hash)
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;

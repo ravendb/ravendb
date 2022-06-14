@@ -7,6 +7,7 @@ using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
@@ -103,8 +104,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
         public async Task GetClusterWideInfoPackage()
         {
             var contentDisposition = $"attachment; filename={DateTime.UtcNow:yyyy-MM-dd H:mm:ss} Cluster Wide.zip";
-            HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
-            HttpContext.Response.Headers["Content-Type"] = "application/zip";
+            HttpContext.Response.Headers[Constants.Headers.ContentDisposition] = contentDisposition;
+            HttpContext.Response.Headers[Constants.Headers.ContentType] = "application/zip";
 
             var token = CreateOperationToken();
             var operationId = GetLongQueryString("operationId", false) ?? ServerStore.Operations.GetNextOperationId();
@@ -184,8 +185,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
         public async Task GetInfoPackage()
         {
             var contentDisposition = $"attachment; filename={DateTime.UtcNow:yyyy-MM-dd H:mm:ss} - Node [{ServerStore.NodeTag}].zip";
-            HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
-            HttpContext.Response.Headers["Content-Type"] = "application/zip";
+            HttpContext.Response.Headers[Constants.Headers.ContentDisposition] = contentDisposition;
+            HttpContext.Response.Headers[Constants.Headers.ContentType] = "application/zip";
 
 
             var token = CreateOperationToken();

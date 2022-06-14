@@ -153,7 +153,7 @@ namespace Raven.Server.Web
                 Server.Configuration.Http.UseResponseCompression &&
                 (HttpContext.Request.IsHttps == false ||
                  (HttpContext.Request.IsHttps && Server.Configuration.Http.AllowResponseCompressionOverHttps)) &&
-                HeadersAllowGzip(HttpContext.Request.Headers, "Content-Encoding");
+                HeadersAllowGzip(HttpContext.Request.Headers, Constants.Headers.ContentEncoding);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -592,7 +592,7 @@ namespace Raven.Server.Web
 
         internal void NoContentStatus(HttpStatusCode statusCode = HttpStatusCode.NoContent)
         {
-            HttpContext.Response.Headers.Remove("Content-Type");
+            HttpContext.Response.Headers.Remove(Constants.Headers.ContentType);
             HttpContext.Response.StatusCode = (int)statusCode;
         }
 
@@ -796,7 +796,7 @@ namespace Raven.Server.Web
             }
             var leaderLocation = url + HttpContext.Request.Path + HttpContext.Request.QueryString;
             HttpContext.Response.StatusCode = (int)HttpStatusCode.TemporaryRedirect;
-            HttpContext.Response.Headers.Remove("Content-Type");
+            HttpContext.Response.Headers.Remove(Constants.Headers.ContentType);
             HttpContext.Response.Headers.Add("Location", leaderLocation);
         }
 

@@ -2,6 +2,7 @@
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
+using Raven.Client;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Extensions;
@@ -14,7 +15,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         public async Task ExportAllDocIds()
         {
             var fileName = $"ids-for-{Uri.EscapeDataString(Database.Name)}-{Database.Time.GetUtcNow().GetDefaultRavenFormat(isUtc: true)}.txt";
-            HttpContext.Response.Headers["Content-Disposition"] = $"attachment; filename={fileName}";
+            HttpContext.Response.Headers[Constants.Headers.ContentDisposition] = $"attachment; filename={fileName}";
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             await using (var writer = new StreamWriter(ResponseBodyStream(), Encoding.UTF8, 4096))

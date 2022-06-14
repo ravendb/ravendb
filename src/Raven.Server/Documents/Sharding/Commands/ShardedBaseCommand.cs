@@ -60,11 +60,11 @@ namespace Raven.Server.Documents.Sharding.Commands
         {
             if (headers.HasFlag(Commands.Headers.IfMatch))
             {
-                command.Headers["If-Match"] = Handler.GetStringFromHeaders("If-Match");
+                command.Headers[Constants.Headers.IfMatch] = Handler.GetStringFromHeaders(Constants.Headers.IfMatch);
             }
             else if(headers.HasFlag(Commands.Headers.IfNoneMatch))
             {
-                command.Headers["If-None-Match"] = Handler.GetStringFromHeaders("If-None-Match");
+                command.Headers[Constants.Headers.IfNoneMatch] = Handler.GetStringFromHeaders(Constants.Headers.IfNoneMatch);
             }
 
             if (headers.HasFlag(Commands.Headers.Sharded))

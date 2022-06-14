@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Documents;
@@ -19,7 +20,7 @@ internal abstract class AbstractDocumentHandlerProcessorForPatch<TRequestHandler
         var isTest = RequestHandler.GetBoolValueQueryString("test", required: false) ?? false;
         var debugMode = RequestHandler.GetBoolValueQueryString("debug", required: false) ?? isTest;
         var skipPatchIfChangeVectorMismatch = RequestHandler.GetBoolValueQueryString("skipPatchIfChangeVectorMismatch", required: false) ?? false;
-        var changeVector = RequestHandler.GetStringFromHeaders("If-Match");
+        var changeVector = RequestHandler.GetStringFromHeaders(Constants.Headers.IfMatch);
 
         using (ContextPool.AllocateOperationContext(out TOperationContext context))
         {

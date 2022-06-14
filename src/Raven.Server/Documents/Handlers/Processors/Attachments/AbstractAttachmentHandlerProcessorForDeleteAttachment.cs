@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client;
 using Raven.Server.Web;
 using Sparrow.Json;
 
@@ -22,7 +23,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
 
             using (ContextPool.AllocateOperationContext(out TOperationContext context))
             {
-                var changeVector = context.GetLazyString(RequestHandler.GetStringFromHeaders("If-Match"));
+                var changeVector = context.GetLazyString(RequestHandler.GetStringFromHeaders(Constants.Headers.IfMatch));
 
                 await DeleteAttachmentAsync(context, id, name, changeVector);
             }

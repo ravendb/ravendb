@@ -599,7 +599,7 @@ namespace Raven.Server.Web.System
                 var cn = nodeCert.GetNameInfo(X509NameType.SimpleName, false);
 
                 var contentDisposition = $"attachment; filename={cn}.Cluster.Settings.zip";
-                HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
+                HttpContext.Response.Headers[Constants.Headers.ContentDisposition] = contentDisposition;
                 HttpContext.Response.ContentType = "application/octet-stream";
 
                 await HttpContext.Response.Body.WriteAsync(zip, 0, zip.Length);
@@ -657,7 +657,7 @@ namespace Raven.Server.Web.System
                 var zip = ((SetupProgressAndResult)operationResult).SettingsZipFile;
 
                 var contentDisposition = $"attachment; filename={setupInfo.Domain}.Cluster.Settings.zip";
-                HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
+                HttpContext.Response.Headers[Constants.Headers.ContentDisposition] = contentDisposition;
                 HttpContext.Response.ContentType = "application/octet-stream";
 
                 await HttpContext.Response.Body.WriteAsync(zip, 0, zip.Length);

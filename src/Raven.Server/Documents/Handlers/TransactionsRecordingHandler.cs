@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Net.Http.Headers;
+using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.TransactionsRecording;
 using Raven.Client.Exceptions;
@@ -64,7 +65,7 @@ namespace Raven.Server.Documents.Handlers
 
                                 if (MultipartRequestHelper.HasFileContentDisposition(contentDisposition))
                                 {
-                                    if (section.Headers.ContainsKey("Content-Encoding") && section.Headers["Content-Encoding"] == "gzip")
+                                    if (section.Headers.ContainsKey(Constants.Headers.ContentEncoding) && section.Headers[Constants.Headers.ContentEncoding] == "gzip")
                                     {
                                         await using (var gzipStream = new GZipStream(section.Body, CompressionMode.Decompress))
                                         {
