@@ -5,10 +5,10 @@
                placeholder="Enter a name for the connection string" />
     </div>
 </div>
-<div class="form-group" data-bind="validationElement: kafkaServerUrl().discoveryUrlName">
-    <label class="control-label">URL<i class="required"></i></label>
+<div class="form-group">
+    <label class="control-label">Bootstrap Servers<i class="required"></i></label>
     <div class="flex-grow">
-        <input class="form-control" data-bind="textInput: kafkaServerUrl().discoveryUrlName" placeholder="Enter the Kafka server URL" />
+        <input class="form-control" data-bind="textInput: kafkaServerUrl().discoveryUrlName" placeholder="Enter Bootstrap Servers, comma separated" />
     </div>
     <a class="btn btn-default" title="Test Kafka server connection" href="#"
        data-bind="click: $root.onTestConnectionKafka, disable: $root.spinners.test, css: { 'btn-spinner': $root.spinners.test() }">

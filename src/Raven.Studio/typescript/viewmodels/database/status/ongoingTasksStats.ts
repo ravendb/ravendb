@@ -14,6 +14,7 @@ import inProgressAnimator = require("common/helpers/graph/inProgressAnimator");
 import colorsManager = require("common/colorsManager");
 import etlScriptDefinitionCache = require("models/database/stats/etlScriptDefinitionCache");
 import subscriptionQueryDefinitionCache = require("models/database/stats/subscriptionQueryDefinitionCache");
+import ongoingTaskModel from "models/database/tasks/ongoingTaskModel";
 import fileImporter = require("common/fileImporter");
 import moment = require("moment");
 
@@ -59,7 +60,7 @@ type trackItemContext = {
 type previewEtlScriptItemContext = {
     transformationName: string;
     taskId: number;
-    etlType: Raven.Client.Documents.Operations.ETL.EtlType;
+    etlType: StudioEtlType;
 }
 
 type previewSubscriptionQueryItemContext = {
@@ -939,7 +940,7 @@ class ongoingTasksStats extends viewModelBase {
             
             trackInfos.push({
                 name: etlTask.TaskName,
-                type: etlTask.EtlType,
+                type: ongoingTaskModel.getStudioEtlTypeFromServerType(etlTask.EtlType, etlTask.EtlSubType),
                 openedHeight: openedHeight,
                 closedHeight: closedHeight
             });
@@ -1493,7 +1494,7 @@ class ongoingTasksStats extends viewModelBase {
                     
                     this.drawScriptName(context, yStartBase + offset + extraPadding, {
                         transformationName: etlStat.TransformationName,
-                        etlType: etlItem.EtlType,
+                        etlType: ongoingTaskModel.getStudioEtlTypeFromServerType(etlItem.EtlType, etlItem.EtlSubType),
                         taskId: etlItem.TaskId
                     });
                 });
@@ -1610,12 +1611,18 @@ class ongoingTasksStats extends viewModelBase {
                 return "OLAP ETL";
             case "ElasticSearch":
                 return "Elasticsearch ETL";
+            case "Kafka":
+                return "Kafka ETL";
+            case "RabbitMQ":
+                return "RabbitMQ ETL";
             case "SubscriptionConnection":
                 return "Subscription";
             case "SubscriptionBatch":
                 return "Documents Batch";
             case "AggregatedBatchesInfo":
                 return "Aggregated History Batches Info";
+            default:
+                generalUtils.assertUnreachable(type, "Unknown stats type: " + type);
         }
         return "";
     }
@@ -1887,10 +1894,13 @@ class ongoingTasksStats extends viewModelBase {
         const currentDatum = this.tooltip.datum();
 
         if (currentDatum !== context.item) {
-            const type = context.rootStats.Type;
+            let type = context.rootStats.Type;
+            
             const isReplication = type === "OutgoingPull" || type === "OutgoingExternal" || type === "OutgoingInternal" ||
                                   type === "IncomingPull" || type === "IncomingExternal" || type === "IncomingInternal";
-            const isEtl = type === "Raven" || type === "Sql" || type === "Olap" || type === "ElasticSearch";
+            
+            const isEtl = type === "Raven" || type === "Sql" || type === "Olap" || type === "ElasticSearch" || "Kafka" || "RabbitMQ";
+            
             const isSubscription = type === "SubscriptionConnection" || type === "SubscriptionBatch" || type === "AggregatedBatchesInfo";
             const isRootItem = context.rootStats.Details === context.item;
             
@@ -1928,7 +1938,9 @@ class ongoingTasksStats extends viewModelBase {
                     case "Raven":
                     case "Sql":
                     case "Olap":
-                    case "ElasticSearch": {
+                    case "ElasticSearch":
+                    case "Kafka":
+                    case "RabbitMQ": {
                         const elementWithData = context.rootStats as EtlPerformanceBaseWithCache;
                         
                         if (elementWithData.HasTransformErrors) {
@@ -2196,7 +2208,8 @@ class ongoingTasksStats extends viewModelBase {
         this.etlData.forEach(etlTaskData => {
             etlTaskData.Stats.forEach(etlStats => {
                 etlStats.Performance.forEach(perfStat => {
-                    liveEtlStatsWebSocketClient.fillCache(perfStat, etlTaskData.EtlType);
+                    liveEtlStatsWebSocketClient.fillCache(perfStat,
+                        ongoingTaskModel.getStudioEtlTypeFromServerType(etlTaskData.EtlType, etlTaskData.EtlSubType));
                 });
             })
         });

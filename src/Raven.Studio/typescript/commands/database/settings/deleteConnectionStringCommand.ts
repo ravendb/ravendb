@@ -1,17 +1,16 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import endpoints = require("endpoints");
-import ongoingTaskModel from "models/database/tasks/ongoingTaskModel";
 
 class deleteConnectionStringCommand extends commandBase {
     
-    constructor(private db: database, private type: StudioEtlType, private connectionStringName: string) {
+    constructor(private db: database, private type: Raven.Client.Documents.Operations.ETL.EtlType, private connectionStringName: string) {
         super();
     }
 
     execute(): JQueryPromise<void> {
         const args = {
-            type: ongoingTaskModel.getServerEtlType(this.type),
+            type: this.type,
             connectionString: this.connectionStringName
         };
         
