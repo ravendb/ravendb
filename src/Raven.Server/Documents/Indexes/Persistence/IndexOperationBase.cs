@@ -116,28 +116,20 @@ public abstract class IndexOperationBase : IDisposable
     protected static int CoraxGetPageSize(global::Corax.IndexSearcher searcher, int pageSize, IndexQueryServerSide query)
     {
         var numberOfEntries = searcher.NumberOfEntries;
+        
         if (numberOfEntries == 0)
             return 2 << 4;
-        
+
         if (numberOfEntries > int.MaxValue)
             return int.MaxValue;
 
         if (query.Metadata.OrderBy is not null)
             return (int)numberOfEntries;
-        
-        
-        return pageSize == 0 ? 2 << 10 : pageSize;
+
+
+        var result = Math.Min(numberOfEntries, pageSize);
+        return (int)(result == 0 ? 2 << 4 : result);
     }
-    
-    //
-    // protected static int CoraxGetPageSize(global::Corax.IndexSearcher searcher, long pageSize, IndexQueryServerSide query)
-    // {
-    //     var size = pageSize;
-    //     if (size >= int.MaxValue)
-    //         return int.MaxValue;
-    //     
-    //     return (int)size;
-    // }
 
     protected QueryFilter GetQueryFilter(Index index, IndexQueryServerSide query, DocumentsOperationContext documentsContext, Reference<int> skippedResults,
         Reference<int> scannedDocuments, IQueryResultRetriever retriever, QueryTimingsScope queryTimings)

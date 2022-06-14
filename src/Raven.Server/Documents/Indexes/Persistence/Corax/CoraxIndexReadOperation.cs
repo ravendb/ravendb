@@ -79,7 +79,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     yield break;
             }
 
-            var ids = ArrayPool<long>.Shared.Rent(CoraxGetPageSize(_indexSearcher, pageSize, query));
+            var ids = ArrayPool<long>.Shared.Rent(CoraxGetPageSize(_indexSearcher, take, query));
             int docsToLoad = pageSize;
             int queryStart = query.Start;
             bool hasHighlights = query.Metadata.HasHighlightings;
@@ -432,7 +432,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             Reference<int> skippedResults, Reference<int> scannedDocuments, IQueryResultRetriever retriever,
             DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException($"{nameof(Corax)} does not support intersect queries.");
         }
 
         public override HashSet<string> Terms(string field, string fromValue, long pageSize, CancellationToken token)
@@ -490,7 +490,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     _fieldMappings, take: take)) is null)
                 yield break;
 
-            var ids = ArrayPool<long>.Shared.Rent(CoraxGetPageSize(_indexSearcher, pageSize, query));
+            var ids = ArrayPool<long>.Shared.Rent(CoraxGetPageSize(_indexSearcher, take, query));
 
             HashSet<string> itemList = new(32);
             var bufferSizes = GetMaximumSizeOfBuffer();
@@ -571,6 +571,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                             for (int i = 1; i <= value.Length; ++i)
                                 enumerableEntries.Add(Encodings.Utf8.GetString(value.Slice(0, i)));
                             doc[binding.FieldNameAsString] = enumerableEntries.ToArray();
+                            continue;
                         }
                         
                         if (binding.FieldIndexingMode is FieldIndexingMode.Exact)

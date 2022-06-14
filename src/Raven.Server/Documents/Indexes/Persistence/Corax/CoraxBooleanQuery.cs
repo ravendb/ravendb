@@ -187,7 +187,7 @@ public class CoraxBooleanQuery : IQueryMatch
             if (query.Operation is not (UnaryMatchOperation.Equals or UnaryMatchOperation.NotEquals))
                 break;
             
-            IQueryMatch second = _indexSearcher.TermQuery(query.Name, query.TermAsString);
+            IQueryMatch second = _indexSearcher.TermQuery(query.Name, query.TermAsString, query.FieldId);
                 if (query.Operation is UnaryMatchOperation.NotEquals)
                     second = _indexSearcher.AndNot(
                         _indexSearcher.ExistsQuery(query.Name),
