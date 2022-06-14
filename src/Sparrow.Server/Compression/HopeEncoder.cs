@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Sparrow.Server.Compression
 {
-    public sealed class HopeEncoder<TAlgorithm>
+    public sealed class HopeEncoder<TAlgorithm> : IDisposable
         where TAlgorithm : struct, IEncoderAlgorithm
     {
         private TAlgorithm _encoder;
@@ -99,6 +99,11 @@ namespace Sparrow.Server.Compression
                 throw new InvalidOperationException("Cannot calculate without a trained dictionary");
 
             return _minSequenceLengthMultiplier * keySize;
+        }
+
+        public void Dispose()
+        {
+            _encoder.Dispose();
         }
     }
 }

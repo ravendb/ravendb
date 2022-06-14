@@ -23,7 +23,8 @@
     <IsLinuxArm64>false</IsLinuxArm64>
     <IsWindows32>false</IsWindows32>
     <IsWindows64>false</IsWindows64>
-    <IsMacOS>false</IsMacOS>
+    <IsMacOS64>false</IsMacOS64>
+    <IsMacOSArm64>false</IsMacOSArm64>
   </PropertyGroup>
   <PropertyGroup Condition="'$(RuntimeIdentifier)' == 'linux-x64'">
     <IsAnyOS>false</IsAnyOS>
@@ -32,7 +33,8 @@
     <IsLinuxArm64>false</IsLinuxArm64>
     <IsWindows32>false</IsWindows32>
     <IsWindows64>false</IsWindows64>
-    <IsMacOS>false</IsMacOS>
+    <IsMacOS64>false</IsMacOS64>
+    <IsMacOSArm64>false</IsMacOSArm64>
   </PropertyGroup>
   <PropertyGroup Condition="'$(RuntimeIdentifier)' == 'win-x64'">
     <IsAnyOS>false</IsAnyOS>
@@ -41,7 +43,8 @@
     <IsLinuxArm64>false</IsLinuxArm64>
     <IsWindows32>false</IsWindows32>
     <IsWindows64>true</IsWindows64>
-    <IsMacOS>false</IsMacOS>
+    <IsMacOS64>false</IsMacOS64>
+    <IsMacOSArm64>false</IsMacOSArm64>
   </PropertyGroup>
   <PropertyGroup Condition="'$(RuntimeIdentifier)' == 'win-x86'">
     <IsAnyOS>false</IsAnyOS>
@@ -50,7 +53,8 @@
     <IsLinuxArm64>false</IsLinuxArm64>
     <IsWindows32>true</IsWindows32>
     <IsWindows64>false</IsWindows64>
-    <IsMacOS>false</IsMacOS>
+    <IsMacOS64>false</IsMacOS64>
+    <IsMacOSArm64>false</IsMacOSArm64>
   </PropertyGroup>
   <PropertyGroup Condition="'$(RuntimeIdentifier)' == 'osx-x64'">
     <IsAnyOS>false</IsAnyOS>
@@ -59,7 +63,18 @@
     <IsLinuxArm64>false</IsLinuxArm64>
     <IsWindows32>false</IsWindows32>
     <IsWindows64>false</IsWindows64>
-    <IsMacOS>true</IsMacOS>
+    <IsMacOS64>true</IsMacOS64>
+    <IsMacOSArm64>false</IsMacOSArm64>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' == 'osx-arm64'">
+    <IsAnyOS>false</IsAnyOS>
+    <IsLinux64>false</IsLinux64>
+    <IsLinuxArm32>false</IsLinuxArm32>
+    <IsLinuxArm64>false</IsLinuxArm64>
+    <IsWindows32>false</IsWindows32>
+    <IsWindows64>false</IsWindows64>
+    <IsMacOS64>false</IsMacOS64>
+    <IsMacOSArm64>true</IsMacOSArm64>
   </PropertyGroup>
   <PropertyGroup Condition="'$(RuntimeIdentifier)' == 'linux-arm'">
     <IsAnyOS>false</IsAnyOS>
@@ -68,7 +83,8 @@
     <IsLinuxArm64>false</IsLinuxArm64>
     <IsWindows32>false</IsWindows32>
     <IsWindows64>false</IsWindows64>
-    <IsMacOS>false</IsMacOS>
+    <IsMacOS64>false</IsMacOS64>
+    <IsMacOSArm64>false</IsMacOSArm64>
   </PropertyGroup>
   <PropertyGroup Condition="'$(RuntimeIdentifier)' == 'linux-arm64'">
     <IsAnyOS>false</IsAnyOS>
@@ -77,7 +93,8 @@
     <IsLinuxArm64>true</IsLinuxArm64>
     <IsWindows32>false</IsWindows32>
     <IsWindows64>false</IsWindows64>
-    <IsMacOS>false</IsMacOS>
+    <IsMacOS64>false</IsMacOS64>
+    <IsMacOSArm64>false</IsMacOSArm64>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="SourceLink.Create.CommandLine" Version="2.8.3" PrivateAssets="All" /> 

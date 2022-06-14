@@ -343,6 +343,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(DatabaseTrafficWatchPayload));
             scripter.AddType(typeof(DatabaseOverviewPayload));
             scripter.AddType(typeof(OngoingTasksPayload));
+            scripter.AddType(typeof(ClusterOverviewPayload));
 
             // expiration
             scripter.AddType(typeof(ExpirationConfiguration));

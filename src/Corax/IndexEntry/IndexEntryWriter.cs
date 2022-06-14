@@ -42,19 +42,10 @@ public unsafe ref partial struct IndexEntryWriter
     // so we wont even try to make the process more complex just to deal with them efficienly.
     private int _dynamicFieldIndex;
 
-    public IndexEntryWriter(Span<byte> buffer, IndexFieldsMapping knownFields = null)
+    public IndexEntryWriter(Span<byte> buffer, IndexFieldsMapping knownFields)
     {
         // TODO: For now we will assume that the max size of an index entry is 32Kb, revisit this...
-        if (knownFields == null)
-        {
-            _knownFields = IndexFieldsMapping.Instance;
-            Debug.Assert(_knownFields.Count == 0);
-        }
-        else
-        {
-            _knownFields = knownFields;
-        }
-
+        _knownFields = knownFields;
         int knownFieldMetadataSize = _knownFields.Count * sizeof(uint);
         _knownFieldsLocations = MemoryMarshal.Cast<byte, int>(buffer[^knownFieldMetadataSize..]);
         _knownFieldsLocations.Fill(Invalid); // We prepare the table in order to avoid tracking the writes. 

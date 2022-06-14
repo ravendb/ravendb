@@ -1,5 +1,5 @@
 // -----------------------------------------------------------------------
-//  <copyright file="TrafficWidget.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="TrafficNotificationSender.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------

@@ -3,7 +3,7 @@
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
 
-class nodeTagColumn<T extends { nodeTag: string, database: string, noData: boolean }> extends hyperlinkColumn<T> {
+class nodeTagColumn<T extends { nodeTag: string, noData: boolean }> extends hyperlinkColumn<T> {
 
     hrefProvider: (item: T) => { url: string; openInNewTab: boolean; targetDescription?: string };
     
@@ -19,15 +19,17 @@ class nodeTagColumn<T extends { nodeTag: string, database: string, noData: boole
     
     private valueProvider(item: T) {
         const nodeTag = item.nodeTag;
-        const extraClass = item.noData ? "no-data" : `node-${nodeTag}`;
         
-        if (item.nodeTag) {
-            const description = this.hrefProvider(item).targetDescription;
-            const titleText = description ? `Go to ${description}` : "";
-            return `<span class="node-label ${extraClass}" title="${titleText}">${nodeTag}</span>`;
-        } else {
+        if (!nodeTag) {
             return "";
         }
+
+        const description = this.hrefProvider(item).targetDescription;
+        const titleText = description ? `Go to ${description}` : "";
+        
+        const nodeDataClass = item.noData ? "no-data" : `node-${nodeTag}`
+
+        return `<span class="node-label ${nodeDataClass}" title="${titleText}">${nodeTag}</span>`;
     }
 
     toDto(): virtualColumnDto {

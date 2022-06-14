@@ -1,5 +1,5 @@
 // -----------------------------------------------------------------------
-//  <copyright file="MemoryUsageWidget.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="MemoryUsageNotificationSender.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------

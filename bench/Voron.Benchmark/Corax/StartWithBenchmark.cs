@@ -112,21 +112,20 @@ namespace Voron.Benchmark.Corax
 
         private static void GenerateData(StorageEnvironment env)
         {
-            using (var writer = new IndexWriter(env))
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            Slice.From(bsc, "Name", ByteStringType.Immutable, out var nameSlice);
+            Slice.From(bsc, "Family", ByteStringType.Immutable, out var familySlice);
+            Slice.From(bsc, "Age", ByteStringType.Immutable, out var ageSlice);
+            Slice.From(bsc, "Type", ByteStringType.Immutable, out var typeSlice);
+
+            Span<byte> buffer = new byte[256];
+            var fields = new IndexFieldsMapping(bsc)
+                .AddBinding(0, nameSlice)
+                .AddBinding(1, familySlice)
+                .AddBinding(2, ageSlice)
+                .AddBinding(3, typeSlice);
+            using (var writer = new IndexWriter(env, fields))
             {
-                using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-                Slice.From(bsc, "Name", ByteStringType.Immutable, out var nameSlice);
-                Slice.From(bsc, "Family", ByteStringType.Immutable, out var familySlice);
-                Slice.From(bsc, "Age", ByteStringType.Immutable, out var ageSlice);
-                Slice.From(bsc, "Type", ByteStringType.Immutable, out var typeSlice);
-
-                Span<byte> buffer = new byte[256];
-                var fields = new IndexFieldsMapping(bsc)
-                                    .AddBinding(0, nameSlice)
-                                    .AddBinding(1, familySlice)
-                                    .AddBinding(2, ageSlice)
-                                    .AddBinding(3, typeSlice);
-
                 {
                     var entryWriter = new IndexEntryWriter(buffer, fields);
                     entryWriter.Write(0, Encoding.UTF8.GetBytes("Arava"));
@@ -135,7 +134,7 @@ namespace Voron.Benchmark.Corax
                     entryWriter.Write(3, Encoding.UTF8.GetBytes("Dog"));
                     entryWriter.Finish(out var entry);
 
-                    writer.Index("dogs/arava", entry, fields);
+                    writer.Index("dogs/arava", entry);
                 }
 
                 {
@@ -146,7 +145,7 @@ namespace Voron.Benchmark.Corax
                     entryWriter.Write(3, Encoding.UTF8.GetBytes("Dog"));
                     entryWriter.Finish(out var entry);
 
-                    writer.Index("dogs/phoebe", entry, fields);
+                    writer.Index("dogs/phoebe", entry);
                 }
 
                 for (int i = 0; i < 10_000; i++)
@@ -159,7 +158,7 @@ namespace Voron.Benchmark.Corax
                     entryWriter.Write(3, Encoding.UTF8.GetBytes("Dog"));
                     entryWriter.Finish(out var entry);
 
-                    writer.Index("dogs/" + i, entry, fields);
+                    writer.Index("dogs/" + i, entry);
                 }
 
                 writer.Commit();

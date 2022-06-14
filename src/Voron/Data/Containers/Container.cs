@@ -2,12 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Reflection.PortableExecutable;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Sparrow;
 using Sparrow.Server;
 using Voron.Data.Sets;
+using Voron.Debugging;
 using Voron.Global;
 using Voron.Impl;
 using Voron.Impl.Paging;
@@ -32,11 +32,9 @@ namespace Voron.Data.Containers
 
         private readonly Page _page;
 
-        public readonly Span<byte> Span => _page.AsSpan();
+        public ref ContainerPageHeader Header => ref MemoryMarshal.AsRef<ContainerPageHeader>(_page.AsSpan());
 
-        public ref ContainerPageHeader Header => ref MemoryMarshal.AsRef<ContainerPageHeader>(Span);
-
-        public Span<ItemMetadata> Offsets => MemoryMarshal.Cast<byte, ItemMetadata>(_page.AsSpan().Slice(PageHeader.SizeOf, Header.NumberOfOffsets * sizeof(ItemMetadata)));
+        public Span<ItemMetadata> Offsets => _page.AsSpan<ItemMetadata>(PageHeader.SizeOf, Header.NumberOfOffsets);
         
 
         [StructLayout(LayoutKind.Explicit, Pack = 1, Size = 4)]
@@ -48,11 +46,15 @@ namespace Voron.Data.Containers
             [FieldOffset(2)]
             public ushort Size;
 
-            public Span<byte> Slice(Span<byte> span) => span.Slice(Offset, Size);
-
             public override string ToString()
             {
                 return "Offset: " + Offset + ", Size: " + Size;
+            }
+
+            public ItemMetadata( ushort offset, ushort size )
+            {
+                Offset = offset;
+                Size = size;
             }
         }
 
@@ -71,7 +73,8 @@ namespace Voron.Data.Containers
         private int SpaceUsed(in Span<ItemMetadata> offsets)
         {
             var size = Header.NumberOfOffsets * sizeof(ItemMetadata) + PageHeader.SizeOf;
-            foreach (var item in offsets) size += item.Size;
+            foreach (var item in offsets) 
+                size += item.Size;
             return size;
         }
 
@@ -82,8 +85,8 @@ namespace Voron.Data.Containers
 
         public static long Create(LowLevelTransaction llt)
         {
-            var page = llt.AllocatePage(1);
-            InitializePage(page);
+            var page = AllocateContainerPage(llt);
+
             var root = new Container(page);
             root.Header.NumberOfPages = 1;
             root.Header.NumberOfOverflowPages = 0;
@@ -92,23 +95,31 @@ namespace Voron.Data.Containers
             root.Allocate(sizeof(SetState), ContainerPageHeader.FreeListOffset, out var freeListSet);
             root.Allocate(sizeof(SetState), ContainerPageHeader.AllPagesOffset, out var allPagesSet);
 
+            // We are creating a set where we will store the free list.
             ref var freeListState = ref MemoryMarshal.AsRef<SetState>(freeListSet);
-            Set.Initialize(llt, ref freeListState);
-            
+            Set.Create(llt, ref freeListState);
+
+            // We are creating a set where we will store the list of all pages.
             ref var allPagesState = ref MemoryMarshal.AsRef<SetState>(allPagesSet);
-            Set.Initialize(llt, ref allPagesState);
-            Set allPages = new Set(llt, AllPagesSetName,MemoryMarshal.AsRef<SetState>(allPagesSet));
+            Set.Create(llt, ref allPagesState);
+
+            // We are adding the root to the list of all pages.
+            Set allPages = new Set(llt, AllPagesSetName, MemoryMarshal.AsRef<SetState>(allPagesSet));
             allPages.Add(page.PageNumber);
             allPagesState = allPages.State;
             return page.PageNumber;
         }
 
-        private static void InitializePage(Page page)
+        private static Page AllocateContainerPage( LowLevelTransaction llt )
         {
+            var page = llt.AllocatePage(1);
+
             ref var header = ref MemoryMarshal.AsRef<ContainerPageHeader>(page.AsSpan());
             header.Flags = PageFlags.Single | PageFlags.Other;
             header.ContainerFlags = ExtendedPageType.Container;
             header.FloorOfData = Constants.Storage.PageSize;
+
+            return page;
         }
 
         // this is computed so this will fit exactly two items of max size in a container page. Beyond that, we'll have enough
@@ -119,7 +130,7 @@ namespace Voron.Data.Containers
         {
             using var _ = llt.Environment.GetTemporaryPage(llt, out var tmp);
             var tmpSpan = tmp.AsSpan();
-            Span.Slice(0, Header.CeilingOfOffsets).CopyTo(tmpSpan);
+            _page.AsSpan(0, Header.CeilingOfOffsets).CopyTo(tmpSpan);
             tmpSpan.Slice(Header.CeilingOfOffsets).Clear();
             ref var tmpHeader = ref MemoryMarshal.AsRef<ContainerPageHeader>(tmpSpan);
             var tmpOffsets = MemoryMarshal.Cast<byte, ItemMetadata>(tmpSpan.Slice(PageHeader.SizeOf)).Slice(0, tmpHeader.NumberOfOffsets);
@@ -129,7 +140,7 @@ namespace Voron.Data.Containers
                 if (tmpOffsets[i].Size == 0)
                     continue;
                 tmpHeader.FloorOfData -= tmpOffsets[i].Size;
-                Span.Slice(tmpOffsets[i].Offset, tmpOffsets[i].Size).CopyTo(tmpSpan.Slice(tmpHeader.FloorOfData));
+                _page.AsSpan(tmpOffsets[i].Offset, tmpOffsets[i].Size).CopyTo(tmpSpan.Slice(tmpHeader.FloorOfData));
                 tmpOffsets[i].Offset = tmpHeader.FloorOfData;
             }
 
@@ -140,7 +151,7 @@ namespace Voron.Data.Containers
                 tmpHeader.NumberOfOffsets--;
             }
 
-            tmpSpan.CopyTo(Span);
+            tmpSpan.CopyTo(_page.AsSpan());
         }
 
         public static bool TryAdjustSize(LowLevelTransaction llt, long id, int newSize, out Span<byte> buffer)
@@ -170,7 +181,7 @@ namespace Voron.Data.Containers
             }
 
             container.Header.FloorOfData -= (ushort)newSize;
-            buffer = container.Span.Slice(container.Header.FloorOfData, newSize);
+            buffer = container._page.AsSpan(container.Header.FloorOfData, newSize);
             tmp.CopyTo(buffer);
             metadata.Offset = container.Header.FloorOfData;
             metadata.Size = (ushort)newSize;
@@ -179,24 +190,28 @@ namespace Voron.Data.Containers
 
         public static long Allocate(LowLevelTransaction llt, long containerId, int size, out Span<byte> allocatedSpace)
         {
+            // This method will return the allocated space inside the container and also the entry internal id to 
+            // address this allocation in the future.
+            
             if(size <= 0)
                 throw new ArgumentOutOfRangeException(nameof(size));
+            
             Container rootContainer;
             if (size > MaxSizeInsideContainerPage)
-            {      
+            {
+                // The space to allocate is big enough to be allocated in a dedicated overflow page.
                 var root = llt.ModifyPage(containerId);
                 rootContainer = new Container(root);
 
-                var numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(size);
-                var overflowPage = llt.AllocatePage(numberOfPages);
+                // We will figure out how many pages we will need to store it.
+                var overflowPage = llt.AllocateOverflowRawPage(size, out var numberOfPages);
+                overflowPage.Flags |= PageFlags.Other;
 
                 rootContainer.Header.NumberOfOverflowPages += numberOfPages;
                 ModifyMetadataList(llt, rootContainer, AllPagesSetName, ContainerPageHeader.AllPagesOffset, add: true, overflowPage.PageNumber);
-                
-                overflowPage.OverflowSize = size;
-                overflowPage.Flags |= PageFlags.Overflow | PageFlags.Other;
-                allocatedSpace = overflowPage.AsSpan(numberOfPages).Slice(PageHeader.SizeOf, size);
-                return overflowPage.PageNumber * Constants.Storage.PageSize;
+
+                allocatedSpace = overflowPage.AsSpan(PageHeader.SizeOf, size);
+                return overflowPage.PageNumber * Constants.Storage.PageSize; 
             }
 
             var rootPage = llt.GetPage(containerId);
@@ -204,8 +219,8 @@ namespace Voron.Data.Containers
 
             var activePage = llt.ModifyPage(rootContainer.Header.NextFreePage);
             var container = new Container(activePage);
+            
             (var reqSize, var pos) = GetRequiredSizeAndPosition(size, container);
-
             if (container.HasEnoughSpaceFor(reqSize) == false)
             {
                 container.Defrag(llt);
@@ -213,9 +228,9 @@ namespace Voron.Data.Containers
                     MoveToNextPage(llt, containerId, ref container, size);
                 
                 (reqSize, pos) = GetRequiredSizeAndPosition(size, container);
-                Debug.Assert(container.HasEnoughSpaceFor(reqSize));
             }
-
+            
+            Debug.Assert(container.HasEnoughSpaceFor(reqSize));
             return container.Allocate(size, pos, out allocatedSpace);
         }
 
@@ -227,8 +242,12 @@ namespace Voron.Data.Containers
             if (pos == Header.NumberOfOffsets)
                 Header.NumberOfOffsets++;
 
-            allocatedSpace = Span.Slice(Header.FloorOfData, size);
-            Offsets[pos] = new ItemMetadata {Offset = Header.FloorOfData, Size = (ushort)size};
+            allocatedSpace = _page.AsSpan(Header.FloorOfData, size);
+
+            ref ItemMetadata item = ref Offsets[pos];
+            item.Offset = Header.FloorOfData;
+            item.Size = (ushort)size;
+
             return Header.PageNumber * Constants.Storage.PageSize + IndexToOffset(pos);
         }
 
@@ -244,53 +263,56 @@ namespace Voron.Data.Containers
             container.Header.OnFreeList = false; // we take it out now..., we'll add to the free list when we delete from it
             var rootPage = llt.ModifyPage(containerId);
             var rootContainer = new Container(rootPage);
-            var freeListStateSpan = rootContainer.Offsets[ContainerPageHeader.FreeListOffset].Slice(rootContainer.Span);
-            var freeList = new Set(llt, FreePagesSetName, MemoryMarshal.AsRef<SetState>(freeListStateSpan));
-            using (var it = freeList.Iterate())
+            
+
+            while (true)
             {
-                if (it.Seek(0))
+                var freeListStateSpan = rootContainer.GetItem(ContainerPageHeader.FreeListOffset);
+                var freeList = new Set(llt, FreePagesSetName, MemoryMarshal.AsRef<SetState>(freeListStateSpan));
+                using (var it = freeList.Iterate())
                 {
-                    do
-                    {
-                        var page = llt.ModifyPage(it.Current);
-                        var maybe = new Container(page);
-                        // we want to ensure that the free list isn't too big...
-                        // if we don't have space here, we'll discard it from the free list
-                        maybe.Header.OnFreeList = false;
-                        ModifyMetadataList(llt,  rootContainer, FreePagesSetName, ContainerPageHeader.FreeListOffset, add: false, page.PageNumber);
-                        if (maybe.HasEnoughSpaceFor(size + MinimumAdditionalFreeSpaceToConsider) == false)
-                            continue;
-                        // we register it as the next free page
-                        rootContainer.Header.NextFreePage = page.PageNumber;
-                        container = maybe;
-                        return;
-                    } while (it.MoveNext());   
+                    if (it.Seek(0) == false)
+                        break;
+
+                    var page = llt.ModifyPage(it.Current);
+                    var maybe = new Container(page);
+                    // we want to ensure that the free list isn't too big...
+                    // if we don't have space here, we'll discard it from the free list
+                    maybe.Header.OnFreeList = false;
+                    ModifyMetadataList(llt, rootContainer, FreePagesSetName, ContainerPageHeader.FreeListOffset, add: false, page.PageNumber);
+                    if (maybe.HasEnoughSpaceFor(size + MinimumAdditionalFreeSpaceToConsider) == false)
+                        continue;
+                    // we register it as the next free page
+                    rootContainer.Header.NextFreePage = page.PageNumber;
+                    container = maybe;
+                    return;
                 }
             }
 
             // no existing pages remaining, allocate new one
-            var newPage = llt.AllocatePage(1);
-            InitializePage(newPage);
+            var newPage = AllocateContainerPage(llt);
             rootContainer.Header.NumberOfPages++;
             rootContainer.Header.NextFreePage = newPage.PageNumber;
+            
             container = new Container(newPage);
             container.Header.OnFreeList = true; // added as the next free page
-            
+
             ModifyMetadataList(llt, rootContainer, AllPagesSetName, ContainerPageHeader.AllPagesOffset, add: true, newPage.PageNumber);
         }
 
         public static List<long> GetAllIds(LowLevelTransaction llt, long containerId)
         {
             var set = GetAllPagesSet(llt, containerId);
-            using var it = set.Iterate();
             var list = new List<long>();
             var itemsLeftOnCurrentPage = 0;
             var count = 0;
             var offset = 0;
+
+            using var it = set.Iterate();
             if (it.Seek(0) == false)
                 return list;
-            Span<long> items = stackalloc long[256];
 
+            Span<long> items = stackalloc long[256];
             do
             {
                 var page = llt.GetPage(it.Current);
@@ -319,10 +341,8 @@ namespace Voron.Data.Containers
                 itemsLeftOnCurrentPage = 0;
                 return results;
             }
-            var container = new Container(page);
-            var entriesOffsets = container.Offsets;
+            
             int i = offset;
-
             if (page.PageNumber == containerId && offset == 0)
             {
                 // skip the free list and all pages list entries
@@ -330,11 +350,15 @@ namespace Voron.Data.Containers
                 i += 2; 
             }
 
+            var container = new Container(page);
+            var entriesOffsets = container.Offsets;
+            var baseOffset = page.PageNumber * Constants.Storage.PageSize;
             for (; writingBufferOffset < ids.Length && i < entriesOffsets.Length; i++, offset++)
             {
                 if (entriesOffsets[i].Size == 0) 
                     continue;
-                ids[writingBufferOffset++] = page.PageNumber * Constants.Storage.PageSize + IndexToOffset(i);
+                
+                ids[writingBufferOffset++] = baseOffset + IndexToOffset(i);
                 results++;
             }
 
@@ -346,16 +370,23 @@ namespace Voron.Data.Containers
         {
             var rootPage = llt.GetPage(containerId);
             var rootContainer = new Container(rootPage);
-            var span = rootContainer.Offsets[ContainerPageHeader.AllPagesOffset].Slice(rootContainer.Span);
+            
+            var span = rootContainer.GetItem(ContainerPageHeader.AllPagesOffset);
             ref var state = ref MemoryMarshal.AsRef<SetState>(span);
             var set = new Set(llt, AllPagesSetName, state);
             return set;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private Span<byte> GetItem(int offset)
+        {
+            ref var item = ref Offsets[offset];
+            return _page.AsSpan(item.Offset, item.Size);
+        }
+
         private static void ModifyMetadataList(LowLevelTransaction llt, in Container rootContainer, Slice name, int offset, bool add, long value)
         {
-            var span = rootContainer.Offsets[offset].Slice(rootContainer.Span);
-            ref var state = ref MemoryMarshal.AsRef<SetState>(span);
+            ref var state = ref MemoryMarshal.AsRef<SetState>(rootContainer.GetItem(offset));
             var set = new Set(llt, name, state);
             if (add)
                 set.Add(value);
@@ -375,11 +406,12 @@ namespace Voron.Data.Containers
             var offsets = container.Offsets;
             for (; pos < offsets.Length; pos++)
             {
+                // There is a delete record here, we can reuse this position.
                 if (offsets[pos].Size == 0)
-                    // we reuse the space
                     return (size, pos);
             }
-
+            
+            // We reserve a new position.
             return (size + sizeof(ItemMetadata), pos);
         }
 
@@ -402,10 +434,11 @@ namespace Voron.Data.Containers
 
             var container = new Container(page);
             var entriesOffsets = container.Offsets;
-            Debug.Assert(entriesOffsets.Length > 0);
+            Debug.Assert(entriesOffsets.Length > 0);            
             var index = (offset - PageHeader.SizeOf) / sizeof(ItemMetadata);
             var metadata = entriesOffsets[index];
             Debug.Assert(metadata.Size != 0);
+            
             int totalSize = 0, count = 0;
             for (var i = 0; i < entriesOffsets.Length; i++)
             {
@@ -416,9 +449,10 @@ namespace Voron.Data.Containers
             }
 
             var averageSize = count == 0 ? 0 : totalSize / count;
-            container.Span.Slice(metadata.Offset, metadata.Size).Clear();
-            entriesOffsets[index] = default; 
-            // we may chang the value of the entriesOffsets, but we can still use the old value
+            container._page.AsSpan(metadata.Offset, metadata.Size).Clear();
+            entriesOffsets[index] = default;
+
+            // we may change the value of the entriesOffsets, but we can still use the old value
             // because it is still valid (and Size == 0 means ignore it)
             if (index + 1 == container.Header.NumberOfOffsets)
                 container.Header.NumberOfOffsets--; // can shrink immediately
@@ -426,9 +460,9 @@ namespace Voron.Data.Containers
             if (container.HasEntries(entriesOffsets) == false) // cannot delete root page
             {
                 Debug.Assert(pageNum != containerId);
+                
                 // don't need to consider the root page, the free list & all pages
                 // entries will ensure that we never get here
-
                 var rootPage = llt.ModifyPage(containerId);
                 var rootContainer = new Container(rootPage);
                 if (rootContainer.Header.NextFreePage == pageNum)
@@ -437,9 +471,11 @@ namespace Voron.Data.Containers
                     // the next allocation via the free list
                     rootContainer.Header.NextFreePage = containerId;
                 }
+                
                 ModifyMetadataList(llt, rootContainer, AllPagesSetName, ContainerPageHeader.AllPagesOffset, add: false, page.PageNumber);
                 if (container.Header.OnFreeList)
                     ModifyMetadataList(llt, rootContainer, FreePagesSetName, ContainerPageHeader.FreeListOffset, add: false, page.PageNumber);
+                
                 llt.FreePage(pageNum);
                 return;
             }
@@ -472,12 +508,10 @@ namespace Voron.Data.Containers
             if (offset == 0)
             {
                 Debug.Assert(page.IsOverflow);
-                int numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(page.OverflowSize);
-                return page.AsSpan(numberOfPages).Slice(PageHeader.SizeOf, page.OverflowSize);
+                return page.AsSpan(PageHeader.SizeOf, page.OverflowSize);
             }
 
             var container = new Container(page);
-
             return container.Get(offset);
         }
 
@@ -488,11 +522,11 @@ namespace Voron.Data.Containers
             if (offset == 0)
             {
                 Debug.Assert(page.IsOverflow);
-                int numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(page.OverflowSize);
                 return new Item(page, PageHeader.SizeOf, page.OverflowSize);
             }
 
             var container = new Container(page);
+            
             ItemMetadata* metadata = (ItemMetadata*)(container._page.Pointer + offset);
             Debug.Assert(metadata->Size != 0);
             return new Item(page, metadata->Offset, metadata->Size);
@@ -507,13 +541,13 @@ namespace Voron.Data.Containers
                 if (offset == 0)
                 {
                     Debug.Assert(page.IsOverflow);
-                    int numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(page.OverflowSize);
                     return new Item(page, PageHeader.SizeOf, page.OverflowSize);
                 }
             }
 
             var container = new Container(page);
             container.ValidatePage();
+            
             ItemMetadata* metadata = (ItemMetadata*)(container._page.Pointer + offset);
             Debug.Assert(metadata->Size != 0);
             return new Item(page, metadata->Offset, metadata->Size);
@@ -535,7 +569,7 @@ namespace Voron.Data.Containers
         {
             ItemMetadata* metadata = (ItemMetadata*)(_page.Pointer + offset);
             Debug.Assert(metadata->Size != 0);
-            return Span.Slice(metadata->Offset, metadata->Size);
+            return _page.AsSpan(metadata->Offset, metadata->Size);
         }
 
         private static int OffsetToIndex(int offset)

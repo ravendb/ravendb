@@ -105,6 +105,17 @@ namespace Micro.Benchmark.Benchmarks
 
             public Span<byte> EncodingTable => new Span<byte>(_value).Slice(0, _value.Length / 2);
             public Span<byte> DecodingTable => new Span<byte>(_value).Slice(_value.Length / 2);
+
+            public bool CanGrow => false;
+
+            public void Dispose()
+            {
+            }
+
+            public void Grow(int minimumSize)
+            {
+                throw new NotSupportedException();
+            }
         }
 
         private struct StringKeys : IReadOnlySpanIndexer, ISpanIndexer, IReadOnlySpanEnumerator

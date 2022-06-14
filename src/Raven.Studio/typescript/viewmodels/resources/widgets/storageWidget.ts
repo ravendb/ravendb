@@ -4,7 +4,6 @@ import clusterDashboard = require("viewmodels/resources/clusterDashboard");
 import clusterDashboardWebSocketClient = require("common/clusterDashboardWebSocketClient");
 import mountPointUsage = require("models/resources/widgets/mountPointUsage");
 
-
 class perNodeStorageStats {
     readonly tag: string;
     disconnected = ko.observable<boolean>(true);

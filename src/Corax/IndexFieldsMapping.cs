@@ -10,14 +10,17 @@ namespace Corax;
 
 public class IndexFieldsMapping : IEnumerable<IndexFieldBinding>
 {
-    public static readonly IndexFieldsMapping Instance = new IndexFieldsMapping(null);
-
     private readonly ByteStringContext _context;
     private readonly Dictionary<Slice, IndexFieldBinding> _fields;
     private readonly Dictionary<int, IndexFieldBinding> _fieldsById;
     private readonly List<IndexFieldBinding> _fieldsList;
     public int Count => _fieldsById.Count;
     public Analyzer DefaultAnalyzer;
+    private int _maximumOutputSize;
+    public int MaximumOutputSize => _maximumOutputSize;
+    
+    private int _maximumTokenSize;
+    public int MaximumTokenSize => _maximumTokenSize;
 
     public IndexFieldsMapping(ByteStringContext context)
     {
@@ -61,8 +64,24 @@ public class IndexFieldsMapping : IEnumerable<IndexFieldBinding>
 
             ifb.Analyzer ??= analyzers.DefaultAnalyzer;
         }
+        
+        //We want also find maximum buffer for analyzers.
+        UpdateMaximumOutputAndTokenSize();
     }
 
+    internal void UpdateMaximumOutputAndTokenSize()
+    {
+        foreach (var analyzer in CollectionsMarshal.AsSpan(_fieldsList))
+        {
+            if (analyzer.Analyzer == null)
+                continue;
+            
+            _maximumOutputSize = Math.Max(_maximumOutputSize, analyzer.Analyzer.MaximumOutputSize);
+            _maximumTokenSize = Math.Max(_maximumTokenSize, analyzer.Analyzer.MaximumTokenSize);
+        }
+    }
+        
+    
     public IndexFieldBinding GetByFieldId(int fieldId)
     {
         return _fieldsById[fieldId];

@@ -5,7 +5,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
-using Raven.Client.Json;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using SlowTests.Server.Documents.PeriodicBackup.Restore;
@@ -147,7 +146,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     streamLength = memoryStream.Length;
                     await client.PutObjectAsync(key,
                         memoryStream,
-                        new Dictionary<string, string> {{property1, value1}, {property2, value2}});
+                        new Dictionary<string, string> { { property1, value1 }, { property2, value2 } });
                 }
 
                 var @object = await client.GetObjectAsync(key);

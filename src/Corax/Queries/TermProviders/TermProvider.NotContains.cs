@@ -10,16 +10,16 @@ namespace Corax.Queries
     {
         private readonly CompactTree _tree;
         private readonly IndexSearcher _searcher;
-        private readonly string _field;
+        private readonly Slice _fieldName;
         private readonly Slice _term;
 
         private CompactTree.Iterator _iterator;
 
-        public NotContainsTermProvider(IndexSearcher searcher, ByteStringContext context, CompactTree tree, string field, int fieldId, Slice term)
+        public NotContainsTermProvider(IndexSearcher searcher, ByteStringContext context, CompactTree tree, Slice fieldName, int fieldId, Slice term)
         {
             _tree = tree;
             _searcher = searcher;
-            _field = field;
+            _fieldName = fieldName;
             _iterator = tree.Iterate();
             _iterator.Reset();
             _term = term;
@@ -39,7 +39,7 @@ namespace Corax.Queries
                 if (termSlice.Contains(contains))
                     continue;
 
-                term = _searcher.TermQuery(_field, termSlice);
+                term = _searcher.TermQuery(_tree, termSlice);
                 return true;
             }
 
@@ -52,7 +52,7 @@ namespace Corax.Queries
             return new QueryInspectionNode($"{nameof(NotContainsTermProvider)}",
                             parameters: new Dictionary<string, string>()
                             {
-                                { "Field", _field },
+                                { "Field", _fieldName.ToString() },
                                 { "Term", _term.ToString()}
                             });
         }

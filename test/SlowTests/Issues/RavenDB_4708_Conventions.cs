@@ -51,6 +51,7 @@ namespace SlowTests.Issues
             suspectedMethods = suspectedMethods.Where(x =>
                 x.ReturnType != typeof(IRavenQueryable<Employee>) &&
                 x.ReturnType != typeof(IAsyncDocumentQuery<Employee>) && 
+#pragma warning restore CS0618
                 x.ReturnType != typeof(IAsyncGroupByDocumentQuery<Employee>) &&
                 x.ReturnType != typeof(IAsyncAggregationDocumentQuery<Employee>))
                 .ToList();
