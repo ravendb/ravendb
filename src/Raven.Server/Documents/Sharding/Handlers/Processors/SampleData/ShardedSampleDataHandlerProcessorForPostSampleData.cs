@@ -16,18 +16,24 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.SampleData
         public ShardedSampleDataHandlerProcessorForPostSampleData([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {
         }
-        
+
         protected override async ValueTask ExecuteSmugglerAsync(JsonOperationContext context, ISmugglerSource source, Stream sampleData, DatabaseItemType operateOnTypes)
         {
+            var operationId = RequestHandler.DatabaseContext.Operations.GetNextOperationId();
             var record = RequestHandler.DatabaseContext.DatabaseRecord;
 
-            var smuggler = new ShardedDatabaseSmuggler(source, context, record,
+            var smuggler = new ShardedDatabaseSmuggler(
+                source,
+                context,
+                record,
                 RequestHandler.Server.ServerStore, RequestHandler.DatabaseContext, RequestHandler,
                 options: new DatabaseSmugglerOptionsServerSide
                 {
-                    OperateOnTypes = operateOnTypes, 
+                    OperateOnTypes = operateOnTypes,
                     SkipRevisionCreation = true
-                }, null);
+                },
+                null,
+                operationId);
 
             await smuggler.ExecuteAsync();
         }

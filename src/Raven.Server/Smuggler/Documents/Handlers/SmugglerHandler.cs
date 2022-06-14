@@ -385,7 +385,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                                     {
                                         TransformScript = transformScript
                                     };
-                                    await DoImportInternalAsync(migrateContext, process.StandardOutput.BaseStream, options, result, onProgress, token);
+                                    await DoImportInternalAsync(migrateContext, process.StandardOutput.BaseStream, options, result, onProgress, operationId, token);
                                 }
                             }
                             catch (OperationCanceledException)
@@ -599,8 +599,14 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             }
         }
 
-        public async Task DoImportInternalAsync(JsonOperationContext jsonOperationContext, Stream stream, DatabaseSmugglerOptionsServerSide options,
-            SmugglerResult result, Action<IOperationProgress> onProgress, OperationCancelToken token)
+        public async Task DoImportInternalAsync(
+            JsonOperationContext jsonOperationContext,
+            Stream stream, 
+            DatabaseSmugglerOptionsServerSide options,
+            SmugglerResult result, 
+            Action<IOperationProgress> onProgress,
+            long operationId,
+            OperationCancelToken token)
         {
             ContextPool.AllocateOperationContext(out DocumentsOperationContext context);
             await using (stream)

@@ -18,7 +18,7 @@ using Sparrow.Json;
 namespace Raven.Server.Documents.Handlers.Processors.SampleData
 {
     internal abstract class AbstractSampleDataHandlerProcessorForPostSampleData<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
-        where TOperationContext : JsonOperationContext 
+        where TOperationContext : JsonOperationContext
         where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
         protected AbstractSampleDataHandlerProcessorForPostSampleData([NotNull] TRequestHandler requestHandler) : base(requestHandler)
@@ -32,8 +32,8 @@ namespace Raven.Server.Documents.Handlers.Processors.SampleData
         public override async ValueTask ExecuteAsync()
         {
             var databaseName = RequestHandler.DatabaseName;
-            
-            if(await IsDatabaseEmptyAsync() == false)
+
+            if (await IsDatabaseEmptyAsync() == false)
                 throw new InvalidOperationException("You cannot create sample data in a database that already contains documents");
 
             var operateOnTypesAsString = RequestHandler.GetStringValuesQueryString("operateOnTypes", required: false);
@@ -71,7 +71,7 @@ namespace Raven.Server.Documents.Handlers.Processors.SampleData
                         }
                     }
                 };
-                
+
                 var editTimeSeries = new EditTimeSeriesConfigurationCommand(tsConfig, databaseName, RequestHandler.GetRaftRequestIdFromQuery() + "/time-series");
                 var (index, _) = await RequestHandler.ServerStore.SendToLeaderAsync(editTimeSeries);
                 await RequestHandler.WaitForIndexNotificationAsync(index);

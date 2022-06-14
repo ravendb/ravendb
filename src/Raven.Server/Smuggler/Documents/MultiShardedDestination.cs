@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Util;
@@ -24,15 +25,17 @@ namespace Raven.Server.Smuggler.Documents
     {
         private readonly ShardedDatabaseContext _databaseContext;
         private readonly ShardedDatabaseRequestHandler _handler;
+        private readonly long _operationId;
         private readonly ISmugglerSource _source;
         private readonly StreamDestination[] _destinations;
         private DatabaseSmugglerOptionsServerSide _options;
 
-        public MultiShardedDestination(ISmugglerSource source, ShardedDatabaseContext databaseContext, ShardedDatabaseRequestHandler handler)
+        public MultiShardedDestination([NotNull] ISmugglerSource source, [NotNull] ShardedDatabaseContext databaseContext, [NotNull] ShardedDatabaseRequestHandler handler, long operationId)
         {
-            _source = source;
-            _databaseContext = databaseContext;
-            _handler = handler;
+            _source = source ?? throw new ArgumentNullException(nameof(source));
+            _databaseContext = databaseContext ?? throw new ArgumentNullException(nameof(databaseContext));
+            _handler = handler ?? throw new ArgumentNullException(nameof(handler));
+            _operationId = operationId;
             _destinations = new StreamDestination[databaseContext.ShardCount];
         }
 
@@ -41,7 +44,7 @@ namespace Raven.Server.Smuggler.Documents
             _options = options;
             var holders = new StreamDestinationHolder[_databaseContext.ShardCount];
 
-            var importOperation = new ShardedImportOperation(_handler, holders, options);
+            var importOperation = new ShardedImportOperation(_handler.HttpContext.Request, options, holders, _operationId);
             var t = _databaseContext.ShardExecutor.ExecuteParallelForAllAsync(importOperation);
 
             await Task.WhenAll(importOperation.ExposedStreamTasks);
@@ -177,7 +180,7 @@ namespace Raven.Server.Smuggler.Documents
                     await _actions[shardNumber].WriteKeyValueAsync(key, value);
                     return;
                 }
-               
+
                 await _last.WriteKeyValueAsync(key, value);
             }
 
