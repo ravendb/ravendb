@@ -1429,7 +1429,7 @@ namespace Raven.Client.Http
                     return true;
 
                 case HttpStatusCode.GatewayTimeout:
-                case HttpStatusCode.RequestTimeout:
+                //case HttpStatusCode.RequestTimeout:
                 case HttpStatusCode.BadGateway:
                 case HttpStatusCode.ServiceUnavailable:
                     return await HandleServerDown(url, chosenNode, nodeIndex, context, command, request, response, null, sessionInfo, shouldRetry, requestContext: null, token: token).ConfigureAwait(false);

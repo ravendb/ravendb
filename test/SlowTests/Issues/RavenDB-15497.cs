@@ -37,7 +37,7 @@ namespace SlowTests.Issues
                         Name = "user1",
                         Count = 3
                     });
-                    session.Advanced.WaitForIndexesAfterSaveChanges(timeout: TimeSpan.FromSeconds(3), throwOnTimeout: false);
+                    session.Advanced.WaitForIndexesAfterSaveChanges(timeout: TimeSpan.FromSeconds(5), throwOnTimeout: true);
                     session.SaveChanges();
                 }
 
@@ -53,7 +53,7 @@ namespace SlowTests.Issues
                     {
                         Name = "user1"
                     });
-                    session.Advanced.WaitForIndexesAfterSaveChanges(timeout: TimeSpan.FromSeconds(3), throwOnTimeout: true);
+                    session.Advanced.WaitForIndexesAfterSaveChanges(timeout: TimeSpan.FromSeconds(5), throwOnTimeout: true);
 
                     var error = Assert.Throws<RavenTimeoutException>(() => session.SaveChanges());
                     Assert.StartsWith("Raven.Client.Exceptions.RavenTimeoutException", error.Message);

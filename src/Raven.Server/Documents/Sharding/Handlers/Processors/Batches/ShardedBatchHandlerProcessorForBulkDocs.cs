@@ -50,8 +50,9 @@ internal class ShardedBatchHandlerProcessorForBulkDocs : AbstractBatchHandlerPro
 
     protected override ValueTask WaitForReplicationAsync(ReplicationBatchOptions options, string lastChangeVector)
     {
-        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "Implement WaitForReplicationAsync");
-        throw new NotImplementedException();
+        // no-op
+        // this is passed as a parameter when we execute transaction on each shard
+        return ValueTask.CompletedTask;
     }
 
     protected override char GetIdentityPartsSeparator() => RequestHandler.DatabaseContext.IdentityPartsSeparator;
