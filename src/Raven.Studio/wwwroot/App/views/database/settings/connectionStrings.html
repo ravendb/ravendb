@@ -276,6 +276,20 @@
                                     <span>Test Connection</span>
                                 </button>
                             </span>
+                            <span data-bind="if: editedKafkaEtlConnectionString">
+                                <button type="submit" class="btn btn-info" title="Test Kafka server connection"
+                                        data-bind="click: onTestConnectionKafka, disable: $root.spinners.test, css: { 'btn-spinner': $root.spinners.test }" >
+                                    <i class="icon-rocket"></i>
+                                    <span>Test Connection</span>
+                                </button>
+                            </span>
+                            <span data-bind="if: editedRabbitMqEtlConnectionString">
+                                <button type="submit" class="btn btn-info" title="Test RabbitMQ server connection"
+                                        data-bind="click: onTestConnectionRabbitMq, disable: $root.spinners.test, css: { 'btn-spinner': $root.spinners.test }" >
+                                    <i class="icon-rocket"></i>
+                                    <span>Test Connection</span>
+                                </button>
+                            </span>
                             <span data-bind="template: { name: 'cancel-save' }"></span>
                         </div>
                     </div>

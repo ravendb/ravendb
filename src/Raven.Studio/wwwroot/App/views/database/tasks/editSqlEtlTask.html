@@ -112,7 +112,7 @@
                                 </div>
                                 <div>
                                     <button class="btn btn-default btn-info" title="Test the New connection string connection"
-                                            data-bind="click: $root.testConnection, disable: !$root.connectionStringDefined() || $root.spinners.test(), css: { 'btn-spinner': $root.spinners.test }">
+                                            data-bind="click: $root.onTestConnectionSql, disable: !$root.connectionStringDefined() || $root.spinners.test(), css: { 'btn-spinner': $root.spinners.test }">
                                         <i class="icon-rocket"></i>
                                         <span>Test Connection</span>
                                     </button>

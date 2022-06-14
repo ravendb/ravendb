@@ -108,9 +108,16 @@
                         </div>
                         <div class="flex-horizontal">
                             <div class="flex-grow margin-top">
-                                <button type="button" class="btn btn-info pull-right margin-right" data-bind="click: $root.toggleAdvancedArea">
+                                <button type="button" class="btn btn-info" data-bind="click: $root.toggleAdvancedArea">
                                     <i class="icon-settings"></i>
                                     <span data-bind="text: $root.showAdvancedOptions() ? 'Close Advanced' : 'Advanced'"></span>
+                                </button>
+                            </div>
+                            <div>
+                                <button class="btn btn-default btn-info" title="Test the New connection string connection"
+                                        data-bind="click: $root.onTestConnectionRabbitMq, disable: !$root.connectionStringDefined() || $root.spinners.test(), css: { 'btn-spinner': $root.spinners.test }">
+                                    <i class="icon-rocket"></i>
+                                    <span>Test Connection</span>
                                 </button>
                             </div>
                         </div>
@@ -120,9 +127,25 @@
                             </div>
                         </div>
                     </div>
-                    <div class="panel-addon" data-bind="visible: rabbitMqEtlConnectionStringsDetails().length === 0 && !createNewConnectionString()">
-                        <div class="padding bg-warning text-warning small">
-                            <i class="icon-warning"></i>&nbsp;&nbsp;No connection strings have been defined yet
+                    <div>
+                        <div class="panel-addon" data-bind="with: testConnectionResult">
+                            <div class="padding bg-success small" data-bind="visible: Success">
+                                <div>Successfully connected to RabbitMQ server</div>
+                            </div>
+                            <div data-bind="if: !Success">
+                                <div class="padding bg-danger small">
+                                    <h2>Connection test failed!</h2>
+                                    <span data-bind="text: $root.fullErrorDetailsVisible() ? Error : $root.shortErrorText()"></span>
+                                    <div>
+                                        <a href="#" data-bind="click: $root.fullErrorDetailsVisible.toggle.bind($root.fullErrorDetailsVisible), text: $root.fullErrorDetailsVisible() ? 'hide details' : 'show details'"></a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="panel-addon" data-bind="visible: rabbitMqEtlConnectionStringsDetails().length === 0 && !createNewConnectionString()">
+                            <div class="padding bg-warning text-warning small">
+                                <i class="icon-warning"></i>&nbsp;&nbsp;No connection strings have been defined yet
+                            </div>
                         </div>
                     </div>
                 </div>

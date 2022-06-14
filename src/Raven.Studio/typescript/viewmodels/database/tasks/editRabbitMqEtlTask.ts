@@ -14,6 +14,7 @@ import connectionStringRabbitMqEtlModel = require("models/database/settings/conn
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import transformationScriptSyntax = require("viewmodels/database/tasks/transformationScriptSyntax");
 import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleMentorsCommand");
+import getConnectionStringInfoCommand = require("commands/database/settings/getConnectionStringInfoCommand");
 import getDocumentsMetadataByIDPrefixCommand = require("commands/database/documents/getDocumentsMetadataByIDPrefixCommand");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import jsonUtil = require("common/jsonUtil");
@@ -51,8 +52,6 @@ class editRabbitMqEtlTask extends viewModelBase {
     rabbitMqEtlConnectionStringsDetails = ko.observableArray<Raven.Client.Documents.Operations.ETL.Queue.QueueConnectionString>([]);
 
     possibleMentors = ko.observableArray<string>([]);
-
-    testConnectionResult = ko.observable<Raven.Server.Web.System.NodeConnectionTestResult>();
     
     spinners = {
         test: ko.observable<boolean>(false),
@@ -65,8 +64,12 @@ class editRabbitMqEtlTask extends viewModelBase {
     createNewConnectionString = ko.observable<boolean>(false);
     newConnectionString = ko.observable<connectionStringRabbitMqEtlModel>();
 
+    connectionStringDefined: KnockoutComputed<boolean>;
+    testConnectionResult = ko.observable<Raven.Server.Web.System.NodeConnectionTestResult>();
+    
     collections = collectionsTracker.default.collections;
 
+    // TODO: check if the below 2 are needed
     usingHttps = location.protocol === "https:";
     certificatesUrl = appUrl.forCertificates();
 
@@ -74,7 +77,7 @@ class editRabbitMqEtlTask extends viewModelBase {
         super();
         
         aceEditorBindingHandler.install();
-        this.bindToCurrentInstance("useConnectionString", "removeTransformationScript",
+        this.bindToCurrentInstance("useConnectionString", "onTestConnectionRabbitMq", "removeTransformationScript",
                                    "cancelEditedTransformation", "saveEditedTransformation", "syntaxHelp",
                                    "toggleTestArea", "toggleAdvancedArea", "setState");
     }
@@ -169,6 +172,15 @@ class editRabbitMqEtlTask extends viewModelBase {
         this.createNewConnectionString.subscribe(() => this.testConnectionResult(null));
         this.newConnectionString().rabbitMqConnectionString.subscribe(() => this.testConnectionResult(null));
 
+        this.connectionStringDefined = ko.pureComputed(() => {
+            const editedEtl = this.editedRabbitMqEtl();
+            if (this.createNewConnectionString()) {
+                return !!this.newConnectionString().rabbitMqConnectionString();
+            } else {
+                return !!editedEtl.connectionStringName();
+            }
+        });
+        
         this.enableTestArea.subscribe(testMode => {
             $("body").toggleClass('show-test', testMode);
         });
@@ -198,6 +210,35 @@ class editRabbitMqEtlTask extends viewModelBase {
         this.editedRabbitMqEtl().connectionStringName(connectionStringToUse);
     }
 
+    onTestConnectionRabbitMq() {
+        eventsCollector.default.reportEvent("rabbitmq-connection-string", "test-connection");
+        this.spinners.test(true);
+        this.testConnectionResult(null);
+
+        // New connection string
+        if (this.createNewConnectionString()) {
+            this.newConnectionString()
+                .testConnection(this.activeDatabase())
+                .done(result => this.testConnectionResult(result))
+                .always(() => {
+                    this.spinners.test(false);
+                    this.fullErrorDetailsVisible(false);
+                });
+        } else {
+            // Existing connection string
+            getConnectionStringInfoCommand.forKafkaEtl(this.activeDatabase(), this.editedRabbitMqEtl().connectionStringName())
+                .execute()
+                .done((result: Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult) => {
+                    new connectionStringRabbitMqEtlModel(result.QueueConnectionStrings[this.editedRabbitMqEtl().connectionStringName()], true, [])
+                        .testConnection(this.activeDatabase())
+                        .done((testResult) => this.testConnectionResult(testResult))
+                        .always(() => {
+                            this.spinners.test(false);
+                        });
+                });
+        }
+    }
+    
     saveRabbitMqEtl() {
         let hasAnyErrors = false;
         this.spinners.save(true);

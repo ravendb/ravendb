@@ -3,6 +3,7 @@ import database = require("models/resources/database");
 import connectionStringModel = require("models/database/settings/connectionStringModel");
 import saveConnectionStringCommand = require("commands/database/settings/saveConnectionStringCommand");
 import testKafkaServerConnectionCommand from "commands/database/cluster/testKafkaServerConnectionCommand";
+import accessManager = require("common/shell/accessManager");
 import jsonUtil = require("common/jsonUtil");
 
 class connectionOptionModel {
@@ -48,13 +49,13 @@ class connectionOptionModel {
 
 class connectionStringKafkaEtlModel extends connectionStringModel {
     
-    kafkaServerUrl = ko.observable<string>(); // TODO rename to bootstrapServers...
-    useRavenCertificate = ko.observable<boolean>(); // TODO show only if secure server...
+    bootstrapServers = ko.observable<string>();
+    useRavenCertificate = ko.observable<boolean>();
     connectionOptions = ko.observableArray<connectionOptionModel>();
+
+    isSecureServer = accessManager.default.secureServer();
     
     validationGroup: KnockoutValidationGroup;
-    hasTestError = ko.observable<boolean>(false)
-    
     dirtyFlag: () => DirtyFlag;
 
     spinners = {
@@ -68,7 +69,7 @@ class connectionStringKafkaEtlModel extends connectionStringModel {
         this.initValidation();
         
         this.dirtyFlag = new ko.DirtyFlag([
-            this.kafkaServerUrl,
+            this.bootstrapServers,
             this.useRavenCertificate,
             this.connectionStringName,
             this.connectionOptions
@@ -79,7 +80,7 @@ class connectionStringKafkaEtlModel extends connectionStringModel {
         super.update(dto);
         
         const kafkaSettings = dto.KafkaConnectionSettings;
-        this.kafkaServerUrl(kafkaSettings.BootstrapServers);
+        this.bootstrapServers(kafkaSettings.BootstrapServers);
         this.useRavenCertificate(kafkaSettings.UseRavenCertificate);
 
         _.forIn(kafkaSettings.ConnectionOptions, (value, key) => {
@@ -90,14 +91,45 @@ class connectionStringKafkaEtlModel extends connectionStringModel {
     initValidation() {
         super.initValidation();
         
-        this.kafkaServerUrl.extend({
-            required: true
+        this.bootstrapServers.extend({
+            required: true,
+            validation: [
+                {
+                    validator: () => this.validateNoProtocol(),
+                    message: "A bootstrap server cannot start with http/https"
+                },
+                {
+                    validator: () => this.validateFormat(),
+                    message: "Format should be: 'hostA:portNumber,hostB:portNumber,...'"
+                }
+            ]
         });
        
         this.validationGroup = ko.validatedObservable({
             connectionStringName: this.connectionStringName,
-            kafkaServerUrl: this.kafkaServerUrl
+            kafkaServerUrl: this.bootstrapServers
         });
+    }
+    
+    private validateNoProtocol(): boolean {
+        const serverList = this.bootstrapServers().split(",");
+        const serversWithProtocol = serverList.filter(x => x.startsWith("http") || x.startsWith('https'));
+        
+        return serversWithProtocol.length === 0;
+    }
+
+    private validateFormat(): boolean {
+        const serverList = this.bootstrapServers().split(",");
+        const hostPortRegexp = /^[a-zA-Z0-9\-_.]+:\d+$/;
+        let result = true;
+        
+        serverList.forEach(x => {
+            if (!hostPortRegexp.test(x)) {
+                result = false;
+            }
+        })
+        
+        return result;
     }
 
     static empty(): connectionStringKafkaEtlModel {
@@ -123,7 +155,7 @@ class connectionStringKafkaEtlModel extends connectionStringModel {
             Name: this.connectionStringName(),
             
             KafkaConnectionSettings: {
-                BootstrapServers: this.kafkaServerUrl(),
+                BootstrapServers: this.bootstrapServers().trim(),
                 UseRavenCertificate: this.useRavenCertificate(),
                 ConnectionOptions: this.connectionOptionsToDto()
             },
@@ -156,13 +188,8 @@ class connectionStringKafkaEtlModel extends connectionStringModel {
     }
 
     testConnection(db: database): JQueryPromise<Raven.Server.Web.System.NodeConnectionTestResult> {
-        return new testKafkaServerConnectionCommand(db, this.kafkaServerUrl(), this.useRavenCertificate(), this.connectionOptionsToDto())
-            .execute()
-            .done((result) => {
-                if (result.Error) {
-                    this.hasTestError(true); // TODO handle in UI
-                }
-            });
+        return new testKafkaServerConnectionCommand(db, this.bootstrapServers(), this.useRavenCertificate(), this.connectionOptionsToDto())
+            .execute();
     }
 }
 

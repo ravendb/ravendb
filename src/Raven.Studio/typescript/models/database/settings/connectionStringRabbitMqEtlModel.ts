@@ -2,6 +2,7 @@
 import database = require("models/resources/database");
 import connectionStringModel = require("models/database/settings/connectionStringModel");
 import saveConnectionStringCommand = require("commands/database/settings/saveConnectionStringCommand");
+import testRabbitMqServerConnectionCommand from "commands/database/cluster/testRabbitMqServerConnectionCommand";
 import jsonUtil = require("common/jsonUtil");
 
 class connectionStringRabbitMqEtlModel extends connectionStringModel {
@@ -73,6 +74,11 @@ class connectionStringRabbitMqEtlModel extends connectionStringModel {
 
     saveConnectionString(db: database) : JQueryPromise<void> {
         return new saveConnectionStringCommand(db, this)
+            .execute();
+    }
+
+    testConnection(db: database): JQueryPromise<Raven.Server.Web.System.NodeConnectionTestResult> {
+        return new testRabbitMqServerConnectionCommand(db, this.rabbitMqConnectionString())
             .execute();
     }
 }
