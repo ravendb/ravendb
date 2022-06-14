@@ -272,22 +272,6 @@ public static class CoraxQueryBuilder
                         highlightingTerms.TryAdd(fieldName, highlightingTerm);
                     }
 
-                    if (operation is UnaryMatchOperation.Equals)
-                    {
-                        var valueAsString = QueryBuilderHelper.CoraxGetValueAsString(value);
-                        var rawMatch = indexSearcher.TermQuery(fieldName, valueAsString, fieldId);
-                        if (highlightingTerm is not null)
-                            highlightingTerm.Values = valueAsString;
-
-                        // This is TermMatch case
-                        if (scoreFunction is not NullScoreFunction)
-                            return indexSearcher.Boost(rawMatch, scoreFunction);
-
-
-                        return rawMatch;
-                    }
-
-
                     var match = valueType switch
                     {
                         ValueTokenType.Double => new CoraxBooleanItem(indexSearcher, fieldName.Value, fieldId, value, operation, scoreFunction),
