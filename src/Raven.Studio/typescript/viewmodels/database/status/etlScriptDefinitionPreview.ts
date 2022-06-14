@@ -18,9 +18,7 @@ class etlScriptDefinitionPreview extends dialogViewModelBase {
         loading: ko.observable<boolean>(true)
     };
     
-    // if we come here from tasks-list-view we know studio-etl-type
-    // if we come from stats-view we only know server-etl-type
-    constructor(etlType: Raven.Client.Documents.Operations.ETL.EtlType | StudioEtlType,
+    constructor(studioEtlType: StudioEtlType,
                 transformationName: string,
                 task: JQueryPromise<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtlDetails |
                                     Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtlDetails |
@@ -37,7 +35,7 @@ class etlScriptDefinitionPreview extends dialogViewModelBase {
                 
                 this.taskName(result.TaskName);
                 this.transformationName(matchedTransformation.Name);
-                this.etlType(etlType);
+                this.etlType(studioEtlType);
                 this.transformation(matchedTransformation);
                 
                 if (matchedTransformation.Script) {

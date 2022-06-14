@@ -27,22 +27,6 @@ abstract class ongoingTaskModel {
     });
     
     abstract get studioTaskType(): StudioTaskType;
-
-    static getStudioTaskType(taskListItem: Raven.Client.Documents.Operations.OngoingTasks.OngoingTask): StudioTaskType {
-        if (taskListItem.TaskType === "QueueEtl") {
-            const task = (taskListItem as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtlListView);
-
-            switch (task.BrokerType) {
-                case "Kafka":
-                    return "KafkaQueueEtl";
-                case "RabbitMq":
-                    return "RabbitQueueEtl";
-                default:
-                    genUtils.assertUnreachable(task.BrokerType, "Unknown BrokerType: " + task.BrokerType);
-            }
-        }
-        return taskListItem.TaskType;
-    }
     
     static formatStudioTaskType(taskType: StudioTaskType): string {
         switch (taskType) {
@@ -69,7 +53,23 @@ abstract class ongoingTaskModel {
         }
     }
 
-    static getServerEtlType(studioEtlType: StudioEtlType): Raven.Client.Documents.Operations.ETL.EtlType {
+    static getStudioTaskTypeFromServerType(taskListItem: Raven.Client.Documents.Operations.OngoingTasks.OngoingTask): StudioTaskType {
+        if (taskListItem.TaskType === "QueueEtl") {
+            const task = (taskListItem as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtlListView);
+
+            switch (task.BrokerType) {
+                case "Kafka":
+                    return "KafkaQueueEtl";
+                case "RabbitMq":
+                    return "RabbitQueueEtl";
+                default:
+                    genUtils.assertUnreachable(task.BrokerType, "Unknown BrokerType: " + task.BrokerType);
+            }
+        }
+        return taskListItem.TaskType;
+    }
+
+    static getServerEtlTypeFromStudioType(studioEtlType: StudioEtlType): Raven.Client.Documents.Operations.ETL.EtlType {
         if (studioEtlType === "Kafka" || studioEtlType === "RabbitMQ") {
             return "Queue";
         }
@@ -77,14 +77,43 @@ abstract class ongoingTaskModel {
         return studioEtlType;
     }
     
+    static getStudioEtlTypeFromServerType(serverEtlType: Raven.Client.Documents.Operations.ETL.EtlType, serverEtlSubType: string): StudioEtlType {
+        switch (serverEtlType) {
+            case "Raven": return "Raven";
+            case "Sql": return "Sql";
+            case "Olap": return "Olap";
+            case "ElasticSearch": return "ElasticSearch";
+            case "Queue": {
+                switch (serverEtlSubType) {
+                    case "Kafka": return "Kafka";
+                    case "RabbitMq": return "RabbitMQ";
+                    default: genUtils.assertUnreachable(serverEtlSubType as never, "Unknown serverEtlSubType: " + serverEtlType);
+                }
+            } break;
+            
+            default: genUtils.assertUnreachable(serverEtlType, "Unknown serverEtlType: " + serverEtlType);
+        }
+        
+        return null;
+    }
+
     static getStudioEtlTypeFromTaskType(studioTaskType: StudioTaskType): StudioEtlType | null {
         switch (studioTaskType) {
-            case "RavenEtl": return "Raven"; break;
-            case "SqlEtl": return "Sql"; break;
-            case "OlapEtl": return "Olap"; break;
-            case "ElasticSearchEtl": return "ElasticSearch"; break;
-            case "KafkaQueueEtl": return "Kafka"; break;
-            case "RabbitQueueEtl": return "RabbitMQ"; break;
+            case "RavenEtl": return "Raven";
+            case "SqlEtl": return "Sql";
+            case "OlapEtl": return "Olap";
+            case "ElasticSearchEtl": return "ElasticSearch";
+            case "KafkaQueueEtl": return "Kafka";
+            case "RabbitQueueEtl": return "RabbitMQ";
+
+            case "PullReplicationAsSink":
+            case "PullReplicationAsHub":
+            case "Replication":
+            case "Backup":
+            case "Subscription":
+                return null;
+
+            default: genUtils.assertUnreachable(studioTaskType, "Unknown studioTaskType: " + studioTaskType);
         }
         
         return null;

@@ -13,7 +13,7 @@ class etlScriptDefinitionCache {
         this.db = db;
     }
 
-    showDefinitionFor(etlType: Raven.Client.Documents.Operations.ETL.EtlType, taskId: number, transformationName: string, studioEtlType?: StudioEtlType) {
+    showDefinitionFor(studioEtlType: StudioEtlType, taskId: number, transformationName: string) {
         let cachedItem = this.taskInfoCache.get(taskId);
 
         if (!cachedItem || cachedItem.task.state() === "rejected") {
@@ -24,7 +24,7 @@ class etlScriptDefinitionCache {
                                                    Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtlDetails |
                                                    Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtlDetails |
                                                    Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtlDetails>;
-            switch (etlType) {
+            switch (studioEtlType) {
                 case "Raven":
                     command = getOngoingTaskInfoCommand.forRavenEtl(this.db, taskId);
                     break;
@@ -37,22 +37,23 @@ class etlScriptDefinitionCache {
                 case "ElasticSearch":
                     command = getOngoingTaskInfoCommand.forElasticSearchEtl(this.db, taskId);
                     break;
-                case "Queue":
+                case "Kafka":
+                case "RabbitMQ":
                     command = getOngoingTaskInfoCommand.forQueueEtl(this.db, taskId);
                     break;
                 default: 
-                    genUtils.assertUnreachable(etlType, "Unknown EtlType: " + etlType);
+                    genUtils.assertUnreachable(studioEtlType, "Unknown studioEtlType: " + studioEtlType);
             }
 
             cachedItem = {
-                etlType: etlType,
+                etlType: studioEtlType,
                 task: command.execute()
             };
 
             this.taskInfoCache.set(taskId, cachedItem);
         }
 
-        const dialog = new etlScriptDefinitionPreview(studioEtlType || cachedItem.etlType, transformationName, cachedItem.task);
+        const dialog = new etlScriptDefinitionPreview(studioEtlType, transformationName, cachedItem.task);
         app.showBootstrapDialog(dialog);
     }
 }

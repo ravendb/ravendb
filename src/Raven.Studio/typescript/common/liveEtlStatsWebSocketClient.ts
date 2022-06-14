@@ -4,6 +4,7 @@ import database = require("models/resources/database");
 import d3 = require("d3");
 import abstractWebSocketClient = require("common/abstractWebSocketClient");
 import endpoints = require("endpoints");
+import ongoingTaskModel from "models/database/tasks/ongoingTaskModel";
 
 class liveEtlStatsWebSocketClient extends abstractWebSocketClient<resultsDto<Raven.Server.Documents.ETL.Stats.EtlTaskPerformanceStats>> {
 
@@ -111,7 +112,8 @@ class liveEtlStatsWebSocketClient extends abstractWebSocketClient<resultsDto<Rav
                 });
                 
                 perTaskStatsFromEndpoint.Performance.forEach(perf => {
-                    liveEtlStatsWebSocketClient.fillCache(perf, etlStatsFromEndpoint.EtlType);
+                    liveEtlStatsWebSocketClient.fillCache(perf,
+                        ongoingTaskModel.getStudioEtlTypeFromServerType(etlStatsFromEndpoint.EtlType, etlStatsFromEndpoint.EtlSubType));
 
                     if (this.dateCutOff && this.dateCutOff.getTime() >= (perf as EtlPerformanceBaseWithCache).StartedAsDate.getTime()) {
                         return;
@@ -134,7 +136,7 @@ class liveEtlStatsWebSocketClient extends abstractWebSocketClient<resultsDto<Rav
         return hasAnyChange;
     }
 
-    static fillCache(perf: Raven.Server.Documents.ETL.Stats.EtlPerformanceStats, type: Raven.Client.Documents.Operations.ETL.EtlType) {
+    static fillCache(perf: Raven.Server.Documents.ETL.Stats.EtlPerformanceStats, type: StudioEtlType) {
         const withCache = perf as EtlPerformanceBaseWithCache;
         withCache.CompletedAsDate = perf.Completed ? liveEtlStatsWebSocketClient.isoParser.parse(perf.Completed) : undefined;
         withCache.StartedAsDate = liveEtlStatsWebSocketClient.isoParser.parse(perf.Started);

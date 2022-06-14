@@ -384,7 +384,7 @@ class ongoingTasks extends viewModelBase {
 
         const toDeleteIds = _.without(oldTaskIds, ...newTaskIds); 
         
-        const groupedTasks = _.groupBy(result.OngoingTasksList, x => ongoingTaskModel.getStudioTaskType(x));
+        const groupedTasks = _.groupBy(result.OngoingTasksList, x => ongoingTaskModel.getStudioTaskTypeFromServerType(x));
 
         this.mergeTasks(this.replicationTasks, 
             groupedTasks["Replication" as StudioTaskType],
@@ -600,20 +600,8 @@ class ongoingTasks extends viewModelBase {
     }
 
     showItemPreview(item: ongoingTaskListModel, scriptName: string) {
-        let serverEtlType: Raven.Client.Documents.Operations.ETL.EtlType;
         let studioTaskType = item.studioTaskType;
-        let studioEtlType: StudioEtlType;
-
-        switch (studioTaskType) {
-            case "RavenEtl": serverEtlType = "Raven"; break;
-            case "SqlEtl": serverEtlType = "Sql"; break;
-            case "OlapEtl": serverEtlType = "Olap"; break;
-            case "ElasticSearchEtl": serverEtlType = "ElasticSearch"; break;
-            case "KafkaQueueEtl": serverEtlType = "Queue"; break;
-            case "RabbitQueueEtl": serverEtlType = "Queue"; break;
-        }
-        
-        this.definitionsCache.showDefinitionFor(serverEtlType, item.taskId, scriptName, ongoingTaskModel.getStudioEtlTypeFromTaskType(studioTaskType));
+        this.definitionsCache.showDefinitionFor(ongoingTaskModel.getStudioEtlTypeFromTaskType(studioTaskType), item.taskId, scriptName);
     }
     
     getTaskNameForUI(taskType: StudioTaskType) {

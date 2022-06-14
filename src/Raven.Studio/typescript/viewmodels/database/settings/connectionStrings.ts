@@ -199,7 +199,7 @@ class connectionStrings extends viewModelBase {
         for (let i = 0; i < tasksThatUseConnectionStrings.length; i++) {
             const task = tasksThatUseConnectionStrings[i];
             
-            const studioTaskType = ongoingTaskModel.getStudioTaskType(task);
+            const studioTaskType = ongoingTaskModel.getStudioTaskTypeFromServerType(task);
             
             let taskData = { TaskId: task.TaskId,
                              TaskName: task.TaskName,
@@ -327,7 +327,7 @@ class connectionStrings extends viewModelBase {
     }
 
     private deleteConnectionString(connectionStringType: StudioEtlType, connectionStringName: string) {
-        new deleteConnectionStringCommand(this.activeDatabase(), connectionStringType, connectionStringName)
+        new deleteConnectionStringCommand(this.activeDatabase(), ongoingTaskModel.getServerEtlTypeFromStudioType(connectionStringType), connectionStringName)
             .execute()
             .done(() => {
                 this.getAllConnectionStrings();

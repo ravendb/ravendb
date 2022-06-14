@@ -81,7 +81,7 @@ class taskNode extends layoutable {
     }
 
     updateWith(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTask, responsibleNode: databaseNode) {
-        this.type = ongoingTaskModel.getStudioTaskType(dto);
+        this.type = ongoingTaskModel.getStudioTaskTypeFromServerType(dto);
         
         this.uniqueId = databaseGroupGraph.getUniqueTaskId(dto);
         this.taskId = dto.TaskId;
