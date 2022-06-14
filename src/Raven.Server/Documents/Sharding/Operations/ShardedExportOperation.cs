@@ -1,71 +1,75 @@
 ﻿using System;
-using System.IO;
 using System.IO.Compression;
 using System.Net.Http;
 using System.Threading.Tasks;
-using System.Web;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
-using Raven.Server.Documents.Handlers.Processors.Smuggler;
-using Raven.Server.Documents.Sharding.Commands;
-using Raven.Server.Documents.Sharding.Handlers;
+using Raven.Client.Json;
 using Raven.Server.Documents.Sharding.Handlers.Processors.Smuggler;
 using Raven.Server.Smuggler.Documents.Data;
-using Raven.Server.Web;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Operations
 {
     public readonly struct ShardedExportOperation : IShardedOperation<BlittableJsonReaderObject>
     {
-        private readonly ShardedDatabaseRequestHandler _handler;
         private readonly DatabaseSmugglerOptionsServerSide _options;
         private readonly AsyncBlittableJsonTextWriter _writer;
         private readonly long _operationId;
 
-        public ShardedExportOperation(ShardedDatabaseRequestHandler handler, long operationId, DatabaseSmugglerOptionsServerSide options, AsyncBlittableJsonTextWriter writer)
+        public ShardedExportOperation(HttpRequest httpRequest, DatabaseSmugglerOptionsServerSide options, AsyncBlittableJsonTextWriter writer, long operationId)
         {
-            _handler = handler;
+            HttpRequest = httpRequest;
             _options = options;
             _writer = writer;
             _operationId = operationId;
         }
-        public RavenCommand<BlittableJsonReaderObject> CreateCommandForShard(int shardNumber) => new ShardedExportCommand(_handler, _operationId, _options, _writer);
 
-        public HttpRequest HttpRequest => _handler.HttpContext.Request;
+        public RavenCommand<BlittableJsonReaderObject> CreateCommandForShard(int shardNumber) => new ShardedExportCommand(_options, _writer, _operationId);
+
+        public HttpRequest HttpRequest { get; }
+
         public BlittableJsonReaderObject Combine(Memory<BlittableJsonReaderObject> results) => null;
 
-        private class ShardedExportCommand : ShardedStreamCommand
+        private class ShardedExportCommand : RavenCommand<BlittableJsonReaderObject>
         {
             private readonly long _operationId;
             private readonly DatabaseSmugglerOptionsServerSide _options;
             private readonly AsyncBlittableJsonTextWriter _writer;
 
-            public ShardedExportCommand(ShardedDatabaseRequestHandler handler, long operationId, DatabaseSmugglerOptionsServerSide options, AsyncBlittableJsonTextWriter writer) : 
-                base(handler, content: null)
+            public ShardedExportCommand(DatabaseSmugglerOptionsServerSide options, AsyncBlittableJsonTextWriter writer, long operationId)
             {
                 _operationId = operationId;
                 _options = options;
                 _writer = writer;
-
-                var queryString = HttpUtility.ParseQueryString(handler.HttpContext.Request.QueryString.Value);
-                queryString["operationId"] = _operationId.ToString();
-                Url = handler.BaseShardUrl + "?" + queryString;
             }
 
-            public override async Task HandleStreamResponse(Stream stream)
-            {
-                await using (var gzipStream = new GZipStream(ShardedSmugglerHandlerProcessorForExport.GetInputStream(stream, _options), CompressionMode.Decompress))
-                {
-                    await _writer.WriteStreamAsync(gzipStream);
-                }
-            } 
+            public override bool IsReadRequest => false;
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                Content = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_options, ctx);
-                return base.CreateRequest(ctx, node, out url);
+                url = $"{node.Url}/databases/{node.Database}/smuggler/export?operationId={_operationId}";
+
+                return new HttpRequestMessage
+                {
+                    Method = HttpMethod.Post,
+                    Content = new BlittableJsonContent(async stream =>
+                    {
+                        await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_options, ctx)).ConfigureAwait(false);
+                    })
+                };
+            }
+
+            public override async Task<ResponseDisposeHandling> ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
+            {
+                await using (var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
+                await using (var gzipStream = new GZipStream(ShardedSmugglerHandlerProcessorForExport.GetInputStream(stream, _options), CompressionMode.Decompress))
+                {
+                    await _writer.WriteStreamAsync(gzipStream).ConfigureAwait(false);
+                }
+
+                return ResponseDisposeHandling.Automatic;
             }
         }
     }

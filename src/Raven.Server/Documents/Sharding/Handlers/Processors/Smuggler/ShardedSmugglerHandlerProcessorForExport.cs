@@ -20,7 +20,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Smuggler
 
         protected override async ValueTask ExportAsync(JsonOperationContext context, long? operationId)
         {
-            
+
             operationId ??= RequestHandler.DatabaseContext.Operations.GetNextOperationId();
             await Export(context, RequestHandler.DatabaseContext.DatabaseName, ExportShardedDatabaseInternalAsync, RequestHandler.DatabaseContext.Operations, operationId.Value);
         }
@@ -44,7 +44,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Smuggler
                 writer.WritePropertyName("BuildVersion");
                 writer.WriteInteger(ServerVersion.Build);
 
-                var exportOperation = new ShardedExportOperation(RequestHandler, operationId, options, writer);
+                var exportOperation = new ShardedExportOperation(RequestHandler.HttpContext.Request, options, writer, operationId);
                 // we execute one by one so requests will not timeout since the export can take long
                 await RequestHandler.ShardExecutor.ExecuteOneByOneForAllAsync(exportOperation);
 
