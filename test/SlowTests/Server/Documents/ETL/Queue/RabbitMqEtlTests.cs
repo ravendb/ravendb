@@ -73,6 +73,52 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
             etlDone.Reset();
         }
     }
+    
+    [RequiresRabbitMqFact]
+    public void TestAreHeadersPresent()
+    {
+        using (var store = GetDocumentStore())
+        {
+            var config = SetupQueueEtlToRabbitMq(store, DefaultScript, DefaultCollections);
+            var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Order
+                {
+                    Id = "orders/1-A",
+                    OrderLines = new List<OrderLine>
+                    {
+                        new OrderLine { Cost = 3, Product = "Milk", Quantity = 2 },
+                        new OrderLine { Cost = 4, Product = "Bear", Quantity = 1 },
+                    }
+                });
+                session.SaveChanges();
+            }
+
+            AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+
+            var channel = CreateRabbitMqConsumer();
+            var consumer = new EventingBasicConsumer(channel);
+
+            consumer.Received += (model, ea) =>
+            {
+                var headers = ea.BasicProperties.Headers;
+
+                Assert.NotNull(headers.ContainsKey("cloudevents:id"));
+                Assert.NotNull(headers.ContainsKey("cloudevents:specversion"));
+                Assert.NotNull(headers.ContainsKey("cloudevents:type"));
+                Assert.NotNull(headers.ContainsKey("cloudevents:partitionkey"));
+                Assert.NotNull(headers.ContainsKey("cloudevents:source"));
+            };
+
+            channel.BasicConsume(queue: DefaultExchanges.First().Name,
+                autoAck: true,
+                consumer: consumer);
+
+            etlDone.Reset();
+        }
+    }
 
     [RequiresRabbitMqFact]
     public void SimpleScriptWithManyDocuments()

@@ -64,6 +64,47 @@ public class KafkaEtlTests : KafkaEtlTestBase
             etlDone.Reset();
         }
     }
+    
+    [RequiresKafkaFact]
+    public void TestAreHeadersPresent()
+    {
+        using (var store = GetDocumentStore())
+        {
+            var config = SetupQueueEtlToKafka(store, DefaultScript, DefaultCollections);
+            var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Order
+                {
+                    Id = "orders/1-A",
+                    OrderLines = new List<OrderLine>
+                    {
+                        new OrderLine { Cost = 3, Product = "Milk", Quantity = 2 },
+                        new OrderLine { Cost = 4, Product = "Bear", Quantity = 1 },
+                    }
+                });
+                session.SaveChanges();
+            }
+
+            AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+
+            using IConsumer<string, byte[]> consumer = CreateKafkaConsumer(DefaultTopics.Select(x => x.Name));
+
+            var consumeResult = consumer.Consume();
+
+            var headers = consumeResult.Message.Headers;
+
+            Assert.NotNull(headers.SingleOrDefault(x => x.Key == "ce_id"));
+            Assert.NotNull(headers.SingleOrDefault(x => x.Key == "ce_type"));
+            Assert.NotNull(headers.SingleOrDefault(x => x.Key == "ce_source"));
+            Assert.NotNull(headers.SingleOrDefault(x => x.Key == "ce_specversion"));
+            Assert.NotNull(headers.SingleOrDefault(x => x.Key == "content-type"));
+
+            consumer.Close();
+            etlDone.Reset();
+        }
+    }
 
     [RequiresKafkaFact]
     public void SimpleScriptWithManyDocuments()
