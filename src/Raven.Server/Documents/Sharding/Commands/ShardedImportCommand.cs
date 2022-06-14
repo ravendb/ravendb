@@ -43,50 +43,50 @@ namespace Raven.Server.Documents.Sharding.Commands
         public BlittableJsonReaderObject Combine(Memory<BlittableJsonReaderObject> results) => null;
 
         public RavenCommand<BlittableJsonReaderObject> CreateCommandForShard(int shardNumber) => new ShardedImportCommand(_options, _holders[shardNumber].OutStream, _operationId);
-    }
 
-    internal class ShardedImportCommand : RavenCommand<BlittableJsonReaderObject>
-    {
-        private readonly StreamExposerContent _stream;
-        private readonly long _operationId;
-        private readonly DatabaseSmugglerOptionsServerSide _options;
-
-        public ShardedImportCommand(DatabaseSmugglerOptionsServerSide options, StreamExposerContent stream, long operationId)
+        private class ShardedImportCommand : RavenCommand<BlittableJsonReaderObject>
         {
-            _stream = stream;
-            _operationId = operationId;
-            _options = options;
-        }
+            private readonly StreamExposerContent _stream;
+            private readonly long _operationId;
+            private readonly DatabaseSmugglerOptionsServerSide _options;
 
-        public override bool IsReadRequest => false;
-
-        public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
-        {
-            url = $"{node.Url}/databases/{node.Database}/smuggler/import?operationId={_operationId}";
-
-            return new HttpRequestMessage
+            public ShardedImportCommand(DatabaseSmugglerOptionsServerSide options, StreamExposerContent stream, long operationId)
             {
-                Headers =
-                {
-                    TransferEncodingChunked = true
-                },
-                Method = HttpMethod.Post,
-                Content = new MultipartFormDataContent
-                {
-                    {
-                        new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_options, ctx))),
-                        Constants.Smuggler.ImportOptions
-                    },
-                    {
-                        _stream, "file", "name"
-                    }
-                }
-            };
-        }
+                _stream = stream;
+                _operationId = operationId;
+                _options = options;
+            }
 
-        public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
-        {
-            Result = response;
+            public override bool IsReadRequest => false;
+
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
+            {
+                url = $"{node.Url}/databases/{node.Database}/smuggler/import?operationId={_operationId}";
+
+                return new HttpRequestMessage
+                {
+                    Headers =
+                    {
+                        TransferEncodingChunked = true
+                    },
+                    Method = HttpMethod.Post,
+                    Content = new MultipartFormDataContent
+                    {
+                        {
+                            new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_options, ctx))),
+                            Constants.Smuggler.ImportOptions
+                        },
+                        {
+                            _stream, "file", "name"
+                        }
+                    }
+                };
+            }
+
+            public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
+            {
+                Result = response;
+            }
         }
     }
 }
