@@ -170,7 +170,7 @@
     <PackageReference Include="NCrontab.Advanced" Version="1.3.28" />
     <PackageReference Include="NEST" Version="7.17.2" />
     <PackageReference Include="Npgsql" Version="5.0.13" />
-    <PackageReference Include="NuGet.Commands" Version="6.2.0" Alias="NGC" />
+    <PackageReference Include="NuGet.Commands" Version="6.2.1" Alias="NGC" />
     <PackageReference Include="NuGet.ProjectModel" Version="6.2.0" />
     <PackageReference Include="NuGet.Resolver" Version="6.2.0" />
     <PackageReference Include="NuGet.PackageManagement" Version="6.2.0" />
