@@ -26,7 +26,7 @@ namespace Raven.Server.Web.System
         {
             // SetupCORSHeaders is called in generic handler - no need to call it here 
             
-            HttpContext.Response.Headers.Remove("Content-Type");
+            HttpContext.Response.Headers.Remove(Constants.Headers.ContentType);
             
             return Task.CompletedTask;
         }

@@ -174,7 +174,7 @@ namespace Raven.Server.Web.System
             }
 
             var error = GetStringQueryString("err");
-            HttpContext.Response.Headers["Content-Type"] = "text/html; charset=utf-8";
+            HttpContext.Response.Headers[Constants.Headers.ContentType] = "text/html; charset=utf-8";
             SetupSecurityHeaders();
             return HttpContext.Response.WriteAsync(HtmlUtil.RenderStudioAuthErrorPage(error));
         }
@@ -330,7 +330,7 @@ namespace Raven.Server.Web.System
                 "Raven.Server.exe).";
 
             HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-            HttpContext.Response.Headers["Content-Type"] = "text/plain; charset=utf-8";
+            HttpContext.Response.Headers[Constants.Headers.ContentType] = "text/plain; charset=utf-8";
 
             await HttpContext.Response.WriteAsync(message);
         }

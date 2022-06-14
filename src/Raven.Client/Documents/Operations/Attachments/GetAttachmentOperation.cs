@@ -95,7 +95,7 @@ namespace Raven.Client.Documents.Operations.Attachments
 
             public override async Task<ResponseDisposeHandling> ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
             {
-                var contentType = response.Content.Headers.TryGetValues("Content-Type", out IEnumerable<string> contentTypeVale) ? contentTypeVale.First() : null;
+                var contentType = response.Content.Headers.TryGetValues(Constants.Headers.ContentType, out IEnumerable<string> contentTypeVale) ? contentTypeVale.First() : null;
                 var changeVector = response.GetEtagHeader();
                 var hash = response.Headers.TryGetValues("Attachment-Hash", out IEnumerable<string> hashVal) ? hashVal.First() : null;
                 long size = 0;

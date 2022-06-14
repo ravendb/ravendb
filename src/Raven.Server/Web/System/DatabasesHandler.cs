@@ -323,7 +323,7 @@ namespace Raven.Server.Web.System
                     {
                         if (dbRecord == null)
                         {
-                            HttpContext.Response.Headers.Remove("Content-Type");
+                            HttpContext.Response.Headers.Remove(Constants.Headers.ContentType);
                             HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                             HttpContext.Response.Headers["Database-Missing"] = dbName;
                             return;

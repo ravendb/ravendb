@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client;
 using Raven.Client.Json;
 using Sparrow.Json;
 
@@ -51,7 +52,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
         {
             numberOfResults = 0;
             totalDocumentsSizeInBytes = 0;
-            HttpContext.Response.Headers["Content-Type"] = "binary/blittable-json";
+            HttpContext.Response.Headers[Constants.Headers.ContentType] = "binary/blittable-json";
 
             using (var streamBuffer = new UnmanagedStreamBuffer(context, RequestHandler.ResponseBodyStream()))
             using (var writer = new ManualBlittableJsonDocumentBuilder<UnmanagedStreamBuffer>(context,

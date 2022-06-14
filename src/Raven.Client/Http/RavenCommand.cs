@@ -204,7 +204,7 @@ namespace Raven.Client.Http
 #endif
 
             if (changeVector != null)
-                request.Headers.TryAddWithoutValidation("If-Match", $"\"{changeVector}\"");
+                request.Headers.TryAddWithoutValidation(Constants.Headers.IfMatch, $"\"{changeVector}\"");
         }
 
         public virtual void OnResponseFailure(HttpResponseMessage response)

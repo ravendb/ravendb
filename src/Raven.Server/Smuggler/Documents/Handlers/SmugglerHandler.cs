@@ -511,7 +511,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                                             continue;
 
                                         BlittableJsonReaderObject blittableJson;
-                                        if (section.Headers.ContainsKey("Content-Encoding") && section.Headers["Content-Encoding"] == "gzip")
+                                        if (section.Headers.ContainsKey(Constants.Headers.ContentEncoding) && section.Headers[Constants.Headers.ContentEncoding] == "gzip")
                                         {
                                             await using (var gzipStream = new GZipStream(section.Body, CompressionMode.Decompress))
                                             {
@@ -554,7 +554,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 
                                         var options = new DatabaseSmugglerOptionsServerSide();
 
-                                        if (section.Headers.ContainsKey("Content-Encoding") && section.Headers["Content-Encoding"] == "gzip")
+                                        if (section.Headers.ContainsKey(Constants.Headers.ContentEncoding) && section.Headers[Constants.Headers.ContentEncoding] == "gzip")
                                         {
                                             await using (var gzipStream = new GZipStream(section.Body, CompressionMode.Decompress))
                                             {

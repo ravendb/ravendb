@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http.Features.Authentication;
+using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Util;
@@ -100,8 +101,8 @@ namespace Raven.Server.Documents.Handlers.Processors.Smuggler
             }
 
             var contentDisposition = "attachment; filename=" + Uri.EscapeDataString(fileName) + ".ravendbdump";
-            HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
-            HttpContext.Response.Headers["Content-Type"] = "application/octet-stream";
+            HttpContext.Response.Headers[Constants.Headers.ContentDisposition] = contentDisposition;
+            HttpContext.Response.Headers[Constants.Headers.ContentType] = "application/octet-stream";
             ApplyBackwardCompatibility(options);
             var token = RequestHandler.CreateOperationToken();
 

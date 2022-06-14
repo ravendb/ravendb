@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Documents;
@@ -17,7 +18,7 @@ internal abstract class AbstractDocumentHandlerProcessorForDelete<TRequestHandle
     public override async ValueTask ExecuteAsync()
     {
         var id = RequestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
-        var changeVector = RequestHandler.GetStringFromHeaders("If-Match");
+        var changeVector = RequestHandler.GetStringFromHeaders(Constants.Headers.IfMatch);
 
         await HandleDeleteDocumentAsync(id, changeVector);
     }

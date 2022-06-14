@@ -3,6 +3,7 @@ using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Context;
@@ -25,7 +26,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
                 revisionsStorage.GetLatestRevisionsBinEntry(context, start, out var actualChangeVector);
                 if (actualChangeVector != null)
                 {
-                    if (RequestHandler.GetStringFromHeaders("If-None-Match") == actualChangeVector)
+                    if (RequestHandler.GetStringFromHeaders(Constants.Headers.IfNoneMatch) == actualChangeVector)
                     {
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
                         return;

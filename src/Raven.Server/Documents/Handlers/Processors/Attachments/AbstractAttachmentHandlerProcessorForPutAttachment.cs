@@ -2,6 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Attachments
@@ -25,7 +26,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
                 var name = RequestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
                 var contentType = RequestHandler.GetStringQueryString("contentType", false) ?? "";
                 var requestBodyStream = RequestHandler.RequestBodyStream();
-                var changeVector = RequestHandler.GetStringFromHeaders("If-Match");
+                var changeVector = RequestHandler.GetStringFromHeaders(Constants.Headers.IfMatch);
 
                 await PutAttachmentsAsync(context, id, name, requestBodyStream, contentType, changeVector, token.Token);
             }

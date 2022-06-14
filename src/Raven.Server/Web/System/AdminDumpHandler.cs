@@ -5,6 +5,7 @@ using System.IO.Compression;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
+using Raven.Client;
 using Raven.Client.Properties;
 using Raven.Server.Rachis;
 using Raven.Server.Routing;
@@ -38,7 +39,7 @@ namespace Raven.Server.Web.System
                 await using (var file = File.OpenRead(path))
                 await using (var gzipStream = new GZipStream(ResponseBodyStream(), CompressionMode.Compress))
                 {
-                    HttpContext.Response.Headers["Content-Disposition"] = "attachment; filename=" + Uri.EscapeDataString(fileNames.GzipFileName);
+                    HttpContext.Response.Headers[Constants.Headers.ContentDisposition] = "attachment; filename=" + Uri.EscapeDataString(fileNames.GzipFileName);
 
                     await file.CopyToAsync(gzipStream);
                 }
@@ -65,7 +66,7 @@ namespace Raven.Server.Web.System
                 await using (var file = File.OpenRead(path))
                 await using (var gzipStream = new GZipStream(ResponseBodyStream(), CompressionMode.Compress))
                 {
-                    HttpContext.Response.Headers["Content-Disposition"] = "attachment; filename=" + Uri.EscapeDataString(fileNames.GzipFileName);
+                    HttpContext.Response.Headers[Constants.Headers.ContentDisposition] = "attachment; filename=" + Uri.EscapeDataString(fileNames.GzipFileName);
 
                     await file.CopyToAsync(gzipStream);
                 }
