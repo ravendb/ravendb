@@ -257,8 +257,8 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
             var result1 = store.Maintenance.Send(new PutConnectionStringOperation<QueueConnectionString>(new QueueConnectionString
             {
                 Name = "simulate",
-                BrokerType = QueueBroker.Kafka,
-                KafkaConnectionSettings = new KafkaConnectionSettings() { BootstrapServers = "amqp://guest:guest@localhost:5672/" }
+                BrokerType = QueueBroker.RabbitMq,
+                RabbitMqConnectionSettings = new RabbitMqConnectionSettings() { ConnectionString = "amqp://guest:guest@localhost:5672/" }
             }));
             Assert.NotNull(result1.RaftCommandIndex);
 

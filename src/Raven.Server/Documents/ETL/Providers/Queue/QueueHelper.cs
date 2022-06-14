@@ -36,7 +36,8 @@ public static class QueueHelper
         IProducer<string, byte[]> producer = new ProducerBuilder<string, byte[]>(config)
             .SetErrorHandler((producer, error) =>
             {
-                logger.Info($"Kafka producer error: {error.Reason}");
+                if (logger.IsOperationsEnabled)
+                    logger.Operations($"Kafka producer error: {error.Reason}");
             })
             .Build();
 
