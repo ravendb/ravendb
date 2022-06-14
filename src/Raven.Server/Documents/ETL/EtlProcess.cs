@@ -182,8 +182,6 @@ namespace Raven.Server.Documents.ETL
         protected abstract IEnumerator<TExtracted> ConvertTimeSeriesDeletedRangeEnumerator(DocumentsOperationContext context, IEnumerator<TimeSeriesDeletedRangeItem> timeSeries, string collection);
 
         protected abstract bool ShouldTrackAttachmentTombstones();
-        
-        //todo: ShouldTrackTombstones
 
         public override long TaskId => Configuration.TaskId;
 
