@@ -6,18 +6,18 @@ namespace Tests.Infrastructure;
 
 public class RequiresRabbitMqFactAttribute : RetryFactAttribute
 {
-    private static readonly bool _canConnect;
+    internal static readonly bool CanConnect;
 
     static RequiresRabbitMqFactAttribute()
     {
-        _canConnect = RabbitMqConnectionString.Instance.CanConnect();
+        CanConnect = RabbitMqConnectionString.Instance.CanConnect();
     }
 
     public RequiresRabbitMqFactAttribute(int maxRetries = 3,
         int delayBetweenRetriesMs = 1000,
         params Type[] skipOnExceptions) : base(maxRetries, delayBetweenRetriesMs, skipOnExceptions)
     {
-        if (_canConnect == false)
+        if (CanConnect == false)
             Skip = "Test requires RabbitMQ instance";
     }
 }

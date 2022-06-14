@@ -6,18 +6,18 @@ namespace Tests.Infrastructure;
 
 public class RequiresKafkaFactAttribute : RetryFactAttribute
 {
-    private static readonly bool _canConnect;
+    internal static readonly bool CanConnect;
 
     static RequiresKafkaFactAttribute()
     {
-        _canConnect = KafkaConnectionString.Instance.CanConnect();
+        CanConnect = KafkaConnectionString.Instance.CanConnect();
     }
 
     public RequiresKafkaFactAttribute(int maxRetries = 3,
         int delayBetweenRetriesMs = 1000,
         params Type[] skipOnExceptions) : base(maxRetries, delayBetweenRetriesMs, skipOnExceptions)
     {
-        if (_canConnect == false)
+        if (CanConnect == false)
             Skip = "Test requires Kafka instance";
     }
 }

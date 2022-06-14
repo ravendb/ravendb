@@ -6,6 +6,7 @@ using RabbitMQ.Client.Events;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.Queue;
+using Tests.Infrastructure;
 using Tests.Infrastructure.ConnectionString;
 using Xunit.Abstractions;
 
@@ -45,7 +46,7 @@ loadToOrders" + ExchangeSuffix + @"(orderData);
     protected QueueEtlConfiguration SetupQueueEtlToRabbitMq(DocumentStore store, string script,
         IEnumerable<string> collections, IEnumerable<EtlQueue> queues = null, bool applyToAllDocuments = false, string configurationName = null,
         string transformationName = null,
-        Dictionary<string, string> configuration = null)
+        Dictionary<string, string> configuration = null, string connectionString = null)
     {
         var connectionStringName = $"{store.Database}@{store.Urls.First()} to RabbitMq";
 
@@ -78,7 +79,7 @@ loadToOrders" + ExchangeSuffix + @"(orderData);
             {
                 Name = connectionStringName,
                 BrokerType = QueueBroker.RabbitMq,
-                RabbitMqConnectionSettings = new RabbitMqConnectionSettings(){ConnectionString = RabbitMqConnectionString.Instance.VerifiedConnectionString.Value}
+                RabbitMqConnectionSettings = new RabbitMqConnectionSettings(){ConnectionString = connectionString ?? RabbitMqConnectionString.Instance.VerifiedConnectionString.Value}
             });
         return config;
     }
@@ -94,7 +95,7 @@ loadToOrders" + ExchangeSuffix + @"(orderData);
     
     private void CleanupQueues()
     {
-        if (_definedTopics.Count == 0)
+        if (_definedTopics.Count == 0 || RequiresRabbitMqFactAttribute.CanConnect == false)
             return;
 
         var channel = CreateRabbitMqConsumer();

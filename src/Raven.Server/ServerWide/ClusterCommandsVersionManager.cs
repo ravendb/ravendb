@@ -85,21 +85,18 @@ namespace Raven.Server.ServerWide
             [nameof(AddRavenEtlCommand)] = Base40CommandsVersion,
             [nameof(AddSqlEtlCommand)] = Base40CommandsVersion,
             [nameof(AddElasticSearchEtlCommand)] = Base40CommandsVersion,
-            [nameof(AddQueueEtlCommand)] = Base40CommandsVersion,
+
             [nameof(RemoveEtlProcessStateCommand)] = Base40CommandsVersion,
             [nameof(UpdateRavenEtlCommand)] = Base40CommandsVersion,
             [nameof(UpdateSqlEtlCommand)] = Base40CommandsVersion,
             [nameof(UpdateElasticSearchEtlCommand)] = Base40CommandsVersion,
-            [nameof(UpdateQueueEtlCommand)] = Base40CommandsVersion,
             [nameof(UpdateEtlProcessStateCommand)] = Base40CommandsVersion,
             [nameof(PutRavenConnectionStringCommand)] = Base40CommandsVersion,
             [nameof(PutSqlConnectionStringCommand)] = Base40CommandsVersion,
             [nameof(PutElasticSearchConnectionStringCommand)] = Base40CommandsVersion,
-            [nameof(PutQueueConnectionStringCommand)] = Base40CommandsVersion,
             [nameof(RemoveRavenConnectionStringCommand)] = Base40CommandsVersion,
             [nameof(RemoveSqlConnectionStringCommand)] = Base40CommandsVersion,
             [nameof(RemoveElasticSearchConnectionStringCommand)] = Base40CommandsVersion,
-            [nameof(RemoveQueueConnectionStringCommand)] = Base40CommandsVersion,
             [nameof(AddOrUpdateCompareExchangeBatchCommand)] = Base40CommandsVersion,
 
             [nameof(CleanUpClusterStateCommand)] = Base41CommandsVersion,
@@ -151,6 +148,11 @@ namespace Raven.Server.ServerWide
 
             [nameof(EditPostgreSqlConfigurationCommand)] = 53_000,
             [nameof(RecordBatchSubscriptionDocumentsCommand)] = 53_000,
+
+            [nameof(AddQueueEtlCommand)] = 54_000,
+            [nameof(UpdateQueueEtlCommand)] = 54_000,
+            [nameof(PutQueueConnectionStringCommand)] = 54_000,
+            [nameof(RemoveQueueConnectionStringCommand)] = 54_000,
         };
 
         public static bool CanPutCommand(string command)
