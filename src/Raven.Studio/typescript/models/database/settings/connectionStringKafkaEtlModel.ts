@@ -4,13 +4,12 @@ import connectionStringModel = require("models/database/settings/connectionStrin
 import saveConnectionStringCommand = require("commands/database/settings/saveConnectionStringCommand");
 import testKafkaServerConnectionCommand from "commands/database/cluster/testKafkaServerConnectionCommand";
 import jsonUtil = require("common/jsonUtil");
-import discoveryUrl from "models/database/settings/discoveryUrl";
 
 class connectionOptionModel {
     key = ko.observable<string>();
     value = ko.observable<string>();
     
-    isValidKeyValue = ko.observable<boolean>()
+    isValidKeyValue = ko.observable<boolean>();
 
     validationGroup: KnockoutObservable<any>;
     dirtyFlag: () => DirtyFlag;
@@ -49,11 +48,12 @@ class connectionOptionModel {
 
 class connectionStringKafkaEtlModel extends connectionStringModel {
     
-    kafkaServerUrl = ko.observable<discoveryUrl>(new discoveryUrl(""));
-    useRavenCertificate = ko.observable<boolean>();
+    kafkaServerUrl = ko.observable<string>(); // TODO rename to bootstrapServers...
+    useRavenCertificate = ko.observable<boolean>(); // TODO show only if secure server...
     connectionOptions = ko.observableArray<connectionOptionModel>();
     
     validationGroup: KnockoutValidationGroup;
+    hasTestError = ko.observable<boolean>(false)
     
     dirtyFlag: () => DirtyFlag;
 
@@ -79,7 +79,7 @@ class connectionStringKafkaEtlModel extends connectionStringModel {
         super.update(dto);
         
         const kafkaSettings = dto.KafkaConnectionSettings;
-        this.kafkaServerUrl().discoveryUrlName(kafkaSettings.Url);
+        this.kafkaServerUrl(kafkaSettings.BootstrapServers);
         this.useRavenCertificate(kafkaSettings.UseRavenCertificate);
 
         _.forIn(kafkaSettings.ConnectionOptions, (value, key) => {
@@ -107,7 +107,7 @@ class connectionStringKafkaEtlModel extends connectionStringModel {
             Name: "",
 
             KafkaConnectionSettings: {
-                Url: "",
+                BootstrapServers: "",
                 UseRavenCertificate: false,
                 ConnectionOptions: null,
             },
@@ -123,7 +123,7 @@ class connectionStringKafkaEtlModel extends connectionStringModel {
             Name: this.connectionStringName(),
             
             KafkaConnectionSettings: {
-                Url: this.kafkaServerUrl().discoveryUrlName(),
+                BootstrapServers: this.kafkaServerUrl(),
                 UseRavenCertificate: this.useRavenCertificate(),
                 ConnectionOptions: this.connectionOptionsToDto()
             },
@@ -156,11 +156,11 @@ class connectionStringKafkaEtlModel extends connectionStringModel {
     }
 
     testConnection(db: database): JQueryPromise<Raven.Server.Web.System.NodeConnectionTestResult> {
-        return new testKafkaServerConnectionCommand(db, this.kafkaServerUrl().discoveryUrlName(), this.useRavenCertificate(), this.connectionOptionsToDto())
+        return new testKafkaServerConnectionCommand(db, this.kafkaServerUrl(), this.useRavenCertificate(), this.connectionOptionsToDto())
             .execute()
             .done((result) => {
                 if (result.Error) {
-                    this.kafkaServerUrl().hasTestError(true);
+                    this.hasTestError(true); // TODO handle in UI
                 }
             });
     }
