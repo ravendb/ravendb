@@ -194,7 +194,7 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithMessages, QueueEtlConfigu
             _kafkaProducer = producer;
         }
 
-        void ReportHandler(DeliveryReport<string?, byte[]> report)
+        void ReportHandler(DeliveryReport<string, byte[]> report)
         {
             if (report.Error.IsError == false)
             {
