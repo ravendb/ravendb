@@ -4,18 +4,16 @@ import database = require("models/resources/database");
 
 class testKafkaServerConnectionCommand extends commandBase {
 
-    constructor(private db: database, private kafkaServerUrl: string, private useServerCertificate: boolean, private connectionOptionsDto: {[optionKey: string]: string}) {
+    constructor(private db: database, private bootstrapServers: string, private useServerCertificate: boolean, private connectionOptionsDto: {[optionKey: string]: string}) {
         super();
     }
 
     execute(): JQueryPromise<Raven.Server.Web.System.NodeConnectionTestResult> {
-        const args = {
-            "bootstrap-servers": this.kafkaServerUrl
-        };
-        
-        const url = endpoints.databases.queueEtlConnection.adminEtlQueueTestConnectionKafka + this.urlEncodeArgs(args);
-        
+
+        const url = endpoints.databases.queueEtlConnection.adminEtlQueueTestConnectionKafka
+
         const payload = {
+            BootstrapServers: this.bootstrapServers,
             Configuration: this.connectionOptionsDto,
             UseRavenCertificate: this.useServerCertificate
         }

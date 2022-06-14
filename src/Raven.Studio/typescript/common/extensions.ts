@@ -101,7 +101,7 @@ class extensions {
                 const base64regex = /^([0-9a-zA-Z+/]{4})*(([0-9a-zA-Z+/]{2}==)|([0-9a-zA-Z+/]{3}=))?$/;
                 return !val || base64regex.test(val);
             },
-            message: 'Invaild base64 string.'
+            message: 'Invalid base64 string.'
         };
         
         (ko.validation.rules as any)['validLicense'] = {

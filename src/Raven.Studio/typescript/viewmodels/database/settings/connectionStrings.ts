@@ -68,7 +68,7 @@ class connectionStrings extends viewModelBase {
         super();
         this.bindToCurrentInstance("onEditSqlEtl", "onEditRavenEtl", "onEditOlapEtl", "onEditElasticSearchEtl", "onEditKafkaEtl", "onEditRabbitMqEtl",
                                    "confirmDelete", "isConnectionStringInUse", 
-                                   "onTestConnectionRaven", "onTestConnectionElasticSearch", "onTestConnectionKafka", "testCredentials");
+                                   "onTestConnectionRaven", "onTestConnectionElasticSearch", "onTestConnectionKafka", "onTestConnectionRabbitMq", "testCredentials");
         this.initObservables();
     }
     
@@ -509,7 +509,7 @@ class connectionStrings extends viewModelBase {
     }
 
     private onKafkaEtl() {
-        this.editedKafkaEtlConnectionString().kafkaServerUrl.subscribe(() => this.clearTestResult());
+        this.editedKafkaEtlConnectionString().bootstrapServers.subscribe(() => this.clearTestResult());
 
         this.editedRavenEtlConnectionString(null);
         this.editedOlapEtlConnectionString(null);
@@ -647,6 +647,21 @@ class connectionStrings extends viewModelBase {
         this.spinners.test(true);
 
         kafkaConnectionString.testConnection(this.activeDatabase())
+            .done(result => this.testConnectionResult(result))
+            .always(() => {
+                this.spinners.test(false);
+                this.fullErrorDetailsVisible(false);
+            });
+    }
+
+    onTestConnectionRabbitMq() {
+        this.clearTestResult();
+        const rabbitMqConnectionString = this.editedRabbitMqEtlConnectionString();
+        eventsCollector.default.reportEvent("rabbitmq-connection-string", "test-connection");
+
+        this.spinners.test(true);
+
+        rabbitMqConnectionString.testConnection(this.activeDatabase())
             .done(result => this.testConnectionResult(result))
             .always(() => {
                 this.spinners.test(false);

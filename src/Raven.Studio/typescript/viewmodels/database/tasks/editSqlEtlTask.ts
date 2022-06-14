@@ -217,7 +217,7 @@ class editSqlEtlTask extends viewModelBase {
     constructor() {
         super();
         this.bindToCurrentInstance("useConnectionString",
-                                   "testConnection",
+                                   "onTestConnectionSql",
                                    "removeTransformationScript",
                                    "cancelEditedTransformation",
                                    "cancelEditedSqlTable",
@@ -333,6 +333,11 @@ class editSqlEtlTask extends viewModelBase {
             this.newConnectionString().connectionStringName(connectionStringName);
             this.editedSqlEtl().connectionStringName(null);
         }
+
+        // Discard test connection result when needed
+        this.createNewConnectionString.subscribe(() => this.testConnectionResult(null));
+        this.newConnectionString().factoryName.subscribe(() => this.testConnectionResult(null));
+        this.newConnectionString().connectionString.subscribe(() => this.testConnectionResult(null));
         
         this.connectionStringDefined = ko.pureComputed(() => {
             const editedEtl = this.editedSqlEtl();
@@ -442,7 +447,7 @@ class editSqlEtlTask extends viewModelBase {
         this.editedSqlEtl().connectionStringName(connectionStringToUse);
     }
 
-    testConnection() {
+    onTestConnectionSql() {
         eventsCollector.default.reportEvent("SQL-ETL-connection-string", "test-connection");
         this.spinners.test(true);
         this.testConnectionResult(null);

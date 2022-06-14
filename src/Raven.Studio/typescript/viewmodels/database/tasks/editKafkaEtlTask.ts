@@ -13,6 +13,7 @@ import connectionStringKafkaEtlModel = require("models/database/settings/connect
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import transformationScriptSyntax = require("viewmodels/database/tasks/transformationScriptSyntax");
 import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleMentorsCommand");
+import getConnectionStringInfoCommand = require("commands/database/settings/getConnectionStringInfoCommand");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import jsonUtil = require("common/jsonUtil");
 import popoverUtils = require("common/popoverUtils");
@@ -44,8 +45,6 @@ class editKafkaEtlTask extends viewModelBase {
     kafkaEtlConnectionStringsDetails = ko.observableArray<Raven.Client.Documents.Operations.ETL.Queue.QueueConnectionString>([]);
 
     possibleMentors = ko.observableArray<string>([]);
-
-    testConnectionResult = ko.observable<Raven.Server.Web.System.NodeConnectionTestResult>();
     
     spinners = {
         test: ko.observable<boolean>(false),
@@ -58,8 +57,12 @@ class editKafkaEtlTask extends viewModelBase {
     createNewConnectionString = ko.observable<boolean>(false);
     newConnectionString = ko.observable<connectionStringKafkaEtlModel>();
 
+    connectionStringDefined: KnockoutComputed<boolean>;
+    testConnectionResult = ko.observable<Raven.Server.Web.System.NodeConnectionTestResult>();
+    
     collections = collectionsTracker.default.collections;
 
+    // TODO: check if the below 2 are needed
     usingHttps = location.protocol === "https:";
     certificatesUrl = appUrl.forCertificates();
 
@@ -160,10 +163,19 @@ class editKafkaEtlTask extends viewModelBase {
         
         // Discard test connection result when needed
         this.createNewConnectionString.subscribe(() => this.testConnectionResult(null));
-        this.newConnectionString().kafkaServerUrl.subscribe(() => this.testConnectionResult(null));
+        this.newConnectionString().bootstrapServers.subscribe(() => this.testConnectionResult(null));
         this.newConnectionString().useRavenCertificate.subscribe(() => this.testConnectionResult(null));
         this.newConnectionString().connectionOptions.subscribe(() => this.testConnectionResult(null));
 
+        this.connectionStringDefined = ko.pureComputed(() => {
+            const editedEtl = this.editedKafkaEtl();
+            if (this.createNewConnectionString()) {
+                return !!this.newConnectionString().bootstrapServers();
+            } else {
+                return !!editedEtl.connectionStringName();
+            }
+        });
+        
         this.enableTestArea.subscribe(testMode => {
             $("body").toggleClass('show-test', testMode);
         });
@@ -198,13 +210,28 @@ class editKafkaEtlTask extends viewModelBase {
         this.spinners.test(true);
         this.testConnectionResult(null);
 
-        this.newConnectionString()
-            .testConnection(this.activeDatabase())
-            .done(result => this.testConnectionResult(result))
-            .always(() => {
-                this.spinners.test(false);
-                this.fullErrorDetailsVisible(false);
-            });
+        // New connection string
+        if (this.createNewConnectionString()) {
+            this.newConnectionString()
+                .testConnection(this.activeDatabase())
+                .done(result => this.testConnectionResult(result))
+                .always(() => {
+                    this.spinners.test(false);
+                    this.fullErrorDetailsVisible(false);
+                });
+        } else {
+            // Existing connection string
+            getConnectionStringInfoCommand.forKafkaEtl(this.activeDatabase(), this.editedKafkaEtl().connectionStringName())
+                .execute()
+                .done((result: Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult) => {
+                    new connectionStringKafkaEtlModel(result.QueueConnectionStrings[this.editedKafkaEtl().connectionStringName()], true, [])
+                        .testConnection(this.activeDatabase())
+                        .done((testResult) => this.testConnectionResult(testResult))
+                        .always(() => {
+                            this.spinners.test(false);
+                        });
+                });  
+        }
     }
 
     saveKafkaEtl() {
