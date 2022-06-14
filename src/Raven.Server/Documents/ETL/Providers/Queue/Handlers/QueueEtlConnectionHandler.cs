@@ -2,8 +2,9 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
+using Confluent.Kafka;
 using Newtonsoft.Json;
-using Raven.Client.Documents.Operations.ETL.Queue;
+using RabbitMQ.Client;
 using Raven.Server.Routing;
 using Raven.Server.Web.System;
 using Sparrow.Json;
@@ -13,28 +14,66 @@ namespace Raven.Server.Documents.ETL.Providers.Queue.Handlers
 {
     public class QueueEtlConnectionHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/admin/etl/queue/test-connection", "POST", AuthorizationStatus.DatabaseAdmin)]
-        public async Task GetTestQueueConnectionResult()
+        [RavenAction("/databases/*/admin/etl/queue/test-connection/kafka", "POST", AuthorizationStatus.DatabaseAdmin)]
+        public async Task GetTestKafkaConnectionResult()
         {
             try
             {
                 string url = GetQueryStringValueAndAssertIfSingleAndNotEmpty("url");
                 string jsonConfig = await new StreamReader(HttpContext.Request.Body).ReadToEndAsync();
-                var config = JsonConvert.DeserializeObject<QueueConfiguration>(jsonConfig);
+                var config = JsonConvert.DeserializeObject<KafkaConnectionConfiguration>(jsonConfig);
 
-                var kafkaProducer = QueueHelper.CreateKafkaClient(
-                    new QueueConnectionString
+                var adminConfig = new AdminClientConfig() { BootstrapServers = url };
+                if (config != null && config.Configuration != null)
+                {
+                    foreach (KeyValuePair<string, string> option in config.Configuration)
                     {
-                        KafkaConnectionSettings = new KafkaConnectionSettings()
-                        {
-                            Url = url, 
-                            ConnectionOptions = config.Configuration,
-                            UseRavenCertificate = config.UseRavenCertificate
-                        }
-                    }, Guid.NewGuid().ToString(), Logger);
+                        adminConfig.Set(option.Key, option.Value);
+                    }    
+                }
 
-                kafkaProducer.InitTransactions(TimeSpan.FromSeconds(60));
-                kafkaProducer.AbortTransaction();
+                var adminClient = new AdminClientBuilder(adminConfig).Build();
+                adminClient.GetMetadata(TimeSpan.FromSeconds(10));
+
+                DynamicJsonValue result = new()
+                {
+                    [nameof(NodeConnectionTestResult.Success)] = true, [nameof(NodeConnectionTestResult.TcpServerUrl)] = url,
+                };
+
+                using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                await using (AsyncBlittableJsonTextWriter writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, result);
+                }
+            }
+            catch (Exception ex)
+            {
+                using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                {
+                    await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                    {
+                        context.Write(writer,
+                            new DynamicJsonValue
+                            {
+                                [nameof(NodeConnectionTestResult.Success)] = false,
+                                [nameof(NodeConnectionTestResult.Error)] = ex.ToString()
+                            });
+                    }
+                }
+            }
+        }
+
+        [RavenAction("/databases/*/admin/etl/queue/test-connection/rabbitmq", "POST", AuthorizationStatus.DatabaseAdmin)]
+        public async Task GetTestRabbitMqConnectionResult()
+        {
+            try
+            {
+                string url = GetQueryStringValueAndAssertIfSingleAndNotEmpty("url");
+
+                var connectionFactory = new ConnectionFactory() { Uri = new Uri(url) };
+                using (connectionFactory.CreateConnection())
+                {
+                }
 
                 DynamicJsonValue result = new()
                 {
@@ -64,11 +103,10 @@ namespace Raven.Server.Documents.ETL.Providers.Queue.Handlers
             }
         }
     }
+}
 
-    public class QueueConfiguration
-    {
-        public Dictionary<string, string> Configuration { get; set; }
-        public bool UseRavenCertificate { get; set; }
-        public string Provider { get; set; }
-    }
+public class KafkaConnectionConfiguration
+{
+    public Dictionary<string, string> Configuration { get; set; }
+    public bool UseRavenCertificate { get; set; }
 }
