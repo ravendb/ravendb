@@ -19,11 +19,11 @@ namespace Raven.Server.Documents.ETL.Providers.Queue.Handlers
         {
             try
             {
-                string url = GetQueryStringValueAndAssertIfSingleAndNotEmpty("url");
+                string bootstrapServers = GetQueryStringValueAndAssertIfSingleAndNotEmpty("bootstrap-servers");
                 string jsonConfig = await new StreamReader(HttpContext.Request.Body).ReadToEndAsync();
                 var config = JsonConvert.DeserializeObject<KafkaConnectionConfiguration>(jsonConfig);
 
-                var adminConfig = new AdminClientConfig() { BootstrapServers = url };
+                var adminConfig = new AdminClientConfig() { BootstrapServers = bootstrapServers };
                 if (config != null && config.Configuration != null)
                 {
                     foreach (KeyValuePair<string, string> option in config.Configuration)
@@ -37,7 +37,7 @@ namespace Raven.Server.Documents.ETL.Providers.Queue.Handlers
 
                 DynamicJsonValue result = new()
                 {
-                    [nameof(NodeConnectionTestResult.Success)] = true, [nameof(NodeConnectionTestResult.TcpServerUrl)] = url,
+                    [nameof(NodeConnectionTestResult.Success)] = true, [nameof(NodeConnectionTestResult.TcpServerUrl)] = bootstrapServers,
                 };
 
                 using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))

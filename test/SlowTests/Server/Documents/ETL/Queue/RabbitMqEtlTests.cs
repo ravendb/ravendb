@@ -258,7 +258,7 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
             {
                 Name = "simulate",
                 BrokerType = QueueBroker.Kafka,
-                KafkaConnectionSettings = new KafkaConnectionSettings() { Url = "amqp://guest:guest@localhost:5672/" }
+                KafkaConnectionSettings = new KafkaConnectionSettings() { BootstrapServers = "amqp://guest:guest@localhost:5672/" }
             }));
             Assert.NotNull(result1.RaftCommandIndex);
 

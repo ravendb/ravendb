@@ -20,7 +20,7 @@ public class QueueConnectionString : ConnectionString
         switch (BrokerType)
         {
             case QueueBroker.Kafka:
-                if (KafkaConnectionSettings == null || string.IsNullOrWhiteSpace(KafkaConnectionSettings.Url))
+                if (KafkaConnectionSettings == null || string.IsNullOrWhiteSpace(KafkaConnectionSettings.BootstrapServers))
                 {
                     errors.Add($"{nameof(KafkaConnectionSettings)} has no valid setting.");
                 }
@@ -43,7 +43,7 @@ public class QueueConnectionString : ConnectionString
         switch (BrokerType)
         {
             case QueueBroker.Kafka:
-                url = KafkaConnectionSettings.Url;
+                url = KafkaConnectionSettings.BootstrapServers;
                 break;
             case QueueBroker.RabbitMq:
                 var connectionString = RabbitMqConnectionSettings.ConnectionString;

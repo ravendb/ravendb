@@ -206,7 +206,7 @@ public class KafkaEtlTests : KafkaEtlTestBase
         {
             Name = "Foo",
             BrokerType = QueueBroker.Kafka,
-            KafkaConnectionSettings = new KafkaConnectionSettings() { ConnectionOptions = new Dictionary<string, string> { }, Url = "localhost:29092" }
+            KafkaConnectionSettings = new KafkaConnectionSettings() { ConnectionOptions = new Dictionary<string, string> { }, BootstrapServers = "localhost:29092" }
         });
 
         List<string> errors;
@@ -239,7 +239,7 @@ public class KafkaEtlTests : KafkaEtlTestBase
             {
                 Name = "simulate",
                 BrokerType = QueueBroker.Kafka,
-                KafkaConnectionSettings = new KafkaConnectionSettings() { Url = "localhost:29092" }
+                KafkaConnectionSettings = new KafkaConnectionSettings() { BootstrapServers = "localhost:29092" }
             }));
             Assert.NotNull(result1.RaftCommandIndex);
 
@@ -401,7 +401,7 @@ output('test output')"
         using (var dstStore = GetDocumentStore())
         {
             var config = SetupQueueEtlToKafka(srcStore,
-                DefaultScript, DefaultCollections, url: "http://localhost:1234");
+                DefaultScript, DefaultCollections, bootstrapServers: "http://localhost:1234");
 
             var exportFile = GetTempFileName();
 
