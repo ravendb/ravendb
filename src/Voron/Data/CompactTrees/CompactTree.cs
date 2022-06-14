@@ -567,7 +567,6 @@ namespace Voron.Data.CompactTrees
                         Page = _llt.GetPage(sibling)
                     };
                     FreePageFor(ref sourceState, ref destinationState);
-
                     return true;
                 }
                 return false;
@@ -678,7 +677,7 @@ namespace Voron.Data.CompactTrees
 
             // Ensure that we got the right key to search. 
             newKey = EncodedKey.Get(newKey, this, _internalCursor._stk[_internalCursor._pos].Header->DictionaryId);
-            SearchInCurrentPage(newKey, ref _internalCursor._stk[_internalCursor._pos]);// positions changed, re-search
+            SearchInCurrentPage(newKey, ref _internalCursor._stk[_internalCursor._pos]); // positions changed, re-search
             AddToPage(newKey, siblingPage);
 
             return true;
@@ -687,28 +686,36 @@ namespace Voron.Data.CompactTrees
         private void FreePageFor(ref CursorState stateToKeep, ref CursorState stateToDelete)
         {
             ref var parent = ref _internalCursor._stk[_internalCursor._pos - 1];
-            DecrementPageNumbers(ref stateToKeep);
-            _llt.FreePage(stateToDelete.Page.PageNumber);
+            DecrementPageNumbers(ref stateToDelete);
+          
             if (parent.Header->NumberOfEntries == 2)
-            {   // let's reduce the height of the tree entirely...
+            {
+                // let's reduce the height of the tree entirely...
+                DecrementPageNumbers(ref parent);
+
                 var parentPageNumber = parent.Page.PageNumber;
                 Memory.Copy(parent.Page.Pointer, stateToKeep.Page.Pointer, Constants.Storage.PageSize);
                 parent.Page.PageNumber = parentPageNumber; // we overwrote it...
-                DecrementPageNumbers(ref stateToKeep);
+
+                // TODO: @ayende can you take a look at this condition, I know it is not correct but I cannot figure it out. 
+                //       There are failing tests that would fail if this one is not correct. 
                 if (_internalCursor._pos == 1)
                 {
                     if (parent.Header->PageFlags.HasFlag(CompactPageFlags.Leaf))
                     {
-                        _state.LeafPages++;
-                        _state.BranchPages--;
+                        _state.Depth--;
                     }
-                    _state.Depth--;
                 }
+                _llt.FreePage(stateToDelete.Page.PageNumber);
                 _llt.FreePage(stateToKeep.Page.PageNumber);
-                return;
+                PopPage(ref _internalCursor);
             }
-            PopPage(ref _internalCursor);
-            RemoveFromPage(allowRecurse: true, parent.LastSearchPosition);
+            else
+            {
+                _llt.FreePage(stateToDelete.Page.PageNumber);
+                PopPage(ref _internalCursor);
+                RemoveFromPage(allowRecurse: true, parent.LastSearchPosition);
+            }
         }
 
         private void DecrementPageNumbers(ref CursorState state)

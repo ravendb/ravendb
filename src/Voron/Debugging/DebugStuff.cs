@@ -286,10 +286,13 @@ namespace Voron.Debugging
         
             
         [Conditional("DEBUG")]
-        public static void RenderAndShow(CompactTree tree)
+        public static void RenderAndShow(CompactTree tree, string message = null)
         {
-            var headerData = $"<p>{tree.State}</p>";
-            RenderAndShowTCompactTree(tree, tree.State.RootPage, headerData);
+            var headerData = $"{tree.State}";
+            if (!string.IsNullOrWhiteSpace(message))
+                headerData = $"{message}-{headerData}";
+
+            RenderAndShowTCompactTree(tree, tree.State.RootPage, $"<p>{headerData}</p>");
         }
         
         [Conditional("DEBUG")]
