@@ -43,6 +43,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Smuggler
             DatabaseSmugglerOptionsServerSide options,
             SmugglerResult result,
             Action<IOperationProgress> onProgress,
+            long operationId,
             OperationCancelToken token);
 
         internal async Task Import<TOperation>(JsonOperationContext context, string databaseName, ImportDelegate onImport,
@@ -119,7 +120,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Smuggler
                                 ApplyBackwardCompatibility(options);
                                 var inputStream = GetInputStream(section.Body, options);
                                 var stream = new GZipStream(inputStream, CompressionMode.Decompress);
-                                await onImport(context, stream, options, result, onProgress, token);
+                                await onImport(context, stream, options, result, onProgress, operationId, token);
 
                             }
                         }

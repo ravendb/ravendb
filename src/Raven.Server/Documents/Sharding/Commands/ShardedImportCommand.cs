@@ -2,14 +2,12 @@
 using System.IO;
 using System.Net.Http;
 using System.Threading.Tasks;
-using System.Web;
 using Microsoft.AspNetCore.Http;
 using Raven.Client;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Util;
-using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
@@ -17,17 +15,18 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Commands
 {
-    internal struct ShardedImportOperation : IShardedOperation<BlittableJsonReaderObject>
+    internal readonly struct ShardedImportOperation : IShardedOperation<BlittableJsonReaderObject>
     {
-        private readonly ShardedDatabaseRequestHandler _handler;
         private readonly MultiShardedDestination.StreamDestinationHolder[] _holders;
+        private readonly long _operationId;
         private readonly DatabaseSmugglerOptionsServerSide _options;
         public readonly Task<Stream>[] ExposedStreamTasks;
 
-        public ShardedImportOperation(ShardedDatabaseRequestHandler handler, MultiShardedDestination.StreamDestinationHolder[] holders, DatabaseSmugglerOptionsServerSide options)
+        public ShardedImportOperation(HttpRequest httpRequest, DatabaseSmugglerOptionsServerSide options, MultiShardedDestination.StreamDestinationHolder[] holders, long operationId)
         {
-            _handler = handler;
+            HttpRequest = httpRequest;
             _holders = holders;
+            _operationId = operationId;
             _options = options;
             ExposedStreamTasks = new Task<Stream>[_holders.Length];
 
@@ -39,50 +38,55 @@ namespace Raven.Server.Documents.Sharding.Commands
             }
         }
 
-        public HttpRequest HttpRequest => _handler.HttpContext.Request;
+        public HttpRequest HttpRequest { get; }
+
         public BlittableJsonReaderObject Combine(Memory<BlittableJsonReaderObject> results) => null;
 
-        public RavenCommand<BlittableJsonReaderObject> CreateCommandForShard(int shardNumber) => new ShardedImportCommand(_handler, _holders[shardNumber].OutStream, _options);
+        public RavenCommand<BlittableJsonReaderObject> CreateCommandForShard(int shardNumber) => new ShardedImportCommand(_options, _holders[shardNumber].OutStream, _operationId);
     }
 
-    internal class ShardedImportCommand : ShardedCommand
+    internal class ShardedImportCommand : RavenCommand<BlittableJsonReaderObject>
     {
         private readonly StreamExposerContent _stream;
+        private readonly long _operationId;
         private readonly DatabaseSmugglerOptionsServerSide _options;
 
-        public ShardedImportCommand(ShardedDatabaseRequestHandler handler, StreamExposerContent stream, DatabaseSmugglerOptionsServerSide options) : base(handler, Commands.Headers.None)
+        public ShardedImportCommand(DatabaseSmugglerOptionsServerSide options, StreamExposerContent stream, long operationId)
         {
             _stream = stream;
+            _operationId = operationId;
             _options = options;
-
-            var queryString = HttpUtility.ParseQueryString(handler.HttpContext.Request.QueryString.Value);
-            Url = "/smuggler/import?" + queryString;
         }
+
+        public override bool IsReadRequest => false;
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
-            var multi = new MultipartFormDataContent
-            {
-                {
-                    new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_options, ctx))),
-                    Constants.Smuggler.ImportOptions
-                },
-                {
-                    _stream, "file", "name"
-                }
-            };
+            url = $"{node.Url}/databases/{node.Database}/smuggler/import?operationId={_operationId}";
 
-            url = $"{node.Url}/databases/{node.Database}{Url}";
-            var message = new HttpRequestMessage
+            return new HttpRequestMessage
             {
                 Headers =
                 {
                     TransferEncodingChunked = true
                 },
-                Method = Method,
-                Content = multi,
+                Method = HttpMethod.Post,
+                Content = new MultipartFormDataContent
+                {
+                    {
+                        new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_options, ctx))),
+                        Constants.Smuggler.ImportOptions
+                    },
+                    {
+                        _stream, "file", "name"
+                    }
+                }
             };
-            return message;
+        }
+
+        public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
+        {
+            Result = response;
         }
     }
 }
