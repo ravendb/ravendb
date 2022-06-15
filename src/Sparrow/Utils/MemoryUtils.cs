@@ -10,6 +10,7 @@ public static class MemoryUtils
         var message =
             $"Commit charge: {memoryInfo.CurrentCommitCharge} / {memoryInfo.TotalCommittableMemory}, " +
             $"Memory: {memoryInfo.TotalPhysicalMemory - memoryInfo.AvailableMemory} / {memoryInfo.TotalPhysicalMemory}, " +
+            $"Calculated Available memory: {memoryInfo.AvailableMemoryForProcessing}, " +
             $"Dirty memory: {memoryInfo.TotalScratchDirtyMemory}, " +
             $"Managed memory: {new Size(AbstractLowMemoryMonitor.GetManagedMemoryInBytes(), SizeUnit.Bytes)}, " +
             $"Unmanaged allocations: {new Size(AbstractLowMemoryMonitor.GetUnmanagedAllocationsInBytes(), SizeUnit.Bytes)}," +
