@@ -724,9 +724,9 @@ namespace Raven.Server.Documents.Replication
                         changeVector = DocumentsStorage.GetFullDatabaseChangeVector(documentsContext);
 
                         lastEtagFromSrc = DocumentsStorage.GetLastReplicatedEtagFrom(
-                            documentsContext, getLatestEtagMessage.SourceDatabaseId);
-                        if (_log.IsInfoEnabled)
-                            _log.Info($"GetLastEtag response, last etag: {lastEtagFromSrc}");
+                        documentsContext, getLatestEtagMessage.SourceDatabaseId);
+                    if (_log.IsInfoEnabled)
+                        _log.Info($"GetLastEtag response, last etag: {lastEtagFromSrc}");
                     }
 
                     var response = new DynamicJsonValue
@@ -1001,7 +1001,7 @@ namespace Raven.Server.Documents.Replication
                 if (handler is not OutgoingMigrationReplicationHandler migrationHandler)
                     continue;
 
-                if (newRecord.ShardBucketMigrations.TryGetValue(migrationHandler.BucketMigrationNode.Bucket, out var migration) == false)
+                if (newRecord.Sharding.ShardBucketMigrations.TryGetValue(migrationHandler.BucketMigrationNode.Bucket, out var migration) == false)
                 {
                     toRemove.Add(migrationHandler.BucketMigrationNode);
                     continue;
@@ -1030,7 +1030,7 @@ namespace Raven.Server.Documents.Replication
             DropOutgoingConnections(toRemove, instancesToDispose);
 
             // add
-            foreach (var migration in newRecord.ShardBucketMigrations)
+            foreach (var migration in newRecord.Sharding.ShardBucketMigrations)
             {
                 var process = migration.Value;
 

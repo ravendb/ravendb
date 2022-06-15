@@ -13,24 +13,22 @@ namespace Raven.Server.Documents.Sharding.Executors
 {
     public class ShardExecutor : AbstractExecutor
     {
-        private readonly ShardedDatabaseContext _databaseContext;
         private readonly RequestExecutor[] _requestExecutors;
         private readonly int[] _fullRange;
 
         public ShardExecutor(ServerStore store, ShardedDatabaseContext databaseContext) : base(store)
         {
-            _databaseContext = databaseContext;
-            var record = _databaseContext.DatabaseRecord;
-            _fullRange = Enumerable.Range(0, record.Shards.Length).ToArray();
+            var record = databaseContext.DatabaseRecord;
+            _fullRange = Enumerable.Range(0, record.Sharding.Shards.Length).ToArray();
 
-            _requestExecutors = new RequestExecutor[record.Shards.Length];
-            for (int i = 0; i < record.Shards.Length; i++)
+            _requestExecutors = new RequestExecutor[record.Sharding.Shards.Length];
+            for (int i = 0; i < record.Sharding.Shards.Length; i++)
             {
                 var allNodes = store.GetClusterTopology().AllNodes;
-                var urls = record.Shards[i].AllNodes.Select(tag => allNodes[tag]).ToArray();
+                var urls = record.Sharding.Shards[i].AllNodes.Select(tag => allNodes[tag]).ToArray();
                 _requestExecutors[i] = RequestExecutor.CreateForServer(
                     urls,
-                    ShardHelper.ToShardName(_databaseContext.DatabaseName, i),
+                    ShardHelper.ToShardName(databaseContext.DatabaseName, i),
                     store.Server.Certificate.Certificate,
                     DocumentConventions.DefaultForServer);
             }

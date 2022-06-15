@@ -55,7 +55,7 @@ namespace Raven.Server.Web.System
                 {
                     writer.WriteStartObject();
 
-                    var items = ServerStore.Cluster.GetAllRawDatabases(context,  GetStart(), GetPageSize());
+                    var items = ServerStore.Cluster.GetAllRawDatabases(context, GetStart(), GetPageSize());
 
                     var allowedDbs = await GetAllowedDbsAsync(null, requireAdmin: false, requireWrite: false);
 
@@ -138,7 +138,7 @@ namespace Raven.Server.Web.System
                         {
                             context.Write(writer, new DynamicJsonValue
                             {
-                                ["Type"] = "Error", 
+                                ["Type"] = "Error",
                                 ["Message"] = "Database " + name + " was deleted"
                             });
                         }
@@ -153,15 +153,15 @@ namespace Raven.Server.Web.System
                     {
                         long stampIndex;
                         IEnumerable<DynamicJsonValue> dbNodes;
-                        if (rawRecord.IsSharded())
+                        if (rawRecord.IsSharded)
                         {
-                            dbNodes = clusterTopology.Members.Keys.Select(x => 
+                            dbNodes = clusterTopology.Members.Keys.Select(x =>
                                 TopologyNodeToJson(x, clusterTopology, name, ServerNode.Role.Member));
-                            stampIndex = rawRecord.Shards.Max(x => x.Stamp?.Index ?? -1);
+                            stampIndex = rawRecord.Sharding.Shards.Max(x => x.Stamp?.Index ?? -1);
                         }
                         else
                         {
-                            dbNodes = rawRecord.Topology.Members.Select(x => 
+                            dbNodes = rawRecord.Topology.Members.Select(x =>
                                     TopologyNodeToJson(x, clusterTopology, name, ServerNode.Role.Member))
                                 .Concat(rawRecord.Topology.Rehabs.Select(x =>
                                     TopologyNodeToJson(x, clusterTopology, name, ServerNode.Role.Rehab))
@@ -178,7 +178,7 @@ namespace Raven.Server.Web.System
                 }
             }
         }
-        
+
         private DynamicJsonValue TopologyNodeToJson(string tag, ClusterTopology clusterTopology, string name, ServerNode.Role role)
         {
             return new DynamicJsonValue
@@ -189,7 +189,7 @@ namespace Raven.Server.Web.System
                 [nameof(ServerNode.Database)] = name
             };
         }
-        
+
         private void AlertIfDocumentStoreCreationRateIsNotReasonable(string applicationIdentifier, string name)
         {
             var q = ServerStore.ClientCreationRate.GetOrCreate(applicationIdentifier);
@@ -428,8 +428,9 @@ namespace Raven.Server.Web.System
                 if (online == false)
                 {
                     // if state of database is found in the cache we can continue
-                    if (ServerStore.DatabaseInfoCache.TryGet(databaseName, databaseInfoJson => { 
-                            
+                    if (ServerStore.DatabaseInfoCache.TryGet(databaseName, databaseInfoJson =>
+                    {
+
                         var periodicBackups = new List<PeriodicBackup>();
 
                         foreach (var periodicBackupConfiguration in dbRecord.PeriodicBackups)

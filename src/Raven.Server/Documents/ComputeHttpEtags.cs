@@ -165,7 +165,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        internal static unsafe void HashChangeVector(byte* state, string? changeVector)
+        internal static unsafe void HashChangeVector(byte* state, string changeVector)
         {
             if (changeVector == null)
             {

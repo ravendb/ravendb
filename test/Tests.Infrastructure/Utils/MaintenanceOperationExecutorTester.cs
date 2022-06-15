@@ -74,9 +74,9 @@ public class MaintenanceOperationExecutorTester<TResult> : IMaintenanceOperation
         _databaseRecord ??= await _executor.Server.SendAsync(new GetDatabaseRecordOperation(_executor._databaseName));
         if (_databaseRecord.IsSharded)
         {
-            for (var i = 0; i < _databaseRecord.Shards.Length; i++)
+            for (var i = 0; i < _databaseRecord.Sharding.Shards.Length; i++)
             {
-                var shardTopology = _databaseRecord.Shards[i];
+                var shardTopology = _databaseRecord.Sharding.Shards[i];
 
                 foreach (var (nKey, nExecutor) in GetExecutors(shardTopology))
                 {
@@ -101,9 +101,9 @@ public class MaintenanceOperationExecutorTester<TResult> : IMaintenanceOperation
         _databaseRecord ??= await _executor.Server.SendAsync(new GetDatabaseRecordOperation(_executor._databaseName));
         if (_databaseRecord.IsSharded)
         {
-            for (var i = 0; i < _databaseRecord.Shards.Length; i++)
+            for (var i = 0; i < _databaseRecord.Sharding.Shards.Length; i++)
             {
-                var shardTopology = _databaseRecord.Shards[i];
+                var shardTopology = _databaseRecord.Sharding.Shards[i];
 
                 foreach (var (nKey, nExecutor) in GetExecutors(shardTopology))
                 {

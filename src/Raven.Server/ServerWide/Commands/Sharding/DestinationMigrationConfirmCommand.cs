@@ -24,7 +24,7 @@ namespace Raven.Server.ServerWide.Commands.Sharding
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            if (record.ShardBucketMigrations.TryGetValue(Bucket, out var migration) == false)
+            if (record.Sharding.ShardBucketMigrations.TryGetValue(Bucket, out var migration) == false)
                 throw new InvalidOperationException($"Bucket '{Bucket}' not found in the migration buckets");
 
             if (migration.MigrationIndex != MigrationIndex)
@@ -36,7 +36,7 @@ namespace Raven.Server.ServerWide.Commands.Sharding
             if (migration.ConfirmedDestinations.Contains(Node) == false)
                 migration.ConfirmedDestinations.Add(Node);
 
-            var shardTopology = record.Shards[migration.DestinationShard];
+            var shardTopology = record.Sharding.Shards[migration.DestinationShard];
             if (shardTopology.Members.All(migration.ConfirmedDestinations.Contains))
             {
                 migration.Status = MigrationStatus.OwnershipTransferred;

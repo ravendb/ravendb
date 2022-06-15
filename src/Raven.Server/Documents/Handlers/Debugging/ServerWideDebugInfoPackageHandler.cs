@@ -58,11 +58,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             nameof(DatabaseRecord.Analyzers),
             nameof(DatabaseRecord.TimeSeries),
 
-            nameof(DatabaseRecord.Shards),
-            nameof(DatabaseRecord.ShardBucketRanges),
-            nameof(DatabaseRecord.ShardBucketMigrations),
-            nameof(DatabaseRecord.MigrationCutOffIndex),
-            nameof(DatabaseRecord.ShardedDatabaseId),
+            nameof(DatabaseRecord.Sharding)
         };
 
         private Logger _logger = LoggingSource.Instance.GetLogger<ServerWideDebugInfoPackageHandler>("Server");

@@ -24,9 +24,9 @@ namespace Raven.Server.ServerWide.Commands.Sharding
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            if (record.ShardBucketMigrations.Count > 0)
+            if (record.Sharding.ShardBucketMigrations.Count > 0)
             {
-                foreach (var migration in record.ShardBucketMigrations)
+                foreach (var migration in record.Sharding.ShardBucketMigrations)
                 {
                     if (migration.Value.Status < MigrationStatus.OwnershipTransferred)
                         throw new InvalidOperationException(
