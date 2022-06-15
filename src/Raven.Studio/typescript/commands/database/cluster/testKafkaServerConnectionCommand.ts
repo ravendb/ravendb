@@ -1,6 +1,7 @@
 import commandBase = require("commands/commandBase");
 import endpoints = require("endpoints");
 import database = require("models/resources/database");
+import KafkaConnectionSettings = Raven.Client.Documents.Operations.ETL.Queue.KafkaConnectionSettings;
 
 class testKafkaServerConnectionCommand extends commandBase {
 
@@ -12,9 +13,9 @@ class testKafkaServerConnectionCommand extends commandBase {
 
         const url = endpoints.databases.queueEtlConnection.adminEtlQueueTestConnectionKafka
 
-        const payload = {
+        const payload: KafkaConnectionSettings = {
             BootstrapServers: this.bootstrapServers,
-            Configuration: this.connectionOptionsDto,
+            ConnectionOptions: this.connectionOptionsDto,
             UseRavenCertificate: this.useServerCertificate
         }
 

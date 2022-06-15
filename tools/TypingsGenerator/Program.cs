@@ -493,6 +493,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(QueueEtlConfiguration));
             scripter.AddType(typeof(QueueEtlTestScriptResult));
             scripter.AddType(typeof(TestQueueEtlScript));
+            scripter.AddType(typeof(KafkaConnectionSettings));
 
             // connection strings
             scripter.AddType(typeof(ConnectionString));
