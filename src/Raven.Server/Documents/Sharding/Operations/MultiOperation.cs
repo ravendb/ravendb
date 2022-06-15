@@ -100,7 +100,7 @@ public class MultiOperation
         var result = new TOrchestratorResult();
         if (result is IShardedOperationResult shardedResult)
         {
-            shardedResult.Results = new IShardNodeIdentifier[_operations.Count]; //TODO stav: change to dict in case of shard numbers not matching count
+            shardedResult.Results = new IShardNodeIdentifier[_operations.Count]; //TODO stav: change to dict in case of shard numbers not matching count? (i.e 4 shards but shard #2 was deleted?)
             foreach (var task in tasks)
             {
                 shardedResult.CombineWith(task.Value.Result, task.Key.ShardNumber, task.Key.NodeTag);

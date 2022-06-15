@@ -50,7 +50,7 @@ namespace Raven.Client.Documents.Operations.Backups
 
         public static void MergeCloudUploadStatus(CloudUploadStatus finalResult, CloudUploadStatus result)
         {
-            //TODO stav: impl
+            //TODO stav: impl rest of fields
             finalResult.Skipped = result.Skipped;
             finalResult.LastFullBackup = result.LastFullBackup;
             finalResult.LastIncrementalBackup = result.LastIncrementalBackup;
@@ -67,11 +67,11 @@ namespace Raven.Client.Documents.Operations.Backups
 
         public static void MergeBackupResult(BackupResult finalResult, BackupResult result)
         {
-            //TODO stav: missing fields non mergeable. assign IOperationProgress to all field types?
+            //TODO stav: missing fields non mergeable.
+            //TODO stav: assign IOperationProgress to all field types?
             finalResult.SnapshotBackup.ErroredCount += result.SnapshotBackup.ErroredCount;
             finalResult.SnapshotBackup.ReadCount += result.SnapshotBackup.ReadCount;
-            //SnapshotBackup: (bool) Processed, (bool) Skipped, StartTime
-
+            
             MergeCloudUploadStatus(finalResult.S3Backup, result.S3Backup);
             MergeCloudUploadStatus(finalResult.AzureBackup, result.AzureBackup);
             MergeCloudUploadStatus(finalResult.GoogleCloudBackup, result.GoogleCloudBackup);
