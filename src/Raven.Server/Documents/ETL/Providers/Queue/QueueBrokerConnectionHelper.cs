@@ -10,7 +10,7 @@ namespace Raven.Server.Documents.ETL.Providers.Queue;
 
 public static class QueueBrokerConnectionHelper
 {
-    public static IProducer<string, byte[]> CreateKafkaProducer(KafkaConnectionSettings settings, string transactionalId, Logger logger,
+    public static IProducer<string, byte[]> CreateKafkaProducer(KafkaConnectionSettings settings, string transactionalId, Logger logger, string etlProcessName,
         X509Certificate2 certificate = null)
     {
         ProducerConfig config = new()
@@ -27,7 +27,15 @@ public static class QueueBrokerConnectionHelper
             .SetErrorHandler((producer, error) =>
             {
                 if (logger.IsOperationsEnabled)
-                    logger.Operations($"Kafka producer error: {error.Reason}");
+                    logger.Operations(
+                        $"ETL process '{etlProcessName}' got the following Kafka producer " +
+                        $"{(error.IsFatal ? "fatal" : "non fatal")}{(error.IsBrokerError ? " broker" : string.Empty)} error: {error.Reason} " +
+                        $"(code: {error.Code}, is local: {error.IsLocalError})");
+            })
+            .SetLogHandler((producer, logMessage) =>
+            {
+                if (logger.IsOperationsEnabled)
+                    logger.Operations($"ETL process: {etlProcessName}. {logMessage.Message} (level: {logMessage.Level}, facility: {logMessage.Facility}");
             })
             .Build();
 
