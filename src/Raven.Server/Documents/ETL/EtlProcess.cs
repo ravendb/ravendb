@@ -490,7 +490,7 @@ namespace Raven.Server.Documents.ETL
 
             if (currentItem is ToOlapItem)
             {
-                if (stats.NumberOfExtractedItems[EtlItemType.Document] > Database.Configuration.Etl.OlapMaxNumberOfExtractedDocuments)
+                if (stats.NumberOfExtractedItems[EtlItemType.Document] >= Database.Configuration.Etl.OlapMaxNumberOfExtractedDocuments)
                 {
                     var reason = $"Stopping the batch because it has already processed max number of extracted documents : {stats.NumberOfExtractedItems[EtlItemType.Document]}";
 
@@ -505,10 +505,10 @@ namespace Raven.Server.Documents.ETL
 
             else
             {
-                if (stats.NumberOfExtractedItems[EtlItemType.Document] > Database.Configuration.Etl.MaxNumberOfExtractedDocuments ||
-                    stats.NumberOfExtractedItems.Sum(x => x.Value) > Database.Configuration.Etl.MaxNumberOfExtractedItems)
+                if (stats.NumberOfExtractedItems[EtlItemType.Document] >= Database.Configuration.Etl.MaxNumberOfExtractedDocuments ||
+                    stats.NumberOfExtractedItems.Sum(x => x.Value) >= Database.Configuration.Etl.MaxNumberOfExtractedItems)
                 {
-                var reason = $"Stopping the batch because it has already processed max number of items ({string.Join(',', stats.NumberOfExtractedItems.Select(x => $"{x.Key} - {x.Value:#,#;;0}"))})";
+                    var reason = $"Stopping the batch because it has already processed max number of items ({string.Join(',', stats.NumberOfExtractedItems.Select(x => $"{x.Key} - {x.Value:#,#;;0}"))})";
 
                     if (Logger.IsInfoEnabled)
                         Logger.Info($"[{Name}] {reason}");
