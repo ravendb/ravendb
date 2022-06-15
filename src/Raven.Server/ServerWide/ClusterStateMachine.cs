@@ -1606,6 +1606,12 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        internal static void UpdateValueForItemsTable(ClusterOperationContext context, long index, Slice lowerKey, Slice key, BlittableJsonReaderObject updated)
+        {
+            var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+            UpdateValue(index, items, lowerKey, key, updated);
+        }
+
         internal static unsafe void UpdateCertificate(Table certificates, Slice key, Slice hash, BlittableJsonReaderObject updated)
         {
             Debug.Assert(key.ToString() == key.ToString().ToLowerInvariant(), $"Key of certificate table (thumbprint) must be lower cased while we got '{key}'");

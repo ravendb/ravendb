@@ -446,6 +446,11 @@ namespace Raven.Server.Web.System
                 {
                     UpdateDatabaseTopology(databaseTopology, clusterTopology, replicationFactor, clusterTransactionId);
                 }
+
+                databaseRecord.Topology = new DatabaseTopology
+                {
+                    Members = new List<string>(clusterTopology.AllNodes.Keys)
+                };
             }
             else
             {

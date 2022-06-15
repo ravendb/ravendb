@@ -247,7 +247,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(IndexingReferenceLoadWarning));
 
             // subscriptions
-            scripter.AddType(typeof(SubscriptionConnectionStats));
+            scripter.AddType(typeof(SubscriptionStatsCollector));
             scripter.AddType(typeof(SubscriptionWorkerOptions));
             scripter.AddType(typeof(SubscriptionError));
             scripter.AddType(typeof(SubscriptionTryout));

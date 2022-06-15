@@ -35,7 +35,7 @@ public class SubscriptionsClusterStorage
         return ReadSubscriptionStateByName(context, databaseName, name);
     }
 
-    public string GetSubscriptionNameById(TransactionOperationContext context, string databaseName, long id)
+    public string GetSubscriptionNameById<TTransaction>(TransactionOperationContext<TTransaction> context, string databaseName, long id) where TTransaction : RavenTransaction
     {
         foreach (var keyValue in ClusterStateMachine.ReadValuesStartingWith(context, SubscriptionState.SubscriptionPrefix(databaseName)))
         {

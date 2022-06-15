@@ -15,7 +15,6 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         public string NodeTag;
         public bool HasHighlyAvailableTasks;
         public DateTime LastClientConnectionTime;
-        public string ShardName;
         private UpdateSubscriptionClientConnectionTime()
         {
         }
@@ -34,7 +33,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
             var subscription = JsonDeserializationCluster.SubscriptionState(existingValue);
 
-            var topology = ShardName == null ? record.Topology : record.Shards[ShardHelper.GetShardNumber(ShardName)];
+            var topology = record.Topology;
             var lastResponsibleNode = AcknowledgeSubscriptionBatchCommand.GetLastResponsibleNode(HasHighlyAvailableTasks, topology, NodeTag);
             var appropriateNode = topology.WhoseTaskIsIt(RachisState.Follower, subscription, lastResponsibleNode);
 
@@ -58,7 +57,6 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             json[nameof(NodeTag)] = NodeTag;
             json[nameof(HasHighlyAvailableTasks)] = HasHighlyAvailableTasks;
             json[nameof(LastClientConnectionTime)] = LastClientConnectionTime;
-            json[nameof(ShardName)] = ShardName;
         }
     }
 }

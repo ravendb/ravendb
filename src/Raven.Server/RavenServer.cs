@@ -39,6 +39,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.Sharding.Subscriptions;
+using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Https;
 using Raven.Server.Integrations.PostgreSQL;
@@ -2418,13 +2419,7 @@ namespace Raven.Server
             switch (header.Operation)
             {
                 case TcpConnectionHeaderMessage.OperationTypes.Subscription:
-                    if (result.DatabaseStatus == DatabasesLandlord.DatabaseSearchResult.Status.Sharded)
-                    {
-                        ShardedSubscriptionConnection.SendShardedSubscriptionDocuments(ServerStore, tcp, bufferToCopy);
-                        break;
-                    }
-
-                    SubscriptionConnection.CreateSubscriptionConnection(ServerStore, tcp, bufferToCopy);
+                    CreateSubscriptionConnection(ServerStore, result, tcp, bufferToCopy);
                     break;
 
                 case TcpConnectionHeaderMessage.OperationTypes.Replication:
@@ -2463,6 +2458,31 @@ namespace Raven.Server
             // ReSharper disable once RedundantAssignment
             tcp = null;
             return false;
+        }
+
+        private static void CreateSubscriptionConnection(ServerStore server, DatabasesLandlord.DatabaseSearchResult databaseResult,
+            TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.MemoryBuffer buffer)
+        {
+            var subscriptionConnectionInProgress = tcpConnectionOptions.ConnectionProcessingInProgress("Subscription");
+            try
+            {
+                var binder = SubscriptionBinder.CreateSubscriptionBinder(server, databaseResult, tcpConnectionOptions, buffer,subscriptionConnectionInProgress, out var connection);
+
+                try
+                {
+                    connection.SubscriptionConnectionTask = binder.Run(tcpConnectionOptions, subscriptionConnectionInProgress);
+                }
+                catch (Exception)
+                {
+                    connection?.Dispose();
+                    throw;
+                }
+            }
+            catch (Exception)
+            {
+                subscriptionConnectionInProgress?.Dispose();
+                throw;
+            }
         }
 
         internal async Task<(Stream Stream, X509Certificate2 Certificate)> AuthenticateAsServerIfSslNeeded(Stream stream)

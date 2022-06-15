@@ -13,11 +13,12 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
     public class ShardedSubscriptionWorker : AbstractSubscriptionWorker<dynamic>
     {
         private readonly RequestExecutor _shardRequestExecutor;
-        private readonly ShardedSubscriptionConnection _parent;
-        public ShardedSubscriptionWorker(SubscriptionWorkerOptions options, string dbName, RequestExecutor re, ShardedSubscriptionConnection parent) : base(options, dbName)
+        private readonly SubscriptionConnectionsStateOrchestrator _state;
+        
+        public ShardedSubscriptionWorker(SubscriptionWorkerOptions options, string dbName, RequestExecutor re, SubscriptionConnectionsStateOrchestrator state) : base(options, dbName)
         {
             _shardRequestExecutor = re;
-            _parent = parent;
+            _state = state;
         }
 
         internal override RequestExecutor GetRequestExecutor()
@@ -61,22 +62,7 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
 
                 try
                 {
-                    // publish batch so ShardedSubscriptionConnection can consume it
-                    PublishedShardBatchItem = new PublishedShardBatch
-                    {
-                        _batchFromServer = incomingBatch,
-                        SendBatchToClientTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously),
-                        ConfirmFromShardSubscriptionConnectionTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously)
-                    };
-
-                    // Set the start handling worker MRE on ShardedSubscriptionConnection
-                    _parent._mre.Set();
-
-                    // wait for ShardedSubscriptionConnection to redirect the batch to client worker
-                    await PublishedShardBatchItem.SendBatchToClientTcs.Task;
-
-                    Debug.Assert(PublishedShardBatchItem.LastSentChangeVectorInBatch != null, "PublishedShardBatchItem.LastSentChangeVectorInBatch != null");
-                    Debug.Assert(tcpStreamCopy != null);
+                    await TryPublishBatch(incomingBatch);
 
                     // send ack to SubscriptionConnection (to shard)
                     await SendAckAsync(PublishedShardBatchItem.LastSentChangeVectorInBatch, tcpStreamCopy, context, _processingCts.Token).ConfigureAwait(false);
@@ -122,6 +108,25 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
                     incomingBatch.ReturnContext.Dispose();
                 }
             }
+        }
+
+        private async Task TryPublishBatch(BatchFromServer incomingBatch)
+        {
+            _processingCts.Token.ThrowIfCancellationRequested();
+
+            // publish batch so ShardedSubscriptionConnection can consume it
+            PublishedShardBatchItem = new PublishedShardBatch
+            {
+                _batchFromServer = incomingBatch,
+                SendBatchToClientTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously),
+                ConfirmFromShardSubscriptionConnectionTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously)
+            };
+
+            // Set the start handling worker MRE on ShardedSubscriptionConnection
+            _state.HasNewDocuments.SetAndResetAtomically();
+
+            // wait for ShardedSubscriptionConnection to redirect the batch to client worker
+            await PublishedShardBatchItem.SendBatchToClientTcs.Task;
         }
     }
 }

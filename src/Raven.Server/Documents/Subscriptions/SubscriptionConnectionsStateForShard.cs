@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.TcpHandlers;
@@ -10,7 +11,7 @@ public class SubscriptionConnectionsStateForShard : SubscriptionConnectionsState
 {
     public ShardedDocumentDatabase ShardedDocumentDatabase;
 
-    public SubscriptionConnectionsStateForShard(long subscriptionId, SubscriptionStorage storage) : base(subscriptionId, storage)
+    public SubscriptionConnectionsStateForShard(string databaseName, long subscriptionId, SubscriptionStorage storage) : base(databaseName, subscriptionId, storage)
     {
         ShardedDocumentDatabase = (ShardedDocumentDatabase)DocumentDatabase;
     }
@@ -28,6 +29,12 @@ public class SubscriptionConnectionsStateForShard : SubscriptionConnectionsState
         }
     }
 
+    public override Task UpdateClientConnectionTime()
+    {
+        // the orchastartor will update the client connection time
+        return Task.CompletedTask;
+    }
+
     protected override AcknowledgeSubscriptionBatchCommand GetAcknowledgeSubscriptionBatchCommand(string changeVector, long? batchId, List<DocumentRecord> docsToResend)
     {
         var cmd = base.GetAcknowledgeSubscriptionBatchCommand(changeVector, batchId, docsToResend);
@@ -36,12 +43,9 @@ public class SubscriptionConnectionsStateForShard : SubscriptionConnectionsState
         return cmd;
     }
 
-    protected override UpdateSubscriptionClientConnectionTime GetUpdateSubscriptionClientConnectionTime()
+    protected override void ValidateTakeOver(SubscriptionConnection currentConnection)
     {
-        var cmd = base.GetUpdateSubscriptionClientConnectionTime();
-        cmd.ShardName = ShardedDocumentDatabase.Name;
-        cmd.DatabaseName = ShardedDocumentDatabase.ShardedDatabaseName;
-        return cmd;
+        // we let take over to override even an existing subscription with take over
     }
 
     protected override Task<long> RecordBatchInternal(RecordBatchSubscriptionDocumentsCommand command)

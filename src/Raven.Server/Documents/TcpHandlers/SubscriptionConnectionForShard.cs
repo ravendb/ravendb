@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Threading.Tasks;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.TcpHandlers;
@@ -25,9 +27,13 @@ public class SubscriptionConnectionForShard : SubscriptionConnection
         };
     }
 
-    protected override SubscriptionConnectionsState GetSubscriptionConnectionState()
+    protected override RawDatabaseRecord GetRecord(TransactionOperationContext context) => _serverStore.Cluster.ReadRawDatabaseRecord(context, ShardName);
+
+    public SubscriptionConnectionsState GetSubscriptionConnectionStateForShard()
     {
         var subscriptions = TcpConnection.DocumentDatabase.SubscriptionStorage.Subscriptions;
-        return subscriptions.GetOrAdd(SubscriptionId, subId => new SubscriptionConnectionsStateForShard(subId, TcpConnection.DocumentDatabase.SubscriptionStorage));
+        var state = subscriptions.GetOrAdd(SubscriptionId, subId => new SubscriptionConnectionsStateForShard(DatabaseName, subId, TcpConnection.DocumentDatabase.SubscriptionStorage));
+        _subscriptionConnectionsState = state;
+        return state;
     }
 }

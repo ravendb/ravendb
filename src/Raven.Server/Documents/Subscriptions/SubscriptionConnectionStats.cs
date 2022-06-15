@@ -3,9 +3,9 @@ using Raven.Server.Utils.Metrics;
 
 namespace Raven.Server.Documents.Subscriptions
 {
-    public class SubscriptionConnectionStats:IDisposable
+    public class SubscriptionConnectionMetrics : IDisposable
     {
-        public SubscriptionConnectionStats()
+        public SubscriptionConnectionMetrics()
         {
             DocsRate = new MeterMetric();
             BytesRate = new MeterMetric();

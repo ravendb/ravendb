@@ -90,7 +90,7 @@ namespace Raven.Client.Documents.Subscriptions
             if (dispose.IsCompletedSuccessfully)
                 return;
 
-            AsyncHelpers.RunSync(() => dispose.AsTask());
+            AsyncHelpers.RunSync(dispose.AsTask);
         }
 
         public ValueTask DisposeAsync()
