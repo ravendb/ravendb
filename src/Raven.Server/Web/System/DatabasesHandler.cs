@@ -155,7 +155,7 @@ namespace Raven.Server.Web.System
                         IEnumerable<DynamicJsonValue> dbNodes;
                         if (rawRecord.IsSharded)
                         {
-                            dbNodes = clusterTopology.Members.Keys.Select(x =>
+                            dbNodes = rawRecord.Sharding.Orchestrator.Topology.Members.Select(x =>
                                 TopologyNodeToJson(x, clusterTopology, name, ServerNode.Role.Member));
                             stampIndex = rawRecord.Sharding.Shards.Max(x => x.Stamp?.Index ?? -1);
                         }
