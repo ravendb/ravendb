@@ -352,7 +352,9 @@ namespace Raven.Server.Documents.Replication.Incoming
                                 }
 
                                 var cmd = GetUpdateChangeVectorCommand(changeVector, _lastDocumentEtag, ConnectionInfo.SourceDatabaseId, _replicationFromAnotherSource);
-                                
+                                if (cmd == null)
+                                    break;
+
                                 if (_prevChangeVectorUpdate != null && _prevChangeVectorUpdate.IsCompleted == false)
                                 {
                                     if (_log.IsInfoEnabled)
@@ -1342,9 +1344,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                     Debug.Assert(context.LastDatabaseChangeVector != null, $"database: {context.DocumentDatabase.Name};");
                     
                     // instead of : SetLastReplicatedEtagFrom -> _incoming.ConnectionInfo.SourceDatabaseId, _lastEtag , we will store in context and write once right before commit (one time instead of repeating on all docs in the same Tx)
-                    if (context.LastReplicationEtagFrom == null)
-                        context.LastReplicationEtagFrom = new Dictionary<string, long>();
-                    context.LastReplicationEtagFrom[_replicationInfo.SourceDatabaseId] = _lastEtag;
+                    SaveSourceEtag(context);
                     return operationsCount;
                 }
                 finally
@@ -1356,6 +1356,12 @@ namespace Raven.Server.Documents.Replication.Incoming
 
                     IsIncomingReplication = false;
                 }
+            }
+
+            protected virtual void SaveSourceEtag(DocumentsOperationContext context)
+            {
+                context.LastReplicationEtagFrom ??= new Dictionary<string, long>();
+                context.LastReplicationEtagFrom[_replicationInfo.SourceDatabaseId] = _lastEtag;
             }
 
             private static void UpdateTimeSeriesNameIfNeeded(DocumentsOperationContext context, LazyStringValue docId, TimeSeriesReplicationItem segment, TimeSeriesStorage tss)

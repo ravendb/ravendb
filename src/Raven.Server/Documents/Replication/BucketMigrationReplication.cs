@@ -9,17 +9,20 @@ namespace Raven.Server.Documents.Replication
 {
     public class BucketMigrationReplication : ReplicationNode
     {
+        public readonly ShardBucketMigration ShardBucketMigration;
         public readonly int Bucket;
         public readonly int Shard;
         public readonly string Node;
         public readonly long MigrationIndex;
 
-        public BucketMigrationReplication(int bucket, int destShard, string destResponsibleNode, long migrationIndex)
+        public BucketMigrationReplication(ShardBucketMigration shardBucketMigration, string destResponsibleNode)
         {
+            ShardBucketMigration = shardBucketMigration ?? throw new ArgumentNullException(nameof(shardBucketMigration));
             Node = destResponsibleNode ?? throw new ArgumentNullException(nameof(destResponsibleNode));
-            Bucket = bucket;
-            Shard = destShard;
-            MigrationIndex = migrationIndex;
+
+            Bucket = ShardBucketMigration.Bucket;
+            Shard = ShardBucketMigration.DestinationShard;
+            MigrationIndex = ShardBucketMigration.MigrationIndex;
         }
 
         public bool ForBucketMigration(ShardBucketMigration migration)

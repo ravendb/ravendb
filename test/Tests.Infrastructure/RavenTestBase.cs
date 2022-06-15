@@ -54,7 +54,7 @@ namespace FastTests
             return Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database ?? store.Database);
         }
 
-        protected bool WaitForDocument<T>(IDocumentStore store,
+        public bool WaitForDocument<T>(IDocumentStore store,
             string docId,
             Func<T, bool> predicate,
             int timeout = 10000,

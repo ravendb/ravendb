@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Linq;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Sharding;
-using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.Sharding
@@ -39,14 +37,16 @@ namespace Raven.Server.ServerWide.Commands.Sharding
                 }
             }
 
-            record.ShardBucketMigrations.Add(Bucket, new ShardBucketMigration
+            var bucketMigration = new ShardBucketMigration
             {
                 Bucket = Bucket,
                 DestinationShard = DestinationShard,
                 SourceShard = SourceShard,
                 MigrationIndex = etag,
                 Status = MigrationStatus.Moving
-            });
+            };
+
+            record.ShardBucketMigrations.Add(Bucket, bucketMigration);
         }
 
         public override void FillJson(DynamicJsonValue json)
