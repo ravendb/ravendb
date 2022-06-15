@@ -164,8 +164,8 @@ class connectionStringKafkaEtlModel extends connectionStringModel {
         };
     }
 
-    connectionOptionsToDto() {
-        const result = {} as {[key: string]: string;}; 
+    connectionOptionsToDto(): Record<string, string> {
+        const result: Record<string, string> = {}; 
 
         this.connectionOptions().forEach((item: connectionOptionModel) => {
             result[item.key()] = item.value();
