@@ -501,11 +501,9 @@ namespace Voron.Data.CompactTrees
 
             return true;
         }
-
-        private void Verify()
+        
+        private void Verify(ref CursorState current)
         {
-            ref var current = ref _internalCursor._stk[_internalCursor._pos];
-
             var dictionary = _dictionaries[current.Header->DictionaryId];
 
             int len = GetEncodedEntry(current.Page, current.EntriesOffsets[0], out var lastEncodedKey, out var l);
@@ -697,18 +695,15 @@ namespace Voron.Data.CompactTrees
                 Memory.Copy(parent.Page.Pointer, stateToKeep.Page.Pointer, Constants.Storage.PageSize);
                 parent.Page.PageNumber = parentPageNumber; // we overwrote it...
 
-                // TODO: @ayende can you take a look at this condition, I know it is not correct but I cannot figure it out. 
-                //       There are failing tests that would fail if this one is not correct. 
-                if (_internalCursor._pos == 1)
-                {
-                    if (parent.Header->PageFlags.HasFlag(CompactPageFlags.Leaf))
-                    {
-                        _state.Depth--;
-                    }
-                }
+                if (_internalCursor._pos == 1) // we are children to the root, and delete one item, so we replace the root
+                    _state.Depth--;
+
                 _llt.FreePage(stateToDelete.Page.PageNumber);
                 _llt.FreePage(stateToKeep.Page.PageNumber);
+                var copy = stateToKeep; // we are about to clear this value, but we need to set the search location here
                 PopPage(ref _internalCursor);
+                _internalCursor._stk[_internalCursor._pos].LastMatch = copy.LastMatch;
+                _internalCursor._stk[_internalCursor._pos].LastMatch = copy.LastSearchPosition;
             }
             else
             {
@@ -817,19 +812,22 @@ namespace Voron.Data.CompactTrees
                     // we will not upgrade and just split the pages using the old dictionary. Eventually the new
                     // dictionary will catch up. 
                     if (TryRecompressPage(state))
-                    {
-                        // It may happen that between the more effective dictionary and the reclaimed space we have enough
-                        // to avoid the split. 
-                        if (state.Header->Upper - state.Header->Lower >= requiredSize + sizeof(short))
-                            splitAnyways = false;
-
+                    {                        
+                        Debug.Assert(state.Header->FreeSpace >= (state.Header->Upper - state.Header->Lower));
+  
+                        // Since the recompressing has changed the topology of the entire page, we need to reencode the key
+                        // to move forward. 
                         key = EncodedKey.Get(key, this, state.Header->DictionaryId);
 
                         // We need to recompute this because it will change.
                         keySizeEncoder = new Encoder();
                         keySizeEncoder.Encode7Bits((ulong)key.Encoded.Length);
                         requiredSize = key.Encoded.Length + keySizeEncoder.Length + valueEncoder.Length;
-                        Debug.Assert(state.Header->FreeSpace >= (state.Header->Upper - state.Header->Lower));
+                        
+                        // It may happen that between the more effective dictionary and the reclaimed space we have enough
+                        // to avoid the split. 
+                        if (state.Header->Upper - state.Header->Lower >= requiredSize + sizeof(short))
+                            splitAnyways = false;
                     }
                 }
                 else
@@ -848,7 +846,6 @@ namespace Voron.Data.CompactTrees
                     // DebugStuff.RenderAndShow(this);
                     return SplitPage(key, value); // still can't do that, need to split the page
                     // DebugStuff.RenderAndShow(this);
-
                 }
             }
 
