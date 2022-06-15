@@ -67,7 +67,7 @@ namespace Raven.Server.Smuggler.Documents
                 using (_serverContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 {
                     var bucket = ShardHelper.GetBucket(context, docId);
-                    var shardNumber = ShardHelper.GetShardNumber(_shardedRecord.ShardBucketRanges, bucket);
+                    var shardNumber = ShardHelper.GetShardNumber(_shardedRecord.Sharding.ShardBucketRanges, bucket);
 
                     return shardNumber != _index;
                 }

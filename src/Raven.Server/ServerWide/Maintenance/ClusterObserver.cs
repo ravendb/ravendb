@@ -1732,9 +1732,9 @@ namespace Raven.Server.ServerWide.Maintenance
             public MergedDatabaseObservationState(RawDatabaseRecord record)
             {
                 RawDatabase = record;
-                _isShardedState = RawDatabase.IsSharded();
+                _isShardedState = RawDatabase.IsSharded;
 
-                var length = _isShardedState ? RawDatabase.Shards.Length : 1;
+                var length = _isShardedState ? RawDatabase.Sharding.Shards.Length : 1;
                 States = new DatabaseObservationState[length];
             }
 

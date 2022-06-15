@@ -38,7 +38,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "Need to handle NodeTag, currently is isn't used for sharded because it is shared");
 
             var topology = record.TopologyForSubscriptions();
-            var lastResponsibleNode = record.IsSharded() ? null : AcknowledgeSubscriptionBatchCommand.GetLastResponsibleNode(HasHighlyAvailableTasks, topology, NodeTag);
+            var lastResponsibleNode = record.IsSharded ? null : AcknowledgeSubscriptionBatchCommand.GetLastResponsibleNode(HasHighlyAvailableTasks, topology, NodeTag);
 
             var appropriateNode = topology.WhoseTaskIsIt(RachisState.Follower, subscription, lastResponsibleNode);
 

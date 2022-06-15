@@ -19,6 +19,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.Sharding;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Documents;
@@ -64,11 +65,11 @@ namespace SlowTests.Cluster
                 [RavenConfiguration.GetKey(x => x.Cluster.MaxSizeOfSingleRaftCommand)] = "1"
             });
             using (var leaderStore = GetDocumentStore(new Options
-                   {
-                       Server = leader,
-                       ReplicationFactor = 3,
-                       
-                   }))
+            {
+                Server = leader,
+                ReplicationFactor = 3,
+
+            }))
             {
                 var user1 = new User()
                 {
@@ -80,9 +81,9 @@ namespace SlowTests.Cluster
                 };
 
                 using (var session = leaderStore.OpenAsyncSession(new SessionOptions
-                       {
-                           TransactionMode = TransactionMode.ClusterWide
-                       }))
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
                 {
                     session.Advanced.ClusterTransaction.CreateCompareExchangeValue("usernames/ayende", new byte[256 * 1024]);
                     await session.StoreAsync(user3, "foo/bar");
@@ -91,9 +92,9 @@ namespace SlowTests.Cluster
                 }
 
                 using (var session = leaderStore.OpenAsyncSession(new SessionOptions
-                       {
-                           TransactionMode = TransactionMode.ClusterWide
-                       }))
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
                 {
                     session.Advanced.ClusterTransaction.CreateCompareExchangeValue("usernames/ayende", user1);
                     await session.StoreAsync(user3, "foo/bar");
@@ -359,11 +360,24 @@ namespace SlowTests.Cluster
             }
             else
             {
-                options.ModifyDatabaseRecord = r => r.Shards = new[]
+                options.ModifyDatabaseRecord = r =>
                 {
-                    new DatabaseTopology { Members = members }, 
-                    new DatabaseTopology { Members = members }, 
-                    new DatabaseTopology { Members = members }
+                    r.Sharding ??= new ShardingConfiguration();
+                    r.Sharding.Shards = new[]
+                    {
+                        new DatabaseTopology
+                        {
+                            Members = members
+                        }, 
+                        new DatabaseTopology
+                        {
+                            Members = members
+                        }, 
+                        new DatabaseTopology
+                        {
+                            Members = members
+                        }
+                    };
                 };
             }
             using (var store = GetDocumentStore(options))

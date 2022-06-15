@@ -952,8 +952,8 @@ namespace Tests.Infrastructure
             }
             else
             {
-                if (numberOfInstances != record.Shards.Length)
-                    throw new InvalidOperationException($@"Couldn't create the db on all shards, just on {numberOfInstances} out of { record.Shards.Length}{Environment.NewLine}");
+                if (numberOfInstances != record.Sharding.Shards.Length)
+                    throw new InvalidOperationException($@"Couldn't create the db on all shards, just on {numberOfInstances} out of { record.Sharding.Shards.Length}{Environment.NewLine}");
             }
 
             return (databaseResult, relevantServers.ToList());

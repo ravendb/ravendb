@@ -120,7 +120,7 @@ namespace Raven.Server.Documents
                             return;
                         }
 
-                        if (rawRecord.IsSharded())
+                        if (rawRecord.IsSharded)
                         {
                             foreach (var shardRawRecord in rawRecord.GetShardedDatabaseRecords())
                             {
@@ -656,7 +656,7 @@ namespace Raven.Server.Documents
                         };
                     }
 
-                    if (databaseRecord.IsSharded())
+                    if (databaseRecord.IsSharded)
                     {
                         var newTask = new Task<ShardedDatabaseContext>(() => new ShardedDatabaseContext(_serverStore, databaseRecord));
                         var currentTask = ShardedDatabasesCache.GetOrAdd(databaseName, newTask);

@@ -25,7 +25,7 @@ namespace Raven.Server.ServerWide.Commands.Sharding
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            if (record.ShardBucketMigrations.TryGetValue(Bucket, out var migration) == false)
+            if (record.Sharding.ShardBucketMigrations.TryGetValue(Bucket, out var migration) == false)
                 throw new InvalidOperationException($"Bucket '{Bucket}' not found in the migration buckets");
 
             if (migration.MigrationIndex != MigrationIndex)

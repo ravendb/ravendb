@@ -2,9 +2,9 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Sharding;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -33,7 +33,10 @@ namespace SlowTests.Cluster
             options.Server = leader;
             options.ReplicationFactor = 2;
             options.ModifyDatabaseRecord = r =>
-                r.Shards = Enumerable.Range(0, numberOfShards).Select(_ => new DatabaseTopology()).ToArray();
+            {
+                r.Sharding ??= new ShardingConfiguration();
+                r.Sharding.Shards = Enumerable.Range(0, numberOfShards).Select(_ => new DatabaseTopology()).ToArray();
+            };
 
             using var store = Sharding.GetDocumentStore(options);
             using (var session = store.OpenAsyncSession(new SessionOptions
@@ -49,7 +52,7 @@ namespace SlowTests.Cluster
                     entities.Add(testObj);
                     await session.StoreAsync(testObj, $"TestObjs/{i}");
                 }
-                
+
                 await session.SaveChangesAsync();
 
                 using var session2 = store.OpenAsyncSession(new SessionOptions

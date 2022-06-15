@@ -39,10 +39,10 @@ namespace Raven.Server.ServerWide.Commands
                 return;
             }
 
-            if (record.Shards.Length <= Shard)
+            if (record.Sharding.Shards.Length <= Shard)
                 throw new RachisApplyException($"The request shard '{Shard}' doesn't exists in '{record.DatabaseName}'");
 
-            record.Shards[Shard.Value] = Topology;
+            record.Sharding.Shards[Shard.Value] = Topology;
         }
         
         private static void SetLeaderStampForTopology(DatabaseTopology topology, long etag)

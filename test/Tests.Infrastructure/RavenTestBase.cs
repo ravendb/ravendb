@@ -17,6 +17,7 @@ using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.Sharding;
 using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
@@ -223,7 +224,7 @@ namespace FastTests
                         catch (ConcurrencyException)
                         {
                             var record = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(name));
-                            Assert.Equal(options.ReplicationFactor, record.IsSharded ? record.Shards[0].Count : record.Topology.ReplicationFactor);
+                            Assert.Equal(options.ReplicationFactor, record.IsSharded ? record.Sharding.Shards[0].Count : record.Topology.ReplicationFactor);
                             raftCommand = record.Etag;
                         }
 
@@ -726,11 +727,14 @@ namespace FastTests
                         options.ModifyDatabaseRecord = record =>
                         {
                             modifyRecord?.Invoke(record);
-                            record.Shards = new[]
+                            record.Sharding = new ShardingConfiguration
                             {
+                                Shards = new[]
+                                {
                                     new DatabaseTopology(),
                                     new DatabaseTopology(),
                                     new DatabaseTopology(),
+                                }
                             };
                         };
 

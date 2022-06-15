@@ -84,8 +84,8 @@ namespace SlowTests.Sharding.Cluster
 
                 var id = "foo/bar";
                 var bucket = ShardHelper.GetBucket(id);
-                var location = ShardHelper.GetShardNumber(record.ShardBucketRanges, bucket);
-                var newLocation = (location + 1) % record.Shards.Length;
+                var location = ShardHelper.GetShardNumber(record.Sharding.ShardBucketRanges, bucket);
+                var newLocation = (location + 1) % record.Sharding.Shards.Length;
                 using (var session = store.OpenAsyncSession())
                 {
                     var user = new User

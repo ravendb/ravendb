@@ -48,9 +48,9 @@ namespace Raven.Server.ServerWide.Commands
                     }
                     else
                     {
-                        for (int i = 0; i < record.Shards.Length; i++)
+                        for (int i = 0; i < record.Sharding.Shards.Length; i++)
                         {
-                            RemoveDatabaseFromSingleNode(record, record.Shards[i], node, $"${i}", deletionInProgressStatus);
+                            RemoveDatabaseFromSingleNode(record, record.Sharding.Shards[i], node, $"${i}", deletionInProgressStatus);
 
                         }
                     }
@@ -64,9 +64,9 @@ namespace Raven.Server.ServerWide.Commands
                 }
                 else
                 {
-                    for (var i = 0; i < record.Shards.Length; i++)
+                    for (var i = 0; i < record.Sharding.Shards.Length; i++)
                     {
-                        record.Shards[i] = RemoveDatabaseFromAllNodes(record, record.Shards[i], $"${i}", deletionInProgressStatus);
+                        record.Sharding.Shards[i] = RemoveDatabaseFromAllNodes(record, record.Sharding.Shards[i], $"${i}", deletionInProgressStatus);
                     }
 
                     record.Topology = new DatabaseTopology

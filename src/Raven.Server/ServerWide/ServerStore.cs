@@ -852,15 +852,15 @@ namespace Raven.Server.ServerWide
                     }
                     else
                     {
-                        if (addDatabase.Record.ShardBucketRanges == null ||
-                            addDatabase.Record.ShardBucketRanges.Count == 0)
+                        if (addDatabase.Record.Sharding.ShardBucketRanges == null ||
+                            addDatabase.Record.Sharding.ShardBucketRanges.Count == 0)
                         {
-                            addDatabase.Record.ShardBucketRanges = new List<ShardBucketRange>();
+                            addDatabase.Record.Sharding.ShardBucketRanges = new List<ShardBucketRange>();
                             var start = 0;
-                            var step = (1024 * 1024) / addDatabase.Record.Shards.Length;
-                            for (int i = 0; i < addDatabase.Record.Shards.Length; i++)
+                            var step = (1024 * 1024) / addDatabase.Record.Sharding.Shards.Length;
+                            for (int i = 0; i < addDatabase.Record.Sharding.Shards.Length; i++)
                             {
-                                addDatabase.Record.ShardBucketRanges.Add(new ShardBucketRange
+                                addDatabase.Record.Sharding.ShardBucketRanges.Add(new ShardBucketRange
                                 {
                                     ShardNumber = i,
                                     BucketRangeStart = start
@@ -868,7 +868,7 @@ namespace Raven.Server.ServerWide
                                 start += step;
                             }
                         }
-                        foreach (var shard in addDatabase.Record.Shards)
+                        foreach (var shard in addDatabase.Record.Sharding.Shards)
                         {
                             if (shard.Count == 0)
                             {
@@ -2785,13 +2785,13 @@ namespace Raven.Server.ServerWide
             }
             else
             {
-                foreach (var shardTopology in record.Shards)
+                foreach (var shardTopology in record.Sharding.Shards)
                 {
                     InitializeTopology(shardTopology);
                 }
 
-                if (string.IsNullOrEmpty(record.ShardedDatabaseId))
-                    record.ShardedDatabaseId = Guid.NewGuid().ToBase64Unpadded();
+                if (string.IsNullOrEmpty(record.Sharding.ShardedDatabaseId))
+                    record.Sharding.ShardedDatabaseId = Guid.NewGuid().ToBase64Unpadded();
             }
 
             var addDatabaseCommand = new AddDatabaseCommand(raftRequestId)

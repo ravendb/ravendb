@@ -191,8 +191,8 @@ namespace Raven.Server.Documents
             }
         }
 
-        public void SetIds(RawDatabaseRecord record) => SetIds(record.Topology, record.ShardedDatabaseId);
-        public void SetIds(DatabaseRecord record) => SetIds(record.Topology, record.ShardedDatabaseId);
+        public void SetIds(RawDatabaseRecord record) => SetIds(record.Topology, record.Sharding?.ShardedDatabaseId);
+        public void SetIds(DatabaseRecord record) => SetIds(record.Topology, record.Sharding?.ShardedDatabaseId);
 
         protected virtual void SetIds(DatabaseTopology topology, string shardedDatabaseId)
         {

@@ -21,7 +21,9 @@ using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Sharding;
+using Raven.Server.Config;
 using Raven.Server.Json;
+using Raven.Server.ServerWide.Sharding;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -56,7 +58,7 @@ namespace Raven.Server.ServerWide
 
         private DatabaseRecord _materializedRecord;
 
-        public RawDatabaseRecord(JsonOperationContext context,BlittableJsonReaderObject record)
+        public RawDatabaseRecord(JsonOperationContext context, BlittableJsonReaderObject record)
         {
             _context = context;
             _record = record ?? throw new ArgumentNullException(nameof(record));
@@ -145,61 +147,38 @@ namespace Raven.Server.ServerWide
         {
             get
             {
-                if (IsSharded())
+                if (IsSharded)
                     return GetShardedDatabaseRecords().Select(x => (x.DatabaseName, x.Topology));
 
-                return new[] {(DatabaseName, Topology)};
+                return new[] { (DatabaseName, Topology) };
             }
         }
 
-        public string _shardedDatabaseId;
+        private RawShardingConfiguration _sharding;
 
-        public string ShardedDatabaseId
+        public RawShardingConfiguration Sharding
         {
             get
             {
-                if (_materializedRecord != null)
-                    return _materializedRecord.ShardedDatabaseId;
-
-                if (_shardedDatabaseId == null)
-                    _record.TryGet(nameof(DatabaseRecord.ShardedDatabaseId), out _shardedDatabaseId);
-
-                return _shardedDatabaseId;
-            }
-        }
-
-        private Dictionary<int, ShardBucketMigration> _bucketMigrations;
-
-        public Dictionary<int, ShardBucketMigration> BucketMigrations
-        {
-            get
-            {
-                if (_materializedRecord != null)
-                    return _materializedRecord.ShardBucketMigrations;
-
-                if (_bucketMigrations == null)
+                if (_sharding == null)
                 {
-                    _bucketMigrations = new Dictionary<int, ShardBucketMigration>();
-                    if (_record.TryGet(nameof(DatabaseRecord.ShardBucketMigrations), out BlittableJsonReaderObject obj) && obj != null)
+                    if (_materializedRecord != null)
                     {
-                        var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
-                        for (var i = 0; i < obj.Count; i++)
-                        {
-                            obj.GetPropertyByIndex(i, ref propertyDetails);
+                        if (_materializedRecord.Sharding == null)
+                            return null;
 
-                            if (propertyDetails.Value == null)
-                                continue;
+                        _sharding = new RawShardingConfiguration(_materializedRecord.Sharding);
 
-                            if (propertyDetails.Value is BlittableJsonReaderObject bjro)
-                                _bucketMigrations[int.Parse(propertyDetails.Name)] = JsonDeserializationCluster.BucketMigration(bjro);
-                        }
+                        return _sharding;
                     }
+
+                    if (_record.TryGet(nameof(DatabaseRecord.Sharding), out BlittableJsonReaderObject obj) && obj != null)
+                        _sharding = new RawShardingConfiguration(_context, obj);
                 }
 
-                return _bucketMigrations;
+                return _sharding;
             }
         }
-
 
         private DatabaseTopology _topology;
 
@@ -219,91 +198,58 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private DatabaseTopology[] _shards;
+        private bool? _isSharded;
 
-        public DatabaseTopology[] Shards
+        public bool IsSharded
         {
             get
             {
                 if (_materializedRecord != null)
-                    return _materializedRecord.Shards;
+                    return _materializedRecord.IsSharded;
 
-                if (_shards != null)
-                    return _shards;
-
-                if (_record.TryGet(nameof(DatabaseRecord.Shards), out BlittableJsonReaderArray array) == false || array == null)
-                    return null;
-
-                _shards = new DatabaseTopology[array.Length];
-                for (var index = 0; index < array.Length; index++)
+                if (_isSharded == null)
                 {
-                    var shard = (BlittableJsonReaderObject)array[index];
-                    _shards[index] = JsonDeserializationCluster.DatabaseTopology(shard);
+                    var sharding = Sharding;
+                    if (sharding != null)
+                    {
+                        sharding.Raw.TryGet(nameof(DatabaseRecord.Sharding.Shards), out BlittableJsonReaderArray array);
+                        _isSharded = array is { Length: > 0 };
+                    }
+                    else
+                    {
+                        _isSharded = false;
+                    }
                 }
 
-                return _shards;
-            }
-        }
-        
-        private List<ShardBucketRange> _shardBucketRanges;
-
-        public List<ShardBucketRange> ShardBucketRanges
-        {
-            get
-            {
-                if (_materializedRecord != null)
-                    return _materializedRecord.ShardBucketRanges;
-
-                if (_shardBucketRanges != null)
-                    return _shardBucketRanges;
-
-                if (_record.TryGet(nameof(DatabaseRecord.ShardBucketRanges), out BlittableJsonReaderArray array) == false || array == null)
-                    return null;
-
-                _shardBucketRanges = new List<ShardBucketRange>(array.Length);
-                for (var index = 0; index < array.Length; index++)
-                {
-                    var shardAllocation = (BlittableJsonReaderObject)array[index];
-                    _shardBucketRanges.Add(JsonDeserializationCluster.ShardRangeAssignment(shardAllocation));
-                }
-
-                return _shardBucketRanges;
+                return _isSharded.Value;
             }
         }
 
-        public bool IsSharded()
+        public RawDatabaseRecord GetShardedDatabaseRecord(int shardNumber)
         {
-            if (_materializedRecord != null)
-                return _materializedRecord.IsSharded;
-
-            _record.TryGet(nameof(DatabaseRecord.Shards), out BlittableJsonReaderArray array);
-            return array != null && array.Length > 0;
-        }
-
-        public RawDatabaseRecord GetShardedDatabaseRecord(int index)
-        {
-            _record.TryGet(nameof(DatabaseRecord.Shards), out BlittableJsonReaderArray array);
-            var shardedTopology = (BlittableJsonReaderObject)array[index];
-            var shardName = ShardHelper.ToShardName(DatabaseName, index);
+            Sharding.Raw.TryGet(nameof(ShardingConfiguration.Shards), out BlittableJsonReaderArray array);
+            var shardedTopology = (BlittableJsonReaderObject)array[shardNumber];
+            var shardName = ShardHelper.ToShardName(DatabaseName, shardNumber);
 
             var settings = new Dictionary<string, string>();
             foreach (var setting in Settings)
-            {
                 settings.Add(setting.Key, setting.Value);
-            }
 
-            // TODO: get rid of the strings
-            if (settings.TryGetValue("DataDir", out string dir))
+            var dataDirectoryKey = RavenConfiguration.GetKey(x => x.Core.DataDirectory);
+            if (settings.TryGetValue(dataDirectoryKey, out string dir))
+                settings[dataDirectoryKey] = Path.Combine(dir, shardName);
+
+            var sharding = Sharding.Raw;
+            sharding.Modifications = new DynamicJsonValue(sharding)
             {
-                settings["DataDir"] = Path.Combine(dir, shardName);
-            }
+                [nameof(ShardingConfiguration.ShardBucketRanges)] = null,
+                [nameof(ShardingConfiguration.Shards)] = null
+            };
 
             _record.Modifications = new DynamicJsonValue(_record)
             {
                 [nameof(DatabaseRecord.DatabaseName)] = shardName,
                 [nameof(DatabaseRecord.Topology)] = shardedTopology,
-                [nameof(DatabaseRecord.ShardBucketRanges)] = null,
-                [nameof(DatabaseRecord.Shards)] = null,
                 [nameof(DatabaseRecord.Settings)] = DynamicJsonValue.Convert(settings)
             };
 
@@ -312,17 +258,18 @@ namespace Raven.Server.ServerWide
 
         public IEnumerable<RawDatabaseRecord> AsShardsOrNormal()
         {
-            if (IsSharded() == false)
-                return new[] {this};
+            if (IsSharded == false)
+                return new[] { this };
 
             return GetShardedDatabaseRecords();
         }
-        
+
         public IEnumerable<RawDatabaseRecord> GetShardedDatabaseRecords()
         {
-            if(_record.TryGet(nameof(DatabaseRecord.Shards), out BlittableJsonReaderArray array) == false 
-               || array == null)
+            if (IsSharded == false)
                 yield break;
+
+            Sharding.Raw.TryGet(nameof(ShardingConfiguration.Shards), out BlittableJsonReaderArray array);
 
             for (var index = 0; index < array.Length; index++)
             {
@@ -335,11 +282,11 @@ namespace Raven.Server.ServerWide
             if (_materializedRecord != null)
                 return _materializedRecord.GetClusterTransactionId();
 
-            if (IsSharded() == false) 
+            if (IsSharded == false)
                 return Topology.ClusterTransactionIdBase64;
 
-            Debug.Assert(Shards.All(s => s.ClusterTransactionIdBase64.Equals(Shards[0].ClusterTransactionIdBase64)));
-            return Shards[0].ClusterTransactionIdBase64;
+            Debug.Assert(Sharding.Shards.All(s => s.ClusterTransactionIdBase64.Equals(Sharding.Shards[0].ClusterTransactionIdBase64)));
+            return Sharding.Shards[0].ClusterTransactionIdBase64;
         }
 
         private DatabaseStateStatus? _databaseState;
@@ -382,7 +329,7 @@ namespace Raven.Server.ServerWide
             {
                 if (_materializedRecord != null)
                     return _materializedRecord.TimeSeries;
-                
+
                 if (_timeSeriesConfiguration == null && _record.TryGet(nameof(DatabaseRecord.TimeSeries), out BlittableJsonReaderObject config) && config != null)
                     _timeSeriesConfiguration = JsonDeserializationCluster.TimeSeriesConfiguration(config);
 
@@ -421,7 +368,7 @@ namespace Raven.Server.ServerWide
 
                 return _revisionsForConflictsConfiguration;
             }
-        }  
+        }
 
         private DocumentsCompressionConfiguration _documentsCompressionConfiguration;
 
@@ -438,7 +385,7 @@ namespace Raven.Server.ServerWide
                 return _documentsCompressionConfiguration;
             }
         }
-        
+
         private ConflictSolver _conflictSolverConfiguration;
 
         public ConflictSolver ConflictSolverConfiguration
@@ -509,8 +456,8 @@ namespace Raven.Server.ServerWide
                 return _externalReplications;
             }
         }
-        
-        
+
+
         public PullReplicationDefinition GetHubPullReplicationByName(string name)
         {
             if (_record.TryGet(nameof(DatabaseRecord.HubPullReplications), out BlittableJsonReaderArray bjra) && bjra != null)
@@ -524,8 +471,8 @@ namespace Raven.Server.ServerWide
 
             return null;
         }
-        
-        
+
+
         public PullReplicationDefinition GetHubPullReplicationById(in long key)
         {
             if (_record.TryGet(nameof(DatabaseRecord.HubPullReplications), out BlittableJsonReaderArray bjra) && bjra != null)
@@ -669,7 +616,7 @@ namespace Raven.Server.ServerWide
                 return _olapEtls;
             }
         }
-        
+
         private List<ElasticSearchEtlConfiguration> _elasticSearchEtls;
 
         public List<ElasticSearchEtlConfiguration> ElasticSearchEtls
@@ -1040,7 +987,7 @@ namespace Raven.Server.ServerWide
                 return _sqlConnectionStrings;
             }
         }
-        
+
         private Dictionary<string, ElasticSearchConnectionString> _elasticSearchConnectionStrings;
 
         public Dictionary<string, ElasticSearchConnectionString> ElasticSearchConnectionStrings

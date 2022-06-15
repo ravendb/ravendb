@@ -442,7 +442,7 @@ namespace Raven.Server.Web.System
 
             if (databaseRecord.IsSharded)
             {
-                foreach (var databaseTopology in databaseRecord.Shards)
+                foreach (var databaseTopology in databaseRecord.Sharding.Shards)
                 {
                     UpdateDatabaseTopology(databaseTopology, clusterTopology, replicationFactor, clusterTransactionId);
                 }

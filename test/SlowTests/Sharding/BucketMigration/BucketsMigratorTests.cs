@@ -2,11 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Sharding;
-using Raven.Server.ServerWide.Maintenance;
 using Raven.Server.ServerWide.Maintenance.Sharding;
 using Raven.Server.Utils;
 using Sparrow;
@@ -61,11 +59,11 @@ namespace SlowTests.Sharding.BucketMigration
         {
             var rnd = new Random(seed ?? 357);
 
-            var shards = new ShardReport[record.Shards.Length];
+            var shards = new ShardReport[record.Sharding.Shards.Length];
 
             for (int bucket = 0; bucket < ShardHelper.NumberOfBuckets; bucket++)
             {
-                var shardNumber = ShardHelper.GetShardNumber(record.ShardBucketRanges, bucket);
+                var shardNumber = ShardHelper.GetShardNumber(record.Sharding.ShardBucketRanges, bucket);
                 shards[shardNumber] ??= new ShardReport
                 {
                     Shard = shardNumber,
@@ -74,8 +72,8 @@ namespace SlowTests.Sharding.BucketMigration
 
                 shards[shardNumber].ReportPerBucket[bucket] = new BucketReport
                 {
-                    Size = (shardNumber + 1) * rnd.NextInt64(10*1024,1024*1024),
-                    NumberOfDocuments = rnd.Next(10,1000)
+                    Size = (shardNumber + 1) * rnd.NextInt64(10 * 1024, 1024 * 1024),
+                    NumberOfDocuments = rnd.Next(10, 1000)
                 };
             }
 
@@ -85,11 +83,14 @@ namespace SlowTests.Sharding.BucketMigration
         [Fact(Skip = "Too stressful")]
         public void BalanceShardsWithNaiveApproach()
         {
-            var record = new DatabaseRecord("dummy") { 
-                Shards = new[]
+            var record = new DatabaseRecord("dummy")
+            {
+                Sharding = new ShardingConfiguration()
+                {
+                    Shards = new[]
                     {
-                        new DatabaseTopology(), 
-                        new DatabaseTopology(), 
+                        new DatabaseTopology(),
+                        new DatabaseTopology(),
                         new DatabaseTopology(),
                         new DatabaseTopology(),
                         new DatabaseTopology(),
@@ -99,15 +100,16 @@ namespace SlowTests.Sharding.BucketMigration
                         new DatabaseTopology(),
                         new DatabaseTopology(),
                     },
-                ShardBucketMigrations = new Dictionary<int, ShardBucketMigration>()
+                    ShardBucketMigrations = new Dictionary<int, ShardBucketMigration>()
+                }
             };
-            
+
             //record.ShardAllocations = PopulateRanges(record.Shards.Length);
-            record.ShardBucketRanges = PopulateRangesEvenly(record.Shards.Length);
+            record.Sharding.ShardBucketRanges = PopulateRangesEvenly(record.Sharding.Shards.Length);
             var reports = CreateShardReports(record);
             var totalMovedBytes = 0L;
             Console.WriteLine($"Inital:");
-            Console.WriteLine(string.Join(Environment.NewLine,reports.Select(r=>$"{r.Shard}:{new Size(r.TotalSize, SizeUnit.Bytes)}")));
+            Console.WriteLine(string.Join(Environment.NewLine, reports.Select(r => $"{r.Shard}:{new Size(r.TotalSize, SizeUnit.Bytes)}")));
 
             var policy = new MigrationPolicy { SizeThreshold = 10 * 1024 * 1024 };
             var moves = 0;
@@ -122,7 +124,7 @@ namespace SlowTests.Sharding.BucketMigration
                 if (migrations.Add(result) == false)
                 {
                     BucketsMigrator.NeedBalanceForDatabase(record, reports, policy, BucketsMigrator.NaiveMove, out result);
-                    if(migrations.Add(result) == false)
+                    if (migrations.Add(result) == false)
                         throw new InvalidOperationException($"Gave up! {Environment.NewLine}{logs}");
                 }
 
@@ -135,11 +137,11 @@ namespace SlowTests.Sharding.BucketMigration
                 if (moves % 100 == 0)
                 {
                     Console.WriteLine($"After {moves} moves");
-                    Console.WriteLine($"ranges: {record.ShardBucketRanges.Count}");
+                    Console.WriteLine($"ranges: {record.Sharding.ShardBucketRanges.Count}");
                     Console.WriteLine($"So far moved: {new Size(totalMovedBytes, SizeUnit.Bytes)}");
-                    Console.WriteLine(string.Join(Environment.NewLine,reports.Select(r=>$"{r.Shard}:{new Size(r.TotalSize, SizeUnit.Bytes)}")));
+                    Console.WriteLine(string.Join(Environment.NewLine, reports.Select(r => $"{r.Shard}:{new Size(r.TotalSize, SizeUnit.Bytes)}")));
                 }
-                
+
                 if (moves % 16 == 0)
                     migrations.Clear();
 

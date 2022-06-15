@@ -24,9 +24,7 @@ using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Operations.Integrations;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Client.Util;
-using Sparrow;
 using Sparrow.Json.Parsing;
-using Sparrow.Utils;
 
 namespace Raven.Client.ServerWide
 {
@@ -65,18 +63,7 @@ namespace Raven.Client.ServerWide
 
         public DatabaseTopology Topology;
 
-        public DatabaseTopology[] Shards;
-
-        public List<ShardBucketRange> ShardBucketRanges = new List<ShardBucketRange>();
-
-        public Dictionary<int, ShardBucketMigration> ShardBucketMigrations;
-
-        // change vectors with a MOVE element below this will be considered as permanent
-        // pointers with the migration index below this one will be purged
-        public long MigrationCutOffIndex;
-
-        // the dbid part with the MOVE tag upon migration
-        public string ShardedDatabaseId;
+        public ShardingConfiguration Sharding;
 
         // public OnGoingTasks tasks;  tasks for this node..
         // list backup.. list sub .. list etl.. list repl(watchers).. list sql
@@ -120,7 +107,7 @@ namespace Raven.Client.ServerWide
         public Dictionary<string, RavenConnectionString> RavenConnectionStrings = new Dictionary<string, RavenConnectionString>();
 
         public Dictionary<string, SqlConnectionString> SqlConnectionStrings = new Dictionary<string, SqlConnectionString>();
-        
+
         public Dictionary<string, OlapConnectionString> OlapConnectionStrings = new Dictionary<string, OlapConnectionString>();
 
         public Dictionary<string, ElasticSearchConnectionString> ElasticSearchConnectionStrings = new Dictionary<string, ElasticSearchConnectionString>();
@@ -130,7 +117,7 @@ namespace Raven.Client.ServerWide
         public List<RavenEtlConfiguration> RavenEtls = new List<RavenEtlConfiguration>();
 
         public List<SqlEtlConfiguration> SqlEtls = new List<SqlEtlConfiguration>();
-        
+
         public List<ElasticSearchEtlConfiguration> ElasticSearchEtls = new List<ElasticSearchEtlConfiguration>();
 
         public List<OlapEtlConfiguration> OlapEtls = new List<OlapEtlConfiguration>();
@@ -146,7 +133,7 @@ namespace Raven.Client.ServerWide
         public HashSet<string> UnusedDatabaseIds = new HashSet<string>();
 
         [JsonIgnore]
-        public bool IsSharded => Shards?.Length > 0;
+        public bool IsSharded => Sharding?.Shards?.Length > 0;
 
         [JsonIgnore]
         internal IEnumerable<(string Name, DatabaseTopology Topology)> Topologies
@@ -155,9 +142,9 @@ namespace Raven.Client.ServerWide
             {
                 if (IsSharded)
                 {
-                    for (int i = 0; i < Shards.Length; i++)
+                    for (int i = 0; i < Sharding.Shards.Length; i++)
                     {
-                        yield return ($"{DatabaseName}${i}", Shards[i]);
+                        yield return ($"{DatabaseName}${i}", Sharding.Shards[i]);
                     }
                     yield break;
                 }
@@ -229,7 +216,7 @@ namespace Raven.Client.ServerWide
 
                 if (differences != null)
                 {
-                    if (differences.Value.HasFlag(IndexDefinitionCompareDifferences.Maps) == false && 
+                    if (differences.Value.HasFlag(IndexDefinitionCompareDifferences.Maps) == false &&
                         differences.Value.HasFlag(IndexDefinitionCompareDifferences.Reduce) == false &&
                         differences.Value.HasFlag(IndexDefinitionCompareDifferences.Fields) == false &&
                         differences.Value.HasFlag(IndexDefinitionCompareDifferences.AdditionalSources) == false &&
@@ -385,7 +372,7 @@ namespace Raven.Client.ServerWide
             {
                 if (periodicBackup.TaskId == backupTaskId)
                 {
-                    if (periodicBackup.Name != null && 
+                    if (periodicBackup.Name != null &&
                         periodicBackup.Name.StartsWith(ServerWideBackupConfiguration.NamePrefix, StringComparison.OrdinalIgnoreCase))
                         throw new InvalidOperationException($"Can't delete task id: {periodicBackup.TaskId}, name: '{periodicBackup.Name}', " +
                                                             $"because it is a server-wide backup task. Please use a dedicated operation.");
@@ -460,27 +447,16 @@ namespace Raven.Client.ServerWide
             if (Topology != null && Topology.Count > 0)
                 return true;
 
-            return Shards != null && Shards.All(shard => shard?.Count > 0);
-        }
-
-        public IEnumerable<string> GetTopologyMembers(Func<DatabaseTopology, List<string>> get)
-        {
-            if (Topology != null)
-                return get(Topology);
-
-            var set = new HashSet<string>();
-            foreach (var shard in Shards)
-            {
-                set.UnionWith(get(shard));
-            }
-
-            return set.ToList();
+            return Sharding != null && Sharding.Shards != null && Sharding.Shards.All(shard => shard?.Count > 0);
         }
 
         internal string GetClusterTransactionId()
         {
-            Debug.Assert(Shards.All(s => s.ClusterTransactionIdBase64.Equals(Shards[0].ClusterTransactionIdBase64)));
-            return Shards[0].ClusterTransactionIdBase64;
+            if (IsSharded == false)
+                return Topology.ClusterTransactionIdBase64;
+
+            Debug.Assert(Sharding.Shards.All(s => s.ClusterTransactionIdBase64.Equals(Sharding.Shards[0].ClusterTransactionIdBase64)));
+            return Sharding.Shards[0].ClusterTransactionIdBase64;
         }
     }
 
@@ -537,9 +513,9 @@ namespace Raven.Client.ServerWide
 
         protected bool Equals(DocumentsCompressionConfiguration other)
         {
-            var mine = new HashSet<string>(Collections,StringComparer.OrdinalIgnoreCase);
+            var mine = new HashSet<string>(Collections, StringComparer.OrdinalIgnoreCase);
             var them = new HashSet<string>(other.Collections, StringComparer.OrdinalIgnoreCase);
-            return CompressRevisions == other.CompressRevisions && 
+            return CompressRevisions == other.CompressRevisions &&
                    CompressAllCollections == other.CompressAllCollections &&
                    mine.SetEquals(them);
         }
@@ -568,12 +544,12 @@ namespace Raven.Client.ServerWide
             hash = 31 * hash + CompressAllCollections.GetHashCode();
             return hash;
         }
-        
+
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
-                [nameof(Collections)] =  new DynamicJsonArray(Collections),
+                [nameof(Collections)] = new DynamicJsonArray(Collections),
                 [nameof(CompressAllCollections)] = CompressAllCollections,
                 [nameof(CompressRevisions)] = CompressRevisions
             };

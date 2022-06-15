@@ -475,7 +475,7 @@ namespace Raven.Server.ServerWide.Commands
                             $"Database cluster transaction command type can be {CommandType.PUT} or {CommandType.PUT} but got {type}");
                 }
 
-                var databaseId = _record.Shards[shardNumber].DatabaseTopologyIdBase64;
+                var databaseId = _record.Sharding.Shards[shardNumber].DatabaseTopologyIdBase64;
                 var changeVector = ChangeVectorUtils.GetClusterWideChangeVector(databaseId, ++_initialCount, _options.DisableAtomicDocumentWrites == false, _index,
                     _record.GetClusterTransactionId());
 
@@ -502,7 +502,7 @@ namespace Raven.Server.ServerWide.Commands
             if (SerializedDatabaseCommands == null)
                 return;
 
-            if (rawRecord.IsSharded())
+            if (rawRecord.IsSharded)
             {
                 if (SerializedDatabaseCommands.TryGet(nameof(DatabaseCommands), out BlittableJsonReaderArray commands) == false)
                     throw new InvalidOperationException($"Cluster {nameof(SerializedDatabaseCommands)} don't include the actual commands : {SerializedDatabaseCommands}");
@@ -518,7 +518,7 @@ namespace Raven.Server.ServerWide.Commands
                         throw new InvalidOperationException($"Got cluster transaction database command without an id: {command}");
 
                     var bucket = ShardHelper.GetBucket(context, id);
-                    var shardNumber = ShardHelper.GetShardNumber(rawRecord.ShardBucketRanges, bucket);
+                    var shardNumber = ShardHelper.GetShardNumber(rawRecord.Sharding.ShardBucketRanges, bucket);
                     perShard.Add(id, command, shardNumber);
                 }
 
