@@ -169,7 +169,7 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithMessages, QueueEtlConfigu
 
         if (_kafkaProducer == null)
         {
-            var producer = QueueHelper.CreateKafkaClient(Configuration.Connection, TransactionalId, Logger,
+            var producer = QueueBrokerConnectionHelper.CreateKafkaProducer(Configuration.Connection.KafkaConnectionSettings, TransactionalId, Logger,
                 Database.ServerStore.Server.Certificate.Certificate);
 
             try
@@ -295,7 +295,7 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithMessages, QueueEtlConfigu
 
         if (_rabbitMqConnection == null)
         {
-            _rabbitMqConnection = QueueHelper.CreateRabbitMqConnection(Configuration.Connection);
+            _rabbitMqConnection = QueueBrokerConnectionHelper.CreateRabbitMqConnection(Configuration.Connection.RabbitMqConnectionSettings);
         }
 
         DeclareExchangesAndQueues();
