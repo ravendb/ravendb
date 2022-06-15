@@ -604,16 +604,6 @@ namespace Raven.Server.Documents.Replication.Outgoing
             LastAcceptedChangeVector = replicationBatchReply.DatabaseChangeVector;
         }
 
-        protected abstract void AddAlertOnFailureToReachOtherSide(string msg, Exception e);
-
-        protected abstract void Replicate();
-
-        protected abstract void OnSuccessfulTwoWaysCommunication();
-
-        protected abstract void OnFailed(Exception e);
-
-        protected abstract long GetLastHeartbeatTicks();
-
         protected static void ThrowTimeout(int timeout)
         {
             throw new TimeoutException("Could not get a server response in a reasonable time " +
@@ -736,6 +726,16 @@ namespace Raven.Server.Documents.Replication.Outgoing
                 ExceptionMessage = exceptionMessage
             });
         }
+
+        protected abstract void AddAlertOnFailureToReachOtherSide(string msg, Exception e);
+
+        protected abstract void Replicate();
+
+        protected abstract void OnSuccessfulTwoWaysCommunication();
+
+        protected abstract void OnFailed(Exception e);
+
+        protected abstract long GetLastHeartbeatTicks();
 
         protected abstract void InitiatePullReplicationAsSink(TcpConnectionHeaderMessage.SupportedFeatures socketResultSupportedFeatures, X509Certificate2 certificate);
 

@@ -273,7 +273,7 @@ namespace Raven.Server.Documents.Replication.Incoming
         {
         }
 
-        protected override Task HandleBatch(DocumentsOperationContext context, DataForReplicationCommand batch, long lastEtag)
+        protected override Task HandleBatchAsync(DocumentsOperationContext context, DataForReplicationCommand batch, long lastEtag)
         {
             var replicationCommand = GetMergeDocumentsCommand(batch, lastEtag);
             return _database.TxMerger.Enqueue(replicationCommand);
@@ -316,11 +316,11 @@ namespace Raven.Server.Documents.Replication.Incoming
                 : LiveReplicationPerformanceCollector.ReplicationPerformanceType.IncomingExternal;
         }
 
-        protected override void OnAttachmentStreamsReceives(int attachmentStreamCount) => AttachmentStreamsReceived?.Invoke(this, attachmentStreamCount);
+        protected override void InvokeOnAttachmentStreamsReceived(int attachmentStreamCount) => AttachmentStreamsReceived?.Invoke(this, attachmentStreamCount);
 
-        protected override void OnFailed(Exception exception) => Failed?.Invoke(this, exception);
+        protected override void InvokeOnFailed(Exception exception) => Failed?.Invoke(this, exception);
 
-        protected override void OnDocumentsReceived() => DocumentsReceived?.Invoke(this);
+        protected override void InvokeOnDocumentsReceived() => DocumentsReceived?.Invoke(this);
 
         internal class MergedDocumentReplicationCommand : TransactionOperationsMerger.MergedTransactionCommand
         {

@@ -217,7 +217,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                     if (Logger.IsInfoEnabled)
                         Logger.Info($"Connection error {FromToString}: an exception was thrown during receiving incoming document replication batch.", e);
 
-                    OnFailed(e);
+                    InvokeOnFailed(e);
                 }
             }
         }
@@ -372,9 +372,9 @@ namespace Raven.Server.Documents.Replication.Incoming
 
             ReceiveSingleDocumentsBatch(context, itemsCount, attachmentStreamCount, lastDocumentEtag, stats);
 
-            OnAttachmentStreamsReceives(attachmentStreamCount);
+            InvokeOnAttachmentStreamsReceived(attachmentStreamCount);
 
-            OnDocumentsReceived();
+            InvokeOnDocumentsReceived();
         }
 
         protected void ReadItemsFromSource(int replicatedDocs, TOperationContext context, ByteStringContext allocator, IncomingReplicationHandler.DataForReplicationCommand data, Reader reader,
@@ -470,7 +470,7 @@ namespace Raven.Server.Documents.Replication.Incoming
 
                     using (stats.For(ReplicationOperation.Incoming.Storage))
                     {
-                        task = HandleBatch(context, dataForReplicationCommand, lastEtag);
+                        task = HandleBatchAsync(context, dataForReplicationCommand, lastEtag);
                         //We need a new context here
                         using (_contextPool.AllocateOperationContext(out JsonOperationContext msgContext))
                         using (var writer = new BlittableJsonTextWriter(msgContext, _stream))
@@ -569,13 +569,13 @@ namespace Raven.Server.Documents.Replication.Incoming
 
         protected abstract void EnsureNotDeleted(string nodeTag);
 
-        protected abstract void OnDocumentsReceived();
+        protected abstract void InvokeOnDocumentsReceived();
 
-        protected abstract void OnAttachmentStreamsReceives(int attachmentStreamCount);
+        protected abstract void InvokeOnAttachmentStreamsReceived(int attachmentStreamCount);
 
-        protected abstract void OnFailed(Exception exception);
+        protected abstract void InvokeOnFailed(Exception exception);
 
-        protected abstract Task HandleBatch(TOperationContext context, IncomingReplicationHandler.DataForReplicationCommand batch, long lastEtag);
+        protected abstract Task HandleBatchAsync(TOperationContext context, IncomingReplicationHandler.DataForReplicationCommand batch, long lastEtag);
 
         protected abstract void HandleTaskCompleteIfNeeded();
 

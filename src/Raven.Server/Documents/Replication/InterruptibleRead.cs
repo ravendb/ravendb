@@ -3,29 +3,28 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Server;
 
 namespace Raven.Server.Documents.Replication
 {
-    public class InterruptibleRead<TPool, TContext> : IDisposable
-    where TPool : JsonContextPoolBase<TContext>
-    where TContext : JsonOperationContext
+    public class InterruptibleRead<TContextPool, TOperationContext> : IDisposable
+    where TContextPool : JsonContextPoolBase<TOperationContext>
+    where TOperationContext : JsonOperationContext
     {
         private bool _isDisposed;
 
         private Task<Result> _prevCall;
         private readonly Dictionary<AsyncManualResetEvent, Task<Task>> _previousWait = new Dictionary<AsyncManualResetEvent, Task<Task>>();
 
-        private readonly TPool _contextPool;
+        private readonly TContextPool _contextPool;
         private readonly Stream _stream;
 
         public struct Result : IDisposable
         {
             public BlittableJsonReaderObject Document;
             public IDisposable ReturnContext;
-            public TContext Context;
+            public TOperationContext Context;
             public bool Timeout;
             public bool Interrupted;
 
@@ -39,7 +38,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        public InterruptibleRead(TPool contextPool, Stream stream)
+        public InterruptibleRead(TContextPool contextPool, Stream stream)
         {
             _contextPool = contextPool;
             _stream = stream;
@@ -109,7 +108,7 @@ namespace Raven.Server.Documents.Replication
 
         private async Task<Result> ReadNextObject(string debugTag, JsonOperationContext.MemoryBuffer buffer, CancellationToken token)
         {
-            var returnContext = _contextPool.AllocateOperationContext(out TContext context);
+            var returnContext = _contextPool.AllocateOperationContext(out TOperationContext context);
             try
             {
                 var json = await context.ParseToMemoryAsync(_stream, debugTag, BlittableJsonDocumentBuilder.UsageMode.None, buffer, token: token);
