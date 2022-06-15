@@ -401,7 +401,14 @@ output('test output')"
         using (var dstStore = GetDocumentStore())
         {
             var config = SetupQueueEtlToKafka(srcStore,
-                DefaultScript, DefaultCollections, bootstrapServers: "http://localhost:1234");
+                DefaultScript, DefaultCollections, new List<EtlQueue>()
+                {
+                    new()
+                    {
+                        Name = "Orders",
+                        DeleteProcessedDocuments = true
+                    }
+                }, bootstrapServers: "http://localhost:1234");
 
             var exportFile = GetTempFileName();
 
@@ -414,6 +421,14 @@ output('test output')"
             var destinationRecord = await dstStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(dstStore.Database));
             Assert.Equal(1, destinationRecord.QueueConnectionStrings.Count);
             Assert.Equal(1, destinationRecord.QueueEtls.Count);
+
+            Assert.Equal(QueueBroker.Kafka, destinationRecord.QueueEtls[0].BrokerType);
+            Assert.Equal(DefaultScript, destinationRecord.QueueEtls[0].Transforms[0].Script);
+            Assert.Equal(DefaultCollections, destinationRecord.QueueEtls[0].Transforms[0].Collections);
+
+            Assert.Equal(1, destinationRecord.QueueEtls[0].Queues.Count);
+            Assert.Equal("Orders", destinationRecord.QueueEtls[0].Queues[0].Name);
+            Assert.True(destinationRecord.QueueEtls[0].Queues[0].DeleteProcessedDocuments);
         }
     }
 
