@@ -302,6 +302,10 @@ namespace SlowTests.Server.Replication
             }
         }
 
+        private const DatabaseItemType AllTypes = DatabaseItemType.Documents | DatabaseItemType.RevisionDocuments | DatabaseItemType.Tombstones |
+                                                  DatabaseItemType.Conflicts | DatabaseItemType.Attachments | DatabaseItemType.CounterGroups |
+                                                  DatabaseItemType.TimeSeries;
+
         [Fact]
         public async Task ExternalReplicationFromNonShardedToShardedShouldWork()
         {
@@ -342,7 +346,7 @@ namespace SlowTests.Server.Replication
             {
                 await SetupReplicationAsync(store1, store2);
 
-                await store1.Maintenance.SendAsync(new CreateSampleDataOperation(DatabaseItemType.AllDatabaseItems));
+                await store1.Maintenance.SendAsync(new CreateSampleDataOperation(AllTypes));
 
                 await EnsureReplicatingAsync(store1, store2);
 
@@ -396,7 +400,7 @@ namespace SlowTests.Server.Replication
             {
                 await SetupReplicationAsync(store1, store2);
 
-                await store1.Maintenance.SendAsync(new CreateSampleDataOperation(DatabaseItemType.AllDatabaseItems));
+                await store1.Maintenance.SendAsync(new CreateSampleDataOperation(AllTypes));
                 WaitForUserToContinueTheTest(store2);
 
                 await EnsureReplicatingAsync(store1, store2);
@@ -447,7 +451,7 @@ namespace SlowTests.Server.Replication
             {
                 await SetupReplicationAsync(store1, store2);
 
-                await store1.Maintenance.SendAsync(new CreateSampleDataOperation(DatabaseItemType.AllDatabaseItems));
+                await store1.Maintenance.SendAsync(new CreateSampleDataOperation(AllTypes));
 
                 await EnsureReplicatingAsync(store1, store2);
                 

@@ -13,6 +13,7 @@ using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Server;
+using Sparrow.Utils;
 using Voron;
 
 namespace Raven.Server.Documents.Sharding.Handlers
@@ -33,19 +34,21 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
         protected override void EnsureNotDeleted(string nodeTag) => _parent.EnsureNotDeleted(_parent.Server.NodeTag);
 
-        protected override void OnFailed(Exception exception)
+        protected override void InvokeOnFailed(Exception exception)
         {
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "Handle replication failures");
         }
 
         protected override void HandleHeartbeatMessage(TransactionOperationContext jsonOperationContext, BlittableJsonReaderObject blittableJsonReaderObject)
         {
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "Find a way to implement change vector updates for tackling optimization issues");
         }
 
-        protected override void OnDocumentsReceived()
+        protected override void InvokeOnDocumentsReceived()
         {
         }
 
-        protected override void OnAttachmentStreamsReceives(int attachmentStreamCount)
+        protected override void InvokeOnAttachmentStreamsReceived(int attachmentStreamCount)
         {
         }
 
@@ -54,7 +57,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
             _replicationQueue.SendToShardCompletion = new AsyncCountdownEvent(_parent.Context.ShardCount);
         }
 
-        protected override Task HandleBatch(TransactionOperationContext context, IncomingReplicationHandler.DataForReplicationCommand dataForReplicationCommand, long lastEtag)
+        protected override Task HandleBatchAsync(TransactionOperationContext context, IncomingReplicationHandler.DataForReplicationCommand dataForReplicationCommand, long lastEtag)
         {
             PrepareReplicationDataForShards(context, dataForReplicationCommand);
             return _replicationQueue.SendToShardCompletion.WaitAsync();
@@ -62,6 +65,8 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
         private void PrepareReplicationDataForShards(TransactionOperationContext context, IncomingReplicationHandler.DataForReplicationCommand dataForReplicationCommand)
         {
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "Optimization possibility: instead of iterating over materialized batch, we can do it while reading from the stream");
+
             var dictionary = new Dictionary<int, List<ReplicationBatchItem>>();
             for (var shard = 0; shard < _parent.Context.ShardCount; shard++)
                 dictionary[shard] = new List<ReplicationBatchItem>();
@@ -103,6 +108,8 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
                             _attachmentStreamsTempFile._file.InnerStream.CopyTo(attachmentStream.Stream);
                             shardAttachments[attachment.Key] = attachmentStream;
+
+                            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "Optimization required");
                         }
                     }
                 }
@@ -136,6 +143,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 case TimeSeriesReplicationItem:
                     return _parent.Context.GetShardNumber(context, _documentInfoHelper.GetDocumentId(item));
                 case RevisionTombstoneReplicationItem:
+                    DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "Handle this (document Id does not exist)");
                     throw new NotSupportedInShardingException("TODO: implement for sharding"); // revision tombstones doesn't contain any info about the doc. The id here is the change-vector of the deleted revision
                 default:
                     throw new ArgumentOutOfRangeException($"{nameof(item)} - {item}");

@@ -66,7 +66,7 @@ namespace Raven.Server.Documents.Sharding
             Changes = new ShardedDocumentsChanges(this);
             Operations = new ShardedOperations(this);
             RachisLogIndexNotifications = new RachisLogIndexNotifications(_databaseShutdown.Token);
-            ReplicationContext = new ShardedReplicationContext(this, serverStore);
+            Replication = new ShardedReplicationContext(this, serverStore);
         }
 
         public IDisposable AllocateContext(out JsonOperationContext context) => ServerStore.ContextPool.AllocateOperationContext(out context);
@@ -126,7 +126,7 @@ namespace Raven.Server.Documents.Sharding
 
             try
             {
-                ReplicationContext.Dispose();
+                Replication.Dispose();
             }
             catch
             {

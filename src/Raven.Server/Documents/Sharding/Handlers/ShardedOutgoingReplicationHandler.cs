@@ -16,6 +16,7 @@ using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.Utils;
 using Voron;
 
 namespace Raven.Server.Documents.Sharding.Handlers
@@ -75,8 +76,12 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
                                 var didWork = SendDocumentsBatch(context, items, _stats.Network);
 
-                                if (MissingAttachmentsInLastBatch) // TODO
+                                if (MissingAttachmentsInLastBatch)
+                                {
+                                    DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "Handle missing attachments");
                                     continue;
+                                }
+                                    
 
                                 _replicationQueue.SendToShardCompletion.Signal();
 
@@ -93,8 +98,8 @@ namespace Raven.Server.Documents.Sharding.Handlers
         {
             try
             {
-                //TODO: think how to unify this with the ReplicationDocumentSenderBase.SendDocumentsBatch 
-
+                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "Unify this with the ReplicationDocumentSenderBase.SendDocumentsBatch");
+                
                 var sw = Stopwatch.StartNew();
                 var headerJson = new DynamicJsonValue
                 {
@@ -176,6 +181,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
         protected override void AddAlertOnFailureToReachOtherSide(string msg, Exception e)
         {
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "Add alert");
         }
 
         protected override void InitiatePullReplicationAsSink(TcpConnectionHeaderMessage.SupportedFeatures socketResultSupportedFeatures, X509Certificate2 certificate)
@@ -185,6 +191,8 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
         protected override void AssertDatabaseNotDisposed()
         {
+            if (_parent.Context == null)
+                throw new InvalidOperationException("Sharded database context got disposed. Stopping the replication.");
         }
 
         protected override X509Certificate2 GetCertificateForReplication(ReplicationNode destination, out TcpConnectionHeaderMessage.AuthorizationInfo authorizationInfo)
@@ -194,14 +202,17 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
         protected override void OnBeforeDispose()
         {
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "Handle this");
         }
 
         protected override void OnSuccessfulTwoWaysCommunication()
         {
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "Handle this");
         }
 
         protected override void OnFailed(Exception e)
         {
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "Handle this");
         }
 
         protected override long GetLastHeartbeatTicks() => _parent.Context.Time.GetUtcNow().Ticks;

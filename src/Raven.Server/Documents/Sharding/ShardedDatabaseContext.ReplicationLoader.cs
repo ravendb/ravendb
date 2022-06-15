@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Sharding
 {
     public partial class ShardedDatabaseContext
     {
-        public readonly ShardedReplicationContext ReplicationContext;
+        public readonly ShardedReplicationContext Replication;
 
         public class ShardedReplicationContext : IDisposable
         {
