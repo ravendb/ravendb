@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.ETL.Providers.Queue.Handlers
 
                 QueueBrokerConnectionHelper.SetupKafkaClientConfig(adminConfig, settings, Database.ServerStore.Server.Certificate.Certificate);
 
-                var adminClient = new AdminClientBuilder(adminConfig).Build();
+                using var adminClient = new AdminClientBuilder(adminConfig).Build();
                 adminClient.GetMetadata(TimeSpan.FromSeconds(10));
 
                 DynamicJsonValue result = new()
