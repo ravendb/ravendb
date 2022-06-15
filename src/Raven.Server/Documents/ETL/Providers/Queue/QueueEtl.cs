@@ -416,11 +416,19 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithMessages, QueueEtlConfigu
         };
     }
 
+    protected override void OnProcessStopped()
+    {
+        _kafkaProducer?.Dispose();
+        _kafkaProducer = null;
+        _rabbitMqConnection?.Dispose();
+        _rabbitMqConnection = null;
+    }
+
     public override void Dispose()
     {
         base.Dispose();
-        _kafkaProducer?.Dispose();
-        _rabbitMqConnection?.Dispose();
+        
+        OnProcessStopped();
     }
 
     private class QueueMessage

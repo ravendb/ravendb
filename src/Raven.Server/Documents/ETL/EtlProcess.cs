@@ -677,6 +677,12 @@ namespace Raven.Server.Documents.ETL
 
             if (longRunningWork != PoolOfThreads.LongRunningWork.Current) // prevent a deadlock
                 longRunningWork.Join(int.MaxValue);
+
+            OnProcessStopped();
+        }
+
+        protected virtual void OnProcessStopped()
+        {
         }
 
         private void ReportStopReasonToStats(string msg)
