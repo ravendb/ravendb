@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -22,6 +23,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Server;
 using Raven.Server.Documents;
 using Raven.Server.Documents.PeriodicBackup;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
@@ -40,11 +42,13 @@ public partial class RavenTestBase
         public ShardedBackupTestsBase Backup;
 
         private readonly RavenTestBase _parent;
+        public readonly ReshardingTestBase Resharding;
 
         public ShardingTestBase(RavenTestBase parent)
         {
             _parent = parent ?? throw new ArgumentNullException(nameof(parent));
             Backup = new ShardedBackupTestsBase(_parent);
+            Resharding = new ReshardingTestBase(_parent);
         }
 
         public IDocumentStore GetDocumentStore(Options options = null, [CallerMemberName] string caller = null, DatabaseTopology[] shards = null)
@@ -395,6 +399,78 @@ public partial class RavenTestBase
                             }
                         };
                 }
+            }
+        }
+
+        public class ReshardingTestBase
+        {
+            private readonly RavenTestBase _parent;
+
+            public ReshardingTestBase(RavenTestBase parent)
+            {
+                _parent = parent;
+            }
+
+            public async Task MoveShardForId(IDocumentStore store, string id, List<RavenServer> servers = null)
+            {
+                if (_parent.Servers.Count > 0)
+                {
+                    servers ??= _parent.Servers;
+                }
+                else
+                {
+                    servers ??= new List<RavenServer> { _parent.Server };
+                }
+
+                var server = servers[0].ServerStore;
+
+                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                var bucket = ShardHelper.GetBucket(id);
+                var location = ShardHelper.GetShardNumber(record.ShardBucketRanges, bucket);
+                var newLocation = (location + 1) % record.Shards.Length;
+
+                var destination = record.Shards[newLocation];
+                var source = record.Shards[location];
+
+
+                using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, location)))
+                {
+                    var user = await session.Advanced.ExistsAsync(id);
+                    Assert.NotNull(user);
+                }
+
+                var result = await server.Sharding.StartBucketMigration(store.Database, bucket, location, newLocation);
+                var migrationIndex = result.Index;
+
+                var exists = _parent.WaitForDocument<dynamic>(store, id, predicate: null, database: ShardHelper.ToShardName(store.Database, newLocation));
+                Assert.True(exists, $"{id} wasn't found at shard {newLocation}");
+
+                using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, newLocation)))
+                {
+                    var user = await session.LoadAsync<dynamic>(id);
+                    var changeVector = session.Advanced.GetChangeVectorFor(user);
+
+                    result = await server.Sharding.SourceMigrationCompleted(store.Database, bucket, migrationIndex, changeVector);
+                    await _parent.Cluster.WaitForRaftIndexToBeAppliedOnClusterNodesAsync(result.Index, servers);
+                }
+
+                foreach (var s in servers)
+                {
+                    if (destination.AllNodes.Contains(s.ServerStore.NodeTag) == false)
+                        continue;
+
+                    result = await s.ServerStore.Sharding.DestinationMigrationConfirm(store.Database, bucket, migrationIndex);
+                }
+                await _parent.Cluster.WaitForRaftIndexToBeAppliedOnClusterNodesAsync(result.Index, servers);
+
+                foreach (var s in servers)
+                {
+                    if (source.AllNodes.Contains(s.ServerStore.NodeTag) == false)
+                        continue;
+
+                    result = await s.ServerStore.Sharding.SourceMigrationCleanup(store.Database, bucket, migrationIndex);
+                }
+                await _parent.Cluster.WaitForRaftIndexToBeAppliedOnClusterNodesAsync(result.Index, servers);
             }
         }
     }

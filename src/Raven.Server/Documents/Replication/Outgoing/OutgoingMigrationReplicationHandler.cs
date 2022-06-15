@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using Raven.Client.ServerWide.Commands;
 using Raven.Server.Documents.Replication.Senders;
 using Sparrow.Logging;
@@ -13,10 +14,8 @@ namespace Raven.Server.Documents.Replication.Outgoing
             BucketMigrationNode = node;
         }
 
-        public override ReplicationDocumentSenderBase CreateDocumentSender(Stream stream, Logger logger)
-        {
-            return new MigrationReplicationDocumentSender(stream, this, logger);
-        }
+        public override ReplicationDocumentSenderBase CreateDocumentSender(Stream stream, Logger logger) => 
+            new MigrationReplicationDocumentSender(stream, this, logger);
 
         protected override void ProcessHandshakeResponse((ReplicationMessageReply.ReplyType ReplyType, ReplicationMessageReply Reply) response)
         {

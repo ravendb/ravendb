@@ -1,4 +1,7 @@
-﻿using Raven.Client.Documents.Replication.Messages;
+﻿using System;
+using Raven.Client.Documents.Replication.Messages;
+using Raven.Server.Documents.Replication.ReplicationItems;
+using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -20,8 +23,10 @@ namespace Raven.Server.Documents.Replication.Incoming
         protected override TransactionOperationsMerger.MergedTransactionCommand GetUpdateChangeVectorCommand(string changeVector, long lastDocumentEtag, string sourceDatabaseId, AsyncManualResetEvent trigger)
         {
             // TODO: noop command here?
+            return null;
             return base.GetUpdateChangeVectorCommand(changeVector, lastDocumentEtag, sourceDatabaseId, trigger);
         }
+
         internal class MergedIncomingMigrationCommand : MergedDocumentReplicationCommand
         {
             public MergedIncomingMigrationCommand(DataForReplicationCommand replicationInfo, long lastEtag) : base(replicationInfo, lastEtag)
@@ -33,6 +38,11 @@ namespace Raven.Server.Documents.Replication.Incoming
                 // TODO: delete current items in the bucket?
                 // TODO: handle the incoming properly
                 return base.ExecuteCmd(context);
+            }
+
+            protected override void SaveSourceEtag(DocumentsOperationContext context)
+            {
+                // do nothing
             }
         }
     }

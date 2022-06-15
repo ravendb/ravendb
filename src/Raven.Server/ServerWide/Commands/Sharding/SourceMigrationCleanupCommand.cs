@@ -30,7 +30,7 @@ namespace Raven.Server.ServerWide.Commands.Sharding
                 throw new InvalidOperationException($"Wrong migration index. Expected: '{MigrationIndex}', Actual: '{migration.MigrationIndex}'");
 
             if (migration.Status != MigrationStatus.OwnershipTransferred)
-                throw new InvalidOperationException($"Expected status is '{MigrationStatus.Moved}', Actual '{migration.Status}'");
+                throw new InvalidOperationException($"Expected status is '{MigrationStatus.OwnershipTransferred}', Actual '{migration.Status}'");
 
             if (migration.ConfirmedSourceCleanup.Contains(Node) == false)
                 migration.ConfirmedSourceCleanup.Add(Node);

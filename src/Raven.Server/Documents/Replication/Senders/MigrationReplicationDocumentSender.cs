@@ -2,9 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Text;
-using Raven.Client.Documents.Operations.Replication;
-using Raven.Server.Documents.Handlers;
+using System.Linq;
 using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Replication.Stats;
@@ -12,8 +10,6 @@ using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Logging;
-using Sparrow.Server;
-using Sparrow.Server.Utils;
 
 namespace Raven.Server.Documents.Replication.Senders
 {
@@ -30,36 +26,17 @@ namespace Raven.Server.Documents.Replication.Senders
 
         protected override IEnumerable<ReplicationBatchItem> GetReplicationItems(DocumentsOperationContext ctx, long etag, ReplicationStats stats, bool caseInsensitiveCounters)
         {
-            // TODO : temporary, waiting for RavenDB-17760
-            var migrationId = Database.ShardedDatabaseId;
-            using var helper = new DocumentInfoHelper();
-            foreach (var item in base.GetReplicationItems(ctx, etag, stats, caseInsensitiveCounters))
-            {
-                var id = helper.GetDocumentId(item);
-                if (ShardHelper.GetBucket(ctx.Allocator, id) == Destination.Bucket)
-                {
-                    var result = ChangeVectorUtils.TryUpdateChangeVector(MigrationTag, migrationId, Destination.MigrationIndex, item.ChangeVector);
-                    Debug.Assert(result.IsValid,$"Failed to update the change vector {item.ChangeVector} with '{MigrationTag}:{Destination.MigrationIndex}-{migrationId}'");
-
-                    item.ChangeVector = result.ChangeVector;
-                    yield return item;
-                }
-            }
-        }
-
-        /*
-        protected override IEnumerable<ReplicationBatchItem> GetReplicationItems(DocumentsOperationContext ctx, long etag, ReplicationStats stats, bool caseInsensitiveCounters)
-        {
             var database = ctx.DocumentDatabase;
-            var bucket = _bucketMigration.Bucket;
+            var bucket = Destination.Bucket;
+            var migrationId = Database.ShardedDatabaseId;
 
-            var docs = database.DocumentsStorage.GetDocumentsByBucketFrom(ctx, bucket, etag + 1);
+            var docs = database.DocumentsStorage.GetDocumentsByBucketFrom(ctx, bucket, etag + 1).Select(DocumentReplicationItem.From);
             var tombs = database.DocumentsStorage.GetTombstonesByBucketFrom(ctx, bucket, etag + 1);
             var conflicts = database.DocumentsStorage.ConflictsStorage.GetConflictsByBucketFrom(ctx, bucket, etag + 1).Select(DocumentReplicationItem.From);
             var revisionsStorage = database.DocumentsStorage.RevisionsStorage;
-            var revisions = revisionsStorage.GetRevisionsByBucketFrom(ctx, bucket, etag + 1, long.MaxValue).Select(DocumentReplicationItem.From);
+            var revisions = revisionsStorage.GetRevisionsByBucketFrom(ctx, bucket, etag + 1).Select(DocumentReplicationItem.From);
             var attachments = database.DocumentsStorage.AttachmentsStorage.GetAttachmentsByBucketFrom(ctx, bucket, etag + 1);
-            var counters = database.DocumentsStorage.CountersStorage.GetCountersByBucketFrom(ctx, bucket, etag + 1, caseInsensitiveCounters);
+            var counters = database.DocumentsStorage.CountersStorage.GetCountersByBucketFrom(ctx, bucket, etag + 1);
             var timeSeries = database.DocumentsStorage.TimeSeriesStorage.GetSegmentsByBucketFrom(ctx, bucket, etag + 1);
             var deletedTimeSeriesRanges = database.DocumentsStorage.TimeSeriesStorage.GetDeletedRangesByBucketFrom(ctx, bucket, etag + 1);
 
@@ -84,11 +61,16 @@ namespace Raven.Server.Documents.Replication.Senders
 
                 while (mergedInEnumerator.MoveNext())
                 {
-                    yield return mergedInEnumerator.Current;
+
+                    var item = mergedInEnumerator.Current;
+                    var result = ChangeVectorUtils.TryUpdateChangeVector(MigrationTag, migrationId, Destination.MigrationIndex, item.ChangeVector);
+                    Debug.Assert(result.IsValid,$"Failed to update the change vector {item.ChangeVector} with '{MigrationTag}:{Destination.MigrationIndex}-{migrationId}'");
+
+                    item.ChangeVector = result.ChangeVector;
+                    yield return item;
                 }
             }
         }
-        */
 
         protected override bool ShouldSkip(ReplicationBatchItem item, OutgoingReplicationStatsScope stats, SkippedReplicationItemsInfo skippedReplicationItemsInfo)
         {

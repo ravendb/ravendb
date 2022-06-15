@@ -707,12 +707,19 @@ namespace Raven.Server.Documents.Replication
                 using (documentsContext.OpenReadTransaction())
                 using (configurationContext.OpenReadTransaction())
                 {
-                    var changeVector = DocumentsStorage.GetFullDatabaseChangeVector(documentsContext);
+                    string changeVector = null;
+                    long lastEtagFromSrc = 0;
 
-                    var lastEtagFromSrc = DocumentsStorage.GetLastReplicatedEtagFrom(
-                        documentsContext, getLatestEtagMessage.SourceDatabaseId);
-                    if (_log.IsInfoEnabled)
-                        _log.Info($"GetLastEtag response, last etag: {lastEtagFromSrc}");
+                    if (getLatestEtagMessage.ReplicationsType != ReplicationLatestEtagRequest.ReplicationType.Migration)
+                    {
+                        changeVector = DocumentsStorage.GetFullDatabaseChangeVector(documentsContext);
+
+                        lastEtagFromSrc = DocumentsStorage.GetLastReplicatedEtagFrom(
+                            documentsContext, getLatestEtagMessage.SourceDatabaseId);
+                        if (_log.IsInfoEnabled)
+                            _log.Info($"GetLastEtag response, last etag: {lastEtagFromSrc}");
+                    }
+                    
                     var response = new DynamicJsonValue
                     {
                         [nameof(ReplicationMessageReply.Type)] = nameof(ReplicationMessageReply.ReplyType.Ok),
@@ -799,6 +806,11 @@ namespace Raven.Server.Documents.Replication
 
                         if (failure.Node is ExternalReplicationBase exNode &&
                             IsMyTask(ravenConnectionStrings, topology, exNode) == false)
+                            // no longer my task
+                            continue;
+
+                        if (failure.Node is BucketMigrationReplication migration &&
+                            topology.WhoseTaskIsIt(RachisState.Follower, migration.ShardBucketMigration, getLastResponsibleNode: null) != _server.NodeTag)
                             // no longer my task
                             continue;
 
@@ -972,7 +984,8 @@ namespace Raven.Server.Documents.Replication
         {
             if (ShardHelper.TryGetShardNumber(newRecord.DatabaseName, out var myShard) == false)
                 return;
-            
+
+            var toRemove = new List<BucketMigrationReplication>();
             // remove
             foreach (var handler in OutgoingHandlers)
             {
@@ -981,13 +994,13 @@ namespace Raven.Server.Documents.Replication
 
                 if (newRecord.ShardBucketMigrations.TryGetValue(migrationHandler.BucketMigrationNode.Bucket, out var migration) == false)
                 {
-                    RegisterMigrationConnectionToDispose(instancesToDispose, migrationHandler);
+                    toRemove.Add(migrationHandler.BucketMigrationNode);
                     continue;
                 }
 
                 if (migrationHandler.BucketMigrationNode.ForBucketMigration(migration) == false)
                 {
-                    RegisterMigrationConnectionToDispose(instancesToDispose, migrationHandler);
+                    toRemove.Add(migrationHandler.BucketMigrationNode);
                     continue;
                 }
 
@@ -998,12 +1011,14 @@ namespace Raven.Server.Documents.Replication
 
                 if (_server.NodeTag != source || migrationHandler.Destination.Url != _clusterTopology.GetUrlFromTag(destNode))
                 {
-                    RegisterMigrationConnectionToDispose(instancesToDispose, migrationHandler);
+                    toRemove.Add(migrationHandler.BucketMigrationNode);
                     continue;
                 }
 
                 // even if the status is ownership transferred we will keep the connection open to send any left overs if needed
             }
+
+            DropOutgoingConnections(toRemove, instancesToDispose);
 
             // add
             foreach (var migration in newRecord.ShardBucketMigrations)
@@ -1021,9 +1036,10 @@ namespace Raven.Server.Documents.Replication
 
                     if (current == null)
                     {
+
                         var destTopology = GetTopologyForShard(process.DestinationShard);
                         var destNode = destTopology.WhoseTaskIsIt(RachisState.Follower, process, getLastResponsibleNode: null);
-                        var migrationDestination = new BucketMigrationReplication(process.Bucket, process.DestinationShard, destNode, process.MigrationIndex)
+                        var migrationDestination = new BucketMigrationReplication(process, destNode)
                         {
                             Database = ShardHelper.ToShardName(newRecord.DatabaseName, process.DestinationShard),
                             Url = _clusterTopology.GetUrlFromTag(destNode)
@@ -1042,15 +1058,6 @@ namespace Raven.Server.Documents.Replication
             {
                 return _server.Cluster.ReadDatabaseTopologyForShard(ctx, ShardHelper.ToDatabaseName(Database.Name), shard);
             }
-        }
-
-        private void RegisterMigrationConnectionToDispose(List<IDisposable> instancesToDispose, OutgoingMigrationReplicationHandler handler)
-        {
-            var reconnect = _reconnectQueue.SingleOrDefault(i => i.Node == handler.Destination);
-            if (reconnect != null)
-                _reconnectQueue.TryRemove(reconnect);
-
-            instancesToDispose.Add(handler);
         }
 
         private void HandleHubPullReplication(DatabaseRecord newRecord, List<IDisposable> instancesToDispose)
