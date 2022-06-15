@@ -315,7 +315,6 @@ namespace Voron.Data.CompactTrees
                 *header = new CompactTreeState
                 {
                     RootObjectType = RootObjectType.CompactTree,
-                    Depth = 1,
                     Flags = CompactTreeFlags.None,
                     BranchPages = 0,
                     LeafPages = 1,
@@ -546,7 +545,7 @@ namespace Voron.Data.CompactTrees
             }
         }
 
-        private bool MaybeMergeEntries(ref CursorState destinationState)
+        private void MaybeMergeEntries(ref CursorState destinationState)
         {
             CursorState sourceState;
             ref var parent = ref _internalCursor._stk[_internalCursor._pos - 1];
@@ -565,9 +564,9 @@ namespace Voron.Data.CompactTrees
                         Page = _llt.GetPage(sibling)
                     };
                     FreePageFor(ref sourceState, ref destinationState);
-                    return true;
+                    return;
                 }
-                return false;
+                return;
             }
 
             var siblingPage = GetValue(ref parent, parent.LastSearchPosition + 1);
@@ -577,7 +576,7 @@ namespace Voron.Data.CompactTrees
             };
 
             if (sourceState.Header->PageFlags != destinationState.Header->PageFlags)
-                return false; // cannot merge leaf & branch pages
+                return; // cannot merge leaf & branch pages
 
             using var __ = _llt.Allocator.Allocate(4096, out var buffer);
             var decodeBuffer = new Span<byte>(buffer.Ptr, 2048);
@@ -645,7 +644,7 @@ namespace Voron.Data.CompactTrees
             }
 
             if (sourceKeysCopied == 0)
-                return false;
+                return;
 
             Memory.Move(sourcePage.Pointer + PageHeader.SizeOf,
                         sourcePage.Pointer + PageHeader.SizeOf + (sourceKeysCopied * sizeof(ushort)),
@@ -658,7 +657,7 @@ namespace Voron.Data.CompactTrees
             {
                 parent.LastSearchPosition++;
                 FreePageFor(ref destinationState, ref sourceState);
-                return true;
+                return;
             }
 
             sourceHeader->FreeSpace += (ushort)(sourceEncodedKeysLenght + (sourceKeysCopied * sizeof(ushort)));
@@ -677,8 +676,6 @@ namespace Voron.Data.CompactTrees
             newKey = EncodedKey.Get(newKey, this, _internalCursor._stk[_internalCursor._pos].Header->DictionaryId);
             SearchInCurrentPage(newKey, ref _internalCursor._stk[_internalCursor._pos]); // positions changed, re-search
             AddToPage(newKey, siblingPage);
-
-            return true;
         }
 
         private void FreePageFor(ref CursorState stateToKeep, ref CursorState stateToDelete)
@@ -694,9 +691,6 @@ namespace Voron.Data.CompactTrees
                 var parentPageNumber = parent.Page.PageNumber;
                 Memory.Copy(parent.Page.Pointer, stateToKeep.Page.Pointer, Constants.Storage.PageSize);
                 parent.Page.PageNumber = parentPageNumber; // we overwrote it...
-
-                if (_internalCursor._pos == 1) // we are children to the root, and delete one item, so we replace the root
-                    _state.Depth--;
 
                 _llt.FreePage(stateToDelete.Page.PageNumber);
                 _llt.FreePage(stateToKeep.Page.PageNumber);
@@ -1040,7 +1034,6 @@ namespace Voron.Data.CompactTrees
 
         private void CreateRootPage()
         {
-            _state.Depth++;
             _state.BranchPages++;
 
             ref var state = ref _internalCursor._stk[_internalCursor._pos];

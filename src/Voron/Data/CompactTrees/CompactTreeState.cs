@@ -11,9 +11,7 @@ namespace Voron.Data.CompactTrees
         [FieldOffset(1)]
         public CompactTreeFlags Flags;
         [FieldOffset(2)]
-        public fixed byte Reserved[2];
-        [FieldOffset(4)]
-        public int Depth;
+        public fixed byte Reserved[6];
         [FieldOffset(8)]
         public long RootPage;
         [FieldOffset(16)]
@@ -29,14 +27,13 @@ namespace Voron.Data.CompactTrees
 
         public override string ToString()
         {
-            return $"{nameof(RootObjectType)}: {RootObjectType}, {nameof(Flags)}: {Flags}, {nameof(Depth)}: {Depth}, {nameof(RootPage)}: {RootPage}, {nameof(NumberOfEntries)}: {NumberOfEntries}, {nameof(BranchPages)}: {BranchPages}, {nameof(LeafPages)}: {LeafPages}, {nameof(TreeDictionaryId)}: {TreeDictionaryId}";
+            return $"{nameof(RootObjectType)}: {RootObjectType}, {nameof(Flags)}: {Flags}, {nameof(RootPage)}: {RootPage}, {nameof(NumberOfEntries)}: {NumberOfEntries}, {nameof(BranchPages)}: {BranchPages}, {nameof(LeafPages)}: {LeafPages}, {nameof(TreeDictionaryId)}: {TreeDictionaryId}";
         }
 
         public void CopyTo(CompactTreeState* header)
         {
             header->RootObjectType = RootObjectType;
             header->Flags = Flags;
-            header->Depth = Depth;
             header->RootPage = RootPage;
             header->NumberOfEntries = NumberOfEntries;
             header->BranchPages = BranchPages;

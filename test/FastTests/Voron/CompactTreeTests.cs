@@ -185,7 +185,6 @@ namespace FastTests.Voron
                 Assert.Equal(0, tree.State.NumberOfEntries);
                 Assert.Equal(0, tree.State.BranchPages);
                 Assert.Equal(1, tree.State.LeafPages);
-                Assert.Equal(1, tree.State.Depth);
             }
         }
 
@@ -235,7 +234,6 @@ namespace FastTests.Voron
                 Assert.Equal(0, tree.State.NumberOfEntries);
                 Assert.Equal(0, tree.State.BranchPages);
                 Assert.Equal(1, tree.State.LeafPages);
-                Assert.Equal(1, tree.State.Depth);
             }
         }
 
@@ -270,7 +268,6 @@ namespace FastTests.Voron
                 Assert.Equal(0, tree.State.NumberOfEntries);
                 Assert.Equal(0, tree.State.BranchPages);
                 Assert.Equal(1, tree.State.LeafPages);
-                Assert.Equal(1, tree.State.Depth);
             }
         }
 
@@ -305,7 +302,6 @@ namespace FastTests.Voron
                 Assert.Equal(0, tree.State.NumberOfEntries);
                 Assert.Equal(0, tree.State.BranchPages);
                 Assert.Equal(1, tree.State.LeafPages);
-                Assert.Equal(1, tree.State.Depth);
             }
         }
 
