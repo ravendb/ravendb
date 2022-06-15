@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -10,7 +12,9 @@ using Raven.Client.Exceptions.Commercial;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Http;
+using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
+using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
 using Raven.Server.Rachis;
@@ -41,17 +45,66 @@ namespace Raven.Server.Documents.Subscriptions
         public SubscriptionWorkerOptions Options => _options;
         public SubscriptionException ConnectionException;
         public long SubscriptionId { get; set; }
-        public string Database;
+        public string DatabaseName;
         public readonly TcpConnectionOptions TcpConnection;
         public readonly CancellationTokenSource CancellationTokenSource;
 
         public SubscriptionOpeningStrategy Strategy => _options.Strategy;
         public readonly string ClientUri;
 
-        protected abstract Task ReportExceptionAsync(SubscriptionError error, Exception e);
+        public abstract Task ReportExceptionAsync(SubscriptionError error, Exception e);
         protected abstract Task OnClientAckAsync();
-        protected abstract Task SendNoopAckAsync();
-        internal abstract Task<SubscriptionConnectionClientMessage> GetReplyFromClientAsync();
+        public abstract Task SendNoopAckAsync();
+
+        internal async Task<SubscriptionConnectionClientMessage> GetReplyFromClientAsync()
+        {
+            try
+            {
+                using (TcpConnection.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                using (var blittable = await context.ParseToMemoryAsync(
+                           TcpConnection.Stream,
+                           "Reply from subscription client",
+                           BlittableJsonDocumentBuilder.UsageMode.None,
+                           _copiedBuffer.Buffer))
+                {
+                    TcpConnection._lastEtagReceived = -1;
+                    TcpConnection.RegisterBytesReceived(blittable.Size);
+                    return JsonDeserializationServer.SubscriptionConnectionClientMessage(blittable);
+                }
+            }
+            catch (EndOfStreamException e)
+            {
+                throw new SubscriptionConnectionDownException("No reply from the subscription client.", e);
+            }
+            catch (IOException)
+            {
+                if (_isDisposed == false)
+                    throw;
+
+                return new SubscriptionConnectionClientMessage
+                {
+                    ChangeVector = null,
+                    Type = SubscriptionConnectionClientMessage.MessageType.DisposedNotification
+                };
+            }
+            catch (ObjectDisposedException)
+            {
+                return new SubscriptionConnectionClientMessage
+                {
+                    ChangeVector = null,
+                    Type = SubscriptionConnectionClientMessage.MessageType.DisposedNotification
+                };
+            }
+        }
+
+        public string WorkerId => _options.WorkerId ??= Guid.NewGuid().ToString();
+        public SubscriptionState SubscriptionState;
+        public SubscriptionConnection.ParsedSubscription Subscription;
+        
+        protected readonly TcpConnectionHeaderMessage.SupportedFeatures _supportedFeatures;
+        public readonly SubscriptionStatsCollector StatsCollector;
+
+        public Task SubscriptionConnectionTask;
 
         protected SubscriptionConnectionBase(TcpConnectionOptions tcpConnection, ServerStore serverStore, JsonOperationContext.MemoryBuffer memoryBuffer, IDisposable tcpConnectionDisposable,
             string database, CancellationToken token)
@@ -61,11 +114,174 @@ namespace Raven.Server.Documents.Subscriptions
             _copiedBuffer = memoryBuffer.Clone(serverStore.ContextPool);
             _tcpConnectionDisposable = tcpConnectionDisposable;
 
-            Database = database;
+            DatabaseName = database;
             CancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token);
-            _logger = LoggingSource.Instance.GetLogger<SubscriptionConnectionBase>(database);
+            _logger = LoggingSource.Instance.GetLogger(database, GetType().FullName);
 
             ClientUri = tcpConnection.TcpClient.Client.RemoteEndPoint.ToString();
+
+            _supportedFeatures = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(TcpConnectionHeaderMessage.OperationTypes.Subscription, tcpConnection.ProtocolVersion);
+            StatsCollector = new SubscriptionStatsCollector();
+        }
+
+        public abstract Task ProcessSubscriptionAsync();
+
+        public async Task InitAsync()
+        {
+            var message = CreateStatusMessage(ConnectionStatus.Create);
+            AddToStatusDescription(message);
+            if (_logger.IsInfoEnabled)
+            {
+                _logger.Info(message);
+            }
+
+            // first, validate details and make sure subscription exists
+            await RefreshAsync();
+            
+            AssertSupportedFeatures();
+        }
+
+        public async Task RefreshAsync(long? registerConnectionDurationInTicks = null)
+        {
+            SubscriptionState = await AssertSubscriptionConnectionDetails(registerConnectionDurationInTicks);
+            Subscription = SubscriptionConnection.ParseSubscriptionQuery(SubscriptionState.Query);
+        }
+
+        public async Task<SubscriptionState> AssertSubscriptionConnectionDetails(long? registerConnectionDurationInTicks) => 
+            await AssertSubscriptionConnectionDetails(SubscriptionId, _options.SubscriptionName, registerConnectionDurationInTicks, CancellationTokenSource.Token);
+
+        protected virtual RawDatabaseRecord GetRecord(TransactionOperationContext context) => _serverStore.Cluster.ReadRawDatabaseRecord(context, DatabaseName);
+
+        private async Task<SubscriptionState> AssertSubscriptionConnectionDetails(long id, string name, long? registerConnectionDurationInTicks, CancellationToken token)
+        {
+            await _serverStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, id, token);
+
+            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            using (var record = GetRecord(context))
+            {
+                var subscription = _serverStore.Cluster.Subscriptions.ReadSubscriptionStateByName(context, DatabaseName, name);
+                var topology = record.Topology;
+
+                var whoseTaskIsIt = _serverStore.WhoseTaskIsIt(topology, subscription, subscription);
+                if (whoseTaskIsIt == null && record.DeletionInProgress.ContainsKey(_serverStore.NodeTag))
+                    throw new DatabaseDoesNotExistException(
+                        $"Stopping subscription '{name}' on node {_serverStore.NodeTag}, because database '{DatabaseName}' is being deleted.");
+
+                if (whoseTaskIsIt != _serverStore.NodeTag)
+                {
+                    var databaseTopologyAvailabilityExplanation = new Dictionary<string, string>();
+
+                    string generalState;
+                    RachisState currentState = _serverStore.Engine.CurrentState;
+                    if (currentState == RachisState.Candidate || currentState == RachisState.Passive)
+                    {
+                        generalState =
+                            $"Current node ({_serverStore.NodeTag}) is in {currentState.ToString()} state therefore, we can't answer who's task is it and returning null";
+                    }
+                    else
+                    {
+                        generalState = currentState.ToString();
+                    }
+
+                    databaseTopologyAvailabilityExplanation["NodeState"] = generalState;
+
+                    FillNodesAvailabilityReportForState(subscription, topology, databaseTopologyAvailabilityExplanation, stateGroup: topology.Rehabs, stateName: "rehab");
+                    FillNodesAvailabilityReportForState(subscription, topology, databaseTopologyAvailabilityExplanation, stateGroup: topology.Promotables,
+                        stateName: "promotable");
+
+                    //whoseTaskIsIt!= null && whoseTaskIsIt == subscription.MentorNode 
+                    foreach (var member in topology.Members)
+                    {
+                        if (whoseTaskIsIt != null)
+                        {
+                            if (whoseTaskIsIt == subscription.MentorNode && member == subscription.MentorNode)
+                            {
+                                databaseTopologyAvailabilityExplanation[member] = "Is the mentor node and a valid member of the topology, it should be the mentor node";
+                            }
+                            else if (whoseTaskIsIt != null && whoseTaskIsIt != member)
+                            {
+                                databaseTopologyAvailabilityExplanation[member] =
+                                    "Is a valid member of the topology, but not chosen to be the node running the subscription";
+                            }
+                            else if (whoseTaskIsIt == member)
+                            {
+                                databaseTopologyAvailabilityExplanation[member] = "Is a valid member of the topology and is chosen to be running the subscription";
+                            }
+                        }
+                        else
+                        {
+                            databaseTopologyAvailabilityExplanation[member] =
+                                "Is a valid member of the topology but was not chosen to run the subscription, we didn't find any other match either";
+                        }
+                    }
+
+                    throw new SubscriptionDoesNotBelongToNodeException(
+                        $"Subscription with id '{id}' and name '{name}' can't be processed on current node ({_serverStore.NodeTag}), because it belongs to {whoseTaskIsIt}",
+                        whoseTaskIsIt,
+                        databaseTopologyAvailabilityExplanation, id) { RegisterConnectionDurationInTicks = registerConnectionDurationInTicks };
+                }
+
+                if (subscription.Disabled)
+                    throw new SubscriptionClosedException($"The subscription with id '{id}' and name '{name}' is disabled and cannot be used until enabled");
+
+                return subscription;
+            }
+
+            static void FillNodesAvailabilityReportForState(SubscriptionState subscription, DatabaseTopology topology,
+                Dictionary<string, string> databaseTopologyAvailabilityExplenation, List<string> stateGroup, string stateName)
+            {
+                foreach (var nodeInGroup in stateGroup)
+                {
+                    var rehabMessage = string.Empty;
+                    if (subscription.MentorNode == nodeInGroup)
+                    {
+                        rehabMessage = $"Although this node is a mentor, it's state is {stateName} and can't run the subscription";
+                    }
+                    else
+                    {
+                        rehabMessage = $"Node's state is {stateName}, can't run subscription";
+                    }
+
+                    if (topology.DemotionReasons.TryGetValue(nodeInGroup, out var demotionReason))
+                    {
+                        rehabMessage = rehabMessage + ". Reason:" + demotionReason;
+                    }
+
+                    databaseTopologyAvailabilityExplenation[nodeInGroup] = rehabMessage;
+                }
+            }
+        }
+
+        public void RecordConnectionInfo() => StatsCollector.ConnectionScope.RecordConnectionInfo(SubscriptionState, ClientUri, Options.Strategy, WorkerId);
+
+        private void AssertSupportedFeatures()
+        {
+            if (_options.Strategy == SubscriptionOpeningStrategy.Concurrent)
+            {
+                _serverStore.LicenseManager.AssertCanAddConcurrentDataSubscriptions();
+            }
+
+            if (_supportedFeatures.Subscription.Includes == false)
+            {
+                if (Subscription.Includes != null && Subscription.Includes.Length > 0)
+                    throw new SubscriptionInvalidStateException(
+                        $"A connection to Subscription Task with ID '{SubscriptionId}' cannot be opened because it requires the protocol to support Includes.");
+            }
+
+            if (_supportedFeatures.Subscription.CounterIncludes == false)
+            {
+                if (Subscription.CounterIncludes != null && Subscription.CounterIncludes.Length > 0)
+                    throw new SubscriptionInvalidStateException(
+                        $"A connection to Subscription Task with ID '{SubscriptionId}' cannot be opened because it requires the protocol to support Counter Includes.");
+            }
+
+            if (_supportedFeatures.Subscription.TimeSeriesIncludes == false)
+            {
+                if (Subscription.TimeSeriesIncludes != null && Subscription.TimeSeriesIncludes.TimeSeries.Count > 0)
+                    throw new SubscriptionInvalidStateException(
+                        $"A connection to Subscription Task with ID '{SubscriptionId}' cannot be opened because it requires the protocol to support TimeSeries Includes.");
+            }
         }
 
         protected async Task LogExceptionAndReportToClientAsync(Exception e)
@@ -270,6 +486,17 @@ namespace Raven.Server.Documents.Subscriptions
             return $"{m}, {info}";
         }
 
+        public virtual void FinishProcessing()
+        {
+            AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info, "Finished processing subscription"));
+            
+            if (_logger.IsInfoEnabled)
+            {
+                _logger.Info(
+                    $"Finished processing subscription {SubscriptionId} / from client {TcpConnection.TcpClient.Client.RemoteEndPoint}");
+            }
+        }
+
         public void AddToStatusDescription(string message)
         {
             while (RecentSubscriptionStatuses.Count > 50)
@@ -296,7 +523,7 @@ namespace Raven.Server.Documents.Subscriptions
 
                 context.OpenReadTransaction();
 
-                var subscriptionItemKey = SubscriptionState.GenerateSubscriptionItemKeyName(Database, _options.SubscriptionName);
+                var subscriptionItemKey = SubscriptionState.GenerateSubscriptionItemKeyName(DatabaseName, _options.SubscriptionName);
                 var translation = _serverStore.Cluster.Read(context, subscriptionItemKey);
                 if (translation == null)
                     throw new SubscriptionDoesNotExistException("Cannot find any Subscription Task with name: " + _options.SubscriptionName);
@@ -389,47 +616,6 @@ namespace Raven.Server.Documents.Subscriptions
             return replyFromClientTask;
         }
 
-        internal async Task<SubscriptionConnectionClientMessage> GetReplyFromClientInternalAsync()
-        {
-            try
-            {
-                using (TcpConnection.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-                using (var blittable = await context.ParseToMemoryAsync(
-                           TcpConnection.Stream,
-                           "Reply from subscription client",
-                           BlittableJsonDocumentBuilder.UsageMode.None,
-                           _copiedBuffer.Buffer))
-                {
-                    TcpConnection._lastEtagReceived = -1;
-                    TcpConnection.RegisterBytesReceived(blittable.Size);
-                    return JsonDeserializationServer.SubscriptionConnectionClientMessage(blittable);
-                }
-            }
-            catch (EndOfStreamException e)
-            {
-                throw new SubscriptionConnectionDownException("No reply from the subscription client.", e);
-            }
-            catch (IOException)
-            {
-                if (_isDisposed == false)
-                    throw;
-
-                return new SubscriptionConnectionClientMessage
-                {
-                    ChangeVector = null,
-                    Type = SubscriptionConnectionClientMessage.MessageType.DisposedNotification
-                };
-            }
-            catch (ObjectDisposedException)
-            {
-                return new SubscriptionConnectionClientMessage
-                {
-                    ChangeVector = null,
-                    Type = SubscriptionConnectionClientMessage.MessageType.DisposedNotification
-                };
-            }
-        }
-
         public virtual void Dispose()
         {
             using (_copiedBuffer.ReleaseBuffer)
@@ -473,6 +659,8 @@ namespace Raven.Server.Documents.Subscriptions
 
                 RecentSubscriptionStatuses?.Clear();
             }
+
+            StatsCollector?.Dispose();
         }
     }
 }

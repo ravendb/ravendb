@@ -74,8 +74,10 @@ namespace StressTests.Rachis
             }
         }
 
-        [Fact]
-        public async Task SubscriptionFailoverWhileModifying()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded, Skip = "Fix me")]
+        public async Task SubscriptionFailoverWhileModifying(Options options)
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
 
@@ -83,11 +85,9 @@ namespace StressTests.Rachis
             try
             {
                 var cluster = await CreateRaftCluster(3);
-                using (var store = GetDocumentStore(new Options
-                {
-                    Server = cluster.Leader,
-                    ReplicationFactor = 3
-                }))
+                options.Server = cluster.Leader;
+                options.ReplicationFactor = 3;
+                using (var store = GetDocumentStore(options))
                 {
                     var generateTask = Task.Run(async () =>
                     {

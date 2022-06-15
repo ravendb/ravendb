@@ -69,7 +69,7 @@ namespace Raven.Server.Documents.Subscriptions
                         foreach (var currentConnection in subscriptionConnections.GetConnections())
                         {
                             // add inProgress aggregator
-                            connectionAggregators.Add(currentConnection.GetPerformanceStats());
+                            connectionAggregators.Add(currentConnection.StatsCollector.LastConnectionStats);
                             
                             // add connection stats to results 
                             var subscriptionItem = results.Find(x => x.TaskId == kvp.Value.Handler.SubscriptionId);
@@ -81,9 +81,9 @@ namespace Raven.Server.Documents.Subscriptions
                         }
 
                         // add history aggregators
-                        connectionAggregators.AddRange(subscriptionConnections.RecentConnections.Select(x => x.GetPerformanceStats()));
-                        connectionAggregators.AddRange(subscriptionConnections.RecentRejectedConnections.Select(x => x.GetPerformanceStats()));
-                        connectionAggregators.AddRange(subscriptionConnections.PendingConnections.Select(x => x.GetPerformanceStats()));
+                        connectionAggregators.AddRange(subscriptionConnections.RecentConnections.Select(x => x.StatsCollector.LastConnectionStats));
+                        connectionAggregators.AddRange(subscriptionConnections.RecentRejectedConnections.Select(x => x.StatsCollector.LastConnectionStats));
+                        connectionAggregators.AddRange(subscriptionConnections.PendingConnections.Select(x => x.StatsCollector.LastConnectionStats));
                     }
                 }
 
@@ -96,17 +96,17 @@ namespace Raven.Server.Documents.Subscriptions
                         foreach (var currentConnection in subscriptionConnections.GetConnections())
                         {
                             // add batches history for inProgress connection
-                            batchesAggregators.AddRange(currentConnection.GetBatchesPerformanceStats());
+                            batchesAggregators.AddRange(currentConnection.StatsCollector.GetBatchesPerformanceStats);
                         }
 
                         // add batches history for previous connections
                         foreach (var recentConnection in subscriptionConnections.RecentConnections)
                         {
-                            batchesAggregators.AddRange(recentConnection.GetBatchesPerformanceStats());
+                            batchesAggregators.AddRange(recentConnection.StatsCollector.GetBatchesPerformanceStats);
                         }
                         foreach (var recentRejectedConnection in subscriptionConnections.RecentRejectedConnections)
                         {
-                            batchesAggregators.AddRange(recentRejectedConnection.GetBatchesPerformanceStats());
+                            batchesAggregators.AddRange(recentRejectedConnection.StatsCollector.GetBatchesPerformanceStats);
                         }
                         // add batch stats to results
                         var subscriptionItem = results.Find(x => x.TaskId == kvp.Value.Handler.SubscriptionId);
@@ -172,7 +172,7 @@ namespace Raven.Server.Documents.Subscriptions
                         {
                             foreach (var connection in subscriptionConnections.GetConnections())
                             {
-                                var inProgressStats = connection.GetPerformanceStats();
+                                var inProgressStats = connection.StatsCollector.LastConnectionStats;
 
                                 if (inProgressStats?.Completed == false &&
                                     connectionsAggregators.Contains(inProgressStats) == false)
@@ -184,7 +184,7 @@ namespace Raven.Server.Documents.Subscriptions
                             // ... and for any pending connections (waiting for free, etc)
                             foreach (SubscriptionConnection pendingConnection in subscriptionConnections.PendingConnections)
                             {
-                                var pendingConnectionStats = pendingConnection.GetPerformanceStats();
+                                var pendingConnectionStats = pendingConnection.StatsCollector.LastConnectionStats;
                                 if (connectionsAggregators.Contains(pendingConnectionStats) == false)
                                 {
                                     connectionsAggregators.Add(pendingConnectionStats);
@@ -223,7 +223,7 @@ namespace Raven.Server.Documents.Subscriptions
 
                         foreach (var connection in inProgressConnections.GetConnections())
                         {
-                            var inProgressBatchStats = connection.GetBatchPerformanceStats();
+                            var inProgressBatchStats = connection.StatsCollector.GetBatchPerformanceStats;
 
                             if (inProgressBatchStats?.Completed == false &&
                                 inProgressBatchStats.ToBatchPerformanceLiveStatsWithDetails().NumberOfDocuments > 0 &&
@@ -270,7 +270,7 @@ namespace Raven.Server.Documents.Subscriptions
 
             if (_perSubscriptionConnectionStats.TryGetValue(subscriptionName, out var subscriptionAndStats))
             {
-                var aggregatorToAdd = connection.GetPerformanceStats();
+                var aggregatorToAdd = connection.StatsCollector.LastConnectionStats;
                 subscriptionAndStats.Performance.TryAdd(aggregatorToAdd);
             }
         }

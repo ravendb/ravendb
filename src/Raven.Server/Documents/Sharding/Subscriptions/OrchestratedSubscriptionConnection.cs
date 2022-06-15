@@ -5,7 +5,6 @@
 // ----------------------------------------------------------------------
 
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
@@ -19,79 +18,62 @@ using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Server;
 using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Subscriptions
 {
-    public class ShardedSubscriptionConnection : SubscriptionConnectionBase
+    public class OrchestratedSubscriptionConnection : SubscriptionConnectionBase
     {
         private readonly Dictionary<string, SubscriptionShardHolder> _shardWorkers = new Dictionary<string, SubscriptionShardHolder>();
-        public static ConcurrentDictionary<string, ShardedSubscriptionConnection> Connections = new ConcurrentDictionary<string, ShardedSubscriptionConnection>();
-        public  AsyncManualResetEvent _mre;
+        private SubscriptionConnectionsStateOrchestrator _state;
 
-        private ShardedSubscriptionConnection(ServerStore serverStore, TcpConnectionOptions tcpConnection, IDisposable tcpConnectionDisposable, JsonOperationContext.MemoryBuffer buffer)
-            : base(tcpConnection, serverStore, buffer, tcpConnectionDisposable, tcpConnection.DatabaseContext.DatabaseName, tcpConnection.DatabaseContext.DatabaseShutdown)
+        public OrchestratedSubscriptionConnection(ServerStore serverStore, TcpConnectionOptions tcpConnection, IDisposable tcpConnectionDisposable,
+            JsonOperationContext.MemoryBuffer buffer)
+            : base(tcpConnection, serverStore, buffer, tcpConnectionDisposable, tcpConnection.DatabaseContext.DatabaseName,
+                tcpConnection.DatabaseContext.DatabaseShutdown)
         {
-            _mre = new AsyncManualResetEvent();
         }
 
-       /*
-        * The subscription worker (client) connects to an orchestrator (SendShardedSubscriptionDocuments). 
-        * The orchestrator initializes shard subscription workers (StartShardSubscriptionWorkersAsync).
-        * ShardedSubscriptionWorkers are maintaining the connection with subscription on each shard.
-        * The orchestrator maintains the connection with the client and checks if there is an available batch on each Sharded Worker (MaintainConnectionWithClientWorkerAsync).
-        * Handle batch flow:
-        * Orchestrator sends the batch to the client (WriteBatchToClientAndAckAsync).
-        * Orchestrator receive batch ACK request from client.
-        * Orchestrator advances the sharded worker and waits for the sharded worker.
-        * Sharded worker sends an ACK to the shard and waits for CONFIRM from shard (ACK command in cluster)
-        * Sharded worker advances the Orchestrator
-        * Orchestrator sends the CONFIRM to client
-        */
-        public static void SendShardedSubscriptionDocuments(ServerStore server, TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.MemoryBuffer buffer)
+        public SubscriptionConnectionsStateOrchestrator GetOrchestratedSubscriptionConnectionState()
         {
-            var tcpConnectionDisposable = tcpConnectionOptions.ConnectionProcessingInProgress($"ShardedSubscription_{tcpConnectionOptions.DatabaseContext.DatabaseName}");
-            try
-            {
-                var connection = new ShardedSubscriptionConnection(server, tcpConnectionOptions, tcpConnectionDisposable, buffer);
-                _ = connection.RunAsync();
-            }
-            catch (Exception)
-            {
-                tcpConnectionDisposable?.Dispose();
-                throw;
-            }
+            var subscriptions = TcpConnection.DatabaseContext.Subscriptions.SubscriptionsConnectionsState;
+            return  _state = subscriptions.GetOrAdd(SubscriptionId, subId => new SubscriptionConnectionsStateOrchestrator(_serverStore, TcpConnection.DatabaseContext, subId));
         }
 
-        public async Task RunAsync()
-        {
-            try
-            {
-                await ParseSubscriptionOptionsAsync();
-                await StartShardSubscriptionWorkersAsync();
-                await MaintainConnectionWithClientWorkerAsync();
-            }
-            catch (Exception e)
-            {
-                await ReportExceptionAsync(SubscriptionError.Error, ConnectionException ?? e);
-            }
-            finally
-            {
-                AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info, "Finished processing sharded subscription."));
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Finished processing sharded subscription '{SubscriptionId}' / from client '{TcpConnection.TcpClient.Client.RemoteEndPoint}'.");
+        /*
+         * The subscription worker (client) connects to an orchestrator (SendShardedSubscriptionDocuments). 
+         * The orchestrator initializes shard subscription workers (StartShardSubscriptionWorkersAsync).
+         * ShardedSubscriptionWorkers are maintaining the connection with subscription on each shard.
+         * The orchestrator maintains the connection with the client and checks if there is an available batch on each Sharded Worker (MaintainConnectionWithClientWorkerAsync).
+         * Handle batch flow:
+         * Orchestrator sends the batch to the client (WriteBatchToClientAndAckAsync).
+         * Orchestrator receive batch ACK request from client.
+         * Orchestrator advances the sharded worker and waits for the sharded worker.
+         * Sharded worker sends an ACK to the shard and waits for CONFIRM from shard (ACK command in cluster)
+         * Sharded worker advances the Orchestrator
+         * Orchestrator sends the CONFIRM to client
+         */
 
-                Connections.TryRemove(_options.SubscriptionName, out _);
-                Dispose();
-            }
+
+        public override async Task ProcessSubscriptionAsync()
+        {
+            StartShardSubscriptionWorkers();
+            await MaintainConnectionWithClientWorkerAsync();
+        }
+
+        public override void FinishProcessing()
+        {
+            AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info, "Finished processing sharded subscription."));
+
+            if (_logger.IsInfoEnabled)
+                _logger.Info($"Finished processing sharded subscription '{SubscriptionId}' / from client '{TcpConnection.TcpClient.Client.RemoteEndPoint}'.");
         }
 
         protected override StatusMessageDetails GetStatusMessageDetails()
         {
             return new StatusMessageDetails
             {
-                DatabaseName = $"for sharded database '{Database}' on '{_serverStore.NodeTag}'",
+                DatabaseName = $"for sharded database '{DatabaseName}' on '{_serverStore.NodeTag}'",
                 ClientType = $"'client worker' with IP '{TcpConnection.TcpClient.Client.RemoteEndPoint}'",
                 SubscriptionType = $"sharded subscription '{_options?.SubscriptionName}', id '{SubscriptionId}'"
             };
@@ -103,42 +85,24 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
 
             // we want to limit the batch of each shard, to not hold too much memory if there are other batches while batch is proceed
             _options.MaxDocsPerBatch = Math.Max(Math.Min(_options.MaxDocsPerBatch / TcpConnection.DatabaseContext.ShardCount, _options.MaxDocsPerBatch), 1);
-
-            // add to connections
-            if (Connections.TryAdd(_options.SubscriptionName, this) == false)
-            {
-                throw new InvalidOperationException($"Sharded subscription '{_options.SubscriptionName}' on '{Database}' already exists!");
-            } 
         }
 
-        protected override async Task ReportExceptionAsync(SubscriptionError error, Exception e)
+        public override async Task ReportExceptionAsync(SubscriptionError error, Exception e)
         {
             try
             {
                 await LogExceptionAndReportToClientAsync(ConnectionException ?? e);
             }
-            catch (Exception)
+            catch
             {
                 // ignored
             }
         }
 
-        protected override Task OnClientAckAsync()
-        {
-            return Task.CompletedTask;
-        }
+        protected override Task OnClientAckAsync() => Task.CompletedTask;
+        public override Task SendNoopAckAsync() => Task.CompletedTask;
 
-        protected override Task SendNoopAckAsync()
-        {
-            return Task.CompletedTask;
-        }
-
-        internal override Task<SubscriptionConnectionClientMessage> GetReplyFromClientAsync()
-        {
-            return null;
-        }
-
-        private async Task StartShardSubscriptionWorkersAsync()
+        private void StartShardSubscriptionWorkers()
         {
             AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Create));
 
@@ -147,20 +111,19 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
                 var re = TcpConnection.DatabaseContext.ShardExecutor.GetRequestExecutorAt(i);
                 var shard = ShardHelper.ToShardName(TcpConnection.DatabaseContext.DatabaseName, i);
                 var worker = CreateShardedWorkerHolder(shard, re, lastErrorDateTime: null);
-
                 _shardWorkers.Add(shard, worker);
             }
-
-            await WriteJsonAsync(new DynamicJsonValue
-            {
-                [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
-                [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.Accepted)
-            });
         }
 
         private SubscriptionShardHolder CreateShardedWorkerHolder(string shard, RequestExecutor re, DateTime? lastErrorDateTime)
         {
-            var shardWorker = new ShardedSubscriptionWorker(_options, shard, re, parent: this);
+            var options = _options.Clone();
+
+            // we don't want to ensure that only one orchestrated connection handle the subscription
+            options.Strategy = SubscriptionOpeningStrategy.TakeOver;
+            options.WorkerId += $"/{ShardHelper.GetShardNumber(shard)}";
+
+            var shardWorker = new ShardedSubscriptionWorker(options, shard, re, _state);
 
             var holder = new SubscriptionShardHolder(shardWorker, shardWorker.RunInternalAsync(CancellationTokenSource.Token), re)
             {
@@ -172,16 +135,16 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
 
         private async Task MaintainConnectionWithClientWorkerAsync()
         {
-            var hasBatch = _mre.WaitAsync(CancellationTokenSource.Token);
+            var hasBatch = _state.HasNewDocuments.WaitAsync(CancellationTokenSource.Token);
             while (CancellationTokenSource.IsCancellationRequested == false)
             {
-                var whenAny = await Task.WhenAny(TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(WaitForChangedDocumentsTimeoutInMs), CancellationTokenSource.Token), hasBatch);
+                var whenAny = await Task.WhenAny(TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(WaitForChangedDocumentsTimeoutInMs), CancellationTokenSource.Token),
+                    hasBatch);
                 CancellationTokenSource.Token.ThrowIfCancellationRequested();
                 HandleBatchFromWorkersResult result;
                 if (whenAny == hasBatch)
                 {
-                    Interlocked.Exchange(ref _mre, new AsyncManualResetEvent());
-                    hasBatch = _mre.WaitAsync(CancellationTokenSource.Token);
+                    hasBatch = _state.HasNewDocuments.WaitAsync(CancellationTokenSource.Token);
                     result = await TryHandleBatchFromWorkersAndCheckReconnectAsync(redirectBatch: true);
                 }
                 else
@@ -237,6 +200,7 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
                 ShardsToReconnect = new List<string>(), 
                 Stopping = false
             };
+
             foreach ((string shard, SubscriptionShardHolder shardHolder) in _shardWorkers)
             {
                 CancellationTokenSource.Token.ThrowIfCancellationRequested();
@@ -254,6 +218,8 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
                         continue;
 
                     await RedirectBatchAndConfirmAsync(batch, shard);
+                    Interlocked.CompareExchange(ref shardHolder.Worker.PublishedShardBatchItem, null, batch);
+
                     continue;
                 }
 
@@ -293,7 +259,8 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
                 var ex = exceptions[worker.Key];
                 Debug.Assert(ex != null, "ex != null");
 
-                (bool shouldTryToReconnect, _) = worker.Value.Worker.CheckIfShouldReconnectWorker(ex, CancellationTokenSource, assertLastConnectionFailure: null, onUnexpectedSubscriptionError: null, throwOnRedirectNodeNotFound: false);
+                (bool shouldTryToReconnect, _) = worker.Value.Worker.CheckIfShouldReconnectWorker(ex, CancellationTokenSource, assertLastConnectionFailure: null,
+                    onUnexpectedSubscriptionError: null, throwOnRedirectNodeNotFound: false);
                 if (shouldTryToReconnect)
                 {
                     // we have at least one worker to try to reconnect
@@ -309,10 +276,18 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
             try
             {
                 // Send to client
-                await WriteBatchToClientAndAckAsync(batch, shard);
+                var sentAnythingToClient = await WriteBatchToClientAndAckAsync(batch, shard);
 
                 // let sharded subscription worker know that we sent the batch to the client and received an ack request from it
                 batch.SendBatchToClientTcs.SetResult();
+
+                // wait for sharded subscription worker to send ack to the shard subscription connection
+                // and receive the confirm from the shard subscription connection
+                await batch.ConfirmFromShardSubscriptionConnectionTcs.Task;
+
+                if (sentAnythingToClient)
+                    // send confirm to client and continue processing
+                    await SendConfirmToClientAsync();
             }
             catch (Exception e)
             {
@@ -320,13 +295,6 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
                 batch.SendBatchToClientTcs.TrySetException(e);
                 throw;
             }
-
-            // wait for sharded subscription worker to send ack to the shard subscription connection
-            // and receive the confirm from the shard subscription connection
-            await batch.ConfirmFromShardSubscriptionConnectionTcs.Task;
-
-            // send confirm to client and continue processing
-            await SendConfirmToClientAsync();
         }
 
         private bool CanContinueSubscription(SubscriptionShardHolder shardHolder)
@@ -343,9 +311,11 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
             return false;
         }
 
-        private async Task WriteBatchToClientAndAckAsync(ShardedSubscriptionWorker.PublishedShardBatch batch, string shard)
+        private Task<SubscriptionConnectionClientMessage> _replyFromClientTask;
+
+        private async Task<bool> WriteBatchToClientAndAckAsync(ShardedSubscriptionWorker.PublishedShardBatch batch, string shardedDatabaseName)
         {
-            var replyFromClientTask = GetReplyFromClientInternalAsync();
+            _replyFromClientTask ??= GetReplyFromClientAsync();
             AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info, "Starting to send documents."));
             int docsToFlush = 0;
             string lastReceivedChangeVector = null;
@@ -358,33 +328,54 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
                 foreach (var doc in batch._batchFromServer.Messages)
                 {
                     CancellationTokenSource.Token.ThrowIfCancellationRequested();
-                    (BlittableJsonReaderObject metadata, string id, string changeVector) = BatchFromServer.GetMetadataFromBlittable(doc.Data);
+                    (BlittableJsonReaderObject metadata, LazyStringValue id, string changeVector) = BatchFromServer.GetMetadataFromBlittable(doc.Data);
+
+                    if (sendingCurrentBatchStopwatch.ElapsedMilliseconds > 1000)
+                    {
+                        await SendHeartBeatAsync("Skipping docs for more than 1000ms without sending any data");
+                        sendingCurrentBatchStopwatch.Restart();
+                    }
+
                     lastReceivedChangeVector = changeVector;
                     SubscriptionConnection.WriteDocumentOrException(context, writer, document: null, doc.Data, metadata, doc.Exception, id, null, null, null);
                     docsToFlush++;
 
-                    if (await SubscriptionConnection.FlushBatchIfNeededAsync(sendingCurrentBatchStopwatch, SubscriptionId, writer, buffer, TcpConnection, stats: null, _logger, docsToFlush, CancellationTokenSource.Token) == false)
+                    if (await SubscriptionConnection.FlushBatchIfNeededAsync(sendingCurrentBatchStopwatch, SubscriptionId, writer, buffer, TcpConnection, metrics: null,
+                            _logger, docsToFlush, CancellationTokenSource.Token) == false)
                         continue;
 
                     docsToFlush = 0;
                     sendingCurrentBatchStopwatch.Restart();
                 }
 
-                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Egor, DevelopmentHelper.Severity.Major, "https://issues.hibernatingrhinos.com/issue/RavenDB-16279");
+                if (lastReceivedChangeVector == null)
+                {
+                    // nothing to send
+                    await SendHeartBeatAsync($"Shard {shardedDatabaseName} found nothing to send");
+                    AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info, $"Shard {shardedDatabaseName} found nothing to send"));
+                    return false;
+                }
+
+                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Egor, DevelopmentHelper.Severity.Major,
+                    "https://issues.hibernatingrhinos.com/issue/RavenDB-16279");
                 SubscriptionConnection.WriteEndOfBatch(writer);
 
-                AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info, $"Flushing docs collected from shard '{shard}'"));
-                await SubscriptionConnection.FlushDocsToClientAsync(SubscriptionId, writer, buffer, TcpConnection, stats: null, _logger, docsToFlush, endOfBatch: true, CancellationTokenSource.Token);
+                AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info, $"Flushing docs collected from shard '{shardedDatabaseName}'"));
+                await SubscriptionConnection.FlushDocsToClientAsync(SubscriptionId, writer, buffer, TcpConnection, metrics: null, _logger, docsToFlush, endOfBatch: true,
+                    CancellationTokenSource.Token);
             }
 
             batch.LastSentChangeVectorInBatch = lastReceivedChangeVector;
-            await WaitForClientAck(replyFromClientTask);
-            AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info, $"Shard '{shard}' got ack from client '{TcpConnection.TcpClient.Client.RemoteEndPoint}'."));
+            _replyFromClientTask = await WaitForClientAck(_replyFromClientTask);
+            AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info,
+                $"Shard '{shardedDatabaseName}' got ack from client '{TcpConnection.TcpClient.Client.RemoteEndPoint}'."));
+            return true;
         }
 
         internal async Task SendConfirmToClientAsync()
         {
-            AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info, $"Shard subscription connection '{SubscriptionId}' send confirm to client '{TcpConnection.TcpClient.Client.RemoteEndPoint}'."));
+            AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info,
+                $"Shard subscription connection '{SubscriptionId}' send confirm to client '{TcpConnection.TcpClient.Client.RemoteEndPoint}'."));
             await WriteJsonAsync(new DynamicJsonValue
             {
                 [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.Confirm)

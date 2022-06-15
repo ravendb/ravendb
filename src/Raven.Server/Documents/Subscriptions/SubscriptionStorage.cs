@@ -11,14 +11,12 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Subscriptions;
-using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents.Subscriptions.Stats;
 using Raven.Server.Documents.TcpHandlers;
-using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.ServerWide.Context;
@@ -31,7 +29,7 @@ using Voron;
 
 namespace Raven.Server.Documents.Subscriptions
 {
-    public class SubscriptionStorage : IDisposable, ILowMemoryHandler
+    public class SubscriptionStorage : IDisposable, ILowMemoryHandler, ISubscriptionSemaphore
     {
         internal readonly DocumentDatabase _db;
         private readonly ServerStore _serverStore;
@@ -131,101 +129,6 @@ namespace Raven.Server.Documents.Subscriptions
             var subscription = _serverStore.Cluster.Subscriptions.ReadSubscriptionStateByName(serverContext, _databaseName, name);
             var topology = _serverStore.Cluster.ReadDatabaseTopology(serverContext, _db.Name);
             return _db.WhoseTaskIsIt(topology, subscription, subscription);
-        }
-
-        public async Task<SubscriptionState> AssertSubscriptionConnectionDetails(long id, string name, long? registerConnectionDurationInTicks, CancellationToken token)
-        {
-            await _serverStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, id, token);
-
-            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverStoreContext))
-            using (serverStoreContext.OpenReadTransaction())
-            using (var record = _serverStore.Cluster.ReadRawDatabaseRecord(serverStoreContext, _db.Name))
-            {
-                var subscription = GetSubscriptionFromServerStore(serverStoreContext, name);
-                var topology = record.Topology;
-
-                var whoseTaskIsIt = _db.WhoseTaskIsIt(topology, subscription, subscription);
-                if (whoseTaskIsIt == null && record.DeletionInProgress.ContainsKey(_serverStore.NodeTag))
-                    throw new DatabaseDoesNotExistException($"Stopping subscription '{name}' on node {_serverStore.NodeTag}, because database '{_db.Name}' is being deleted.");
-
-                if (whoseTaskIsIt != _serverStore.NodeTag)
-                {
-                    var databaseTopologyAvailabilityExplanation = new Dictionary<string, string>();
-
-                    string generalState;
-                    RachisState currentState = _serverStore.Engine.CurrentState;
-                    if (currentState == RachisState.Candidate || currentState == RachisState.Passive)
-                    {
-                        generalState = $"Current node ({_serverStore.NodeTag}) is in {currentState.ToString()} state therefore, we can't answer who's task is it and returning null";
-                    }
-                    else
-                    {
-                        generalState = currentState.ToString();
-                    }
-                    databaseTopologyAvailabilityExplanation["NodeState"] = generalState;
-
-                    FillNodesAvailabilityReportForState(subscription, topology, databaseTopologyAvailabilityExplanation, stateGroup: topology.Rehabs, stateName: "rehab");
-                    FillNodesAvailabilityReportForState(subscription, topology, databaseTopologyAvailabilityExplanation, stateGroup: topology.Promotables, stateName: "promotable");
-
-                    //whoseTaskIsIt!= null && whoseTaskIsIt == subscription.MentorNode 
-                    foreach (var member in topology.Members)
-                    {
-                        if (whoseTaskIsIt != null)
-                        {
-                            if (whoseTaskIsIt == subscription.MentorNode && member == subscription.MentorNode)
-                            {
-                                databaseTopologyAvailabilityExplanation[member] = "Is the mentor node and a valid member of the topology, it should be the mentor node";
-                            }
-                            else if (whoseTaskIsIt != null && whoseTaskIsIt != member)
-                            {
-                                databaseTopologyAvailabilityExplanation[member] = "Is a valid member of the topology, but not chosen to be the node running the subscription";
-                            }
-                            else if (whoseTaskIsIt == member)
-                            {
-                                databaseTopologyAvailabilityExplanation[member] = "Is a valid member of the topology and is chosen to be running the subscription";
-                            }
-                        }
-                        else
-                        {
-                            databaseTopologyAvailabilityExplanation[member] = "Is a valid member of the topology but was not chosen to run the subscription, we didn't find any other match either";
-                        }
-                    }
-                    throw new SubscriptionDoesNotBelongToNodeException(
-                        $"Subscription with id '{id}' and name '{name}' can't be processed on current node ({_serverStore.NodeTag}), because it belongs to {whoseTaskIsIt}",
-                        whoseTaskIsIt,
-                        databaseTopologyAvailabilityExplanation, id)
-                    {
-                        RegisterConnectionDurationInTicks = registerConnectionDurationInTicks
-                    };
-                }
-                if (subscription.Disabled)
-                    throw new SubscriptionClosedException($"The subscription with id '{id}' and name '{name}' is disabled and cannot be used until enabled");
-
-                return subscription;
-            }
-
-            static void FillNodesAvailabilityReportForState(SubscriptionGeneralDataAndStats subscription, DatabaseTopology topology, Dictionary<string, string> databaseTopologyAvailabilityExplenation, List<string> stateGroup, string stateName)
-            {
-                foreach (var nodeInGroup in stateGroup)
-                {
-                    var rehabMessage = string.Empty;
-                    if (subscription.MentorNode == nodeInGroup)
-                    {
-                        rehabMessage = $"Although this node is a mentor, it's state is {stateName} and can't run the subscription";
-                    }
-                    else
-                    {
-                        rehabMessage = $"Node's state is {stateName}, can't run subscription";
-                    }
-
-                    if (topology.DemotionReasons.TryGetValue(nodeInGroup, out var demotionReason))
-                    {
-                        rehabMessage = rehabMessage + ". Reason:" + demotionReason;
-                    }
-
-                    databaseTopologyAvailabilityExplenation[nodeInGroup] = rehabMessage;
-                }
-            }
         }
 
         public static async Task DeleteSubscriptionInternal(ServerStore serverStore, string databaseName, string name, string raftRequestId, Logger logger)
@@ -565,51 +468,56 @@ namespace Raven.Server.Documents.Subscriptions
                 //checks which subscriptions should be dropped because of the database record change
                 foreach (var subscriptionStateKvp in _subscriptions)
                 {
+                    if (subscriptionStateKvp.Value is SubscriptionConnectionsStateForShard)
+                        continue;
+
                     var subscriptionName = subscriptionStateKvp.Value.SubscriptionName;
                     if (subscriptionName == null)
                         continue;
 
+                    var id = subscriptionStateKvp.Key;
+                    var subscriptionConnectionsState = subscriptionStateKvp.Value;
+
                     using var subscriptionStateRaw = _serverStore.Cluster.Subscriptions.ReadSubscriptionStateRaw(context, _databaseName, subscriptionName);
                     if (subscriptionStateRaw == null)
                     {
-                        DropSubscriptionConnections(subscriptionStateKvp.Key, new SubscriptionDoesNotExistException($"The subscription {subscriptionName} had been deleted"));
+                        DropSubscriptionConnections(id, new SubscriptionDoesNotExistException($"The subscription {subscriptionName} had been deleted"));
                         continue;
                     }
 
                     var subscriptionState = JsonDeserializationClient.SubscriptionState(subscriptionStateRaw);
                     if (subscriptionState.Disabled)
                     {
-                        DropSubscriptionConnections(subscriptionStateKvp.Key, new SubscriptionClosedException($"The subscription {subscriptionName} is disabled and cannot be used until enabled"));
+                        DropSubscriptionConnections(id, new SubscriptionClosedException($"The subscription {subscriptionName} is disabled and cannot be used until enabled"));
                         continue;
                     }
 
-                    var subscriptionConnectionsState = subscriptionStateKvp.Value;
 
                     //make sure we only drop old connection and not new ones just arriving with the updated query
                     if (subscriptionConnectionsState != null && subscriptionState.Query != subscriptionConnectionsState.Query)
                     {
-                        DropSubscriptionConnections(subscriptionStateKvp.Key, new SubscriptionClosedException($"The subscription {subscriptionName} query has been modified, connection must be restarted", canReconnect: true));
+                        DropSubscriptionConnections(id, new SubscriptionClosedException($"The subscription {subscriptionName} query has been modified, connection must be restarted", canReconnect: true));
                         continue;
                     }
 
                     if (subscriptionState.LastClientConnectionTime == null &&
                         subscriptionState.ChangeVectorForNextBatchStartingPoint != subscriptionConnectionsState.LastChangeVectorSent)
                     {
-                        DropSubscriptionConnections(subscriptionStateKvp.Key, new SubscriptionClosedException($"The subscription {subscriptionName} was modified, connection must be restarted", canReconnect: true));
+                        DropSubscriptionConnections(id, new SubscriptionClosedException($"The subscription {subscriptionName} was modified, connection must be restarted", canReconnect: true));
                         continue;
                     }
 
-                    var whoseTaskIsIt = _db.WhoseTaskIsIt(databaseRecord.Topology, subscriptionState, subscriptionState);
+                    var whoseTaskIsIt = _serverStore.WhoseTaskIsIt(databaseRecord.Topology, subscriptionState, subscriptionState);
                     if (whoseTaskIsIt != _serverStore.NodeTag)
                     {
-                        DropSubscriptionConnections(subscriptionStateKvp.Key,
+                        DropSubscriptionConnections(id,
                             new SubscriptionDoesNotBelongToNodeException("Subscription operation was stopped, because it's now under a different server's responsibility"));
                     }
                 }
             }
         }
 
-        public bool TryEnterSemaphore()
+        public bool TryEnterSubscriptionsSemaphore()
         {
             return _concurrentConnectionsSemiSemaphore.Wait(0);
         }
@@ -631,7 +539,7 @@ namespace Raven.Server.Documents.Subscriptions
 
                 var recentConnection = kvp.Value.MostRecentEndedConnection();
 
-                if (recentConnection != null && recentConnection.Stats.LastMessageSentAt < oldestPossibleIdleSubscription)
+                if (recentConnection != null && recentConnection.StatsCollector.Metrics.LastMessageSentAt < oldestPossibleIdleSubscription)
                 {
                     if (_subscriptions.TryRemove(kvp.Key, out var subsState))
                     {

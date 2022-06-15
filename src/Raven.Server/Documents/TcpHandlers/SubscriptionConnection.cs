@@ -23,6 +23,7 @@ using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.TimeSeries;
 using Raven.Server.Documents.Sharding;
+using Raven.Server.Documents.Sharding.Subscriptions;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.Subscriptions.Stats;
 using Raven.Server.Documents.Subscriptions.SubscriptionProcessor;
@@ -67,172 +68,17 @@ namespace Raven.Server.Documents.TcpHandlers
         private static readonly TimeSpan InitialConnectionTimeout = TimeSpan.FromMilliseconds(16);
 
         private readonly MemoryStream _buffer = new MemoryStream();
-        public readonly SubscriptionConnectionStats Stats;
-
-        private SubscriptionConnectionStatsScope _connectionScope;
-        private SubscriptionConnectionStatsScope _pendingConnectionScope;
-        private SubscriptionConnectionStatsScope _activeConnectionScope;
-
-        private static int _connectionStatsId;
-        private int _connectionStatsIdForConnection;
-        private static int _batchStatsId;
-
-        private SubscriptionConnectionStatsAggregator _lastConnectionStats; // inProgress connection data
-        public SubscriptionConnectionStatsAggregator GetPerformanceStats()
-        {
-            return _lastConnectionStats;
-        }
-
-        private SubscriptionBatchStatsAggregator _lastBatchStats; // inProgress batch data
-        public SubscriptionBatchStatsAggregator GetBatchPerformanceStats()
-        {
-            return _lastBatchStats;
-        }
-
-        private readonly ConcurrentQueue<SubscriptionBatchStatsAggregator> _lastBatchesStats = new ConcurrentQueue<SubscriptionBatchStatsAggregator>(); // batches history
-        public List<SubscriptionBatchStatsAggregator> GetBatchesPerformanceStats()
-        {
-            return _lastBatchesStats.ToList();
-        }
-
-        public string WorkerId => _options.WorkerId ??= Guid.NewGuid().ToString();
-
-        private SubscriptionConnectionsState _subscriptionConnectionsState;
-        public SubscriptionConnectionsState SubscriptionConnectionsState => _subscriptionConnectionsState;
+        private readonly DocumentDatabase _database;
 
         public long CurrentBatchId;
 
         public string LastSentChangeVectorInThisConnection;
 
-        public SubscriptionState SubscriptionState;
-
-        public ParsedSubscription Subscription;
-
         public SubscriptionConnection(ServerStore serverStore, TcpConnectionOptions tcpConnection, IDisposable tcpConnectionDisposable, JsonOperationContext.MemoryBuffer bufferToCopy, string database)
             : base(tcpConnection, serverStore, bufferToCopy, tcpConnectionDisposable, database, tcpConnection.DocumentDatabase.DatabaseShutdown)
         {
-            _supportedFeatures = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(TcpConnectionHeaderMessage.OperationTypes.Subscription, tcpConnection.ProtocolVersion);
-            Stats = new SubscriptionConnectionStats();
-
-            _connectionStatsIdForConnection = Interlocked.Increment(ref _connectionStatsId);
-
+            _database = tcpConnection.DocumentDatabase;
             CurrentBatchId = NonExistentBatch;
-        }
-
-        private async Task InitAsync()
-        {
-            var message = CreateStatusMessage(ConnectionStatus.Create);
-            AddToStatusDescription(message);
-            if (_logger.IsInfoEnabled)
-            {
-                _logger.Info(message);
-            }
-
-            // first, validate details and make sure subscription exists
-            SubscriptionState = await TcpConnection.DocumentDatabase.SubscriptionStorage.AssertSubscriptionConnectionDetails(SubscriptionId, _options.SubscriptionName, registerConnectionDurationInTicks: null, CancellationTokenSource.Token);
-            Subscription = ParseSubscriptionQuery(SubscriptionState.Query);
-
-            AssertSupportedFeatures();
-        }
-
-        private async Task NotifyClientAboutSuccess(long registerConnectionDurationInTicks)
-        {
-            TcpConnection.DocumentDatabase.ForTestingPurposes?.Subscription_ActionToCallAfterRegisterSubscriptionConnection?.Invoke(registerConnectionDurationInTicks);
-
-            _activeConnectionScope = _connectionScope.For(SubscriptionOperationScope.ConnectionActive);
-
-            // refresh subscription data (change vector may have been updated, because in the meanwhile, another subscription could have just completed a batch)
-            SubscriptionState =
-                await TcpConnection.DocumentDatabase.SubscriptionStorage.AssertSubscriptionConnectionDetails(SubscriptionId, _options.SubscriptionName, registerConnectionDurationInTicks,
-                    CancellationTokenSource.Token);
-
-            Subscription = ParseSubscriptionQuery(SubscriptionState.Query);
-
-            // update the state if above data changed
-            _subscriptionConnectionsState.Initialize(this, afterSubscribe: true);
-
-
-            await SendNoopAckAsync();
-            await WriteJsonAsync(new DynamicJsonValue
-            {
-                [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
-                [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.Accepted)
-            });
-
-            await _subscriptionConnectionsState.UpdateClientConnectionTime();
-        }
-
-        private async Task<(IDisposable DisposeOnDisconnect, long RegisterConnectionDurationInTicks)> SubscribeAsync()
-        {
-            var random = new Random();
-            var registerConnectionDuration = Stopwatch.StartNew();
-
-            _connectionScope.RecordConnectionInfo(SubscriptionState, ClientUri, _options.Strategy, WorkerId);
-
-            _subscriptionConnectionsState.PendingConnections.Add(this);
-
-            try
-            {
-                while (true)
-                {
-                    CancellationTokenSource.Token.ThrowIfCancellationRequested();
-
-                    try
-                    {
-                        var disposeOnce = _subscriptionConnectionsState.RegisterSubscriptionConnection(this);
-                        registerConnectionDuration.Stop();
-                        return (disposeOnce, registerConnectionDuration.ElapsedTicks);
-                    }
-                    catch (TimeoutException)
-                    {
-                        if (_logger.IsInfoEnabled)
-                        {
-                            _logger.Info(
-                                $"A connection from IP {TcpConnection.TcpClient.Client.RemoteEndPoint} is starting to wait until previous connection from " +
-                                $"{_subscriptionConnectionsState.GetConnectionsAsString()} is released");
-                        }
-
-                        var timeout = TimeSpan.FromMilliseconds(Math.Max(250, (long)_options.TimeToWaitBeforeConnectionRetry.TotalMilliseconds / 2) + random.Next(15, 50));
-                        await Task.Delay(timeout);
-                        await SendHeartBeatAsync(
-                            $"A connection from IP {TcpConnection.TcpClient.Client.RemoteEndPoint} is waiting for Subscription Task that is serving a connection from IP " +
-                            $"{_subscriptionConnectionsState.GetConnectionsAsString()} to be released");
-                    }
-                }
-            }
-            finally
-            {
-                _subscriptionConnectionsState.PendingConnections.TryRemove(this);
-            }
-        }
-
-        private void AssertSupportedFeatures()
-        {
-            if (_options.Strategy == SubscriptionOpeningStrategy.Concurrent)
-            {
-                _serverStore.LicenseManager.AssertCanAddConcurrentDataSubscriptions();
-            }
-
-            if (_supportedFeatures.Subscription.Includes == false)
-            {
-                if (Subscription.Includes != null && Subscription.Includes.Length > 0)
-                    throw new SubscriptionInvalidStateException(
-                        $"A connection to Subscription Task with ID '{SubscriptionId}' cannot be opened because it requires the protocol to support Includes.");
-            }
-
-            if (_supportedFeatures.Subscription.CounterIncludes == false)
-            {
-                if (Subscription.CounterIncludes != null && Subscription.CounterIncludes.Length > 0)
-                    throw new SubscriptionInvalidStateException(
-                        $"A connection to Subscription Task with ID '{SubscriptionId}' cannot be opened because it requires the protocol to support Counter Includes.");
-            }
-
-            if (_supportedFeatures.Subscription.TimeSeriesIncludes == false)
-            {
-                if (Subscription.TimeSeriesIncludes != null && Subscription.TimeSeriesIncludes.TimeSeries.Count > 0)
-                    throw new SubscriptionInvalidStateException(
-                        $"A connection to Subscription Task with ID '{SubscriptionId}' cannot be opened because it requires the protocol to support TimeSeries Includes.");
-            }
         }
 
         internal static async Task FlushBufferToNetworkAsync(MemoryStream buffer, TcpConnectionOptions tcpConnection, CancellationToken token = default)
@@ -244,119 +90,18 @@ namespace Raven.Server.Documents.TcpHandlers
             buffer.SetLength(0);
         }
 
-        protected virtual SubscriptionConnectionsState GetSubscriptionConnectionState()
+        protected SubscriptionConnectionsState _subscriptionConnectionsState;
+
+        public SubscriptionConnectionsState GetSubscriptionConnectionState()
         {
             var subscriptions = TcpConnection.DocumentDatabase.SubscriptionStorage.Subscriptions;
-            return subscriptions.GetOrAdd(SubscriptionId, subId => new SubscriptionConnectionsState(subId, TcpConnection.DocumentDatabase.SubscriptionStorage));
+            _subscriptionConnectionsState =  subscriptions.GetOrAdd(SubscriptionId, subId => new SubscriptionConnectionsState(_database.Name, subId, TcpConnection.DocumentDatabase.SubscriptionStorage));
+            return _subscriptionConnectionsState;
         }
 
-        public async Task Run(TcpConnectionOptions tcpConnectionOptions, IDisposable subscriptionConnectionInProgress)
-        {
-            using (tcpConnectionOptions)
-            using (subscriptionConnectionInProgress)
-            using (this)
-            {
-                _lastConnectionStats = new SubscriptionConnectionStatsAggregator(_connectionStatsIdForConnection, null);
-                _connectionScope = _lastConnectionStats.CreateScope();
-
-                _pendingConnectionScope = _connectionScope.For(SubscriptionOperationScope.ConnectionPending);
-                IDisposable disposeOnDisconnect = default;
-
-                try
-                {
-                    await ParseSubscriptionOptionsAsync();
-
-                    if (TcpConnection.DocumentDatabase.SubscriptionStorage.TryEnterSemaphore() == false)
-                    {
-                        throw new SubscriptionClosedException(
-                            $"Cannot open new subscription connection, max amount of concurrent connections reached ({TcpConnection.DocumentDatabase.Configuration.Subscriptions.MaxNumberOfConcurrentConnections}), you can modify the value at 'Subscriptions.MaxNumberOfConcurrentConnections'");
-                    }
-
-                    try
-                    {
-                        long registerConnectionDurationInTicks;
-                        using (_pendingConnectionScope)
-                        {
-                            await InitAsync();
-                            _subscriptionConnectionsState = GetSubscriptionConnectionState();
-                            _subscriptionConnectionsState.Initialize(this);
-                            (disposeOnDisconnect, registerConnectionDurationInTicks) = await SubscribeAsync();
-                        }
-
-                        await NotifyClientAboutSuccess(registerConnectionDurationInTicks);
-                        await ProcessSubscriptionAsync();
-                    }
-                    finally
-                    {
-                        TcpConnection.DocumentDatabase.SubscriptionStorage.ReleaseSubscriptionsSemaphore();
-                    }
-                }
-                catch (SubscriptionChangeVectorUpdateConcurrencyException e)
-                {
-                    _subscriptionConnectionsState.DropSubscription(e);
-                    await ReportExceptionAsync(SubscriptionError.Error, e);
-                }
-                catch (SubscriptionInUseException e)
-                {
-                    await ReportExceptionAsync(SubscriptionError.ConnectionRejected, e);
-                }
-                catch (Exception e)
-                {
-                    await ReportExceptionAsync(SubscriptionError.Error, e);
-                }
-                finally
-                {
-                    AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info, "Finished processing subscription"));
-                    if (_logger.IsInfoEnabled)
-                    {
-                        _logger.Info(
-                            $"Finished processing subscription {SubscriptionId} / from client {TcpConnection.TcpClient.Client.RemoteEndPoint}");
-                    }
-                    disposeOnDisconnect?.Dispose();
-                }
-            }
-        }
-
-        public Task SubscriptionConnectionTask;
-
-        public static void CreateSubscriptionConnection(ServerStore server, TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.MemoryBuffer buffer)
-        {
-            var subscriptionConnectionInProgress = tcpConnectionOptions.ConnectionProcessingInProgress("Subscription");
-
-            try
-            {
-                SubscriptionConnection connection;
-                if (tcpConnectionOptions.DocumentDatabase is ShardedDocumentDatabase shardedDocumentDatabase)
-                {
-                    connection = new SubscriptionConnectionForShard(server, tcpConnectionOptions, subscriptionConnectionInProgress, buffer, shardedDocumentDatabase.ShardedDatabaseName);
-                }
-                else
-                {
-                    connection = new SubscriptionConnection(server, tcpConnectionOptions, subscriptionConnectionInProgress, buffer, tcpConnectionOptions.DocumentDatabase.Name);
-                }
-
-                try
-                {
-                    connection.SubscriptionConnectionTask = connection.Run(tcpConnectionOptions, subscriptionConnectionInProgress);
-                }
-                catch (Exception)
-                {
-                    connection?.Dispose();
-                    throw;
-                }
-            }
-            catch (Exception)
-            {
-                subscriptionConnectionInProgress?.Dispose();
-
-                throw;
-            }
-        }
-
-        private readonly TcpConnectionHeaderMessage.SupportedFeatures _supportedFeatures;
         private SubscriptionProcessor _processor;
 
-        private async Task ProcessSubscriptionAsync()
+        public override async Task ProcessSubscriptionAsync()
         {
             AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info, "Starting to process subscription"));
             if (_logger.IsInfoEnabled)
@@ -366,7 +111,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
             using (_processor = SubscriptionProcessor.Create(this))
             {
-                var replyFromClientTask = GetReplyFromClientInternalAsync();
+                var replyFromClientTask = GetReplyFromClientAsync();
 
                 _processor.AddScript(SetupFilterAndProjectionScript());
 
@@ -374,7 +119,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 {
                     _buffer.SetLength(0);
 
-                    var inProgressBatchStats = _lastBatchStats = new SubscriptionBatchStatsAggregator(Interlocked.Increment(ref _batchStatsId), _lastBatchStats);
+                    var inProgressBatchStats = StatsCollector.CreateInProgressBatchStats();
 
                     using (var batchScope = inProgressBatchStats.CreateScope())
                     {
@@ -398,7 +143,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                     AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info,
                                         $"Acknowledging docs processing progress without sending any documents to client. CV: {_subscriptionConnectionsState.LastChangeVectorSent ?? "None"}"));
 
-                                    UpdateBatchPerformanceStats(0, false);
+                                    StatsCollector.UpdateBatchPerformanceStats(0, false);
 
                                     if (sendingCurrentBatchStopwatch.ElapsedMilliseconds > 1000)
                                         await SendHeartBeatAsync("Didn't find any documents to send and more then 1000ms passed");
@@ -406,7 +151,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                     using (docsContext.OpenReadTransaction())
                                     {
                                         var globalEtag = _processor.GetLastItemEtag(docsContext, Subscription.Collection);
-                                        if (globalEtag > SubscriptionConnectionsState.GetLastEtagSent())
+                                        if (globalEtag > _subscriptionConnectionsState.GetLastEtagSent())
                                         {
                                             _subscriptionConnectionsState.NotifyHasMoreDocs();
                                         }
@@ -424,7 +169,9 @@ namespace Raven.Server.Documents.TcpHandlers
                                 replyFromClientTask = await WaitForClientAck(replyFromClientTask);
                             }
 
-                            UpdateBatchPerformanceStats(batchScope.GetBatchSize());
+                            var last = StatsCollector.UpdateBatchPerformanceStats(batchScope.GetBatchSize());
+                            TcpConnection.DocumentDatabase.SubscriptionStorage.RaiseNotificationForBatchEnded(_options.SubscriptionName, last);
+
                         }
                         catch (Exception e)
                         {
@@ -436,21 +183,6 @@ namespace Raven.Server.Documents.TcpHandlers
 
                 CancellationTokenSource.Token.ThrowIfCancellationRequested();
             }
-        }
-
-        private void UpdateBatchPerformanceStats(long batchSize, bool anyDocumentsSent = true)
-        {
-            _lastBatchStats.Complete();
-
-            if (anyDocumentsSent)
-            {
-                _connectionScope.RecordBatchCompleted(batchSize);
-
-                AddBatchPerformanceStatsToBatchesHistory(_lastBatchStats);
-                TcpConnection.DocumentDatabase.SubscriptionStorage.RaiseNotificationForBatchEnded(_options.SubscriptionName, _lastBatchStats);
-            }
-
-            _lastBatchStats = null;
         }
 
         private void AssertCloseWhenNoDocsLeft()
@@ -488,7 +220,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
                 using (batchScope.For(SubscriptionOperationScope.BatchSendDocuments))
                 {
-                    batchScope.RecordBatchInfo(_subscriptionConnectionsState.SubscriptionId, _subscriptionConnectionsState.SubscriptionName, _connectionStatsIdForConnection,
+                    batchScope.RecordBatchInfo(_subscriptionConnectionsState.SubscriptionId, _subscriptionConnectionsState.SubscriptionName, StatsCollector.ConnectionStatsIdForConnection,
                         batchStatsAggregator.Id);
 
                     int docsToFlush = 0;
@@ -503,6 +235,7 @@ namespace Raven.Server.Documents.TcpHandlers
                             IncludeDocumentsCommand includeDocumentsCommand = null;
                             IncludeCountersCommand includeCountersCommand = null;
                             IncludeTimeSeriesCommand includeTimeSeriesCommand = null;
+
                             if (_supportedFeatures.Subscription.Includes)
                                 includeDocumentsCommand = new IncludeDocumentsCommand(TcpConnection.DocumentDatabase.DocumentsStorage, docsContext, Subscription.Includes,
                                     isProjection: string.IsNullOrWhiteSpace(Subscription.Script) == false);
@@ -521,7 +254,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
                                 lastChangeVectorSentInThisBatch = ChangeVectorUtils.MergeVectors(
                                     lastChangeVectorSentInThisBatch,
-                                    ChangeVectorUtils.NewChangeVector(SubscriptionConnectionsState.DocumentDatabase, result.Doc.Etag),
+                                    ChangeVectorUtils.NewChangeVector(_database, result.Doc.Etag),
                                     result.Doc.ChangeVector); //merge with this node's local etag
 
                                 if (result.Doc.Data == null)
@@ -559,7 +292,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
                                 TcpConnection._lastEtagSent = -1;
                                 // perform flush for current batch after 1000ms of running or 1 MB
-                                if (await FlushBatchIfNeededAsync(sendingCurrentBatchStopwatch, SubscriptionId, writer, _buffer, TcpConnection, Stats, _logger, docsToFlush, CancellationTokenSource.Token))
+                                if (await FlushBatchIfNeededAsync(sendingCurrentBatchStopwatch, SubscriptionId, writer, _buffer, TcpConnection, StatsCollector.Metrics, _logger, docsToFlush, CancellationTokenSource.Token))
                                 {
                                     docsToFlush = 0;
                                     sendingCurrentBatchStopwatch.Restart();
@@ -637,7 +370,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
                                 AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info, "Flushing sent docs to client"));
 
-                                await FlushDocsToClientAsync(SubscriptionId, writer, _buffer, TcpConnection, Stats, _logger, docsToFlush, true, CancellationTokenSource.Token);
+                                await FlushDocsToClientAsync(SubscriptionId, writer, _buffer, TcpConnection, StatsCollector.Metrics, _logger, docsToFlush, true, CancellationTokenSource.Token);
                             }
 
                             if (lastChangeVectorSentInThisBatch != null)
@@ -707,20 +440,20 @@ namespace Raven.Server.Documents.TcpHandlers
             writer.WriteString(nameof(SubscriptionConnectionServerMessage.MessageType.EndOfBatch));
             writer.WriteEndObject();
         }
-        internal static async Task<bool> FlushBatchIfNeededAsync(Stopwatch sendingCurrentBatchStopwatch, long subscriptionId, AsyncBlittableJsonTextWriter writer, MemoryStream buffer, TcpConnectionOptions tcpConnection, SubscriptionConnectionStats stats, Logger logger, int docsToFlush, CancellationToken token = default)
+        internal static async Task<bool> FlushBatchIfNeededAsync(Stopwatch sendingCurrentBatchStopwatch, long subscriptionId, AsyncBlittableJsonTextWriter writer, MemoryStream buffer, TcpConnectionOptions tcpConnection, SubscriptionConnectionMetrics metrics, Logger logger, int docsToFlush, CancellationToken token = default)
         {
             // perform flush for current batch after 1000ms of running or 1 MB
             if (buffer.Length < Constants.Size.Megabyte && sendingCurrentBatchStopwatch.ElapsedMilliseconds < 1000)
                 return false;
 
-            await FlushDocsToClientAsync(subscriptionId, writer, buffer, tcpConnection, stats, logger, docsToFlush, endOfBatch: false, token: token);
+            await FlushDocsToClientAsync(subscriptionId, writer, buffer, tcpConnection, metrics, logger, docsToFlush, endOfBatch: false, token: token);
             if (logger.IsInfoEnabled)
             {
                 logger.Info($"Finished flushing a batch with {docsToFlush} documents for subscription {subscriptionId}");
             }
             return true;
         }
-        internal static async Task FlushDocsToClientAsync(long subscriptionId, AsyncBlittableJsonTextWriter writer, MemoryStream buffer, TcpConnectionOptions tcpConnection, SubscriptionConnectionStats stats, Logger logger, int flushedDocs, bool endOfBatch = false, CancellationToken token = default)
+        internal static async Task FlushDocsToClientAsync(long subscriptionId, AsyncBlittableJsonTextWriter writer, MemoryStream buffer, TcpConnectionOptions tcpConnection, SubscriptionConnectionMetrics metrics, Logger logger, int flushedDocs, bool endOfBatch = false, CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
 
@@ -733,11 +466,11 @@ namespace Raven.Server.Documents.TcpHandlers
 
             tcpConnection.RegisterBytesSent(bufferSize);
 
-            if (stats != null)
+            if (metrics != null)
             {
-                stats.LastMessageSentAt = DateTime.UtcNow;
-                stats.DocsRate?.Mark(flushedDocs);
-                stats.BytesRate?.Mark(bufferSize);
+                metrics.LastMessageSentAt = DateTime.UtcNow;
+                metrics.DocsRate?.Mark(flushedDocs);
+                metrics.BytesRate?.Mark(bufferSize);
             }
         }
 
@@ -788,14 +521,10 @@ namespace Raven.Server.Documents.TcpHandlers
                 return;
             _isDisposed = true;
 
-            _lastConnectionStats.Complete();
+            StatsCollector.LastConnectionStats.Complete();
             TcpConnection.DocumentDatabase.SubscriptionStorage.RaiseNotificationForConnectionEnded(this);
 
             base.Dispose();
-
-            Stats.Dispose();
-            _activeConnectionScope?.Dispose();
-            _connectionScope.Dispose();
         }
 
         public struct ParsedSubscription
@@ -1078,17 +807,9 @@ namespace Raven.Server.Documents.TcpHandlers
             };
         }
 
-        private void AddBatchPerformanceStatsToBatchesHistory(SubscriptionBatchStatsAggregator batchStats)
+        public override async Task ReportExceptionAsync(SubscriptionError error, Exception e)
         {
-            _lastBatchesStats.Enqueue(batchStats); // add to batches history
-
-            while (_lastBatchesStats.Count > 25)
-                _lastBatchesStats.TryDequeue(out batchStats);
-        }
-
-        protected override async Task ReportExceptionAsync(SubscriptionError error, Exception e)
-        {
-            _connectionScope.RecordException(error, e.ToString());
+            StatsCollector.ConnectionScope.RecordException(error, e.ToString());
             if (ConnectionException == null && e is SubscriptionException se)
             {
                 ConnectionException = se;
@@ -1108,30 +829,25 @@ namespace Raven.Server.Documents.TcpHandlers
         {
             await _processor.AcknowledgeBatch(CurrentBatchId);
 
-            Stats.LastAckReceivedAt = TcpConnection.DocumentDatabase.Time.GetUtcNow();
-            Stats.AckRate?.Mark();
+            StatsCollector.Metrics.LastAckReceivedAt = TcpConnection.DocumentDatabase.Time.GetUtcNow();
+            StatsCollector.Metrics.AckRate?.Mark();
             await WriteJsonAsync(new DynamicJsonValue
             {
                 [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.Confirm)
             });
         }
 
-        protected override Task SendNoopAckAsync()
+        public override Task SendNoopAckAsync()
         {
-            return SubscriptionConnectionsState.AcknowledgeBatchProcessed(nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange),
+            return _subscriptionConnectionsState.AcknowledgeBatchProcessed(nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange),
                 NonExistentBatch, docsToResend: null);
-        }
-
-        internal override Task<SubscriptionConnectionClientMessage> GetReplyFromClientAsync()
-        {
-            return GetReplyFromClientInternalAsync();
         }
 
         protected virtual StatusMessageDetails GetDefault()
         {
             return new StatusMessageDetails
             {
-                DatabaseName = $"for database '{Database}'",
+                DatabaseName = $"for database '{DatabaseName}'",
                 ClientType = "'client worker'",
                 SubscriptionType = "subscription"
             };

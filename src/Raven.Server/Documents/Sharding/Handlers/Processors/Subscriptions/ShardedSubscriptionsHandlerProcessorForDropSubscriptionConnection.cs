@@ -4,8 +4,6 @@ using JetBrains.Annotations;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Server.Documents.Handlers.Processors.Subscriptions;
 using Raven.Server.Documents.Sharding.Operations;
-using Raven.Server.Documents.Sharding.Subscriptions;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Utils;
 
@@ -41,9 +39,11 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Subscriptions
                         throw new SubscriptionDoesNotExistException($"Could not find a subscription with a subscription id of {subscriptionId.Value}");
                 }
 
-                if (ShardedSubscriptionConnection.Connections.TryRemove(subscriptionName, out ShardedSubscriptionConnection connection))
+                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Stav, DevelopmentHelper.Severity.Normal, "Make this identical to the normal EP");
+
+                if (RequestHandler.DatabaseContext.Subscriptions.SubscriptionsConnectionsState.TryRemove(subscriptionId.Value, out var state))
                 {
-                    connection.Dispose();
+                    state.Dispose();
                 }
             }
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Stav, DevelopmentHelper.Severity.Normal, "Handle status code");

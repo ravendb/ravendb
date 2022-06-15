@@ -32,12 +32,12 @@ namespace Raven.Client.Documents.Subscriptions
         public List<BlittableJsonReaderObject> TimeSeriesIncludes;
 
 
-        internal static (BlittableJsonReaderObject, string, string) GetMetadataFromBlittable(BlittableJsonReaderObject curDoc)
+        internal static (BlittableJsonReaderObject Metadata, LazyStringValue Id, string ChangeVector) GetMetadataFromBlittable(BlittableJsonReaderObject curDoc)
         {
             if (curDoc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false)
                 ThrowRequired("@metadata field");
 
-            if (metadata.TryGet(Constants.Documents.Metadata.Id, out string id) == false)
+            if (metadata.TryGet(Constants.Documents.Metadata.Id, out LazyStringValue id) == false)
                 ThrowRequired("@id field");
 
             if (metadata.TryGet(Constants.Documents.Metadata.ChangeVector, out string changeVector) == false ||
@@ -183,5 +183,22 @@ namespace Raven.Client.Documents.Subscriptions
         public int ReceiveBufferSizeInBytes { get; set; }
 
         public string WorkerId { get; internal set; }
+
+        internal SubscriptionWorkerOptions Clone()
+        {
+            return new SubscriptionWorkerOptions()
+            {
+                WorkerId = WorkerId,
+                ReceiveBufferSizeInBytes = ReceiveBufferSizeInBytes,
+                SendBufferSizeInBytes = SendBufferSizeInBytes,
+                CloseWhenNoDocsLeft = CloseWhenNoDocsLeft,
+                MaxErroneousPeriod = MaxErroneousPeriod,
+                MaxDocsPerBatch = MaxDocsPerBatch,
+                Strategy = Strategy,
+                IgnoreSubscriberErrors = IgnoreSubscriberErrors,
+                TimeToWaitBeforeConnectionRetry = TimeToWaitBeforeConnectionRetry,
+                SubscriptionName = SubscriptionName
+            };
+        }
     }
 }

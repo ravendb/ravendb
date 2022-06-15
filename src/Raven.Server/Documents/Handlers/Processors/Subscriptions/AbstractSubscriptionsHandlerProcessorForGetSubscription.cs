@@ -114,23 +114,23 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
             {
                 [nameof(SubscriptionConnection.ClientUri)] = x.ClientUri,
                 [nameof(SubscriptionConnection.Strategy)] = x.Strategy,
-                [nameof(SubscriptionConnection.Stats)] = GetConnectionStatsJson(x.Stats),
+                [nameof(SubscriptionConnection.StatsCollector)] = GetConnectionStatsJson(x.StatsCollector),
                 [nameof(SubscriptionConnection.ConnectionException)] = x.ConnectionException?.Message,
                 ["TcpConnectionStats"] = x.TcpConnection.GetConnectionStats(),
                 [nameof(SubscriptionConnection.RecentSubscriptionStatuses)] = new DynamicJsonArray(x.RecentSubscriptionStatuses?.ToArray() ?? Array.Empty<string>())
             };
         }
 
-        private static DynamicJsonValue GetConnectionStatsJson(SubscriptionConnectionStats x)
+        private static DynamicJsonValue GetConnectionStatsJson(SubscriptionStatsCollector x)
         {
             return new DynamicJsonValue()
             {
-                [nameof(SubscriptionConnectionStats.AckRate)] = x.AckRate?.CreateMeterData(),
-                [nameof(SubscriptionConnectionStats.BytesRate)] = x.BytesRate?.CreateMeterData(),
-                [nameof(SubscriptionConnectionStats.ConnectedAt)] = x.ConnectedAt,
-                [nameof(SubscriptionConnectionStats.DocsRate)] = x.DocsRate?.CreateMeterData(),
-                [nameof(SubscriptionConnectionStats.LastAckReceivedAt)] = x.LastAckReceivedAt,
-                [nameof(SubscriptionConnectionStats.LastMessageSentAt)] = x.LastMessageSentAt,
+                [nameof(SubscriptionStatsCollector.Metrics.AckRate)] = x.Metrics.AckRate?.CreateMeterData(),
+                [nameof(SubscriptionStatsCollector.Metrics.BytesRate)] = x.Metrics.BytesRate?.CreateMeterData(),
+                [nameof(SubscriptionStatsCollector.Metrics.ConnectedAt)] = x.Metrics.ConnectedAt,
+                [nameof(SubscriptionStatsCollector.Metrics.DocsRate)] = x.Metrics.DocsRate?.CreateMeterData(),
+                [nameof(SubscriptionStatsCollector.Metrics.LastAckReceivedAt)] = x.Metrics.LastAckReceivedAt,
+                [nameof(SubscriptionStatsCollector.Metrics.LastMessageSentAt)] = x.Metrics.LastMessageSentAt,
             };
         }
     }

@@ -65,6 +65,8 @@ namespace Raven.Server.Documents.Sharding
             Cluster = new ShardedCluster(this);
             Changes = new ShardedDocumentsChanges(this);
             Operations = new ShardedOperations(this);
+            Subscriptions = new ShardedSubscriptions(this, serverStore);
+
             RachisLogIndexNotifications = new RachisLogIndexNotifications(_databaseShutdown.Token);
             Replication = new ShardedReplicationContext(this, serverStore);
         }
@@ -77,6 +79,8 @@ namespace Raven.Server.Documents.Sharding
             UpdateConfiguration(record.Settings);
 
             Indexes.Update(record, index);
+
+            Subscriptions.Update(record);
 
             Interlocked.Exchange(ref _record, record);
 
@@ -148,7 +152,7 @@ namespace Raven.Server.Documents.Sharding
                 // ignored
             }
 
-            foreach (var connection in ShardedSubscriptionConnection.Connections)
+            foreach (var connection in Subscriptions.SubscriptionsConnectionsState)
             {
                 connection.Value.Dispose();
             }

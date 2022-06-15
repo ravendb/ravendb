@@ -108,7 +108,7 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
 
         public virtual void InitializeProcessor()
         {
-            SubscriptionConnectionsState = Connection.SubscriptionConnectionsState;
+            SubscriptionConnectionsState = Database.SubscriptionStorage.Subscriptions[Connection.SubscriptionId];
             Collection = Connection.Subscription.Collection;
             Options = Connection.Options;
             SubscriptionState = Connection.SubscriptionState;
