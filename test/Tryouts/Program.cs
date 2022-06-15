@@ -19,6 +19,9 @@ public static class Program
 
     public static async Task Main(string[] args)
     {
+        using (var testOutputHelper = new ConsoleTestOutputHelper())
+            new CompactTreeTests(testOutputHelper).CanDeleteLargeNumberOfItemsInRandomInsertionOrder(60597, 54632);
+
         Console.WriteLine(Process.GetCurrentProcess().Id);
         for (int i = 0; i < 100; i++)
         {
@@ -26,27 +29,28 @@ public static class Program
             try
             {
                 using (var testOutputHelper = new ConsoleTestOutputHelper())
-                {
-
+                {                    
                     int minFailure = int.MaxValue;
-                    int failureRandom = -1;
+                    int failureRandom = -1;                    
 
                     var rnd = new Random();
                     int number = 500000;
-                    while (number > 0)
+                    while (number > 16)
                     {
                         int seed = rnd.Next(100000);
                         try
                         {
+                            //new CompactTreeTests(testOutputHelper).CanDeleteLargeNumberOfItemsInRandomInsertionOrder(2023, 13878);
                             new CompactTreeTests(testOutputHelper).CanDeleteLargeNumberOfItemsInRandomInsertionOrder(number, seed);
                         }
-                        catch
+                        catch (Exception ex)
                         {
                             if (number < minFailure)
                             {
                                 minFailure = number;
                                 failureRandom = seed;
                                 Console.WriteLine($"[N:{minFailure}, Rnd:{failureRandom}]");
+                                Console.WriteLine($"--> {ex}");
                             }
                         }
 
