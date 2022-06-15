@@ -12,7 +12,7 @@ namespace Raven.Client.Documents.Operations.Backups
     {
         private readonly BackupConfiguration _backupConfiguration;
         private readonly string _nodeTag;
-
+        
         public BackupOperation(BackupConfiguration backupConfiguration)
         {
             _backupConfiguration = backupConfiguration ?? throw new ArgumentNullException(nameof(backupConfiguration));
@@ -28,23 +28,29 @@ namespace Raven.Client.Documents.Operations.Backups
 
         public RavenCommand<OperationIdResult<StartBackupOperationResult>> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
-            return new BackupCommand(_backupConfiguration, _nodeTag);
+            return new BackupCommand(_backupConfiguration, null, _nodeTag);
         }
 
         internal class BackupCommand : RavenCommand<OperationIdResult<StartBackupOperationResult>>
         {
             public override bool IsReadRequest => false;
             private readonly BackupConfiguration _backupConfiguration;
+            private readonly long? _operationId;
 
-            public BackupCommand(BackupConfiguration backupConfiguration, string nodeTag = null)
+            public BackupCommand(BackupConfiguration backupConfiguration, long? operationId = null, string nodeTag = null)
             {
                 _backupConfiguration = backupConfiguration;
+                _operationId = operationId;
                 SelectedNodeTag = nodeTag;
+                _operationId = operationId;
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/databases/{node.Database}/admin/backup";
+
+                if (_operationId.HasValue)
+                    url += $"?operationId={_operationId}";
 
                 var request = new HttpRequestMessage
                 {
