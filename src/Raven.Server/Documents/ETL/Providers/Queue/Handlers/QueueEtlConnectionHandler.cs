@@ -21,16 +21,11 @@ namespace Raven.Server.Documents.ETL.Providers.Queue.Handlers
             try
             {
                 string jsonConfig = await new StreamReader(HttpContext.Request.Body).ReadToEndAsync();
-                var config = JsonConvert.DeserializeObject<KafkaConnectionSettings>(jsonConfig);
+                var settings = JsonConvert.DeserializeObject<KafkaConnectionSettings>(jsonConfig);
 
-                var adminConfig = new AdminClientConfig() { BootstrapServers = config.BootstrapServers };
-                if (config.ConnectionOptions != null)
-                {
-                    foreach (KeyValuePair<string, string> option in config.ConnectionOptions)
-                    {
-                        adminConfig.Set(option.Key, option.Value);
-                    }    
-                }
+                var adminConfig = new AdminClientConfig() { BootstrapServers = settings.BootstrapServers };
+
+                QueueBrokerConnectionHelper.SetupKafkaClientConfig(adminConfig, settings, Database.ServerStore.Server.Certificate.Certificate);
 
                 var adminClient = new AdminClientBuilder(adminConfig).Build();
                 adminClient.GetMetadata(TimeSpan.FromSeconds(10));
@@ -69,11 +64,11 @@ namespace Raven.Server.Documents.ETL.Providers.Queue.Handlers
             try
             {
                 string jsonConfig = await new StreamReader(HttpContext.Request.Body).ReadToEndAsync();
-                var config = JsonConvert.DeserializeObject<RabbitMqConnectionSettings>(jsonConfig);
+                var settings = JsonConvert.DeserializeObject<RabbitMqConnectionSettings>(jsonConfig);
 
-                var connectionFactory = new ConnectionFactory() { Uri = new Uri(config.ConnectionString) };
-                using (connectionFactory.CreateConnection())
+                using (QueueBrokerConnectionHelper.CreateRabbitMqConnection(settings))
                 {
+
                 }
 
                 DynamicJsonValue result = new()
