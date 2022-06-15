@@ -868,16 +868,23 @@ namespace Raven.Server.ServerWide
                                 start += step;
                             }
                         }
-                        foreach (var shard in addDatabase.Record.Sharding.Shards)
+
+                        var orchestratorTopology = addDatabase.Record.Sharding.Orchestrator.Topology;
+                        if (orchestratorTopology.Count == 0)
+                            AssignNodesToDatabase(clusterTopology, addDatabase.Record.DatabaseName, addDatabase.Encrypted, orchestratorTopology);
+
+                        Debug.Assert(orchestratorTopology.Count != 0, "Empty orchestrator topology after AssignNodesToDatabase");
+
+                        foreach (var shardTopology in addDatabase.Record.Sharding.Shards)
                         {
-                            if (shard.Count == 0)
+                            if (shardTopology.Count == 0)
                             {
                                 AssignNodesToDatabase(clusterTopology,
                                     addDatabase.Record.DatabaseName,
                                     addDatabase.Encrypted,
-                                    shard);
+                                    shardTopology);
                             }
-                            Debug.Assert(shard.Count != 0, "Empty shard topology after AssignNodesToDatabase");
+                            Debug.Assert(shardTopology.Count != 0, "Empty shard topology after AssignNodesToDatabase");
                         }
                     }
                     break;

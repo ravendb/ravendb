@@ -135,4 +135,23 @@ public class RawShardingConfiguration
             return _shardBucketRanges;
         }
     }
+
+    private OrchestratorConfiguration _orchestrator;
+
+    public OrchestratorConfiguration Orchestrator
+    {
+        get
+        {
+            if (_materializedSharding != null)
+                return _materializedSharding.Orchestrator;
+
+            if (_orchestrator == null)
+            {
+                if (_sharding.TryGet(nameof(ShardingConfiguration.Orchestrator), out BlittableJsonReaderObject obj) && obj != null)
+                    _orchestrator = JsonDeserializationCluster.OrchestratorConfiguration(obj);
+            }
+
+            return _orchestrator;
+        }
+    }
 }

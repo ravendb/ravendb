@@ -4,6 +4,8 @@ namespace Raven.Client.ServerWide.Sharding;
 
 public class ShardingConfiguration
 {
+    public OrchestratorConfiguration Orchestrator;
+
     public DatabaseTopology[] Shards;
 
     public List<ShardBucketRange> ShardBucketRanges = new List<ShardBucketRange>();
@@ -16,4 +18,9 @@ public class ShardingConfiguration
 
     // the dbid part with the MOVE tag upon migration
     public string ShardedDatabaseId;
+}
+
+public class OrchestratorConfiguration
+{
+    public DatabaseTopology Topology;
 }

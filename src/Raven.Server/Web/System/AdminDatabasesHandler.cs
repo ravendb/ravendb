@@ -28,6 +28,7 @@ using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Migration;
+using Raven.Client.ServerWide.Sharding;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
@@ -442,15 +443,11 @@ namespace Raven.Server.Web.System
 
             if (databaseRecord.IsSharded)
             {
-                foreach (var databaseTopology in databaseRecord.Sharding.Shards)
-                {
-                    UpdateDatabaseTopology(databaseTopology, clusterTopology, replicationFactor, clusterTransactionId);
-                }
+                databaseRecord.Sharding.Orchestrator ??= new OrchestratorConfiguration();
+                databaseRecord.Sharding.Orchestrator.Topology ??= new DatabaseTopology();
 
-                databaseRecord.Topology = new DatabaseTopology
-                {
-                    Members = new List<string>(clusterTopology.AllNodes.Keys)
-                };
+                foreach (var databaseTopology in databaseRecord.Sharding.Shards)
+                    UpdateDatabaseTopology(databaseTopology, clusterTopology, replicationFactor, clusterTransactionId);
             }
             else
             {
