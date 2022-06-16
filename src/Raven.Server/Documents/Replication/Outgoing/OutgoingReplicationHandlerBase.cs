@@ -422,7 +422,15 @@ namespace Raven.Server.Documents.Replication.Outgoing
         public override void Dispose()
         {
             base.Dispose();
-            _waitForChanges.Dispose();
+
+            try
+            {
+                _waitForChanges.Dispose();
+            }
+            catch (ObjectDisposedException)
+            {
+                //was already disposed? we don't care, we are disposing
+            }
         }
 
         protected override void OnSuccessfulTwoWaysCommunication() => SuccessfulTwoWaysCommunication?.Invoke(this);
