@@ -180,7 +180,8 @@
                                             </div>
                                             <div class="collections">
                                                 Collections:
-                                                <span class="etl-collections" data-bind="foreach: transformScriptCollections, visible: !applyScriptForAllCollections() && transformScriptCollections().length" title="The Collections transformed">
+                                                <span class="etl-collections" title="The Collections transformed"
+                                                      data-bind="foreach: transformScriptCollections, visible: !applyScriptForAllCollections() && transformScriptCollections().length">
                                                     <span data-bind="text: $data, attr: { class: 'collection-color-' + $parent.getCollectionEntry($data) }"></span>
                                                 </span>
                                                 <span class="etl-collections" data-bind="visible: applyScriptForAllCollections" title="The Collections transformed">
