@@ -118,6 +118,11 @@ class editKafkaEtlTask extends viewModelBase {
             {
                 content: tasksCommonContent.responsibleNodeInfo
             });
+
+        popoverUtils.longWithHover($(".use-server-certificate"),
+            {
+                content: connectionStringKafkaEtlModel.usingServerCertificateInfo
+            });
     }
 
     private getAllConnectionStrings() {
