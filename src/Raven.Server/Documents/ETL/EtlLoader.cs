@@ -73,6 +73,12 @@ namespace Raven.Server.Documents.ETL
 
         public List<QueueEtlConfiguration> QueueDestinations;
 
+        public long GetQueueDestinationCountByBroker(QueueBroker brokerType)
+        {
+            var items = QueueDestinations.Where(x => x.BrokerType == brokerType);
+            return items.Count();
+        }
+        
         public void Initialize(DatabaseRecord record)
         {
             LoadProcesses(record, record.RavenEtls, record.SqlEtls, record.OlapEtls, record.ElasticSearchEtls, record.QueueEtls, toRemove: null);

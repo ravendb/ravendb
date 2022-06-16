@@ -332,7 +332,6 @@
                         }
                     }
 
-
                     &.node-warning {
                         .node-label {
                             box-shadow: 0 0 0 1px @well-bg inset, 0 0 0 3px @brand-warning;
@@ -596,7 +595,7 @@
     .tasks-container {
         background-color: @well-bg;
         margin: 0 @gutter-xxs @gutter-xxs;
-        max-height: 400px;
+        max-height: 450px;
         overflow: auto;
 
         .task-item {
@@ -660,6 +659,14 @@
 
             &.elastic-etl .task-name i {
                 color: @elastic-etl-color;
+            }
+
+            &.kafka-etl .task-name i {
+                color: @kafka-etl-color;
+            }
+
+            &.rabbitmq-etl .task-name i {
+                color: @rabbitmq-etl-color;
             }
 
             &.periodic-backup .task-name i {
@@ -946,7 +953,7 @@
 
     .connection-selected {
         .connection-incoming, .connection-outgoing {
-            .connection {                
+            .connection {
                 stroke-dashoffset: -400px;
                 stroke-dasharray: 400px;
                 opacity: 0;
@@ -954,7 +961,7 @@
                 transition-duration: 0s;
             }
 
-            .arrow {                
+            .arrow {
                 transition: all 0s;
                 transition-delay: 0s;
                 opacity: 0;
@@ -970,8 +977,7 @@
                 fill: #edcd51;                
             }
         }
-
-
+        
         .connection-outgoing {
             .connection {
                 stroke: #51d27a;
@@ -1010,8 +1016,6 @@
 
         .node-fill {
             fill: @brand-success;
-
-            
         }
 
         &:hover {
@@ -1055,6 +1059,7 @@
             fill: #FFFFFF;
         }
     }
+    
     .node-type {
         fill: #FFFFFF;
         transition: all .2s cubic-bezier(1, 0, 0, 1);        
@@ -1082,8 +1087,6 @@
             opacity: 1;
         }
 
-        
-
         .node{
             &:not(.node-selected) {
                 .node-type {
@@ -1103,10 +1106,12 @@
             opacity: 1;
             transition-delay: .2s;
         }
+        
         .connection-selected {
             .connection {
                 opacity: 0;
             }
+            
             .connection-incoming, .connection-outgoing {
                 .connection {
                     opacity: 1;
@@ -1121,6 +1126,5 @@
                 }
             }
         }
-
     }
 }
