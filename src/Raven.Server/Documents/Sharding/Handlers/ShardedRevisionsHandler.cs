@@ -65,5 +65,12 @@ namespace Raven.Server.Documents.Sharding.Handlers
             using (var processor = new ShardedRevisionsHandlerProcessorForGetResolvedRevisions(this))
                 await processor.ExecuteAsync();
         }
+
+        [RavenShardedAction("/databases/*/debug/documents/get-revisions", "GET")]
+        public async Task GetRevisions()
+        {
+            using (var processor = new ShardedRevisionsHandlerProcessorForGetRevisionsDebug(this))
+                await processor.ExecuteAsync();
+        }
     }
 }
