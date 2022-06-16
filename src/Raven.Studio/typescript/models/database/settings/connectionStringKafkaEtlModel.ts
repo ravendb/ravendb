@@ -54,6 +54,7 @@ class connectionStringKafkaEtlModel extends connectionStringModel {
     connectionOptions = ko.observableArray<connectionOptionModel>();
 
     isSecureServer = accessManager.default.secureServer();
+    readonly sslCaLocation: string = "ssl.ca.location";
     
     validationGroup: KnockoutValidationGroup;
     dirtyFlag: () => DirtyFlag;
@@ -67,6 +68,17 @@ class connectionStringKafkaEtlModel extends connectionStringModel {
         
         this.update(dto);
         this.initValidation();
+        
+        this.useRavenCertificate.subscribe(toggledOn => {
+            const locationItem = this.connectionOptions().find(x => x.key() === this.sslCaLocation);
+            
+            if (toggledOn && !locationItem) {
+                this.connectionOptions.unshift(new connectionOptionModel(this.sslCaLocation, ""));
+            } else {
+                this.connectionOptions.remove(locationItem);
+            }
+            
+        })
         
         this.dirtyFlag = new ko.DirtyFlag([
             this.bootstrapServers,
@@ -191,6 +203,15 @@ class connectionStringKafkaEtlModel extends connectionStringModel {
         return new testKafkaServerConnectionCommand(db, this.bootstrapServers(), this.useRavenCertificate(), this.connectionOptionsToDto())
             .execute();
     }
+
+    static readonly usingServerCertificateInfo =
+        `<small><div class="margin-top-sm">The following <strong>configuration options</strong> will be set for you when using RavenDB server certificate:</div>
+             <ul class="margin-top margin-top-xs no-padding-left margin-left-lg">
+                 <li><code>security.protocol = SSL</code></li>
+                 <li><code>ssl.key.pem = &lt;RavenDB Server Private Key&gt;</code></li>
+                 <li><code>ssl.certificate.pem = &lt;RavenDB Server Public Key&gt;</code></li>
+            </ul>
+         </small>`;
 }
 
 export = connectionStringKafkaEtlModel;

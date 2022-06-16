@@ -18,6 +18,7 @@ import getPeriodicBackupConfigCommand = require("commands/database/tasks/getPeri
 import backupSettings = require("models/database/tasks/periodicBackup/backupSettings");
 import testPeriodicBackupCredentialsCommand = require("commands/serverWide/testPeriodicBackupCredentialsCommand");
 import ongoingTaskModel from "models/database/tasks/ongoingTaskModel";
+import popoverUtils = require("common/popoverUtils");
 
 class connectionStrings extends viewModelBase {
 
@@ -516,6 +517,11 @@ class connectionStrings extends viewModelBase {
         this.editedSqlEtlConnectionString(null);
         this.editedElasticSearchEtlConnectionString(null);
         this.editedRabbitMqEtlConnectionString(null);
+
+        popoverUtils.longWithHover($(".use-server-certificate"),
+            {
+                content: connectionStringKafkaEtlModel.usingServerCertificateInfo
+            });
     }
 
     onAddRabbitMqEtl() {

@@ -862,7 +862,7 @@
                     <span data-bind="text: name"></span>
                     <a title="Show script preview" href="#" data-bind="click: _.partial($root.showItemPreview, $parent, name())"><i class="icon-preview margin-left margin-left-xs"></i></a>
                     <div class="flex-separator"></div>
-                    <div class="text-warning" data-bind="visible: !globalProgress.total()">
+                    <div class="text-warning" data-bind="visible: !globalProgress.total() && $parent.taskType() !== 'QueueEtl'">
                         <small>
                             <i class="icon-warning"></i>
                             This script doesn't match any documents.
