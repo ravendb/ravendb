@@ -1,15 +1,22 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Server.Replication;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions.Documents;
+using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Commands.Revisions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -21,31 +28,22 @@ namespace SlowTests.Server.Replication
         {
         }
 
-        [Fact]
-        public async Task ReplicateAConflictThenResolveIt()
+        [RavenTheory(RavenTestCategory.Sharding | RavenTestCategory.Revisions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded, Skip = "This test depends on the completion of sharded external replication")]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public async Task ReplicateAConflictThenResolveIt(Options options)
         {
-            using (var store1 = GetDocumentStore(options: new Options
+            options.ModifyDatabaseRecord = record =>
             {
-                ModifyDatabaseRecord = record =>
+                record.ConflictSolverConfig = new ConflictSolver
                 {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
-            using (var store2 = GetDocumentStore(options: new Options
-            {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
+                    ResolveToLatest = false,
+                    ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                };
+            };
+
+            using (var store1 = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(options))
             {
 
                 using (var session = store1.OpenSession())
@@ -77,10 +75,33 @@ namespace SlowTests.Server.Replication
 
                 Assert.True(WaitForDocument(store1, "foo/bar"));
 
+                var resolvedConflicts = (await store1.Maintenance.SendAsync(new GetResolvedRevisionsOperation())).Results.ToList();
+                Assert.Equal(1, resolvedConflicts.Count);
+                
+                var resolvedConflicts2 = (await store2.Maintenance.SendAsync(new GetResolvedRevisionsOperation())).Results.ToList();
+                Assert.Equal(1, resolvedConflicts2.Count);
+
                 Assert.Empty(store1.Commands().GetConflictsFor("foo/bar"));
                 Assert.Empty(store2.Commands().GetConflictsFor("foo/bar"));
             }
-        }  
+        }
+        
+        public class GetResolvedRevisionsOperation : IMaintenanceOperation<ResolvedRevisions>
+        {
+            private readonly DateTime? _since;
+            private readonly int? _take;
+
+            public GetResolvedRevisionsOperation(DateTime? since = null, int? take = null)
+            {
+                _since = since;
+                _take = take;
+            }
+
+            public RavenCommand<ResolvedRevisions> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+            {
+                return new GetResolvedRevisionsCommand(_since, _take);
+            }
+        }
 
         [Fact]
         public async Task CanManuallyResolveConflict_with_tombstone()
