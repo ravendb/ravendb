@@ -99,8 +99,10 @@
                                         <a href="#">
                                             <div class="row">
                                                 <strong class="col-xs-7" data-bind="text: $data.Name"></strong>
-                                                <small class="col-xs-2">Kafka server URL:</small>
-                                                <small class="col-xs-3" data-bind="text: $data.KafkaConnectionSettings.Url"></small>
+                                                <small class="col-xs-2">Bootstrap servers:</small>
+                                                <small class="col-xs-2 o-padding-right no-padding-left text-overflow-inline-block"
+                                                       data-bind="text: $data.KafkaConnectionSettings.BootstrapServers, attr: { title: $data.KafkaConnectionSettings.BootstrapServers }">
+                                                </small>
                                             </div>
                                         </a>
                                     </li>

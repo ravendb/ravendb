@@ -119,7 +119,7 @@ class connectionStringKafkaEtlModel extends connectionStringModel {
        
         this.validationGroup = ko.validatedObservable({
             connectionStringName: this.connectionStringName,
-            kafkaServerUrl: this.bootstrapServers
+            bootstrapServers: this.bootstrapServers
         });
     }
     
