@@ -620,7 +620,7 @@ namespace Raven.Server.Documents
 
         internal void UpdateGlobalReplicationInfoBeforeCommit(DocumentsOperationContext context)
         {
-            if (string.IsNullOrEmpty(context.LastDatabaseChangeVector) == false)
+            if (context.LastDatabaseChangeVector?.IsNullOrEmpty == false)
             {
                 _parent.DocumentsStorage.SetDatabaseChangeVector(context, context.LastDatabaseChangeVector);
             }

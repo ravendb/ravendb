@@ -150,7 +150,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                 if (conflictStatus != ConflictStatus.Update)
                     return false;
 
-                context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(current, _changeVector);
+                context.LastDatabaseChangeVector = current.MergeWith(_changeVector);
                 context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += _ =>
                 {
                     try
@@ -339,7 +339,10 @@ namespace Raven.Server.Documents.Replication.Incoming
                 _replicationType = replicationType;
             }
 
-            protected virtual string PreProcessItem(DocumentsOperationContext context, ReplicationBatchItem item) => item.ChangeVector;
+            protected virtual ChangeVector PreProcessItem(DocumentsOperationContext context, ReplicationBatchItem item)
+            {
+                return context.GetChangeVector(item.ChangeVector).Order;
+            }
 
             protected virtual Slice HandleRevisionTombstone(DocumentsOperationContext context, LazyStringValue id, List<IDisposable> toDispose)
             {
@@ -375,9 +378,11 @@ namespace Raven.Server.Documents.Replication.Incoming
 
                         var changeVectorToMerge = PreProcessItem(context, item);
 
-                        var rcvdChangeVector = item.ChangeVector;
+                        var incomingChangeVector = context.GetChangeVector(item.ChangeVector);
+                        var changeVectorVersion = incomingChangeVector .Version;
+                        var changeVectorOrder = incomingChangeVector .Order;
 
-                        context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(changeVectorToMerge, context.LastDatabaseChangeVector);
+                        context.LastDatabaseChangeVector = ChangeVector.Merge(changeVectorToMerge, context.LastDatabaseChangeVector);
 
                         TimeSeriesStorage tss;
                         LazyStringValue docId;
@@ -419,7 +424,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                                     continue;
 
                                 database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, attachmentTombstone.Key, false, "$fromReplication", null,
-                                    rcvdChangeVector,
+                                    changeVectorVersion,
                                     attachmentTombstone.LastModifiedTicks);
                                 break;
 
@@ -428,7 +433,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                                 var id = HandleRevisionTombstone(context, revisionTombstone.Id, toDispose);
 
                                 database.DocumentsStorage.RevisionsStorage.DeleteRevision(context, id, revisionTombstone.Collection,
-                                    rcvdChangeVector, revisionTombstone.LastModifiedTicks);
+                                    changeVectorVersion, revisionTombstone.LastModifiedTicks);
                                 break;
 
                             case CounterReplicationItem counter:
@@ -456,9 +461,12 @@ namespace Raven.Server.Documents.Replication.Incoming
                                     From = deletedRange.From,
                                     To = deletedRange.To
                                 };
-                                var removedChangeVector = tss.DeleteTimestampRange(context, deletionRangeRequest, rcvdChangeVector);
+                                var removedChangeVector = tss.DeleteTimestampRange(context, deletionRangeRequest, changeVectorVersion);
                                 if (removedChangeVector != null)
-                                    context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(removedChangeVector, rcvdChangeVector);
+                                {
+                                    var removed = context.GetChangeVector(removedChangeVector);
+                                    context.LastDatabaseChangeVector = ChangeVector.Merge(removed, changeVectorOrder);
+                                }
 
                                 break;
 
@@ -481,11 +489,12 @@ namespace Raven.Server.Documents.Replication.Incoming
                                     throw new LegacyReplicationViolationException(msg);
                                 }
                                 UpdateTimeSeriesNameIfNeeded(context, docId, segment, tss);
-
+                                
+                                var segmentChangeVector = context.GetChangeVector(segment.ChangeVector);
                                 if (tss.TryAppendEntireSegment(context, segment, docId, segment.Name, baseline))
                                 {
                                     var databaseChangeVector = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
-                                    context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(databaseChangeVector, segment.ChangeVector);
+                                    context.LastDatabaseChangeVector = ChangeVector.Merge(databaseChangeVector, segmentChangeVector);
                                     continue;
                                 }
 
@@ -497,7 +506,7 @@ namespace Raven.Server.Documents.Replication.Incoming
 
                                 var values = segment.Segment.YieldAllValues(context, context.Allocator, baseline);
                                 var changeVector = tss.AppendTimestamp(context, docId, segment.Collection, segment.Name, values, options);
-                                context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(changeVector, segment.ChangeVector);
+                                context.LastDatabaseChangeVector = segmentChangeVector.MergeWith(changeVector);
 
                                 break;
 
@@ -540,7 +549,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                                         document,
                                         doc.Flags,
                                         nonPersistentFlags,
-                                        rcvdChangeVector,
+                                        changeVectorVersion,
                                         doc.LastModifiedTicks);
                                     continue;
                                 }
@@ -553,7 +562,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                                         document,
                                         doc.Flags,
                                         nonPersistentFlags,
-                                        rcvdChangeVector,
+                                        changeVectorVersion,
                                         doc.LastModifiedTicks);
                                     continue;
                                 }
@@ -585,7 +594,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                                             try
                                             {
                                                 database.DocumentsStorage.Put(context, doc.Id, null, resolvedDocument, doc.LastModifiedTicks,
-                                                    rcvdChangeVector, null, flags, nonPersistentFlags);
+                                                    incomingChangeVector, null, flags, nonPersistentFlags);
                                             }
                                             catch (DocumentCollectionMismatchException)
                                             {
@@ -599,7 +608,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                                                 database.DocumentsStorage.Delete(
                                                     context, keySlice, doc.Id, null,
                                                     doc.LastModifiedTicks,
-                                                    rcvdChangeVector,
+                                                    incomingChangeVector,
                                                     new CollectionName(doc.Collection),
                                                     nonPersistentFlags,
                                                     flags);
@@ -620,8 +629,9 @@ namespace Raven.Server.Documents.Replication.Incoming
                                             // in two _different clusters_, so we will treat it as a "normal" conflict
 
                                             IsIncomingReplication = false;
+
                                             conflictManager.HandleConflictForDocument(context, doc.Id, doc.Collection, doc.LastModifiedTicks,
-                                                document, rcvdChangeVector, doc.Flags);
+                                                document, incomingChangeVector, doc.Flags);
                                             continue;
                                         }
 

@@ -2120,9 +2120,9 @@ namespace Raven.Server.Documents.Replication
             return (_numberOfSiblings + 1) / 2 + 1;
         }
 
-        public async Task<int> WaitForReplicationAsync(int numberOfReplicasToWaitFor, TimeSpan waitForReplicasTimeout, string lastChangeVector)
+        public async Task<int> WaitForReplicationAsync(int numberOfReplicasToWaitFor, TimeSpan waitForReplicasTimeout, ChangeVector lastChangeVector)
         {
-            lastChangeVector = lastChangeVector.StripTrxnTags();
+            lastChangeVector.StripTrxnTags();
             var sp = Stopwatch.StartNew();
             while (true)
             {
@@ -2175,17 +2175,19 @@ namespace Raven.Server.Documents.Replication
             return count;
         }
 
-        private int ReplicatedPastInternalDestinations(HashSet<string> internalUrls, string changeVector)
+        private int ReplicatedPastInternalDestinations(HashSet<string> internalUrls, ChangeVector changeVector)
         {
             var count = 0;
+
             //We need to avoid the case that we removed database from DB group and CV updated only in the destination
-            Database.DocumentsStorage.TryRemoveUnusedIds(ref changeVector);
+            changeVector.RemoveIds(Database.DocumentsStorage.UnusedDatabaseIds);
+
             foreach (var destination in _outgoing)
             {
                 if (internalUrls.Contains(destination.Destination.Url) == false)
                     continue;
 
-                var conflictStatus = Database.DocumentsStorage.GetConflictStatus(changeVector, destination.LastAcceptedChangeVector);
+                var conflictStatus = Database.DocumentsStorage.GetConflictStatus(changeVector, destination.LastAcceptedChangeVector, ChangeVectorMode.Order);
                 if (conflictStatus == ConflictStatus.AlreadyMerged)
                     count++;
             }

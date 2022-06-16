@@ -1059,10 +1059,10 @@ namespace Raven.Server.Documents
 
         public void SetChangeVector(string changeVector)
         {
-            using (DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
-            using (var tx = documentsContext.OpenWriteTransaction())
+            using (DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (var tx = context.OpenWriteTransaction())
             {
-                DocumentsStorage.SetDatabaseChangeVector(documentsContext, changeVector);
+                DocumentsStorage.SetDatabaseChangeVector(context, context.GetChangeVector(changeVector));
                 tx.Commit();
             }
         }

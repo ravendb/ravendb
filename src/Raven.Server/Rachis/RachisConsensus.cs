@@ -15,6 +15,7 @@ using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Server.Config;
+using Raven.Server.Documents.Replication;
 using Raven.Server.Extensions;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.Rachis.Remote;
@@ -2153,9 +2154,9 @@ namespace Raven.Server.Rachis
             if (nodeTag == InitialTag)
                 return;
 
-            if (nodeTag.Equals("RAFT", StringComparison.OrdinalIgnoreCase))
+            if (nodeTag.Equals(ChangeVectorParser.RaftTag, StringComparison.OrdinalIgnoreCase))
                 ThrowInvalidNodeTag(nodeTag, "RAFT is a reserved tag.");
-            if (nodeTag.Equals("SINK", StringComparison.OrdinalIgnoreCase))
+            if (nodeTag.Equals(ChangeVectorParser.SinkTag, StringComparison.OrdinalIgnoreCase))
                 ThrowInvalidNodeTag(nodeTag, "SINK is a reserved tag.");
             if (nodeTag.Length > 4)
                 ThrowInvalidNodeTag(nodeTag, "Max node tag length is 4.");

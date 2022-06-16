@@ -907,21 +907,21 @@ namespace SlowTests.Issues
             using (hubDb.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
             using (ctx.OpenReadTransaction())
             {
-                var hubGlobalCv = DocumentsStorage.GetDatabaseChangeVector(ctx);
+                var hubGlobalCv = DocumentsStorage.GetDatabaseChangeVector(ctx).AsString();
                 Assert.Equal(1, hubGlobalCv.ToChangeVector().Length);
             }
 
             using (sink1Db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
             using (ctx.OpenReadTransaction())
             {
-                var sink1GlobalCv = DocumentsStorage.GetDatabaseChangeVector(ctx);
+                var sink1GlobalCv = DocumentsStorage.GetDatabaseChangeVector(ctx).AsString();
                 Assert.Equal(3, sink1GlobalCv.ToChangeVector().Length);
             }
 
             using (sink2Db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
             using (ctx.OpenReadTransaction())
             {
-                var sink2GlobalCv = DocumentsStorage.GetDatabaseChangeVector(ctx);
+                var sink2GlobalCv = DocumentsStorage.GetDatabaseChangeVector(ctx).AsString();
                 Assert.Equal(3, sink2GlobalCv.ToChangeVector().Length);
             }
 
@@ -1058,14 +1058,14 @@ namespace SlowTests.Issues
             using (hubDb.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
             using (ctx.OpenReadTransaction())
             {
-                var hubGlobalCv = DocumentsStorage.GetDatabaseChangeVector(ctx);
+                var hubGlobalCv = DocumentsStorage.GetDatabaseChangeVector(ctx).AsString();
                 Assert.Equal(1, hubGlobalCv.ToChangeVector().Length);
             }
 
             using (sink1Db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
             using (ctx.OpenReadTransaction())
             {
-                var sink1GlobalCv = DocumentsStorage.GetDatabaseChangeVector(ctx);
+                var sink1GlobalCv = DocumentsStorage.GetDatabaseChangeVector(ctx).AsString();
                 Assert.Equal(2, sink1GlobalCv.ToChangeVector().Length);
             }
 
@@ -1261,21 +1261,21 @@ namespace SlowTests.Issues
             using (hubDb.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
             using (ctx.OpenReadTransaction())
             {
-                var hubGlobalCv = DocumentsStorage.GetDatabaseChangeVector(ctx);
+                var hubGlobalCv = DocumentsStorage.GetDatabaseChangeVector(ctx).AsString();
                 Assert.Equal(1, hubGlobalCv.ToChangeVector().Length);
             }
 
             using (sink1Db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
             using (ctx.OpenReadTransaction())
             {
-                var sink1GlobalCv = DocumentsStorage.GetDatabaseChangeVector(ctx);
+                var sink1GlobalCv = DocumentsStorage.GetDatabaseChangeVector(ctx).AsString();
                 Assert.Equal(2, sink1GlobalCv.ToChangeVector().Length);
             }
 
             using (sink2Db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
             using (ctx.OpenReadTransaction())
             {
-                var sink2GlobalCv = DocumentsStorage.GetDatabaseChangeVector(ctx);
+                var sink2GlobalCv = DocumentsStorage.GetDatabaseChangeVector(ctx).AsString();
                 Assert.Equal(2, sink2GlobalCv.ToChangeVector().Length);
             }
 

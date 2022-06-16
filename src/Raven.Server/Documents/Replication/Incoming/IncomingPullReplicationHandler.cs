@@ -7,6 +7,7 @@ using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server;
@@ -140,7 +141,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                 _preventDeletionsMode = pullReplicationParams.PreventDeletionsMode;
             }
 
-            protected override string PreProcessItem(DocumentsOperationContext context, ReplicationBatchItem item)
+            protected override ChangeVector PreProcessItem(DocumentsOperationContext context, ReplicationBatchItem item)
             {
                 HandleExpiredDocuments(context, item);
 
@@ -152,7 +153,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                 if (_isHub) 
                     changeVectorToMerge = ReplaceUnknownEntriesWithSinkTag(context, ref item.ChangeVector);
 
-                return changeVectorToMerge;
+                return context.GetChangeVector(changeVectorToMerge);
             }
 
             protected override Slice HandleRevisionTombstone(DocumentsOperationContext context, LazyStringValue id, List<IDisposable> toDispose)
@@ -185,7 +186,7 @@ namespace Raven.Server.Documents.Replication.Incoming
 
             private static string ReplaceUnknownEntriesWithSinkTag(DocumentsOperationContext context, ref string changeVector)
             {
-                var globalDbIds = context.LastDatabaseChangeVector?.ToChangeVectorList()?.Select(x => x.DbId).ToList();
+                var globalDbIds = context.LastDatabaseChangeVector?.AsString().ToChangeVectorList()?.Select(x => x.DbId).ToList();
                 var incoming = changeVector.ToChangeVectorList();
                 var knownEntries = new List<ChangeVectorEntry>();
                 var newIncoming = new List<ChangeVectorEntry>();
@@ -223,7 +224,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                 if (changeVector.Contains("SINK", StringComparison.OrdinalIgnoreCase) == false)
                     return;
 
-                var global = context.LastDatabaseChangeVector?.ToChangeVectorList();
+                var global = context.LastDatabaseChangeVector?.AsString().ToChangeVectorList();
                 var incoming = changeVector.ToChangeVectorList();
                 var newIncoming = new List<ChangeVectorEntry>();
 

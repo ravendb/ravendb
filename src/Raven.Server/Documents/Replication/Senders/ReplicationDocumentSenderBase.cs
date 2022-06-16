@@ -609,7 +609,7 @@ namespace Raven.Server.Documents.Replication.Senders
             }
 
             // destination already has it
-            if (_parent._database.DocumentsStorage.GetConflictStatus(item.ChangeVector, _parent.LastAcceptedChangeVector) == ConflictStatus.AlreadyMerged)
+            if (_parent._database.DocumentsStorage.GetConflictStatus(item.ChangeVector, _parent.LastAcceptedChangeVector, ChangeVectorMode.Order) == ConflictStatus.AlreadyMerged)
             {
                 stats.RecordChangeVectorSkip();
                 skippedReplicationItemsInfo.Update(item);

@@ -1,6 +1,8 @@
 ﻿using System.Threading.Tasks;
 using FastTests;
 using FastTests.Sharding;
+using Orders;
+using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Utils;
 using SlowTests.Core.Utils.Entities;
@@ -72,6 +74,58 @@ namespace SlowTests.Sharding.Cluster
                     var user = await session.LoadAsync<User>(id);
                     Assert.Equal("Original shard", user.Name);
                 }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Sharding)]
+        public async Task CanMoveOneBucketOfSampleData()
+        {
+            using (var store = Sharding.GetDocumentStore())
+            {
+                await store.Maintenance.SendAsync(new CreateSampleDataOperation(DatabaseItemType.Documents | DatabaseItemType.Attachments | DatabaseItemType.CounterGroups | DatabaseItemType.RevisionDocuments));
+                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+
+                var id = "orders/830-A";
+               
+                var bucket = ShardHelper.GetBucket(id);
+                var location = ShardHelper.GetShardNumber(record.ShardBucketRanges, bucket);
+                var newLocation = (location + 1) % record.Shards.Length;
+                using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, location)))
+                {
+                    var order = await session.LoadAsync<Order>(id);
+                    Assert.NotNull(order);
+                }
+
+                var result = await Server.ServerStore.Sharding.StartBucketMigration(store.Database, bucket, location, newLocation);
+
+                var exists = WaitForDocument<Order>(store, id, predicate: null, database: ShardHelper.ToShardName(store.Database, newLocation));
+                Assert.True(exists);
+
+                using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, newLocation)))
+                {
+                    var order = await session.LoadAsync<Order>(id);
+                    var changeVector = session.Advanced.GetChangeVectorFor(order);
+                    await Server.ServerStore.Sharding.SourceMigrationCompleted(store.Database, bucket, result.Index, changeVector);
+                }
+
+                result = await Server.ServerStore.Sharding.DestinationMigrationConfirm(store.Database, bucket, result.Index);
+                await Server.ServerStore.Cluster.WaitForIndexNotification(result.Index);
+
+                // the document will be written to the new location
+                using (var session = store.OpenAsyncSession())
+                {
+                    var order = await session.LoadAsync<Order>(id);
+                    order.Employee = "New shard";
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, location)))
+                {
+                    var order = await session.LoadAsync<Order>(id);
+                    Assert.Equal("employees/1-A", order.Employee);
+                }
+
+                WaitForUserToContinueTheTest(store);
             }
         }
 
