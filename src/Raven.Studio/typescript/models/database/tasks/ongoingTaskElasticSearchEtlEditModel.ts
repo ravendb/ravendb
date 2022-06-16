@@ -16,6 +16,10 @@ class ongoingTaskElasticSearchEtlEditModel extends ongoingTaskEditModel {
     get studioTaskType(): StudioTaskType {
         return "ElasticSearchEtl";
     }
+
+    get destinationType(): TaskDestinationType {
+        return "Index";
+    }
     
     constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtlDetails) {
         super();

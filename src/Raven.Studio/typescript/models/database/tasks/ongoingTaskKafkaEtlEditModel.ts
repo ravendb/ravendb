@@ -7,6 +7,10 @@ class ongoingTaskKafkaEtlEditModel extends ongoingTaskQueueEtlEditModel {
         return "KafkaQueueEtl";
     }
 
+    get destinationType(): TaskDestinationType {
+        return "Topic";
+    }
+
     toDto(): Raven.Client.Documents.Operations.ETL.Queue.QueueEtlConfiguration { 
         return super.toDto("Kafka");
     }

@@ -517,7 +517,7 @@ class editRavenEtlTask extends viewModelBase {
     }
 
     syntaxHelp() {
-        const viewmodel = new transformationScriptSyntax("Raven");
+        const viewmodel = new transformationScriptSyntax("Raven",this.editedRavenEtl().destinationType);
         app.showBootstrapDialog(viewmodel);
     }
 

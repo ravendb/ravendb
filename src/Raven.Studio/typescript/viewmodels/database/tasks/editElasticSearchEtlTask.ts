@@ -516,7 +516,7 @@ class editElasticSearchEtlTask extends viewModelBase {
     }
 
     syntaxHelp() {
-        const viewmodel = new transformationScriptSyntax("ElasticSearch");
+        const viewmodel = new transformationScriptSyntax("ElasticSearch", this.editedElasticSearchEtl().destinationType);
         app.showBootstrapDialog(viewmodel);
     }
     

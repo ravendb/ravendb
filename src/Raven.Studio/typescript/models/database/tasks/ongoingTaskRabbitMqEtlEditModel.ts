@@ -7,6 +7,10 @@ class ongoingTaskRabbitMqEtlEditModel extends ongoingTaskQueueEtlEditModel {
         return "RabbitQueueEtl";
     }
 
+    get destinationType(): TaskDestinationType {
+        return "Queue";
+    }
+
     toDto(): Raven.Client.Documents.Operations.ETL.Queue.QueueEtlConfiguration {
         return super.toDto("RabbitMq");
     }

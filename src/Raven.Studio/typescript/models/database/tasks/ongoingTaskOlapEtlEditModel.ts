@@ -25,6 +25,10 @@ class ongoingTaskOlapEtlEditModel extends ongoingTaskEditModel {
     get studioTaskType(): StudioTaskType {
         return "OlapEtl";
     }
+
+    get destinationType(): TaskDestinationType {
+        return "Index";
+    }
     
     constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtlDetails) {
         super();

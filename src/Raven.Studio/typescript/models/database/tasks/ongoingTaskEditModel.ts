@@ -7,6 +7,10 @@ abstract class ongoingTaskEditModel extends ongoingTaskModel {
     
     nodeTag: string = null;
 
+    protected get destinationType(): TaskDestinationType | null {
+        return null;
+    }
+
     update(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTask) {
         super.update(dto);
 
