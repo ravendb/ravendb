@@ -119,15 +119,13 @@ namespace Raven.Server.Documents.Replication.Outgoing
                     context.LastDatabaseChangeVector);
                 if (result.IsValid)
                 {
-                    if (context.LastReplicationEtagFrom == null)
-                        context.LastReplicationEtagFrom = new Dictionary<string, long>();
-
+                    context.LastReplicationEtagFrom ??= new Dictionary<string, long>();
                     if (context.LastReplicationEtagFrom.ContainsKey(_replicationBatchReply.DatabaseId) == false)
                     {
                         context.LastReplicationEtagFrom[_replicationBatchReply.DatabaseId] = _replicationBatchReply.CurrentEtag;
                     }
 
-                    context.LastDatabaseChangeVector = result.ChangeVector;
+                    context.LastDatabaseChangeVector = context.GetChangeVector(result.ChangeVector);
 
                     context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += _ =>
                     {

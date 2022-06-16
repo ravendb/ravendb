@@ -323,9 +323,9 @@ namespace Raven.Server.Documents
                 throw new InvalidOperationException("No active transaction found in the context, and at least read transaction is needed");
         }
 
-        public static string GetDatabaseChangeVector(DocumentsOperationContext context)
+        public static ChangeVector GetDatabaseChangeVector(DocumentsOperationContext context)
         {
-            return GetDatabaseChangeVector(context.Transaction.InnerTransaction);
+            return context.GetChangeVector(GetDatabaseChangeVector(context.Transaction.InnerTransaction));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -339,6 +339,7 @@ namespace Raven.Server.Documents
             {
                 return string.Empty;
             }
+
             return Encodings.Utf8.GetString(val.Reader.Base, val.Reader.Length);
         }
 
@@ -353,7 +354,7 @@ namespace Raven.Server.Documents
             return true;
         }
 
-        public bool TryRemoveUnusedIds(ref string changeVector)
+        /*public bool TryRemoveUnusedIds(ChangeVector changeVector)
         {
             if (string.IsNullOrEmpty(changeVector))
                 return false;
@@ -379,30 +380,31 @@ namespace Raven.Server.Documents
 
             changeVector = parsed.SerializeVector();
             return true;
-        }
+        }*/
 
         public string CreateNextDatabaseChangeVector(DocumentsOperationContext context, string changeVector)
         {
+            var cv = context.GetChangeVector(changeVector);
             var databaseChangeVector = context.LastDatabaseChangeVector ?? GetDatabaseChangeVector(context);
-            context.SkipChangeVectorValidation = TryRemoveUnusedIds(ref databaseChangeVector);
-            changeVector = ChangeVectorUtils.MergeVectors(databaseChangeVector, changeVector);
-            return ChangeVectorUtils.TryUpdateChangeVector(DocumentDatabase, changeVector).ChangeVector;
+            context.SkipChangeVectorValidation = databaseChangeVector.RemoveIds(UnusedDatabaseIds);
+            cv = ChangeVector.Merge(databaseChangeVector, cv);
+            return ChangeVectorUtils.TryUpdateChangeVector(DocumentDatabase, cv).ChangeVector;
         }
 
-        public (string ChangeVector, long Etag) GetNewChangeVector(DocumentsOperationContext context)
+        public (ChangeVector ChangeVector, long Etag) GetNewChangeVector(DocumentsOperationContext context)
         {
             var etag = GenerateNextEtag();
             return (GetNewChangeVector(context, etag), etag);
         }
 
-        public string GetNewChangeVector(DocumentsOperationContext context, long newEtag)
+        public ChangeVector GetNewChangeVector(DocumentsOperationContext context, long newEtag)
         {
             var changeVector = context.LastDatabaseChangeVector ??
                                (context.LastDatabaseChangeVector = GetDatabaseChangeVector(context));
 
-            context.SkipChangeVectorValidation = TryRemoveUnusedIds(ref changeVector);
+            context.SkipChangeVectorValidation = changeVector.RemoveIds(UnusedDatabaseIds);
 
-            if (string.IsNullOrEmpty(changeVector))
+            if (changeVector.IsNullOrEmpty)
             {
                 context.LastDatabaseChangeVector = ChangeVectorUtils.NewChangeVector(DocumentDatabase, newEtag);
                 return context.LastDatabaseChangeVector;
@@ -411,17 +413,17 @@ namespace Raven.Server.Documents
             var result = ChangeVectorUtils.TryUpdateChangeVector(DocumentDatabase, changeVector, newEtag);
             if (result.IsValid)
             {
-                context.LastDatabaseChangeVector = result.ChangeVector;
+                context.LastDatabaseChangeVector = context.GetChangeVector(result.ChangeVector);
             }
 
             return context.LastDatabaseChangeVector;
         }
 
-        public void SetDatabaseChangeVector(DocumentsOperationContext context, string changeVector)
+        public void SetDatabaseChangeVector(DocumentsOperationContext context, ChangeVector changeVector)
         {
             SetFullDatabaseChangeVector(context, changeVector);
 
-            if (TryRemoveUnusedIds(ref changeVector) == false)
+            if (changeVector.RemoveIds(UnusedDatabaseIds) == false)
                 ThrowOnNotUpdatedChangeVector(context, changeVector);
 
             var tree = context.Transaction.InnerTransaction.ReadTree(GlobalTreeSlice);
@@ -457,16 +459,16 @@ namespace Raven.Server.Documents
         }
 
         [Conditional("DEBUG")]
-        private static void ThrowOnNotUpdatedChangeVector(DocumentsOperationContext context, string changeVector)
+        private static void ThrowOnNotUpdatedChangeVector(DocumentsOperationContext context, ChangeVector changeVector)
         {
+            var globalChangeVector = GetDatabaseChangeVector(context);
+            
             if (context.SkipChangeVectorValidation)
                 return;
 
-            var globalChangeVector = GetDatabaseChangeVector(context);
-
             if (globalChangeVector != changeVector &&
-                globalChangeVector != null &&
-                globalChangeVector.ToChangeVector().OrderByDescending(x => x).SequenceEqual(changeVector.ToChangeVector().OrderByDescending(x => x)) == false &&
+                globalChangeVector.IsNullOrEmpty == false &&
+                // globalChangeVector.ToChangeVector().OrderByDescending(x => x).SequenceEqual(changeVector.ToChangeVector().OrderByDescending(x => x)) == false &&
                 ChangeVectorUtils.GetConflictStatus(changeVector, globalChangeVector) != ConflictStatus.Update)
             {
                 throw new InvalidOperationException($"Global Change Vector wasn't updated correctly. " +
@@ -1831,21 +1833,18 @@ namespace Raven.Server.Documents
             if (string.IsNullOrEmpty(changeVector) &&
                 nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false)
             {
-                changeVector = ConflictsStorage.GetMergedConflictChangeVectorsAndDeleteConflicts(
+                var mergedChangeVector = ConflictsStorage.GetMergedConflictChangeVectorsAndDeleteConflicts(
                     context,
                     lowerId,
                     newEtag,
                     docChangeVector);
 
-                if (string.IsNullOrEmpty(changeVector))
+                if (string.IsNullOrEmpty(mergedChangeVector))
                     ChangeVectorUtils.ThrowConflictingEtag(lowerId.ToString(), docChangeVector, newEtag, Environment.Base64Id, DocumentDatabase.ServerStore.NodeTag);
 
-                if (context.LastDatabaseChangeVector == null)
-                    context.LastDatabaseChangeVector = GetDatabaseChangeVector(context);
-
-                changeVector = ChangeVectorUtils.MergeVectors(context.LastDatabaseChangeVector, changeVector);
-
-                context.LastDatabaseChangeVector = changeVector;
+                context.LastDatabaseChangeVector ??= GetDatabaseChangeVector(context);
+                context.LastDatabaseChangeVector = ChangeVector.Merge(context.LastDatabaseChangeVector, context.GetChangeVector(mergedChangeVector));
+                changeVector = context.LastDatabaseChangeVector;
             }
             else
             {
@@ -2046,7 +2045,11 @@ namespace Raven.Server.Documents
             string oldChangeVectorForClusterTransactionIndexCheck = null,
             DocumentFlags flags = DocumentFlags.None, NonPersistentDocumentFlags nonPersistentFlags = NonPersistentDocumentFlags.None)
         {
-            return DocumentPut.PutDocument(context, id, expectedChangeVector, document, lastModifiedTicks, changeVector, oldChangeVectorForClusterTransactionIndexCheck, flags, nonPersistentFlags);
+            ChangeVector cv = null;
+            if (changeVector != null)
+                cv = context.GetChangeVector(changeVector);
+
+            return DocumentPut.PutDocument(context, id, expectedChangeVector, document, lastModifiedTicks, cv, oldChangeVectorForClusterTransactionIndexCheck, flags, nonPersistentFlags);
         }
 
         public long GetNumberOfDocumentsToProcess(DocumentsOperationContext context, string collection, long afterEtag, out long totalCount)
@@ -2263,15 +2266,15 @@ namespace Raven.Server.Documents
         }
 
 
-        public ConflictStatus GetConflictStatus(string remote, string local)
-        {
-            return GetConflictStatus(remote, local, out _);
-        }
+        public ConflictStatus GetConflictStatus(string remote, string local, ChangeVectorMode mode) => GetConflictStatus(remote, local, mode, out _);
 
-        public ConflictStatus GetConflictStatus(string remote, string local, out bool skipValidation)
+        public ConflictStatus GetConflictStatus(string remote, string local, ChangeVectorMode mode, out bool skipValidation)
         {
+            var remoteChangeVector = new ChangeVector(remote);
+            var localChangeVector = new ChangeVector(local);
+
             skipValidation = false;
-            var originalStatus = ChangeVectorUtils.GetConflictStatus(remote, local);
+            var originalStatus = ChangeVectorUtils.GetConflictStatus(remoteChangeVector, localChangeVector, mode: mode);
             if (originalStatus == ConflictStatus.Conflict && HasUnusedDatabaseIds())
             {
                 // We need to distinguish between few cases here
@@ -2289,14 +2292,14 @@ namespace Raven.Server.Documents
                 // case 3: incoming change vector A:11, B:10, C:10 -> update                (original: update, after: already merged)
                 // case 4: incoming change vector A:11, B:12, C:10 -> update                (original: conflict, after: update)
 
-                var original = ChangeVectorUtils.GetConflictStatus(remote, local);
+                var original = ChangeVectorUtils.GetConflictStatus(remoteChangeVector, localChangeVector, mode: mode);
                 
-                remote = remote.StripTrxnTags();
-                local = local.StripTrxnTags();
+                remoteChangeVector.StripTrxnTags();
+                localChangeVector.StripTrxnTags();
 
-                TryRemoveUnusedIds(ref remote);
-                skipValidation = TryRemoveUnusedIds(ref local);
-                var after = ChangeVectorUtils.GetConflictStatus(remote, local);
+                remoteChangeVector.RemoveIds(UnusedDatabaseIds);
+                skipValidation = localChangeVector.RemoveIds(UnusedDatabaseIds);
+                var after = ChangeVectorUtils.GetConflictStatus(remoteChangeVector, localChangeVector, mode: mode);
 
                 if (after == ConflictStatus.AlreadyMerged)
                     return original;
@@ -2545,6 +2548,13 @@ namespace Raven.Server.Documents
         {
             var ptr = tvr.Read(index, out int size);
             return Encodings.Utf8.GetString(ptr, size);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ChangeVector TableValueToChangeVector(DocumentsOperationContext context, int index, ref TableValueReader tvr)
+        {
+            var ptr = tvr.Read(index, out int size);
+            return context.GetChangeVector(Encodings.Utf8.GetString(ptr, size));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

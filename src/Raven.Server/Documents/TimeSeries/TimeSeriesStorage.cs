@@ -2517,16 +2517,16 @@ namespace Raven.Server.Documents.TimeSeries
         private (string ChangeVector, long NewEtag) GenerateChangeVector(DocumentsOperationContext context, string fromReplicationChangeVector)
         {
             var newEtag = _documentsStorage.GenerateNextEtag();
-            string databaseChangeVector = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
-            string changeVector = ChangeVectorUtils.TryUpdateChangeVector(_documentDatabase, databaseChangeVector, newEtag).ChangeVector;
-
+            var databaseChangeVector = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
+            databaseChangeVector.UpdateOrder(_documentDatabase.ServerStore.NodeTag, _documentDatabase.DbBase64Id, newEtag);
+            
             if (fromReplicationChangeVector != null)
             {
-                changeVector = ChangeVectorUtils.MergeVectors(fromReplicationChangeVector, changeVector);
+                databaseChangeVector = databaseChangeVector.MergeWith(fromReplicationChangeVector);
             }
 
-            context.LastDatabaseChangeVector = changeVector;
-            return (changeVector, newEtag);
+            context.LastDatabaseChangeVector = databaseChangeVector;
+            return (databaseChangeVector, newEtag);
         }
 
         private static void ValidateSegment(TimeSeriesValuesSegment segment)

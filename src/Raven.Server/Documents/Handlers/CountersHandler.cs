@@ -420,7 +420,8 @@ namespace Raven.Server.Documents.Handlers
                 _database.DocumentsStorage.CountersStorage.PutCounters(context, counterGroupDetail.DocumentId, docCollection,
                     counterGroupDetail.ChangeVector, counterGroupDetail.Values);
 
-                context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(counterGroupDetail.ChangeVector, context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context));
+                context.LastDatabaseChangeVector ??= DocumentsStorage.GetDatabaseChangeVector(context);
+                context.LastDatabaseChangeVector = context.LastDatabaseChangeVector.MergeWith(counterGroupDetail.ChangeVector);
 
                 if (doc?.Data != null &&
                     _counterUpdates.ContainsKey(counterGroupDetail.DocumentId) == false)

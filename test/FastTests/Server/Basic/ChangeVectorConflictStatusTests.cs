@@ -73,7 +73,7 @@ namespace FastTests.Server.Basic
         [Fact]
         public void EtagShouldNotOverflow2()
         {
-            var x = ChangeVectorUtils.TryUpdateChangeVector("C", "n0rGjcmUT0u7ctxBXlZZPg", 5554138256, "C:5554138256-n0rGjcmUT0u7ctxBXlZZPg");
+            var x = ChangeVectorUtils.TryUpdateChangeVector("C", "n0rGjcmUT0u7ctxBXlZZPg", 5554138256, new ChangeVector("C:5554138256-n0rGjcmUT0u7ctxBXlZZPg"));
 
             Assert.False(x.IsValid);
         }

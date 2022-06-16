@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using Raven.Server.Documents;
-using Raven.Server.Documents.Replication;
 using Raven.Server.Utils;
+using Sparrow.Collections;
+using Sparrow.Json;
 using Sparrow.Threading;
 using Voron;
 
@@ -12,31 +13,79 @@ namespace Raven.Server.ServerWide.Context
     {
         private readonly DocumentDatabase _documentDatabase;
 
-        internal string LastDatabaseChangeVector
+        private int _maxOfAllocatedChangeVectors;
+        private int _numberOfAllocatedChangeVectors;
+        private FastList<ChangeVector> _changeVectorsPool;
+        private static readonly PerCoreContainer<FastList<ChangeVector>> _perCoreChangeVectorList = new PerCoreContainer<FastList<ChangeVector>>(32);
+
+        public DocumentsOperationContext(DocumentDatabase documentDatabase, int initialSize, int longLivedSize, int maxNumberOfAllocatedStringValues, SharedMultipleUseFlag lowMemoryFlag)
+            : base(initialSize, longLivedSize, maxNumberOfAllocatedStringValues, lowMemoryFlag)
+        {
+            _documentDatabase = documentDatabase;
+            _maxOfAllocatedChangeVectors = 1024;
+            if (_perCoreChangeVectorList.TryPull(out _changeVectorsPool) == false)
+                _changeVectorsPool = new FastList<ChangeVector>(256);
+        }
+
+        public override void Dispose()
+        {
+            base.Dispose();
+
+            if (_changeVectorsPool != null)
+            {
+                if (_perCoreChangeVectorList.TryPush(_changeVectorsPool) == false)
+                {
+                    /*foreach (var allocatedStringValue in _changeVectorsPool)
+                        allocatedStringValue?.Dispose();*/
+                }
+
+                _changeVectorsPool = null;
+            }
+        }
+
+        public ChangeVector GetChangeVector(string changeVector)
+        {
+            ChangeVector allocatedChangeVector;
+            if (_numberOfAllocatedChangeVectors < _changeVectorsPool.Count)
+            {
+                allocatedChangeVector = _changeVectorsPool[_numberOfAllocatedChangeVectors++];
+                allocatedChangeVector.Renew(changeVector);
+                return allocatedChangeVector;
+            }
+
+            allocatedChangeVector = new ChangeVector(changeVector);
+            if (_numberOfAllocatedChangeVectors < _maxOfAllocatedChangeVectors)
+            {
+                _changeVectorsPool.Add(allocatedChangeVector);
+                _numberOfAllocatedChangeVectors++;
+            }
+
+            return allocatedChangeVector;
+        }
+
+        internal ChangeVector LastDatabaseChangeVector
         {
             get => _lastDatabaseChangeVector;
             set
             {
-                value = value.StripTrxnTags();
+                if (value.IsSingle == false)
+                    throw new InvalidOperationException($"The global change vector '{value}' cannot contain pipe");
 
-                if (DbIdsToIgnore == null || DbIdsToIgnore.Count == 0 || string.IsNullOrEmpty(value))
+
+                value.StripTrxnTags();
+
+                if (DbIdsToIgnore == null || DbIdsToIgnore.Count == 0 || value.IsNullOrEmpty)
                 {
                     _lastDatabaseChangeVector = value;
                     return;
                 }
                 
-                var list = value.ToChangeVectorList();
-                if (list.RemoveAll(x => DbIdsToIgnore.Contains(x.DbId)) > 0)
-                {
-                    _lastDatabaseChangeVector = list.SerializeVector();
-                    return;
-                }
-
+                value.RemoveIds(DbIdsToIgnore);
                 _lastDatabaseChangeVector = value;
             }
         }
 
-        private string _lastDatabaseChangeVector;
+        private ChangeVector _lastDatabaseChangeVector;
         internal Dictionary<string, long> LastReplicationEtagFrom;
         private bool _skipChangeVectorValidation;
         internal HashSet<string> DbIdsToIgnore;
@@ -71,11 +120,7 @@ namespace Raven.Server.ServerWide.Context
             return shortTermSingleUse;
         }
 
-        public DocumentsOperationContext(DocumentDatabase documentDatabase, int initialSize, int longLivedSize, int maxNumberOfAllocatedStringValues, SharedMultipleUseFlag lowMemoryFlag)
-            : base(initialSize, longLivedSize, maxNumberOfAllocatedStringValues, lowMemoryFlag)
-        {
-            _documentDatabase = documentDatabase;
-        }
+        
 
         protected override DocumentsTransaction CloneReadTransaction(DocumentsTransaction previous)
         {

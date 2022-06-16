@@ -2800,7 +2800,11 @@ namespace Raven.Server.ServerWide
                 }
 
                 if (string.IsNullOrEmpty(record.Sharding.DatabaseId))
+                {
                     record.Sharding.DatabaseId = Guid.NewGuid().ToBase64Unpadded();
+                    record.UnusedDatabaseIds ??= new HashSet<string>();
+                    record.UnusedDatabaseIds.Add( record.Sharding.DatabaseId);
+                }
             }
 
             var addDatabaseCommand = new AddDatabaseCommand(raftRequestId)

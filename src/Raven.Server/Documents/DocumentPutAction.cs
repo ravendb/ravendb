@@ -101,7 +101,7 @@ namespace Raven.Server.Documents
             string expectedChangeVector,
             BlittableJsonReaderObject document,
             long? lastModifiedTicks = null,
-            string changeVector = null,
+            ChangeVector changeVector = null,
             string oldChangeVectorForClusterTransactionIndexCheck = null,
             DocumentFlags flags = DocumentFlags.None,
             NonPersistentDocumentFlags nonPersistentFlags = NonPersistentDocumentFlags.None)
@@ -238,12 +238,12 @@ namespace Raven.Server.Documents
                         }
 
                         flags |= DocumentFlags.HasRevisions;
-                        _documentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, document, flags, nonPersistentFlags, changeVector, modifiedTicks, configuration, collectionName);
+                        _documentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, document, flags, nonPersistentFlags, changeVector.AsString(), modifiedTicks, configuration, collectionName);
                     }
                 }
 
-                FlagsProperlySet(flags, changeVector);
-                using (Slice.From(context.Allocator, changeVector, out var cv))
+                FlagsProperlySet(flags, changeVector.AsString());
+                using (Slice.From(context.Allocator, changeVector.AsString(), out var cv))
                 using (table.Allocate(out TableValueBuilder tvb))
                 {
                     tvb.Add(lowerId);
@@ -275,7 +275,7 @@ namespace Raven.Server.Documents
 
                 context.Transaction.AddAfterCommitNotification(new DocumentChange
                 {
-                    ChangeVector = changeVector,
+                    ChangeVector = changeVector.AsString(),
                     CollectionName = collectionName.Name,
                     Id = id,
                     Type = DocumentChangeTypes.Put,
@@ -289,7 +289,7 @@ namespace Raven.Server.Documents
                     Etag = newEtag,
                     Id = id,
                     Collection = collectionName,
-                    ChangeVector = changeVector,
+                    ChangeVector = changeVector.AsString(),
                     Flags = flags,
                     LastModified = new DateTime(modifiedTicks, DateTimeKind.Utc)
                 };
@@ -347,9 +347,9 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private (string ChangeVector, NonPersistentDocumentFlags NonPersistentFlags) BuildChangeVectorAndResolveConflicts(
+        private (ChangeVector ChangeVector, NonPersistentDocumentFlags NonPersistentFlags) BuildChangeVectorAndResolveConflicts(
             DocumentsOperationContext context, string id, Slice lowerId, long newEtag,
-            BlittableJsonReaderObject document, string changeVector, string expectedChangeVector, DocumentFlags flags, TableValueReader oldValue)
+            BlittableJsonReaderObject document, ChangeVector changeVector, string expectedChangeVector, DocumentFlags flags, TableValueReader oldValue)
         {
             var nonPersistentFlags = NonPersistentDocumentFlags.None;
             var fromReplication = flags.Contain(DocumentFlags.FromReplication);
@@ -370,42 +370,49 @@ namespace Raven.Server.Documents
                     var result = _documentsStorage.ConflictsStorage.MergeConflictChangeVectorIfNeededAndDeleteConflicts(changeVector, context, id, newEtag, document);
                     nonPersistentFlags = result.NonPersistentFlags;
 
-                    if (string.IsNullOrEmpty(result.ChangeVector) == false)
+                    if (result.ChangeVector != null)
                         return (result.ChangeVector, nonPersistentFlags);
                 }
             }
 
-            if (string.IsNullOrEmpty(changeVector) == false)
+            if (changeVector != null)
                 return (changeVector, nonPersistentFlags);
 
-            string oldChangeVector = oldValue.Pointer != null ? TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref oldValue) : null;
+            var oldChangeVector = oldValue.Pointer != null ? TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref oldValue) : null;
             if (fromReplication == false)
             {
                 context.LastDatabaseChangeVector ??= GetDatabaseChangeVector(context);
-                oldChangeVector = ChangeVectorUtils.MergeVectors(context.LastDatabaseChangeVector, oldChangeVector);
+                if (oldChangeVector == null)
+                {
+                    oldChangeVector = context.GetChangeVector(context.LastDatabaseChangeVector);
+                }
+                else
+                {
+                    oldChangeVector = oldChangeVector.MergeWith(context.LastDatabaseChangeVector);
+                }
             }
 
             changeVector = SetDocumentChangeVectorForLocalChange(context, lowerId, oldChangeVector, newEtag);
-            context.SkipChangeVectorValidation = _documentsStorage.TryRemoveUnusedIds(ref changeVector);
+            context.SkipChangeVectorValidation = changeVector.RemoveIds(_documentsStorage.UnusedDatabaseIds);
             return (changeVector, nonPersistentFlags);
         }
 
-        private static bool UpdateLastDatabaseChangeVector(DocumentsOperationContext context, string changeVector, DocumentFlags flags, NonPersistentDocumentFlags nonPersistentFlags)
+        private static bool UpdateLastDatabaseChangeVector(DocumentsOperationContext context, ChangeVector changeVector, DocumentFlags flags, NonPersistentDocumentFlags nonPersistentFlags)
         {
             var currentGlobalChangeVector = context.LastDatabaseChangeVector ?? GetDatabaseChangeVector(context);
-            changeVector = changeVector.StripSinkTags(currentGlobalChangeVector);
+            changeVector.StripSinkTags(currentGlobalChangeVector);
 
             // this is raft created document, so it must contain only the RAFT element 
             if (flags.Contain(DocumentFlags.FromClusterTransaction))
             {
-                context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(currentGlobalChangeVector, changeVector);
+                context.LastDatabaseChangeVector = ChangeVector.Merge(currentGlobalChangeVector, changeVector.Order);
                 return false;
             }
 
             // the resolved document must preserve the original change vector (without the global change vector) to avoid ping-pong replication.
             if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromResolver))
             {
-                context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(currentGlobalChangeVector, changeVector);
+                context.LastDatabaseChangeVector = ChangeVector.Merge(currentGlobalChangeVector, changeVector.Order);
                 return false;
             }
 
@@ -414,7 +421,7 @@ namespace Raven.Server.Documents
             if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication))
                 return false;
 
-            context.LastDatabaseChangeVector = changeVector;
+            context.LastDatabaseChangeVector = changeVector.Order;
             return true;
         }
 
@@ -792,15 +799,15 @@ namespace Raven.Server.Documents
             }
         }
 
-        private string SetDocumentChangeVectorForLocalChange(DocumentsOperationContext context, Slice lowerId, string oldChangeVector, long newEtag)
+        private ChangeVector SetDocumentChangeVectorForLocalChange(DocumentsOperationContext context, Slice lowerId, ChangeVector oldChangeVector, long newEtag)
         {
-            if (string.IsNullOrEmpty(oldChangeVector) == false)
+            if (oldChangeVector != null)
             {
-                var result = ChangeVectorUtils.TryUpdateChangeVector(_documentDatabase.ServerStore.NodeTag, _documentsStorage.Environment.Base64Id, newEtag, oldChangeVector);
-                return result.ChangeVector;
+                oldChangeVector.UpdateVersion(_documentDatabase.ServerStore.NodeTag, _documentsStorage.Environment.Base64Id, newEtag);
+                oldChangeVector.UpdateOrder(_documentDatabase.ServerStore.NodeTag, _documentsStorage.Environment.Base64Id, newEtag);
+                return oldChangeVector;
             }
-
-            return _documentsStorage.ConflictsStorage.GetMergedConflictChangeVectorsAndDeleteConflicts(context, lowerId, newEtag);
+            return context.GetChangeVector(_documentsStorage.ConflictsStorage.GetMergedConflictChangeVectorsAndDeleteConflicts(context, lowerId, newEtag));
         }
 
         [Conditional("DEBUG")]

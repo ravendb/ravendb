@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Exceptions.Documents;
+using Raven.Server.Documents.Replication;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
@@ -160,17 +161,8 @@ public class ClusterTransactionMergedCommand : TransactionMergedCommand
                 }
             }
 
-            if (context.LastDatabaseChangeVector == null)
-            {
-                context.LastDatabaseChangeVector = global;
-            }
-
-            var updatedChangeVector = ChangeVectorUtils.TryUpdateChangeVector("RAFT", Database.DatabaseGroupId, count, global);
-
-            if (updatedChangeVector.IsValid)
-            {
-                context.LastDatabaseChangeVector = updatedChangeVector.ChangeVector;
-            }
+            context.LastDatabaseChangeVector ??= global;
+            context.LastDatabaseChangeVector.UpdateOrder(ChangeVectorParser.RaftTag, Database.DatabaseGroupId, count);
         }
 
         return Reply.Count;

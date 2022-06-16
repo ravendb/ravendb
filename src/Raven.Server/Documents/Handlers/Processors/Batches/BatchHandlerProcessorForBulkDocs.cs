@@ -127,10 +127,12 @@ internal class BatchHandlerProcessorForBulkDocs : AbstractBatchHandlerProcessorF
             ? RequestHandler.Database.ReplicationLoader.GetSizeOfMajority()
             : options.NumberOfReplicasToWaitFor;
 
+        var changeVector = new ChangeVector(lastChangeVector);
+
         var replicatedPast = await RequestHandler.Database.ReplicationLoader.WaitForReplicationAsync(
             numberOfReplicasToWaitFor,
             options.WaitForReplicasTimeout,
-            lastChangeVector);
+            changeVector);
 
         if (replicatedPast < numberOfReplicasToWaitFor && options.ThrowOnTimeoutInWaitForReplicas)
         {

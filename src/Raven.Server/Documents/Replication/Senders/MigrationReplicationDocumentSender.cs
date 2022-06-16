@@ -15,7 +15,6 @@ namespace Raven.Server.Documents.Replication.Senders
 {
     public class MigrationReplicationDocumentSender : ReplicationDocumentSenderBase
     {
-        public const string MigrationTag = "MOVE";
         public readonly BucketMigrationReplication Destination;
         public readonly ShardedDocumentDatabase Database;
         public MigrationReplicationDocumentSender(Stream stream, OutgoingMigrationReplicationHandler parent, Logger log) : base(stream, parent, log)
@@ -61,13 +60,13 @@ namespace Raven.Server.Documents.Replication.Senders
 
                 while (mergedInEnumerator.MoveNext())
                 {
-
-                    var item = mergedInEnumerator.Current;
+                    yield return mergedInEnumerator.Current;
+                    /*var item = mergedInEnumerator.Current;
                     var result = ChangeVectorUtils.TryUpdateChangeVector(MigrationTag, migrationId, Destination.MigrationIndex, item.ChangeVector);
                     Debug.Assert(result.IsValid,$"Failed to update the change vector {item.ChangeVector} with '{MigrationTag}:{Destination.MigrationIndex}-{migrationId}'");
 
                     item.ChangeVector = result.ChangeVector;
-                    yield return item;
+                    yield return item;*/
                 }
             }
         }

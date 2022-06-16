@@ -886,7 +886,7 @@ namespace Raven.Server.Smuggler.Documents
                         {
                             newEtag = _database.DocumentsStorage.GenerateNextEtag();
                             tombstone.ChangeVector = _database.DocumentsStorage.GetNewChangeVector(context, newEtag);
-                            databaseChangeVector = ChangeVectorUtils.MergeVectors(databaseChangeVector, tombstone.ChangeVector);
+                            databaseChangeVector = ChangeVector.Merge(databaseChangeVector, context.GetChangeVector(tombstone.ChangeVector));
                             AddTrxnIfNeeded(context, tombstone.LowerId, ref tombstone.ChangeVector);
                             switch (tombstone.Type)
                             {
@@ -920,7 +920,7 @@ namespace Raven.Server.Smuggler.Documents
                     var conflict = documentType.Conflict;
                     if (conflict != null)
                     {
-                        databaseChangeVector = ChangeVectorUtils.MergeVectors(databaseChangeVector, documentType.Conflict.ChangeVector);
+                        databaseChangeVector = ChangeVector.Merge(databaseChangeVector, context.GetChangeVector(documentType.Conflict.ChangeVector));
                         _database.DocumentsStorage.ConflictsStorage.AddConflict(context, conflict.Id, conflict.LastModified.Ticks, conflict.Doc, conflict.ChangeVector,
                             conflict.Collection, conflict.Flags, NonPersistentDocumentFlags.FromSmuggler);
 
@@ -943,7 +943,7 @@ namespace Raven.Server.Smuggler.Documents
                         PutAttachments(context, document, isRevision: true, out var hasAttachments);
                         if (hasAttachments)
                         {
-                            databaseChangeVector = ChangeVectorUtils.MergeVectors(databaseChangeVector, context.LastDatabaseChangeVector);
+                            databaseChangeVector = ChangeVector.Merge(databaseChangeVector, context.LastDatabaseChangeVector);
                         }
 
                         if ((document.NonPersistentFlags.Contain(NonPersistentDocumentFlags.FromSmuggler)) &&
@@ -968,7 +968,7 @@ namespace Raven.Server.Smuggler.Documents
                                 document.NonPersistentFlags, document.ChangeVector, document.LastModified.Ticks);
                         }
 
-                        databaseChangeVector = ChangeVectorUtils.MergeVectors(databaseChangeVector, document.ChangeVector);
+                        databaseChangeVector = ChangeVector.Merge(databaseChangeVector, context.GetChangeVector(document.ChangeVector));
 
                         continue;
                     }
@@ -1004,7 +1004,7 @@ namespace Raven.Server.Smuggler.Documents
                         if (parentDocument != null)
                         {
                             // the change vector of the document must be identical to the one of the last revision
-                            databaseChangeVector = ChangeVectorUtils.MergeVectors(databaseChangeVector, document.ChangeVector);
+                            databaseChangeVector = ChangeVector.Merge(databaseChangeVector, context.GetChangeVector(document.ChangeVector));
 
                             using (parentDocument.Data)
                                 parentDocument.Data = parentDocument.Data.Clone(context);
@@ -1021,7 +1021,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     newEtag = _database.DocumentsStorage.GenerateNextEtag();
                     document.ChangeVector = _database.DocumentsStorage.GetNewChangeVector(context, newEtag);
-                    databaseChangeVector = ChangeVectorUtils.MergeVectors(databaseChangeVector, document.ChangeVector);
+                    databaseChangeVector = ChangeVector.Merge(databaseChangeVector, context.GetChangeVector(document.ChangeVector));
                     AddTrxnIfNeeded(context, id, ref document.ChangeVector);
 
                     try

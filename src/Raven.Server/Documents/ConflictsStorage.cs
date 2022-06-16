@@ -428,7 +428,8 @@ namespace Raven.Server.Documents
         {
             if (existing != null)
             {
-                var result = ChangeVectorUtils.TryUpdateChangeVector(_documentDatabase.ServerStore.NodeTag, _documentsStorage.Environment.Base64Id, newEtag, existing);
+                var cv = new ChangeVector(existing);
+                var result = ChangeVectorUtils.TryUpdateChangeVector(_documentDatabase.ServerStore.NodeTag, _documentsStorage.Environment.Base64Id, newEtag, cv);
                 return result.ChangeVector;
             }
             return ChangeVectorUtils.NewChangeVector(_documentDatabase.ServerStore.NodeTag, newEtag, _documentsStorage.Environment.Base64Id);
@@ -450,7 +451,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public (string ChangeVector, NonPersistentDocumentFlags NonPersistentFlags) MergeConflictChangeVectorIfNeededAndDeleteConflicts(string documentChangeVector,
+        public (ChangeVector ChangeVector, NonPersistentDocumentFlags NonPersistentFlags) MergeConflictChangeVectorIfNeededAndDeleteConflicts(ChangeVector documentChangeVector,
             DocumentsOperationContext context, string id, long newEtag, BlittableJsonReaderObject document)
         {
             var result = DeleteConflictsFor(context, id, document);
@@ -460,14 +461,19 @@ namespace Raven.Server.Documents
                 return (documentChangeVector, result.NonPersistentFlags);
             }
 
-            var changeVectorList = new List<string>
+            var changeVectorList = new List<ChangeVector>
             {
                 documentChangeVector,
-                context.LastDatabaseChangeVector ?? GetDatabaseChangeVector(context),
-                ChangeVectorUtils.NewChangeVector(_documentDatabase, newEtag)
+                context.GetChangeVector(context.LastDatabaseChangeVector ?? GetDatabaseChangeVector(context)),
+                context.GetChangeVector(ChangeVectorUtils.NewChangeVector(_documentDatabase, newEtag)),
             };
-            changeVectorList.AddRange(result.ChangeVectors);
-            var merged = ChangeVectorUtils.MergeVectors(changeVectorList);
+
+            foreach (var conflictChangeVector in result.ChangeVectors)
+            {
+                changeVectorList.Add(new ChangeVector(conflictChangeVector));
+            }
+
+            var merged = ChangeVector.Merge(changeVectorList);
 
             return (merged, result.NonPersistentFlags);
         }
@@ -699,7 +705,7 @@ namespace Raven.Server.Documents
                     lowerId,
                     latestConflict.Etag,
                     collectionName,
-                    context.GetLazyString(mergedChangeVector),
+                    mergedChangeVector,
                     latestConflict.LastModified.Ticks,
                     changeVector,
                     latestConflict.Flags,
@@ -775,7 +781,7 @@ namespace Raven.Server.Documents
             else
                 return ConflictStatus.Update; //document with 'id' doesn't exist locally, so just do PUT
 
-            status = context.DocumentDatabase.DocumentsStorage.GetConflictStatus(changeVector, local, out var skipValidation);
+            status = context.DocumentDatabase.DocumentsStorage.GetConflictStatus(context.GetChangeVector(changeVector), context.GetChangeVector(local), ChangeVectorMode.Version, out var skipValidation);
             context.SkipChangeVectorValidation |= skipValidation;
 
             if (status == ConflictStatus.Conflict)

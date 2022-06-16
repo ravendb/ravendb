@@ -717,7 +717,7 @@ namespace RachisTests.DatabaseCluster
                         using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                         using (context.OpenReadTransaction())
                         {
-                            var cv = DocumentsStorage.GetDatabaseChangeVector(context);
+                            var cv = DocumentsStorage.GetDatabaseChangeVector(context).AsString();
 
                             return cv != null && cv.Contains("A:1-") && cv.Contains("B:1-") && cv.Contains("C:1-");
                         }
