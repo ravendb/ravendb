@@ -561,7 +561,7 @@ class editSqlEtlTask extends viewModelBase {
     }
 
     syntaxHelp() {
-        const viewmodel = new transformationScriptSyntax("Sql");
+        const viewmodel = new transformationScriptSyntax("Sql", this.editedSqlEtl().destinationType);
         app.showBootstrapDialog(viewmodel);
     }
    

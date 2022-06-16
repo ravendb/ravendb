@@ -824,6 +824,8 @@ type StudioTaskType =  "Replication" | "PullReplicationAsHub" | "PullReplication
     
 type StudioEtlType = "Raven" | "Sql" | "Olap" | "ElasticSearch" | "Kafka" | "RabbitMQ";
 
+type TaskDestinationType = "Collection" | "Table" | "Queue" | "Topic" | "Index";
+
 interface sampleCode {
     title: string;
     text: string;

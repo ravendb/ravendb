@@ -622,7 +622,7 @@ class editOlapEtlTask extends viewModelBase {
     }
 
     syntaxHelp() {
-        const viewmodel = new transformationScriptSyntax("Olap");
+        const viewmodel = new transformationScriptSyntax("Olap", this.editedOlapEtl().destinationType);
         app.showBootstrapDialog(viewmodel);
     }
     

@@ -8,30 +8,15 @@ class transformationScriptSyntax extends dialogViewModelBase {
     view = require("views/database/tasks/transformationScriptSyntax.html");
     
     etlType = ko.observable<StudioEtlType>();
-    destinationType: KnockoutComputed<string>
+    destinationType = ko.observable<TaskDestinationType>();
     
     dialogContainer: Element;
 
-    constructor(etlType: StudioEtlType) {
+    constructor(etlType: StudioEtlType, destination: TaskDestinationType) {
         super();
-        this.etlType(etlType);
         
-        this.destinationType = ko.pureComputed(() => {
-           const type = this.etlType();
-           
-           switch (type) {
-               case "Raven": return "collection"; 
-               case "Sql": return "table";
-               
-               case "Olap":
-               case "ElasticSearch": return "index";
-               
-               case "Kafka": return "topic";
-               case "RabbitMQ": return "queue";
-               
-               default: genUtils.assertUnreachable(type, "Unknown studioEtlType: " + type);
-           } 
-        });
+        this.etlType(etlType);
+        this.destinationType(destination);
     }
     
     compositionComplete() {

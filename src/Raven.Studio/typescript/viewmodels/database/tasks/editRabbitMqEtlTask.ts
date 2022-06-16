@@ -397,7 +397,7 @@ class editRabbitMqEtlTask extends viewModelBase {
     }
 
     syntaxHelp() {
-        const viewmodel = new transformationScriptSyntax("RabbitMQ");
+        const viewmodel = new transformationScriptSyntax("RabbitMQ", this.editedRabbitMqEtl().destinationType);
         app.showBootstrapDialog(viewmodel);
     }
 

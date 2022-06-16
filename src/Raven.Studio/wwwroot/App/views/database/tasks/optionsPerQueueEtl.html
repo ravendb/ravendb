@@ -1,8 +1,8 @@
 <div class="flex-horizontal flex-header margin-top-sm">
-    <div><h3>Options Per Queue</h3></div>
+    <div><h3 data-bind="text: 'Options Per ' + $data.destinationType"></h3></div>
     <div>
         <button type="button" class="btn btn-info margin-bottom-sm margin-left" data-bind="click: addNewQueueOptions">
-            <i class="icon-plus"></i><span>Add queue options</span>
+            <i class="icon-plus"></i><span data-bind="text: 'Add ' + $data.destinationType.toLowerCase() + ' options'"></span>
         </button>
     </div>
 </div>
@@ -14,7 +14,7 @@
     <div data-bind="foreach: optionsPerQueue">
         <div class="flex-horizontal margin-bottom-sm item">
             <div class="flex-grow margin-right" data-bind="validationElement: queueName">
-                <input type="text" class="form-control" placeholder="Queue name" data-bind="textInput: queueName"/>
+                <input type="text" class="form-control" data-bind="textInput: queueName, attr: { placeholder: $parent.destinationType + ' name'}"/>
             </div>
             <div class="toggle input-sm flex-noshrink">
                 <input id="toggleMode" class="styled" type="checkbox" data-bind="checked: deleteProcessedDocuments">

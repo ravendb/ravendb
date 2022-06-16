@@ -22,6 +22,10 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
     get studioTaskType(): StudioTaskType {
         return "RavenEtl";
     }
+
+    get destinationType(): TaskDestinationType {
+        return "Collection";
+    }
     
     constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtlDetails) {
         super();

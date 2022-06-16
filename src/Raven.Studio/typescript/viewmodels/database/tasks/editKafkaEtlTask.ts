@@ -400,7 +400,7 @@ class editKafkaEtlTask extends viewModelBase {
     }
 
     syntaxHelp() {
-        const viewmodel = new transformationScriptSyntax("Kafka");
+        const viewmodel = new transformationScriptSyntax("Kafka", this.editedKafkaEtl().destinationType);
         app.showBootstrapDialog(viewmodel);
     }
 
