@@ -36,7 +36,6 @@ class editRabbitMqEtlTask extends viewModelBase {
     view = require("views/database/tasks/editRabbitMqEtlTask.html");
     optionsPerQueueEtlView = require("views/database/tasks/optionsPerQueueEtl.html");
     connectionStringView = require("views/database/settings/connectionStringRabbitMq.html")
-    certificateUploadInfoForOngoingTasks = require("views/partial/certificateUploadInfoForOngoingTasks.html");
     
     static readonly scriptNamePrefix = "Script_";
     static isApplyToAll = ongoingTaskQueueEtlTransformationModel.isApplyToAll;
@@ -68,10 +67,6 @@ class editRabbitMqEtlTask extends viewModelBase {
     testConnectionResult = ko.observable<Raven.Server.Web.System.NodeConnectionTestResult>();
     
     collections = collectionsTracker.default.collections;
-
-    // TODO: check if the below 2 are needed
-    usingHttps = location.protocol === "https:";
-    certificatesUrl = appUrl.forCertificates();
 
     constructor() {
         super();

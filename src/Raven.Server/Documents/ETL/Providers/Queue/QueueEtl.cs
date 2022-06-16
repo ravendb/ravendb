@@ -170,7 +170,7 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithMessages, QueueEtlConfigu
         if (_kafkaProducer == null)
         {
             var producer = QueueBrokerConnectionHelper.CreateKafkaProducer(Configuration.Connection.KafkaConnectionSettings, TransactionalId, Logger, Name,
-                Database.ServerStore.Server.Certificate.Certificate);
+                Database.ServerStore.Server.Certificate);
 
             try
             {
