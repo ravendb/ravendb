@@ -4,7 +4,7 @@ import abstractOngoingTaskEtlListModel = require("models/database/tasks/abstract
 import appUrl = require("common/appUrl");
 
 class ongoingTaskKafkaEtlListModel extends abstractOngoingTaskEtlListModel {
-    kafkaServerUrl = ko.observable<string>();
+    bootstrapServers = ko.observable<string>();
     connectionStringDefined = ko.observable<boolean>(true); // needed for template in the ongoing tasks list view
     
     get studioTaskType(): StudioTaskType {
@@ -31,7 +31,7 @@ class ongoingTaskKafkaEtlListModel extends abstractOngoingTaskEtlListModel {
         super.update(dto);
 
         this.connectionStringName(dto.ConnectionStringName);
-        this.kafkaServerUrl(dto.Url);
+        this.bootstrapServers(dto.Url);
     }
 }
 
