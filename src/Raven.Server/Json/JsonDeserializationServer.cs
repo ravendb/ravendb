@@ -27,6 +27,7 @@ using Raven.Server.Commercial;
 using Raven.Server.Documents.Commands;
 using Raven.Server.Documents.Commands.ETL;
 using Raven.Server.Documents.Commands.Indexes;
+using Raven.Server.Documents.Commands.Revisions;
 using Raven.Server.Documents.ETL.Providers.ElasticSearch.Test;
 using Raven.Server.Documents.ETL.Providers.OLAP.Test;
 using Raven.Server.Documents.ETL.Providers.Raven.Test;
@@ -238,6 +239,8 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, GetIndexErrorsCountCommand.IndexErrorsCount> IndexErrorsCount = GenerateJsonDeserializationRoutine<GetIndexErrorsCountCommand.IndexErrorsCount>();
 
         public static readonly Func<BlittableJsonReaderObject, LastChangeVectorForCollectionResult> LastChangeVectorForCollectionResult = GenerateJsonDeserializationRoutine<LastChangeVectorForCollectionResult>();
+
+        public static readonly Func<BlittableJsonReaderObject, ResolvedRevisions> ResolvedRevisions = GenerateJsonDeserializationRoutine<ResolvedRevisions>();
 
         public static readonly Func<BlittableJsonReaderObject, GetConflictsPreviewResult> GetConflictResults = GenerateJsonDeserializationRoutine<GetConflictsPreviewResult>();
 

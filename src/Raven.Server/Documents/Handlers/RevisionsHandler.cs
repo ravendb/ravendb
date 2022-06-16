@@ -61,20 +61,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/revisions/resolved", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetResolvedConflictsSince()
         {
-            var since = GetStringQueryString("since", required: false);
-            var take = GetIntValueQueryString("take", required: false) ?? 1024;
-            var date = Convert.ToDateTime(since).ToUniversalTime();
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (context.OpenReadTransaction())
-            using (var token = CreateOperationToken())
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                writer.WriteStartObject();
-                writer.WritePropertyName("Results");
-                var revisions = Database.DocumentsStorage.RevisionsStorage.GetResolvedDocumentsSince(context, date, take);
-                await writer.WriteDocumentsAsync(context, revisions, metadataOnly: false, token.Token);
-                writer.WriteEndObject();
-            }
+            using (var processor = new RevisionsHandlerProcessorForGetResolvedRevisions(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/revisions/bin", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
