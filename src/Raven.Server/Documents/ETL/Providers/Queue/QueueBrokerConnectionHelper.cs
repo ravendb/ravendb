@@ -1,17 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Security.Cryptography.X509Certificates;
+using System.IO;
 using Confluent.Kafka;
+using Org.BouncyCastle.Utilities.IO.Pem;
 using RabbitMQ.Client;
 using Raven.Client.Documents.Operations.ETL.Queue;
+using Raven.Server.Utils;
 using Sparrow.Logging;
+using PemWriter = Org.BouncyCastle.OpenSsl.PemWriter;
 
 namespace Raven.Server.Documents.ETL.Providers.Queue;
 
 public static class QueueBrokerConnectionHelper
 {
     public static IProducer<string, byte[]> CreateKafkaProducer(KafkaConnectionSettings settings, string transactionalId, Logger logger, string etlProcessName,
-        X509Certificate2 certificate = null)
+        CertificateUtils.CertificateHolder certificateHolder = null)
     {
         ProducerConfig config = new()
         {
@@ -21,7 +24,7 @@ public static class QueueBrokerConnectionHelper
             EnableIdempotence = true
         };
 
-        SetupKafkaClientConfig(config, settings, certificate);
+        SetupKafkaClientConfig(config, settings, certificateHolder);
         
         IProducer<string, byte[]> producer = new ProducerBuilder<string, byte[]>(config)
             .SetErrorHandler((producer, error) =>
@@ -42,12 +45,12 @@ public static class QueueBrokerConnectionHelper
         return producer;
     }
 
-    public static void SetupKafkaClientConfig(ClientConfig config, KafkaConnectionSettings settings, X509Certificate2 certificate = null)
+    public static void SetupKafkaClientConfig(ClientConfig config, KafkaConnectionSettings settings, CertificateUtils.CertificateHolder certificateHolder = null)
     {
-        if (settings.UseRavenCertificate && certificate != null)
+        if (settings.UseRavenCertificate && certificateHolder?.Certificate != null)
         {
-            config.SslCertificatePem = Convert.ToBase64String(certificate.Export(X509ContentType.Cert));
-            config.SslKeyPem = Convert.ToBase64String(certificate.Export(X509ContentType.Pkcs7));
+            config.SslCertificatePem = ExportAsPem(new PemObject("CERTIFICATE", certificateHolder.Certificate.RawData));
+            config.SslKeyPem = ExportAsPem(certificateHolder.PrivateKey.Key);
             config.SecurityProtocol = SecurityProtocol.Ssl;
         }
 
@@ -57,6 +60,18 @@ public static class QueueBrokerConnectionHelper
             {
                 config.Set(option.Key, option.Value);
             }
+        }
+    }
+
+    private static string ExportAsPem(object @object)
+    {
+        using (var sw = new StringWriter())
+        {
+            var pemWriter = new PemWriter(sw);
+            
+            pemWriter.WriteObject(@object);
+
+            return sw.ToString();
         }
     }
 
