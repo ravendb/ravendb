@@ -54,7 +54,7 @@ class connectionStringKafkaEtlModel extends connectionStringModel {
     connectionOptions = ko.observableArray<connectionOptionModel>();
 
     isSecureServer = accessManager.default.secureServer();
-    readonly sslCaLocation: string = "ssl.ca.location";
+    static readonly sslCaLocation: string = "ssl.ca.location";
     
     validationGroup: KnockoutValidationGroup;
     dirtyFlag: () => DirtyFlag;
@@ -70,15 +70,10 @@ class connectionStringKafkaEtlModel extends connectionStringModel {
         this.initValidation();
         
         this.useRavenCertificate.subscribe(toggledOn => {
-            const locationItem = this.connectionOptions().find(x => x.key() === this.sslCaLocation);
-            
-            if (toggledOn && !locationItem) {
-                this.connectionOptions.unshift(new connectionOptionModel(this.sslCaLocation, ""));
-            } else {
-                this.connectionOptions.remove(locationItem);
+            if (toggledOn && !this.connectionOptions().find(x => x.key() === connectionStringKafkaEtlModel.sslCaLocation)) {
+                this.connectionOptions.unshift(new connectionOptionModel(connectionStringKafkaEtlModel.sslCaLocation, ""));
             }
-            
-        })
+        });
         
         this.dirtyFlag = new ko.DirtyFlag([
             this.bootstrapServers,
