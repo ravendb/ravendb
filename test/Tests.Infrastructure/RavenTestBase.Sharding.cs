@@ -435,12 +435,11 @@ public partial class RavenTestBase
 
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
                 var bucket = ShardHelper.GetBucket(id);
-                var location = ShardHelper.GetShardNumber(record.ShardBucketRanges, bucket);
-                var newLocation = (location + 1) % record.Shards.Length;
+                var location = ShardHelper.GetShardNumber(record.Sharding.ShardBucketRanges, bucket);
+                var newLocation = (location + 1) % record.Sharding.Shards.Length;
 
-                var destination = record.Shards[newLocation];
-                var source = record.Shards[location];
-
+                var destination = record.Sharding.Shards[newLocation];
+                var source = record.Sharding.Shards[location];
 
                 using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, location)))
                 {
