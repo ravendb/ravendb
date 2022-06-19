@@ -23,6 +23,8 @@ import { highlight, languages } from "prismjs";
 import shardViewModelBase from "viewmodels/shardViewModelBase";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import getIndexNamesCommand from "commands/database/index/getIndexNamesCommand";
+import shardedDatabase from "models/resources/shardedDatabase";
+import shard from "models/resources/shard";
 
 type testTabName = "results" | "diagnostics";
 type fetcherType = (skip: number, take: number) => JQueryPromise<pagedResult<documentObject>>;
@@ -33,6 +35,8 @@ class customSorters extends shardViewModelBase {
 
     indexes = ko.observableArray<string>();
     languageService: rqlLanguageService;
+    
+    canUseCustomSorters: boolean;
     
     sorters = ko.observableArray<sorterListItemModel>([]);
     serverWideSorters = ko.observableArray<sorterListItemModel>([]);
@@ -65,6 +69,8 @@ class customSorters extends shardViewModelBase {
 
     constructor(db: database) {
         super(db);
+        
+        this.canUseCustomSorters = !(db instanceof shardedDatabase) && !(db instanceof shard);
 
         aceEditorBindingHandler.install();
         this.bindToCurrentInstance("confirmRemoveSorter", "enterTestSorterMode", "editSorter", "runTest");
@@ -76,6 +82,10 @@ class customSorters extends shardViewModelBase {
     
     activate(args: any) {
         super.activate(args);
+        
+        if (!this.canUseCustomSorters) {
+            return ;
+        }
         
         return $.when<any>(this.loadSorters(), this.loadServerWideSorters(), this.fetchIndexNames(this.db)
             .done(() => { 
