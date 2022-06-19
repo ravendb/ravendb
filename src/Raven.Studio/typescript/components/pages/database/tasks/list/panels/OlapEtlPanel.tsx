@@ -2,6 +2,7 @@
 import {
     BaseOngoingTaskPanelProps,
     ConnectionStringItem,
+    EmptyScriptsWarning,
     ICanShowTransformationScriptPreview,
     OngoingTaskActions,
     OngoingTaskName,
@@ -34,6 +35,7 @@ function Details(props: OlapEtlPanelProps & { canEdit: boolean }) {
                 connectionStringName={data.shared.connectionStringName}
                 connectionStringsUrl={connectionStringsUrl}
             />
+            <EmptyScriptsWarning task={data} />
         </RichPanelDetails>
     );
 }

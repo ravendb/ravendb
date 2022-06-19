@@ -102,17 +102,13 @@ export interface OngoingTaskSubscriptionSharedInfo extends OngoingTaskSharedInfo
     //TODO:
 }
 
-export interface OngoingTaskElasticSearchEtlNodeInfoDetails extends OngoingTaskNodeInfoDetails {
-    //TODO:
-}
+export interface OngoingTaskElasticSearchEtlNodeInfoDetails extends OngoingTaskNodeInfoDetails {}
 
 export interface OngoingTaskExternalReplicationNodeInfoDetails extends OngoingTaskNodeInfoDetails {
     //TODO:
 }
 
-export interface OngoingTaskOlapEtlNodeInfoDetails extends OngoingTaskNodeInfoDetails {
-    //TODO:
-}
+export interface OngoingTaskOlapEtlNodeInfoDetails extends OngoingTaskNodeInfoDetails {}
 
 export interface OngoingTaskPeriodicBackupNodeInfoDetails extends OngoingTaskNodeInfoDetails {
     //TODO: LastExecutingNodeTag - is local?
@@ -128,9 +124,7 @@ export interface OngoingTaskReplicationSinkNodeInfoDetails extends OngoingTaskNo
     //TODO:
 }
 
-export interface OngoingTaskSqlEtlNodeInfoDetails extends OngoingTaskNodeInfoDetails {
-    //TODO:
-}
+export interface OngoingTaskSqlEtlNodeInfoDetails extends OngoingTaskNodeInfoDetails {}
 
 export interface OngoingTaskSubscriptionNodeInfoDetails extends OngoingTaskNodeInfoDetails {
     //TODO: ChangeVectorForNextBatchStartingPoint and ChangeVectorForNextBatchStartingPointPerShard
