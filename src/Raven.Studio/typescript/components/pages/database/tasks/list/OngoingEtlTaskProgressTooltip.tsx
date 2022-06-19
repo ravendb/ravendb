@@ -1,22 +1,22 @@
 ﻿import React from "react";
 import { PopoverWithHover } from "../../../../common/PopoverWithHover";
-import { OngoingTaskInfo, OngoingTaskNodeInfo } from "../../../../models/tasks";
+import { OngoingEtlTaskNodeInfo, OngoingTaskInfo, OngoingTaskNodeInfo } from "../../../../models/tasks";
 import { NamedProgress, NamedProgressItem } from "../../../../common/NamedProgress";
 
-interface OngoingTaskProgressTooltipProps {
+interface OngoingTaskEtlProgressTooltipProps {
     target: string;
-    nodeInfo: OngoingTaskNodeInfo;
+    nodeInfo: OngoingEtlTaskNodeInfo;
     task: OngoingTaskInfo;
     showPreview: (transformationName: string) => void;
 }
 
-export function OngoingTaskProgressTooltip(props: OngoingTaskProgressTooltipProps) {
+export function OngoingEtlTaskProgressTooltip(props: OngoingTaskEtlProgressTooltipProps) {
     const { target, nodeInfo, showPreview } = props;
     return (
         <PopoverWithHover rounded target={target} placement="top" delay={100}>
             <div className="ongoing-tasks-details-tooltip">
-                {nodeInfo.progress &&
-                    nodeInfo.progress.map((transformationScriptProgress) => {
+                {nodeInfo.etlProgress &&
+                    nodeInfo.etlProgress.map((transformationScriptProgress) => {
                         const nameNode = (
                             <div>
                                 {transformationScriptProgress.transformationName}

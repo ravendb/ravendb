@@ -1,5 +1,10 @@
 ﻿import database from "models/resources/database";
-import { OngoingTaskInfo, OngoingTaskSharedInfo } from "../../../../models/tasks";
+import {
+    AnyEtlOngoingTaskInfo,
+    OngoingEtlTaskNodeInfo,
+    OngoingTaskInfo,
+    OngoingTaskSharedInfo,
+} from "../../../../models/tasks";
 import useBoolean from "hooks/useBoolean";
 import React, { useCallback } from "react";
 import router from "plugins/router";
@@ -163,7 +168,7 @@ export function ConnectionStringItem(props: {
     );
 }
 
-export function EmptyScriptsWarning(props: { task: OngoingTaskInfo }) {
+export function EmptyScriptsWarning(props: { task: AnyEtlOngoingTaskInfo }) {
     const emptyScripts = findScriptsWithOutMatchingDocuments(props.task);
 
     if (!emptyScripts.length) {
@@ -180,11 +185,13 @@ export function EmptyScriptsWarning(props: { task: OngoingTaskInfo }) {
     );
 }
 
-function findScriptsWithOutMatchingDocuments(data: OngoingTaskInfo): string[] {
+function findScriptsWithOutMatchingDocuments(
+    data: OngoingTaskInfo<OngoingTaskSharedInfo, OngoingEtlTaskNodeInfo>
+): string[] {
     const perScriptCounts = new Map<string, number>();
     data.nodesInfo.forEach((node) => {
-        if (node.progress) {
-            node.progress.forEach((progress) => {
+        if (node.etlProgress) {
+            node.etlProgress.forEach((progress) => {
                 const transformationName = progress.transformationName;
                 perScriptCounts.set(
                     transformationName,

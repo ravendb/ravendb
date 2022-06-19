@@ -1,5 +1,7 @@
 ﻿import { Reducer } from "react";
 import {
+    AnyEtlOngoingTaskInfo,
+    OngoingEtlTaskNodeInfo,
     OngoingTaskElasticSearchEtlSharedInfo,
     OngoingTaskExternalReplicationSharedInfo,
     OngoingTaskHubDefinitionInfo,
@@ -30,6 +32,7 @@ import EtlTaskProgress = Raven.Server.Documents.ETL.Stats.EtlTaskProgress;
 import EtlProcessProgress = Raven.Server.Documents.ETL.Stats.EtlProcessProgress;
 import TaskUtils from "../../../../utils/TaskUtils";
 import OngoingTaskType = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType;
+import { WritableDraft } from "immer/dist/types/types-external";
 
 interface ActionTasksLoaded {
     location: databaseLocationSpecifier;
@@ -205,7 +208,6 @@ function initNodesInfo(locations: databaseLocationSpecifier[]): OngoingTaskNodeI
         location: l,
         status: "notLoaded",
         details: null,
-        progress: null,
     }));
 }
 
@@ -228,7 +230,6 @@ export const ongoingTasksReducer: Reducer<OngoingTasksState, OngoingTaskReducerA
                         location: incomingLocation,
                         status: "loaded",
                         details: mapNodeInfo(incomingTask),
-                        progress: null,
                     };
 
                     return {
@@ -279,7 +280,7 @@ export const ongoingTasksReducer: Reducer<OngoingTasksState, OngoingTaskReducerA
                             TaskUtils.etlTypeToTaskType(x.EtlType) === task.shared.taskType &&
                             x.TaskName === task.shared.taskName
                     );
-                    perLocationDraft.progress = progressToApply
+                    (perLocationDraft as WritableDraft<OngoingEtlTaskNodeInfo>).etlProgress = progressToApply
                         ? progressToApply.ProcessesProgress.map(mapProgress)
                         : null;
                 });

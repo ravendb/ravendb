@@ -31,7 +31,11 @@ export interface OngoingTaskNodeInfo<TNodeInfo extends OngoingTaskNodeInfoDetail
     location: databaseLocationSpecifier;
     status: loadStatus;
     details: TNodeInfo;
-    progress: OngoingTaskNodeProgressDetails[];
+}
+
+export interface OngoingEtlTaskNodeInfo<TNodeInfo extends OngoingTaskNodeInfoDetails = OngoingTaskNodeInfoDetails>
+    extends OngoingTaskNodeInfo<TNodeInfo> {
+    etlProgress: OngoingTaskNodeProgressDetails[];
 }
 
 export interface OngoingTaskSharedInfo {
@@ -132,48 +136,63 @@ export interface OngoingTaskSubscriptionNodeInfoDetails extends OngoingTaskNodeI
     //TODO: ChangeVectorForNextBatchStartingPoint and ChangeVectorForNextBatchStartingPointPerShard
 }
 
+export type AnyEtlOngoingTaskInfo =
+    | OngoingTaskSqlEtlInfo
+    | OngoingTaskOlapEtlInfo
+    | OngoingTaskElasticSearchEtlInfo
+    | OngoingTaskRavenEtlInfo;
+
 export interface OngoingTaskInfo<
     TSharded extends OngoingTaskSharedInfo = OngoingTaskSharedInfo,
-    TNodeInfo extends OngoingTaskNodeInfoDetails = OngoingTaskNodeInfoDetails
+    TNodesInfo extends OngoingTaskNodeInfo = OngoingTaskNodeInfo
 > {
     shared: TSharded;
-    nodesInfo: OngoingTaskNodeInfo<TNodeInfo>[];
+    nodesInfo: TNodesInfo[];
 }
 
 type OngoingTaskElasticSearchEtlInfo = OngoingTaskInfo<
     OngoingTaskElasticSearchEtlSharedInfo,
-    OngoingTaskElasticSearchEtlNodeInfoDetails
+    OngoingEtlTaskNodeInfo<OngoingTaskElasticSearchEtlNodeInfoDetails>
 >;
 
 type OngoingTaskExternalReplicationInfo = OngoingTaskInfo<
     OngoingTaskExternalReplicationSharedInfo,
-    OngoingTaskExternalReplicationNodeInfoDetails
+    OngoingTaskNodeInfo<OngoingTaskExternalReplicationNodeInfoDetails>
 >;
 
-type OngoingTaskOlapEtlInfo = OngoingTaskInfo<OngoingTaskOlapEtlSharedInfo, OngoingTaskOlapEtlNodeInfoDetails>;
+type OngoingTaskOlapEtlInfo = OngoingTaskInfo<
+    OngoingTaskOlapEtlSharedInfo,
+    OngoingEtlTaskNodeInfo<OngoingTaskOlapEtlNodeInfoDetails>
+>;
 
 type OngoingTaskPeriodicBackupInfo = OngoingTaskInfo<
     OngoingTaskPeriodicBackupSharedInfo,
-    OngoingTaskPeriodicBackupNodeInfoDetails
+    OngoingTaskNodeInfo<OngoingTaskPeriodicBackupNodeInfoDetails>
 >;
 
-type OngoingTaskRavenEtlInfo = OngoingTaskInfo<OngoingTaskRavenEtlSharedInfo, OngoingTaskRavenEtlNodeInfoDetails>;
+type OngoingTaskRavenEtlInfo = OngoingTaskInfo<
+    OngoingTaskRavenEtlSharedInfo,
+    OngoingEtlTaskNodeInfo<OngoingTaskRavenEtlNodeInfoDetails>
+>;
 
 type OngoingTaskReplicationHubInfo = OngoingTaskInfo<
     OngoingTaskReplicationHubSharedInfo,
-    OngoingTaskReplicationHubNodeInfoDetails
+    OngoingTaskNodeInfo<OngoingTaskReplicationHubNodeInfoDetails>
 >;
 
 type OngoingTaskHubDefinitionInfo = OngoingTaskInfo<OngoingTaskHubDefinitionSharedInfo, never>;
 
 type OngoingTaskReplicationSinkInfo = OngoingTaskInfo<
     OngoingTaskReplicationSinkSharedInfo,
-    OngoingTaskReplicationSinkNodeInfoDetails
+    OngoingTaskNodeInfo<OngoingTaskReplicationSinkNodeInfoDetails>
 >;
 
-type OngoingTaskSqlEtlInfo = OngoingTaskInfo<OngoingTaskSqlEtlSharedInfo, OngoingTaskSqlEtlNodeInfoDetails>;
+type OngoingTaskSqlEtlInfo = OngoingTaskInfo<
+    OngoingTaskSqlEtlSharedInfo,
+    OngoingEtlTaskNodeInfo<OngoingTaskSqlEtlNodeInfoDetails>
+>;
 
 type OngoingTaskSubscriptionInfo = OngoingTaskInfo<
     OngoingTaskSubscriptionSharedInfo,
-    OngoingTaskSubscriptionNodeInfoDetails
+    OngoingTaskNodeInfo<OngoingTaskSubscriptionNodeInfoDetails>
 >;

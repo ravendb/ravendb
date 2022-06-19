@@ -12,7 +12,7 @@ import {
 import { useAppUrls } from "hooks/useAppUrls";
 import { OngoingTaskRavenEtlInfo } from "../../../../../models/tasks";
 import { BaseOngoingTaskPanelProps, useTasksOperations } from "../shared";
-import { OngoingTaskDistribution } from "./OngoingTaskDistribution";
+import { OngoingEtlTaskDistribution } from "./OngoingEtlTaskDistribution";
 
 type RavenEtlPanelProps = BaseOngoingTaskPanelProps<OngoingTaskRavenEtlInfo>;
 
@@ -94,7 +94,7 @@ export function RavenEtlPanel(props: RavenEtlPanelProps & ICanShowTransformation
                 />
             </RichPanelHeader>
             {detailsVisible && <Details {...props} canEdit={canEdit} />}
-            {detailsVisible && <OngoingTaskDistribution task={data} showPreview={showPreview} />}
+            {detailsVisible && <OngoingEtlTaskDistribution task={data} showPreview={showPreview} />}
         </RichPanel>
     );
 }
