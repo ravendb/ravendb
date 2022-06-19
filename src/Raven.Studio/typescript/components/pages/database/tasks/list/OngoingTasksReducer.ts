@@ -31,7 +31,6 @@ import OngoingTaskPullReplicationAsHub = Raven.Client.Documents.Operations.Ongoi
 import EtlTaskProgress = Raven.Server.Documents.ETL.Stats.EtlTaskProgress;
 import EtlProcessProgress = Raven.Server.Documents.ETL.Stats.EtlProcessProgress;
 import TaskUtils from "../../../../utils/TaskUtils";
-import OngoingTaskType = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType;
 import { WritableDraft } from "immer/dist/types/types-external";
 
 interface ActionTasksLoaded {

@@ -15,7 +15,6 @@ import appUrl = require("common/appUrl");
 import getPeriodicBackupConfigCommand = require("commands/database/tasks/getPeriodicBackupConfigCommand");
 import backupSettings = require("models/database/tasks/periodicBackup/backupSettings");
 import testPeriodicBackupCredentialsCommand = require("commands/serverWide/testPeriodicBackupCredentialsCommand");
-import clusterTopology from "models/database/cluster/clusterTopology";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
 
 class connectionStrings extends viewModelBase {
@@ -154,7 +153,8 @@ class connectionStrings extends viewModelBase {
 
     private fetchOngoingTasks(): JQueryPromise<Raven.Server.Web.System.OngoingTasksResult> {
         const db = this.activeDatabase();
-        return new ongoingTasksCommand(db, db.getLocations()[0]) //TODO:
+        const localNodeTag = clusterTopologyManager.default.localNodeTag();
+        return new ongoingTasksCommand(db, db.getFirstLocation(localNodeTag))
             .execute()
             .done((info) => {
                 this.processData(info);

@@ -239,7 +239,8 @@ class manageDatabaseGroup extends viewModelBase {
 
     private fetchOngoingTasks(): JQueryPromise<Raven.Server.Web.System.OngoingTasksResult> {
         const db = this.activeDatabase();
-        return new ongoingTasksCommand(db, null) //tODO:
+        const localNodeTag = clusterTopologyManager.default.localNodeTag();
+        return new ongoingTasksCommand(db, db.getFirstLocation(localNodeTag))
             .execute()
             .done((info) => {
                 this.graph.onTasksChanged(info);

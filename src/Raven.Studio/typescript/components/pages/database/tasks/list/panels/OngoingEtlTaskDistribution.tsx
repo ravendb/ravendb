@@ -1,13 +1,7 @@
 ﻿import React, { useState } from "react";
 import { DistributionItem, DistributionLegend, LocationDistribution } from "../../../../../common/LocationDistribution";
 import classNames from "classnames";
-import {
-    AnyEtlOngoingTaskInfo,
-    OngoingEtlTaskNodeInfo,
-    OngoingTaskElasticSearchEtlInfo,
-    OngoingTaskInfo,
-    OngoingTaskNodeInfo,
-} from "../../../../../models/tasks";
+import { AnyEtlOngoingTaskInfo, OngoingEtlTaskNodeInfo, OngoingTaskInfo } from "../../../../../models/tasks";
 import { ProgressCircle } from "../../../../../common/ProgressCircle";
 import { OngoingEtlTaskProgressTooltip } from "../OngoingEtlTaskProgressTooltip";
 

@@ -2,6 +2,7 @@
 import {
     BaseOngoingTaskPanelProps,
     ConnectionStringItem,
+    EmptyScriptsWarning,
     ICanShowTransformationScriptPreview,
     OngoingTaskActions,
     OngoingTaskName,
@@ -35,6 +36,7 @@ function Details(props: ElasticSearchEtlPanelProps & { canEdit: boolean }) {
                     <div className="value">{nodeUrl}</div>
                 </RichPanelDetailItem>
             ))}
+            <EmptyScriptsWarning task={data} />
         </RichPanelDetails>
     );
 }
