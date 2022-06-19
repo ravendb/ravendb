@@ -1,5 +1,13 @@
 <div class="flex-vertical absolute-fill content-margin custom-sorters">
-    <div class="row flex-row flex-grow flex-stretch-items">
+    <div class="absolute-center unsecure" data-bind="visible: !canUseCustomSorters">
+        <div class="panel padding padding-md">
+            <h2 class="text-warning"><i class="icon-info"></i> Feature not available</h2>
+            <p class="margin-top margin-lg">
+                Custom sorters are not available for sharded databases. 
+            </p>
+        </div>
+    </div>
+    <div class="row flex-row flex-grow flex-stretch-items" data-bind="if: canUseCustomSorters, visible: canUseCustomSorters">
         <div class="col-sm-12 col-lg-6 flex-vertical">
             <div class="flex-header flex-horizontal">
                 <div>
