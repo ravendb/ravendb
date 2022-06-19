@@ -12,7 +12,7 @@ import { OngoingTaskOlapEtlInfo } from "../../../../../models/tasks";
 import { useAccessManager } from "hooks/useAccessManager";
 import { useAppUrls } from "hooks/useAppUrls";
 import { RichPanel, RichPanelDetailItem, RichPanelDetails, RichPanelHeader } from "../../../../../common/RichPanel";
-import { OngoingTaskDistribution } from "./OngoingTaskDistribution";
+import { OngoingEtlTaskDistribution } from "./OngoingEtlTaskDistribution";
 
 type OlapEtlPanelProps = BaseOngoingTaskPanelProps<OngoingTaskOlapEtlInfo>;
 
@@ -73,7 +73,7 @@ export function OlapEtlPanel(props: OlapEtlPanelProps & ICanShowTransformationSc
                 />
             </RichPanelHeader>
             {detailsVisible && <Details {...props} canEdit={canEdit} />}
-            {detailsVisible && <OngoingTaskDistribution task={data} showPreview={showPreview} />}
+            {detailsVisible && <OngoingEtlTaskDistribution task={data} showPreview={showPreview} />}
         </RichPanel>
     );
 }

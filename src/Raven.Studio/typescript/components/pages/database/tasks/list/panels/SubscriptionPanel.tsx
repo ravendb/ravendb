@@ -1,5 +1,5 @@
-﻿import React from "react";
-import { RichPanel, RichPanelHeader } from "../../../../../common/RichPanel";
+﻿import React, { useCallback } from "react";
+import { RichPanel, RichPanelDetails, RichPanelHeader } from "../../../../../common/RichPanel";
 import { OngoingTaskSubscriptionInfo } from "../../../../../models/tasks";
 import {
     BaseOngoingTaskPanelProps,
@@ -10,6 +10,8 @@ import {
 } from "../shared";
 import { useAccessManager } from "hooks/useAccessManager";
 import { useAppUrls } from "hooks/useAppUrls";
+import { OngoingEtlTaskDistribution } from "./OngoingEtlTaskDistribution";
+import { SubscriptionTaskDistribution } from "./SubscriptionTaskDistribution";
 
 type SubscriptionPanelProps = BaseOngoingTaskPanelProps<OngoingTaskSubscriptionInfo>;
 
@@ -45,6 +47,7 @@ export function SubscriptionPanel(props: SubscriptionPanelProps) {
                 />
             </RichPanelHeader>
             {detailsVisible && <Details {...props} />}
+            {detailsVisible && <SubscriptionTaskDistribution task={data} />}
         </RichPanel>
     );
 
@@ -52,37 +55,11 @@ export function SubscriptionPanel(props: SubscriptionPanelProps) {
 
     /*
     return (
-        <div
-            className="panel destination-item subscription"
-            
-        >
-            <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>
-            <div className="padding-sm destination-info flex-vertical">
-                <div className="flex-horizontal">
-                    
-                </div>
-            </div>
             <div className="collapse panel-addon" data-bind="collapse: showDetails">
                 <div className="padding-sm flex-horizontal flex-wrap">
                     <div>
                         <div className="list-properties">
-                            <div className="property-item">
-                                <div className="property-name">Task Status:</div>
-                                <span className="property-value text-details" data-bind="text: badgeText"></span>
-                            </div>
-                            <div className="property-item">
-                                <div className="property-name">Mode:</div>
-                                <span className="property-value text-details" data-bind="text: subscriptionMode"></span>
-                            </div>
-                            ko if: clientDetailsIssue
-                            <div className="property-item">
-                                <div className="property-name">Client Status:</div>
-                                <div className="property-value">
-                                    <span data-bind="text: clientDetailsIssue, attr: { class: textClass() }"></span>
-                                </div>
-                            </div>
-                            /ko ko if: !clientDetailsIssue()
-                            <hr />
+                        
                             <div data-bind="foreach: clients">
                                 <div className="property-item">
                                     <div className="property-name">Client URI:</div>

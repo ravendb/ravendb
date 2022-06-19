@@ -12,7 +12,7 @@ import { OngoingTaskElasticSearchEtlInfo } from "../../../../../models/tasks";
 import { useAccessManager } from "hooks/useAccessManager";
 import { useAppUrls } from "hooks/useAppUrls";
 import { RichPanel, RichPanelDetailItem, RichPanelDetails, RichPanelHeader } from "../../../../../common/RichPanel";
-import { OngoingTaskDistribution } from "./OngoingTaskDistribution";
+import { OngoingEtlTaskDistribution } from "./OngoingEtlTaskDistribution";
 
 type ElasticSearchEtlPanelProps = BaseOngoingTaskPanelProps<OngoingTaskElasticSearchEtlInfo>;
 
@@ -74,7 +74,7 @@ export function ElasticSearchEtlPanel(props: ElasticSearchEtlPanelProps & ICanSh
                 />
             </RichPanelHeader>
             {detailsVisible && <Details {...props} canEdit={canEdit} />}
-            {detailsVisible && <OngoingTaskDistribution task={data} showPreview={showPreview} />}
+            {detailsVisible && <OngoingEtlTaskDistribution task={data} showPreview={showPreview} />}
         </RichPanel>
     );
 }

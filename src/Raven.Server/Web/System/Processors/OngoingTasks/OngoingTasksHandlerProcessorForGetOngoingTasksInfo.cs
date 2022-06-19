@@ -21,6 +21,7 @@ using Raven.Server.Documents.Replication.Incoming;
 using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 
 namespace Raven.Server.Web.System.Processors.OngoingTasks;
 
@@ -272,7 +273,9 @@ internal abstract class OngoingTasksHandlerProcessorForGetOngoingTasksInfo : Abs
 
     protected override IEnumerable<OngoingTaskSubscription> CollectSubscriptionTasks(TransactionOperationContext context, ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
     {
-        foreach (var keyValue in ClusterStateMachine.ReadValuesStartingWith(context, SubscriptionState.SubscriptionPrefix(databaseRecord.DatabaseName)))
+        var shardedDatabaseName = ShardHelper.ToDatabaseName(databaseRecord.DatabaseName);
+
+        foreach (var keyValue in ClusterStateMachine.ReadValuesStartingWith(context, SubscriptionState.SubscriptionPrefix(shardedDatabaseName)))
         {
             var subscriptionState = JsonDeserializationClient.SubscriptionState(keyValue.Value);
             var tag = _database.WhoseTaskIsIt(databaseRecord.Topology, subscriptionState, subscriptionState);

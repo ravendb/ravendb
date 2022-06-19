@@ -23,14 +23,15 @@ export function NamedProgressItem(props: {
     const progressFormatted = formatPercentage(progress, incomplete);
     const completed = !incomplete && progress.total === progress.processed;
     const remaining = progress.total - progress.processed;
-    const title =
-        "Processed " +
-        progress.processed.toLocaleString() +
-        " out of " +
-        progress.total.toLocaleString() +
-        " (" +
-        remaining.toLocaleString() +
-        " left)";
+    const title = completed
+        ? "Processed all items (" + progress.processed.toLocaleString() + ")"
+        : "Processed " +
+          progress.processed.toLocaleString() +
+          " out of " +
+          progress.total.toLocaleString() +
+          " (" +
+          remaining.toLocaleString() +
+          " left)";
     return (
         <div className="progress-item" title={title}>
             <strong className="progress-percentage">{progressFormatted}%</strong> {children}

@@ -1,16 +1,22 @@
 ﻿import React, { useState } from "react";
 import { DistributionItem, DistributionLegend, LocationDistribution } from "../../../../../common/LocationDistribution";
 import classNames from "classnames";
-import { OngoingTaskInfo, OngoingTaskNodeInfo } from "../../../../../models/tasks";
+import {
+    AnyEtlOngoingTaskInfo,
+    OngoingEtlTaskNodeInfo,
+    OngoingTaskElasticSearchEtlInfo,
+    OngoingTaskInfo,
+    OngoingTaskNodeInfo,
+} from "../../../../../models/tasks";
 import { ProgressCircle } from "../../../../../common/ProgressCircle";
-import { OngoingTaskProgressTooltip } from "../OngoingTaskProgressTooltip";
+import { OngoingEtlTaskProgressTooltip } from "../OngoingEtlTaskProgressTooltip";
 
-interface OngoingTaskDistributionProps {
-    task: OngoingTaskInfo;
+interface OngoingEtlTaskDistributionProps {
+    task: AnyEtlOngoingTaskInfo;
     showPreview: (transformationName: string) => void;
 }
 
-export function OngoingTaskDistribution(props: OngoingTaskDistributionProps) {
+export function OngoingEtlTaskDistribution(props: OngoingEtlTaskDistributionProps) {
     const { task, showPreview } = props;
     const sharded = task.nodesInfo.some((x) => x.location.shardNumber != null);
 
@@ -49,8 +55,8 @@ export function OngoingTaskDistribution(props: OngoingTaskDistributionProps) {
                         </div>
                         <div>{nodeInfo.status === "loaded" ? nodeInfo.details.taskConnectionStatus : ""}</div>
                         <div>{hasError ? "error" : "-"}</div>
-                        <OngoingTaskProgress task={task} nodeInfo={nodeInfo} />
-                        <OngoingTaskProgressTooltip
+                        <OngoingEtlTaskProgress task={task} nodeInfo={nodeInfo} />
+                        <OngoingEtlTaskProgressTooltip
                             target={id}
                             nodeInfo={nodeInfo}
                             task={task}
@@ -87,18 +93,18 @@ export function OngoingTaskDistribution(props: OngoingTaskDistributionProps) {
     );
 }
 
-interface OngoingTaskProgressProps {
-    nodeInfo: OngoingTaskNodeInfo;
+interface OngoingEtlTaskProgressProps {
+    nodeInfo: OngoingEtlTaskNodeInfo;
     task: OngoingTaskInfo;
 }
 
-export function OngoingTaskProgress(props: OngoingTaskProgressProps) {
+export function OngoingEtlTaskProgress(props: OngoingEtlTaskProgressProps) {
     const { nodeInfo, task } = props;
-    if (!nodeInfo.progress) {
+    if (!nodeInfo.etlProgress) {
         return <ProgressCircle state="running" />;
     }
 
-    if (nodeInfo.progress.every((x) => x.completed) && task.shared.taskState === "Enabled") {
+    if (nodeInfo.etlProgress.every((x) => x.completed) && task.shared.taskState === "Enabled") {
         return (
             <ProgressCircle state="success" icon="icon-check">
                 up to date
@@ -107,11 +113,11 @@ export function OngoingTaskProgress(props: OngoingTaskProgressProps) {
     }
 
     // at least one transformation is not completed - let's calculate total progress
-    const totalItems = nodeInfo.progress.reduce((acc, current) => acc + current.global.total, 0);
-    const totalProcessed = nodeInfo.progress.reduce((acc, current) => acc + current.global.processed, 0);
+    const totalItems = nodeInfo.etlProgress.reduce((acc, current) => acc + current.global.total, 0);
+    const totalProcessed = nodeInfo.etlProgress.reduce((acc, current) => acc + current.global.processed, 0);
 
     const percentage = Math.floor((totalProcessed * 100) / totalItems) / 100;
-    const anyDisabled = nodeInfo.progress.some((x) => x.disabled);
+    const anyDisabled = nodeInfo.etlProgress.some((x) => x.disabled);
 
     return (
         <ProgressCircle state="running" icon={anyDisabled ? "icon-stop" : null} progress={percentage}>
@@ -120,5 +126,5 @@ export function OngoingTaskProgress(props: OngoingTaskProgressProps) {
     );
 }
 
-const taskNodeInfoKey = (nodeInfo: OngoingTaskNodeInfo) =>
+const taskNodeInfoKey = (nodeInfo: OngoingEtlTaskNodeInfo) =>
     nodeInfo.location.shardNumber + "__" + nodeInfo.location.nodeTag;

@@ -3,7 +3,6 @@ import jsonUtil = require("common/jsonUtil");
 import getFolderPathOptionsCommand = require("commands/resources/getFolderPathOptionsCommand");
 import genUtils = require("common/generalUtils");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
-import { shardingTodo } from "common/developmentHelper";
 
 type configurationOrigin = "Default" | "Server" | "Database";
 
