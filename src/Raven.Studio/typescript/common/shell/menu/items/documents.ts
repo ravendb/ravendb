@@ -29,6 +29,7 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: "databases/patch(/:recentPatchHash)",
             moduleId: require("viewmodels/database/patch/patch"),
+            shardingMode: "allShards",
             title: "Patch",
             nav: true,
             css: "icon-patch",

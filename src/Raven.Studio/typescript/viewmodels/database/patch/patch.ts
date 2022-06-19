@@ -1,5 +1,4 @@
 import app = require("durandal/app");
-import viewModelBase = require("viewmodels/viewModelBase");
 import patchDocument = require("models/database/patch/patchDocument");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import document = require("models/database/documents/document");
@@ -24,8 +23,7 @@ import rqlLanguageService = require("common/rqlLanguageService");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import getIndexNamesCommand from "commands/database/index/getIndexNamesCommand";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
-
-type fetcherType = (skip: number, take: number, previewCols: string[], fullCols: string[]) => JQueryPromise<pagedResult<document>>;
+import shardViewModelBase from "viewmodels/shardViewModelBase";
 
 class patchList {
 
@@ -123,7 +121,7 @@ class patchList {
     }
 }
 
-class patch extends viewModelBase {
+class patch extends shardViewModelBase {
     
     view = require("views/database/patch/patch.html");
 
@@ -165,7 +163,7 @@ class patch extends viewModelBase {
 
     savedPatches = new patchList(item => this.usePatch(item), item => this.removePatch(item));
 
-    test = new patchTester(this.patchDocument().query, this.activeDatabase);
+    test: patchTester;
 
     private hideSavePatchHandler = (e: Event) => {
         if ($(e.target).closest(".patch-save").length === 0) {
@@ -173,11 +171,12 @@ class patch extends viewModelBase {
         }
     };
 
-    constructor() {
-        super();
+    constructor(db: database) {
+        super(db);
         aceEditorBindingHandler.install();
 
-        this.languageService = new rqlLanguageService(this.activeDatabase(), this.indexes, "Update");
+        this.languageService = new rqlLanguageService(db, this.indexes, "Update");
+        this.test = new patchTester(this.patchDocument().query, db);
 
         this.bindToCurrentInstance("savePatch");
         this.initObservables();
@@ -207,17 +206,17 @@ class patch extends viewModelBase {
         super.activate(recentPatchHash);
         this.updateHelpLink("QGGJR5");
 
-        this.fullDocumentsProvider = new documentPropertyProvider(this.activeDatabase());
+        this.fullDocumentsProvider = new documentPropertyProvider(this.db);
 
         this.loadLastQuery();
 
         this.disableAutoIndexCreation(activeDatabaseTracker.default.settings().disableAutoIndexCreation.getValue());
         
-        return $.when<any>(this.fetchIndexNames(this.activeDatabase()), this.savedPatches.loadAll(this.activeDatabase()));
+        return $.when<any>(this.fetchIndexNames(this.db), this.savedPatches.loadAll(this.db));
     }
 
     private loadLastQuery() {
-        const myLastQuery = patch.lastQuery.get(this.activeDatabase().name);
+        const myLastQuery = patch.lastQuery.get(this.db.name);
 
         if (myLastQuery) {
             this.patchDocument().query(myLastQuery);
@@ -232,7 +231,7 @@ class patch extends viewModelBase {
     }
 
     private saveLastQuery(queryText: string) {
-        patch.lastQuery.set(this.activeDatabase().name, queryText);
+        patch.lastQuery.set(this.db.name, queryText);
     }
 
     attached() {
@@ -267,7 +266,7 @@ class patch extends viewModelBase {
         const hasCollapsedFields = meta[getDocumentsPreviewCommand.ObjectStubsKey] || meta[getDocumentsPreviewCommand.ArrayStubsKey] || meta[getDocumentsPreviewCommand.TrimmedValueKey];
 
         if (hasCollapsedFields) {
-            new getDocumentWithMetadataCommand(doc.getId(), this.activeDatabase(), true)
+            new getDocumentWithMetadataCommand(doc.getId(), this.db, true)
                 .execute()
                 .done((fullDocument: document) => {
                     documentBasedColumnsProvider.showPreview(fullDocument);
@@ -300,8 +299,8 @@ class patch extends viewModelBase {
         })
             .done(result => {
                 if (result.can) {
-                    savedPatchesStorage.removeSavedPatchByHash(this.activeDatabase(), item.Hash);
-                    this.savedPatches.loadAll(this.activeDatabase());
+                    savedPatchesStorage.removeSavedPatchByHash(this.db, item.Hash);
+                    this.savedPatches.loadAll(this.db);
                 }
             });
     }
@@ -320,7 +319,7 @@ class patch extends viewModelBase {
             if (this.isValid(this.saveValidationGroup) && this.isValid(this.patchDocument().validationGroup)) {
 
                 // Verify if name already exists
-                if (_.find(savedPatchesStorage.getSavedPatches(this.activeDatabase()), x => x.Name.toUpperCase() === this.patchSaveName().toUpperCase())) { 
+                if (_.find(savedPatchesStorage.getSavedPatches(this.db), x => x.Name.toUpperCase() === this.patchSaveName().toUpperCase())) { 
                     this.confirmationMessage(`Patch ${generalUtils.escapeHtml(this.patchSaveName())} already exists`, `Overwrite existing patch ?`, {
                         buttons: ["No", "Overwrite"],
                         html: true
@@ -369,14 +368,14 @@ class patch extends viewModelBase {
         const dto = this.patchDocument().toDto();
         dto.RecentPatch = isRecent;
         this.savedPatches.append(dto);
-        savedPatchesStorage.storeSavedPatches(this.activeDatabase(), this.savedPatches.allPatches());
+        savedPatchesStorage.storeSavedPatches(this.db, this.savedPatches.allPatches());
 
         this.patchDocument().name("");
-        this.savedPatches.loadAll(this.activeDatabase());
+        this.savedPatches.loadAll(this.db);
     }
 
     showFirstItemInPreviewArea() {
-        this.savedPatches.previewItem(savedPatchesStorage.getSavedPatches(this.activeDatabase())[0]);
+        this.savedPatches.previewItem(savedPatchesStorage.getSavedPatches(this.db)[0]);
     }
     
     private getRecentPatchName(): string {
@@ -394,7 +393,7 @@ class patch extends viewModelBase {
             let query = queryCriteria.empty();
             query.queryText(patchScriptParts[0]);
 
-            new queryCommand(this.activeDatabase(), 0, 0, query)
+            new queryCommand(this.db, 0, 0, query)
                 .execute()
                 .done((queryResults: pagedResultExtended<document>) => matchingDocs.resolve(queryResults.totalResultCount))
                 .fail(() => matchingDocs.resolve(-1))
@@ -431,7 +430,7 @@ class patch extends viewModelBase {
         })
             .done(result => {
                 if (result.can) {
-                    new patchCommand(this.patchDocument().query(), this.activeDatabase(), {
+                    new patchCommand(this.patchDocument().query(), this.db, {
                         allowStale: this.staleIndexBehavior() === "patchStale",
                         staleTimeout: this.staleIndexBehavior() === "timeoutDefined" ? generalUtils.formatAsTimeSpan(this.staleTimeout() * 1000) : undefined,
                         maxOpsPerSecond: this.maxOperationsPerSecond(),
@@ -439,7 +438,7 @@ class patch extends viewModelBase {
                     })
                         .execute()
                         .done((operation: operationIdDto) => {
-                            notificationCenter.instance.openDetailsForOperationById(this.activeDatabase(), operation.OperationId);
+                            notificationCenter.instance.openDetailsForOperationById(this.db, operation.OperationId);
                             this.saveLastQuery("");
                             this.saveRecentPatch();
                         });
