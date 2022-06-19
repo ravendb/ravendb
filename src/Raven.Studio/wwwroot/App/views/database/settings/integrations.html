@@ -2,7 +2,7 @@
     <div class="row flex-row flex-grow flex-stretch-items">
         <div class="col-sm-12 col-lg-6 flex-vertical">
             <div class="scroll flex-grow">
-                <div class="hr-title on-base-background margin-top margin-top-lg">
+                <div class="hr-title on-base-background margin-top">
                     <h5><strong>PostgreSQL</strong> protocol credentials</h5><hr>
                     <button class="btn btn-sm btn-primary" title="Add new credentials"
                             data-bind="click: onAddPostgreSqlCredentials, requiredAccess: 'DatabaseAdmin'">
@@ -51,11 +51,11 @@
         </div>
         <div class="col-sm-12 col-lg-6 flex-vertical" data-bind="visible: editedPostgreSqlCredentials()">
             <div class="panel slidein-style">
-                <div class="flex-horizontal padding">
+                <div class="flex-horizontal padding-sm">
                     <h3 class="flex-grow" data-bind="visible: editedPostgreSqlCredentials">PostgreSQL Protocol Credentials</h3>
                     <button class="close flex-start" data-bind="click: onCloseEdit"><i class="icon-cancel"></i></button>
                 </div>
-                <form class="flex-form padding" autocomplete="off">
+                <form class="flex-form padding-sm" autocomplete="off">
                     <div data-bind="with: editedPostgreSqlCredentials">
                         <div class="form-group" data-bind="validationElement: username">
                             <label class="control-label">Username</label>
@@ -86,7 +86,7 @@
                     </div>
                     <div class="flex-horizontal">
                         <div class="flex-grow"></div>
-                        <div class="margin-top margin-top-lg">
+                        <div class="margin-top">
 <!--                            TODO - return the test button when imlemented on server side -->
 <!--                            <span data-bind="if: editedPostgreSqlCredentials">-->
 <!--                                <button class="btn btn-info disabled" title="Click to test credentials"-->
@@ -100,11 +100,11 @@
                     </div>
                 </form>
                 <div class="panel-addon" data-bind="with: testConnectionResult">
-                    <div class="padding bg-success small" data-bind="visible: Success">
+                    <div class="padding-sm bg-success small" data-bind="visible: Success">
                         <div data-bind="visible: $root.editedPostgreSqlCredentials()">Credentials successfully validated</div>
                     </div>
                     <div data-bind="if: !Success">
-                        <div class="padding bg-danger small">
+                        <div class="padding-sm bg-danger small">
                             <h2>Credentials failed!</h2>
                             <div data-bind="text: $root.errorText"></div>
                         </div>
