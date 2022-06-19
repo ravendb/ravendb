@@ -6,9 +6,9 @@ class docsIdsBasedOnQueryFetcher {
 
     static readonly MAX_RESULTS = 100;
 
-    private database: KnockoutObservable<database>;
+    private database: database;
 
-    constructor(database: KnockoutObservable<database>) {
+    constructor(database: database) {
         this.database = database
     }
     
@@ -24,7 +24,7 @@ class docsIdsBasedOnQueryFetcher {
         criteria.queryText(`${wherelessQueryText} where startsWith(id(), '${this.escape(documentIdPrefix)}')`);
         criteria.metadataOnly(true);
         
-        return new queryCommand(this.database(), 0, 10, criteria)
+        return new queryCommand(this.database, 0, 10, criteria)
             .execute()
             .then(result => result.items.map(x => x.getId()));
     }

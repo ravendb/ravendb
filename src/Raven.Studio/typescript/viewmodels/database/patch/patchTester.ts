@@ -20,7 +20,7 @@ class patchTester extends viewModelBase {
     
     view: any = null;
 
-    private db: KnockoutObservable<database>;
+    private readonly db: database;
 
     testMode = ko.observable<boolean>(false);
     query: KnockoutObservable<string>;
@@ -72,7 +72,7 @@ class patchTester extends viewModelBase {
     validationGroup: KnockoutValidationGroup;
     testDocumentValidationGroup: KnockoutValidationGroup;
 
-    constructor(query: KnockoutObservable<string>, db: KnockoutObservable<database>) {
+    constructor(query: KnockoutObservable<string>, db: database) {
         super();
         this.query = query;
         this.db = db;
@@ -93,7 +93,7 @@ class patchTester extends viewModelBase {
 
         this.docsIdsAutocompleteSource = new docsIdsBasedOnQueryFetcher(this.db);
         
-        new getIndexesDefinitionsCommand(this.db(), 0, 1024 * 1024)
+        new getIndexesDefinitionsCommand(this.db, 0, 1024 * 1024)
             .execute()
             .then(indexes => {
                 indexes.forEach(index => {
@@ -126,7 +126,7 @@ class patchTester extends viewModelBase {
         });
 
         validationHelpers.addDocumentIdValidation(
-            this.documentId, this.activeDatabase, ko.pureComputed(() => !!this.docsIdsAutocompleteResults()));
+            this.documentId, this.db, ko.pureComputed(() => !!this.docsIdsAutocompleteResults()));
 
         this.query.subscribe(x => 
             this.docsIdsAutocompleteResults([]));
@@ -224,7 +224,7 @@ class patchTester extends viewModelBase {
 
         viewHelpers.asyncValidationCompleted(this.testDocumentValidationGroup)
         .then(() => {
-            return new getDocumentWithMetadataCommand(this.documentId(), this.db())
+            return new getDocumentWithMetadataCommand(this.documentId(), this.db)
             .execute()
             .done((doc: document) => {
                 if (doc) {
@@ -260,7 +260,7 @@ class patchTester extends viewModelBase {
 
                 const query = this.query();
 
-                new patchCommand(query, this.db(), { test: true, documentId: this.documentId() })
+                new patchCommand(query, this.db, { test: true, documentId: this.documentId() })
                     .execute()
                     .done((result: any) => {
                         const modifiedDocument = new document(result.ModifiedDocument).toDto(true);
