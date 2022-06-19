@@ -65,6 +65,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: 'databases/settings/revertRevisions',
             moduleId: require('viewmodels/database/settings/revertRevisions'),
+            shardingMode: "allShards",
             title: 'Revert Revisions',
             nav: false,
             css: 'icon-revert-revisions',
