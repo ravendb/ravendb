@@ -46,7 +46,7 @@ namespace Raven.Server.ServerWide.Commands.Sharding
                 Status = MigrationStatus.Moving
             };
 
-            record.ShardBucketMigrations.Add(Bucket, bucketMigration);
+            record.Sharding.ShardBucketMigrations.Add(Bucket, bucketMigration);
         }
 
         public override void FillJson(DynamicJsonValue json)
