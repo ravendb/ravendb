@@ -444,7 +444,7 @@ namespace Raven.Server.Web.System
             if (databaseRecord.IsSharded)
             {
                 databaseRecord.Sharding.Orchestrator ??= new OrchestratorConfiguration();
-                databaseRecord.Sharding.Orchestrator.Topology ??= new DatabaseTopology();
+                databaseRecord.Sharding.Orchestrator.Topology ??= new OrchestratorTopology();
 
                 foreach (var databaseTopology in databaseRecord.Sharding.Shards)
                     UpdateDatabaseTopology(databaseTopology, clusterTopology, replicationFactor, clusterTransactionId);

@@ -197,101 +197,101 @@ namespace Raven.Server.Utils
 
                 if (bucket == 0)
                 {
-                    if (record.Sharding.ShardBucketRanges[0].ShardNumber == toShard)
+                    if (record.Sharding.BucketRanges[0].ShardNumber == toShard)
                         return; // same shard
 
-                    record.Sharding.ShardBucketRanges[0].BucketRangeStart++;
-                    record.Sharding.ShardBucketRanges.Insert(0, new ShardBucketRange { BucketRangeStart = 0, ShardNumber = toShard });
+                    record.Sharding.BucketRanges[0].BucketRangeStart++;
+                    record.Sharding.BucketRanges.Insert(0, new ShardBucketRange { BucketRangeStart = 0, ShardNumber = toShard });
                     return;
                 }
 
                 if (bucket == NumberOfBuckets - 1)
                 {
-                    if (record.Sharding.ShardBucketRanges[^1].ShardNumber == toShard)
+                    if (record.Sharding.BucketRanges[^1].ShardNumber == toShard)
                         return; // same shard
 
-                    record.Sharding.ShardBucketRanges.Add(new ShardBucketRange { BucketRangeStart = bucket, ShardNumber = toShard });
+                    record.Sharding.BucketRanges.Add(new ShardBucketRange { BucketRangeStart = bucket, ShardNumber = toShard });
                     return;
                 }
 
-                for (int i = 0; i < record.Sharding.ShardBucketRanges.Count - 1; i++)
+                for (int i = 0; i < record.Sharding.BucketRanges.Count - 1; i++)
                 {
-                    var start = record.Sharding.ShardBucketRanges[i].BucketRangeStart;
-                    var end = record.Sharding.ShardBucketRanges[i + 1].BucketRangeStart - 1;
+                    var start = record.Sharding.BucketRanges[i].BucketRangeStart;
+                    var end = record.Sharding.BucketRanges[i + 1].BucketRangeStart - 1;
                     var size = end - start + 1;
 
                     if (bucket <= end)
                     {
-                        var currentShard = record.Sharding.ShardBucketRanges[i].ShardNumber;
+                        var currentShard = record.Sharding.BucketRanges[i].ShardNumber;
                         if (currentShard == toShard)
                             return; // same shard
 
                         if (size == 1)
                         {
-                            var next = record.Sharding.ShardBucketRanges[i + 1].ShardNumber;
-                            var prev = record.Sharding.ShardBucketRanges[i - 1].ShardNumber;
+                            var next = record.Sharding.BucketRanges[i + 1].ShardNumber;
+                            var prev = record.Sharding.BucketRanges[i - 1].ShardNumber;
 
                             if (next == toShard)
                             {
-                                record.Sharding.ShardBucketRanges[i + 1].BucketRangeStart--;
-                                record.Sharding.ShardBucketRanges.RemoveAt(i);
+                                record.Sharding.BucketRanges[i + 1].BucketRangeStart--;
+                                record.Sharding.BucketRanges.RemoveAt(i);
                             }
 
                             if (prev == toShard)
                             {
-                                record.Sharding.ShardBucketRanges.RemoveAt(i);
+                                record.Sharding.BucketRanges.RemoveAt(i);
                             }
 
                             if (next != toShard && prev != toShard)
-                                record.Sharding.ShardBucketRanges[i].ShardNumber = toShard;
+                                record.Sharding.BucketRanges[i].ShardNumber = toShard;
 
                             return;
                         }
 
                         if (bucket == start)
                         {
-                            record.Sharding.ShardBucketRanges[i].BucketRangeStart++;
+                            record.Sharding.BucketRanges[i].BucketRangeStart++;
 
-                            if (record.Sharding.ShardBucketRanges[i - 1].ShardNumber == toShard)
+                            if (record.Sharding.BucketRanges[i - 1].ShardNumber == toShard)
                                 return;
 
-                            record.Sharding.ShardBucketRanges.Insert(i + 1, new ShardBucketRange { BucketRangeStart = bucket, ShardNumber = toShard });
+                            record.Sharding.BucketRanges.Insert(i + 1, new ShardBucketRange { BucketRangeStart = bucket, ShardNumber = toShard });
                             return;
                         }
 
                         if (bucket == end)
                         {
-                            if (record.Sharding.ShardBucketRanges[i + 1].ShardNumber == toShard)
+                            if (record.Sharding.BucketRanges[i + 1].ShardNumber == toShard)
                             {
-                                record.Sharding.ShardBucketRanges[i + 1].BucketRangeStart--;
+                                record.Sharding.BucketRanges[i + 1].BucketRangeStart--;
                                 return;
                             }
 
-                            record.Sharding.ShardBucketRanges.Insert(i + 1, new ShardBucketRange { BucketRangeStart = bucket, ShardNumber = toShard });
+                            record.Sharding.BucketRanges.Insert(i + 1, new ShardBucketRange { BucketRangeStart = bucket, ShardNumber = toShard });
                             return;
                         }
 
                         // split
-                        record.Sharding.ShardBucketRanges.Insert(i + 1, new ShardBucketRange { BucketRangeStart = bucket, ShardNumber = toShard });
+                        record.Sharding.BucketRanges.Insert(i + 1, new ShardBucketRange { BucketRangeStart = bucket, ShardNumber = toShard });
 
-                        record.Sharding.ShardBucketRanges.Insert(i + 2, new ShardBucketRange { BucketRangeStart = bucket + 1, ShardNumber = currentShard });
+                        record.Sharding.BucketRanges.Insert(i + 2, new ShardBucketRange { BucketRangeStart = bucket + 1, ShardNumber = currentShard });
                         return;
                     }
                 }
 
-                var lastRange = record.Sharding.ShardBucketRanges[^1];
+                var lastRange = record.Sharding.BucketRanges[^1];
                 if (bucket == lastRange.BucketRangeStart)
                 {
-                    if (toShard == record.Sharding.ShardBucketRanges[^2].ShardNumber)
+                    if (toShard == record.Sharding.BucketRanges[^2].ShardNumber)
                     {
-                        record.Sharding.ShardBucketRanges[^1].BucketRangeStart++;
+                        record.Sharding.BucketRanges[^1].BucketRangeStart++;
                         return;
                     }
                 }
 
                 // split last
-                record.Sharding.ShardBucketRanges.Insert(record.Sharding.ShardBucketRanges.Count, new ShardBucketRange { BucketRangeStart = bucket, ShardNumber = toShard });
-                record.Sharding.ShardBucketRanges.Insert(record.Sharding.ShardBucketRanges.Count,
+                record.Sharding.BucketRanges.Insert(record.Sharding.BucketRanges.Count, new ShardBucketRange { BucketRangeStart = bucket, ShardNumber = toShard });
+                record.Sharding.BucketRanges.Insert(record.Sharding.BucketRanges.Count,
                     new ShardBucketRange { BucketRangeStart = bucket + 1, ShardNumber = lastRange.ShardNumber });
             }
             finally
@@ -302,16 +302,16 @@ namespace Raven.Server.Utils
 
         private static void ValidateBucketsMapping(DatabaseRecord record)
         {
-            if (record.Sharding.ShardBucketRanges[0].BucketRangeStart != 0)
+            if (record.Sharding.BucketRanges[0].BucketRangeStart != 0)
                 throw new InvalidOperationException($"At database '{record.DatabaseName}', " +
-                                                    $"First mapping must start with zero, actual: {record.Sharding.ShardBucketRanges[0].BucketRangeStart}");
+                                                    $"First mapping must start with zero, actual: {record.Sharding.BucketRanges[0].BucketRangeStart}");
 
-            var lastShard = record.Sharding.ShardBucketRanges[0].ShardNumber;
+            var lastShard = record.Sharding.BucketRanges[0].ShardNumber;
             var lastStart = 0;
 
-            for (int i = 1; i < record.Sharding.ShardBucketRanges.Count - 1; i++)
+            for (int i = 1; i < record.Sharding.BucketRanges.Count - 1; i++)
             {
-                var current = record.Sharding.ShardBucketRanges[i];
+                var current = record.Sharding.BucketRanges[i];
                 if (current.BucketRangeStart <= lastStart)
                     throw new InvalidOperationException($"At database '{record.DatabaseName}', " +
                                                         $"Overlap detected between mapping '{i}' and '{i - 1}' start: {current.BucketRangeStart}, previous end: {lastStart}");
