@@ -719,7 +719,7 @@ namespace Raven.Server.Documents.Replication
                     long lastEtagFromSrc = 0;
 
                     if (getLatestEtagMessage.ReplicationsType != ReplicationLatestEtagRequest.ReplicationType.Migration &&
-						ShardHelper.IsShardedName(Database.Name) == false)
+                        ShardHelper.IsShardedName(Database.Name) == false)
                     {
                         changeVector = DocumentsStorage.GetFullDatabaseChangeVector(documentsContext);
 
@@ -728,7 +728,7 @@ namespace Raven.Server.Documents.Replication
                         if (_log.IsInfoEnabled)
                             _log.Info($"GetLastEtag response, last etag: {lastEtagFromSrc}");
                     }
-                    
+
                     var response = new DynamicJsonValue
                     {
                         [nameof(ReplicationMessageReply.Type)] = nameof(ReplicationMessageReply.ReplyType.Ok),

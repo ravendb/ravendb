@@ -1,5 +1,4 @@
-﻿extern alias NGC;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Security.Cryptography.X509Certificates;
@@ -23,7 +22,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
 {
     public class ShardedOutgoingReplicationHandler : AbstractOutgoingReplicationHandler<TransactionContextPool, TransactionOperationContext>
     {
-        private readonly int _shard;
+        private readonly int _shardNumber;
         private readonly ShardedDatabaseContext.ShardedReplicationContext _parent;
         private readonly ReplicationQueue _replicationQueue;
 
@@ -37,7 +36,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
             base(connectionInfo, parent.Server, parent.DatabaseName, node, parent.Context.DatabaseShutdown, parent.Server.ContextPool)
         {
             _parent = parent;
-            _shard = shardNumber;
+            _shardNumber = shardNumber;
 
             _tcpConnectionOptions = new TcpConnectionOptions
             {
@@ -52,7 +51,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
         {
             while (_cts.IsCancellationRequested == false)
             {
-                while (_replicationQueue.Items[_shard].TryTake(out var items))
+                while (_replicationQueue.Items[_shardNumber].TryTake(out var items))
                 {
                     using (_parent.Server.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     {
@@ -81,7 +80,6 @@ namespace Raven.Server.Documents.Sharding.Handlers
                                     DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "Handle missing attachments");
                                     continue;
                                 }
-                                    
 
                                 _replicationQueue.SendToShardCompletion.Signal();
 
@@ -99,14 +97,14 @@ namespace Raven.Server.Documents.Sharding.Handlers
             try
             {
                 DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "Unify this with the ReplicationDocumentSenderBase.SendDocumentsBatch");
-                
+
                 var sw = Stopwatch.StartNew();
                 var headerJson = new DynamicJsonValue
                 {
                     [nameof(ReplicationMessageHeader.Type)] = ReplicationMessageType.Documents,
                     [nameof(ReplicationMessageHeader.LastDocumentEtag)] = _lastEtag,
                     [nameof(ReplicationMessageHeader.ItemsCount)] = items.Count,
-                    [nameof(ReplicationMessageHeader.AttachmentStreamsCount)] = _replicationQueue.AttachmentsPerShard[_shard].Count
+                    [nameof(ReplicationMessageHeader.AttachmentStreamsCount)] = _replicationQueue.AttachmentsPerShard[_shardNumber].Count
                 };
 
                 WriteToServer(headerJson);
@@ -121,7 +119,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                     _lastEtag = item.Etag;
                 }
 
-                foreach (var kvp in _replicationQueue.AttachmentsPerShard[_shard])
+                foreach (var kvp in _replicationQueue.AttachmentsPerShard[_shardNumber])
                 {
                     using (stats.For(ReplicationOperation.Outgoing.AttachmentRead))
                     {
@@ -163,7 +161,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                     item.Dispose();
                 }
 
-                _replicationQueue.AttachmentsPerShard[_shard].Clear();
+                _replicationQueue.AttachmentsPerShard[_shardNumber].Clear();
             }
 
             return true;
