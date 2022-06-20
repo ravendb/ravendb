@@ -31,37 +31,47 @@ public partial class ClusterTestBase
 
         public Task<(long Index, List<RavenServer> Servers)> CreateShardedDatabaseInCluster(string databaseName, int replicationFactor, (List<RavenServer> Nodes, RavenServer Leader) tuple, int shards = 3, X509Certificate2 certificate = null)
         {
+            var tags = tuple.Nodes.Select(x => x.ServerStore.NodeTag).ToList();
+
             var record = new DatabaseRecord(databaseName)
             {
                 Sharding = new ShardingConfiguration
                 {
-                    Shards = GetDatabaseTopologyForShards(replicationFactor, tuple.Nodes.Select(x => x.ServerStore.NodeTag).ToList(), shards)
+                    Orchestrator = new OrchestratorConfiguration
+                    {
+                        Topology = CreateTopology<OrchestratorTopology>(replicationFactor, tags, 0)
+                    },
+                    Shards = GetDatabaseTopologyForShards(replicationFactor, tags, shards)
                 }
             };
             return _parent.CreateDatabaseInCluster(record, replicationFactor, tuple.Leader.WebUrl, certificate);
         }
 
-        public static DatabaseTopology[] GetDatabaseTopologyForShards(int replicationFactor, List<string> tags, int shards)
+        private static DatabaseTopology[] GetDatabaseTopologyForShards(int replicationFactor, List<string> tags, int shards)
         {
             Assert.True(replicationFactor <= tags.Count);
             var topology = new DatabaseTopology[shards];
             for (int i = 0; i < shards; i++)
-            {
-                var currentTag = tags[i % tags.Count];
-                var otherTags = tags.Where(x => x != currentTag).ToList();
-                var members = new List<string>() { currentTag };
-                var localReplicationFactor = replicationFactor;
-                while (--localReplicationFactor != 0 && otherTags.Count > 0)
-                {
-                    int index = new Random().Next(otherTags.Count);
-                    members.Add(otherTags[index]);
-                    otherTags.Remove(otherTags[index]);
-                }
-
-                topology[i] = new DatabaseTopology { Members = members };
-            }
+                topology[i] = CreateTopology<DatabaseTopology>(replicationFactor, tags, i);
 
             return topology;
+        }
+
+        private static TTopology CreateTopology<TTopology>(int replicationFactor, List<string> tags, int shardNumber)
+            where TTopology : DatabaseTopology, new()
+        {
+            var currentTag = tags[shardNumber % tags.Count];
+            var otherTags = tags.Where(x => x != currentTag).ToList();
+            var members = new List<string> { currentTag };
+            var localReplicationFactor = replicationFactor;
+            while (--localReplicationFactor != 0 && otherTags.Count > 0)
+            {
+                int index = new Random().Next(otherTags.Count);
+                members.Add(otherTags[index]);
+                otherTags.Remove(otherTags[index]);
+            }
+
+            return new TTopology { Members = members };
         }
 
         public async Task<IDictionary<string, List<DocumentDatabase>>> GetShardsDocumentDatabaseInstancesFor(IDocumentStore store, List<RavenServer> Nodes, string database = null)
