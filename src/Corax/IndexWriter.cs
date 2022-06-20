@@ -9,6 +9,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Corax.Pipeline;
 using Corax.Utils;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Server;
 using Sparrow.Server.Compression;
@@ -305,6 +306,10 @@ namespace Corax
 
             void AnalyzeInsert(Span<byte> wordsBuffer, Span<Token> tokens, ReadOnlySpan<byte> value)
             {
+                if (wordsBuffer.Length < value.Length)
+                {
+                    throw new Exception($"Passed value with length: {value.Length}. Contains {Encodings.Utf8.GetString(value)} but buffer is only {wordsBuffer.Length}");
+                }
                 binding.Analyzer.Execute(value, ref wordsBuffer, ref tokens);
                 for (int i = 0; i < tokens.Length; i++)
                 {

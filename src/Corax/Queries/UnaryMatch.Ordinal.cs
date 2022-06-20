@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -36,6 +37,36 @@ namespace Corax.Queries
             return result;
         }
 
+        // private static int FillFuncSequenceAnyBasedOnTerms<TComparer>(ref UnaryMatch<TInner, TValueType> match, Span<long> matches)
+        //     where TComparer : struct, IUnaryMatchComparer
+        // {
+        //     var comparer = default(TComparer);
+        //     var searcher = match._searcher;
+        //     var currentMatches = matches;
+        //     int totalResults = 0;
+        //     int maxUnusedMatchesSlots = matches.Length >= 64 ? matches.Length / 8 : 1;
+        //     int storeIdx = 0;
+        //     int results;
+        //     do
+        //     {
+        //         var freeMemory = currentMatches.Slice(storeIdx);
+        //         results = match._inner.Fill(freeMemory);
+        //         if (results == 0)
+        //             return totalResults;
+        //
+        //         for (int i = 0; i < results; i++)
+        //         {
+        //             var matchIdx = freeMemory[i];
+        //             var reader = searcher.GetReaderFor(freeMemory[i]);
+        //             var type = reader.GetFieldType(match._fieldId, out var _);
+        //             
+        //             
+        //             
+        //             
+        //         }
+        //         
+        //     } while ();
+        // }
 
         [SkipLocalsInit]
         private static int FillFuncSequenceAny<TComparer>(ref UnaryMatch<TInner, TValueType> match, Span<long> matches)
@@ -653,7 +684,7 @@ namespace Corax.Queries
 
             return storeIdx;
         }
-
+        
         [SkipLocalsInit]
         private static int FillFuncNumericalAny<TComparer>(ref UnaryMatch<TInner, TValueType> match, Span<long> matches)
             where TComparer : struct, IUnaryMatchComparer
@@ -1186,8 +1217,7 @@ namespace Corax.Queries
                 throw new NotSupportedException($"MatchComparer does not support type {nameof(T)}");
             }
         }
-
-
+        
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static long CoherseValueTypeToLong(TValueType value)
         {
