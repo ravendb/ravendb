@@ -99,7 +99,10 @@ export interface OngoingTaskSqlEtlSharedInfo extends OngoingTaskSharedInfo {
 }
 
 export interface OngoingTaskSubscriptionSharedInfo extends OngoingTaskSharedInfo {
-    //TODO:
+    changeVectorForNextBatchStartingPoint: string;
+    changeVectorForNextBatchStartingPointPerShard: { [key: string]: string };
+    lastBatchAckTime?: string;
+    lastClientConnectionTime?: string;
 }
 
 export interface OngoingTaskElasticSearchEtlNodeInfoDetails extends OngoingTaskNodeInfoDetails {}
@@ -126,9 +129,7 @@ export interface OngoingTaskReplicationSinkNodeInfoDetails extends OngoingTaskNo
 
 export interface OngoingTaskSqlEtlNodeInfoDetails extends OngoingTaskNodeInfoDetails {}
 
-export interface OngoingTaskSubscriptionNodeInfoDetails extends OngoingTaskNodeInfoDetails {
-    //TODO: ChangeVectorForNextBatchStartingPoint and ChangeVectorForNextBatchStartingPointPerShard
-}
+export interface OngoingTaskSubscriptionNodeInfoDetails extends OngoingTaskNodeInfoDetails {}
 
 export type AnyEtlOngoingTaskInfo =
     | OngoingTaskSqlEtlInfo

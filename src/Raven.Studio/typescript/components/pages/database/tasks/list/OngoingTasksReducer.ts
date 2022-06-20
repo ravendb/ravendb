@@ -15,6 +15,8 @@ import {
     OngoingTaskReplicationSinkSharedInfo,
     OngoingTaskSharedInfo,
     OngoingTaskSqlEtlSharedInfo,
+    OngoingTaskSubscriptionInfo,
+    OngoingTaskSubscriptionSharedInfo,
 } from "../../../../models/tasks";
 import OngoingTasksResult = Raven.Server.Web.System.OngoingTasksResult;
 import { produce } from "immer";
@@ -32,6 +34,7 @@ import EtlTaskProgress = Raven.Server.Documents.ETL.Stats.EtlTaskProgress;
 import EtlProcessProgress = Raven.Server.Documents.ETL.Stats.EtlProcessProgress;
 import TaskUtils from "../../../../utils/TaskUtils";
 import { WritableDraft } from "immer/dist/types/types-external";
+import OngoingTaskSubscription = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSubscription;
 
 interface ActionTasksLoaded {
     location: databaseLocationSpecifier;
@@ -185,16 +188,27 @@ function mapSharedInfo(task: OngoingTask): OngoingTaskSharedInfo {
             };
             return result;
         }
+        case "Subscription": {
+            const incoming = task as OngoingTaskSubscription;
+
+            // noinspection UnnecessaryLocalVariableJS
+            const result: OngoingTaskSubscriptionSharedInfo = {
+                ...commonProps,
+                lastClientConnectionTime: incoming.LastClientConnectionTime,
+                lastBatchAckTime: incoming.LastBatchAckTime,
+                changeVectorForNextBatchStartingPointPerShard: incoming.ChangeVectorForNextBatchStartingPointPerShard,
+                changeVectorForNextBatchStartingPoint: incoming.ChangeVectorForNextBatchStartingPoint,
+            };
+            return result;
+        }
 
         //TODO: backup
-        //TODO: subscriptions
     }
 
     return commonProps;
 }
 
 function mapNodeInfo(task: OngoingTask): OngoingTaskNodeInfoDetails {
-    //TODO: switch on type
     return {
         taskConnectionStatus: task.TaskConnectionStatus,
         responsibleNode: task.ResponsibleNode?.NodeTag,
