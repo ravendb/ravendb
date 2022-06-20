@@ -306,7 +306,8 @@ internal abstract class OngoingTasksHandlerProcessorForGetOngoingTasksInfo : Abs
                 MentorNode = subscriptionState.MentorNode,
                 TaskId = subscriptionState.SubscriptionId,
                 Query = subscriptionState.Query,
-                TaskConnectionStatus = connectionStatus
+                TaskConnectionStatus = connectionStatus,
+                //TODO: client ack, connect time + change vectors?
             };
         }
     }
