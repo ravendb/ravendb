@@ -190,7 +190,7 @@ class olapTaskTestMode {
                 Configuration: this.configurationProvider(),
             };
 
-            eventsCollector.default.reportEvent("olap-etl", "test-replication");
+            eventsCollector.default.reportEvent("olap-etl", "test-script");
 
             new testOlapEtlCommand(this.db(), dto)
                 .execute()

@@ -473,7 +473,7 @@ Option unchecked: <Br />No execution will take place, only generate the SQL stat
             <div role="tabpanel" class="tab-pane fade" id="testResults">
                 <h3>Generated SQL statements:</h3>
                 <div data-bind="foreach: testResults">
-                    <div class="sql-statement panel">
+                    <div class="test-output panel">
                         <pre data-bind="text: CommandText"></pre>
                         
                         <h4 class="margin-left" data-bind="visible: Params && Params.length"><strong>Parameters:</strong></h4>

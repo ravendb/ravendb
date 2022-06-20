@@ -202,8 +202,7 @@ loadToOrders(orderData, {{  // load to the 'Orders' Queue with optional params
     PartitionKey: id(this),
     Type: 'com.github.users',
     Source: '/registrations/direct-signup',
-    Exchange: 'users-topic',
-    ExchangeType: 'topic',
+    Exchange: 'users-topic'
 }});`;
     
     kafkaEtlSampleHtml = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.kafkaEtlSampleText);
