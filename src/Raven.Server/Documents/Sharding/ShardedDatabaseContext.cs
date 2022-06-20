@@ -99,13 +99,13 @@ namespace Raven.Server.Documents.Sharding
 
         public DatabaseTopology[] ShardsTopology => _record.Sharding.Shards;
 
-        public int GetShardNumber(int shardBucket) => ShardHelper.GetShardNumber(_record.Sharding.ShardBucketRanges, shardBucket);
+        public int GetShardNumber(int shardBucket) => ShardHelper.GetShardNumber(_record.Sharding.BucketRanges, shardBucket);
 
         public int GetShardNumber(TransactionOperationContext context, string id)
         {
             var bucket = ShardHelper.GetBucket(context, id);
 
-            return ShardHelper.GetShardNumber(_record.Sharding.ShardBucketRanges, bucket);
+            return ShardHelper.GetShardNumber(_record.Sharding.BucketRanges, bucket);
         }
 
         public bool HasTopologyChanged(long etag)

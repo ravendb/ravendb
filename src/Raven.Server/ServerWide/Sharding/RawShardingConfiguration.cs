@@ -43,10 +43,10 @@ public class RawShardingConfiguration
         get
         {
             if (_materializedSharding != null)
-                return _materializedSharding.ShardedDatabaseId;
+                return _materializedSharding.DatabaseId;
 
             if (_shardedDatabaseId == null)
-                _sharding.TryGet(nameof(ShardingConfiguration.ShardedDatabaseId), out _shardedDatabaseId);
+                _sharding.TryGet(nameof(ShardingConfiguration.DatabaseId), out _shardedDatabaseId);
 
             return _shardedDatabaseId;
         }
@@ -59,12 +59,12 @@ public class RawShardingConfiguration
         get
         {
             if (_materializedSharding != null)
-                return _materializedSharding.ShardBucketMigrations;
+                return _materializedSharding.BucketMigrations;
 
             if (_bucketMigrations == null)
             {
                 _bucketMigrations = new Dictionary<int, ShardBucketMigration>();
-                if (_sharding.TryGet(nameof(ShardingConfiguration.ShardBucketMigrations), out BlittableJsonReaderObject obj) && obj != null)
+                if (_sharding.TryGet(nameof(ShardingConfiguration.BucketMigrations), out BlittableJsonReaderObject obj) && obj != null)
                 {
                     var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
                     for (var i = 0; i < obj.Count; i++)
@@ -117,12 +117,12 @@ public class RawShardingConfiguration
         get
         {
             if (_materializedSharding != null)
-                return _materializedSharding.ShardBucketRanges;
+                return _materializedSharding.BucketRanges;
 
             if (_shardBucketRanges != null)
                 return _shardBucketRanges;
 
-            if (_sharding.TryGet(nameof(ShardingConfiguration.ShardBucketRanges), out BlittableJsonReaderArray array) == false || array == null)
+            if (_sharding.TryGet(nameof(ShardingConfiguration.BucketRanges), out BlittableJsonReaderArray array) == false || array == null)
                 return null;
 
             _shardBucketRanges = new List<ShardBucketRange>(array.Length);

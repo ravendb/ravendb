@@ -852,15 +852,15 @@ namespace Raven.Server.ServerWide
                     }
                     else
                     {
-                        if (addDatabase.Record.Sharding.ShardBucketRanges == null ||
-                            addDatabase.Record.Sharding.ShardBucketRanges.Count == 0)
+                        if (addDatabase.Record.Sharding.BucketRanges == null ||
+                            addDatabase.Record.Sharding.BucketRanges.Count == 0)
                         {
-                            addDatabase.Record.Sharding.ShardBucketRanges = new List<ShardBucketRange>();
+                            addDatabase.Record.Sharding.BucketRanges = new List<ShardBucketRange>();
                             var start = 0;
                             var step = (1024 * 1024) / addDatabase.Record.Sharding.Shards.Length;
                             for (int i = 0; i < addDatabase.Record.Sharding.Shards.Length; i++)
                             {
-                                addDatabase.Record.Sharding.ShardBucketRanges.Add(new ShardBucketRange
+                                addDatabase.Record.Sharding.BucketRanges.Add(new ShardBucketRange
                                 {
                                     ShardNumber = i,
                                     BucketRangeStart = start
@@ -2797,8 +2797,8 @@ namespace Raven.Server.ServerWide
                     InitializeTopology(shardTopology);
                 }
 
-                if (string.IsNullOrEmpty(record.Sharding.ShardedDatabaseId))
-                    record.Sharding.ShardedDatabaseId = Guid.NewGuid().ToBase64Unpadded();
+                if (string.IsNullOrEmpty(record.Sharding.DatabaseId))
+                    record.Sharding.DatabaseId = Guid.NewGuid().ToBase64Unpadded();
             }
 
             var addDatabaseCommand = new AddDatabaseCommand(raftRequestId)

@@ -128,6 +128,10 @@ namespace Raven.Client.ServerWide
         }
     }
 
+    public class OrchestratorTopology : DatabaseTopology
+    {
+    }
+
     public class DatabaseTopology
     {
         public List<string> Members = new List<string>();

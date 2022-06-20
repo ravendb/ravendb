@@ -1686,10 +1686,10 @@ namespace Raven.Server.ServerWide
                         if (addDatabaseCommand.Record.IsSharded == false)
                             return addDatabaseCommand.Record.Topology.Members;
 
-                        if (addDatabaseCommand.Record.Sharding == null || addDatabaseCommand.Record.Sharding.ShardBucketRanges == null || addDatabaseCommand.Record.Sharding.ShardBucketRanges.Count == 0)
-                            throw new RachisInvalidOperationException($"Can't create a sharded database {addDatabaseCommand.Name} with an empty {nameof(DatabaseRecord.Sharding.ShardBucketRanges)}");
+                        if (addDatabaseCommand.Record.Sharding == null || addDatabaseCommand.Record.Sharding.BucketRanges == null || addDatabaseCommand.Record.Sharding.BucketRanges.Count == 0)
+                            throw new RachisInvalidOperationException($"Can't create a sharded database {addDatabaseCommand.Name} with an empty {nameof(DatabaseRecord.Sharding.BucketRanges)}");
 
-                        var set = new HashSet<string>();
+                        var set = new HashSet<string>(addDatabaseCommand.Record.Sharding.Orchestrator.Topology.Members);
                         foreach (var shard in addDatabaseCommand.Record.Sharding.Shards)
                         {
                             set.UnionWith(shard.Members);

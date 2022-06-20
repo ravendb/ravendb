@@ -1001,7 +1001,7 @@ namespace Raven.Server.Documents.Replication
                 if (handler is not OutgoingMigrationReplicationHandler migrationHandler)
                     continue;
 
-                if (newRecord.Sharding.ShardBucketMigrations.TryGetValue(migrationHandler.BucketMigrationNode.Bucket, out var migration) == false)
+                if (newRecord.Sharding.BucketMigrations.TryGetValue(migrationHandler.BucketMigrationNode.Bucket, out var migration) == false)
                 {
                     toRemove.Add(migrationHandler.BucketMigrationNode);
                     continue;
@@ -1030,7 +1030,7 @@ namespace Raven.Server.Documents.Replication
             DropOutgoingConnections(toRemove, instancesToDispose);
 
             // add
-            foreach (var migration in newRecord.Sharding.ShardBucketMigrations)
+            foreach (var migration in newRecord.Sharding.BucketMigrations)
             {
                 var process = migration.Value;
 
