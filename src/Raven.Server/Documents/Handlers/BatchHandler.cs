@@ -73,7 +73,7 @@ namespace Raven.Server.Documents.Handlers
                         BatchTrafficWatch(command.ParsedCommands);
                     }
                 }
-                
+
                 var disableAtomicDocumentWrites = GetBoolValueQueryString("disableAtomicDocumentWrites", required: false) ??
                                                   Database.Configuration.Cluster.DisableAtomicDocumentWrites;
 
@@ -143,7 +143,7 @@ namespace Raven.Server.Documents.Handlers
 
         private void CheckBackwardCompatibility(ref bool disableAtomicDocumentWrites)
         {
-            if (disableAtomicDocumentWrites) 
+            if (disableAtomicDocumentWrites)
                 return;
 
             if (RequestRouter.TryGetClientVersion(HttpContext, out var clientVersion) == false)
@@ -342,7 +342,10 @@ namespace Raven.Server.Documents.Handlers
                               $"to {numberOfReplicasToWaitFor} servers in {waitForReplicasTimeout}. " +
                               $"So far, it only replicated to {replicatedPast}";
 
-                throw new TimeoutException(message);
+                throw new RavenTimeoutException(message)
+                {
+                    FailImmediately = true
+                };
             }
         }
 
@@ -456,7 +459,10 @@ namespace Raven.Server.Documents.Handlers
                 errorMessage += $", total paused indexes: {pausedIndexes.Count} ({string.Join(", ", pausedIndexes)})";
             }
 
-            throw new TimeoutException(errorMessage);
+            throw new RavenTimeoutException(errorMessage)
+            {
+                FailImmediately = true
+            };
         }
 
         private static List<Index> GetImpactedIndexesToWaitForToBecomeNonStale(DocumentDatabase database, List<string> specifiedIndexesQueryString, HashSet<string> modifiedCollections)
@@ -853,7 +859,7 @@ namespace Raven.Server.Documents.Handlers
                                     flags |= DocumentFlags.HasRevisions;
                                 }
 
-                                putResult = Database.DocumentsStorage.Put(context, cmd.Id, cmd.ChangeVector, cmd.Document, 
+                                putResult = Database.DocumentsStorage.Put(context, cmd.Id, cmd.ChangeVector, cmd.Document,
                                     oldChangeVectorForClusterTransactionIndexCheck: cmd.OriginalChangeVector, flags: flags);
                             }
                             catch (Voron.Exceptions.VoronConcurrencyErrorException)
@@ -883,7 +889,7 @@ namespace Raven.Server.Documents.Handlers
 
                         case CommandType.PATCH:
                         case CommandType.BatchPATCH:
-                                cmd.PatchCommand.ExecuteDirectly(context);
+                            cmd.PatchCommand.ExecuteDirectly(context);
 
                             var lastChangeVector = cmd.PatchCommand.HandleReply(Reply, ModifiedCollections);
 
@@ -1082,7 +1088,7 @@ namespace Raven.Server.Documents.Handlers
                                 Documents = new List<DocumentCountersOperation> { cmd.Counters },
                                 FromEtl = cmd.FromEtl
                             });
-                                counterBatchCmd.ExecuteDirectly(context);
+                            counterBatchCmd.ExecuteDirectly(context);
 
                             LastChangeVector = counterBatchCmd.LastChangeVector;
 
@@ -1274,12 +1280,12 @@ namespace Raven.Server.Documents.Handlers
                     patch: (ParsedCommands[i].Patch, ParsedCommands[i].PatchArgs),
                     patchIfMissing: (ParsedCommands[i].PatchIfMissing, ParsedCommands[i].PatchIfMissingArgs),
                     database: database,
-                    createIfMissing:ParsedCommands[i].CreateIfMissing,
+                    createIfMissing: ParsedCommands[i].CreateIfMissing,
                     isTest: false,
                     debugMode: false,
                     collectResultsNeeded: true,
                     returnDocument: ParsedCommands[i].ReturnDocument
-                    
+
                 );
             }
 
