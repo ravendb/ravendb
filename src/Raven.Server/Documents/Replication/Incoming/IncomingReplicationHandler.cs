@@ -685,8 +685,8 @@ namespace Raven.Server.Documents.Replication.Incoming
             protected virtual void SaveSourceEtag(DocumentsOperationContext context)
             {
                 context.LastReplicationEtagFrom ??= new Dictionary<string, long>();
-      			if (_replicationType != ReplicationLatestEtagRequest.ReplicationType.Sharded)
-                        context.LastReplicationEtagFrom[_replicationInfo.SourceDatabaseId] = _lastEtag;
+                if (_replicationType != ReplicationLatestEtagRequest.ReplicationType.Sharded)
+                    context.LastReplicationEtagFrom[_replicationInfo.SourceDatabaseId] = _lastEtag;
             }
 
             private static void UpdateTimeSeriesNameIfNeeded(DocumentsOperationContext context, LazyStringValue docId, TimeSeriesReplicationItem segment, TimeSeriesStorage tss)
