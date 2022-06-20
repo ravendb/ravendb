@@ -11,7 +11,7 @@ class testKafkaServerConnectionCommand extends commandBase {
 
     execute(): JQueryPromise<Raven.Server.Web.System.NodeConnectionTestResult> {
 
-        const url = endpoints.databases.queueEtlConnection.adminEtlQueueTestConnectionKafka
+        const url = endpoints.databases.queueEtlConnection.adminEtlQueueKafkaTestConnection
 
         const payload: KafkaConnectionSettings = {
             BootstrapServers: this.bootstrapServers,

@@ -10,7 +10,7 @@ class testRabbitMqServerConnectionCommand extends commandBase {
 
     execute(): JQueryPromise<Raven.Server.Web.System.NodeConnectionTestResult> {
 
-        const url = endpoints.databases.queueEtlConnection.adminEtlQueueTestConnectionRabbitmq
+        const url = endpoints.databases.queueEtlConnection.adminEtlQueueRabbitmqTestConnection
 
         const payload = {
             ConnectionString: this.connectionString

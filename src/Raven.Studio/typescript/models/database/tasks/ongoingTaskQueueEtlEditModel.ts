@@ -2,7 +2,6 @@
 import ongoingTaskEditModel = require("models/database/tasks/ongoingTaskEditModel");
 import ongoingTaskQueueEtlTransformationModel = require("models/database/tasks/ongoingTaskQueueEtlTransformationModel");
 import jsonUtil = require("common/jsonUtil");
-import QueueBroker = Raven.Client.Documents.Operations.ETL.Queue.QueueBroker;
 
 class queueOptionsModel {
     queueName = ko.observable<string>();
@@ -149,7 +148,7 @@ abstract class ongoingTaskQueueEtlEditModel extends ongoingTaskEditModel {
         }
     }
 
-    protected toDto(broker: QueueBroker): Raven.Client.Documents.Operations.ETL.Queue.QueueEtlConfiguration {
+    protected toDto(broker: Raven.Client.Documents.Operations.ETL.Queue.QueueBrokerType): Raven.Client.Documents.Operations.ETL.Queue.QueueEtlConfiguration {
         return {
             Name: this.taskName(),
             ConnectionStringName: this.connectionStringName(),
