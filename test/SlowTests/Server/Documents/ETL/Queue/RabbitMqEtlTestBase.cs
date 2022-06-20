@@ -66,7 +66,7 @@ loadToOrders" + ExchangeSuffix + @"(orderData);
                 transformation
             },
             Queues = queues?.ToList(),
-            BrokerType = QueueBroker.RabbitMq
+            BrokerType = QueueBrokerType.RabbitMq
         };
 
         foreach (var queue in queues?.Select(x => x.Name).ToArray() ?? transformation.GetCollectionsFromScript())
@@ -78,7 +78,7 @@ loadToOrders" + ExchangeSuffix + @"(orderData);
             new QueueConnectionString
             {
                 Name = connectionStringName,
-                BrokerType = QueueBroker.RabbitMq,
+                BrokerType = QueueBrokerType.RabbitMq,
                 RabbitMqConnectionSettings = new RabbitMqConnectionSettings(){ConnectionString = connectionString ?? RabbitMqConnectionString.Instance.VerifiedConnectionString.Value}
             });
         return config;

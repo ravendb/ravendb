@@ -14,7 +14,7 @@ namespace Raven.Client.Documents.Operations.ETL.Queue
 
         public List<EtlQueue> Queues { get; set; }
 
-        public QueueBroker BrokerType { get; set; }
+        public QueueBrokerType BrokerType { get; set; }
 
         public override bool Validate(out List<string> errors, bool validateName = true, bool validateConnection = true)
         {
@@ -38,14 +38,14 @@ namespace Raven.Client.Documents.Operations.ETL.Queue
         {
             switch (BrokerType)
             {
-                case QueueBroker.Kafka:
+                case QueueBrokerType.Kafka:
                     if (Connection.KafkaConnectionSettings.ConnectionOptions.ContainsKey("SecurityProtocol"))
                     {
                         string protocol = Connection.KafkaConnectionSettings.ConnectionOptions["SecurityProtocol"];
                         return protocol.ToLower() == "ssl";
                     }
                     break;
-                case QueueBroker.RabbitMq:
+                case QueueBrokerType.RabbitMq:
                     return Connection.RabbitMqConnectionSettings.ConnectionString.StartsWith("amqp", StringComparison.OrdinalIgnoreCase);
                 default:
                     return false;

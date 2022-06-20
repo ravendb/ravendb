@@ -73,7 +73,7 @@ namespace Raven.Server.Documents.ETL
 
         public List<QueueEtlConfiguration> QueueDestinations;
 
-        public long GetQueueDestinationCountByBroker(QueueBroker brokerType)
+        public long GetQueueDestinationCountByBroker(QueueBrokerType brokerType)
         {
             var items = QueueDestinations.Where(x => x.BrokerType == brokerType);
             return items.Count();

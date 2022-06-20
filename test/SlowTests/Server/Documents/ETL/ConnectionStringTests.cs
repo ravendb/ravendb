@@ -54,7 +54,7 @@ namespace SlowTests.Server.Documents.ETL
                 var queueConnectionString = new QueueConnectionString
                 {
                     Name = "QueueEtlConnectionString-Kafka",
-                    BrokerType = QueueBroker.Kafka,
+                    BrokerType = QueueBrokerType.Kafka,
                     KafkaConnectionSettings = new KafkaConnectionSettings(){BootstrapServers = "localhost:9092" }
                 };
 

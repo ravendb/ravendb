@@ -205,7 +205,7 @@ public class KafkaEtlTests : KafkaEtlTestBase
         config.Initialize(new QueueConnectionString
         {
             Name = "Foo",
-            BrokerType = QueueBroker.Kafka,
+            BrokerType = QueueBrokerType.Kafka,
             KafkaConnectionSettings = new KafkaConnectionSettings() { ConnectionOptions = new Dictionary<string, string> { }, BootstrapServers = "localhost:29092" }
         });
 
@@ -238,7 +238,7 @@ public class KafkaEtlTests : KafkaEtlTestBase
             var result1 = store.Maintenance.Send(new PutConnectionStringOperation<QueueConnectionString>(new QueueConnectionString
             {
                 Name = "simulate",
-                BrokerType = QueueBroker.Kafka,
+                BrokerType = QueueBrokerType.Kafka,
                 KafkaConnectionSettings = new KafkaConnectionSettings() { BootstrapServers = "localhost:29092" }
             }));
             Assert.NotNull(result1.RaftCommandIndex);
@@ -422,7 +422,7 @@ output('test output')"
             Assert.Equal(1, destinationRecord.QueueConnectionStrings.Count);
             Assert.Equal(1, destinationRecord.QueueEtls.Count);
 
-            Assert.Equal(QueueBroker.Kafka, destinationRecord.QueueEtls[0].BrokerType);
+            Assert.Equal(QueueBrokerType.Kafka, destinationRecord.QueueEtls[0].BrokerType);
             Assert.Equal(DefaultScript, destinationRecord.QueueEtls[0].Transforms[0].Script);
             Assert.Equal(DefaultCollections, destinationRecord.QueueEtls[0].Transforms[0].Collections);
 
