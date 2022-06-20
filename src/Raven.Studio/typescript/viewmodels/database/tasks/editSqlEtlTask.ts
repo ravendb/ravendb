@@ -146,7 +146,7 @@ class sqlTaskTestMode {
                 Connection: this.connectionProvider()
             } as Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters.TestSqlEtlScript;
 
-            eventsCollector.default.reportEvent("sql-etl", "test-replication");
+            eventsCollector.default.reportEvent("sql-etl", "test-script");
             
             new testSqlReplicationCommand(this.db(), dto)
                 .execute()

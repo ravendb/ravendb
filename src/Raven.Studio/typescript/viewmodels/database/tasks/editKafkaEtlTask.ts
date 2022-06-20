@@ -14,14 +14,152 @@ import collectionsTracker = require("common/helpers/database/collectionsTracker"
 import transformationScriptSyntax = require("viewmodels/database/tasks/transformationScriptSyntax");
 import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleMentorsCommand");
 import getConnectionStringInfoCommand = require("commands/database/settings/getConnectionStringInfoCommand");
+import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
+import getDocumentsMetadataByIDPrefixCommand = require("commands/database/documents/getDocumentsMetadataByIDPrefixCommand");
+import testQueueEtlCommand = require("commands/database/tasks/testQueueEtlCommand");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import jsonUtil = require("common/jsonUtil");
 import popoverUtils = require("common/popoverUtils");
+import database = require("models/resources/database");
 import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
+import documentMetadata = require("models/database/documents/documentMetadata");
+import viewHelpers = require("common/helpers/view/viewHelpers");
+import document = require("models/database/documents/document");
+import { highlight, languages } from "prismjs";
 
-type resultItem = {
-    header: string;
-    payload: string;
+class kafkaTaskTestMode {
+    documentId = ko.observable<string>();
+    testDelete = ko.observable<boolean>(false);
+    docsIdsAutocompleteResults = ko.observableArray<string>([]);
+    db: KnockoutObservable<database>;
+    configurationProvider: () => Raven.Client.Documents.Operations.ETL.Queue.QueueEtlConfiguration;
+
+    validationGroup: KnockoutValidationGroup;
+    validateParent: () => boolean;
+
+    testAlreadyExecuted = ko.observable<boolean>(false);
+
+    spinners = {
+        preview: ko.observable<boolean>(false),
+        test: ko.observable<boolean>(false)
+    };
+
+    loadedDocument = ko.observable<string>();
+    loadedDocumentId = ko.observable<string>();
+
+    testResults = ko.observableArray<Raven.Server.Documents.ETL.Providers.Queue.Test.QueueSummary>([]);
+    debugOutput = ko.observableArray<string>([]);
+
+    // all kinds of alerts:
+    transformationErrors = ko.observableArray<Raven.Server.NotificationCenter.Notifications.Details.EtlErrorInfo>([]);
+
+    warningsCount = ko.pureComputed(() => {
+        return this.transformationErrors().length;
+    });
+
+    constructor(db: KnockoutObservable<database>,
+                validateParent: () => boolean,
+                configurationProvider: () => Raven.Client.Documents.Operations.ETL.Queue.QueueEtlConfiguration) {
+        this.db = db;
+        this.validateParent = validateParent;
+        this.configurationProvider = configurationProvider;
+
+        _.bindAll(this, "onAutocompleteOptionSelected");
+    }
+
+    initObservables() {
+        this.documentId.extend({
+            required: true
+        });
+
+        this.documentId.throttle(250).subscribe(item => {
+            if (!item) {
+                return;
+            }
+
+            new getDocumentsMetadataByIDPrefixCommand(item, 10, this.db())
+                .execute()
+                .done(results => {
+                    this.docsIdsAutocompleteResults(results.map(x => x["@metadata"]["@id"]));
+                });
+        });
+
+        this.validationGroup = ko.validatedObservable({
+            documentId: this.documentId
+        });
+    }
+
+    onAutocompleteOptionSelected(option: string) {
+        this.documentId(option);
+        this.previewDocument();
+    }
+
+    previewDocument() {
+        const spinner = this.spinners.preview;
+        const documentId: KnockoutObservable<string> = this.documentId;
+
+        spinner(true);
+
+        viewHelpers.asyncValidationCompleted(this.validationGroup)
+            .then(() => {
+                if (viewHelpers.isValid(this.validationGroup)) {
+                    new getDocumentWithMetadataCommand(documentId(), this.db())
+                        .execute()
+                        .done((doc: document) => {
+                            const docDto = doc.toDto(true);
+                            const metaDto = docDto["@metadata"];
+                            documentMetadata.filterMetadata(metaDto);
+                            const text = JSON.stringify(docDto, null, 4);
+                            this.loadedDocument(highlight(text, languages.javascript, "js"));
+                            this.loadedDocumentId(doc.getId());
+
+                            $('.test-container a[href="#documentPreview"]').tab('show');
+                        }).always(() => spinner(false));
+                } else {
+                    spinner(false);
+                }
+            });
+    }
+
+    runTest() {
+        const testValid = viewHelpers.isValid(this.validationGroup, true);
+        const parentValid = this.validateParent();
+
+        if (testValid && parentValid) {
+            this.spinners.test(true);
+
+            const dto: Raven.Server.Documents.ETL.Providers.Queue.Test.TestQueueEtlScript = {
+                DocumentId: this.documentId(),
+                IsDelete: this.testDelete(),
+                Configuration: this.configurationProvider()
+            };
+
+            eventsCollector.default.reportEvent("kafka-etl", "test-script");
+
+            new testQueueEtlCommand(this.db(), dto, "Kafka")
+                .execute()
+                .done(simulationResult => {
+                    const summaryFormatted =  simulationResult.Summary.map(x => ({
+                        Messages: x.Messages,
+                        QueueName: x.QueueName
+                    }));
+
+                    this.testResults(summaryFormatted);
+
+                    this.debugOutput(simulationResult.DebugOutput);
+                    this.transformationErrors(simulationResult.TransformationErrors);
+
+                    if (this.warningsCount()) {
+                        $('.test-container a[href="#warnings"]').tab('show');
+                    } else {
+                        $('.test-container a[href="#testResults"]').tab('show');
+                    }
+
+                    this.testAlreadyExecuted(true);
+                })
+                .always(() => this.spinners.test(false));
+        }
+    }
 }
 
 class editKafkaEtlTask extends viewModelBase {
@@ -34,9 +172,9 @@ class editKafkaEtlTask extends viewModelBase {
     static isApplyToAll = ongoingTaskQueueEtlTransformationModel.isApplyToAll;
 
     enableTestArea = ko.observable<boolean>(false);
+    test: kafkaTaskTestMode;
+    
     showAdvancedOptions = ko.observable<boolean>(false);
-
-    //test: kafkaTaskTestMode; // TODO
     
     editedKafkaEtl = ko.observable<ongoingTaskKafkaEtlEditModel>();
     isAddingNewKafkaEtlTask = ko.observable<boolean>(true);
@@ -193,6 +331,12 @@ class editKafkaEtlTask extends viewModelBase {
             }
             return dto;
         };
+
+        this.test = new kafkaTaskTestMode(this.activeDatabase, () => {
+            return this.isValid(this.editedKafkaEtl().editedTransformationScriptSandbox().validationGroup);
+        }, dtoProvider);
+
+        this.test.initObservables();
 
         this.dirtyFlag = new ko.DirtyFlag([
             this.createNewConnectionString,

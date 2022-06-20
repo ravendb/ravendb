@@ -21,14 +21,145 @@ import jsonUtil = require("common/jsonUtil");
 import viewHelpers = require("common/helpers/view/viewHelpers");
 import documentMetadata = require("models/database/documents/documentMetadata");
 import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
+import testQueueEtlCommand = require("commands/database/tasks/testQueueEtlCommand");
 import document = require("models/database/documents/document");
 import popoverUtils = require("common/popoverUtils");
 import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 import { highlight, languages } from "prismjs";
 
-type resultItem = {
-    header: string;
-    payload: string;
+class rabbitMqTaskTestMode {
+    documentId = ko.observable<string>();
+    testDelete = ko.observable<boolean>(false);
+    docsIdsAutocompleteResults = ko.observableArray<string>([]);
+    db: KnockoutObservable<database>;
+    configurationProvider: () => Raven.Client.Documents.Operations.ETL.Queue.QueueEtlConfiguration;
+
+    validationGroup: KnockoutValidationGroup;
+    validateParent: () => boolean;
+
+    testAlreadyExecuted = ko.observable<boolean>(false);
+
+    spinners = {
+        preview: ko.observable<boolean>(false),
+        test: ko.observable<boolean>(false)
+    };
+
+    loadedDocument = ko.observable<string>();
+    loadedDocumentId = ko.observable<string>();
+
+    testResults = ko.observableArray<Raven.Server.Documents.ETL.Providers.Queue.Test.QueueSummary>([]);
+    debugOutput = ko.observableArray<string>([]);
+
+    // all kinds of alerts:
+    transformationErrors = ko.observableArray<Raven.Server.NotificationCenter.Notifications.Details.EtlErrorInfo>([]);
+
+    warningsCount = ko.pureComputed(() => {
+        return this.transformationErrors().length;
+    });
+
+    constructor(db: KnockoutObservable<database>,
+                validateParent: () => boolean,
+                configurationProvider: () => Raven.Client.Documents.Operations.ETL.Queue.QueueEtlConfiguration) {
+        this.db = db;
+        this.validateParent = validateParent;
+        this.configurationProvider = configurationProvider;
+
+        _.bindAll(this, "onAutocompleteOptionSelected");
+    }
+
+    initObservables() {
+        this.documentId.extend({
+            required: true
+        });
+
+        this.documentId.throttle(250).subscribe(item => {
+            if (!item) {
+                return;
+            }
+
+            new getDocumentsMetadataByIDPrefixCommand(item, 10, this.db())
+                .execute()
+                .done(results => {
+                    this.docsIdsAutocompleteResults(results.map(x => x["@metadata"]["@id"]));
+                });
+        });
+
+        this.validationGroup = ko.validatedObservable({
+            documentId: this.documentId
+        });
+    }
+
+    onAutocompleteOptionSelected(option: string) {
+        this.documentId(option);
+        this.previewDocument();
+    }
+
+    previewDocument() {
+        const spinner = this.spinners.preview;
+        const documentId: KnockoutObservable<string> = this.documentId;
+
+        spinner(true);
+
+        viewHelpers.asyncValidationCompleted(this.validationGroup)
+            .then(() => {
+                if (viewHelpers.isValid(this.validationGroup)) {
+                    new getDocumentWithMetadataCommand(documentId(), this.db())
+                        .execute()
+                        .done((doc: document) => {
+                            const docDto = doc.toDto(true);
+                            const metaDto = docDto["@metadata"];
+                            documentMetadata.filterMetadata(metaDto);
+                            const text = JSON.stringify(docDto, null, 4);
+                            this.loadedDocument(highlight(text, languages.javascript, "js"));
+                            this.loadedDocumentId(doc.getId());
+
+                            $('.test-container a[href="#documentPreview"]').tab('show');
+                        }).always(() => spinner(false));
+                } else {
+                    spinner(false);
+                }
+            });
+    }
+
+    runTest() {
+        const testValid = viewHelpers.isValid(this.validationGroup, true);
+        const parentValid = this.validateParent();
+
+        if (testValid && parentValid) {
+            this.spinners.test(true);
+
+            const dto: Raven.Server.Documents.ETL.Providers.Queue.Test.TestQueueEtlScript = {
+                DocumentId: this.documentId(),
+                IsDelete: this.testDelete(),
+                Configuration: this.configurationProvider()
+            };
+
+            eventsCollector.default.reportEvent("rabbitmq-etl", "test-script");
+
+            new testQueueEtlCommand(this.db(), dto, "RabbitMq")
+                .execute()
+                .done(simulationResult => {
+                    const summaryFormatted =  simulationResult.Summary.map(x => ({
+                        Messages: x.Messages,
+                        QueueName: x.QueueName
+                    }));
+
+                    this.testResults(summaryFormatted);
+
+                    this.debugOutput(simulationResult.DebugOutput);
+                    this.transformationErrors(simulationResult.TransformationErrors);
+
+                    if (this.warningsCount()) {
+                        $('.test-container a[href="#warnings"]').tab('show');
+                    } else {
+                        $('.test-container a[href="#testResults"]').tab('show');
+                    }
+
+                    this.testAlreadyExecuted(true);
+                })
+                .always(() => this.spinners.test(false));
+        }
+    }
 }
 
 class editRabbitMqEtlTask extends viewModelBase {
@@ -43,7 +174,7 @@ class editRabbitMqEtlTask extends viewModelBase {
     enableTestArea = ko.observable<boolean>(false);
     showAdvancedOptions = ko.observable<boolean>(false);
 
-    // test: rabbitMqTaskTestMode; // TODO
+    test: rabbitMqTaskTestMode;
     
     editedRabbitMqEtl = ko.observable<ongoingTaskRabbitMqEtlEditModel>();
     isAddingNewRabbitMqEtlTask = ko.observable<boolean>(true);
@@ -193,6 +324,12 @@ class editRabbitMqEtlTask extends viewModelBase {
             }
             return dto;
         };
+
+        this.test = new rabbitMqTaskTestMode(this.activeDatabase, () => {
+            return this.isValid(this.editedRabbitMqEtl().editedTransformationScriptSandbox().validationGroup);
+        }, dtoProvider);
+
+        this.test.initObservables();
 
         this.dirtyFlag = new ko.DirtyFlag([
             this.createNewConnectionString,

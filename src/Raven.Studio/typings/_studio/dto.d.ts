@@ -632,6 +632,11 @@ declare module Raven.Server.Documents.ETL.Providers.ElasticSearch.Test {
     }
 }
 
+declare module Raven.Server.Documents.ETL.Providers.Queue.Test {
+    interface QueueEtlTestScriptResult extends testEtlScriptResult {
+    }
+}
+
 type backupOptions = "None" | "Local" | "Azure" | "AmazonGlacier" | "AmazonS3" | "FTP" | "GoogleCloud";
 
 interface periodicBackupServerLimitsResponse {

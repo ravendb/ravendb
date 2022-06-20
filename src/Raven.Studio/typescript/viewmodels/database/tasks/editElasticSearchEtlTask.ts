@@ -137,7 +137,7 @@ class elasticSearchTaskTestMode {
                 Configuration: this.configurationProvider()
             };
 
-            eventsCollector.default.reportEvent("elastic-search-etl", "test-replication");
+            eventsCollector.default.reportEvent("elastic-search-etl", "test-script");
 
             new testElasticSearchEtlCommand(this.db(), dto)
                 .execute()

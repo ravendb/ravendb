@@ -728,15 +728,10 @@
 .js-test-sql-tooltip {
     z-index: @zindex-modal + 1;
 }
+
 .show-test {
     .backdrop {
         .backdrop.show;
-    }
-    
-    .sql-statement {
-        pre {
-            white-space: normal;
-        }
     }
 
     .edit-raven-sql-task, .edit-raven-etl-task, .edit-elastic-search-task, .edit-kafka-etl-task, .edit-rabbitmq-etl-task {
@@ -748,7 +743,7 @@
         }
     }
     
-    #debugOutput pre {
+    .test-output pre, #debugOutput pre {
         white-space: pre-wrap;
         word-wrap: break-word;
     }
