@@ -187,23 +187,23 @@ for (var i = 0; i < this.Lines.length; i++) {
     static readonly kafkaEtlSampleText =
 `${transformationScriptSyntax.queueEtlBaseSampleText}
 
-loadToOrders(orderData, {{  // load to the 'Orders' Topic with optional params
+loadToOrders(orderData, {  // load to the 'Orders' Topic with optional params
     Id: id(this),
     PartitionKey: id(this),
     Type: 'com.github.users',
     Source: '/registrations/direct-signup'
-}});`;
+});`;
 
     static readonly rabbitMqEtlSampleText =
 `${transformationScriptSyntax.queueEtlBaseSampleText}
 
-loadToOrders(orderData, {{  // load to the 'Orders' Queue with optional params
+loadToOrders(orderData, {  // load to the 'Orders' Queue with optional params
     Id: id(this),
     PartitionKey: id(this),
     Type: 'com.github.users',
     Source: '/registrations/direct-signup',
     Exchange: 'users-topic'
-}});`;
+});`;
     
     kafkaEtlSampleHtml = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.kafkaEtlSampleText);
     
