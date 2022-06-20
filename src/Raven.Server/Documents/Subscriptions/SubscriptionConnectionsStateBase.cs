@@ -53,8 +53,6 @@ public abstract class SubscriptionConnectionsStateBase<TSubscriptionConnection> 
 
     public string PreviouslyRecordedChangeVector;
 
-    public string StateId = Guid.NewGuid().ToString();
-
     protected SubscriptionConnectionsStateBase(ServerStore server, string databaseName, long subscriptionId)
     {
         if (databaseName.Contains('$'))
@@ -71,7 +69,7 @@ public abstract class SubscriptionConnectionsStateBase<TSubscriptionConnection> 
     
     public abstract Task UpdateClientConnectionTime();
 
-    public abstract Task WaitForIndexNotification(long index);
+    public abstract Task WaitForIndexNotificationAsync(long index);
 
     public abstract void DropSubscription(SubscriptionException e);
 
@@ -278,7 +276,7 @@ public abstract class SubscriptionConnectionsStateBase<TSubscriptionConnection> 
         var command = GetAcknowledgeSubscriptionBatchCommand(changeVector, batchId, docsToResend);
             
         var (etag, _) = await _server.SendToLeaderAsync(command);
-        await WaitForIndexNotification(etag);
+        await WaitForIndexNotificationAsync(etag);
     }
 
 
@@ -318,7 +316,7 @@ public abstract class SubscriptionConnectionsStateBase<TSubscriptionConnection> 
     protected virtual async Task<long> RecordBatchInternal(RecordBatchSubscriptionDocumentsCommand command)
     {
         var (etag, _) = await _server.SendToLeaderAsync(command);
-        await WaitForIndexNotification(etag);
+        await WaitForIndexNotificationAsync(etag);
         return etag;
     }
     

@@ -29,7 +29,7 @@ public class SubscriptionConnectionsStateOrchestrator : SubscriptionConnectionsS
         var command = GetUpdateSubscriptionClientConnectionTime();
         var (etag, _) = await _server.SendToLeaderAsync(command);
         await _server.Cluster.WaitForIndexNotification(etag);
-        // await WaitForIndexNotification(etag);
+        // await WaitForIndexNotificationAsync(etag);
     }
 
     protected override UpdateSubscriptionClientConnectionTime GetUpdateSubscriptionClientConnectionTime()
@@ -39,7 +39,7 @@ public class SubscriptionConnectionsStateOrchestrator : SubscriptionConnectionsS
         return cmd;
     }
 
-    public override Task WaitForIndexNotification(long index) => _databaseContext.Cluster.WaitForExecutionOnShardsAsync(index).AsTask();
+    public override Task WaitForIndexNotificationAsync(long index) => _databaseContext.Cluster.WaitForExecutionOnShardsAsync(index).AsTask();
 
     public override void DropSubscription(SubscriptionException e)
     {

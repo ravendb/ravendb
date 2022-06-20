@@ -102,7 +102,7 @@ namespace Raven.Server.Documents.Subscriptions
         public SubscriptionConnection.ParsedSubscription Subscription;
         
         protected readonly TcpConnectionHeaderMessage.SupportedFeatures _supportedFeatures;
-        public readonly SubscriptionStatsCollector StatsCollector;
+        public readonly SubscriptionStatsCollector Stats;
 
         public Task SubscriptionConnectionTask;
 
@@ -121,7 +121,7 @@ namespace Raven.Server.Documents.Subscriptions
             ClientUri = tcpConnection.TcpClient.Client.RemoteEndPoint.ToString();
 
             _supportedFeatures = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(TcpConnectionHeaderMessage.OperationTypes.Subscription, tcpConnection.ProtocolVersion);
-            StatsCollector = new SubscriptionStatsCollector();
+            Stats = new SubscriptionStatsCollector();
         }
 
         public abstract Task ProcessSubscriptionAsync();
@@ -253,7 +253,7 @@ namespace Raven.Server.Documents.Subscriptions
             }
         }
 
-        public void RecordConnectionInfo() => StatsCollector.ConnectionScope.RecordConnectionInfo(SubscriptionState, ClientUri, Options.Strategy, WorkerId);
+        public void RecordConnectionInfo() => Stats.ConnectionScope.RecordConnectionInfo(SubscriptionState, ClientUri, Options.Strategy, WorkerId);
 
         private void AssertSupportedFeatures()
         {
@@ -660,7 +660,7 @@ namespace Raven.Server.Documents.Subscriptions
                 RecentSubscriptionStatuses?.Clear();
             }
 
-            StatsCollector?.Dispose();
+            Stats?.Dispose();
         }
     }
 }

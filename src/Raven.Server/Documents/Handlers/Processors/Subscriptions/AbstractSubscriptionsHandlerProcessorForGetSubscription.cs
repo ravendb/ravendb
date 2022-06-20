@@ -114,7 +114,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
             {
                 [nameof(SubscriptionConnection.ClientUri)] = x.ClientUri,
                 [nameof(SubscriptionConnection.Strategy)] = x.Strategy,
-                [nameof(SubscriptionConnection.StatsCollector)] = GetConnectionStatsJson(x.StatsCollector),
+                [nameof(SubscriptionConnection.Stats)] = GetConnectionStatsJson(x.Stats),
                 [nameof(SubscriptionConnection.ConnectionException)] = x.ConnectionException?.Message,
                 ["TcpConnectionStats"] = x.TcpConnection.GetConnectionStats(),
                 [nameof(SubscriptionConnection.RecentSubscriptionStatuses)] = new DynamicJsonArray(x.RecentSubscriptionStatuses?.ToArray() ?? Array.Empty<string>())

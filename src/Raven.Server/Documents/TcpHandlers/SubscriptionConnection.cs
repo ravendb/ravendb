@@ -119,7 +119,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 {
                     _buffer.SetLength(0);
 
-                    var inProgressBatchStats = StatsCollector.CreateInProgressBatchStats();
+                    var inProgressBatchStats = Stats.CreateInProgressBatchStats();
 
                     using (var batchScope = inProgressBatchStats.CreateScope())
                     {
@@ -143,7 +143,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                     AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info,
                                         $"Acknowledging docs processing progress without sending any documents to client. CV: {_subscriptionConnectionsState.LastChangeVectorSent ?? "None"}"));
 
-                                    StatsCollector.UpdateBatchPerformanceStats(0, false);
+                                    Stats.UpdateBatchPerformanceStats(0, false);
 
                                     if (sendingCurrentBatchStopwatch.ElapsedMilliseconds > 1000)
                                         await SendHeartBeatAsync("Didn't find any documents to send and more then 1000ms passed");
@@ -169,7 +169,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                 replyFromClientTask = await WaitForClientAck(replyFromClientTask);
                             }
 
-                            var last = StatsCollector.UpdateBatchPerformanceStats(batchScope.GetBatchSize());
+                            var last = Stats.UpdateBatchPerformanceStats(batchScope.GetBatchSize());
                             TcpConnection.DocumentDatabase.SubscriptionStorage.RaiseNotificationForBatchEnded(_options.SubscriptionName, last);
 
                         }
@@ -220,7 +220,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
                 using (batchScope.For(SubscriptionOperationScope.BatchSendDocuments))
                 {
-                    batchScope.RecordBatchInfo(_subscriptionConnectionsState.SubscriptionId, _subscriptionConnectionsState.SubscriptionName, StatsCollector.ConnectionStatsIdForConnection,
+                    batchScope.RecordBatchInfo(_subscriptionConnectionsState.SubscriptionId, _subscriptionConnectionsState.SubscriptionName, Stats.ConnectionStatsIdForConnection,
                         batchStatsAggregator.Id);
 
                     int docsToFlush = 0;
@@ -292,7 +292,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
                                 TcpConnection._lastEtagSent = -1;
                                 // perform flush for current batch after 1000ms of running or 1 MB
-                                if (await FlushBatchIfNeededAsync(sendingCurrentBatchStopwatch, SubscriptionId, writer, _buffer, TcpConnection, StatsCollector.Metrics, _logger, docsToFlush, CancellationTokenSource.Token))
+                                if (await FlushBatchIfNeededAsync(sendingCurrentBatchStopwatch, SubscriptionId, writer, _buffer, TcpConnection, Stats.Metrics, _logger, docsToFlush, CancellationTokenSource.Token))
                                 {
                                     docsToFlush = 0;
                                     sendingCurrentBatchStopwatch.Restart();
@@ -370,7 +370,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
                                 AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info, "Flushing sent docs to client"));
 
-                                await FlushDocsToClientAsync(SubscriptionId, writer, _buffer, TcpConnection, StatsCollector.Metrics, _logger, docsToFlush, true, CancellationTokenSource.Token);
+                                await FlushDocsToClientAsync(SubscriptionId, writer, _buffer, TcpConnection, Stats.Metrics, _logger, docsToFlush, true, CancellationTokenSource.Token);
                             }
 
                             if (lastChangeVectorSentInThisBatch != null)
@@ -521,7 +521,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 return;
             _isDisposed = true;
 
-            StatsCollector.LastConnectionStats.Complete();
+            Stats.LastConnectionStats.Complete();
             TcpConnection.DocumentDatabase.SubscriptionStorage.RaiseNotificationForConnectionEnded(this);
 
             base.Dispose();
@@ -809,7 +809,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
         public override async Task ReportExceptionAsync(SubscriptionError error, Exception e)
         {
-            StatsCollector.ConnectionScope.RecordException(error, e.ToString());
+            Stats.ConnectionScope.RecordException(error, e.ToString());
             if (ConnectionException == null && e is SubscriptionException se)
             {
                 ConnectionException = se;
@@ -829,8 +829,8 @@ namespace Raven.Server.Documents.TcpHandlers
         {
             await _processor.AcknowledgeBatch(CurrentBatchId);
 
-            StatsCollector.Metrics.LastAckReceivedAt = TcpConnection.DocumentDatabase.Time.GetUtcNow();
-            StatsCollector.Metrics.AckRate?.Mark();
+            Stats.Metrics.LastAckReceivedAt = TcpConnection.DocumentDatabase.Time.GetUtcNow();
+            Stats.Metrics.AckRate?.Mark();
             await WriteJsonAsync(new DynamicJsonValue
             {
                 [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.Confirm)
