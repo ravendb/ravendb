@@ -300,7 +300,6 @@ loadToOrders(orderData, {
                                                             Type: 'com.github.users',
                                                             Source: '/registrations/direct-signup',
                                                             Exchange: 'users-topic',
-                                                            ExchangeType: 'topic',
                                                      });
 
 output('test output')"
@@ -333,7 +332,6 @@ output('test output')"
                                                             Type: 'com.github.users',
                                                             Source: '/registrations/direct-signup',
                                                             Exchange: 'users-topic',
-                                                            ExchangeType: 'topic',
                                                      }})", new[] { "Users" });
 
             var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
