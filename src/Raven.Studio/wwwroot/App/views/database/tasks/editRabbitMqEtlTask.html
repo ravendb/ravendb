@@ -74,6 +74,13 @@
                         </div>
                         <div class="form-group">
                             <label class="control-label">&nbsp;</label>
+                            <div class="toggle skip-automatic-declaration">
+                                <input id="skipAutoDefinition" type="checkbox" data-bind="checked: skipAutomaticQueueDeclaration">
+                                <label for="skipAutoDefinition">Skip automatic Exchange/Queue declaration</label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="control-label">&nbsp;</label>
                             <div class="toggle">
                                 <input id="createNewString" type="checkbox" data-bind="checked: $root.createNewConnectionString">
                                 <label for="createNewString">Create new RabbitMQ connection string</label>

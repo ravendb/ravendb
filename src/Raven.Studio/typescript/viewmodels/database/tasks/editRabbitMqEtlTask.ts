@@ -256,6 +256,13 @@ class editRabbitMqEtlTask extends viewModelBase {
             {
                 content: tasksCommonContent.responsibleNodeInfo
             });
+
+        popoverUtils.longWithHover($(".skip-automatic-declaration"),
+            {
+                content: `<small class="margin-top-xs no-padding-left">
+                              Use this option when manually defining the Exchanges, Queues & Bindings.
+                          </small>`
+            });
     }
 
     private getAllConnectionStrings() {
