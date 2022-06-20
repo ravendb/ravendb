@@ -306,13 +306,13 @@ namespace Raven.Server.Dashboard
             long olapEtlCountOnNode = GetTaskCountOnNode<OlapEtlConfiguration>(database, dbRecord, serverStore, database.EtlLoader.OlapDestinations,
                 task => EtlLoader.GetProcessState(task.Transforms, database, task.Name));
 
-            var kafkaEtlCount = database.EtlLoader.GetQueueDestinationCountByBroker(QueueBroker.Kafka);
+            var kafkaEtlCount = database.EtlLoader.GetQueueDestinationCountByBroker(QueueBrokerType.Kafka);
             long kafkaEtlCountOnNode = GetTaskCountOnNode<QueueEtlConfiguration>(database, dbRecord, serverStore, database.EtlLoader.QueueDestinations,
-                task => EtlLoader.GetProcessState(task.Transforms, database, task.Name), task => task.BrokerType == QueueBroker.Kafka);
+                task => EtlLoader.GetProcessState(task.Transforms, database, task.Name), task => task.BrokerType == QueueBrokerType.Kafka);
             
-            var rabbitMqEtlCount = database.EtlLoader.GetQueueDestinationCountByBroker(QueueBroker.RabbitMq);
+            var rabbitMqEtlCount = database.EtlLoader.GetQueueDestinationCountByBroker(QueueBrokerType.RabbitMq);
             long rabbitMqEtlCountOnNode = GetTaskCountOnNode<QueueEtlConfiguration>(database, dbRecord, serverStore, database.EtlLoader.QueueDestinations,
-                task => EtlLoader.GetProcessState(task.Transforms, database, task.Name), task => task.BrokerType == QueueBroker.RabbitMq);
+                task => EtlLoader.GetProcessState(task.Transforms, database, task.Name), task => task.BrokerType == QueueBrokerType.RabbitMq);
             
             var periodicBackupCount = database.PeriodicBackupRunner.PeriodicBackups.Count;
             long periodicBackupCountOnNode = GetTaskCountOnNode<PeriodicBackupConfiguration>(database, dbRecord, serverStore,

@@ -61,6 +61,6 @@ namespace Raven.Client.Documents.Smuggler
         ElasticSearchEtls = 1 << 22,
         PostgreSQLIntegration = 1 << 23,
         QueueConnectionStrings = 1 << 24,
-        QueueEtls = 1 << 24,
+        QueueEtls = 1 << 25,
     }
 }

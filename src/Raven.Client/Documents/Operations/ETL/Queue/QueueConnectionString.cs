@@ -7,7 +7,7 @@ namespace Raven.Client.Documents.Operations.ETL.Queue;
 
 public class QueueConnectionString : ConnectionString
 {
-    public QueueBroker BrokerType { get; set; }
+    public QueueBrokerType BrokerType { get; set; }
 
     public KafkaConnectionSettings KafkaConnectionSettings { get; set; }
 
@@ -19,13 +19,13 @@ public class QueueConnectionString : ConnectionString
     {
         switch (BrokerType)
         {
-            case QueueBroker.Kafka:
+            case QueueBrokerType.Kafka:
                 if (KafkaConnectionSettings == null || string.IsNullOrWhiteSpace(KafkaConnectionSettings.BootstrapServers))
                 {
                     errors.Add($"{nameof(KafkaConnectionSettings)} has no valid setting.");
                 }
                 break;
-            case QueueBroker.RabbitMq:
+            case QueueBrokerType.RabbitMq:
                 if (RabbitMqConnectionSettings == null || string.IsNullOrWhiteSpace(RabbitMqConnectionSettings.ConnectionString))
                 {
                     errors.Add($"{nameof(RabbitMqConnectionSettings)} has no valid setting.");
@@ -36,16 +36,16 @@ public class QueueConnectionString : ConnectionString
         }
     }
 
-    public string GetUrl()
+    internal string GetUrl()
     {
         string url;
 
         switch (BrokerType)
         {
-            case QueueBroker.Kafka:
+            case QueueBrokerType.Kafka:
                 url = KafkaConnectionSettings.BootstrapServers;
                 break;
-            case QueueBroker.RabbitMq:
+            case QueueBrokerType.RabbitMq:
                 var connectionString = RabbitMqConnectionSettings.ConnectionString;
 
                 int indexOfStartServerUri = connectionString.IndexOf("@", StringComparison.OrdinalIgnoreCase);

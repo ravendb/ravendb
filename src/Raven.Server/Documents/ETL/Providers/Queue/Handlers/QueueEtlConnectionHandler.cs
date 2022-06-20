@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.ETL.Providers.Queue.Handlers
 {
     public class QueueEtlConnectionHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/admin/etl/queue/test-connection/kafka", "POST", AuthorizationStatus.DatabaseAdmin)]
+        [RavenAction("/databases/*/admin/etl/queue/kafka/test-connection", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task GetTestKafkaConnectionResult()
         {
             try
@@ -58,7 +58,7 @@ namespace Raven.Server.Documents.ETL.Providers.Queue.Handlers
             }
         }
 
-        [RavenAction("/databases/*/admin/etl/queue/test-connection/rabbitmq", "POST", AuthorizationStatus.DatabaseAdmin)]
+        [RavenAction("/databases/*/admin/etl/queue/rabbitmq/test-connection", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task GetTestRabbitMqConnectionResult()
         {
             try

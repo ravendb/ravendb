@@ -66,7 +66,7 @@ loadToOrders" + TopicSuffix + @"(orderData);
                 transformation
             },
             Queues = queues?.ToList(),
-            BrokerType = QueueBroker.Kafka
+            BrokerType = QueueBrokerType.Kafka
         };
 
         foreach (var queue in queues?.Select(x => x.Name).ToArray() ?? transformation.GetCollectionsFromScript())
@@ -78,7 +78,7 @@ loadToOrders" + TopicSuffix + @"(orderData);
             new QueueConnectionString
             {
                 Name = connectionStringName,
-                BrokerType = QueueBroker.Kafka,
+                BrokerType = QueueBrokerType.Kafka,
                 KafkaConnectionSettings = new KafkaConnectionSettings() { ConnectionOptions = configuration, BootstrapServers = bootstrapServers ?? KafkaConnectionString.Instance.VerifiedUrl.Value }
             });
         return config;

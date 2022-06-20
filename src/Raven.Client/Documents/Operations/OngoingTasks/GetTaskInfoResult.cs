@@ -368,7 +368,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             TaskType = OngoingTaskType.QueueEtl;
         }
 
-        public QueueBroker BrokerType { get; set; }
+        public QueueBrokerType BrokerType { get; set; }
         public string ConnectionStringName { get; set; }
         public string Url { get; set; }
 
