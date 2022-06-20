@@ -129,6 +129,7 @@ namespace Corax.Queries
             }
 
             matches.Slice(0, results).CopyTo(bufferSlice);
+
             _bufferIdx += results;
 
             // We track the amount of times this is called in order to know if we need to sort the buffer when scoring.             
@@ -157,7 +158,10 @@ namespace Corax.Queries
             var bufferHandler = _searcher.Allocator.Allocate(size, out var buffer);
             
             // Ensure we copy the content and then switch the buffers. 
-            new Span<long>(_buffer, _bufferIdx).CopyTo(new Span<long>(buffer.Ptr, size));
+            new Span<long>(_buffer, _bufferIdx).CopyTo(new Span<long>(buffer.Ptr, size));// == false)
+           // {
+           //     throw new Exception("Failed to copy the content of the buffer");
+           // }
             _bufferHandler.Dispose();
 
             _buffer = (long*)buffer.Ptr;
