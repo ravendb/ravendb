@@ -50,6 +50,8 @@ abstract class ongoingTaskQueueEtlEditModel extends ongoingTaskEditModel {
     editedTransformationScriptSandbox = ko.observable<ongoingTaskQueueEtlTransformationModel>();
     
     optionsPerQueue = ko.observableArray<queueOptionsModel>();
+
+    skipAutomaticQueueDeclaration = ko.observable<boolean>(false);
     
     validationGroup: KnockoutValidationGroup;
     dirtyFlag: () => DirtyFlag;
@@ -89,6 +91,7 @@ abstract class ongoingTaskQueueEtlEditModel extends ongoingTaskEditModel {
                 this.connectionStringName,
                 this.allowEtlOnNonEncryptedChannel,
                 this.optionsPerQueue,
+                this.skipAutomaticQueueDeclaration,
                 scriptsCount,
                 hasAnyDirtyTransformationScript
             ],
@@ -138,6 +141,7 @@ abstract class ongoingTaskQueueEtlEditModel extends ongoingTaskEditModel {
             this.connectionStringName(dto.Configuration.ConnectionStringName);
             this.transformationScripts(dto.Configuration.Transforms.map(x => new ongoingTaskQueueEtlTransformationModel(x, false, false)));
             this.manualChooseMentor(!!dto.Configuration.MentorNode);
+            this.skipAutomaticQueueDeclaration(dto.Configuration.SkipAutomaticQueueDeclaration);
             
             if (dto.Configuration.Queues) {
                 dto.Configuration.Queues.forEach(x => {
@@ -159,6 +163,7 @@ abstract class ongoingTaskQueueEtlEditModel extends ongoingTaskEditModel {
             MentorNode: this.manualChooseMentor() ? this.mentorNode() : undefined,
             TaskId: this.taskId,
             BrokerType: broker,
+            SkipAutomaticQueueDeclaration: this.skipAutomaticQueueDeclaration(),
             Queues: this.queueOptionsToDto()
         };
     }
