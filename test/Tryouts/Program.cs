@@ -7,6 +7,7 @@ using FastTests;
 using Tests.Infrastructure;
 using FastTests.Client.Subscriptions;
 using FastTests.Voron;
+using SlowTests.Voron.CompactTrees;
 
 namespace Tryouts;
 
@@ -17,10 +18,10 @@ public static class Program
         XunitLogging.RedirectStreams = false;
     }
 
-    public static async Task Main(string[] args)
+    public static void Main(string[] args)
     {
         using (var testOutputHelper = new ConsoleTestOutputHelper())
-            new CompactTreeTests(testOutputHelper).CanDeleteLargeNumberOfItemsInRandomInsertionOrder(60597, 54632);
+            new CompactTreeSlowTests(testOutputHelper).CanDeleteLargeNumberOfItemsInRandomInsertionOrder(60597, 54632);
 
         Console.WriteLine(Process.GetCurrentProcess().Id);
         for (int i = 0; i < 100; i++)
@@ -41,7 +42,7 @@ public static class Program
                         try
                         {
                             //new CompactTreeTests(testOutputHelper).CanDeleteLargeNumberOfItemsInRandomInsertionOrder(2023, 13878);
-                            new CompactTreeTests(testOutputHelper).CanDeleteLargeNumberOfItemsInRandomInsertionOrder(number, seed);
+                            new CompactTreeSlowTests(testOutputHelper).CanDeleteLargeNumberOfItemsInRandomInsertionOrder(number, seed);
                         }
                         catch (Exception ex)
                         {
