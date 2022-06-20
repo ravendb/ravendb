@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.Subscriptions
         internal readonly DocumentDatabase _db;
         private readonly ServerStore _serverStore;
         private string _databaseName; // this is full name for sharded db 
-        private readonly ConcurrentDictionary<long, SubscriptionConnectionsState> _subscriptions = new ();
+        private readonly ConcurrentDictionary<long, SubscriptionConnectionsState> _subscriptions = new();
         private readonly Logger _logger;
         private readonly SemaphoreSlim _concurrentConnectionsSemiSemaphore;
 
@@ -95,7 +95,7 @@ namespace Raven.Server.Documents.Subscriptions
                 // updated existing subscription
                 return (etag, subscriptionId.Value);
             }
-            
+
             _db.SubscriptionStorage.RaiseNotificationForTaskAdded(options.Name);
 
             return (etag, etag);
@@ -108,6 +108,12 @@ namespace Raven.Server.Documents.Subscriptions
             {
                 return _serverStore.Cluster.Subscriptions.ReadSubscriptionStateByName(context, _databaseName, name);
             }
+        }
+
+        public IEnumerable<SubscriptionState> GetAllSubscriptionsFromServerStore(TransactionOperationContext context)
+        {
+            foreach (var state in SubscriptionsClusterStorage.GetAllSubscriptionsWithoutState(context, _databaseName, 0, int.MaxValue))
+                yield return state;
         }
 
         public SubscriptionState GetSubscriptionFromServerStoreById(long id)
@@ -257,7 +263,7 @@ namespace Raven.Server.Documents.Subscriptions
             var connectionToDrop = subscriptionConnectionsState.GetConnections().FirstOrDefault(conn => conn.WorkerId == workerId);
             if (connectionToDrop == null)
                 return false;
-            
+
             subscriptionConnectionsState.DropSingleConnection(connectionToDrop, ex);
             if (_logger.IsInfoEnabled)
                 _logger.Info(
@@ -330,7 +336,7 @@ namespace Raven.Server.Documents.Subscriptions
                 };
             }
         }
-        
+
         public static IEnumerable<ResendItem> GetResendItems(ClusterOperationContext context, string database, long id)
         {
             var subscriptionState = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.SubscriptionStateSchema, ClusterStateMachine.SubscriptionState);
@@ -341,12 +347,12 @@ namespace Raven.Server.Documents.Subscriptions
                 foreach (var item in subscriptionState.SeekByPrimaryKeyPrefix(prefixSlice, Slices.Empty, 0))
                 {
                     resendItem = new ResendItem
-                        {
-                            Type = (SubscriptionType)item.Key[prefixSlice.Size],
-                            Id = item.Value.Reader.ReadStringWithPrefix((int)ClusterStateMachine.SubscriptionStateTable.Key, prefix.Length + 2),
-                            ChangeVector = item.Value.Reader.ReadString((int)ClusterStateMachine.SubscriptionStateTable.ChangeVector),
-                            Batch = Bits.SwapBytes(item.Value.Reader.ReadLong((int)ClusterStateMachine.SubscriptionStateTable.BatchId))
-                        };
+                    {
+                        Type = (SubscriptionType)item.Key[prefixSlice.Size],
+                        Id = item.Value.Reader.ReadStringWithPrefix((int)ClusterStateMachine.SubscriptionStateTable.Key, prefix.Length + 2),
+                        ChangeVector = item.Value.Reader.ReadString((int)ClusterStateMachine.SubscriptionStateTable.ChangeVector),
+                        Batch = Bits.SwapBytes(item.Value.Reader.ReadLong((int)ClusterStateMachine.SubscriptionStateTable.BatchId))
+                    };
 
                     yield return resendItem;
                 }
@@ -358,7 +364,7 @@ namespace Raven.Server.Documents.Subscriptions
             foreach (var kvp in _subscriptions)
             {
                 var subscriptionConnectionsState = kvp.Value;
-                
+
                 if (subscriptionConnectionsState.IsSubscriptionActive() == false)
                     continue;
 
@@ -465,7 +471,7 @@ namespace Raven.Server.Documents.Subscriptions
 
             if (_subscriptions.TryGetValue(subscriptionId, out var concurrentSubscription) == false)
                 return false;
-            
+
             if (concurrentSubscription == null)
                 return false;
 
@@ -585,8 +591,8 @@ namespace Raven.Server.Documents.Subscriptions
                         DropSubscriptionConnections(subscriptionStateKvp.Key, new SubscriptionClosedException($"The subscription {subscriptionName} query has been modified, connection must be restarted", canReconnect: true));
                         continue;
                     }
-                    
-                    if (subscriptionState.LastClientConnectionTime == null && 
+
+                    if (subscriptionState.LastClientConnectionTime == null &&
                         subscriptionState.ChangeVectorForNextBatchStartingPoint != subscriptionConnectionsState.LastChangeVectorSent)
                     {
                         DropSubscriptionConnections(subscriptionStateKvp.Key, new SubscriptionClosedException($"The subscription {subscriptionName} was modified, connection must be restarted", canReconnect: true));
@@ -653,22 +659,22 @@ namespace Raven.Server.Documents.Subscriptions
         {
             // nothing to do here
         }
-        
+
         public void RaiseNotificationForTaskAdded(string subscriptionName)
         {
             OnAddTask?.Invoke(subscriptionName);
         }
-        
+
         public void RaiseNotificationForTaskRemoved(string subscriptionName)
         {
             OnRemoveTask?.Invoke(subscriptionName);
         }
-        
+
         public void RaiseNotificationForConnectionEnded(SubscriptionConnection connection)
         {
             OnEndConnection?.Invoke(connection);
         }
-        
+
         public void RaiseNotificationForBatchEnded(string subscriptionName, SubscriptionBatchStatsAggregator batchAggregator)
         {
             OnEndBatch?.Invoke(subscriptionName, batchAggregator);
