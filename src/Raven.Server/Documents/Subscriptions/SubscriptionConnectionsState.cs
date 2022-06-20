@@ -14,24 +14,6 @@ using Sparrow.Server;
 
 namespace Raven.Server.Documents.Subscriptions
 {
-    public class DummySubscriptionConnectionsState : SubscriptionConnectionsState
-    {
-        // for subscription test only
-        public DummySubscriptionConnectionsState(string name, DocumentsStorage storage, SubscriptionState state) : base(name, -0x42, storage.DocumentDatabase.SubscriptionStorage)
-        {
-            _subscriptionName = "dummy";
-
-            CancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(DocumentDatabase.DatabaseShutdown);
-            LastChangeVectorSent = state.ChangeVectorForNextBatchStartingPoint;
-            PreviouslyRecordedChangeVector = LastChangeVectorSent;
-            Query = state.Query;
-        }
-
-        public override void Initialize(SubscriptionConnection connection, bool afterSubscribe = false)
-        {
-        }
-    }
-    
     public class SubscriptionConnectionsState : SubscriptionConnectionsStateBase<SubscriptionConnection>
     {
         private readonly SubscriptionStorage _subscriptionStorage;
@@ -58,10 +40,10 @@ namespace Raven.Server.Documents.Subscriptions
         {
             var command = GetUpdateSubscriptionClientConnectionTime();
             var (etag, _) = await _server.SendToLeaderAsync(command);
-            await WaitForIndexNotification(etag);
+            await WaitForIndexNotificationAsync(etag);
         }
 
-        public override Task WaitForIndexNotification(long index) => 
+        public override Task WaitForIndexNotificationAsync(long index) => 
             DocumentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(index, _server.Engine.OperationTimeout);
 
         public virtual long GetLastEtagSent() => ChangeVectorUtils.GetEtagById(LastChangeVectorSent, DocumentDatabase.DbBase64Id);

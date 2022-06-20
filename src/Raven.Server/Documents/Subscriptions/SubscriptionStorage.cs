@@ -539,7 +539,7 @@ namespace Raven.Server.Documents.Subscriptions
 
                 var recentConnection = kvp.Value.MostRecentEndedConnection();
 
-                if (recentConnection != null && recentConnection.StatsCollector.Metrics.LastMessageSentAt < oldestPossibleIdleSubscription)
+                if (recentConnection != null && recentConnection.Stats.Metrics.LastMessageSentAt < oldestPossibleIdleSubscription)
                 {
                     if (_subscriptions.TryRemove(kvp.Key, out var subsState))
                     {

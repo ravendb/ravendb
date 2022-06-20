@@ -44,12 +44,12 @@ public static class SubscriptionBinder
                 new Lazy<SubscriptionConnectionsState>(connectionForShard.GetSubscriptionConnectionStateForShard), connectionForShard);
         }
 
-        var connection2 = new SubscriptionConnection(server, tcpConnectionOptions, onDispose, buffer,
+        var nonShardedConnection = new SubscriptionConnection(server, tcpConnectionOptions, onDispose, buffer,
             tcpConnectionOptions.DocumentDatabase.Name);
-        connection = connection2;
+        connection = nonShardedConnection;
 
         return new SubscriptionBinder<SubscriptionConnectionsState, SubscriptionConnection>(tcpConnectionOptions.DocumentDatabase.SubscriptionStorage,
-            new Lazy<SubscriptionConnectionsState>(connection2.GetSubscriptionConnectionState), connection2);
+            new Lazy<SubscriptionConnectionsState>(nonShardedConnection.GetSubscriptionConnectionState), nonShardedConnection);
     }
 }
 
@@ -76,7 +76,7 @@ public class SubscriptionBinder<TState, TConnection> : ISubscriptionBinder
         using (subscriptionConnectionInProgress)
         using (_connection)
         {
-            var stats = _connection.StatsCollector;
+            var stats = _connection.Stats;
             stats.Initialize();
             IDisposable disposeOnDisconnect = default;
 
@@ -135,7 +135,7 @@ public class SubscriptionBinder<TState, TConnection> : ISubscriptionBinder
 
         // refresh subscription data (change vector may have been updated, because in the meanwhile, another subscription could have just completed a batch)
         await _connection.RefreshAsync(registerConnectionDurationInTicks);
-        _connection.StatsCollector.CreateActiveConnectionScope();
+        _connection.Stats.CreateActiveConnectionScope();
 
         // update the state if above data changed
         _subscriptionConnectionsState.Initialize(_connection, afterSubscribe: true);

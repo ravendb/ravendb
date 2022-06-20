@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
 
                 try
                 {
-                    await TryPublishBatch(incomingBatch);
+                    await TryPublishBatchAsync(incomingBatch);
 
                     // send ack to SubscriptionConnection (to shard)
                     await SendAckAsync(PublishedShardBatchItem.LastSentChangeVectorInBatch, tcpStreamCopy, context, _processingCts.Token).ConfigureAwait(false);
@@ -110,7 +110,7 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
             }
         }
 
-        private async Task TryPublishBatch(BatchFromServer incomingBatch)
+        private async Task TryPublishBatchAsync(BatchFromServer incomingBatch)
         {
             _processingCts.Token.ThrowIfCancellationRequested();
 
