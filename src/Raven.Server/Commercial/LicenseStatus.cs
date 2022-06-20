@@ -221,6 +221,7 @@ namespace Raven.Server.Commercial
                 [nameof(HasTcpDataCompression)] = HasTcpDataCompression,
                 [nameof(HasConcurrentDataSubscriptions)] = HasConcurrentDataSubscriptions,
                 [nameof(HasElasticSearchEtl)] = HasElasticSearchEtl,
+                [nameof(HasQueueEtl)] = HasQueueEtl,
                 [nameof(HasPowerBI)] = HasPowerBI,
                 [nameof(HasPostgreSqlIntegration)] = HasPostgreSqlIntegration
             };

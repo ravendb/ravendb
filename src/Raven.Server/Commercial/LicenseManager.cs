@@ -985,6 +985,7 @@ namespace Raven.Server.Commercial
             var sqlEtlCount = 0;
             var olapEtlCount = 0;
             var elasticSearchEtlCount = 0;
+            var queueEtlCount = 0;
             var snapshotBackupsCount = 0;
             var cloudBackupsCount = 0;
             var encryptedBackupsCount = 0;
@@ -1042,6 +1043,10 @@ namespace Raven.Server.Commercial
                     if (databaseRecord.ElasticSearchEtls != null &&
                         databaseRecord.ElasticSearchEtls.Count > 0)
                         elasticSearchEtlCount++;
+                    
+                    if (databaseRecord.QueueEtls != null &&
+                        databaseRecord.QueueEtls.Count > 0)
+                        queueEtlCount++;
 
                     var backupTypes = GetBackupTypes(databaseRecord.PeriodicBackups);
                     if (backupTypes.HasSnapshotBackup)
@@ -1119,6 +1124,12 @@ namespace Raven.Server.Commercial
             {
                 var message = GenerateDetails(elasticSearchEtlCount, "ElasticSearch ETL");
                 throw GenerateLicenseLimit(LimitType.ElasticSearchEtl, message);
+            }
+            
+            if (queueEtlCount > 0 && newLicenseStatus.HasQueueEtl == false)
+            {
+                var message = GenerateDetails(queueEtlCount, "Queue ETL");
+                throw GenerateLicenseLimit(LimitType.QueueEtl, message);
             }
 
             if (snapshotBackupsCount > 0 && newLicenseStatus.HasSnapshotBackups == false)
