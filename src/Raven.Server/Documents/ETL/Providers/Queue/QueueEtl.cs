@@ -37,8 +37,7 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithMessages, QueueEtlConfigu
 
     public const string QueueEtlTag = "Queue ETL";
     private string TransactionalId => $"{Database.DbId}-{Name}";
-    private readonly HashSet<string> _existingQueues = new();
-    private readonly List<QueueDeclare> _queuesForDeclare = new();
+    private readonly Dictionary<string, HashSet<string>> _existingRabbitMqQueuesAndExchanges = new();
 
     public override string EtlSubType => Configuration.BrokerType.ToString();
 
@@ -110,7 +109,7 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithMessages, QueueEtlConfigu
 
         using (var formatter = new BlittableJsonEventBinaryFormatter(context))
         {
-            var messages = new List<QueueMessage>();
+            var publish = new QueueMessagesToPublish();
 
             foreach (QueueWithMessages queueItem in items)
             {
@@ -120,7 +119,19 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithMessages, QueueEtlConfigu
                 {
                     CloudEvent eventMessage = CreateEventMessage(message);
 
-                    messages.Add(new QueueMessage { QueueName = queueName, Message = eventMessage });
+                    var messageToPublish = new QueueMessage
+                    {
+                        QueueName = queueName, 
+                        CloudEvent = eventMessage,
+                        Options = message.Options
+                    };
+
+                    publish.MessagesByLoadOrder.Add(messageToPublish);
+
+                    if (publish.MessagesByQueue.TryGetValue(queueName, out var messagesPerQueue) == false)
+                        publish.MessagesByQueue[queueName] = messagesPerQueue = new List<QueueMessage>();
+                    
+                    messagesPerQueue.Add(messageToPublish);
 
                     if (queueItem.DeleteProcessedDocuments)
                         idsToDelete.Add(message.DocumentId);
@@ -130,10 +141,10 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithMessages, QueueEtlConfigu
             switch (Configuration.Connection.BrokerType)
             {
                 case QueueBrokerType.Kafka:
-                    count = ProcessKafka(messages, formatter);
+                    count = ProcessKafka(publish, formatter);
                     break;
                 case QueueBrokerType.RabbitMq:
-                    count = ProcessRabbitMq(items, formatter);
+                    count = ProcessRabbitMq(publish, formatter);
                     break;
             }
         }
@@ -160,11 +171,11 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithMessages, QueueEtlConfigu
         return new EtlStatsScope(stats);
     }
 
-    private int ProcessKafka(List<QueueMessage> messages, BlittableJsonEventBinaryFormatter formatter)
+    private int ProcessKafka(QueueMessagesToPublish publish, BlittableJsonEventBinaryFormatter formatter)
     {
         int count = 0;
 
-        if (messages.Count == 0)
+        if (publish.MessagesByLoadOrder.Count == 0)
             return count;
 
         if (_kafkaProducer == null)
@@ -222,9 +233,9 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithMessages, QueueEtlConfigu
 
         try
         {
-            foreach (var @event in messages)
+            foreach (var @event in publish.MessagesByLoadOrder)
             {
-                var kafkaMessage = @event.Message.ToKafkaMessage(ContentMode.Binary, formatter);
+                var kafkaMessage = @event.CloudEvent.ToKafkaMessage(ContentMode.Binary, formatter);
 
                 _kafkaProducer.Produce(@event.QueueName, kafkaMessage, ReportHandler);
             }
@@ -249,70 +260,42 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithMessages, QueueEtlConfigu
         return count;
     }
 
-    private int ProcessRabbitMq(IEnumerable<QueueWithMessages> items, BlittableJsonEventBinaryFormatter formatter)
+    private int ProcessRabbitMq(QueueMessagesToPublish publish, BlittableJsonEventBinaryFormatter formatter)
     {
         int count = 0;
-        var queues = new List<RabbitMqQueueWithMessages>();
 
-        foreach (QueueWithMessages queueItem in items)
-        {
-            var newQueue = new RabbitMqQueueWithMessages { QueueName = queueItem.Name };
-
-            if (_queuesForDeclare.Any(x => x.QueueName == queueItem.Name) == false)
-            {
-                _queuesForDeclare.Add(new QueueDeclare() { QueueName = queueItem.Name });
-            }
-
-            foreach (var message in queueItem.Messages)
-            {
-                if (string.IsNullOrWhiteSpace(message.Options?.Exchange) == false)
-                {
-                    var queue = _queuesForDeclare.First(x => x.QueueName == queueItem.Name);
-
-                    if (queue.Exchanges.Any(x => x.ExchangeName == message.Options.ExchangeType) == false)
-                    {
-                        queue.Exchanges.Add(new ExchangeDeclare()
-                        {
-                            ExchangeName = message.Options?.Exchange,
-                            ExchangeType = message.Options?.ExchangeType ?? ExchangeType.Direct,
-                        });
-                    }
-                }
-
-                CloudEvent eventMessage = CreateEventMessage(message);
-                newQueue.Messages.Add(new RabbitMqMessage()
-                {
-                    Exchange = message.Options?.Exchange ?? "",
-                    ExchangeType = message.Options?.ExchangeType ?? ExchangeType.Direct,
-                    Message = eventMessage.ToAmqpMessage(ContentMode.Binary, formatter)
-                });
-            }
-
-            queues.Add(newQueue);
-        }
-
-        if (queues.Count == 0) return count;
+        if (publish.MessagesByLoadOrder.Count == 0) 
+            return count;
 
         if (_rabbitMqConnection == null)
         {
             _rabbitMqConnection = QueueBrokerConnectionHelper.CreateRabbitMqConnection(Configuration.Connection.RabbitMqConnectionSettings);
         }
 
-        DeclareExchangesAndQueues();
+        if (Configuration.SkipAutomaticQueueDeclaration == false)
+            DeclareDefaultRabbitMqExchangesAndQueues(publish);
 
-        foreach (var queue in queues)
+        // withing a single transaction we can publish messages to the same queue
+        // so we handle the loaded messages per queue
+
+        foreach (var item in publish.MessagesByQueue)
         {
+            var queueName = item.Key;
+
             using var rabbitMqProducer = _rabbitMqConnection.CreateModel();
             
             rabbitMqProducer.TxSelect();
+
             var batch = rabbitMqProducer.CreateBasicPublishBatch();
 
-            foreach (var message in queue.Messages)
+            foreach (var message in item.Value)
             {
                 var properties = rabbitMqProducer.CreateBasicProperties();
                 properties.Headers = new Dictionary<string, object>();
-                
-                foreach (var appProperty in message.Message.ApplicationProperties.Map.ToList())
+
+                var rabbitMqMessage = message.CloudEvent.ToAmqpMessage(ContentMode.Binary, formatter);
+
+                foreach (var appProperty in rabbitMqMessage.ApplicationProperties.Map.ToList())
                 {
                     string key = appProperty.Key.ToString()?.Split(':')[1];
                     string value = appProperty.Value.ToString();
@@ -323,7 +306,7 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithMessages, QueueEtlConfigu
                     }
                 }
                 
-                batch.Add(message.Exchange, queue.QueueName, true, properties, new ReadOnlyMemory<byte>((byte[])message.Message.Body));
+                batch.Add(message.Options?.Exchange ?? string.Empty, queueName, true, properties, new ReadOnlyMemory<byte>((byte[])rabbitMqMessage.Body));
                 count++;
             }
             
@@ -350,24 +333,36 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithMessages, QueueEtlConfigu
         return count;
     }
 
-    private void DeclareExchangesAndQueues()
+    private void DeclareDefaultRabbitMqExchangesAndQueues(QueueMessagesToPublish publish)
     {
-        using var rabbitMqProducer = _rabbitMqConnection.CreateModel();
+        using var rabbitMqModel = _rabbitMqConnection.CreateModel();
         
-        foreach (var queueDeclare in _queuesForDeclare)
+        foreach (var item in publish.MessagesByQueue)
         {
+            var queueName = item.Key;
+            var messages = item.Value;
+
             try
             {
-                if (_existingQueues.Contains(queueDeclare.QueueName) == false)
+                if (_existingRabbitMqQueuesAndExchanges.ContainsKey(queueName) == false)
                 {
-                    rabbitMqProducer.QueueDeclare(queueDeclare.QueueName, true, false, false, null);
-                    foreach (ExchangeDeclare exchangeDeclare in queueDeclare.Exchanges)
-                    {
-                        rabbitMqProducer.ExchangeDeclare(exchangeDeclare.ExchangeName, exchangeDeclare.ExchangeType, true, false, null);
-                        rabbitMqProducer.QueueBind(queueDeclare.QueueName, exchangeDeclare.ExchangeName, queueDeclare.QueueName);
-                    }
+                    rabbitMqModel.QueueDeclare(queueName, true, false, false, null);
 
-                    _existingQueues.Add(queueDeclare.QueueName);
+                    _existingRabbitMqQueuesAndExchanges.Add(queueName, new HashSet<string>());
+                }
+
+                foreach (var message in messages)
+                {
+                    var exchange = message.Options?.Exchange;
+
+                    if (string.IsNullOrEmpty(exchange) == false && _existingRabbitMqQueuesAndExchanges[queueName].Contains(exchange))
+                    {
+                        rabbitMqModel.ExchangeDeclare(exchange, ExchangeType.Direct, true, false, null);
+
+                        rabbitMqModel.QueueBind(queueName, message.Options.Exchange, queueName);
+
+                        _existingRabbitMqQueuesAndExchanges[queueName].Add(exchange);
+                    }
                 }
             }
             catch (OperationInterruptedException e)
@@ -394,7 +389,7 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithMessages, QueueEtlConfigu
             Data = item.TransformationResult
         };
 
-        eventMessage.SetPartitionKey(item.Options?.PartitionKey ?? item.ChangeVector);
+        eventMessage.SetPartitionKey(item.Options?.PartitionKey ?? item.DocumentId);
 
         return eventMessage;
     }
@@ -431,24 +426,19 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithMessages, QueueEtlConfigu
         OnProcessStopped();
     }
 
+    private class QueueMessagesToPublish
+    {
+        public List<QueueMessage> MessagesByLoadOrder { get; } = new();
+
+        public Dictionary<string, List<QueueMessage>> MessagesByQueue { get; } = new();
+    }
+
     private class QueueMessage
     {
         public string QueueName { get; set; }
 
-        public CloudEvent Message { get; set; }
-    }
+        public QueueLoadOptions Options { get; set; }
 
-    private class QueueDeclare
-    {
-        public string QueueName { get; set; }
-
-        public List<ExchangeDeclare> Exchanges { get; set; } = new();
-    }
-
-    private class ExchangeDeclare
-    {
-        public string ExchangeName { get; set; }
-
-        public string ExchangeType { get; set; }
+        public CloudEvent CloudEvent { get; set; }
     }
 }

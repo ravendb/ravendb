@@ -88,6 +88,12 @@ internal class QueueDocumentTransformer : EtlTransformer<QueueItem, QueueWithMes
 
         if (options != null)
         {
+            options.GetOwnPropertyKeys().ForEach(x =>
+            {
+                if (QueueLoadOptions.ValidOptions.Contains(x.ToString()) == false)
+                    throw new InvalidOperationException($"Unknown option passed to loadTo(..., {{ {x}: ... }}). '{x}' is not a valid property name (property names are case sensitive)");
+            });
+
             loadOptions = new QueueLoadOptions();
 
             if (TryGetOptionValue(nameof(QueueLoadOptions.Id), out var messageId))
@@ -104,9 +110,6 @@ internal class QueueDocumentTransformer : EtlTransformer<QueueItem, QueueWithMes
 
             if (TryGetOptionValue(nameof(QueueLoadOptions.Exchange), out var exchange))
                 loadOptions.Exchange = exchange;
-            
-            if (TryGetOptionValue(nameof(QueueLoadOptions.ExchangeType), out var exchangeType))
-                loadOptions.ExchangeType = exchangeType;
         }
 
         LoadToFunction(name, result, loadOptions);
