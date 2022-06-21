@@ -79,6 +79,8 @@ interface IndexErrorPerDocument {
     Action: string;
     IndexName: string;
     Timestamp: string;
+    LocalTime: string;
+    RelativeTime: string;
 }
 
 interface revisionTimeSeriesDto {

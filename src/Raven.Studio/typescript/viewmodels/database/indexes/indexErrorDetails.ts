@@ -1,4 +1,5 @@
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
+import popoverUtils = require("common/popoverUtils");
 
 class indexErrorDetails extends dialogViewModelBase {
 
@@ -17,13 +18,30 @@ class indexErrorDetails extends dialogViewModelBase {
 
         this.initObservables();
     }
+    
+    compositionComplete() {
+        super.compositionComplete();
+        
+        popoverUtils.longWithHover($(".time-value"),
+            {
+                content: `<div class="data-container padding padding-xs">
+                              <div>
+                                  <div class="data-label">UTC:</div>
+                                  <div class="data-value">${this.currentError().Timestamp}</div>
+                              </div>
+                              <div>
+                                  <div class="data-label">Relative:</div>
+                                  <div class="data-value">${this.currentError().RelativeTime}</div>
+                              </div>
+                          </div>`
+            });
+    }
 
     private initObservables() {
         this.currentError = ko.pureComputed(() => this.indexErrors[this.currentIndex()]);
         this.canNavigateToPreviousError = ko.pureComputed(() => this.currentIndex() > 0);
         this.canNavigateToNextError = ko.pureComputed(() => this.currentIndex() < this.indexErrors.length - 1);
     }
-
 
     previousError() {
         const idx = this.currentIndex();
@@ -38,7 +56,6 @@ class indexErrorDetails extends dialogViewModelBase {
             this.currentIndex(idx + 1);
         }
     }
-
 }
 
-export = indexErrorDetails; 
+export = indexErrorDetails;
