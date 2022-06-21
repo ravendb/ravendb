@@ -8,6 +8,8 @@ using Tests.Infrastructure;
 using FastTests.Client.Subscriptions;
 using FastTests.Voron;
 using SlowTests.Voron.CompactTrees;
+using FastTests.Voron;
+using FastTests.Voron.Sets;
 
 namespace Tryouts;
 
@@ -42,7 +44,7 @@ public static class Program
                         try
                         {
                             //new CompactTreeTests(testOutputHelper).CanDeleteLargeNumberOfItemsInRandomInsertionOrder(2023, 13878);
-                            new CompactTreeSlowTests(testOutputHelper).CanDeleteLargeNumberOfItemsInRandomInsertionOrder(number, seed);
+                            new SetTests(testOutputHelper).CanDeleteAndInsertInRandomOrder(number, seed);
                         }
                         catch (Exception ex)
                         {
