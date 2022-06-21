@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using RabbitMQ.Client;
@@ -8,12 +9,36 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.Queue;
 using Tests.Infrastructure;
 using Tests.Infrastructure.ConnectionString;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.Queue;
 
 public class RabbitMqEtlTestBase : QueueEtlTestBase
 {
+    protected class TestRabbitMqConsumer : DefaultBasicConsumer
+    {
+        private readonly BlockingCollection<(byte[] Body, IBasicProperties Properties)> _deliveries = new();
+
+        public TestRabbitMqConsumer(IModel model) : base(model)
+        {
+        }
+
+        public override void HandleBasicDeliver(string consumerTag, ulong deliveryTag, bool redelivered, string exchange, string routingKey, IBasicProperties properties, ReadOnlyMemory<byte> body)
+        {
+            _deliveries.Add((body.ToArray(), properties));
+        }
+
+        public (byte[] Body, IBasicProperties Properties) Consume()
+        {
+            var result = _deliveries.TryTake(out var delivery, TimeSpan.FromMinutes(1));
+
+            Assert.True(result, "Failed to consume message");
+
+            return delivery;
+        }
+    }
+
     private readonly HashSet<string> _definedTopics = new();
 
     protected RabbitMqEtlTestBase(ITestOutputHelper output) : base(output)
@@ -84,7 +109,7 @@ loadToOrders" + ExchangeSuffix + @"(orderData);
         return config;
     }
 
-    protected IModel CreateRabbitMqConsumer()
+    protected IModel CreateRabbitMqChannel()
     {
         var connectionFactory = new ConnectionFactory() { Uri = new Uri(RabbitMqConnectionString.Instance.VerifiedConnectionString.Value) };
         var connection = connectionFactory.CreateConnection();
@@ -98,7 +123,7 @@ loadToOrders" + ExchangeSuffix + @"(orderData);
         if (_definedTopics.Count == 0 || RequiresRabbitMqFactAttribute.CanConnect == false)
             return;
 
-        var channel = CreateRabbitMqConsumer();
+        var channel = CreateRabbitMqChannel();
         var consumer = new EventingBasicConsumer(channel);
 
         foreach (string definedTopic in _definedTopics)

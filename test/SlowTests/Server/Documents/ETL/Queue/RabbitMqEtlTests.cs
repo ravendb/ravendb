@@ -5,7 +5,6 @@ using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using RabbitMQ.Client;
-using RabbitMQ.Client.Events;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.Queue;
@@ -50,27 +49,24 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
 
             AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
-            var channel = CreateRabbitMqConsumer();
-            var consumer = new EventingBasicConsumer(channel);
-
-            consumer.Received += (model, ea) =>
-            {
-                var body = ea.Body.ToArray();
-                var bytesAsString = Encoding.UTF8.GetString(body);
-                
-                var order = JsonConvert.DeserializeObject<OrderData>(bytesAsString);
-
-                Assert.NotNull(order);
-                Assert.Equal(order.Id, "orders/1-A");
-                Assert.Equal(order.OrderLinesCount, 2);
-                Assert.Equal(order.TotalCost, 10);
-            };
+            var channel = CreateRabbitMqChannel();
+            var consumer = new TestRabbitMqConsumer(channel);
 
             channel.BasicConsume(queue: DefaultExchanges.First().Name,
                 autoAck: true,
                 consumer: consumer);
 
-            etlDone.Reset();
+            var ea = consumer.Consume();
+
+            var body = ea.Body.ToArray();
+            var bytesAsString = Encoding.UTF8.GetString(body);
+
+            var order = JsonConvert.DeserializeObject<OrderData>(bytesAsString);
+
+            Assert.NotNull(order);
+            Assert.Equal(order.Id, "orders/1-A");
+            Assert.Equal(order.OrderLinesCount, 2);
+            Assert.Equal(order.TotalCost, 10);
         }
     }
     
@@ -98,25 +94,23 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
 
             AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
-            var channel = CreateRabbitMqConsumer();
-            var consumer = new EventingBasicConsumer(channel);
+            var channel = CreateRabbitMqChannel();
 
-            consumer.Received += (model, ea) =>
-            {
-                var headers = ea.BasicProperties.Headers;
-
-                Assert.NotNull(headers.ContainsKey("cloudevents:id"));
-                Assert.NotNull(headers.ContainsKey("cloudevents:specversion"));
-                Assert.NotNull(headers.ContainsKey("cloudevents:type"));
-                Assert.NotNull(headers.ContainsKey("cloudevents:partitionkey"));
-                Assert.NotNull(headers.ContainsKey("cloudevents:source"));
-            };
+            var consumer = new TestRabbitMqConsumer(channel);
 
             channel.BasicConsume(queue: DefaultExchanges.First().Name,
                 autoAck: true,
                 consumer: consumer);
 
-            etlDone.Reset();
+            var ea = consumer.Consume();
+
+            var headers = ea.Properties.Headers;
+
+            Assert.True(headers.ContainsKey("cloudEvents:id"));
+            Assert.True(headers.ContainsKey("cloudEvents:specversion"));
+            Assert.True(headers.ContainsKey("cloudEvents:type"));
+            Assert.True(headers.ContainsKey("cloudEvents:partitionkey"));
+            Assert.True(headers.ContainsKey("cloudEvents:source"));
         }
     }
 
@@ -150,26 +144,25 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
 
         AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
         
-        var channel = CreateRabbitMqConsumer();
-        var consumer = new EventingBasicConsumer(channel);
-        var counter = 0;
+        var channel = CreateRabbitMqChannel();
+        var consumer = new TestRabbitMqConsumer(channel);
 
-        consumer.Received += (model, ea) =>
+        channel.BasicConsume(queue: DefaultExchanges.First().Name, autoAck: true, consumer: consumer);
+
+        for (int counter = 0; counter < numberOfOrders; counter++)
         {
+            var ea = consumer.Consume();
+
             var body = ea.Body.ToArray();
             var bytesAsString = Encoding.UTF8.GetString(body);
-                
+
             var order = JsonConvert.DeserializeObject<OrderData>(bytesAsString);
 
             Assert.NotNull(order);
             Assert.Equal(order.Id, $"orders/{counter}");
             Assert.Equal(order.OrderLinesCount, 2);
             Assert.Equal(order.TotalCost, counter * 2);
-            
-            counter++;
-        };
-
-        channel.BasicConsume(queue: DefaultExchanges.First().Name, autoAck: true, consumer: consumer);
+        }
     }
 
     [RequiresRabbitMqFact]
@@ -191,22 +184,32 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
 
         AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
         
-        var channel = CreateRabbitMqConsumer();
-        var consumer = new   EventingBasicConsumer(channel);
-
-        consumer.Received += (model, ea) =>
-        {
-            var body = ea.Body.ToArray();
-            var bytesAsString = Encoding.UTF8.GetString(body);
-                
-            var user = JsonConvert.DeserializeObject<UserData>(bytesAsString);
-            
-            Assert.NotNull(user);
-            Assert.Contains(user.UserId, new List<string>() { "users/1", "people/1" });
-            Assert.Contains(user.Name, new List<string>() { "John Doe", "James Smith" });
-        };
+        var channel = CreateRabbitMqChannel();
+        var consumer = new TestRabbitMqConsumer(channel);
 
         channel.BasicConsume(queue: $"Users{ExchangeSuffix}", autoAck: true, consumer: consumer);
+
+        var ea = consumer.Consume();
+
+        var body = ea.Body.ToArray();
+        var bytesAsString = Encoding.UTF8.GetString(body);
+
+        var user = JsonConvert.DeserializeObject<UserData>(bytesAsString);
+
+        Assert.NotNull(user);
+        Assert.Equal("users/1", user.UserId);
+        Assert.Equal("Joe Doe", user.Name);
+
+        ea = consumer.Consume();
+
+        body = ea.Body.ToArray();
+        bytesAsString = Encoding.UTF8.GetString(body);
+
+        user = JsonConvert.DeserializeObject<UserData>(bytesAsString);
+
+        Assert.NotNull(user);
+        Assert.Equal("people/1", user.UserId);
+        Assert.Equal("James Smith", user.Name);
     }
 
     [Fact]
@@ -344,21 +347,20 @@ output('test output')"
 
             AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
             
-            var channel = CreateRabbitMqConsumer();
-            var consumer = new EventingBasicConsumer(channel);
-            
-            consumer.Received += (model, ea) =>
-            {
-                var body = ea.Body.ToArray();
-                var bytesAsString = Encoding.UTF8.GetString(body);
-                
-                var user = JsonConvert.DeserializeObject<UserData>(bytesAsString);
-            
-                Assert.NotNull(user);
-                Assert.Equal(user.Name, "Arek");
-            };
+            var channel = CreateRabbitMqChannel();
+            var consumer = new TestRabbitMqConsumer(channel);
 
             channel.BasicConsume(queue: $"Users{ExchangeSuffix}", autoAck: true, consumer: consumer);
+
+            var ea = consumer.Consume();
+
+            var body = ea.Body.ToArray();
+            var bytesAsString = Encoding.UTF8.GetString(body);
+
+            var user = JsonConvert.DeserializeObject<UserData>(bytesAsString);
+
+            Assert.NotNull(user);
+            Assert.Equal(user.Name, "Arek");
         }
     }
 
@@ -381,21 +383,20 @@ output('test output')"
 
             AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
             
-            var channel = CreateRabbitMqConsumer();
-            var consumer = new   EventingBasicConsumer(channel);
-
-            consumer.Received += (model, ea) =>
-            {
-                var body = ea.Body.ToArray();
-                var bytesAsString = Encoding.UTF8.GetString(body);
-                
-                var user = JsonConvert.DeserializeObject<UserData>(bytesAsString);
-            
-                Assert.NotNull(user);
-                Assert.Equal(user.Name, "Arek");
-            };
+            var channel = CreateRabbitMqChannel();
+            var consumer = new TestRabbitMqConsumer(channel);
 
             channel.BasicConsume(queue: $"Users{ExchangeSuffix}", autoAck: true, consumer: consumer);
+
+            var ea = consumer.Consume();
+
+            var body = ea.Body.ToArray();
+            var bytesAsString = Encoding.UTF8.GetString(body);
+
+            var user = JsonConvert.DeserializeObject<UserData>(bytesAsString);
+
+            Assert.NotNull(user);
+            Assert.Equal(user.Name, "Arek");
 
             using (var session = store.OpenSession())
             {
