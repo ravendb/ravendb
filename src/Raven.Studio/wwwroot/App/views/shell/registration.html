@@ -12,6 +12,9 @@
             </div>
             <div class="modal-body">
                 <img src="Content/img/license_multiple.png" class="img-responsive licenseModalImg" data-bind="visible: !licenseExpired() && !renewWhenNotExpired()"/>
+                <div data-bind="visible: licenseType() !== 'None'" class="text-center">
+                    <strong data-bind="text: 'License ID: ' + licenseId()"></strong>
+                </div>
                 <div class="text-center lead">
                     <span data-bind="if: dismissVisible">
                         <strong class="text-warning" data-bind="text: daysToRegister"></strong>
@@ -20,7 +23,7 @@
                     <span data-bind="if: error">
                         <strong class="text-warning" data-bind="text: error"></strong>
                     </span>
-                    <div data-bind="visible: licenseExpired"> 
+                    <div data-bind="visible: licenseExpired" class="margin-top-lg"> 
                         Select one of the following options:
                     </div>
                 </div>
