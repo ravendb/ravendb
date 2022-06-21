@@ -13,11 +13,11 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks
         {
         }
 
-        protected override ValueTask<bool> ScheduleBackupOperation(long taskId, bool isFullBackup, long operationId)
+        protected override ValueTask<bool> ScheduleBackupOperationAsync(long taskId, bool isFullBackup, long operationId)
         {
             var token = RequestHandler.CreateTimeLimitedOperationToken();
 
-            var t = RequestHandler.DatabaseContext.Operations.AddRemoteOperation<OperationIdResult<StartBackupOperationResult>, ShardedBackupResult>(operationId,
+            var t = RequestHandler.DatabaseContext.Operations.AddRemoteOperation<OperationIdResult<StartBackupOperationResult>, ShardedBackupResult, ShardedBackupProgress>(operationId,
                 Server.Documents.Operations.OperationType.DatabaseBackup,
                 "Backup of sharded database : " + RequestHandler.DatabaseName,
                 detailedDescription: null,

@@ -11,7 +11,6 @@ namespace Raven.Client.Documents.Operations.Backups
     public class BackupOperation : IMaintenanceOperation<OperationIdResult<StartBackupOperationResult>>
     {
         private readonly BackupConfiguration _backupConfiguration;
-        private readonly string _nodeTag;
         
         public BackupOperation(BackupConfiguration backupConfiguration)
         {
@@ -21,14 +20,9 @@ namespace Raven.Client.Documents.Operations.Backups
                 throw new InvalidOperationException("Cannot start the one-time backup using the provided configuration since the backup configuration defines no destinations.");
         }
 
-        public BackupOperation(BackupConfiguration backupConfiguration, string nodeTag) : this(backupConfiguration)
-        {
-            _nodeTag = nodeTag;
-        }
-
         public RavenCommand<OperationIdResult<StartBackupOperationResult>> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
-            return new BackupCommand(_backupConfiguration, null, _nodeTag);
+            return new BackupCommand(_backupConfiguration, null);
         }
 
         internal class BackupCommand : RavenCommand<OperationIdResult<StartBackupOperationResult>>
@@ -37,11 +31,9 @@ namespace Raven.Client.Documents.Operations.Backups
             private readonly BackupConfiguration _backupConfiguration;
             private readonly long? _operationId;
 
-            public BackupCommand(BackupConfiguration backupConfiguration, long? operationId = null, string nodeTag = null)
+            public BackupCommand(BackupConfiguration backupConfiguration, long? operationId = null)
             {
                 _backupConfiguration = backupConfiguration;
-                _operationId = operationId;
-                SelectedNodeTag = nodeTag;
                 _operationId = operationId;
             }
 

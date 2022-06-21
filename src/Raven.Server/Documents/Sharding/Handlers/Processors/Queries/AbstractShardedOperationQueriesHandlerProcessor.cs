@@ -45,7 +45,7 @@ internal abstract class AbstractShardedOperationQueriesHandlerProcessor : Abstra
         var op = GetOperation(query, operationId, options);
 
         var task = RequestHandler.DatabaseContext.Operations
-            .AddRemoteOperation<OperationIdResult, BulkOperationResult>(
+            .AddRemoteOperation<OperationIdResult, BulkOperationResult, BulkInsertProgress>(
                 operationId,
                 op.Type,
                 GetOperationDescription(query),

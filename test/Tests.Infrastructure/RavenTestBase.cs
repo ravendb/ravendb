@@ -738,10 +738,7 @@ namespace FastTests
                         options.ModifyDocumentStore = s =>
                         {
                             modifyStore?.Invoke(s);
-                            s.Conventions.OperationStatusFetchMode = OperationStatusFetchMode.Polling;
                         };
-
-                        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "remove above after changes api is working");
 
                         options.DatabaseMode = RavenDatabaseMode.Sharded;
                         options.AddToDescription($"{nameof(RavenDataAttribute.DatabaseMode)} = {nameof(RavenDatabaseMode.Sharded)}");

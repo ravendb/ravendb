@@ -368,7 +368,7 @@ namespace SlowTests.Sharding.Backup
             var backupPath = NewDataPath(suffix: "_BackupFolder");
             const string idPrefix = "users";
 
-            using (var store = Sharding.GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "0 2 * * 0", incrementalBackupFrequency: "0 2 * * 1");
 
@@ -385,11 +385,25 @@ namespace SlowTests.Sharding.Backup
                 }
 
                 var op = await store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup: true, backupTaskId));
-                var backupResult = (BackupResult)await op.WaitForCompletionAsync();
-                Assert.Equal(100, backupResult.Documents.ReadCount);
-                
-                var dirs = Directory.GetDirectories(backupPath);
-                Assert.Equal(3, dirs.Length);
+                var operationResult = await op.WaitForCompletionAsync();
+
+                string[] dirs = null;
+                if (options.DatabaseMode == RavenDatabaseMode.Single)
+                {
+                    var backupResult = operationResult as BackupResult;
+                    Assert.Equal(100, backupResult.Documents.ReadCount);
+                    dirs = Directory.GetDirectories(backupPath);
+                    Assert.Equal(1, dirs.Length);
+                }
+                else if (options.DatabaseMode == RavenDatabaseMode.Sharded)
+                {
+                    var sbr = operationResult as ShardedBackupResult;
+                    Assert.Equal(3, sbr.Results.Count);
+                    Assert.Equal(100, sbr.Results.Sum(x => x.Result.Documents.ReadCount));
+                    dirs = Directory.GetDirectories(backupPath);
+                    Assert.Equal(3, dirs.Length);
+                }
+
                 using (var store2 = GetDocumentStore(options))
                 {
                     foreach (var dir in dirs)

@@ -119,26 +119,11 @@ namespace Raven.Client.Documents.Smuggler
             return json;
         }
 
-        public override IOperationProgress Clone()
-        {
-            var result = new SmugglerResult();
-            result.MergeWith((IOperationProgress)this);
-            return result;
-        }
-
-        public override bool CanMerge => true;
-
         public bool ShouldPersist => true;
 
-        public virtual void MergeWith(IOperationResult result)
+        public void MergeWith(IOperationResult result)
         {
-            if (result is not SmugglerResult smugglerResult)
-                return;
-
-            base.MergeWith(smugglerResult);
-
-            foreach (var message in smugglerResult.Messages)
-                AddMessage(message);
+            throw new NotSupportedException();
         }
 
         public string LegacyLastDocumentEtag { get; set; }
@@ -146,7 +131,7 @@ namespace Raven.Client.Documents.Smuggler
 
         public class SmugglerProgress : SmugglerProgressBase
         {
-            protected readonly SmugglerResult _result;
+            internal SmugglerResult _result;
 
             public SmugglerProgress()
                 : this(null)
@@ -180,23 +165,6 @@ namespace Raven.Client.Documents.Smuggler
                 var json = base.ToJson();
                 json[nameof(Message)] = _result?.Message ?? Message;
                 return json;
-            }
-
-            public override IOperationProgress Clone()
-            {
-                var result = new SmugglerProgress();
-                result.MergeWith(this);
-                return result;
-            }
-
-            public override bool CanMerge => true;
-
-            public override void MergeWith(IOperationProgress progress)
-            {
-                if(progress is not SmugglerProgress smugglerProgress)
-                    return;
-                
-                base.MergeWith(smugglerProgress);
             }
         }
         
@@ -281,47 +249,16 @@ namespace Raven.Client.Documents.Smuggler
             };
         }
 
-        public abstract IOperationProgress Clone();
-        public abstract bool CanMerge { get; }
-        public virtual void MergeWith(IOperationProgress progress)
+        public IOperationProgress Clone()
         {
-            if (progress is not SmugglerProgressBase smugglerResult)
-                return;
+            throw new NotSupportedException();
+        }
 
-            Documents.SkippedCount += smugglerResult.Documents.SkippedCount;
-            Documents.ReadCount += smugglerResult.Documents.ReadCount;
-            Documents.ErroredCount += smugglerResult.Documents.ErroredCount;
-            Documents.LastEtag = Math.Max(Documents.LastEtag, smugglerResult.Documents.LastEtag);
-            Documents.Attachments.ReadCount += smugglerResult.Documents.Attachments.ReadCount;
+        public bool CanMerge => false;
 
-            Tombstones.ReadCount += smugglerResult.Tombstones.ReadCount;
-            Tombstones.ErroredCount += smugglerResult.Tombstones.ErroredCount;
-            Tombstones.LastEtag = Math.Max(Tombstones.LastEtag, smugglerResult.Tombstones.LastEtag);
-
-            RevisionDocuments.ReadCount += smugglerResult.RevisionDocuments.ReadCount;
-            RevisionDocuments.ErroredCount += smugglerResult.RevisionDocuments.ErroredCount;
-            RevisionDocuments.LastEtag = Math.Max(RevisionDocuments.LastEtag, smugglerResult.RevisionDocuments.LastEtag);
-            RevisionDocuments.Attachments = smugglerResult.RevisionDocuments.Attachments;
-
-            Counters.ReadCount += smugglerResult.Counters.ReadCount;
-            Counters.ErroredCount += smugglerResult.Counters.ErroredCount;
-            Counters.LastEtag = Math.Max(Counters.LastEtag, smugglerResult.Counters.LastEtag);
-
-            TimeSeries.ReadCount += smugglerResult.TimeSeries.ReadCount;
-            TimeSeries.ErroredCount += smugglerResult.TimeSeries.ErroredCount;
-            TimeSeries.LastEtag = Math.Max(TimeSeries.LastEtag, smugglerResult.TimeSeries.LastEtag);
-
-            Identities.ReadCount += smugglerResult.Identities.ReadCount;
-            Identities.ErroredCount += smugglerResult.Identities.ErroredCount;
-
-            CompareExchange.ReadCount += smugglerResult.CompareExchange.ReadCount;
-            CompareExchange.ErroredCount += smugglerResult.CompareExchange.ErroredCount;
-
-            Subscriptions.ReadCount += smugglerResult.Subscriptions.ReadCount;
-            Subscriptions.ErroredCount += smugglerResult.Subscriptions.ErroredCount;
-
-            Indexes.ReadCount += smugglerResult.Indexes.ReadCount;
-            Indexes.ErroredCount += smugglerResult.Indexes.ErroredCount;
+        public void MergeWith(IOperationProgress progress)
+        {
+            throw new NotSupportedException();
         }
         
         public class DatabaseRecordProgress : Counts

@@ -18,7 +18,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Revisions
         protected override void ScheduleRevertRevisions(long operationId, RevertRevisionsRequest configuration, OperationCancelToken token)
         {
             var task = RequestHandler.DatabaseContext.Operations
-                .AddRemoteOperation<OperationIdResult, RevertResult>(
+                .AddRemoteOperation<OperationIdResult, RevertResult, RevertResult>(
                     operationId,
                     OperationType.DatabaseRevert,
                     $"Revert database '{RequestHandler.DatabaseName}' to {configuration.Time} UTC.",

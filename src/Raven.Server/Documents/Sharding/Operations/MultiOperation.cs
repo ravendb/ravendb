@@ -5,7 +5,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Extensions;
 
 namespace Raven.Server.Documents.Sharding.Operations;
@@ -31,7 +30,8 @@ public class MultiOperation
         _operations = new Dictionary<ShardedDatabaseIdentifier, Operation>();
     }
 
-    public void Watch(ShardedDatabaseIdentifier key, Operation operation)
+    public void Watch<TOperationProgress>(ShardedDatabaseIdentifier key, Operation operation)
+        where TOperationProgress : IOperationProgress, new()
     {
         Debug.Assert(_progresses == null);
 
@@ -46,6 +46,13 @@ public class MultiOperation
         {
             if (progress.CanMerge == false)
             {
+                if (typeof(TOperationProgress).IsAssignableTo(typeof(IShardedOperationProgress)))
+                {
+                    var sp = new TOperationProgress() as IShardedOperationProgress;
+                    sp?.Fill(progress, k.ShardNumber, k.NodeTag);
+                    progress = sp;
+                }
+
                 NotifyAboutProgress(progress);
                 return;
             }
@@ -96,15 +103,17 @@ public class MultiOperation
         }
 
         await Task.WhenAll(tasks.Values).WithCancellation(token);
-
+        
         var result = new TOrchestratorResult();
+
         if (result is IShardedOperationResult shardedResult)
         {
-            shardedResult.Results = new IShardNodeIdentifier[_operations.Count]; //TODO stav: change to dict in case of shard numbers not matching count? (i.e 4 shards but shard #2 was deleted?)
             foreach (var task in tasks)
             {
                 shardedResult.CombineWith(task.Value.Result, task.Key.ShardNumber, task.Key.NodeTag);
             }
+
+            return shardedResult;
         }
 
         foreach (var task in tasks)
