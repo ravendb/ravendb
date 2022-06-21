@@ -31,7 +31,9 @@
                     <div class="row">
                         <div class="col-md-4 text-right">Time</div>
                         <div class="col-md-8 details-value">
-                            <span data-bind="text: currentError().LocalTime + '&nbsp;'" class="time-value"></span>
+                            <span class="js-time-value">
+                                <span data-bind="text: currentError().LocalTime" class="margin-right-sm"></span>
+                            </span>
                         </div>
                     </div>
                 </div>
