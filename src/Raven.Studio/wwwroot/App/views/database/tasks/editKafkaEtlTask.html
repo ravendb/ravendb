@@ -366,22 +366,24 @@
                         <div data-bind="foreach: Messages" class="test-output">
                             <div class="header margin-bottom">
                                 <span>Message body:</span>
-                                <pre data-bind="text: $data.Body" class="margin-top"></pre>
-                                <div class="margin-top-sm">
-                                    <span>Id:</span>
-                                    <strong data-bind="text: $data.Options.Id"></strong>
-                                </div>
-                                <div>
-                                    <span>Partition key:</span>
-                                    <strong data-bind="text: $data.Options.PartitionKey"></strong>
-                                </div>
-                                <div>
-                                    <span>Type:</span>
-                                    <strong data-bind="text: $data.Options.Type"></strong>
-                                </div>
-                                <div>
-                                    <span>Source:</span>
-                                    <strong data-bind="text: $data.Options.Source"></strong>
+                                <pre data-bind="text: Body" class="margin-top"></pre>
+                                <div class="margin-top-sm" data-bind="visible: Options">
+                                    <div data-bind="visible: Options.Id">
+                                        <span>Id:</span>
+                                        <strong data-bind="text: Options.Id"></strong>
+                                    </div>
+                                    <div data-bind="visible: Options.PartitionKey">
+                                        <span>Partition Key:</span>
+                                        <strong data-bind="text: Options.PartitionKey"></strong>
+                                    </div>
+                                    <div data-bind="visible: Options.Type">
+                                        <span>Type:</span>
+                                        <strong data-bind="text: Options.Type"></strong>
+                                    </div>
+                                    <div data-bind="visible: Options.Source">
+                                        <span>Source:</span>
+                                        <strong data-bind="text: Options.Source"></strong>
+                                    </div>
                                 </div>
                             </div>
                         </div>
