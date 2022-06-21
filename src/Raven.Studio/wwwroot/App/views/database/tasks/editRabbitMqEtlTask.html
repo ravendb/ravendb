@@ -372,7 +372,7 @@
                             <div class="header margin-bottom">
                                 <span>Message body:</span>
                                 <pre data-bind="text: Body" class="margin-top"></pre>
-                                <div class="margin-top-sm" data-bind="visible: Options">
+                                <div class="margin-top-sm" data-bind="if: Options">
                                     <div data-bind="visible: Options.Id">
                                         <span>Id:</span>
                                         <strong data-bind="text: Options.Id"></strong>
