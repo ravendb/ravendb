@@ -22,7 +22,7 @@ class indexErrorDetails extends dialogViewModelBase {
     compositionComplete() {
         super.compositionComplete();
         
-        popoverUtils.longWithHover($(".time-value"),
+        popoverUtils.longWithHover($(".js-time-value"),
             {
                 content: `<div class="data-container padding padding-xs">
                               <div>
