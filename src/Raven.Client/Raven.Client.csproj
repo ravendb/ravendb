@@ -113,6 +113,12 @@
       <PackageCopyToOutput>true</PackageCopyToOutput>
       <Pack>true</Pack>
     </None>
+    <None Include="..\..\libs\libzstd\libzstd.mac.arm64.dylib" Link="libzstd.mac.arm64.dylib">
+      <PackagePath>runtimes/osx-arm64/native/</PackagePath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <PackageCopyToOutput>true</PackageCopyToOutput>
+      <Pack>true</Pack>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Sparrow\Sparrow.csproj" PrivateAssets="All" />
