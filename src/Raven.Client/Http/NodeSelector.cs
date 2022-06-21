@@ -69,12 +69,11 @@ namespace Raven.Client.Http
             var len = Math.Min(serverNodes.Count, stateFailures.Length);
             for (var i = 0; i < len; i++)
             {
-                if (serverNodes[i].ClusterTag == nodeTag)
+                //In case of an error
+                //We want to reach the same node over and over  
+                if (serverNodes[i].ClusterTag == nodeTag && string.IsNullOrEmpty(serverNodes[i].Url) == false)
                 {
-                    if (stateFailures[i] == 0 && string.IsNullOrEmpty(serverNodes[i].Url) == false)
-                        return (i, serverNodes[i]);
-
-                    throw new RequestedNodeUnavailableException($"Requested node {nodeTag} currently unavailable, please try again later.");
+                    return (i, serverNodes[i]);
                 }
             }
 
@@ -97,6 +96,7 @@ namespace Raven.Client.Http
             var len = Math.Min(serverNodes.Count, stateFailures.Length);
             for (int i = 0; i < len; i++)
             {
+
                 if (stateFailures[i] == 0 && string.IsNullOrEmpty(serverNodes[i].Url) == false)
                 {
                     return (i, serverNodes[i]);
