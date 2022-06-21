@@ -148,10 +148,11 @@
     <PackageReference Include="AWSSDK.Glacier" Version="3.7.0.173" />
     <PackageReference Include="AWSSDK.S3" Version="3.7.9.16" />
     <PackageReference Include="Azure.Storage.Blobs" Version="12.12.0" />
-    <PackageReference Include="CloudNative.CloudEvents.NewtonsoftJson" Version="2.1.1" />
+    <PackageReference Include="CloudNative.CloudEvents.NewtonsoftJson" Version="2.3.0" />
     <PackageReference Include="CloudNative.CloudEvents" Version="2.3.0" />    
     <PackageReference Include="CloudNative.CloudEvents.Amqp" Version="2.3.0" />
     <PackageReference Include="CloudNative.CloudEvents.Kafka" Version="2.3.0" />
+    <PackageReference Include="Confluent.Kafka" Version="1.9.0" />
     <PackageReference Include="CsvHelper" Version="27.2.1" />
     <PackageReference Include="DasMulli.Win32.ServiceUtils.Signed" Version="1.1.0" />
     <PackageReference Include="JetBrains.Annotations" Version="2022.1.0">
@@ -161,6 +162,7 @@
     <PackageReference Include="Google.Api.Gax.Rest" Version="4.0.0" />
     <PackageReference Include="Google.Cloud.Storage.V1" Version="4.0.0" />
     <PackageReference Include="Lextm.SharpSnmpLib.Engine" Version="11.3.102" />
+    <PackageReference Include="librdkafka.redist" Version="1.9.0.1" />
     <PackageReference Include="Lucene.Net" Version="3.0.54001" />
     <PackageReference Include="Lucene.Net.Contrib.Spatial.NTS" Version="3.0.54001" />
     <PackageReference Include="McMaster.Extensions.CommandLineUtils" Version="4.0.1" />
@@ -183,7 +185,7 @@
     <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="3.21.61" />
     <PackageReference Include="Parquet.Net" Version="3.9.1" />
     <PackageReference Include="Portable.BouncyCastle" Version="1.9.0" />
-    <PackageReference Include="RabbitMQ.Client" Version="6.3.0" />
+    <PackageReference Include="RabbitMQ.Client" Version="6.4.0" />
     <PackageReference Include="Raven.CodeAnalysis" Version="1.0.11">
       <PrivateAssets>All</PrivateAssets>
     </PackageReference>
