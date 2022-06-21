@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Tests.Infrastructure;
+using Voron;
 using Voron.Data.Sets;
 using Xunit;
 using Xunit.Abstractions;
@@ -347,6 +349,72 @@ namespace FastTests.Voron.Sets
             {
                 var tree = rtx.OpenSet("test");
                 Assert.Equal(_data, AllValues(tree));
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Voron)]
+        [InlineData(1337, 200000)]
+        public void CanDeleteAndInsertInRandomOrder(int seed, int size)
+        {
+            static void Shuffle(int[] list, Random rng)
+            {
+                int n = list.Length;
+                while (n > 1)
+                {
+                    n--;
+                    int k = rng.Next(n + 1);
+                    var value = list[k];
+                    list[k] = list[n];
+                    list[n] = value;
+                }
+            }
+
+            Random random = new Random(seed);
+
+            var uniqueKeys = new HashSet<int>();
+            var inTreeKeys = new HashSet<int>();
+            var removedKeys = new HashSet<int>();
+
+            int name = random.Next();
+
+            for (int iter = 0; iter < 4; iter++)
+            {
+                using (var wtx = Env.WriteTransaction())
+                {
+                    var set = wtx.OpenSet($"Set({name})");
+                    for (int i = 0; i < size; i++)
+                    {
+                        var rname = (int)(uint)random.Next();
+                        if (!uniqueKeys.Contains(rname))
+                        {
+                            uniqueKeys.Add(rname);
+                            inTreeKeys.Add(rname);
+                            set.Add(rname);
+                        }
+                    }
+
+                    Assert.Equal(uniqueKeys.Count, set.State.NumberOfEntries);
+
+                    wtx.Commit();
+                }
+
+                var values = inTreeKeys.ToArray();
+                Shuffle(values, random);
+
+                using (var wtx = Env.WriteTransaction())
+                {
+                    var set = wtx.OpenSet($"Set({name})");
+                    for (int i = 0; i < size / 2; i++)
+                    {
+                        set.Remove(values[i]);                        
+                        inTreeKeys.Remove(values[i]);
+                        removedKeys.Add(values[i]);
+
+                        Assert.Equal(uniqueKeys.Count - removedKeys.Count, set.State.NumberOfEntries);
+                    }
+                    
+                    wtx.Commit();
+                }
             }
         }
     }
