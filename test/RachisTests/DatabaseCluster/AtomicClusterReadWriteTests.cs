@@ -286,9 +286,6 @@ namespace RachisTests.DatabaseCluster
             var (nodes, leader) = await CreateRaftCluster(3);
             using var documentStore = GetDocumentStore(new Options { Server = leader, ReplicationFactor = nodes.Count });
 
-            using var socket = new DummyWebSocket();
-            var _ = LoggingSource.Instance.Register(socket, new LoggingSource.WebSocketContext(), CancellationToken.None);
-
             var notDelete = $"TestObjs/{count}";
             using (var source = GetDocumentStore())
             {
@@ -333,14 +330,7 @@ namespace RachisTests.DatabaseCluster
                 return await session.LoadAsync<TestObj>(notDelete);
             });
 
-            var r = await WaitForSingleAsync(async () => await documentStore.Operations.SendAsync(new GetCompareExchangeValuesOperation<TestObj>("")),timeout: 15_000);
-            if (r.Count != 1)
-            {
-                // temp loggin to solve issue RavenDB-17890.
-                var logs = await socket.CloseAndGetLogsAsync();
-                Assert.True(false, $"Count is {r.Count} ,logs={logs}");
-            }
-
+            var r = await AssertWaitForSingleAsync(async () => await documentStore.Operations.SendAsync(new GetCompareExchangeValuesOperation<TestObj>("")));
             Assert.EndsWith(notDelete, r.Single().Key, StringComparison.OrdinalIgnoreCase);
         }
 
