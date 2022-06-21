@@ -206,7 +206,7 @@ class nodeInfo {
         return serverUrl;
     }
 
-    toDto(): Raven.Server.Commercial.SetupInfo.NodeInfo {
+    toDto(): Raven.Server.Commercial.NodeInfo {
         return {
             Addresses: this.ips().map(x => x.ip()),
             Port: this.port() ? parseInt(this.port(), 10) : null,
@@ -215,7 +215,7 @@ class nodeInfo {
             TcpPort: this.tcpPort() ? parseInt(this.tcpPort(), 10) : null,
             ExternalPort: (this.advancedSettingsCheckBox() && this.externalHttpsPort()) ? parseInt(this.externalHttpsPort(), 10) : null,
             ExternalTcpPort: (this.advancedSettingsCheckBox() && this.externalTcpPort()) ? parseInt(this.externalTcpPort(), 10) : null
-        } as Raven.Server.Commercial.SetupInfo.NodeInfo;
+        } as Raven.Server.Commercial.NodeInfo;
     }
 }
 

@@ -305,7 +305,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
             tag = tag?.Trim();
 
-            NodeInfo nodeInfo;
+            Client.ServerWide.Commands.NodeInfo nodeInfo;
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(nodeUrl, Server.Certificate.Certificate))
             {
@@ -501,7 +501,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             RedirectToLeader();
         }
 
-        private static void AssertCanAddNodeWithTopologyId(ClusterTopology clusterTopology, NodeInfo nodeInfo, string nodeUrl)
+        private static void AssertCanAddNodeWithTopologyId(ClusterTopology clusterTopology, Client.ServerWide.Commands.NodeInfo nodeInfo, string nodeUrl)
         {
             if (clusterTopology.TopologyId != nodeInfo.TopologyId)
             {

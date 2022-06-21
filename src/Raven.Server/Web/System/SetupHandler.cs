@@ -31,6 +31,7 @@ using Raven.Server.Utils;
 using Raven.Server.Utils.Features;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Utils;
 using StudioConfiguration = Raven.Client.Documents.Operations.Configuration.StudioConfiguration;
 
 namespace Raven.Server.Web.System
@@ -489,7 +490,57 @@ namespace Raven.Server.Web.System
                 }
             }
         }
+        [RavenAction("/setup/unsecured/package", "POST", AuthorizationStatus.UnauthenticatedClients)]
+        public async Task SetupUnsecuredPackage()
+        {
+            AssertOnlyInSetupMode();
 
+            using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+            using (var setupInfoJson = await context.ReadForMemoryAsync(RequestBodyStream(), "setup-unsecured"))
+            {
+                // Making sure we don't have leftovers from previous setup
+                try
+                {
+                    using (var tx = context.OpenWriteTransaction())
+                    {
+                        ServerStore.Engine.DeleteTopology(context);
+                        tx.Commit();
+                    }
+                }
+                catch (Exception)
+                {
+                    // ignored
+                }
+                var stream = TryGetRequestFromStream("Options") ?? RequestBodyStream();
+                var operationCancelToken = CreateOperationToken();
+                var operationId = GetLongQueryString("operationId", false);
+
+                if (operationId.HasValue == false)
+                    operationId = ServerStore.Operations.GetNextOperationId();
+
+                var unsecuredSetupInfo = JsonDeserializationServer.UnsecuredSetupInfo(setupInfoJson);
+                await using (var fs = new FileStream(ServerStore.Configuration.ConfigPath, FileMode.Open, FileAccess.Read))
+                {
+                    await context.ReadForMemoryAsync(fs, "settings-json");
+                }
+
+                var operationResult = await ServerStore.Operations.AddOperation(
+                    null,
+                    "Setting up RavenDB in unsecured mode.",
+                    Documents.Operations.Operations.OperationType.Setup,
+                    progress => SetupManager.SetupUnsecuredTask(progress, unsecuredSetupInfo, ServerStore, operationCancelToken.Token), operationId.Value, token: operationCancelToken);
+
+                var zip = ((SetupProgressAndResult)operationResult).SettingsZipFile;
+                
+                var contentDisposition = "attachment; filename=Unsecured.Cluster.Settings.zip";
+                HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
+                HttpContext.Response.ContentType = "application/octet-stream";
+        
+                await HttpContext.Response.Body.WriteAsync(zip, 0, zip.Length);
+            }
+
+            NoContentStatus();
+        }
         [RavenAction("/setup/unsecured", "POST", AuthorizationStatus.UnauthenticatedClients)]
         public async Task SetupUnsecured()
         {
@@ -681,8 +732,7 @@ namespace Raven.Server.Web.System
 
                 try
                 {
-                    var urlByTag = new Dictionary<string, string>();
-
+                    var urlOrIpByTag = new Dictionary<string, string>();
                     await using (var ms = new MemoryStream(zipBytes))
                     using (var archive = new ZipArchive(ms, ZipArchiveMode.Read, false))
                     {
@@ -695,16 +745,22 @@ namespace Raven.Server.Web.System
 
                             using (var settingsJson = await context.ReadForMemoryAsync(entry.Open(), "settings-json"))
                                 if (settingsJson.TryGet(nameof(ConfigurationNodeInfo.PublicServerUrl), out string publicServerUrl))
-                                    urlByTag[tag] = publicServerUrl;
+                                {
+                                    urlOrIpByTag[tag] = publicServerUrl;
+                                }
+                                else if (settingsJson.TryGet(nameof(ConfigurationNodeInfo.ServerUrl), out string serverUrl))
+                                {
+                                    urlOrIpByTag[tag] = serverUrl;
+                                }
                         }
                     }
-
+    
                     await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
                         writer.WriteStartArray();
                         var first = true;
 
-                        foreach (var node in urlByTag)
+                        foreach (var node in urlOrIpByTag)
                         {
                             if (first == false)
                                 writer.WriteComma();
@@ -713,10 +769,20 @@ namespace Raven.Server.Web.System
                             writer.WritePropertyName(nameof(ConfigurationNodeInfo.Tag));
                             writer.WriteString(node.Key);
                             writer.WriteComma();
-                            writer.WritePropertyName(nameof(ConfigurationNodeInfo.PublicServerUrl));
-                            writer.WriteString(node.Value);
-                            writer.WriteEndObject();
-
+                            var uri = new Uri(node.Value);
+                            if (uri.Scheme.Equals(Uri.UriSchemeHttp) == false)
+                            {
+                                writer.WritePropertyName(nameof(ConfigurationNodeInfo.PublicServerUrl));
+                                writer.WriteString(node.Value);
+                                writer.WriteEndObject();
+                            }
+                            else
+                            {
+                                writer.WritePropertyName(nameof(ConfigurationNodeInfo.ServerUrl));
+                                writer.WriteString(node.Value);
+                                writer.WriteEndObject();
+                            }
+                            
                             first = false;
                         }
 
@@ -801,6 +867,7 @@ namespace Raven.Server.Web.System
     public class ConfigurationNodeInfo
     {
         public string Tag { get; set; }
+        public string ServerUrl { get; set; }
         public string PublicServerUrl { get; set; }
     }
 }

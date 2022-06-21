@@ -356,7 +356,7 @@ namespace Raven.Server.Commercial
             await _serverStore.PutNodeLicenseLimitsAsync(nodeTag, detailsPerNode, LicenseStatus.MaxCores, raftRequestId);
         }
 
-        private async Task<NodeInfo> GetNodeInfo(string nodeUrl, TransactionOperationContext ctx)
+        private async Task<Client.ServerWide.Commands.NodeInfo> GetNodeInfo(string nodeUrl, TransactionOperationContext ctx)
         {
             using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(nodeUrl, _serverStore.Server.Certificate.Certificate))
             {

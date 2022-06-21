@@ -28,12 +28,15 @@
     <Compile Include="..\..\src\Raven.Client\Exceptions\Security\SecurityException.cs" Link="Client\Exceptions\Security\SecurityException.cs" />
     <Compile Include="..\..\src\Raven.Client\Exceptions\RavenException.cs" Link="Client\Exceptions\RavenException.cs" />
     <Compile Include="..\..\src\Raven.Client\ServerWide\Operations\Certificates\CertificateDefinition.cs" Link="Client\ServerWide\Operations\Certificates\CertificateDefinition.cs" />
+    <Compile Include="..\..\src\Raven.Client\Extensions\CharExtensions.cs" Link="Client\Extensions\CharExtensions.cs" />
+    <Compile Include="..\..\src\Raven.Client\Extensions\MemberInfoExtensions.cs" Link="Client\Extensions\MemberInfoExtensions.cs" />
     <Compile Include="..\..\src\Raven.Client\Extensions\StringExtensions.cs" Link="Client\Extensions\StringExtensions.cs" />
     <Compile Include="..\..\src\Raven.Server\Commercial\CompleteClusterConfigurationResult.cs" Link="Server\Commercial\CompleteClusterConfigurationResult.cs" />
     <Compile Include="..\..\src\Raven.Server\Commercial\GetSetupZipFileParameters.cs" Link="Server\Commercial\GetSetupZipFileParameters.cs" />
     <Compile Include="..\..\src\Raven.Server\Commercial\SetupMode.cs" Link="Server\Commercial\SetupMode.cs" />
     <Compile Include="..\..\src\Raven.Server\Commercial\SetupWizard\CompleteAuthorizationAndGetCertificateParameters.cs" Link="Server\Commercial\SetupWizard\CompleteAuthorizationAndGetCertificateParameters.cs" />
     <Compile Include="..\..\src\Raven.Server\Commercial\SetupWizard\LetsEncryptSetupUtils.cs" Link="Server\Commercial\SetupWizard\LetsEncryptSetupUtils.cs" />
+    <Compile Include="..\..\src\Raven.Server\Commercial\SetupWizard\UnsecuredSetupUtils.cs" Link="Server\Commercial\SetupWizard\UnsecuredSetupUtils.cs" />
     <Compile Include="..\..\src\Raven.Server\Config\Attributes\ConfigurationEntryAttribute.cs" Link="Server\Config\Attributes\ConfigurationEntryAttribute.cs" />
     <Compile Include="..\..\src\Raven.Server\Config\Attributes\MinValueAttribute.cs" Link="Server\Config\Attributes\MinValueAttribute.cs" />
     <Compile Include="..\..\src\Raven.Server\Config\Attributes\SizeUnitAttribute.cs" Link="Server\Config\Attributes\SizeUnitAttribute.cs" />
@@ -69,6 +72,8 @@
     <Compile Include="..\..\src\Raven.Server\Commercial\SetupWizard\OwnCertificateSetupUtils.cs" Link="Server\Commercial\SetupWizard\OwnCertificateSetupUtils.cs" />
     <Compile Include="..\..\src\Raven.Server\Commercial\SetupWizard\SetupWizardUtils.cs" Link="Server\Commercial\SetupWizard\SetupWizardUtils.cs" />
     <Compile Include="..\..\src\Raven.Server\Commercial\SetupInfo.cs" Link="Server\Commercial\SetupInfo.cs" />
+    <Compile Include="..\..\src\Raven.Server\Commercial\SetupInfoBase.cs" Link="Server\Commercial\SetupInfoBase.cs" />
+    <Compile Include="..\..\src\Raven.Server\Commercial\CreateSetupPackageParameters.cs" Link="Server\Commercial\CreateSetupPackageParameters.cs" />
     <Compile Include="..\..\src\Raven.Server\Commercial\License.cs" Link="Server\Commercial\License.cs" />
     <Compile Include="..\..\src\Raven.Server\Commercial\LicenseType.cs" Link="Server\Commercial\LicenseType.cs" />
     <Compile Include="..\..\src\Raven.Server\Commercial\LetsEncryptClient.cs" Link="Server\Commercial\LetsEncryptClient.cs" />

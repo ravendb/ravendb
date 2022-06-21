@@ -25,7 +25,7 @@ namespace Raven.Server.Commercial.LetsEncrypt;
 
 public static class SettingsZipFileHelper
 {
-    internal static async Task<byte[]> GetSetupZipFile(GetSetupZipFileParameters parameters)
+    internal static async Task<byte[]> GetSetupZipFileSecuredSetup(GetSetupZipFileParameters parameters)
     {
         
         parameters.Progress?.AddInfo("Writing certificates to zip archive.");
@@ -274,6 +274,165 @@ public static class SettingsZipFileHelper
             return ms.ToArray();
         }
     }
+    internal static async Task<byte[]> GetSetupZipFileUnsecuredSetup(GetSetupZipFileParameters parameters)
+    {
+        
+        parameters.Progress?.AddInfo("Writing settings files to zip archive.");
+        parameters.OnProgress?.Invoke(parameters.Progress);
+        
+        await using (var ms = new MemoryStream())
+        {
+            using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, true))
+            using (var context = new JsonOperationContext(1024, 1024 * 4, 32 * 1024, SharedMultipleUseFlag.None))
+            {
+                BlittableJsonReaderObject settingsJson;
+                if (parameters.OnSettingsPath != null)
+                {
+                    string settingsPath = parameters.OnSettingsPath.Invoke();
+                    await using (var fs = SafeFileStream.Create(settingsPath, FileMode.Open, FileAccess.Read))
+                    {
+                        settingsJson = await context.ReadForMemoryAsync(fs, "settings-json");
+                    }
+                }
+                else
+                {
+                    await using (var ms2 = new MemoryStream())
+                    {
+                        ms2.WriteByte((byte)'{');
+                        ms2.WriteByte((byte)'}');
+                        ms2.Position = 0;
+                        settingsJson = await context.ReadForMemoryAsync(ms2, "settings-json");
+                    }
+                }
+
+                settingsJson.Modifications = new DynamicJsonValue(settingsJson)
+                {
+                    [RavenConfiguration.GetKey(x => x.Core.SetupMode)] = parameters.SetupMode.ToString()
+                };
+
+                if (parameters.UnsecuredSetupInfo.EnableExperimentalFeatures)
+                {
+                    settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)] = FeaturesAvailability.Experimental;
+                }
+
+                if (parameters.UnsecuredSetupInfo.Environment != StudioConfiguration.StudioEnvironment.None)
+                {
+                    if (parameters.OnPutServerWideStudioConfigurationValues != null)
+                        await parameters.OnPutServerWideStudioConfigurationValues(parameters.UnsecuredSetupInfo.Environment);
+                }
+
+                foreach (var node in parameters.UnsecuredSetupInfo.NodeSetupInfos)
+                {
+                    var currentNodeSettingsJson = settingsJson.Clone(context);
+                    currentNodeSettingsJson.Modifications ??= new DynamicJsonValue(currentNodeSettingsJson);
+
+                    parameters.Progress?.AddInfo($"Creating settings file 'settings.json' for node {node.Key}.");
+                    parameters.OnProgress?.Invoke(parameters.Progress);
+
+                    if (node.Value.Addresses.Count != 0)
+                    {
+                        currentNodeSettingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] =
+                            string.Join(";", node.Value.Addresses.Select(ip => IpAddress(ip, node.Value.Port)));
+                        currentNodeSettingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.TcpServerUrls)] =
+                            string.Join(";", node.Value.Addresses.Select(ip => IpAddressToTcp(ip, node.Value.TcpPort)));
+                    }
+
+                    if (string.IsNullOrEmpty(node.Value.ExternalIpAddress) == false)
+                        currentNodeSettingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.ExternalIp)] = node.Value.ExternalIpAddress;
+
+                    var modifiedJsonObj = context.ReadObject(currentNodeSettingsJson, "modified-settings-json");
+
+                    var indentedJson = JsonStringHelper.Indent(modifiedJsonObj.ToString());
+                    if (node.Key == parameters.UnsecuredSetupInfo.LocalNodeTag)
+                    {
+                        try
+                        {
+                            parameters.OnWriteSettingsJsonLocally?.Invoke(indentedJson);
+                        }
+                        catch (Exception e)
+                        {
+                            throw new InvalidOperationException("Failed to write settings file 'settings.json' for the local sever.", e);
+                        }
+                    }
+
+                    parameters.Progress?.AddInfo($"Adding settings file for node '{node.Key}' to zip archive.");
+                    parameters.OnProgress?.Invoke(parameters.Progress);
+
+                    try
+                    {
+                        var entry = archive.CreateEntry($"{node.Key}/settings.json");
+                        entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
+
+                        await using (var entryStream = entry.Open())
+                        await using (var writer = new StreamWriter(entryStream))
+                        {
+                            await writer.WriteAsync(indentedJson);
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        throw new InvalidOperationException($"Failed to write settings.json for node '{node.Key}' in zip archive.", e);
+                    }
+                }
+
+                parameters.Progress?.AddInfo("Adding readme file to zip archive.");
+                parameters.OnProgress?.Invoke(parameters.Progress);
+
+                string readmeString = CreateReadmeText(parameters.UnsecuredSetupInfo.LocalNodeTag, parameters.CompleteClusterConfigurationResult.PublicServerUrl, parameters.UnsecuredSetupInfo.NodeSetupInfos.Count > 1,
+                   false);
+
+                if (parameters.Progress != null)
+                {
+                    parameters.Progress.Readme = readmeString;
+                }
+
+                try
+                {
+                    var entry = archive.CreateEntry("readme.txt");
+                    entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
+
+                    await using (var entryStream = entry.Open())
+                    await using (var writer = new StreamWriter(entryStream))
+                    {
+                        await writer.WriteAsync(readmeString);
+                    }
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidOperationException("Failed to write readme.txt to zip archive.", e);
+                }
+
+                parameters.Progress?.AddInfo("Adding setup.json file to zip archive.");
+                parameters.OnProgress?.Invoke(parameters.Progress);
+
+                try
+                {
+                    var settings = new SetupSettings {Nodes = parameters.UnsecuredSetupInfo.NodeSetupInfos.Select(tag => new SetupSettings.Node {Tag = tag.Key}).ToArray()};
+
+                    var modifiedJsonObj = context.ReadObject(settings.ToJson(), "setup-json");
+
+                    var indentedJson = JsonStringHelper.Indent(modifiedJsonObj.ToString());
+
+                    var entry = archive.CreateEntry("setup.json");
+                    entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
+
+                    await using (var entryStream = entry.Open())
+                    await using (var writer = new StreamWriter(entryStream))
+                    {
+                        await writer.WriteAsync(indentedJson);
+                        await writer.FlushAsync();
+                        await entryStream.FlushAsync(parameters.Token);
+                    }
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidOperationException("Failed to write setup.json to zip archive.", e);
+                }
+            }
+            return ms.ToArray();
+        }
+    }
+
 
     public static void WriteSettingsJsonLocally(string settingsPath, string json)
     {
@@ -391,6 +550,22 @@ public static class SettingsZipFileHelper
         }
 
         return str;
+    }
+    
+    internal static string IpAddress(string address, int port)
+    {
+        var url = "http://" + address;
+        if (port != 0)
+            url += ":" + port;
+        return url;
+    }
+    
+    private static string IpAddressToTcp(string address, int port)
+    {
+        var url = "tcp://" + address;
+        if (port != 0)
+            url += ":" + port;
+        return url;
     }
     
     private static string IpAddressToUrl(string address, int port)

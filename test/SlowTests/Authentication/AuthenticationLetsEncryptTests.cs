@@ -89,9 +89,9 @@ namespace SlowTests.Authentication
                 LocalNodeTag = "A",
                 License = license,
                 Email = email,
-                NodeSetupInfos = new Dictionary<string, SetupInfo.NodeInfo>()
+                NodeSetupInfos = new Dictionary<string, NodeInfo>()
                 {
-                    ["A"] = new SetupInfo.NodeInfo
+                    ["A"] = new NodeInfo
                     {
                         Port = port,
                         Addresses = new List<string>

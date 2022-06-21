@@ -4,6 +4,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net;
+using System.Net.NetworkInformation;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
@@ -49,8 +50,87 @@ namespace Raven.Server.Commercial
             return acmeClient.GetTermsOfServiceUri();
         }
 
-        public static async Task<IOperationResult> SetupSecuredTask(Action<IOperationProgress> onProgress, SetupInfo setupInfo, ServerStore serverStore,
-            CancellationToken token)
+        public static async Task<IOperationResult> SetupUnsecuredTask(Action<IOperationProgress> onProgress, UnsecuredSetupInfo unsecuredSetupInfo, ServerStore serverStore, CancellationToken token)
+        {
+            List<Exception> exceptions = new();
+            var progress = new SetupProgressAndResult(tuple =>
+            {
+                if (Logger is {IsInfoEnabled: true})
+                    Logger.Info(tuple.Message, tuple.Exception);
+            });
+
+            try
+            {
+                AssertNoClusterDefined(serverStore);
+
+                progress.AddInfo("Setting up RavenDB in 'Unsecured Mode'.");
+                progress.AddInfo("Starting validation.");
+                onProgress(progress);
+
+                try
+                {
+                    unsecuredSetupInfo.InfoValidation(new CreateSetupPackageParameters
+                    {
+                        UnsecuredSetupInfo = unsecuredSetupInfo
+                    });
+                }
+                catch (Exception ex)
+                {
+                    throw new AggregateException(ex);
+                }
+             
+                await ValidateUnsecuredServerCanRunWithSuppliedSettings(unsecuredSetupInfo, serverStore, token);
+
+                progress.Processed++;
+                progress.AddInfo("Validation is successful.");
+                progress.AddInfo("Creating new RavenDB configuration settings.");
+                onProgress(progress);
+
+                try
+                {
+                    foreach (var node in unsecuredSetupInfo.NodeSetupInfos.Values)
+                    {
+                        node.PublicServerUrl = string.Join(";", node.Addresses.Select(ip => SettingsZipFileHelper.IpAddress(ip, node.Port)));
+                    }
+                    
+                    var completeClusterConfigurationResult = await CompleteClusterConfigurationAndGetSettingsZipUnsecuredSetup(onProgress, progress, SetupMode.Unsecured, unsecuredSetupInfo, serverStore, token);
+
+                    progress.SettingsZipFile = await SettingsZipFileHelper.GetSetupZipFileUnsecuredSetup(new GetSetupZipFileParameters
+                    {
+                        CompleteClusterConfigurationResult = completeClusterConfigurationResult,
+                        Progress = progress,
+                        OnProgress = onProgress,
+                        OnSettingsPath = () => serverStore.Configuration.ConfigPath,
+                        UnsecuredSetupInfo = unsecuredSetupInfo,
+                        SetupMode = SetupMode.Unsecured,
+                        Token = token,
+                        OnWriteSettingsJsonLocally = indentedJson => SettingsZipFileHelper.WriteSettingsJsonLocally(serverStore.Configuration.ConfigPath, indentedJson),
+                        OnPutServerWideStudioConfigurationValues = async studioEnvironment =>
+                        {
+                            var res = await serverStore.PutValueInClusterAsync(new PutServerWideStudioConfigurationCommand(
+                                new ServerWideStudioConfiguration {Disabled = false, Environment = studioEnvironment}, RaftIdGenerator.DontCareId));
+                            await serverStore.Cluster.WaitForIndexNotification(res.Index);
+                        }
+                    });
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidOperationException("Could not create configuration settings.", e);
+                }
+
+                progress.Processed++;
+                progress.AddInfo("Configuration settings created.");
+                progress.AddInfo("Setting up RavenDB in 'Secured Mode' finished successfully.");
+                onProgress(progress);
+            }
+            catch (Exception e)
+            {
+                LogErrorAndThrow(onProgress, progress, "Setting up RavenDB in 'Secured Mode' failed.", e);
+            }
+
+            return progress;
+        }
+        public static async Task<IOperationResult> SetupSecuredTask(Action<IOperationProgress> onProgress, SetupInfo setupInfo, ServerStore serverStore, CancellationToken token)
         {
             var progress = new SetupProgressAndResult(tuple =>
             {
@@ -84,9 +164,9 @@ namespace Raven.Server.Commercial
 
                 try
                 {
-                    var completeClusterConfigurationResult = await CompleteClusterConfigurationAndGetSettingsZip(onProgress, progress, SetupMode.Secured, setupInfo, serverStore, token);
+                    var completeClusterConfigurationResult = await CompleteClusterConfigurationAndGetSettingsZipSecuredSetup(onProgress, progress, SetupMode.Secured, setupInfo, serverStore, token);
 
-                    progress.SettingsZipFile = await SettingsZipFileHelper.GetSetupZipFile(new GetSetupZipFileParameters
+                    progress.SettingsZipFile = await SettingsZipFileHelper.GetSetupZipFileSecuredSetup(new GetSetupZipFileParameters
                     {
                         CompleteClusterConfigurationResult = completeClusterConfigurationResult,
                         Progress = progress,
@@ -181,8 +261,7 @@ namespace Raven.Server.Commercial
             return cert;
         }
 
-        public static async Task<IOperationResult> ContinueClusterSetupTask(Action<IOperationProgress> onProgress, ContinueSetupInfo continueSetupInfo,
-            ServerStore serverStore, CancellationToken token)
+        public static async Task<IOperationResult> ContinueClusterSetupTask(Action<IOperationProgress> onProgress, ContinueSetupInfo continueSetupInfo, ServerStore serverStore, CancellationToken token)
         {
             var progress = new SetupProgressAndResult(tuple =>
             {
@@ -315,64 +394,97 @@ namespace Raven.Server.Commercial
             onProgress.Invoke(progress);
             throw new InvalidOperationException(msg, e);
         }
-
-
-   internal static async Task ValidateServerCanRunWithSuppliedSettings(SetupInfo setupInfo, ServerStore serverStore, SetupMode setupMode, CancellationToken token)
-    {
-        var localNode = setupInfo.NodeSetupInfos[setupInfo.LocalNodeTag];
-        var localIps = new List<IPEndPoint>();
-
-        foreach (var hostnameOrIp in localNode.Addresses)
+        internal static Task ValidateUnsecuredServerCanRunWithSuppliedSettings(UnsecuredSetupInfo unsecuredSetupInfo, ServerStore serverStore, CancellationToken token)
         {
-            if (hostnameOrIp.Equals(Constants.Network.AnyIp))
+            var localServerIp = unsecuredSetupInfo.NodeSetupInfos.Values.First();
+            var nodes = unsecuredSetupInfo.NodeSetupInfos.Values.Where(x => x != localServerIp);
+            try
             {
-                localIps.Add(new IPEndPoint(IPAddress.Parse(hostnameOrIp), localNode.Port));
-                continue;
+                List<Exception> exceptions = new();
+                // Evaluate current system tcp connections. This is the same information provided
+                // by the netstat command line application, just in .Net strongly-typed object
+                // form.  We will look through the list, and if our port we would like to use
+                // in our TcpClient is occupied, we will set throw exception accordingly.
+                IPGlobalProperties ipGlobalProperties = IPGlobalProperties.GetIPGlobalProperties();
+                TcpConnectionInformation[] tcpConnInfoArray = ipGlobalProperties.GetActiveTcpConnections();
+
+                foreach (var node in nodes)
+                {
+                    foreach (TcpConnectionInformation tcpi in tcpConnInfoArray)
+                    {
+                        if (tcpi.LocalEndPoint.Port == node.Port)
+                        {
+                            exceptions.Add( new Exception($"The given port:{node.Port} is already in use"));
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("Failed to simulate running the server with the supplied settings using: " + localServerIp, e);
             }
 
-            foreach (var ip in await Dns.GetHostAddressesAsync(hostnameOrIp, token))
-            {
-                localIps.Add(new IPEndPoint(IPAddress.Parse(ip.ToString()), localNode.Port));
-            }
+            return Task.CompletedTask;
         }
 
-        var serverCert = setupInfo.GetX509Certificate();
-
-        var localServerUrl = CertificateUtils.GetServerUrlFromCertificate(serverCert, setupInfo, setupInfo.LocalNodeTag, localNode.Port, localNode.TcpPort, out _, out _);
-
-        try
+        internal static async Task ValidateServerCanRunWithSuppliedSettings(SetupInfo setupInfo, ServerStore serverStore, SetupMode setupMode, CancellationToken token)
         {
-            if (serverStore.Server.ListenEndpoints.Port == localNode.Port)
+            var localNode = setupInfo.NodeSetupInfos[setupInfo.LocalNodeTag];
+            var localIps = new List<IPEndPoint>();
+
+            foreach (var hostnameOrIp in localNode.Addresses)
             {
-                var currentIps = serverStore.Server.ListenEndpoints.Addresses.ToList();
+                if (hostnameOrIp.Equals(Constants.Network.AnyIp))
+                {
+                    localIps.Add(new IPEndPoint(IPAddress.Parse(hostnameOrIp), localNode.Port));
+                    continue;
+                }
 
-                if (localIps.Count == 0 && currentIps.Count == 1 &&
-                    (Equals(currentIps[0], IPAddress.Any) || Equals(currentIps[0], IPAddress.IPv6Any)))
-                    return; // listen to any ip in this
-
-                if (localIps.All(ip => currentIps.Contains(ip.Address)))
-                    return; // we already listen to all these IPs, no need to check
+                foreach (var ip in await Dns.GetHostAddressesAsync(hostnameOrIp, token))
+                {
+                    localIps.Add(new IPEndPoint(IPAddress.Parse(ip.ToString()), localNode.Port));
+                }
             }
 
-            if (setupMode == SetupMode.LetsEncrypt)
+            var serverCert = setupInfo.GetX509Certificate();
+
+            var localServerUrl =
+                CertificateUtils.GetServerUrlFromCertificate(serverCert, setupInfo, setupInfo.LocalNodeTag, localNode.Port, localNode.TcpPort, out _, out _);
+
+            try
             {
-                // In case an external ip was specified, this is the ip we update in the dns records. (not the one we bind to)
-                var ips = localNode.ExternalIpAddress == null
-                    ? localIps.ToArray()
-                    : new[] {new IPEndPoint(IPAddress.Parse(localNode.ExternalIpAddress), localNode.ExternalPort)};
+                if (serverStore.Server.ListenEndpoints.Port == localNode.Port)
+                {
+                    var currentIps = serverStore.Server.ListenEndpoints.Addresses.ToList();
 
-                await RavenDnsRecordHelper.AssertDnsUpdatedSuccessfully(localServerUrl, ips, token);
+                    if (localIps.Count == 0 && currentIps.Count == 1 &&
+                        (Equals(currentIps[0], IPAddress.Any) || Equals(currentIps[0], IPAddress.IPv6Any)))
+                        return; // listen to any ip in this
+
+                    if (localIps.All(ip => currentIps.Contains(ip.Address)))
+                        return; // we already listen to all these IPs, no need to check
+                }
+
+                if (setupMode == SetupMode.LetsEncrypt)
+                {
+                    // In case an external ip was specified, this is the ip we update in the dns records. (not the one we bind to)
+                    var ips = localNode.ExternalIpAddress == null
+                        ? localIps.ToArray()
+                        : new[] {new IPEndPoint(IPAddress.Parse(localNode.ExternalIpAddress), localNode.ExternalPort)};
+
+                    await RavenDnsRecordHelper.AssertDnsUpdatedSuccessfully(localServerUrl, ips, token);
+                }
+
+                // Here we send the actual ips we will bind to in the local machine.
+                await LetsEncryptSimulationHelper.SimulateRunningServer(serverStore, serverCert, localServerUrl, setupInfo.LocalNodeTag, localIps.ToArray(),
+                    localNode.Port,
+                    serverStore.Configuration.ConfigPath, setupMode, token);
             }
-
-            // Here we send the actual ips we will bind to in the local machine.
-            await LetsEncryptSimulationHelper.SimulateRunningServer(serverStore, serverCert, localServerUrl, setupInfo.LocalNodeTag, localIps.ToArray(), localNode.Port,
-                serverStore.Configuration.ConfigPath, setupMode, token);
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("Failed to simulate running the server with the supplied settings using: " + localServerUrl, e);
+            }
         }
-        catch (Exception e)
-        {
-            throw new InvalidOperationException("Failed to simulate running the server with the supplied settings using: " + localServerUrl, e);
-        }
-    }
 
     public static async Task<IOperationResult> SetupLetsEncryptTask(Action<IOperationProgress> onProgress, SetupInfo setupInfo, ServerStore serverStore,
         CancellationToken token)
@@ -479,9 +591,9 @@ namespace Raven.Server.Commercial
 
             try
             {
-                var completeClusterConfigurationResult = await CompleteClusterConfigurationAndGetSettingsZip(onProgress, progress, SetupMode.LetsEncrypt, setupInfo, serverStore, token);
+                var completeClusterConfigurationResult = await CompleteClusterConfigurationAndGetSettingsZipSecuredSetup(onProgress, progress, SetupMode.LetsEncrypt, setupInfo, serverStore, token);
 
-                progress.SettingsZipFile = await SettingsZipFileHelper.GetSetupZipFile(new GetSetupZipFileParameters
+                progress.SettingsZipFile = await SettingsZipFileHelper.GetSetupZipFileSecuredSetup(new GetSetupZipFileParameters
                 {
                     CompleteClusterConfigurationResult = completeClusterConfigurationResult,
                     Progress = progress,
@@ -706,7 +818,64 @@ namespace Raven.Server.Commercial
             }
         }
 
-        private static async Task<CompleteClusterConfigurationResult> CompleteClusterConfigurationAndGetSettingsZip(
+        private static async Task<CompleteClusterConfigurationResult> CompleteClusterConfigurationAndGetSettingsZipUnsecuredSetup(
+            Action<IOperationProgress> onProgress,
+            SetupProgressAndResult progress,
+            SetupMode setupMode,
+            UnsecuredSetupInfo unsecuredSetupInfo,
+            ServerStore serverStore,
+            CancellationToken token)
+        {
+            return await SetupWizardUtils.CompleteClusterConfigurationUnsecuredSetup(new CompleteClusterConfigurationParameters
+            {
+                OnProgress = onProgress,
+                Progress = progress,
+                UnsecuredSetupInfo = unsecuredSetupInfo,
+                OnSettingsPath = () => serverStore.Configuration.ConfigPath,
+                SetupMode = setupMode,
+                OnWriteSettingsJsonLocally = indentedJson => SettingsZipFileHelper.WriteSettingsJsonLocally(serverStore.Configuration.ConfigPath, indentedJson),
+                OnPutServerWideStudioConfigurationValues = async studioEnvironment =>
+                {
+                    var res = await serverStore.PutValueInClusterAsync(new PutServerWideStudioConfigurationCommand(
+                        new ServerWideStudioConfiguration
+                        {
+                            Disabled = false,
+                            Environment = studioEnvironment
+                        },
+                        RaftIdGenerator.DontCareId));
+                    await serverStore.Cluster.WaitForIndexNotification(res.Index);
+                },
+                OnBeforeAddingNodesToCluster = async (publicServerUrl, localNodeTag) =>
+                {
+                    try
+                    {
+                        serverStore.Engine.SetNewState(RachisState.Passive, null, serverStore.Engine.CurrentTerm, "During setup wizard, " + "making sure there is no cluster from previous installation.");
+                    }
+                    catch (Exception e)
+                    {
+                        throw new InvalidOperationException("Failed to delete previous cluster topology during setup.", e);
+                    }
+
+                    await serverStore.EnsureNotPassiveAsync(publicServerUrl, unsecuredSetupInfo.LocalNodeTag);
+                    await DeleteAllExistingCertificates(serverStore);
+
+                    serverStore.HasFixedPort = unsecuredSetupInfo.NodeSetupInfos[localNodeTag].Port != 0;
+                },
+                AddNodeToCluster = async nodeTag =>
+                {
+                    try
+                    {
+                        await serverStore.AddNodeToClusterAsync(unsecuredSetupInfo.NodeSetupInfos[nodeTag].PublicServerUrl, nodeTag, validateNotInTopology: false, token: token);
+                    }
+                    catch (Exception e)
+                    {
+                        throw new InvalidOperationException($"Failed to add node '{nodeTag}' to the cluster.", e);
+                    }
+                },
+            });
+        }
+                
+        private static async Task<CompleteClusterConfigurationResult> CompleteClusterConfigurationAndGetSettingsZipSecuredSetup(
             Action<IOperationProgress> onProgress,
             SetupProgressAndResult progress,
             SetupMode setupMode,
@@ -714,7 +883,7 @@ namespace Raven.Server.Commercial
             ServerStore serverStore,
             CancellationToken token)
         {
-            return await SetupWizardUtils.CompleteClusterConfiguration(new()
+            return await SetupWizardUtils.CompleteClusterConfigurationSecuredSetup(new CompleteClusterConfigurationParameters
             {
                 OnProgress = onProgress,
                 Progress = progress,

@@ -128,6 +128,7 @@ class serverSetup {
             EnableExperimentalFeatures: this.useExperimentalFeatures(),
             Port: setup.port() ? parseInt(setup.port(), 10) : 8080,
             Addresses: [setup.ip().ip()],
+            NodeSetupInfos: {}, //TODO
             LocalNodeTag: setup.bootstrapCluster() ? setup.localNodeTag() : null,
             Environment: setup.bootstrapCluster() ? this.environment() : null,
             TcpPort: setup.tcpPort() ? parseInt(setup.tcpPort(), 10) : 38888
@@ -135,7 +136,7 @@ class serverSetup {
     }
     
     toSecuredDto(): Raven.Server.Commercial.SetupInfo {
-        const nodesInfo = {} as dictionary<Raven.Server.Commercial.SetupInfo.NodeInfo>;
+        const nodesInfo = {} as dictionary<Raven.Server.Commercial.NodeInfo>;
         this.nodes().forEach((node, idx) => {
             nodesInfo[node.nodeTag()] = node.toDto();
         });

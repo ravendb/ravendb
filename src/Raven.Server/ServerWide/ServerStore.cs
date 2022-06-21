@@ -83,6 +83,7 @@ using Sparrow.Utils;
 using Voron;
 using Voron.Exceptions;
 using Constants = Raven.Client.Constants;
+using NodeInfo = Raven.Client.ServerWide.Commands.NodeInfo;
 
 namespace Raven.Server.ServerWide
 {
