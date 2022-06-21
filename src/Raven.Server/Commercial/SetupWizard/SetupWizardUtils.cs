@@ -46,11 +46,16 @@ public static class SetupWizardUtils
                     out _,
                     out domainFromCert);
 
-                if (parameters.OnBeforeAddingNodesToCluster != null)
-                    await parameters.OnBeforeAddingNodesToCluster(publicServerUrl, localNodeTag);
+                if (parameters.OnBeforeAddingNodesToCluster != null )
+                        await parameters.OnBeforeAddingNodesToCluster(publicServerUrl, localNodeTag);
 
-                serverCertificateHolder = SecretProtection.ValidateCertificateAndCreateCertificateHolder("Setup", serverCert, serverCertBytes,
-                    parameters.SetupInfo.Password, parameters.LicenseType, parameters.CertificateValidationKeyUsages, parameters.Progress);
+                serverCertificateHolder = SecretProtection.ValidateCertificateAndCreateCertificateHolder("Setup",
+                    serverCert,
+                    serverCertBytes,
+                    parameters.SetupInfo.Password,
+                    parameters.LicenseType,
+                    parameters.CertificateValidationKeyUsages,
+                    parameters.Progress);
 
                 foreach (var node in parameters.SetupInfo.NodeSetupInfos)
                 {
@@ -96,7 +101,7 @@ public static class SetupWizardUtils
 
                 Debug.Assert(selfSignedCertificate != null);
 
-                if (parameters.PutCertificateInCluster != null && parameters.SetupInfo.RegisterClientCert)
+                if (parameters.PutCertificateInCluster != null && parameters.SetupInfo.RegisterClientCert && parameters.SetupInfo.ModifyLocalServer)
                     await parameters.PutCertificateInCluster(selfSignedCertificate, certificateDefinition);
 
                 clientCert = new X509Certificate2(certBytes, (string)null,
@@ -138,23 +143,24 @@ public static class SetupWizardUtils
 
         try
         {
-            if (parameters.UnsecuredSetupInfo.ModifyLocalServer)
-            {
+
                 if (parameters.OnBeforeAddingNodesToCluster != null)
                     await parameters.OnBeforeAddingNodesToCluster(nodeInfo.PublicServerUrl, localNodeTag);
                 
-                foreach (var node in parameters.UnsecuredSetupInfo.NodeSetupInfos)
+                if (parameters.UnsecuredSetupInfo.ModifyLocalServer)
                 {
-                    if (node.Key == parameters.UnsecuredSetupInfo.LocalNodeTag)
-                        continue;
+                    foreach (var node in parameters.UnsecuredSetupInfo.NodeSetupInfos)
+                    {
+                        if (node.Key == parameters.UnsecuredSetupInfo.LocalNodeTag)
+                            continue;
 
-                    parameters.Progress?.AddInfo($"Adding node '{node.Key}' to the cluster.");
-                    parameters.OnProgress?.Invoke(parameters.Progress);
+                        parameters.Progress?.AddInfo($"Adding node '{node.Key}' to the cluster.");
+                        parameters.OnProgress?.Invoke(parameters.Progress);
 
-                    if (parameters.AddNodeToCluster != null)
-                        await parameters.AddNodeToCluster(node.Key);
+                        if (parameters.AddNodeToCluster != null)
+                            await parameters.AddNodeToCluster(node.Key);
+                    }
                 }
-            }
         }
         catch (Exception e)
         {

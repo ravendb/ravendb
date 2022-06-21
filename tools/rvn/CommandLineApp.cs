@@ -26,7 +26,7 @@ namespace rvn
 
         internal const string OwnCertificate = "own-certificate";
         internal const string LetsEncrypt = "lets-encrypt";
-        private const string Unsecured = "unsercured";
+        private const string Unsecured = "unsecured";
 
         public static int Run(string[] args)
         {
@@ -175,6 +175,7 @@ namespace rvn
             SetupInfoBase setupInfoBase;
             try
             {
+                ValidateSetupOptions(parameters);
                 ExtractSetupInfoObjectFromFile(parameters, out setupInfoBase);
                 setupInfoBase.InfoValidation(parameters);
                 
@@ -199,7 +200,6 @@ namespace rvn
             try
             {
                 var zipFile = await setupInfoBase.GenerateZipFile(parameters);
-
                 await File.WriteAllBytesAsync(parameters.PackageOutputPath, zipFile, parameters.CancellationToken);
             }
             catch (Exception e)
@@ -636,9 +636,11 @@ namespace rvn
 
                 case LetsEncrypt: return;
 
+                case Unsecured: return;
+                
                 case OwnCertificate: return;
                 
-                default: throw new InvalidOperationException($"{parameters.Mode} mode is invalid{Environment.NewLine}-m|--mode option must be set. Please use either '{OwnCertificate}' or '{LetsEncrypt}'");
+                default: throw new InvalidOperationException($"{parameters.Mode} mode is invalid. -m|--mode option must be set.{Environment.NewLine}Please use either '{Unsecured}', '{OwnCertificate}' and '{LetsEncrypt}'");
             }
         }
 

@@ -115,11 +115,11 @@ namespace Raven.Server.Commercial
             
             if (Path.HasExtension(parameters.PackageOutputPath) == false)
             {
-                parameters.PackageOutputPath += ".zip";
+                parameters.PackageOutputPath += $"{DateTime.UtcNow:yyyy-MM-dd HH-mm}.zip";
             }
             else if (Path.GetExtension(parameters.PackageOutputPath)?.Equals(".zip", StringComparison.OrdinalIgnoreCase) == false)
             {
-                throw new InvalidOperationException("--package-output-path file name must end with an extension of .zip");
+                throw new InvalidOperationException("-o|--package-output-path file name must end with an extension of .zip");
             }
             
             parameters.PackageOutputPath = Path.ChangeExtension(parameters.PackageOutputPath, Path.GetExtension(parameters.PackageOutputPath)?.ToLower());
@@ -160,7 +160,7 @@ namespace Raven.Server.Commercial
 
     public class UnsecuredSetupInfo : SetupInfoBase
     {
-        public override void InfoValidation(CreateSetupPackageParameters _)
+        public override void InfoValidation(CreateSetupPackageParameters parameters)
         {
             List<Exception> exceptions = new ();
             if (NodeSetupInfos is null || NodeSetupInfos.Any() == false)
@@ -190,6 +190,23 @@ namespace Raven.Server.Commercial
                     nodeInfoNode.TcpPort = Constants.Network.DefaultSecuredRavenDbTcpPort;
                 }
             }
+
+            if (string.IsNullOrEmpty(parameters.PackageOutputPath))
+            {
+                var fileName = $"Unsecure.Cluster.Settings.{DateTime.UtcNow:yyyy-MM-dd HH-mm}.zip ";
+                parameters.PackageOutputPath = fileName;
+            }
+            else if (Path.HasExtension(parameters.PackageOutputPath) == false)
+            {
+                parameters.PackageOutputPath += $".{DateTime.UtcNow:yyyy-MM-dd HH-mm}.zip";
+            }
+            else if (Path.GetExtension(parameters.PackageOutputPath)?.Equals(".zip", StringComparison.OrdinalIgnoreCase) == false)
+            {
+                throw new InvalidOperationException("-o|--package-output-path file name must end with an extension of .zip");
+            }
+            
+            parameters.PackageOutputPath = Path.ChangeExtension(parameters.PackageOutputPath, Path.GetExtension(parameters.PackageOutputPath)?.ToLower());
+            
             if (exceptions.Count > 0)
                 throw new AggregateException($"{nameof(UnsecuredSetupInfo)} validation exceptions list: ", exceptions);
 
