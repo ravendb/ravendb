@@ -42,7 +42,7 @@ namespace SlowTests.Issues
 
                     session.Advanced.WaitForIndexesAfterSaveChanges(timeout: TimeSpan.FromSeconds(1), throwOnTimeout: true);
 
-                    var ex = Assert.Throws<RavenException>(() => session.SaveChanges()); // expected since indexing is stopped
+                    var ex = Assert.Throws<RavenTimeoutException>(() => session.SaveChanges()); // expected since indexing is stopped
 
                     Assert.Contains("TimeoutException", ex.Message);
                 }
