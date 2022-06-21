@@ -708,7 +708,9 @@ class databaseCreationModel {
             Disabled: false,
             Encrypted: this.getEncryptionConfigSection().enabled(),
             Topology: numberOfShards ? null : this.topologyToDto(),
-            Shards: shards
+            Sharding: {
+                Shards: shards
+            }
         } as Raven.Client.ServerWide.DatabaseRecord;
     }
 
