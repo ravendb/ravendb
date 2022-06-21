@@ -220,8 +220,11 @@ public static class SettingsZipFileHelper
                 parameters.Progress?.AddInfo("Adding readme file to zip archive.");
                 parameters.OnProgress?.Invoke(parameters.Progress);
 
-                string readmeString = CreateReadmeText(parameters.SetupInfo.LocalNodeTag, parameters.CompleteClusterConfigurationResult.PublicServerUrl, parameters.SetupInfo.NodeSetupInfos.Count > 1,
-                    parameters.SetupInfo.RegisterClientCert);
+                string readmeString = CreateReadmeText(parameters.SetupInfo.LocalNodeTag,
+                    parameters.CompleteClusterConfigurationResult.PublicServerUrl,
+                    parameters.SetupInfo.NodeSetupInfos.Count > 1,
+                    parameters.SetupInfo.RegisterClientCert,
+                    parameters.SetupInfo.ModifyLocalServer);
 
                 if (parameters.Progress != null)
                 {
@@ -514,9 +517,7 @@ public static class SettingsZipFileHelper
         return str;
         
     }
-    // TODO:
-    // 1. Call this method w/ relevant 'zipOnly' param
-    // 2. Pass relevant 'publicServerUrl' when this is Unsecure
+
     public static string CreateReadmeText(string nodeTag, string publicServerUrl, bool isCluster, bool registerClientCert, bool zipOnly = false)
     {
         var str =

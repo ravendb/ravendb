@@ -42,8 +42,8 @@ public class UnsecuredSetupUtils
                 
                 progress.Processed++;
                 progress.AddInfo("Configuration settings created.");
-                progress.AddInfo("Setting up RavenDB in 'Secured Mode' finished successfully.");
-                
+                progress.AddInfo("Setting up RavenDB in 'Unsecured Mode' finished successfully.");
+
                 return progress.SettingsZipFile;
             }
             catch (Exception e)
@@ -54,7 +54,7 @@ public class UnsecuredSetupUtils
         }
         catch (Exception e)
         {
-            throw new InvalidOperationException("Setting up RavenDB in 'Secured Mode' failed.", e);
+            throw new InvalidOperationException("Setting up RavenDB in 'Unsecured Mode' failed.", e);
         }
     }
 }

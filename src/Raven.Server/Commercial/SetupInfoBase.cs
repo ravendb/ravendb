@@ -11,7 +11,7 @@ public abstract class SetupInfoBase
     public StudioConfiguration.StudioEnvironment Environment { get; set; }
     public Dictionary<string, NodeInfo> NodeSetupInfos { get; set; }
     public string LocalNodeTag { get; set; }
-    public bool ModifyLocalServer { get; set; }
+    public bool ModifyLocalServer { get; set; } = true;
     
     public abstract Task<byte[]> GenerateZipFile(CreateSetupPackageParameters parameters);
     public abstract void InfoValidation(CreateSetupPackageParameters parameters);
