@@ -297,8 +297,8 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithMessages, QueueEtlConfigu
 
                 foreach (var appProperty in rabbitMqMessage.ApplicationProperties.Map.ToList())
                 {
-                    string key = appProperty.Key.ToString()?.Split(':')[1];
-                    string value = appProperty.Value.ToString();
+                    string key = appProperty.Key?.ToString();
+                    string value = appProperty.Value?.ToString();
                     
                     if (key != null)
                     {
@@ -355,7 +355,7 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithMessages, QueueEtlConfigu
                 {
                     var exchange = message.Options?.Exchange;
 
-                    if (string.IsNullOrEmpty(exchange) == false && _existingRabbitMqQueuesAndExchanges[queueName].Contains(exchange))
+                    if (string.IsNullOrEmpty(exchange) == false && _existingRabbitMqQueuesAndExchanges[queueName].Contains(exchange) == false)
                     {
                         rabbitMqModel.ExchangeDeclare(exchange, ExchangeType.Direct, true, false, null);
 
