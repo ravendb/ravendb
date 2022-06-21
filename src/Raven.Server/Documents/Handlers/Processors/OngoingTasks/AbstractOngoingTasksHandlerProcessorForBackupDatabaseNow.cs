@@ -12,7 +12,8 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
         protected AbstractOngoingTasksHandlerProcessorForBackupDatabaseNow([NotNull] TRequestHandler requestHandler) : base(requestHandler)
         {
         }
-        protected abstract ValueTask<bool> ScheduleBackupOperation(long taskId, bool isFullBackup, long operationId);
+
+        protected abstract ValueTask<bool> ScheduleBackupOperationAsync(long taskId, bool isFullBackup, long operationId);
 
         protected abstract long GetNextOperationId();
 
@@ -22,7 +23,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
             var isFullBackup = RequestHandler.GetBoolValueQueryString("isFullBackup", required: false) ?? true;
             var operationId = RequestHandler.GetLongQueryString("operationId", required: false) ?? GetNextOperationId();
 
-            var isResponsibleNode = await ScheduleBackupOperation(taskId, isFullBackup, operationId);
+            var isResponsibleNode = await ScheduleBackupOperationAsync(taskId, isFullBackup, operationId);
 
             if (isResponsibleNode)
             {

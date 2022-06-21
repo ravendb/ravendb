@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System.Collections.Generic;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations
@@ -38,18 +39,21 @@ namespace Raven.Client.Documents.Operations
 
     public interface IShardedOperationResult : IOperationResult
     {
-        IShardNodeIdentifier[] Results { get; set; }
-
         void CombineWith(IOperationResult result, int shardNumber, string nodeTag);
     }
 
-    public interface IShardNodeIdentifier : IOperationResult
+    public interface IShardedOperationResult<TResult> : IShardedOperationResult where TResult :IOperationResult
+    {
+        List<TResult> Results { get; set; }
+    }
+
+    public interface IShardNodeOperationResult<TResult> : IOperationResult where TResult :IOperationResult
     {
         public int ShardNumber { get; set; }
         public string NodeTag { get; set; }
-        public IOperationResult ShardResult { get; set; }
+        public TResult Result { get; set; }
     }
-
+    
     public interface IOperationDetailedDescription
     {
         DynamicJsonValue ToJson();

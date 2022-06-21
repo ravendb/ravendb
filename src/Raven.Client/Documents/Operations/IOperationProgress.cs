@@ -14,6 +14,14 @@ namespace Raven.Client.Documents.Operations
         void MergeWith(IOperationProgress progress);
     }
 
+    public interface IShardedOperationProgress : IOperationProgress
+    {
+        public int ShardNumber { get; set; }
+        public string NodeTag { get; set; }
+        
+        void Fill(IOperationProgress progress, int shardNumber, string nodeTag);
+    }
+
     /// <summary>
     /// Used to describe operations with progress expressed as percentage (using processed / total items)
     /// </summary>

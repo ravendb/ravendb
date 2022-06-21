@@ -22,7 +22,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin.Processors.Revisions
 
         protected override void ScheduleEnforceConfigurationOperation(long operationId, OperationCancelToken token)
         {
-            var task = RequestHandler.DatabaseContext.Operations.AddRemoteOperation<OperationIdResult, EnforceConfigurationResult>(
+            var task = RequestHandler.DatabaseContext.Operations.AddRemoteOperation<OperationIdResult, EnforceConfigurationResult, EnforceConfigurationResult>(
                 operationId,
                 OperationType.EnforceRevisionConfiguration,
                 $"Enforce revision configuration in database '{RequestHandler.DatabaseName}'.",

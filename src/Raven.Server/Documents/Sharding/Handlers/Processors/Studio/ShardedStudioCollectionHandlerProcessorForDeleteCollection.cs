@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Studio
 
                 var shardToIds = ShardLocator.GetDocumentIdsByShards(context, RequestHandler.DatabaseContext, excludeIds);
 
-                var task = RequestHandler.DatabaseContext.Operations.AddRemoteOperation<OperationIdResult, BulkOperationResult>(
+                var task = RequestHandler.DatabaseContext.Operations.AddRemoteOperation<OperationIdResult, BulkOperationResult, BulkInsertProgress>(
                     operationId,
                     OperationType.DeleteByCollection,
                     collectionName,

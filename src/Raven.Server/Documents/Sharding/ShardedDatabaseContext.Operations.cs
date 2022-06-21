@@ -63,7 +63,7 @@ public partial class ShardedDatabaseContext
             return AddOperationInternalAsync(operation, taskFactory);
         }
         
-        public Task AddRemoteOperation<TResult, TOrchestratorResult>(
+        public Task AddRemoteOperation<TResult, TOrchestratorResult, TOperationProgress>(
             long id,
             OperationType operationType,
             string description,
@@ -72,19 +72,21 @@ public partial class ShardedDatabaseContext
             OperationCancelToken token = null) 
             where TResult : OperationIdResult
             where TOrchestratorResult : IOperationResult, new()
+            where TOperationProgress : IOperationProgress, new()
         {
             var operation = CreateOperationInstance(id, _context.DatabaseName, operationType, description, detailedDescription, token);
 
-            return AddOperationInternalAsync(operation, onProgress => CreateTaskAsync<TResult, TOrchestratorResult>(operation, commandFactory, onProgress, token));
+            return AddOperationInternalAsync(operation, onProgress => CreateTaskAsync<TResult, TOrchestratorResult, TOperationProgress>(operation, commandFactory, onProgress, token));
         }
 
-        private async Task<IOperationResult> CreateTaskAsync<TResult, TOrchestratorResult>(
+        private async Task<IOperationResult> CreateTaskAsync<TResult, TOrchestratorResult, TOperationProgress>(
             ShardedOperation operation,
             Func<JsonOperationContext, int, RavenCommand<TResult>> commandFactory,
             Action<IOperationProgress> onProgress,
             OperationCancelToken token) 
             where TResult : OperationIdResult
             where TOrchestratorResult : IOperationResult, new()
+            where TOperationProgress : IOperationProgress, new()
         {
             var t = token?.Token ?? default;
 
@@ -123,7 +125,7 @@ public partial class ShardedDatabaseContext
 
                 var shardOperation = new Operation(context.ShardExecutor.GetRequestExecutorAt(shardNumber), () => changes, DocumentConventions.DefaultForServer, command.Result.OperationId, command.Result.OperationNodeTag);
 
-                operation.Watch(key, shardOperation);
+                operation.Watch<TOperationProgress>(key, shardOperation);
             }
         }
 

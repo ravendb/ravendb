@@ -2,6 +2,7 @@
 using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client;
 using Raven.Client.Http;
 using Raven.Server.ServerWide.Context;
 
@@ -18,7 +19,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
             return RequestHandler.Database.Operations.GetNextOperationId();
         }
 
-        protected override async ValueTask<bool> ScheduleBackupOperation(long taskId, bool isFullBackup, long operationId)
+        protected override async ValueTask<bool> ScheduleBackupOperationAsync(long taskId, bool isFullBackup, long operationId)
         {
             // task id == raft index
             // we must wait here to ensure that the task was actually created on this node
@@ -55,7 +56,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 
             var location = url + HttpContext.Request.Path + HttpContext.Request.QueryString;
             HttpContext.Response.StatusCode = (int)HttpStatusCode.TemporaryRedirect;
-            HttpContext.Response.Headers.Remove("Content-Type");
+            HttpContext.Response.Headers.Remove(Constants.Headers.ContentType);
             HttpContext.Response.Headers.Add("Location", location);
         }
     }

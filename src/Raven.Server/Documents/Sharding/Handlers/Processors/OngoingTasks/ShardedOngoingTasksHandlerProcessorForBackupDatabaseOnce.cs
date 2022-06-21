@@ -18,13 +18,13 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks
 
         protected override void ScheduleBackup(BackupConfiguration backupConfiguration, long operationId, string backupName, Stopwatch sw, OperationCancelToken token)
         {
-            var t = RequestHandler.DatabaseContext.Operations.AddRemoteOperation<OperationIdResult<StartBackupOperationResult>, ShardedBackupResult>(
+            var t = RequestHandler.DatabaseContext.Operations.AddRemoteOperation<OperationIdResult<StartBackupOperationResult>, ShardedBackupResult, ShardedBackupProgress>(
                 operationId,
                 OperationType.DatabaseBackup,
                 $"Manual backup for database: {RequestHandler.DatabaseName}",
                 detailedDescription: null,
                 commandFactory: (context, shardNumber) => new BackupOperation.BackupCommand(backupConfiguration, operationId),
-                token); //TODO stav: add nodeTag?
+                token);
 
             var _ = t.ContinueWith(_ =>
             {
