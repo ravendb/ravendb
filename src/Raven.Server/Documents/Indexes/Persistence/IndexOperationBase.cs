@@ -125,17 +125,16 @@ public abstract class IndexOperationBase : IDisposable
         
         if (numberOfEntries > int.MaxValue)
             return int.MaxValue;
-
-        if (query.Metadata.OrderBy is not null)
-            return (int)numberOfEntries;
-
+        
         //If we have a binary operation, we need to pass a buffer large enough to hold all the individual results.
-        //We need to do this to get correct results and since we don't know how much subqueries will have results we create a buffer from the number of entries in index.
-        if (isBoolean)
+        //We need to do this to get correct results and since we don't know how much results subqueries will have  we must create a buffer from the number of entries in index.
+        if (query.Metadata.OrderBy is not null || query.Metadata.IsDistinct || isBoolean)
             return (int)numberOfEntries;
+
+        
 
         var result = Math.Min(numberOfEntries, pageSize);
-        return (int)(result == 0 ? 2 << 4 : result);
+        return (int)(result <= 0 ? 2 << 4 : result);
     }
 
     protected QueryFilter GetQueryFilter(Index index, IndexQueryServerSide query, DocumentsOperationContext documentsContext, Reference<int> skippedResults,
