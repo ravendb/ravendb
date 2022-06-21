@@ -521,7 +521,10 @@ namespace Voron.Data.CompactTrees
                 Span<byte> decodedKey = new byte[dictionary.GetMaxDecodingBytes(encodedKey)];
                 dictionary.Decode(encodedKey, ref decodedKey);
 
-                Span<byte> decodedKey1 = new byte[dictionary.GetMaxDecodingBytes(encodedKey)];
+                Span<byte> reencodedKey = new byte[dictionary.GetMaxEncodingBytes(decodedKey)];
+                dictionary.Encode(decodedKey, ref reencodedKey);
+
+                Span<byte> decodedKey1 = new byte[dictionary.GetMaxDecodingBytes(reencodedKey)];
                 dictionary.Decode(encodedKey, ref decodedKey1);
 
                 if (decodedKey1.SequenceCompareTo(decodedKey) != 0)
@@ -529,7 +532,7 @@ namespace Voron.Data.CompactTrees
 
                 // Console.WriteLine($"{Encoding.UTF8.GetString(lastDecodedKey)} - {Encoding.UTF8.GetString(decodedKey)}");
 
-                if (lastDecodedKey.SequenceCompareTo(decodedKey) > 0)
+                if (lastDecodedKey.SequenceCompareTo(decodedKey) > 0 || lastEncodedKey.SequenceCompareTo(encodedKey) > 0)
                 {
                     Console.WriteLine($"{Encoding.UTF8.GetString(lastDecodedKey)} - {Encoding.UTF8.GetString(decodedKey)}");
 
@@ -539,7 +542,7 @@ namespace Voron.Data.CompactTrees
                     dictionary.Decode(lastEncodedKey, ref lastDecodedKey);
                     VoronUnrecoverableErrorException.Raise(_llt, "Last encoded key does not follow lexicographically.");
                 }
-                
+
                 lastEncodedKey = encodedKey;
                 lastDecodedKey = decodedKey;
             }
