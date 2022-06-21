@@ -28,7 +28,7 @@ public static class CoraxQueryBuilder
 
     public static IQueryMatch BuildQuery(IndexSearcher indexSearcher, TransactionOperationContext serverContext, DocumentsOperationContext context,
         IndexQueryServerSide query,
-        Index index, BlittableJsonReaderObject parameters, QueryBuilderFactories factories, IndexFieldsMapping indexMapping = null, FieldsToFetch queryMapping = null,
+        Index index, BlittableJsonReaderObject parameters, QueryBuilderFactories factories, out bool isBinary, IndexFieldsMapping indexMapping = null, FieldsToFetch queryMapping = null,
         Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms = null,
         List<string> buildSteps = null, int take = TakeAll)
     {
@@ -37,6 +37,8 @@ public static class CoraxQueryBuilder
             IQueryMatch coraxQuery;
             var metadata = query.Metadata;
             var allEntries = indexSearcher.Memoize(indexSearcher.AllEntries());
+            isBinary = false;
+
             if (metadata.Query.Where is not null)
             {
                 coraxQuery = ToCoraxQuery<NullScoreFunction>(indexSearcher, serverContext, context, metadata.Query, metadata.Query.Where, metadata, index, parameters,
@@ -48,7 +50,11 @@ public static class CoraxQueryBuilder
                     highlightingTerms: highlightingTerms);
 
                 if (coraxQuery is CoraxBooleanQuery cbq)
+                {
+                    isBinary |= cbq.HasInnerBinary;
                     coraxQuery = cbq.Materialize();
+                }
+
                 if (coraxQuery is CoraxBooleanItem cbi)
                     coraxQuery = cbi.Materialize();
             }
@@ -56,7 +62,9 @@ public static class CoraxQueryBuilder
             {
                 coraxQuery = allEntries.Replay();
             }
-
+            
+            isBinary |= coraxQuery is BinaryMatch;
+            
             if (metadata.Query.OrderBy is not null)
             {
                 var sortMetadata = GetSortMetadata(query, index, factories.GetSpatialFieldFactory, indexMapping, queryMapping);

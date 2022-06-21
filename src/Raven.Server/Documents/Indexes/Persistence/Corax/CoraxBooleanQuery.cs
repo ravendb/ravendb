@@ -135,7 +135,7 @@ public class CoraxBooleanQuery : IQueryMatch
     private MemoizationMatchProvider<AllEntriesMatch> _allEntries;
 
     private readonly IndexSearcher _indexSearcher;
-
+    public bool HasInnerBinary { get; private set; }
     public CoraxBooleanQuery(IndexSearcher indexSearcher, MemoizationMatchProvider<AllEntriesMatch> allEntries, CoraxBooleanItem left, CoraxBooleanItem right,
         IQueryScoreFunction scoreFunction)
     {
@@ -189,16 +189,19 @@ public class CoraxBooleanQuery : IQueryMatch
             
             IQueryMatch second = _indexSearcher.TermQuery(query.Name, query.TermAsString, query.FieldId);
                 if (query.Operation is UnaryMatchOperation.NotEquals)
-                    second = _indexSearcher.AndNot(
-                        _indexSearcher.ExistsQuery(query.Name),
-                        second
-                    );
-                ;
+                {
+                    second = _indexSearcher.AndNot(_indexSearcher.ExistsQuery(query.Name), second);
+                    HasInnerBinary = true;
+                }
+                
 
             if (baseMatch == null)
                 baseMatch = second;
             else
+            {
                 baseMatch = _indexSearcher.And(baseMatch, second);
+                HasInnerBinary = true;
+            }
 
             reduced++;
         }

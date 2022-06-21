@@ -70,15 +70,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
             IQueryMatch queryMatch;
             Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms = query.Metadata.HasHighlightings ? new() : null;
+            bool isBinary;
             using (coraxScope?.Start())
             {
-                if ((queryMatch = CoraxQueryBuilder.BuildQuery(_indexSearcher, null, null, query, _index, query.QueryParameters, QueryBuilderFactories,
+                if ((queryMatch = CoraxQueryBuilder.BuildQuery(_indexSearcher, null, null, query, _index, query.QueryParameters, QueryBuilderFactories, out isBinary,
                     _fieldMappings, fieldsToFetch, highlightingTerms: highlightingTerms, take: take)) is null)
                     yield break;
             }
 
             
-            var ids = QueryPool.Rent(CoraxGetPageSize(_indexSearcher, take, query, queryMatch.GetType() == typeof(BinaryMatch)));
+            var ids = QueryPool.Rent(CoraxGetPageSize(_indexSearcher, take, query, isBinary ));
             int docsToLoad = pageSize;
             int queryStart = query.Start;
             bool hasHighlights = query.Metadata.HasHighlightings;
@@ -485,11 +486,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 take = CoraxConstants.IndexSearcher.TakeAll;
 
             IQueryMatch queryMatch;
-            if ((queryMatch = CoraxQueryBuilder.BuildQuery(_indexSearcher, null, null, query, _index, null, null, 
+            bool isBinary;
+            if ((queryMatch = CoraxQueryBuilder.BuildQuery(_indexSearcher, null, null, query, _index, null, null, out isBinary,
                     _fieldMappings, take: take)) is null)
                 yield break;
 
-            var ids = ArrayPool<long>.Shared.Rent(CoraxGetPageSize(_indexSearcher, take, query));
+            var ids = QueryPool.Rent(CoraxGetPageSize(_indexSearcher, take, query, isBinary));
 
             HashSet<string> itemList = new(32);
             var bufferSizes = GetMaximumSizeOfBuffer();
@@ -515,7 +517,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 totalResults.Value += read;
             }
 
-            ArrayPool<long>.Shared.Return(ids);
+            QueryPool.Return(ids);
             ArrayPool<byte>.Shared.Return(encodedBuffer);
             ArrayPool<Token>.Shared.Return(tokensBuffer);
 
