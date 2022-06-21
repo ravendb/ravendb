@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Commercial.LetsEncrypt;
@@ -12,7 +13,7 @@ namespace Raven.Server.Commercial.SetupWizard;
 
 public static class SetupWizardUtils
 { 
-    public static async Task<CompleteClusterConfigurationResult> CompleteClusterConfiguration(CompleteClusterConfigurationParameters parameters)
+    public static async Task<CompleteClusterConfigurationResult> CompleteClusterConfigurationSecuredSetup(CompleteClusterConfigurationParameters parameters)
     {
         try
         {
@@ -122,5 +123,57 @@ public static class SetupWizardUtils
         {
             throw new InvalidOperationException("Failed to create settings file(s).", e);
         }
+    }
+    public static async Task<CompleteClusterConfigurationResult> CompleteClusterConfigurationUnsecuredSetup(CompleteClusterConfigurationParameters parameters)
+    {
+        try
+        {
+            parameters.Progress?.AddInfo("Completing cluster configuration.");
+            parameters.OnProgress?.Invoke(parameters.Progress);
+
+            NodeInfo localNode = new ();
+            try
+            {
+                var localNodeTag = parameters.UnsecuredSetupInfo.LocalNodeTag ?? parameters.UnsecuredSetupInfo.NodeSetupInfos.Keys.FirstOrDefault();
+                if (localNodeTag is null)
+                {
+                    throw new InvalidOperationException($"Could not determine {nameof(localNodeTag)}");
+                }
+            
+                parameters.UnsecuredSetupInfo.NodeSetupInfos.Values.First();
+                if (parameters.OnBeforeAddingNodesToCluster != null)
+                    await parameters.OnBeforeAddingNodesToCluster(localNode.PublicServerUrl, localNodeTag);
+        
+                foreach (var node in parameters.UnsecuredSetupInfo.NodeSetupInfos)
+                {
+                    if (node.Key == parameters.UnsecuredSetupInfo.LocalNodeTag)
+                        continue;
+
+                    parameters.Progress?.AddInfo($"Adding node '{node.Key}' to the cluster.");
+                    parameters.OnProgress?.Invoke(parameters.Progress);
+
+                    if (parameters.AddNodeToCluster != null)
+                        await parameters.AddNodeToCluster(node.Key);
+                }
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("Failed to load and validate server certificate.", e);
+            }
+
+            return new CompleteClusterConfigurationResult
+            {
+               PublicServerUrl = localNode.PublicServerUrl,
+            };
+        }
+        catch (Exception e)
+        {
+            throw new InvalidOperationException("Failed to create settings file(s).", e);
+        }
+    }
+    
+    public static bool IsValidNodeTag(string str)
+    {
+        return Regex.IsMatch(str, @"^[A-Z]{1,4}$");
     }
 }

@@ -9,7 +9,6 @@ using McMaster.Extensions.CommandLineUtils;
 using Newtonsoft.Json;
 using Raven.Server.Commercial;
 using Raven.Server.Commercial.SetupWizard;
-using rvn.Parameters;
 using Sparrow.Platform;
 using Voron.Global;
 
@@ -27,6 +26,7 @@ namespace rvn
 
         internal const string OwnCertificate = "own-certificate";
         internal const string LetsEncrypt = "lets-encrypt";
+        private const string Unsecured = "unsercured";
 
         public static int Run(string[] args)
         {
@@ -172,41 +172,34 @@ namespace rvn
 
         private static async Task<int> CreateSetupPackage(CreateSetupPackageParameters parameters)
         {
-            byte[] zipFile;
-            SetupInfo setupInfo;
-
+            SetupInfoBase setupInfoBase;
             try
             {
-                ExtractSetupInfoObjectFromFile(parameters, out setupInfo);
-                ValidateSetupInfoAndSetDefaultSetupParametersIfNeeded(setupInfo, parameters);
-                ValidateSetupOptions(parameters);
+                ExtractSetupInfoObjectFromFile(parameters, out setupInfoBase);
+                setupInfoBase.InfoValidation(parameters);
+                
+                switch (setupInfoBase)
+                {
+                    case UnsecuredSetupInfo unsecuredSetupInfo:
+                        parameters.UnsecuredSetupInfo = unsecuredSetupInfo;
+                        break;
+                    case SetupInfo setupInfo:
+                        parameters.SetupInfo = setupInfo;
+                        break;
+                    default:
+                        throw new NotSupportedException($"{setupInfoBase.GetType()} is not supported");
+                }
+
             }
             catch (InvalidOperationException e)
             {
                 return ExitWithError(e.Message, parameters.Command);
             }
 
-            switch (parameters.Mode)
-            {
-                case OwnCertificate:
-                {
-                    var certBytes = await File.ReadAllBytesAsync(parameters.CertificatePath, parameters.CancellationToken);
-                    var certBase64 = Convert.ToBase64String(certBytes);
-                    setupInfo.Certificate = certBase64;
-                    zipFile = await OwnCertificateSetupUtils.Setup(setupInfo, parameters.Progress, parameters.CancellationToken);
-                    break;
-                }
-                case LetsEncrypt:
-                {
-                    zipFile = await LetsEncryptSetupUtils.Setup(setupInfo, parameters.Progress, parameters.CancellationToken);
-                    break;
-                }
-                default:
-                    return ExitWithError("Invalid mode provided.", parameters.Command);
-            }
-
             try
             {
+                var zipFile = await setupInfoBase.GenerateZipFile(parameters);
+
                 await File.WriteAllBytesAsync(parameters.PackageOutputPath, zipFile, parameters.CancellationToken);
             }
             catch (Exception e)
@@ -219,7 +212,7 @@ namespace rvn
             return 0;
         }
 
-        private static void ExtractSetupInfoObjectFromFile(CreateSetupPackageParameters parameters, out SetupInfo setupInfo)
+        private static void ExtractSetupInfoObjectFromFile(CreateSetupPackageParameters parameters, out SetupInfoBase setupInfoBase)
         {
             if (string.IsNullOrEmpty(parameters.SetupJsonPath))
             {
@@ -236,101 +229,13 @@ namespace rvn
                 using (StreamReader file = File.OpenText(parameters.SetupJsonPath))
                 {
                     JsonSerializer serializer = new();
-                    setupInfo = (SetupInfo)serializer.Deserialize(file, typeof(SetupInfo));
-                }
+                    setupInfoBase = (SetupInfoBase)serializer.Deserialize(file, parameters.Mode.Equals(Unsecured)  ? typeof(UnsecuredSetupInfo) : typeof(SetupInfo));
+                }  
             }
             catch (Exception ex)
             {
-                throw new Exception($"Failed to deserialize {nameof(setupInfo)} object from this path {parameters.SetupJsonPath}", ex);
+                throw new Exception($"Failed to deserialize {nameof(setupInfoBase)} object from this path {parameters.SetupJsonPath}", ex);
             }
-        }
-
-        private static void ValidateSetupInfoAndSetDefaultSetupParametersIfNeeded(SetupInfo setupInfo, CreateSetupPackageParameters parameters)
-        {
-            var ex = new List<Exception>();
-            if (setupInfo.License == null)
-            {
-                throw new InvalidOperationException($"{nameof(setupInfo.License)} must be set");
-            }
-
-            if (setupInfo.License.Keys is null || setupInfo.License.Keys.Any() == false)
-            {
-                throw new InvalidOperationException($"{nameof(setupInfo.License.Keys)} must be set");
-            }
-
-            if (string.IsNullOrEmpty(setupInfo.License.Id.ToString()))
-            {
-                throw new InvalidOperationException($"{nameof(setupInfo.License.Id)} must be set");
-            }
-
-            if (string.IsNullOrEmpty(setupInfo.License.Name))
-            {
-                throw new InvalidOperationException($"{nameof(setupInfo.License.Name)} must be set");
-            }
-
-            if (string.IsNullOrEmpty(setupInfo.Email))
-            {
-                throw new InvalidOperationException($"{nameof(setupInfo.Email)} must be set");
-            }
-
-            if (string.IsNullOrEmpty(setupInfo.Domain))
-            {
-                throw new InvalidOperationException($"{nameof(setupInfo.Domain)} must be set");
-            }
-
-            if (string.IsNullOrEmpty(setupInfo.RootDomain))
-            {
-                throw new InvalidOperationException($"{nameof(setupInfo.RootDomain)} must be set");
-            }
-
-            if (setupInfo.NodeSetupInfos is null || setupInfo.NodeSetupInfos.Any() == false)
-            {
-                throw new InvalidOperationException($"{nameof(setupInfo.NodeSetupInfos)} must be set");
-            }
-            
-            foreach (var tag in setupInfo.NodeSetupInfos.Keys.Where(tag => IsValidNodeTag(tag) == false))
-            {
-                ex.Add(new InvalidOperationException($"'{tag}'"));
-            }
-
-            if (ex.Count > 0)
-                throw new AggregateException($"Node tags must contain only capital letters.Maximum length should be up to 4 characters{Environment.NewLine}Node tags - ",ex);
-
-            foreach (var nodeInfoNode in setupInfo.NodeSetupInfos.Values)
-            {
-                if (nodeInfoNode?.Addresses is null)
-                {
-                    throw new InvalidOperationException($"Addresses must be set inside {nameof(setupInfo.NodeSetupInfos)}");
-                }
-
-                if (nodeInfoNode.Port == 0)
-                {
-                    nodeInfoNode.Port = Raven.Client.Constants.Network.DefaultSecuredRavenDbHttpPort;
-                }
-
-                if (nodeInfoNode.TcpPort == 0)
-                {
-                    nodeInfoNode.TcpPort = Raven.Client.Constants.Network.DefaultSecuredRavenDbTcpPort;
-                }
-            }
-
-            parameters.PackageOutputPath ??= setupInfo.Domain;
-
-            if (string.IsNullOrEmpty(parameters.CertPassword) == false)
-            {
-                setupInfo.Password = parameters.CertPassword;
-            }
-            
-            if (Path.HasExtension(parameters.PackageOutputPath) == false)
-            {
-                parameters.PackageOutputPath += ".zip";
-            }
-            else if (Path.GetExtension(parameters.PackageOutputPath)?.Equals(".zip", StringComparison.OrdinalIgnoreCase) == false)
-            {
-                throw new InvalidOperationException("--package-output-path file name must end with an extension of .zip");
-            }
-
-            parameters.PackageOutputPath = Path.ChangeExtension(parameters.PackageOutputPath, Path.GetExtension(parameters.PackageOutputPath)?.ToLower());
         }
 
         private static void ConfigureLogsCommand()
@@ -736,12 +641,7 @@ namespace rvn
                 default: throw new InvalidOperationException($"{parameters.Mode} mode is invalid{Environment.NewLine}-m|--mode option must be set. Please use either '{OwnCertificate}' or '{LetsEncrypt}'");
             }
         }
-        
-        private static bool IsValidNodeTag(string str)
-        {
-            return Regex.IsMatch(str, @"^[A-Z]{1,4}$");
-        }
-        
+
         private static int PerformOfflineOperation(Func<string> offlineOperation, CommandArgument systemDirArg, CommandLineApplication cmd)
         {
             try

@@ -16,10 +16,18 @@ namespace Raven.Server.Commercial.LetsEncrypt;
 
 public class LetsEncryptValidationHelper
 {
-    private static async Task AssertLocalNodeCanListenToEndpoints(SetupInfo setupInfo, ServerStore serverStore)
+    private static async Task AssertLocalNodeCanListenToEndpoints(SetupInfoBase setupInfoBase, ServerStore serverStore)
     {
-        var localNode = setupInfo.NodeSetupInfos[setupInfo.LocalNodeTag];
+        NodeInfo localNode;
         var localIps = new List<IPEndPoint>();
+        if (setupInfoBase is SetupInfo setupInfo)
+        {
+            localNode = setupInfo.NodeSetupInfos[setupInfo.LocalNodeTag];
+        }
+        else
+        {
+            localNode = setupInfoBase.NodeSetupInfos.FirstOrDefault().Value;
+        }
 
         // Because we can get from user either an ip or a hostname, we resolve the hostname and get the actual ips it is mapped to
         foreach (var hostnameOrIp in localNode.Addresses)
@@ -154,7 +162,7 @@ public class LetsEncryptValidationHelper
                 throw new ArgumentException($"{nameof(setupInfo.Certificate)} is a mandatory property for a secured setup");
         }
 
-        foreach ((string key, SetupInfo.NodeInfo value) in setupInfo.NodeSetupInfos)
+        foreach ((string key, NodeInfo value) in setupInfo.NodeSetupInfos)
         {
             RachisConsensus.ValidateNodeTag(key);
 

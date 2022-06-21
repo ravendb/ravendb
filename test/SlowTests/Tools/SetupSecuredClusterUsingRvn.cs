@@ -52,7 +52,7 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
             LocalNodeTag = "A",
             Environment = StudioConfiguration.StudioEnvironment.None,
             License = licenseObj,
-            NodeSetupInfos = new Dictionary<string, SetupInfo.NodeInfo>()
+            NodeSetupInfos = new Dictionary<string,NodeInfo>()
             {
                 ["A"] = new() { Port = 443, TcpPort = 38887, Addresses = new List<string> { "127.0.0.1" } },
                 ["B"] = new() { Port = 448, TcpPort = 38888, Addresses = new List<string> { "127.0.0.1" } },
@@ -227,7 +227,7 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
             LocalNodeTag = "A",
             Environment = StudioConfiguration.StudioEnvironment.None,
             License = licenseObj,
-            NodeSetupInfos = new Dictionary<string, SetupInfo.NodeInfo>()
+            NodeSetupInfos = new Dictionary<string, NodeInfo>()
             {
                 ["A"] = new() { Port = 443, TcpPort = 38887, Addresses = new List<string> { "127.0.0.1" } },
             }
@@ -332,9 +332,9 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
             Domain = domain,
             RootDomain = rootDomain,
             LocalNodeTag = "A",
-            NodeSetupInfos = new Dictionary<string, SetupInfo.NodeInfo>
+            NodeSetupInfos = new Dictionary<string, NodeInfo>
             {
-                {"A", new SetupInfo.NodeInfo {Port = 443, TcpPort = 38879, Addresses = new List<string> {"127.0.0.1"}}},
+                {"A", new NodeInfo {Port = 443, TcpPort = 38879, Addresses = new List<string> {"127.0.0.1"}}},
             }
         };
 
@@ -465,11 +465,11 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
             Domain = domain,
             RootDomain = rootDomain,
             LocalNodeTag = "A",
-            NodeSetupInfos = new Dictionary<string, SetupInfo.NodeInfo>
+            NodeSetupInfos = new Dictionary<string, NodeInfo>
             {
-                {"A", new SetupInfo.NodeInfo {Port = 443, TcpPort = 38879, Addresses = new List<string> {"127.0.0.1"}}},
-                {"B", new SetupInfo.NodeInfo {Port = 444, TcpPort = 38880, Addresses = new List<string> {"127.0.0.1"}}},
-                {"C", new SetupInfo.NodeInfo {Port = 446, TcpPort = 38888, Addresses = new List<string> {"127.0.0.1"}}}
+                {"A", new NodeInfo {Port = 443, TcpPort = 38879, Addresses = new List<string> {"127.0.0.1"}}},
+                {"B", new NodeInfo {Port = 444, TcpPort = 38880, Addresses = new List<string> {"127.0.0.1"}}},
+                {"C", new NodeInfo {Port = 446, TcpPort = 38888, Addresses = new List<string> {"127.0.0.1"}}}
             }
         };
         Assert.True(setupInfo.ModifyLocalServer == false, nameof(setupInfo.ModifyLocalServer) + " != false");

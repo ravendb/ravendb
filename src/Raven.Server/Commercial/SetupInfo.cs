@@ -1,20 +1,49 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading.Tasks;
+using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Util;
+using Raven.Server.Commercial.SetupWizard;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 
 namespace Raven.Server.Commercial
 {
-    public class SetupInfo
+    public class NodeInfo
     {
-        public bool EnableExperimentalFeatures { get; set; }
-        public StudioConfiguration.StudioEnvironment Environment { get; set; }
+        public string PublicServerUrl { get; set; }
+        public string PublicTcpServerUrl { get; set; }
+        public int Port { get; set; }
+        public int TcpPort { get; set; }
+        public string ExternalIpAddress { get; set; }
+        public int ExternalPort { get; set; }
+        public int ExternalTcpPort { get; set; }
+        public List<string> Addresses { get; set; }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(PublicServerUrl)] = PublicServerUrl,
+                [nameof(PublicTcpServerUrl)] = PublicTcpServerUrl,
+                [nameof(Port)] = Port,
+                [nameof(TcpPort)] = TcpPort,
+                [nameof(ExternalIpAddress)] = ExternalIpAddress,
+                [nameof(ExternalPort)] = ExternalPort,
+                [nameof(ExternalTcpPort)] = ExternalTcpPort,
+                [nameof(Addresses)] = new DynamicJsonArray(Addresses)
+            };
+        }
+    }
+
+    public class SetupInfo : SetupInfoBase
+    {
         public bool RegisterClientCert { get; set; }
         public DateTime? ClientCertNotAfter { get; set; }
         public License License { get; set; }
@@ -26,14 +55,10 @@ namespace Raven.Server.Commercial
         public string Certificate { get; set; }
         public string Password { get; set; }
 
-        public Dictionary<string, NodeInfo> NodeSetupInfos { get; set; }
-
-        public DynamicJsonValue ToJson()
+        public override DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
-                [nameof(EnableExperimentalFeatures)] = EnableExperimentalFeatures,
-                [nameof(Environment)] = Environment,
                 [nameof(License)] = License.ToJson(),
                 [nameof(Email)] = Email,
                 [nameof(Domain)] = Domain,
@@ -43,37 +68,84 @@ namespace Raven.Server.Commercial
                 [nameof(ClientCertNotAfter)] = ClientCertNotAfter,
                 [nameof(Certificate)] = Certificate,
                 [nameof(Password)] = Password,
-                [nameof(NodeSetupInfos)] = DynamicJsonValue.Convert(NodeSetupInfos)
             };
         }
 
-        public class NodeInfo
+        public override void InfoValidation(CreateSetupPackageParameters parameters)
         {
-            public string PublicServerUrl { get; set; }
-            public string PublicTcpServerUrl { get; set; }
-            public int Port { get; set; }
-            public int TcpPort { get; set; }
-            public string ExternalIpAddress { get; set; }
-            public int ExternalPort { get; set; }
-            public int ExternalTcpPort { get; set; }
-            public List<string> Addresses { get; set; }
+            var exceptions = new List<Exception>();
 
-            public DynamicJsonValue ToJson()
+            if (License == null)
             {
-                return new DynamicJsonValue
-                {
-                    [nameof(PublicServerUrl)] = PublicServerUrl,
-                    [nameof(PublicTcpServerUrl)] = PublicTcpServerUrl,
-                    [nameof(Port)] = Port,
-                    [nameof(TcpPort)] = TcpPort,
-                    [nameof(ExternalIpAddress)] = ExternalIpAddress,
-                    [nameof(ExternalPort)] = ExternalPort,
-                    [nameof(ExternalTcpPort)] = ExternalTcpPort,
-                    [nameof(Addresses)] = new DynamicJsonArray(Addresses)
-                };
+                exceptions.Add(new InvalidOperationException($"{nameof(License)} must be set"));
             }
-        }
 
+            if (License?.Keys is null || License.Keys.Any() == false)
+            {
+                exceptions.Add(new InvalidOperationException($"{nameof(License.Keys)} must be set"));
+            }
+
+            if (string.IsNullOrEmpty(License?.Id.ToString()))
+            {
+                exceptions.Add(new InvalidOperationException($"{nameof(License.Id)} must be set"));
+            }
+
+            if (string.IsNullOrEmpty(License?.Name))
+            {
+                exceptions.Add(new InvalidOperationException($"{nameof(License.Name)} must be set"));
+            }
+
+            if (string.IsNullOrEmpty(Email))
+            {
+                exceptions.Add(new InvalidOperationException($"{nameof(Email)} must be set"));
+            }
+
+            if (string.IsNullOrEmpty(Domain))
+            {
+                exceptions.Add(new InvalidOperationException($"{nameof(Domain)} must be set"));
+            }
+
+            if (string.IsNullOrEmpty(RootDomain))
+            {
+                exceptions.Add(new InvalidOperationException($"{nameof(RootDomain)} must be set"));
+            }
+        
+            parameters.PackageOutputPath ??= Domain;
+            
+            if (string.IsNullOrEmpty(parameters.CertPassword) == false)
+            {
+                Password = parameters.CertPassword;
+            }
+            
+            if (Path.HasExtension(parameters.PackageOutputPath) == false)
+            {
+                parameters.PackageOutputPath += ".zip";
+            }
+            else if (Path.GetExtension(parameters.PackageOutputPath)?.Equals(".zip", StringComparison.OrdinalIgnoreCase) == false)
+            {
+                throw new InvalidOperationException("--package-output-path file name must end with an extension of .zip");
+            }
+            
+            parameters.PackageOutputPath = Path.ChangeExtension(parameters.PackageOutputPath, Path.GetExtension(parameters.PackageOutputPath)?.ToLower());
+        }
+        public override async Task<byte[]> GenerateZipFile(CreateSetupPackageParameters parameters)
+    {
+        switch (parameters.Mode)
+        {
+            case  "own-certificate":
+            {
+                var certBytes = await File.ReadAllBytesAsync(parameters.CertificatePath, parameters.CancellationToken);
+                var certBase64 = Convert.ToBase64String(certBytes);
+                Certificate = certBase64;
+                return await OwnCertificateSetupUtils.Setup(parameters.SetupInfo, parameters.Progress, parameters.CancellationToken);
+            }
+            case  "lets-encrypt":
+            {
+                return await LetsEncryptSetupUtils.Setup(parameters.SetupInfo, parameters.Progress, parameters.CancellationToken);
+            }
+            default: throw new InvalidOperationException("Invalid mode provided.");
+        }
+    }
         public X509Certificate2 GetX509Certificate()
         {
             try
@@ -90,16 +162,54 @@ namespace Raven.Server.Commercial
         }
     }
 
-    public class UnsecuredSetupInfo
+    public class UnsecuredSetupInfo : SetupInfoBase
     {
-        public bool EnableExperimentalFeatures { get; set; }
-        public StudioConfiguration.StudioEnvironment Environment { get; set; }
         public List<string> Addresses { get; set; }
         public int Port { get; set; }
         public int TcpPort { get; set; }
         public string LocalNodeTag { get; set; }
 
-        public DynamicJsonValue ToJson()
+        public override void InfoValidation(CreateSetupPackageParameters _)
+        {
+            List<Exception> exceptions = new ();
+            if (NodeSetupInfos is null || NodeSetupInfos.Any() == false)
+            {
+                exceptions.Add(new InvalidOperationException($"{nameof(NodeSetupInfos)} must be set"));
+            }
+
+            foreach (var tag in NodeSetupInfos.Keys.Where(tag => SetupWizardUtils.IsValidNodeTag(tag) == false))
+            {
+                exceptions.Add(new InvalidOperationException($"Node tags must contain only capital letters.Maximum length should be up to 4 characters/nNode tag - {tag}"));
+            }
+
+            foreach (var nodeInfoNode in NodeSetupInfos.Values)
+            {
+                if (nodeInfoNode?.Addresses is null)
+                {
+                    exceptions.Add(new InvalidOperationException($"Addresses must be set inside {nameof(NodeSetupInfos)}"));
+                }
+
+                if (nodeInfoNode?.Port == 0)
+                {
+                    nodeInfoNode.Port = Constants.Network.DefaultSecuredRavenDbHttpPort;
+                }
+
+                if (nodeInfoNode.TcpPort == 0)
+                {
+                    nodeInfoNode.TcpPort = Constants.Network.DefaultSecuredRavenDbTcpPort;
+                }
+            }
+            if (exceptions.Count > 0)
+                throw new AggregateException($"{nameof(UnsecuredSetupInfo)} validation exceptions list: ", exceptions);
+
+        }
+
+        public override async Task<byte[]> GenerateZipFile(CreateSetupPackageParameters parameters)
+        {
+            return await UnsecuredSetupUtils.Setup(parameters.UnsecuredSetupInfo, parameters.Progress, parameters.CancellationToken);
+        }
+
+        public override DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
