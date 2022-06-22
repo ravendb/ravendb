@@ -73,6 +73,9 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                 case EtlType.ElasticSearch:
                     RequestHandler.ServerStore.LicenseManager.AssertCanAddElasticSearchEtl();
                     break;
+                case EtlType.Queue:
+                    RequestHandler.ServerStore.LicenseManager.AssertCanAddQueueEtl();
+                    break;
                 default:
                     throw new NotSupportedException($"Unknown ETL configuration type. Configuration: {etlConfiguration}");
             }

@@ -7,6 +7,7 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
+using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Exceptions;
 using Raven.Client.Util;
@@ -17,20 +18,21 @@ using Sparrow.Json;
 namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 {
     internal class OngoingTasksHandlerProcessorForGetConnectionString<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
-        where TOperationContext : JsonOperationContext 
+        where TOperationContext : JsonOperationContext
         where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
-        public OngoingTasksHandlerProcessorForGetConnectionString([NotNull] TRequestHandler requestHandler): base(requestHandler)
+        public OngoingTasksHandlerProcessorForGetConnectionString([NotNull] TRequestHandler requestHandler) : base(requestHandler)
         {
         }
 
-        private static (Dictionary<string, RavenConnectionString>, Dictionary<string, SqlConnectionString>, Dictionary<string, OlapConnectionString>, Dictionary<string, ElasticSearchConnectionString>)
+        private static (Dictionary<string, RavenConnectionString>, Dictionary<string, SqlConnectionString>, Dictionary<string, OlapConnectionString>, Dictionary<string, ElasticSearchConnectionString>, Dictionary<string, QueueConnectionString>)
           GetConnectionString(RawDatabaseRecord rawRecord, string connectionStringName, ConnectionStringType connectionStringType)
         {
             var ravenConnectionStrings = new Dictionary<string, RavenConnectionString>();
             var sqlConnectionStrings = new Dictionary<string, SqlConnectionString>();
             var olapConnectionStrings = new Dictionary<string, OlapConnectionString>();
             var elasticSearchConnectionStrings = new Dictionary<string, ElasticSearchConnectionString>();
+            var queueConnectionStrings = new Dictionary<string, QueueConnectionString>();
 
             switch (connectionStringType)
             {
@@ -70,11 +72,20 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 
                     break;
 
+                case ConnectionStringType.Queue:
+                    var recordQueueConnectionStrings = rawRecord.QueueConnectionStrings;
+                    if (recordQueueConnectionStrings != null && recordQueueConnectionStrings.TryGetValue(connectionStringName, out var queueConnectionString))
+                    {
+                        queueConnectionStrings.TryAdd(connectionStringName, queueConnectionString);
+                    }
+
+                    break;
+
                 default:
                     throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
             }
 
-            return (ravenConnectionStrings, sqlConnectionStrings, olapConnectionStrings, elasticSearchConnectionStrings);
+            return (ravenConnectionStrings, sqlConnectionStrings, olapConnectionStrings, elasticSearchConnectionStrings, queueConnectionStrings);
         }
 
         public override async ValueTask ExecuteAsync()
@@ -97,6 +108,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                 Dictionary<string, SqlConnectionString> sqlConnectionStrings;
                 Dictionary<string, OlapConnectionString> olapConnectionStrings;
                 Dictionary<string, ElasticSearchConnectionString> elasticSearchConnectionStrings;
+                Dictionary<string, QueueConnectionString> queueConnectionStrings;
 
                 using (context.OpenReadTransaction())
                 using (var rawRecord = RequestHandler.ServerStore.Cluster.ReadRawDatabaseRecord(context, RequestHandler.DatabaseName))
@@ -110,7 +122,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                             throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
 
 
-                        (ravenConnectionStrings, sqlConnectionStrings, olapConnectionStrings, elasticSearchConnectionStrings) = GetConnectionString(rawRecord, connectionStringName, connectionStringType);
+                        (ravenConnectionStrings, sqlConnectionStrings, olapConnectionStrings, elasticSearchConnectionStrings, queueConnectionStrings) = GetConnectionString(rawRecord, connectionStringName, connectionStringType);
                     }
                     else
                     {
@@ -118,6 +130,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                         sqlConnectionStrings = rawRecord.SqlConnectionStrings;
                         olapConnectionStrings = rawRecord.OlapConnectionString;
                         elasticSearchConnectionStrings = rawRecord.ElasticSearchConnectionStrings;
+                        queueConnectionStrings = rawRecord.QueueConnectionStrings;
                     }
                 }
 
@@ -128,7 +141,8 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                         RavenConnectionStrings = ravenConnectionStrings,
                         SqlConnectionStrings = sqlConnectionStrings,
                         OlapConnectionStrings = olapConnectionStrings,
-                        ElasticSearchConnectionStrings = elasticSearchConnectionStrings
+                        ElasticSearchConnectionStrings = elasticSearchConnectionStrings,
+                        QueueConnectionStrings = queueConnectionStrings
                     };
                     context.Write(writer, result.ToJson());
                 }

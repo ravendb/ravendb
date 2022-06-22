@@ -114,6 +114,21 @@ internal abstract class ShardedOngoingTasksHandlerProcessorForGetOngoingTasksInf
         }
     }
 
+    protected override IEnumerable<OngoingTaskQueueEtlListView> CollectQueueEtlTasks(TransactionOperationContext context, ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
+    {
+        if (databaseRecord.QueueEtls != null)
+        {
+            foreach (var etl in databaseRecord.QueueEtls)
+            {
+                yield return new OngoingTaskQueueEtlListView()
+                {
+                    TaskId = etl.TaskId,
+                    TaskName = etl.Name,
+                };
+            }
+        }
+    }
+
     protected override IEnumerable<OngoingTaskReplication> CollectExternalReplicationTasks(TransactionOperationContext context, ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
     {
         if (databaseRecord.ExternalReplications != null)

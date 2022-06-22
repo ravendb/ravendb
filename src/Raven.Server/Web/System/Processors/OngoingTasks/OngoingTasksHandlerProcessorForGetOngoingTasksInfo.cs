@@ -20,6 +20,7 @@ using Raven.Server.Documents.Replication.Incoming;
 using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using NotImplementedException = System.NotImplementedException;
 
 namespace Raven.Server.Web.System.Processors.OngoingTasks;
 
@@ -189,6 +190,38 @@ internal abstract class OngoingTasksHandlerProcessorForGetOngoingTasksInfo : Abs
                     },
                     ConnectionStringName = elasticSearchEtl.ConnectionStringName,
                     NodesUrls = connection?.Nodes,
+                    Error = error
+                };
+            }
+        }
+    }
+
+    protected override IEnumerable<OngoingTaskQueueEtlListView> CollectQueueEtlTasks(TransactionOperationContext context, ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
+    {
+        if (databaseRecord.QueueEtls != null)
+        {
+            foreach (var queueEtl in databaseRecord.QueueEtls)
+            {
+                databaseRecord.QueueConnectionStrings.TryGetValue(queueEtl.ConnectionStringName, out var connection);
+
+                var connectionStatus = GetEtlTaskConnectionStatusAsync(databaseRecord, queueEtl, out var tag, out var error).Result;
+                var taskState = OngoingTasksHandler.GetEtlTaskState(queueEtl);
+
+                yield return new OngoingTaskQueueEtlListView
+                {
+                    TaskId = queueEtl.TaskId,
+                    TaskName = queueEtl.Name,
+                    TaskConnectionStatus = connectionStatus,
+                    TaskState = taskState,
+                    MentorNode = queueEtl.MentorNode,
+                    ResponsibleNode = new NodeId
+                    {
+                        NodeTag = tag,
+                        NodeUrl = clusterTopology.GetUrlFromTag(tag)
+                    },
+                    ConnectionStringName = queueEtl.ConnectionStringName,
+                    BrokerType = queueEtl.BrokerType,
+                    Url = connection?.GetUrl(),
                     Error = error
                 };
             }
