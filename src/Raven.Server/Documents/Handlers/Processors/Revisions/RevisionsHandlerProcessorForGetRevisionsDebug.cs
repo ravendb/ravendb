@@ -1,5 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -13,11 +12,12 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
         public RevisionsHandlerProcessorForGetRevisionsDebug([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {
         }
-
+        
         protected override bool SupportsCurrentNode => true;
+
         protected override async ValueTask HandleCurrentNodeAsync()
         {
-            var (etag, pageSize) = GetParameters();
+            var (start, pageSize) = GetParameters();
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
@@ -28,7 +28,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
                 writer.WriteStartArray();
 
                 var first = true;
-                foreach (var revision in RequestHandler.Database.DocumentsStorage.RevisionsStorage.GetRevisionsFrom(context, etag, pageSize))
+                foreach (var revision in RequestHandler.Database.DocumentsStorage.RevisionsStorage.GetRevisionsFrom(context, start, pageSize))
                 {
                     if (first == false)
                         writer.WriteComma();
@@ -59,9 +59,9 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
             }
         }
 
-        protected override Task HandleRemoteNodeAsync(ProxyCommand<BlittableJsonReaderObject> command, OperationCancelToken token)
+        protected override async Task HandleRemoteNodeAsync(ProxyCommand<BlittableJsonReaderObject> command, OperationCancelToken token)
         {
-            throw new NotImplementedException();
+            await RequestHandler.ExecuteRemoteAsync(command, token.Token);
         }
     }
 }

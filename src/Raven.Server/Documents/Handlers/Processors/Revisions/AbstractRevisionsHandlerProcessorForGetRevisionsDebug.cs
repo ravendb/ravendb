@@ -1,4 +1,6 @@
 ﻿using JetBrains.Annotations;
+using Raven.Client.Http;
+using Raven.Server.Documents.Commands.Revisions;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Revisions
@@ -13,7 +15,13 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
 
         protected (long Start, int PageSize) GetParameters()
         {
-            return (RequestHandler.GetLongQueryString("etag", false) ?? 0, RequestHandler.GetPageSize());
+            return (RequestHandler.GetLongQueryString("start", false) ?? 0, RequestHandler.GetPageSize());
+        }
+
+        protected override RavenCommand<BlittableJsonReaderObject> CreateCommandForNode(string nodeTag)
+        {
+            var (start, pageSize) = GetParameters();
+            return new GetRevisionsDebugCommand(nodeTag, start, pageSize);
         }
     }
 }
