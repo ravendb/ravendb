@@ -91,6 +91,8 @@ class notificationCenter {
     databaseOperationsWatch = new notificationCenterOperationsWatch();
 
     allNotifications: KnockoutComputed<abstractNotification[]>;
+    notificationsToShow: KnockoutComputed<abstractNotification[]>;
+    
     visibleNotifications: KnockoutComputed<abstractNotification[]>;
     visibleNotificationsTrimmed: KnockoutComputed<abstractNotification[]>;
 
@@ -196,6 +198,9 @@ class notificationCenter {
 
         this.visibleNotificationsTrimmed = ko.pureComputed(() =>
             this.visibleNotifications().slice(0, notificationCenter.numberOfNotificationsToShow));
+
+        this.notificationsToShow = ko.pureComputed(() =>
+            this.isShowingAllNotifications() ? this.visibleNotifications() : this.visibleNotificationsTrimmed());
 
         this.totalItemsCount = ko.pureComputed(() => this.allNotifications().length);
 

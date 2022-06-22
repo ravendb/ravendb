@@ -23,15 +23,8 @@
         <h2 class="text-center text-muted">No new notifications</h2>
     </div>
     <div class="notification-list scroll" data-bind="if: includeInDom">
-        <div data-bind="if: !isShowingAllNotifications()">
-            <!-- ko foreach: visibleNotificationsTrimmed-->
+        <div data-bind="foreach: notificationsToShow">
             <div data-bind="template: { name: type + '-template' }"></div>
-            <!-- /ko -->
-        </div>
-        <div data-bind="if: isShowingAllNotifications">
-            <!-- ko foreach: visibleNotifications-->
-            <div data-bind="template: { name: type + '-template' }"></div>
-            <!-- /ko -->
         </div>
         <div class="text-center" data-bind="visible: visibleNotifications().length > constructor.numberOfNotificationsToShow && !isShowingAllNotifications()">
             <button class="btn btn-danger margin-top-xs" data-bind="click: showAllNotifications">
