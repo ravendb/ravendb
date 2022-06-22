@@ -145,7 +145,10 @@ internal class BatchHandlerProcessorForBulkDocs : AbstractBatchHandlerProcessorF
                           $"to {numberOfReplicasToWaitFor} servers in {waitForReplicasTimeout}. " +
                           $"So far, it only replicated to {replicatedPast}";
 
-            throw new TimeoutException(message);
+            throw new RavenTimeoutException(message)
+            {
+                FailImmediately = true
+            };
         }
     }
 
@@ -198,7 +201,10 @@ internal class BatchHandlerProcessorForBulkDocs : AbstractBatchHandlerProcessorF
             errorMessage += $", total paused indexes: {pausedIndexes.Count} ({string.Join(", ", pausedIndexes)})";
         }
 
-        throw new TimeoutException(errorMessage);
+        throw new RavenTimeoutException(errorMessage)
+        {
+            FailImmediately = true
+        };
     }
 
     private static List<Index> GetImpactedIndexesToWaitForToBecomeNonStale(DocumentDatabase database, List<string> specifiedIndexesQueryString, HashSet<string> modifiedCollections)
