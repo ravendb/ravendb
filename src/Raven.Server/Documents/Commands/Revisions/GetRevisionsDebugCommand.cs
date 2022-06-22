@@ -7,13 +7,13 @@ namespace Raven.Server.Documents.Commands.Revisions
 {
     public class GetRevisionsDebugCommand : RavenCommand<BlittableJsonReaderObject>
     {
-        private readonly long? _etag;
+        private readonly long? _start;
         private readonly int? _pageSize;
 
-        public GetRevisionsDebugCommand(string nodeTag, long? etag, int? pageSize)
+        public GetRevisionsDebugCommand(string nodeTag, long? start, int? pageSize)
         {
             SelectedNodeTag = nodeTag;
-            _etag = etag;
+            _start = start;
             _pageSize = pageSize;
         }
 
@@ -29,15 +29,15 @@ namespace Raven.Server.Documents.Commands.Revisions
                 .Append(node.Database)
                 .Append("/debug/documents/get-revisions");
 
-            if (_etag.HasValue && _pageSize.HasValue)
+            if (_start.HasValue && _pageSize.HasValue)
             {
-                pathBuilder.Append("?etag=").Append(_etag.Value);
+                pathBuilder.Append("?start=").Append(_start.Value);
                 pathBuilder.Append("&pageSize=").Append(_pageSize.Value);
             }
             else if (_pageSize.HasValue)
                 pathBuilder.Append("?pageSize=").Append(_pageSize.Value);
-            else if (_etag.HasValue)
-                pathBuilder.Append("?etag=").Append(_etag.Value);
+            else if (_start.HasValue)
+                pathBuilder.Append("?start=").Append(_start.Value);
 
             url = pathBuilder.ToString();
             return request;

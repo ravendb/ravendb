@@ -1683,7 +1683,7 @@ namespace Raven.Server.Documents.Revisions
                 var document = TableValueToRevision(context, ref tvr.Reader);
                 yield return document;
 
-                if (take-- <= 0)
+                if (--take <= 0)
                     yield break;
             }
         }

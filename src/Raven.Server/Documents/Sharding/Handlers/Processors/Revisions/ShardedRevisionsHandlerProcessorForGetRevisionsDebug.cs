@@ -18,21 +18,16 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Revisions
         }
 
         protected override bool SupportsCurrentNode => false;
+
         protected override ValueTask HandleCurrentNodeAsync()
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException();
         }
 
         protected override Task HandleRemoteNodeAsync(ProxyCommand<BlittableJsonReaderObject> command, OperationCancelToken token)
         {
             var shardNumber = GetShardNumber();
             return RequestHandler.ShardExecutor.ExecuteSingleShardAsync(command, shardNumber, token.Token);
-        }
-
-        protected override RavenCommand<BlittableJsonReaderObject> CreateCommandForNode(string nodeTag)
-        {
-            var (etag, pageSize) = GetParameters();
-            return new GetRevisionsDebugCommand(nodeTag, etag, pageSize);
         }
     }
 }

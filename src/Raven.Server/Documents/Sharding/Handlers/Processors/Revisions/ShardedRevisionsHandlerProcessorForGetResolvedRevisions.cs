@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
@@ -21,7 +22,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Revisions
 
         protected override async ValueTask GetResolvedRevisionsAndWriteAsync(TransactionOperationContext context, DateTime since, int take, CancellationToken token)
         {
-            var op = new ShardedGetResolvedRevisionsOperation(context, RequestHandler.HttpContext, since, take);
+            var op = new ShardedGetResolvedRevisionsOperation(context, RequestHandler, since, take);
             var revisions = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(op, token);
 
             using (context.OpenReadTransaction())
@@ -37,35 +38,37 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Revisions
     internal readonly struct ShardedGetResolvedRevisionsOperation : IShardedOperation<ResolvedRevisions, List<BlittableJsonReaderObject>>
     {
         private readonly JsonOperationContext _context;
-        private readonly HttpContext _httpContext;
+        private readonly ShardedDatabaseRequestHandler _handler;
         private readonly DateTime _since;
         private readonly int _take;
 
-        public ShardedGetResolvedRevisionsOperation(JsonOperationContext context, HttpContext httpContext, DateTime since, int take)
+        public ShardedGetResolvedRevisionsOperation(JsonOperationContext context, ShardedDatabaseRequestHandler handler, DateTime since, int take)
         {
             _context = context;
-            _httpContext = httpContext;
+            _handler = handler;
             _since = since;
             _take = take;
         }
 
-        public HttpRequest HttpRequest => _httpContext.Request;
+        public HttpRequest HttpRequest => _handler.HttpContext.Request;
 
         public List<BlittableJsonReaderObject> Combine(Memory<ResolvedRevisions> results)
         {
             var combined = new List<BlittableJsonReaderObject>();
+            var taken = 0;
 
-            foreach (var revisions in results.Span)
+            foreach (var item in _handler.DatabaseContext.Streaming.CombinedResults(
+                         results,
+                         arr => arr.Results.Items.Select(i => (BlittableJsonReaderObject)i),
+                         ShardedDatabaseContext.ShardedStreaming.DocumentLastModifiedComparer.Instance))
             {
-                if(revisions == null)
-                    continue;
-                
-                foreach (BlittableJsonReaderObject revision in revisions.Results)
-                {
-                    combined.Add(revision.Clone(_context));
-                }
-            }
+                if (taken >= _take)
+                    break;
 
+                combined.Add(item?.Item.Clone(_context));
+                taken++;
+            }
+            
             return combined;
         }
 
