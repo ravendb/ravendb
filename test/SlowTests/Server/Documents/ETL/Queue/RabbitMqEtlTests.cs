@@ -441,7 +441,7 @@ for (var i = 0; i < this.OrderLines.length; i++) {
     orderData.TotalCost += line.Cost * line.Quantity;    
 }
 
-loadToOrders(orderData, {
+loadToOrders(orderData, 'myRoutingKey', {
                                                             Id: id(this),
                                                             PartitionKey: id(this),
                                                             Type: 'com.github.users',
@@ -459,6 +459,12 @@ output('test output')"
                     Assert.Equal(0, result.TransformationErrors.Count);
 
                     Assert.Equal(1, result.Summary.Count);
+
+                    Assert.Equal("Orders", result.Summary[0].QueueName);
+                    Assert.Equal("myRoutingKey", result.Summary[0].Messages[0].RoutingKey);
+                    Assert.Equal("orders/1-A", result.Summary[0].Messages[0].Attributes.Id);
+                    Assert.Equal("com.github.users", result.Summary[0].Messages[0].Attributes.Type);
+                    Assert.Equal("/registrations/direct-signup", result.Summary[0].Messages[0].Attributes.Source);
 
                     Assert.Equal("test output", result.DebugOutput[0]);
                 }
