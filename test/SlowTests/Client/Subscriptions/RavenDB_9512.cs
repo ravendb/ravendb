@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Subscriptions;
@@ -30,16 +32,30 @@ namespace SlowTests.Client.Subscriptions
                     await session.SaveChangesAsync();
                 }
 
+                var actions = new List<string>();
                 var sn = await store.Subscriptions.CreateAsync<User>();
                 var worker = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(sn)
                 {
                     CloseWhenNoDocsLeft = true,
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                 });
+                worker.OnSubscriptionConnectionRetry += exception =>
+                {
+                    actions.Add($"OnSubscriptionConnectionRetry: {exception}");
+                };
+                worker.OnUnexpectedSubscriptionError += exception =>
+                {
+                    actions.Add($"OnUnexpectedSubscriptionError: {exception}");
+                };
+                worker.AfterAcknowledgment += batch =>
+                {
+                    actions.Add($"AfterAcknowledgment ids: {string.Join(", ", batch.Items.Select(x => x.Id))}");
 
+                    return Task.CompletedTask;
+                };
                 var st = worker.Run(x => { });
 
-                Assert.True(await Assert.ThrowsAsync<SubscriptionClosedException>(() => st).WaitWithoutExceptionAsync(_reasonableWaitTime));
+                Assert.True(await Assert.ThrowsAsync<SubscriptionClosedException>(() => st).WaitWithoutExceptionAsync(_reasonableWaitTime), $"Actions logs:{Environment.NewLine}"+string.Join(Environment.NewLine, actions));
             }
         }
     }

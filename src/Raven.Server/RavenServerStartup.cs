@@ -306,7 +306,7 @@ namespace Raven.Server
             TrafficWatchManager.DispatchMessage(twn);
         }
 
-        private void MaybeAddAdditionalExceptionData(DynamicJsonValue djv, Exception exception)
+        private static void MaybeAddAdditionalExceptionData(DynamicJsonValue djv, Exception exception)
         {
             if (exception is IndexCompilationException indexCompilationException)
             {
@@ -326,6 +326,11 @@ namespace Raven.Server
                 djv[nameof(ConcurrencyException.Id)] = concurrencyException.Id;
                 djv[nameof(ConcurrencyException.ExpectedChangeVector)] = concurrencyException.ExpectedChangeVector;
                 djv[nameof(ConcurrencyException.ActualChangeVector)] = concurrencyException.ActualChangeVector;
+            }
+
+            if (exception is RavenTimeoutException timeoutException)
+            {
+                djv[nameof(RavenTimeoutException.FailImmediately)] = timeoutException.FailImmediately;
             }
 
             if (exception is ClusterTransactionConcurrencyException { ConcurrencyViolations: { } } ctxConcurrencyException)
@@ -372,7 +377,7 @@ namespace Raven.Server
                 exception is DatabaseConcurrentLoadTimeoutException ||
                 exception is NodeIsPassiveException ||
                 exception is ClientVersionMismatchException ||
-                exception is DatabaseSchemaErrorException || 
+                exception is DatabaseSchemaErrorException ||
                 exception is DatabaseIdleException
                 )
             {
@@ -399,7 +404,7 @@ namespace Raven.Server
                 return;
             }
 
-            if (exception is TimeoutException)
+            if (exception is TimeoutException or RavenTimeoutException)
             {
                 response.StatusCode = (int)HttpStatusCode.RequestTimeout;
                 return;

@@ -13,7 +13,6 @@
             </div>
         </div>
         <div class="modal-body">
-
             <div class="modal-details">
                 <div class="details-item">
                     <div class="row">
@@ -21,7 +20,6 @@
                         <div class="col-md-8 details-value" data-bind="text: currentError().IndexName"></div>
                     </div>
                 </div>
-
                 <div class="details-item">
                     <div class="row">
                         <div class="col-md-4 text-right">Document ID</div>
@@ -31,25 +29,25 @@
                 
                 <div class="details-item">
                     <div class="row">
-                        <div class="col-md-4 text-right">Timestamp</div>
-                        <div class="col-md-8 details-value" data-bind="text: currentError().Timestamp"></div>
+                        <div class="col-md-4 text-right">Time</div>
+                        <div class="col-md-8 details-value">
+                            <span class="js-time-value">
+                                <span data-bind="text: currentError().LocalTime" class="margin-right-sm"></span>
+                            </span>
+                        </div>
                     </div>
                 </div>
-                
                 <div class="details-item">
                     <div class="row">
                         <div class="col-md-4 text-right">Action</div>
                         <div class="col-md-8 details-value" data-bind="text: currentError().Action"></div>
                     </div>
                 </div>
-
             </div>
-
             <div data-bind="if: currentError().Error">
                 <pre class="margin-top error-messages"><code data-bind="text: currentError().Error">
 </code></pre>
             </div>
-
         </div>
         <div class="modal-footer">
             <div class="flex-horizontal">
@@ -64,7 +62,6 @@
                 <div class="flex-separator"></div>
                 <button type="button" class="btn btn-default" data-bind="click: $root.close">Close</button>
             </div>
-            
         </div>
     </div>
 </div>
