@@ -22,11 +22,6 @@ namespace Raven.Server.Documents.Indexes.Static
     {
         private V8EngineEx EngineExV8 => _engineHandle as V8EngineEx;
         private readonly AbstractJavaScriptIndexV8 IndexV8;
-        public override void SetContext()
-        {
-            EngineExV8.Context = IndexV8._contextExV8;
-        }
-
         public override void SetArgs()
         {
            //noop
@@ -105,10 +100,6 @@ namespace Raven.Server.Documents.Indexes.Static
     public class JavaScriptMapOperationJint : JavaScriptMapOperation<JsHandleJint>
     {
         private JintEngineEx EngineExJint => _engineHandle as JintEngineEx;
-        public override void SetContext()
-        {
-          //  EngineExJint.Context = IndexV8._contextExV8;
-        }
 
         public override void SetArgs()
         {
@@ -194,7 +185,6 @@ namespace Raven.Server.Documents.Indexes.Static
         public HashSet<string> Fields = new HashSet<string>();
         public Dictionary<string, IndexFieldOptions> FieldOptions = new Dictionary<string, IndexFieldOptions>();
         public string IndexName { get; set; }
-
         protected JavaScriptMapOperation(AbstractJavaScriptIndex<T> index, JavaScriptIndexUtils<T> jsIndexUtils, FunctionInstance mapFuncJint, T mapFunc, string indexName, string mapString)
         {
             _index = index;
@@ -204,7 +194,7 @@ namespace Raven.Server.Documents.Indexes.Static
             _jsIndexUtils = jsIndexUtils;
             _engineHandle = _jsIndexUtils.EngineHandle;
 
-            MapFunc =  mapFunc;
+            MapFunc = mapFunc;
             MapFuncJint = mapFuncJint ?? throw new ArgumentNullException(nameof(mapFuncJint));
             IndexName = indexName;
             MapString = mapString;
@@ -213,140 +203,126 @@ namespace Raven.Server.Documents.Indexes.Static
                 _resolver = ((JintEngineEx)_engineHandle).RefResolver;
         }
 
-        ~JavaScriptMapOperation()
-        {
-            MapFunc.Dispose();
-        }
-
-        public abstract void SetContext();
         public IEnumerable<T> IndexingFunction(IEnumerable<object> items)
         {
-            lock (_engineHandle)
+            var memorySnapshotName = "map";
+            bool isMemorySnapshotMade = false;
+            if (_engineHandle.IsMemoryChecksOn)
             {
-              //  _index._lastException = null;
+                _engineHandle.MakeSnapshot(memorySnapshotName);
+                isMemorySnapshotMade = true;
+            }
 
-              //TODO: egor can I do it once in ctor?
-                        SetContext();
+            foreach (var item in items)
+            {
+                _engineHandle.ResetCallStack();
+                _engineHandle.ResetConstraints();
 
-                var memorySnapshotName = "map";
-                bool isMemorySnapshotMade = false;
-                if (_engineHandle.IsMemoryChecksOn)
+                if (_jsIndexUtils.GetValue(item, out T jsItem) == false)
+                    continue;
+
+                if (jsItem.IsObject)
                 {
-                    _engineHandle.MakeSnapshot(memorySnapshotName);
-                    isMemorySnapshotMade = true;
-                }
-
-                foreach (var item in items)
-                {
-                    _engineHandle.ResetCallStack();
-                    _engineHandle.ResetConstraints();
-
-                    if (_jsIndexUtils.GetValue(item, out T jsItem) == false)
-                        continue;
-
-                    if (jsItem.IsObject)
+                    using (jsItem)
                     {
-                        using (jsItem)
+                        T jsRes = _engineHandle.Empty;
+                        try
                         {
-                            T jsRes = _engineHandle.Empty;
-                            try
+                            if (!MapFunc.IsFunction)
                             {
-                                if (!MapFunc.IsFunction)
-                                {
-                                    throw new JavaScriptIndexFuncException($"MapFunc is not a function");
-                                }
-
-                                jsRes = MapFunc.StaticCall(jsItem);
-                                //TODO: egor add exception handling?
-                                //if (_index._lastException != null)
-                                //{
-                                //    ExceptionDispatchInfo.Capture(_index._lastException).Throw();
-                                //}
-                                //else
-                                //{
-                                    jsRes.ThrowOnError();
-                                //}
-                            }
-                            catch (JavaScriptException jse)
-                            {
-                                ProcessRunException(jsRes, memorySnapshotName, isMemorySnapshotMade);
-                                var (message, success) = JavaScriptIndexFuncException.PrepareErrorMessageForJavaScriptIndexFuncException(MapString, jse);
-                                if (success == false)
-                                    throw new JavaScriptIndexFuncException($"Failed to execute {MapString}", jse);
-                                throw new JavaScriptIndexFuncException($"Failed to execute map script, {message}", jse);
-                            }
-                            catch (V8Exception jse)
-                            {
-                                ProcessRunException(jsRes, memorySnapshotName, isMemorySnapshotMade);
-                                var (message, success) = JavaScriptIndexFuncException.PrepareErrorMessageForJavaScriptIndexFuncException(MapString, jse);
-                                if (success == false)
-                                    throw new JavaScriptIndexFuncException($"Failed to execute {MapString}", jse);
-                                throw new JavaScriptIndexFuncException($"Failed to execute map script, {message}", jse);
-                            }
-                            catch (Exception e)
-                            {
-                                ProcessRunException(jsRes, memorySnapshotName, isMemorySnapshotMade);
-                                throw new JavaScriptIndexFuncException($"Failed to execute {MapString}", e);
-                            }
-                            finally
-                            {
-                              //  _index._lastException = null;
+                                throw new JavaScriptIndexFuncException($"MapFunc is not a function");
                             }
 
-                            using (jsRes)
+                            jsRes = MapFunc.StaticCall(jsItem);
+                            //TODO: egor add exception handling?
+                            //if (_index._lastException != null)
+                            //{
+                            //    ExceptionDispatchInfo.Capture(_index._lastException).Throw();
+                            //}
+                            //else
+                            //{
+                            jsRes.ThrowOnError();
+                            //}
+                        }
+                        catch (JavaScriptException jse)
+                        {
+                            ProcessRunException(jsRes, memorySnapshotName, isMemorySnapshotMade);
+                            var (message, success) = JavaScriptIndexFuncException.PrepareErrorMessageForJavaScriptIndexFuncException(MapString, jse);
+                            if (success == false)
+                                throw new JavaScriptIndexFuncException($"Failed to execute {MapString}", jse);
+                            throw new JavaScriptIndexFuncException($"Failed to execute map script, {message}", jse);
+                        }
+                        catch (V8Exception jse)
+                        {
+                            ProcessRunException(jsRes, memorySnapshotName, isMemorySnapshotMade);
+                            var (message, success) = JavaScriptIndexFuncException.PrepareErrorMessageForJavaScriptIndexFuncException(MapString, jse);
+                            if (success == false)
+                                throw new JavaScriptIndexFuncException($"Failed to execute {MapString}", jse);
+                            throw new JavaScriptIndexFuncException($"Failed to execute map script, {message}", jse);
+                        }
+                        catch (Exception e)
+                        {
+                            ProcessRunException(jsRes, memorySnapshotName, isMemorySnapshotMade);
+                            throw new JavaScriptIndexFuncException($"Failed to execute {MapString}", e);
+                        }
+                        finally
+                        {
+                            //  _index._lastException = null;
+                        }
+
+                        using (jsRes)
+                        {
+                            if (jsRes.IsArray)
                             {
-                                if (jsRes.IsArray)
+                                var length = (uint)jsRes.ArrayLength;
+                                for (int i = 0; i < length; i++)
                                 {
-                                    var length = (uint)jsRes.ArrayLength;
-                                    for (int i = 0; i < length; i++)
+                                    var arrItem = jsRes.GetProperty(i);
+                                    using (arrItem)
                                     {
-                                        var arrItem = jsRes.GetProperty(i);
-                                        using (arrItem)
+                                        if (arrItem.IsObject)
                                         {
-                                            if (arrItem.IsObject)
-                                            {
-                                                yield return arrItem; // being yield it is converted to blittable object and not disposed - so disposing it here
-                                            }
-                                            else
-                                            {
-                                                ProcessRunException(jsRes, memorySnapshotName, isMemorySnapshotMade);
-                                                
-                                                // this check should be to catch map errors
-                                                throw new JavaScriptIndexFuncException($"Failed to execute {MapString}",
-                                                    new Exception($"At least one of map results is not object: {jsRes.ToString()}"));
-                                            }
+                                            yield return arrItem; // being yield it is converted to blittable object and not disposed - so disposing it here
+                                        }
+                                        else
+                                        {
+                                            ProcessRunException(jsRes, memorySnapshotName, isMemorySnapshotMade);
+
+                                            // this check should be to catch map errors
+                                            throw new JavaScriptIndexFuncException($"Failed to execute {MapString}",
+                                                new Exception($"At least one of map results is not object: {jsRes.ToString()}"));
                                         }
                                     }
                                 }
-                                else if (jsRes.IsObject)
-                                {
-                                    yield return jsRes; // being yield it is converted to blittable object and not disposed - so disposing it here
-                                }
-                                // we ignore everything else by design, we support only
-                                // objects and arrays, anything else is discarded
                             }
-                        }
-
-                        _engineHandle.ForceGarbageCollection();
-                        if (isMemorySnapshotMade)
-                        {
-                            _engineHandle.CheckForMemoryLeaks(memorySnapshotName, shouldRemove: false);
+                            else if (jsRes.IsObject)
+                            {
+                                yield return jsRes; // being yield it is converted to blittable object and not disposed - so disposing it here
+                            }
+                            // we ignore everything else by design, we support only
+                            // objects and arrays, anything else is discarded
                         }
                     }
-                    else
+
+                    _engineHandle.ForceGarbageCollection();
+                    if (isMemorySnapshotMade)
                     {
-                        using (jsItem)
-                            throw new JavaScriptIndexFuncException($"Failed to execute {MapString}", new Exception($"Entry item is not document: {jsItem.ToString()}"));
+                        _engineHandle.CheckForMemoryLeaks(memorySnapshotName, shouldRemove: false);
                     }
-
-                    // TODO [shlomo] why there is no SetArgs in indexes?
-                    SetArgs();
                 }
-                
-                if (isMemorySnapshotMade)
+                else
                 {
-                    _engineHandle.RemoveMemorySnapshot(memorySnapshotName);
+                    using (jsItem)
+                        throw new JavaScriptIndexFuncException($"Failed to execute {MapString}", new Exception($"Entry item is not document: {jsItem.ToString()}"));
                 }
+
+                // TODO [shlomo] why there is no SetArgs in indexes?
+                SetArgs();
+            }
+
+            if (isMemorySnapshotMade)
+            {
+                _engineHandle.RemoveMemorySnapshot(memorySnapshotName);
             }
         }
 

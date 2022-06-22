@@ -24,6 +24,7 @@ function map(name, lambda) {
     }
 }
 
+/*
 public interface IJavaScriptIndex<T>
     where T : struct, IJsHandle<T>
 {
@@ -34,4 +35,4 @@ public interface IJavaScriptIndex<T>
     public T CounterNamesFor(T self, T[] args);
     public T LoadAttachment(T self, T[] args);
     public T LoadAttachments(T self, T[] args);
-}
+}*/

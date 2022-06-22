@@ -37,6 +37,8 @@ using Raven.Server.Documents.Indexes.Static.Counters;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Indexes.Static.TimeSeries;
 using Raven.Server.Documents.Indexes.Workers;
+using Raven.Server.Documents.Patch.Jint;
+using Raven.Server.Documents.Patch.V8;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Facets;
@@ -360,9 +362,20 @@ namespace Raven.Server.Documents.Indexes
 
             exceptionAggregator.Execute(() => { _mre?.Dispose(); });
 
+            if (Type.IsJavaScript())
+            {
+                exceptionAggregator.Execute(() =>
+                {
+                    if (_compiled is AbstractJavaScriptIndexV8 jsIndex)
+                    {
+                        V8EngineEx.ReturnEngine(jsIndex.EngineEx);
+                    }
+                });
+            }
+
             exceptionAggregator.ThrowIfNeeded();
         }
-
+        
         public static Index Open(string path, DocumentDatabase documentDatabase, bool generateNewDatabaseId)
         {
             var logger = LoggingSource.Instance.GetLogger<Index>(documentDatabase.Name);

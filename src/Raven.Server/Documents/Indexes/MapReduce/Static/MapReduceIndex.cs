@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
@@ -272,11 +273,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
             TStaticIndex instance;
             if (typeof(TStaticIndex) == typeof(MapReduceIndex))
-                instance = (TStaticIndex)CreateIndexInstance<MapReduceIndex>(definition, documentDatabase.Configuration, version, (staticMapIndexDefinition, staticIndex) => new MapReduceIndex(staticMapIndexDefinition, staticIndex));
+                instance = (TStaticIndex)CreateIndexInstance<MapReduceIndex>(definition, documentDatabase.Configuration, version, (staticMapIndexDefinition, staticIndex) => new MapReduceIndex(staticMapIndexDefinition, staticIndex), documentDatabase.DatabaseShutdown);
             else if (typeof(TStaticIndex) == typeof(MapReduceTimeSeriesIndex))
-                instance = (TStaticIndex)(MapReduceIndex)CreateIndexInstance<MapReduceTimeSeriesIndex>(definition, documentDatabase.Configuration, version, (staticMapIndexDefinition, staticIndex) => new MapReduceTimeSeriesIndex(staticMapIndexDefinition, staticIndex));
+                instance = (TStaticIndex)(MapReduceIndex)CreateIndexInstance<MapReduceTimeSeriesIndex>(definition, documentDatabase.Configuration, version, (staticMapIndexDefinition, staticIndex) => new MapReduceTimeSeriesIndex(staticMapIndexDefinition, staticIndex), documentDatabase.DatabaseShutdown);
             else if (typeof(TStaticIndex) == typeof(MapReduceCountersIndex))
-                instance = (TStaticIndex)(MapReduceIndex)CreateIndexInstance<MapReduceCountersIndex>(definition, documentDatabase.Configuration, version, (staticMapIndexDefinition, staticIndex) => new MapReduceCountersIndex(staticMapIndexDefinition, staticIndex));
+                instance = (TStaticIndex)(MapReduceIndex)CreateIndexInstance<MapReduceCountersIndex>(definition, documentDatabase.Configuration, version, (staticMapIndexDefinition, staticIndex) => new MapReduceCountersIndex(staticMapIndexDefinition, staticIndex), documentDatabase.DatabaseShutdown);
             else
                 throw new NotSupportedException($"Not supported index type {typeof(TStaticIndex).Name}");
 
@@ -292,11 +293,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
         {
             TStaticIndex instance;
             if (typeof(TStaticIndex) == typeof(MapReduceIndex))
-                instance = (TStaticIndex)CreateIndexInstance<MapReduceIndex>(definition, database.Configuration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion, (staticMapIndexDefinition, staticIndex) => new MapReduceIndex(staticMapIndexDefinition, staticIndex));
+                instance = (TStaticIndex)CreateIndexInstance<MapReduceIndex>(definition, database.Configuration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion, (staticMapIndexDefinition, staticIndex) => new MapReduceIndex(staticMapIndexDefinition, staticIndex), database.DatabaseShutdown);
             else if (typeof(TStaticIndex) == typeof(MapReduceTimeSeriesIndex))
-                instance = (TStaticIndex)(MapReduceIndex)CreateIndexInstance<MapReduceTimeSeriesIndex>(definition, database.Configuration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion, (staticMapIndexDefinition, staticIndex) => new MapReduceTimeSeriesIndex(staticMapIndexDefinition, staticIndex));
+                instance = (TStaticIndex)(MapReduceIndex)CreateIndexInstance<MapReduceTimeSeriesIndex>(definition, database.Configuration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion, (staticMapIndexDefinition, staticIndex) => new MapReduceTimeSeriesIndex(staticMapIndexDefinition, staticIndex), database.DatabaseShutdown);
             else if (typeof(TStaticIndex) == typeof(MapReduceCountersIndex))
-                instance = (TStaticIndex)(MapReduceIndex)CreateIndexInstance<MapReduceCountersIndex>(definition, database.Configuration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion, (staticMapIndexDefinition, staticIndex) => new MapReduceCountersIndex(staticMapIndexDefinition, staticIndex));
+                instance = (TStaticIndex)(MapReduceIndex)CreateIndexInstance<MapReduceCountersIndex>(definition, database.Configuration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion, (staticMapIndexDefinition, staticIndex) => new MapReduceCountersIndex(staticMapIndexDefinition, staticIndex), database.DatabaseShutdown);
             else
                 throw new NotSupportedException($"Not supported index type {typeof(TStaticIndex).Name}");
 
@@ -331,22 +332,22 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             staticMapIndex.Update(staticMapIndexDefinition, new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration));
         }
 
-        private static TStaticIndex CreateIndexInstance<TStaticIndex>(IndexDefinition definition, RavenConfiguration configuration, long indexVersion, Func<MapReduceIndexDefinition, AbstractStaticIndexBase, TStaticIndex> factory)
+        private static TStaticIndex CreateIndexInstance<TStaticIndex>(IndexDefinition definition, RavenConfiguration configuration, long indexVersion, Func<MapReduceIndexDefinition, AbstractStaticIndexBase, TStaticIndex> factory, CancellationToken token)
             where TStaticIndex : MapReduceIndex
         {
-            var staticMapIndexDefinition = CreateIndexDefinition(definition, configuration, indexVersion, out var staticIndex);
+            var staticMapIndexDefinition = CreateIndexDefinition(definition, configuration, indexVersion, out var staticIndex, token);
             return factory(staticMapIndexDefinition, staticIndex);
         }
 
-        private static MapReduceIndexDefinition CreateIndexDefinition(IndexDefinition definition, RavenConfiguration configuration, long indexVersion, out AbstractStaticIndexBase staticIndex)
+        private static MapReduceIndexDefinition CreateIndexDefinition(IndexDefinition definition, RavenConfiguration configuration, long indexVersion, out AbstractStaticIndexBase staticIndex, CancellationToken token)
         {
-            staticIndex = IndexCompilationCache.GetIndexInstance(definition, configuration, indexVersion);
+            staticIndex = IndexCompilationCache.GetIndexInstance(definition, configuration, indexVersion, token);
             return new MapReduceIndexDefinition(definition, staticIndex.Maps.Keys, staticIndex.OutputFields, staticIndex.GroupByFields, staticIndex.HasDynamicFields, staticIndex.CollectionsWithCompareExchangeReferences.Count > 0, indexVersion);
         }
 
-        public static IndexInformationHolder CreateIndexInformationHolder(IndexDefinition definition, RavenConfiguration configuration, long indexVersion, out AbstractStaticIndexBase staticIndex)
+        public static IndexInformationHolder CreateIndexInformationHolder(IndexDefinition definition, RavenConfiguration configuration, long indexVersion, out AbstractStaticIndexBase staticIndex, CancellationToken token)
         {
-            var mapReduceIndexDefinition = CreateIndexDefinition(definition, configuration, indexVersion, out staticIndex);
+            var mapReduceIndexDefinition = CreateIndexDefinition(definition, configuration, indexVersion, out staticIndex, token);
             var indexConfiguration = new SingleIndexConfiguration(definition.Configuration, configuration);
 
             return IndexInformationHolder.CreateFor(mapReduceIndexDefinition, indexConfiguration, staticIndex);

@@ -24,7 +24,7 @@ public abstract class ScriptRunnerResult<T> : IScriptRunnerResult
         Instance.Dispose();
     }
 
-    public IJsEngineHandle<T> EngineHandle => _parent.ScriptEngineHandle;
+    public IJsEngineHandle<T> EngineHandle => _parent.EngineHandle;
     public abstract bool GetOrCreateInternal(string propertyName, out T value);
     public abstract void TryReset();
     public T GetOrCreate(string propertyName)
@@ -37,7 +37,7 @@ public abstract class ScriptRunnerResult<T> : IScriptRunnerResult
         if (o.IsUndefined || o.IsNull)
         {
             o.Dispose();
-            o = _parent.ScriptEngineHandle.CreateObject();
+            o = _parent.EngineHandle.CreateObject();
             Instance.SetProperty(propertyName, o, throwOnError: true);
         }
         return o;

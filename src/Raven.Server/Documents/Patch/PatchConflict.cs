@@ -85,7 +85,7 @@ namespace Raven.Server.Documents.Patch
                 // if user didn't specify it, we'll take it from the first doc
                 // we cannot change collections here anyway, anything else, the 
                 // user need to merge on their own
-                if (instance.SetProperty(Constants.Documents.Metadata.Collection, run.ScriptEngineHandle.CreateValue(_fstDocumentConflict.Collection.ToString())) ==
+                if (instance.SetProperty(Constants.Documents.Metadata.Collection, run.EngineHandle.CreateValue(_fstDocumentConflict.Collection.ToString())) ==
                     false)
                 {
                     _logger.Info(

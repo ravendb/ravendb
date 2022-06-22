@@ -37,9 +37,13 @@ namespace Raven.Server.Documents.Patch.V8
                 {
                     return ObjClr.GetOwnPropertyJsV8(propertyName);
                 }
-                catch (Exception e) 
+                catch (Exception e)
                 {
-                    ObjClr.EngineExV8.Context.JsContext.LastException = e;
+                    if (ObjClr.EngineExV8.Context.JsContext != null)
+                    {
+                        ObjClr.EngineExV8.Context.JsContext.LastException = e;
+                    }
+              
                     return ObjClr.EngineV8.CreateError(e.ToString(), JSValueType.ExecutionError);
                 }
             }
@@ -53,7 +57,10 @@ namespace Raven.Server.Documents.Patch.V8
                 }
                 catch (Exception e) 
                 {
-                    ObjClr.EngineExV8.Context.JsContext.LastException = e;
+                    if (ObjClr.EngineExV8.Context.JsContext != null)
+                    {
+                        ObjClr.EngineExV8.Context.JsContext.LastException = e;
+                    }
                     return ObjClr.EngineV8.CreateError(e.ToString(), JSValueType.ExecutionError);
                 }
             }
@@ -67,7 +74,10 @@ namespace Raven.Server.Documents.Patch.V8
                 }
                 catch (Exception e) 
                 {
-                    ObjClr.EngineExV8.Context.JsContext.LastException = e;
+                    if (ObjClr.EngineExV8.Context.JsContext != null)
+                    {
+                        ObjClr.EngineExV8.Context.JsContext.LastException = e;
+                    }
                     return ObjClr.EngineV8.CreateError(e.ToString(), JSValueType.ExecutionError);
                 }
             }
@@ -81,7 +91,10 @@ namespace Raven.Server.Documents.Patch.V8
                 }
                 catch (Exception e) 
                 {
-                    ObjClr.EngineExV8.Context.JsContext.LastException = e;
+                    if (ObjClr.EngineExV8.Context.JsContext != null)
+                    {
+                        ObjClr.EngineExV8.Context.JsContext.LastException = e;
+                    }
                     return null;
                 }
             }
@@ -95,7 +108,10 @@ namespace Raven.Server.Documents.Patch.V8
                 }
                 catch (Exception e) 
                 {
-                    ObjClr.EngineExV8.Context.JsContext.LastException = e;
+                    if (ObjClr.EngineExV8.Context.JsContext != null)
+                    {
+                        ObjClr.EngineExV8.Context.JsContext.LastException = e;
+                    }
                     return ObjClr.EngineV8.CreateError(e.ToString(), JSValueType.ExecutionError);
                 }
             }
@@ -763,7 +779,10 @@ namespace Raven.Server.Documents.Patch.V8
                         _value = InternalHandle.Empty;
                         return;
                     }
-
+                    if (_propertyName == "Stuff")
+                    {
+                
+                    }
                     if (TryGetValueFromDocument(_parent, _propertyName, out _value) == false)
                     {
                         if (_parent._projection?.MustExtractFromDocument == true)
@@ -972,8 +991,9 @@ namespace Raven.Server.Documents.Patch.V8
                 return true;
             }
 
-            private InternalHandle GetArrayInstanceFromBlittableArray(V8Engine engine, BlittableJsonReaderArray bjra, BlittableObjectInstanceV8 parent)
+            private InternalHandle GetArrayInstanceFromBlittableArray(V8Engine engine, BlittableJsonReaderArray bjra, BlittableObjectInstanceV8 parent,string key=null )
             {
+             
                 bjra.NoCache = true;
 
                 int arrayLength = bjra.Length;
@@ -982,9 +1002,10 @@ namespace Raven.Server.Documents.Patch.V8
                 {
                     var json = bjra.GetValueTokenTupleByIndex(i);
                     BlittableJsonToken itemType = json.Item2 & BlittableJsonReaderBase.TypesMask;
-                    jsItems[i] = (itemType == BlittableJsonToken.Integer || itemType == BlittableJsonToken.LazyNumber)
-                        ? TranslateToJs(null, null, json.Item2, json.Item1)
-                        : TranslateToJs(parent, null, json.Item2, json.Item1);
+                    if (itemType == BlittableJsonToken.Integer || itemType == BlittableJsonToken.LazyNumber)
+                        jsItems[i] = TranslateToJs(null, null, json.Item2, json.Item1);
+                    else
+                        jsItems[i] = TranslateToJs(parent, null, json.Item2, json.Item1);
                 }
 
                 return _engine.CreateArrayWithDisposal(jsItems);
@@ -992,6 +1013,7 @@ namespace Raven.Server.Documents.Patch.V8
 
             private InternalHandle TranslateToJs(BlittableObjectInstanceV8 owner, string key, BlittableJsonToken type, object value)
             {
+
                 switch (type & BlittableJsonReaderBase.TypesMask)
                 {
                     case BlittableJsonToken.Null:
@@ -1045,7 +1067,7 @@ namespace Raven.Server.Documents.Patch.V8
                         _changed = true;
                         _parent.MarkChanged();
                         var array = (BlittableJsonReaderArray)value;
-                        return GetArrayInstanceFromBlittableArray(_engineEx.Engine, array, owner);
+                        return GetArrayInstanceFromBlittableArray(_engineEx.Engine, array, owner, key);
 
                     default:
                         throw new ArgumentOutOfRangeException(type.ToString());

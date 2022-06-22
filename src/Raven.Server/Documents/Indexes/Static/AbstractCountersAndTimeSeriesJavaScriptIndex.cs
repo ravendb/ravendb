@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using Jint;
 using Jint.Native.Function;
 using Raven.Client;
@@ -97,7 +98,7 @@ namespace Raven.Server.Documents.Indexes.Static
                                         }
                                     }
 
-                                    operation.Analyze(_engineForParsing);
+                                    operation.Analyze(_engineForParsing.Engine);
                                     if (ReferencedCollections.TryGetValue(mapCollection, out var collectionNames) == false)
                                     {
                                         collectionNames = new HashSet<CollectionName>();
@@ -117,12 +118,47 @@ namespace Raven.Server.Documents.Indexes.Static
                 }
             }
         }
+        
+        protected override JsHandleJint MetadataFor(JsHandleJint self, JsHandleJint[] args)
+        {
+            throw new System.NotImplementedException();
+        }
+
+        protected override JsHandleJint AttachmentsFor(JsHandleJint self, JsHandleJint[] args)
+        {
+            throw new System.NotImplementedException();
+        }
+
+        protected override JsHandleJint TimeSeriesNamesFor(JsHandleJint self, JsHandleJint[] args)
+        {
+            throw new System.NotImplementedException();
+        }
+
+        protected override JsHandleJint CounterNamesFor(JsHandleJint self, JsHandleJint[] args)
+        {
+            throw new System.NotImplementedException();
+        }
+
+        protected override JsHandleJint LoadAttachment(JsHandleJint self, JsHandleJint[] args)
+        {
+            throw new System.NotImplementedException();
+        }
+
+        protected override JsHandleJint LoadAttachments(JsHandleJint self, JsHandleJint[] args)
+        {
+            throw new System.NotImplementedException();
+        }
+
+        protected override JsHandleJint GetDocumentId(JsHandleJint self, JsHandleJint[] args)
+        {
+            throw new System.NotImplementedException();
+        }
     }
 
     public abstract class AbstractCountersAndTimeSeriesJavaScriptIndexV8 : AbstractJavaScriptIndexV8
     {
-        protected AbstractCountersAndTimeSeriesJavaScriptIndexV8(IndexDefinition definition, RavenConfiguration configuration, string mapPrefix, string allItems, long indexVersion)
-            : base(definition, configuration, mappingFunctions => CountersAndTimeSeriesJavascriptIndexHelper.ModifyMappingFunctions(mappingFunctions, mapPrefix), CountersAndTimeSeriesJavascriptIndexHelper.GetMapCode(allItems), indexVersion)
+        protected AbstractCountersAndTimeSeriesJavaScriptIndexV8(IndexDefinition definition, RavenConfiguration configuration, string mapPrefix, string allItems, long indexVersion, CancellationToken token)
+            : base(definition, configuration, mappingFunctions => CountersAndTimeSeriesJavascriptIndexHelper.ModifyMappingFunctions(mappingFunctions, mapPrefix), CountersAndTimeSeriesJavascriptIndexHelper.GetMapCode(allItems), indexVersion, token)
         {
         }
 
@@ -206,7 +242,7 @@ namespace Raven.Server.Documents.Indexes.Static
                                         }
                                     }
 
-                                    operation.Analyze(_engineForParsing);
+                                    operation.Analyze(_engineForParsing.Engine);
                                     if (ReferencedCollections.TryGetValue(mapCollection, out var collectionNames) == false)
                                     {
                                         collectionNames = new HashSet<CollectionName>();
@@ -225,6 +261,41 @@ namespace Raven.Server.Documents.Indexes.Static
                     }
                 }
             }
+        }
+        
+        protected override JsHandleV8 MetadataFor(JsHandleV8 self, JsHandleV8[] args)
+        {
+            throw new System.NotImplementedException();
+        }
+
+        protected override JsHandleV8 AttachmentsFor(JsHandleV8 self, JsHandleV8[] args)
+        {
+            throw new System.NotImplementedException();
+        }
+
+        protected override JsHandleV8 TimeSeriesNamesFor(JsHandleV8 self, JsHandleV8[] args)
+        {
+            throw new System.NotImplementedException();
+        }
+
+        protected override JsHandleV8 CounterNamesFor(JsHandleV8 self, JsHandleV8[] args)
+        {
+            throw new System.NotImplementedException();
+        }
+
+        protected override JsHandleV8 LoadAttachment(JsHandleV8 self, JsHandleV8[] args)
+        {
+            throw new System.NotImplementedException();
+        }
+
+        protected override JsHandleV8 LoadAttachments(JsHandleV8 self, JsHandleV8[] args)
+        {
+            throw new System.NotImplementedException();
+        }
+
+        protected override JsHandleV8 GetDocumentId(JsHandleV8 self, JsHandleV8[] args)
+        {
+            throw new System.NotImplementedException();
         }
     }
 

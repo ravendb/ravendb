@@ -74,7 +74,9 @@ namespace Raven.Server.Documents.Patch.V8
 
         public JsHandleV8 Set(JsHandleV8 value)
         {
-            return new JsHandleV8(ref value.Item);
+            Dispose();
+            var set = Item.Set(value.Item);
+            return new JsHandleV8(ref set);
         }
 
         public JsHandleV8 Empty1()

@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Client.ServerWide.JavaScript;
@@ -13,6 +15,7 @@ using Raven.Server.Documents.Indexes.Static.Counters.V8;
 using Raven.Server.Documents.Indexes.Static.JavaScript.V8;
 using Raven.Server.Documents.Indexes.Static.TimeSeries.V8;
 using Sparrow;
+using Sparrow.Collections;
 using Sparrow.Json;
 using V8.Net;
 
@@ -32,24 +35,60 @@ public class V8EngineEx : IJsEngineHandle<JsHandleV8>, IDisposable
     // at the same time we avoid creating many contexts with low usage level, so before creating a new engine we first try to use the existing one to some configured reasonable level (targetLevel)
     // also we limit the maximum number of engines to avoid memory issues (maxCapacity)
     // PoolWithLevels<V8EngineEx>(targetLevel, maxCapacity) makes this job
-    private static PoolWithLevels<V8EngineEx>? _pool;
+    public static BlockingCollection <V8EngineEx> EnginePool;
+    //current active engines and waiters count
+    private static long _enginesCount = 0;
 
+    public static V8EngineEx GetEngine(RavenConfiguration ravenConfiguration, IJavaScriptContext jsContext, CancellationToken cancellationToken)
+    {
+        if (EnginePool.TryTake(out var engine))
+        {
+            // there is free pooled engine
+            _ = engine.CreateAndSetContextEx(ravenConfiguration, jsContext);
+            return engine;
+        }
+
+        if (Interlocked.Increment(ref _enginesCount) > ravenConfiguration.JavaScript.MaxEngineCount)
+        {
+            try
+            {
+                // wait for free engine and decrement count
+                engine = EnginePool.Take(cancellationToken);
+                _ = engine.CreateAndSetContextEx(ravenConfiguration, jsContext);
+                return engine;
+            }
+            finally
+            {
+                // we got an engine from pool, so we decrease the engines count
+                Interlocked.Decrement(ref _enginesCount);
+            }
+        }
+
+        // engines limit not hit, we can create new engine
+        try
+        {
+            engine = new V8EngineEx();
+            _ = engine.CreateAndSetContextEx(ravenConfiguration, jsContext);
+        }
+        catch
+        {
+            // I could not create new engine, should decrease the engines count
+            Interlocked.Decrement(ref _enginesCount);
+            throw;
+        }
+
+        return engine;
+    }
+
+    public static void ReturnEngine(V8EngineEx engine)
+    {
+        engine.Context.Dispose();
+        if (EnginePool.TryAdd(engine) == false)
+            engine.Dispose();
+    }
     public static int MemoryChecksMode;
     public static bool IsMemoryChecksOnStatic => false; // MemoryChecksMode > 0; // TODO [shlomo] to restore
     public static JsConverter JsConverterInstance;
-
-    public static PoolWithLevels<V8EngineEx> GetPool(RavenConfiguration configuration)
-    {
-        var jsOptions = configuration.JavaScript;
-        if (_pool == null)
-        {
-            _pool = new PoolWithLevels<V8EngineEx>(jsOptions.TargetContextCountPerEngine, jsOptions.MaxEngineCount);
-            MemoryChecksMode = int.Parse(Environment.GetEnvironmentVariable("JS_V8_MemoryChecksMode") ?? "0");
-            JsConverterInstance = new(IsMemoryChecksOnStatic);
-        }
-
-        return _pool;
-    }
 
     public class ContextEx : IDisposable
     {
@@ -61,7 +100,7 @@ public class V8EngineEx : IJsEngineHandle<JsHandleV8>, IDisposable
         {
             _contextNative = engine.CreateContext(globalTemplate);
             Engine = engine;
-            _jsContext = jsContext;
+            JsContext = jsContext;
         }
 
         public void Dispose()
@@ -84,9 +123,7 @@ public class V8EngineEx : IJsEngineHandle<JsHandleV8>, IDisposable
 
         public IJavaScriptOptions? JsOptions => _jsOptions;
 
-
-        private IJavaScriptContext _jsContext;
-        public IJavaScriptContext JsContext => _jsContext;
+        public IJavaScriptContext JsContext;
 
         public void SetOptions(RavenConfiguration configuration)
         {
@@ -414,10 +451,11 @@ var process = {
             if (_contextEx == null || !ReferenceEquals(value, _contextEx))
             {
                 _contextEx = value;
-                Engine.SetContext(value.ContextNative);
+                //TODO: egor this is right way to set engine ctx to null??
+                if (value != null)
+                    Engine.SetContext(value.ContextNative);
             }
         }
-
     }
 
     public static void DisposeJsObjectsIfNeeded(object value)
@@ -448,8 +486,10 @@ var process = {
     public JsHandleV8 False { get; set; }
 
     // TODO: egor need to handle those like in DynamicJsNullJint?
-    public JsHandleV8 ImplicitNull { get; set; } = JsHandleV8.Empty;
-    public JsHandleV8 ExplicitNull { get; set; } = JsHandleV8.Empty;
+    public JsHandleV8 ImplicitNull { get; set; }
+    public JsHandleV8 ExplicitNull { get; set; }
+   // public JsHandleV8 ImplicitNull { get; set; } = JsHandleV8.Null;
+   // public JsHandleV8 ExplicitNull { get; set; } = JsHandleV8.Null;
 
     //public JsHandleV8 ImplicitNull() => Context.ImplicitNull();
     //public JsHandleV8 ExplicitNull() => Context.ExplicitNull();
@@ -730,18 +770,30 @@ var process = {
     public V8EngineEx()
     {
         Engine = new V8Engine(false, jsConverter: JsConverterInstance);
-        var trueVal = Engine.CreateValue(true);
-        var falseVal = Engine.CreateValue(true);
-        True = new JsHandleV8(ref trueVal);
-        False = new JsHandleV8(ref falseVal);
     }
 
     public ContextEx CreateAndSetContextEx(RavenConfiguration configuration, IJavaScriptContext jsContext, ObjectTemplate? globalTemplate = null)
     {
+        if (Context != null)
+        {
+            Context.Dispose();
+            Context = null;
+        }
         var contextEx = new ContextEx(Engine, jsContext, globalTemplate);
         Context = contextEx;
         contextEx.SetOptions(configuration);
         contextEx.InitializeGlobal();
+        
+        //TODO: egor added so I dont have NRE in dispose of Context
+        Engine.MemorySnapshots = new Dictionary<string, MemorySnapshot>();
+        
+        var trueVal = Engine.CreateValue(true);
+        var falseVal = Engine.CreateValue(false);
+        True = new JsHandleV8(ref trueVal);
+        False = new JsHandleV8(ref falseVal);
+        var nullVal = Engine.CreateNullValue();
+        ImplicitNull = new JsHandleV8(ref nullVal);
+        ExplicitNull = new JsHandleV8(ref nullVal);
         return contextEx;
     }
 

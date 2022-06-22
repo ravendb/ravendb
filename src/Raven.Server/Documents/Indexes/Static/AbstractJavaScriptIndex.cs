@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using Esprima;
 using Jint;
 using Jint.Native.Function;
@@ -9,6 +10,7 @@ using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Config;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Documents.Patch.Jint;
 using Raven.Server.ServerWide;
 using Sparrow.Server;
 using V8.Net;
@@ -21,7 +23,7 @@ public abstract class AbstractJavaScriptIndex<T> : AbstractJavaScriptIndexBase
     public IJavaScriptUtils<T> JsUtils;
     public JavaScriptIndexUtils<T> JsIndexUtils;
 
-    public Engine _engineForParsing; // is used for maps static analysis, but not for running
+    public JintEngineEx  _engineForParsing; // is used for maps static analysis, but not for running
     public ObjectInstance _definitionsForParsing;
 
     public IJsEngineHandle<T> EngineHandle;
@@ -111,6 +113,56 @@ public abstract class AbstractJavaScriptIndex<T> : AbstractJavaScriptIndexBase
         ReduceOperation?.SetAllocatorForTestingPurposes(byteStringContext);
     }
 
+    protected static List<MapMetadata> InitializeEngineInternal(IScriptEngineChanges engineHandle, IndexDefinition definition, List<string> maps, string mapCode)
+    {
+        engineHandle.ExecuteWithReset(Code, "Code");
+        engineHandle.ExecuteWithReset(mapCode, "MapCode");
+
+        var sb = new StringBuilder();
+        if (definition.AdditionalSources != null)
+        {
+            foreach (var script in definition.AdditionalSources.Values)
+            {
+                engineHandle.ExecuteWithReset(script);
+                sb.Append(Environment.NewLine);
+                sb.AppendLine(script);
+            }
+        }
+
+        var additionalSources = sb.ToString();
+        var mapReferencedCollections = new List<MapMetadata>();
+        foreach (var map in maps)
+        {
+            var result = ExecuteCodeAndCollectReferencedCollections(engineHandle, map, additionalSources);
+            mapReferencedCollections.Add(result);
+        }
+
+        if (definition.Reduce != null)
+        {
+            engineHandle.ExecuteWithReset(definition.Reduce, "reduce");
+        }
+
+        return mapReferencedCollections;
+    }
+    
+    private static MapMetadata ExecuteCodeAndCollectReferencedCollections(IScriptEngineChanges engineHandle, string code, string additionalSources)
+    {
+        var javascriptParser = new JavaScriptParser(code, DefaultParserOptions);
+        var program = javascriptParser.ParseScript();
+        //   engine.ExecuteWithReset(program);
+        engineHandle.ExecuteWithReset(code, "map");
+        var loadVisitor = new EsprimaReferencedCollectionVisitor();
+        if (string.IsNullOrEmpty(additionalSources) == false)
+            loadVisitor.Visit(new JavaScriptParser(additionalSources, DefaultParserOptions).ParseScript());
+
+        loadVisitor.Visit(program);
+        return new MapMetadata
+        {
+            ReferencedCollections = loadVisitor.ReferencedCollection,
+            HasCompareExchangeReferences = loadVisitor.HasCompareExchangeReferences
+        };
+    }
+
     protected class MapMetadata
     {
         public HashSet<CollectionName> ReferencedCollections;
@@ -155,7 +207,7 @@ public abstract class AbstractJavaScriptIndex<T> : AbstractJavaScriptIndexBase
 
     protected abstract void ProcessMaps(List<string> mapList, List<MapMetadata> mapReferencedCollections, out Dictionary<string, Dictionary<string, List<JavaScriptMapOperation<T>>>> collectionFunctions);
 
-    protected virtual void OnInitializeEngine()
+    protected void OnInitializeEngine()
     {
         var loadFunc = EngineHandle.CreateClrCallBack(Load, LoadDocument);
 
@@ -167,7 +219,25 @@ public abstract class AbstractJavaScriptIndex<T> : AbstractJavaScriptIndexBase
         EngineHandle.SetGlobalClrCallBack(CmpXchg, LoadCompareExchangeValue);
         EngineHandle.SetGlobalClrCallBack("tryConvertToNumber", TryConvertToNumber);
         EngineHandle.SetGlobalClrCallBack("recurse", Recurse);
+        
+        
+        EngineHandle.SetGlobalClrCallBack("getMetadata", MetadataFor); // for backward-compatibility only
+        EngineHandle.SetGlobalClrCallBack("metadataFor", MetadataFor);
+        EngineHandle.SetGlobalClrCallBack("attachmentsFor", AttachmentsFor);
+        EngineHandle.SetGlobalClrCallBack("timeSeriesNamesFor", TimeSeriesNamesFor);
+        EngineHandle.SetGlobalClrCallBack("counterNamesFor", CounterNamesFor);
+        EngineHandle.SetGlobalClrCallBack("loadAttachment", LoadAttachment);
+        EngineHandle.SetGlobalClrCallBack("loadAttachments", LoadAttachments);
+        EngineHandle.SetGlobalClrCallBack("id", GetDocumentId);
     }
+
+    protected abstract T MetadataFor(T self, T[] args);
+    protected abstract T AttachmentsFor(T self, T[] args);
+    protected abstract T TimeSeriesNamesFor(T self, T[] args);
+    protected abstract T CounterNamesFor(T self, T[] args);
+    protected abstract T LoadAttachment(T self, T[] args);
+    protected abstract T LoadAttachments(T self, T[] args);
+    protected abstract T GetDocumentId(T self, T[] args);
 
     protected abstract List<MapMetadata> InitializeEngine(List<string> maps, string mapCode);
 
@@ -323,7 +393,7 @@ public abstract class AbstractJavaScriptIndex<T> : AbstractJavaScriptIndexBase
 
     public ObjectInstance GetDefinitionsForParsingJint()
     {
-        var definitionsObj = _engineForParsing.GetValue(GlobalDefinitions);
+        var definitionsObj = _engineForParsing.GetGlobalProperty(GlobalDefinitions).Item;
 
         if (definitionsObj.IsNull() || definitionsObj.IsUndefined() || definitionsObj.IsObject() == false)
             ThrowIndexCreationException($"is missing its '{GlobalDefinitions}' global variable, are you modifying it in your script?");

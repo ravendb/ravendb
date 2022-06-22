@@ -101,10 +101,10 @@ public partial class ShardedDatabaseContext
                 switch (definition.Type)
                 {
                     case IndexType.Map:
-                        indexInformationHolder = MapIndex.CreateIndexInformationHolder(definition, _context.Configuration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion, out _);
+                        indexInformationHolder = MapIndex.CreateIndexInformationHolder(definition, _context.Configuration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion, out _, _context.DatabaseShutdown);
                         break;
                     case IndexType.MapReduce:
-                        indexInformationHolder = MapReduceIndex.CreateIndexInformationHolder(definition, _context.Configuration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion, out _);
+                        indexInformationHolder = MapReduceIndex.CreateIndexInformationHolder(definition, _context.Configuration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion, out _, _context.DatabaseShutdown);
                         break;
                     default:
                         throw new ArgumentOutOfRangeException(nameof(definition.Type));

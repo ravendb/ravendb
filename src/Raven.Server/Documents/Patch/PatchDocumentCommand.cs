@@ -168,7 +168,7 @@ namespace Raven.Server.Documents.Patch
                     };
                 }
 
-                T documentInstance = run.ScriptEngineHandle.Empty;
+                T documentInstance = run.EngineHandle.Empty;
                 var args = _patch.Args;
                 if (originalDocument == null)
                 {

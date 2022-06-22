@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Buffers;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -15,6 +16,7 @@ using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.JavaScript;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config;
@@ -26,6 +28,7 @@ using Raven.Server.Documents.Handlers.Processors.Batches;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Documents.Patch.V8;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.Documents.Queries;
@@ -117,6 +120,11 @@ namespace Raven.Server.Documents
 
             Is32Bits = PlatformDetails.Is32Bits || Configuration.Storage.ForceUsing32BitsPager;
 
+            if (configuration.JavaScript.EngineType == JavaScriptEngineType.V8)
+            {
+                V8EngineEx.EnginePool = new BlockingCollection<V8EngineEx>(configuration.JavaScript.MaxEngineCount);
+            }
+            
             _disposeOnce = new DisposeOnce<SingleAttempt>(DisposeInternal);
 
             try
@@ -895,6 +903,22 @@ namespace Raven.Server.Documents
             });
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed DocumentsStorage");
 
+         
+            if (Configuration.JavaScript.EngineType == JavaScriptEngineType.V8)
+            {
+                ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing V8EngineEx.EnginePool");
+                exceptionAggregator.Execute(() =>
+                {
+//TODO: egor handle dispose (currently its static and cannot dispsoe it for db)
+                    /*foreach (var eng in V8EngineEx.EnginePool.GetConsumingEnumerable())
+                    {
+                        eng.Dispose();
+                    }*/
+                });
+                ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed V8EngineEx.EnginePool");
+            }
+        
+            
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing _databaseShutdown");
             exceptionAggregator.Execute(() =>
             {

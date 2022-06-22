@@ -1,12 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading;
 using Jint;
 using Jint.Native.Function;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes.Static.JavaScript.V8;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Documents.Patch.Jint;
 using Raven.Server.Documents.Patch.V8;
 using Raven.Server.Extensions.Jint;
 using V8.Net;
@@ -18,30 +20,22 @@ public abstract class AbstractJavaScriptIndexV8 : AbstractJavaScriptIndex<JsHand
 {
     public V8EngineEx EngineEx;
     public V8Engine Engine;
-    private PoolWithLevels<V8EngineEx>.PooledValue _scriptEngineV8Pooled;
-    public V8EngineEx.ContextEx _contextExV8;
+
     private JavaScriptUtilsV8 JsUtilsV8;
-    protected AbstractJavaScriptIndexV8(IndexDefinition definition, RavenConfiguration configuration, Action<List<string>> modifyMappingFunctions, string mapCode, long indexVersion)
+
+    protected AbstractJavaScriptIndexV8(IndexDefinition definition, RavenConfiguration configuration, Action<List<string>> modifyMappingFunctions, string mapCode,
+        long indexVersion, CancellationToken token)
         : base(definition)
     {
-        _scriptEngineV8Pooled = V8EngineEx.GetPool(configuration).GetValue();
-        var engineEx = _scriptEngineV8Pooled.Value;
-        //TODO: egor this is passed to only set "last exception"
-        _contextExV8 = engineEx.CreateAndSetContextEx(configuration, jsContext: this);
-        //TODO: egor this is set in line above??? not needed here?
-        engineEx.Context = _contextExV8;
-        Engine = EngineEx.Engine;
-        EngineHandle = engineEx;
-        EngineEx = engineEx;
-
-        _engineForParsing = new Engine();
+        var engineEx = V8EngineEx.GetEngine(configuration, jsContext: this, token);
+        //TODO: egor jsContext is passed to only set "last exception"
+        Engine = engineEx.Engine;
+        EngineHandle = EngineEx = engineEx;
+        _engineForParsing = new JintEngineEx(configuration);
         JsUtils = JavaScriptUtilsV8.Create(null, EngineEx);
-        JsIndexUtils = new JavaScriptIndexUtilsV8(JsUtils, _engineForParsing);
+        JsIndexUtils = new JavaScriptIndexUtilsV8(JsUtils, _engineForParsing.Engine);
 
-        lock (EngineHandle)
-        {
-            Initialize(modifyMappingFunctions, mapCode, indexVersion);
-        }
+        Initialize(modifyMappingFunctions, mapCode, indexVersion);
     }
 
     protected abstract override void ProcessMaps(List<string> mapList, List<MapMetadata> mapReferencedCollections,
@@ -51,7 +45,7 @@ public abstract class AbstractJavaScriptIndexV8 : AbstractJavaScriptIndex<JsHand
     public override IDisposable DisableConstraintsOnInit()
     {
         var d1 = EngineHandle.DisableConstraints();
-        var d2 = _engineForParsing.DisableMaxStatements();
+        var d2 = _engineForParsing.Engine.DisableMaxStatements();
         return new DisposableAction(() => { d1.Dispose(); d2.Dispose(); });
     }
 
@@ -64,48 +58,15 @@ public abstract class AbstractJavaScriptIndexV8 : AbstractJavaScriptIndex<JsHand
     //}
     public override JavaScriptReduceOperation<JsHandleV8> CreateJavaScriptReduceOperation(ScriptFunctionInstance groupByKeyForParsingJint, JsHandleV8 reduce, JsHandleV8 groupByKey, long indexVersion)
     {
-        return new JavaScriptReduceOperationV8(this, JsIndexUtils, groupByKeyForParsingJint, _engineForParsing, reduce, groupByKey, indexVersion)
+        return new JavaScriptReduceOperationV8(this, JsIndexUtils, groupByKeyForParsingJint, _engineForParsing.Engine, reduce, groupByKey, indexVersion)
             { ReduceString = Definition.Reduce };
     }
     protected override List<MapMetadata> InitializeEngine(List<string> maps, string mapCode)
     {
         OnInitializeEngine();
 
-        EngineHandle.ExecuteWithReset(Code, "Code");
-        EngineHandle.ExecuteWithReset(mapCode, "MapCode");
-        //TODO: egor add those to v8
-        //_engineForParsing.ExecuteWithReset(Code);
-        //_engineForParsing.ExecuteWithReset(MapCode);
-
-        var sb = new StringBuilder();
-        if (Definition.AdditionalSources != null)
-        {
-            foreach (var kvpScript in Definition.AdditionalSources)
-            {
-                var script = kvpScript.Value;
-                EngineHandle.ExecuteWithReset(script, $"./{Definition.Name}/additionalSource/{kvpScript.Key}");
-                //   _engineForParsing.ExecuteWithReset(script);
-                sb.Append(Environment.NewLine);
-                sb.AppendLine(script);
-            }
-        }
-
-        var additionalSources = sb.ToString();
-        var mapReferencedCollections = new List<MapMetadata>();
-        foreach (var map in maps)
-        {
-            EngineHandle.ExecuteWithReset(map, "map");
-            //     _engineForParsing.ExecuteWithReset(map);
-            var result = CollectReferencedCollections(map, additionalSources);
-            mapReferencedCollections.Add(result);
-        }
-
-        if (Definition.Reduce != null)
-        {
-            EngineHandle.ExecuteWithReset(Definition.Reduce, "reduce");
-            //    _engineForParsing.ExecuteWithReset(Definition.Reduce);
-        }
-
+        var mapReferencedCollections = InitializeEngineInternal(EngineHandle, this.Definition, maps, mapCode);
+        InitializeEngineInternal(_engineForParsing, this.Definition, maps, mapCode);
         return mapReferencedCollections;
     }
 

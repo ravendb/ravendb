@@ -62,15 +62,13 @@ namespace Raven.Server.Documents.ETL
                     DocumentScript.DebugMode = true;
             }
 
-            DocumentEngineHandle = DocumentScript?.ScriptEngineHandle;
-            BehaviorsEngineHandle = BehaviorsScript?.ScriptEngineHandle;
+            DocumentEngineHandle = DocumentScript?.EngineHandle;
+            BehaviorsEngineHandle = BehaviorsScript?.EngineHandle;
 
             if (DocumentEngineHandle != null)
             {
                 lock (DocumentEngineHandle)
                 {
-                    DocumentScript.SetContext();
-
                     DocumentEngineHandle.SetGlobalClrCallBack(Transformation.LoadAttachment, LoadAttachment);
                     DocumentEngineHandle.SetGlobalClrCallBack(Transformation.CountersTransformation.Load, LoadCounter);
                     DocumentEngineHandle.SetGlobalClrCallBack(Transformation.TimeSeriesTransformation.LoadTimeSeries.Name, LoadTimeSeries);

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Indexes;
@@ -22,7 +23,8 @@ internal abstract class AbstractStudioIndexHandlerForPostIndexFields<TRequestHan
     }
 
     protected abstract RavenConfiguration GetDatabaseConfiguration();
-
+    public CancellationToken DatabaseShutdown;
+ 
     public override async ValueTask ExecuteAsync()
     {
         using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -48,7 +50,8 @@ internal abstract class AbstractStudioIndexHandlerForPostIndexFields<TRequestHan
 
                 try
                 {
-                    var compiledIndex = IndexCompilationCache.GetIndexInstance(indexDefinition, GetDatabaseConfiguration(), IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion);
+                    // TODO: egor handle disposal of engine if this is v8 
+                    var compiledIndex = IndexCompilationCache.GetIndexInstance(indexDefinition, GetDatabaseConfiguration(), IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion, DatabaseShutdown);
 
                     var outputFields = compiledIndex.OutputFields;
 

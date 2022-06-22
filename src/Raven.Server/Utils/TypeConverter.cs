@@ -411,7 +411,10 @@ namespace Raven.Server.Utils
                 if (ow is not null)
                 {
                     var target = ow.Target;
-                    return TryReturnLazyValue(target, js);
+                    
+                    if (TryReturnLazyValue(target, out var lazyVal) == false)
+                        ThrowInvalidObject(js);
+                    return lazyVal;
                 }
 
                 return jsBlittableBridge.Translate(context, js);
@@ -421,20 +424,23 @@ namespace Raven.Server.Utils
             return null;
         }
 
-        internal static object TryReturnLazyValue<T>(object target,T js) where T : struct, IJsHandle<T>
+        internal static bool TryReturnLazyValue(object target, out object value)
         {
             switch (target)
             {
                 case LazyStringValue lsv:
-                    return lsv;
+                    value = lsv;
+                    return true;
                 case LazyCompressedStringValue lcsv:
-                    return lcsv;
+                    value = lcsv;
+                    return true;
                 case LazyNumberValue lnv:
-                    return lnv; //should be already blittable supported type.
+                    value = lnv;
+                    return true; //should be already blittable supported type.
             }
-
-            ThrowInvalidObject(js);
-            return null;
+            
+            value = null;
+            return false;
         }
 
         private static object BlittableSupportedTypeV8(object root, JsHandleV8 value, bool flattenArrays, bool forIndexing, int recursiveLevel,
@@ -462,7 +468,13 @@ namespace Raven.Server.Utils
                 if (boundObject != null)
                 {
                     //TODO: egor we throw here, in original v8 code we continue, need to check
-                    return TryReturnLazyValue(boundObject, js);
+                    if (TryReturnLazyValue(boundObject, out var lazyVal))
+                        return lazyVal;
+                    /*else
+                    {
+                        //TODO: egor remove this
+                        ThrowInvalidObject(js);
+                    }*/
                 }
 
                 return jsBlittableBridge.Translate(context, js);
@@ -556,7 +568,7 @@ namespace Raven.Server.Utils
             return kvpKeyAsString;
         }
 
-        private static void ThrowInvalidObject<T>(IJsHandle<T> jsValue)
+        internal static void ThrowInvalidObject<T>(IJsHandle<T> jsValue)
             where T: struct, IJsHandle<T>
         {
             throw new InvalidOperationException("Invalid type " + jsValue.ValueType);

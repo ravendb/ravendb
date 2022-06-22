@@ -30,12 +30,6 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             IndexV8 = index;
         }
-
-        public override void SetContext()
-        {
-            EngineExV8.Context = IndexV8._contextExV8;
-        }
-
     }
 
     public class JavaScriptReduceOperationJint : JavaScriptReduceOperation<JsHandleJint>
@@ -44,12 +38,6 @@ namespace Raven.Server.Documents.Indexes.Static
             JsHandleJint reduce, JsHandleJint key, long indexVersion) : base(index, jsIndexUtils, keyJint, engineForParsing, reduce, key, indexVersion)
         {
         }
-
-        public override void SetContext()
-        {
-            //noop
-        }
-
     }
     public abstract class JavaScriptReduceOperation<T>
         where T : struct, IJsHandle<T>
@@ -200,8 +188,6 @@ namespace Raven.Server.Documents.Indexes.Static
                 return (int)Hashing.Mix(_yKey.Hash);
             }
         }
-
-        public abstract void SetContext();
         public IEnumerable IndexingFunction(IEnumerable<dynamic> items)
         {
             try
@@ -218,79 +204,74 @@ namespace Raven.Server.Documents.Indexes.Static
                     list.Add(item.BlittableJson);
                 }
 
-                lock (EngineHandle)
+                var memorySnapshotName = "reduce";
+                bool isMemorySnapshotMade = false;
+                if (EngineHandle.IsMemoryChecksOn)
                 {
-                    SetContext();
-
-                    var memorySnapshotName = "reduce";
-                    bool isMemorySnapshotMade = false;
-                    if (EngineHandle.IsMemoryChecksOn)
-                    {
-                        EngineHandle.MakeSnapshot(memorySnapshotName);
-                        isMemorySnapshotMade = true;
-                    }
-
-                    foreach (var item in _groupedItems.Values)
-                    {
-                        //TODO: egor check if this error handling needed
-                       // _index._lastException = null;
-
-                        EngineHandle.ResetCallStack();
-                        EngineHandle.ResetConstraints();
-
-                        T jsRes = EngineHandle.Empty;
-                        try
-                        {
-                            using (var jsGrouping = ConstructGrouping(item))
-                            {
-                                jsRes = Reduce.StaticCall(jsGrouping);
-                                //if (_index._lastException != null)
-                                //{
-                                //    ExceptionDispatchInfo.Capture(_index._lastException).Throw();
-                                //}
-                                //else
-                                //{
-                                    jsRes.ThrowOnError();
-                             //   }
-
-                                if (jsRes.IsObject == false)
-                                    throw new JavaScriptIndexFuncException($"Failed to execute {ReduceString}",
-                                        new Exception($"Reduce result is not object: {jsRes.ToString()}"));
-                            }
-                        }
-                        catch (V8Exception jse)
-                        {
-                            ProcessRunException(jsRes, memorySnapshotName, isMemorySnapshotMade);
-                            var (message, success) = JavaScriptIndexFuncException.PrepareErrorMessageForJavaScriptIndexFuncException(ReduceString, jse);
-                            if (success == false)
-                                throw new JavaScriptIndexFuncException($"Failed to execute {ReduceString}", jse);
-                            throw new JavaScriptIndexFuncException($"Failed to execute reduce script, {message}", jse);
-                        }
-                        catch (Exception e)
-                        {
-                            ProcessRunException(jsRes, memorySnapshotName, isMemorySnapshotMade);
-                            throw new JavaScriptIndexFuncException($"Failed to execute {ReduceString}", e);
-                        }
-                        finally
-                        {
-                         //   _index._lastException = null;
-                        }
-
-                        if (isMemorySnapshotMade)
-                        {
-                            EngineHandle.AddToLastMemorySnapshotBefore(jsRes);
-                        }
-
-                        yield return jsRes;
-
-                        EngineHandle.ForceGarbageCollection();
-                        if (isMemorySnapshotMade)
-                        {
-                            EngineHandle.CheckForMemoryLeaks(memorySnapshotName, shouldRemove: false);
-                        }
-                    }
-                    // memory snapshot is removed after removing all reduce results and the final check in AggregatedAnonymousObjects.Dispose() 
+                    EngineHandle.MakeSnapshot(memorySnapshotName);
+                    isMemorySnapshotMade = true;
                 }
+
+                foreach (var item in _groupedItems.Values)
+                {
+                    //TODO: egor check if this error handling needed
+                    // _index._lastException = null;
+
+                    EngineHandle.ResetCallStack();
+                    EngineHandle.ResetConstraints();
+
+                    T jsRes = EngineHandle.Empty;
+                    try
+                    {
+                        using (var jsGrouping = ConstructGrouping(item))
+                        {
+                            jsRes = Reduce.StaticCall(jsGrouping);
+                            //if (_index._lastException != null)
+                            //{
+                            //    ExceptionDispatchInfo.Capture(_index._lastException).Throw();
+                            //}
+                            //else
+                            //{
+                            jsRes.ThrowOnError();
+                            //   }
+
+                            if (jsRes.IsObject == false)
+                                throw new JavaScriptIndexFuncException($"Failed to execute {ReduceString}",
+                                    new Exception($"Reduce result is not object: {jsRes.ToString()}"));
+                        }
+                    }
+                    catch (V8Exception jse)
+                    {
+                        ProcessRunException(jsRes, memorySnapshotName, isMemorySnapshotMade);
+                        var (message, success) = JavaScriptIndexFuncException.PrepareErrorMessageForJavaScriptIndexFuncException(ReduceString, jse);
+                        if (success == false)
+                            throw new JavaScriptIndexFuncException($"Failed to execute {ReduceString}", jse);
+                        throw new JavaScriptIndexFuncException($"Failed to execute reduce script, {message}", jse);
+                    }
+                    catch (Exception e)
+                    {
+                        ProcessRunException(jsRes, memorySnapshotName, isMemorySnapshotMade);
+                        throw new JavaScriptIndexFuncException($"Failed to execute {ReduceString}", e);
+                    }
+                    finally
+                    {
+                        //   _index._lastException = null;
+                    }
+
+                    if (isMemorySnapshotMade)
+                    {
+                        EngineHandle.AddToLastMemorySnapshotBefore(jsRes);
+                    }
+
+                    yield return jsRes;
+
+                    EngineHandle.ForceGarbageCollection();
+                    if (isMemorySnapshotMade)
+                    {
+                        EngineHandle.CheckForMemoryLeaks(memorySnapshotName, shouldRemove: false);
+                    }
+                }
+                // memory snapshot is removed after removing all reduce results and the final check in AggregatedAnonymousObjects.Dispose() 
             }
             finally
             {

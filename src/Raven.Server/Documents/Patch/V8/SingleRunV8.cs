@@ -12,9 +12,8 @@ namespace Raven.Server.Documents.Patch.V8
 {
     public class SingleRunV8 : SingleRun<JsHandleV8>, IJavaScriptContext
     {
-        private PoolWithLevels<V8EngineEx>.PooledValue _scriptEngineV8Pooled;
         public V8Engine ScriptEngineV8;
-        private V8EngineEx.ContextEx _contextExV8;
+      //  private V8EngineEx.ContextEx _contextExV8;
         public V8EngineEx ScriptEngineExV8;
 
         private Exception _lastException;
@@ -31,39 +30,19 @@ namespace Raven.Server.Documents.Patch.V8
         public SingleRunV8(DocumentDatabase database, RavenConfiguration configuration, ScriptRunnerV8 runner, List<string> scriptsSource, bool executeScriptsSource = true)
             : base(database, configuration, runner, scriptsSource)
         {
-            _scriptEngineV8Pooled = V8EngineEx.GetPool(configuration).GetValue();
-            var engine = _scriptEngineV8Pooled.Value;
-            //TODO: egor this is passed to only set "last exception"
-            _contextExV8 = engine.CreateAndSetContextEx(configuration, jsContext: this);
-            //TODO: egor this is set in line above??? not needed here?
-            engine.Context = _contextExV8;
+            var engine = V8EngineEx.GetEngine(configuration, jsContext: this, database.DatabaseShutdown);
             ScriptEngineExV8 = engine;
             ScriptEngineV8 = engine.Engine;
-            ScriptEngineHandle = engine;
+            EngineHandle = engine;
 
             JsUtils = new JavaScriptUtilsV8(runner, engine);
             JsBlittableBridge = new JsBlittableBridgeV8(engine);
             Initialize(executeScriptsSource);
         }
-
-        //TODO: egor what to do with the finalizer ? why not IDisposable ##################################
-        //TODO: should move to the try-finally of Run() ?
-        ~SingleRunV8()
+        
+        public override void CleanInternal()
         {
-            DisposeArgs();
-            DisposeV8();
-        }
-
-
-        private void DisposeV8()
-        {
-            _contextExV8.Dispose();
-            _scriptEngineV8Pooled.Dispose();
-        }
-
-        public override void SetContext()
-        {
-            ScriptEngineExV8.Context = _contextExV8;
+            V8EngineEx.ReturnEngine(ScriptEngineExV8);
         }
 
         protected override JsHandleV8 CreateObjectBinder(BlittableJsonToken type, object value)
@@ -72,7 +51,7 @@ namespace Raven.Server.Documents.Patch.V8
             switch (type)
             {
                 case BlittableJsonToken.Integer:
-                    return ScriptEngineHandle.CreateValue((long)value);
+                    return EngineHandle.CreateValue((long)value);
                 case BlittableJsonToken.LazyNumber:
                     internalHandle = ScriptEngineV8.CreateObjectBinder((LazyNumberValue)value);
                     break;
@@ -118,8 +97,8 @@ namespace Raven.Server.Documents.Patch.V8
                                 }
                                 else
                                 {
-                                    var valueNewStr = ScriptEngineHandle.JsonStringify().Item.StaticCall(valueNew);
-                                    var valuePrevStr = ScriptEngineHandle.JsonStringify().Item.StaticCall(valuePrev);
+                                    var valueNewStr = EngineHandle.JsonStringify().Item.StaticCall(valueNew);
+                                    var valuePrevStr = EngineHandle.JsonStringify().Item.StaticCall(valuePrev);
                                     throw new ArgumentException(
                                         $"Can't set argument '{propertyName}' as property on global object as it already exists with value {valuePrevStr}, new value {valueNewStr}");
                                 }
@@ -138,40 +117,36 @@ namespace Raven.Server.Documents.Patch.V8
         public override ScriptRunnerResult<JsHandleV8> Run(JsonOperationContext jsonCtx, DocumentsOperationContext docCtx, string method, string documentId, object[] args, QueryTimingsScope scope = null,
             CancellationToken token = default)
         {
-            lock (ScriptEngineHandle)
+            _docsCtx = docCtx;
+            _jsonCtx = jsonCtx ?? ThrowArgumentNull();
+            _scope = scope;
+            _token = token;
+
+            JsUtils.Reset(_jsonCtx);
+            //  ScriptEngineExV8.Context = _contextExV8;
+            Reset();
+            OriginalDocumentId = documentId;
+
+            bool isMemorySnapshotMade = false;
+
+            try
             {
-                //     _lastException = null;
-
-                _docsCtx = docCtx;
-                _jsonCtx = jsonCtx ?? ThrowArgumentNull();
-                _scope = scope;
-                _token = token;
-
-                JsUtils.Reset(_jsonCtx);
-
-                Reset();
-                OriginalDocumentId = documentId;
-
-                bool isMemorySnapshotMade = false;
-
-                try
+                if (EngineHandle.IsMemoryChecksOn)
                 {
-                    if (ScriptEngineHandle.IsMemoryChecksOn)
-                    {
-                        ScriptEngineHandle.MakeSnapshot("single_run");
-                    }
+                    EngineHandle.MakeSnapshot("single_run");
+                }
 
-                    SetArgs(jsonCtx, method, args);
+                SetArgs(jsonCtx, method, args);
 
-                    using (var jsMethod = ScriptEngineHandle.GetGlobalProperty(method))
-                    {
-                        if (jsMethod.IsUndefined)
-                            throw new InvalidOperationException(
-                                $"Failed to get global function '{method}', global object is: {ScriptEngineHandle.JsonStringify().StaticCall(ScriptEngineHandle.GlobalObject)}");
+                using (var jsMethod = EngineHandle.GetGlobalProperty(method))
+                {
+                    if (jsMethod.IsUndefined)
+                        throw new InvalidOperationException(
+                            $"Failed to get global function '{method}', global object is: {EngineHandle.JsonStringify().StaticCall(EngineHandle.GlobalObject)}");
 
-                        if (!jsMethod.IsFunction)
-                            throw new InvalidOperationException(
-                                $"Obtained {method} global property is not a function: {ScriptEngineHandle.JsonStringify().StaticCall(method)}");
+                    if (!jsMethod.IsFunction)
+                        throw new InvalidOperationException(
+                            $"Obtained {method} global property is not a function: {EngineHandle.JsonStringify().StaticCall(method)}");
 
 #if false //DEBUG
                             var argsStr = "";
@@ -185,19 +160,19 @@ namespace Raven.Server.Documents.Patch.V8
                             }
 #endif
 
-                        using (var jsRes = jsMethod.StaticCall(_args))
+                    using (var jsRes = jsMethod.StaticCall(_args))
+                    {
+                        if (jsRes.IsError)
                         {
-                            if (jsRes.IsError)
-                            {
-                                //if (_lastException != null)
-                                //{
-                                //    ExceptionDispatchInfo.Capture(_lastException).Throw();
-                                //}
-                                //else
-                                //{
-                                //    jsRes.ThrowOnError();
-                                //}
-                            }
+                            //if (_lastException != null)
+                            //{
+                            //    ExceptionDispatchInfo.Capture(_lastException).Throw();
+                            //}
+                            //else
+                            //{
+                            //    jsRes.ThrowOnError();
+                            //}
+                        }
 #if false //DEBUG
                                 var resStr = "";
                                 using (var jsResStr = ScriptEngineHandle.JsonStringify().StaticCall(jsRes))
@@ -206,40 +181,39 @@ namespace Raven.Server.Documents.Patch.V8
                                 }
 #endif
 
-                                //  ScriptEngineV8.AddToLastMemorySnapshotBefore(jsRes.V8.Item);
-                                isMemorySnapshotMade = true;
+                        //  ScriptEngineV8.AddToLastMemorySnapshotBefore(jsRes.V8.Item);
+                        isMemorySnapshotMade = true;
 
-                            //  return new ScriptRunnerResult(this, jsRes);
-                            return new ScriptRunnerResultV8(this, jsRes);
-                        }
+                        //  return new ScriptRunnerResult(this, jsRes);
+                        return new ScriptRunnerResultV8(this, jsRes);
                     }
                 }
-                catch (V8Exception e)
-                {
-                    //ScriptRunnerResult is in charge of disposing of the disposable but it is not created (the clones did)
-                    JsUtils.Clear();
-                    throw CreateFullError(e);
-                }
-                catch (Exception)
-                {
-                    JsUtils.Clear();
-                    throw;
-                }
-                finally
-                {
-                    DisposeArgs();
-                    _scope = null;
-                    _loadScope = null;
-                    _docsCtx = null;
-                    _jsonCtx = null;
-                    _token = default;
-                    //   _lastException = null;
+            }
+            catch (V8Exception e)
+            {
+                //ScriptRunnerResult is in charge of disposing of the disposable but it is not created (the clones did)
+                JsUtils.Clear();
+                throw CreateFullError(e);
+            }
+            catch (Exception)
+            {
+                JsUtils.Clear();
+                throw;
+            }
+            finally
+            {
+                DisposeArgs();
+                _scope = null;
+                _loadScope = null;
+                _docsCtx = null;
+                _jsonCtx = null;
+                _token = default;
+                //   _lastException = null;
 
-                    ScriptEngineHandle.ForceGarbageCollection();
-                    if (ScriptEngineHandle.IsMemoryChecksOn && isMemorySnapshotMade)
-                    {
-                        ScriptEngineHandle.CheckForMemoryLeaks("single_run");
-                    }
+                EngineHandle.ForceGarbageCollection();
+                if (EngineHandle.IsMemoryChecksOn && isMemorySnapshotMade)
+                {
+                    EngineHandle.CheckForMemoryLeaks("single_run");
                 }
             }
         }
@@ -275,8 +249,8 @@ namespace Raven.Server.Documents.Patch.V8
                             }
                             else
                             {
-                                var valueNewStr = ScriptEngineHandle.JsonStringify().Item.StaticCall(valueNew);
-                                var valuePrevStr = ScriptEngineHandle.JsonStringify().Item.StaticCall(valuePrev);
+                                var valueNewStr = EngineHandle.JsonStringify().Item.StaticCall(valueNew);
+                                var valuePrevStr = EngineHandle.JsonStringify().Item.StaticCall(valuePrev);
                                 throw new ArgumentException(
                                     $"Can't set argument '{propertyName}' as property on global object as it already exists with value {valuePrevStr}, new value {valueNewStr}");
                             }
@@ -318,7 +292,7 @@ namespace Raven.Server.Documents.Patch.V8
                 _args[i] = default;
             }
             //TODO: egor just allocate new empty array?
-        //    Array.Clear(_args, 0, _args.Length);
+            Array.Clear(_args, 0, _args.Length);
         }
 
         //TODO: egor end ###################################################

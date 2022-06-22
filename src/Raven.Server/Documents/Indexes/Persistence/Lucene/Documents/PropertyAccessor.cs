@@ -58,12 +58,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 {
                     return new JsPropertyAccessorJint(groupByFields);
                 }
-            } else if (instance is JsHandleV8)
+            } else if (instance is JsHandleV8 v8)
             {
+                /*var tt = v8.Item.GetType();
                 if (isObjectInstance || typeof(IObjectInstance<>).IsAssignableFrom(type))
-                {
+                {*/
                     return new JsPropertyAccessorV8(groupByFields);
+                /*
                 }
+            */
             }
             ////TODO: egor check this
             //if (isObjectInstance || typeof(IObjectInstance<>).IsAssignableFrom(type))
@@ -330,7 +333,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             if (jsValue.Item is ObjectWrapper wrapper)
             {
                 var target = wrapper.Target;
-                value = Utils.TypeConverter.TryReturnLazyValue(target, jsValue);
+                if (Utils.TypeConverter.TryReturnLazyValue(target, out value) == false)
+                    Utils.TypeConverter.ThrowInvalidObject(jsValue);
+                   
                 return true;
             }
 
@@ -357,8 +362,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             object boundObject = jsValue.Item.BoundObject;
             if (boundObject != null)
             {
-                //TODO: egor we throw here, in original v8 code we continue, need to check (same as TypeConverter)
-                value = Utils.TypeConverter.TryReturnLazyValue(boundObject, jsValue);
+                //TODO: egor we throw here in jint, in original v8 code we continue, need to check (same as TypeConverter)
+                Utils.TypeConverter.TryReturnLazyValue(boundObject, out value);
                 return true;
             }
 

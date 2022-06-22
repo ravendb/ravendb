@@ -62,9 +62,10 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
 
         DocumentCountersToUpdate?.Clear();
         DocumentTimeSeriesToUpdate?.Clear();
+        CleanInternal();
     }
 
-    public IJsEngineHandle<T> ScriptEngineHandle;
+    public IJsEngineHandle<T> EngineHandle;
     public JavaScriptUtilsBase<T> JsUtils;
 
     protected readonly DocumentDatabase _database;
@@ -94,7 +95,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
     }
     IScriptEngineChanges ISingleRun.ScriptEngineHandle
     {
-        get => ScriptEngineHandle;
+        get => EngineHandle;
         set
         {
         }
@@ -118,97 +119,92 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
         _jsEngineType = configuration.JavaScript.EngineType;
         _runner = runner;
         _scriptsSource = scriptsSource;
-
-        //  Initialize(executeScriptsSource);
     }
 
     public void Initialize(bool executeScriptsSource = true)
     {
-        lock (ScriptEngineHandle)
+        EngineHandle.SetGlobalClrCallBack("getMetadata", JsUtils.GetMetadata);
+        EngineHandle.SetGlobalClrCallBack("metadataFor", (JsUtils.GetMetadata));
+        EngineHandle.SetGlobalClrCallBack("id", JsUtils.GetDocumentId);
+
+        //console.log
+        var consoleObject = EngineHandle.CreateObject();
+        var jsFuncLog = EngineHandle.CreateClrCallBack("log", OutputDebug, keepAlive: true);
+        consoleObject.FastAddProperty("log", jsFuncLog, false, false, false);
+        EngineHandle.SetGlobalProperty("console", consoleObject);
+
+        //spatial.distance
+        var spatialObject = EngineHandle.CreateObject();
+        var jsFuncSpatial = EngineHandle.CreateClrCallBack("distance", Spatial_Distance, keepAlive: true);
+        spatialObject.FastAddProperty("distance", jsFuncSpatial.Clone(), false, false, false);
+        EngineHandle.SetGlobalProperty("spatial", spatialObject);
+        EngineHandle.SetGlobalProperty("spatial.distance", jsFuncSpatial);
+
+        // includes
+        var includesObject = EngineHandle.CreateObject();
+        var jsFuncIncludeDocument = EngineHandle.CreateClrCallBack("include", IncludeDoc, keepAlive: true);
+        includesObject.FastAddProperty("document", jsFuncIncludeDocument.Clone(), false, false, false);
+        // includes - backward compatibility
+        EngineHandle.SetGlobalProperty("include", jsFuncIncludeDocument);
+
+        var jsFuncIncludeCompareExchangeValue =
+            EngineHandle.CreateClrCallBack("cmpxchg", IncludeCompareExchangeValue, keepAlive: true);
+        includesObject.FastAddProperty("cmpxchg", jsFuncIncludeCompareExchangeValue, false, false, false);
+
+        var jsFuncIncludeRevisions = EngineHandle.CreateClrCallBack("revisions", IncludeRevisions, keepAlive: true);
+        includesObject.FastAddProperty("revisions", jsFuncIncludeRevisions, false, false, false);
+        EngineHandle.SetGlobalProperty("includes", includesObject);
+
+        EngineHandle.SetGlobalClrCallBack("output", OutputDebug);
+        EngineHandle.SetGlobalClrCallBack("load", LoadDocument);
+        EngineHandle.SetGlobalClrCallBack("LoadDocument", ThrowOnLoadDocument);
+
+        EngineHandle.SetGlobalClrCallBack("loadPath", LoadDocumentByPath);
+        EngineHandle.SetGlobalClrCallBack("del", DeleteDocument);
+        EngineHandle.SetGlobalClrCallBack("DeleteDocument", ThrowOnDeleteDocument);
+        EngineHandle.SetGlobalClrCallBack("put", PutDocument);
+        EngineHandle.SetGlobalClrCallBack("PutDocument", ThrowOnPutDocument);
+        EngineHandle.SetGlobalClrCallBack("cmpxchg", CompareExchange);
+
+        EngineHandle.SetGlobalClrCallBack("counter", GetCounter);
+        EngineHandle.SetGlobalClrCallBack("counterRaw", GetCounterRaw);
+        EngineHandle.SetGlobalClrCallBack("incrementCounter", IncrementCounter);
+        EngineHandle.SetGlobalClrCallBack("deleteCounter", DeleteCounter);
+
+        EngineHandle.SetGlobalClrCallBack("lastModified", GetLastModified);
+
+        EngineHandle.SetGlobalClrCallBack("startsWith", StartsWith);
+        EngineHandle.SetGlobalClrCallBack("endsWith", EndsWith);
+        EngineHandle.SetGlobalClrCallBack("regex", Regex);
+
+        EngineHandle.SetGlobalClrCallBack("Raven_ExplodeArgs", ExplodeArgs);
+        EngineHandle.SetGlobalClrCallBack("Raven_Min", Raven_Min);
+        EngineHandle.SetGlobalClrCallBack("Raven_Max", Raven_Max);
+
+        EngineHandle.SetGlobalClrCallBack("convertJsTimeToTimeSpanString", ConvertJsTimeToTimeSpanString);
+        EngineHandle.SetGlobalClrCallBack("convertToTimeSpanString", ConvertToTimeSpanString);
+        EngineHandle.SetGlobalClrCallBack("compareDates", CompareDates);
+
+        EngineHandle.SetGlobalClrCallBack("toStringWithFormat", ToStringWithFormat);
+
+        EngineHandle.SetGlobalClrCallBack("scalarToRawString", ScalarToRawString);
+
+        //TimeSeries
+        EngineHandle.SetGlobalClrCallBack("timeseries", TimeSeries);
+        EngineHandle.Execute(ScriptRunnerCache.PolyfillJs, "polyfill.js");
+
+        if (executeScriptsSource)
         {
-            ScriptEngineHandle.SetGlobalClrCallBack("getMetadata", JsUtils.GetMetadata);
-            ScriptEngineHandle.SetGlobalClrCallBack("metadataFor", (JsUtils.GetMetadata));
-            ScriptEngineHandle.SetGlobalClrCallBack("id", JsUtils.GetDocumentId);
+            ExecuteScriptsSource();
+        }
 
-            //console.log
-            var consoleObject = ScriptEngineHandle.CreateObject();
-            var jsFuncLog = ScriptEngineHandle.CreateClrCallBack("log", OutputDebug, keepAlive: true);
-            consoleObject.FastAddProperty("log", jsFuncLog, false, false, false);
-            ScriptEngineHandle.SetGlobalProperty("console", consoleObject);
-
-            //spatial.distance
-            var spatialObject = ScriptEngineHandle.CreateObject();
-            var jsFuncSpatial = ScriptEngineHandle.CreateClrCallBack("distance", Spatial_Distance, keepAlive: true);
-            spatialObject.FastAddProperty("distance", jsFuncSpatial.Clone(), false, false, false);
-            ScriptEngineHandle.SetGlobalProperty("spatial", spatialObject);
-            ScriptEngineHandle.SetGlobalProperty("spatial.distance", jsFuncSpatial);
-
-            // includes
-            var includesObject = ScriptEngineHandle.CreateObject();
-            var jsFuncIncludeDocument = ScriptEngineHandle.CreateClrCallBack("include", IncludeDoc, keepAlive: true);
-            includesObject.FastAddProperty("document", jsFuncIncludeDocument.Clone(), false, false, false);
-            // includes - backward compatibility
-            ScriptEngineHandle.SetGlobalProperty("include", jsFuncIncludeDocument);
-
-            var jsFuncIncludeCompareExchangeValue =
-                ScriptEngineHandle.CreateClrCallBack("cmpxchg", IncludeCompareExchangeValue, keepAlive: true);
-            includesObject.FastAddProperty("cmpxchg", jsFuncIncludeCompareExchangeValue, false, false, false);
-
-            var jsFuncIncludeRevisions = ScriptEngineHandle.CreateClrCallBack("revisions", IncludeRevisions, keepAlive: true);
-            includesObject.FastAddProperty("revisions", jsFuncIncludeRevisions, false, false, false);
-            ScriptEngineHandle.SetGlobalProperty("includes", includesObject);
-
-            ScriptEngineHandle.SetGlobalClrCallBack("output", OutputDebug);
-            ScriptEngineHandle.SetGlobalClrCallBack("load", LoadDocument);
-            ScriptEngineHandle.SetGlobalClrCallBack("LoadDocument", ThrowOnLoadDocument);
-
-            ScriptEngineHandle.SetGlobalClrCallBack("loadPath", LoadDocumentByPath);
-            ScriptEngineHandle.SetGlobalClrCallBack("del", DeleteDocument);
-            ScriptEngineHandle.SetGlobalClrCallBack("DeleteDocument", ThrowOnDeleteDocument);
-            ScriptEngineHandle.SetGlobalClrCallBack("put", PutDocument);
-            ScriptEngineHandle.SetGlobalClrCallBack("PutDocument", ThrowOnPutDocument);
-            ScriptEngineHandle.SetGlobalClrCallBack("cmpxchg", CompareExchange);
-
-            ScriptEngineHandle.SetGlobalClrCallBack("counter", GetCounter);
-            ScriptEngineHandle.SetGlobalClrCallBack("counterRaw", GetCounterRaw);
-            ScriptEngineHandle.SetGlobalClrCallBack("incrementCounter", IncrementCounter);
-            ScriptEngineHandle.SetGlobalClrCallBack("deleteCounter", DeleteCounter);
-
-            ScriptEngineHandle.SetGlobalClrCallBack("lastModified", GetLastModified);
-
-            ScriptEngineHandle.SetGlobalClrCallBack("startsWith", StartsWith);
-            ScriptEngineHandle.SetGlobalClrCallBack("endsWith", EndsWith);
-            ScriptEngineHandle.SetGlobalClrCallBack("regex", Regex);
-
-            ScriptEngineHandle.SetGlobalClrCallBack("Raven_ExplodeArgs", ExplodeArgs);
-            ScriptEngineHandle.SetGlobalClrCallBack("Raven_Min", Raven_Min);
-            ScriptEngineHandle.SetGlobalClrCallBack("Raven_Max", Raven_Max);
-
-            ScriptEngineHandle.SetGlobalClrCallBack("convertJsTimeToTimeSpanString", ConvertJsTimeToTimeSpanString);
-            ScriptEngineHandle.SetGlobalClrCallBack("convertToTimeSpanString", ConvertToTimeSpanString);
-            ScriptEngineHandle.SetGlobalClrCallBack("compareDates", CompareDates);
-
-            ScriptEngineHandle.SetGlobalClrCallBack("toStringWithFormat", ToStringWithFormat);
-
-            ScriptEngineHandle.SetGlobalClrCallBack("scalarToRawString", ScalarToRawString);
-
-            //TimeSeries
-            ScriptEngineHandle.SetGlobalClrCallBack("timeseries", TimeSeries);
-            ScriptEngineHandle.Execute(ScriptRunnerCache.PolyfillJs, "polyfill.js");
-
-            if (executeScriptsSource)
-            {
-                ExecuteScriptsSource();
-            }
-
-            foreach (var ts in _runner.TimeSeriesDeclaration)
-            {
-                ScriptEngineHandle.SetGlobalClrCallBack(ts.Key,
-                    (
-                        (self, args) => InvokeTimeSeriesFunction(ts.Key, args)
-                    )
-                );
-            }
+        foreach (var ts in _runner.TimeSeriesDeclaration)
+        {
+            EngineHandle.SetGlobalClrCallBack(ts.Key,
+                (
+                    (self, args) => InvokeTimeSeriesFunction(ts.Key, args)
+                )
+            );
         }
     }
 
@@ -218,7 +214,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
         {
             try
             {
-                ScriptEngineHandle.Execute(script);
+                EngineHandle.Execute(script);
             }
             catch (Exception e)
             {
@@ -256,7 +252,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
                     }
                 }
                 
-                return ScriptEngineHandle.CreateArray(results);
+                return EngineHandle.CreateArray(results);
             }
 
             if (args[0].IsStringEx == false)
@@ -290,11 +286,11 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
                 IncludeUtil.GetDocIdFromInclude(b.Blittable, path, _documentIds, _database.IdentityPartsSeparator);
                 if (path.IndexOf("[]", StringComparison.InvariantCulture) != -1)
                 {
-                    return ScriptEngineHandle.FromObjectGen(_documentIds.Select(LoadDocumentInternal).ToList());
+                    return EngineHandle.FromObjectGen(_documentIds.Select(LoadDocumentInternal).ToList());
                 } // array
 
                 if (_documentIds.Count == 0)
-                    return ScriptEngineHandle.Null;
+                    return EngineHandle.Null;
 
                 return LoadDocumentInternal(_documentIds.First());
             }
@@ -307,7 +303,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
     {
         if (string.IsNullOrEmpty(id))
         {
-            return ScriptEngineHandle.Undefined;
+            return EngineHandle.Undefined;
         }
 
         var document = _database.DocumentsStorage.Get(_docsCtx, id);
@@ -347,7 +343,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
             DebugActions.DeleteDocument.Add(id);
         }
 
-        return ScriptEngineHandle.CreateValue(result != null);
+        return EngineHandle.CreateValue(result != null);
     }
 
     public T PutDocument(T self, T[] args)
@@ -403,7 +399,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
             if (RefreshOriginalDocument == false && string.Equals(put.Id, OriginalDocumentId, StringComparison.OrdinalIgnoreCase))
                 RefreshOriginalDocument = true;
 
-            return ScriptEngineHandle.CreateValue(put.Id);
+            return EngineHandle.CreateValue(put.Id);
         }
         finally
         {
@@ -425,14 +421,14 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
     private T CmpXchangeInternal(string key)
     {
         if (string.IsNullOrEmpty(key))
-            return ScriptEngineHandle.Undefined;
+            return EngineHandle.Undefined;
 
         using (_database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
         using (ctx.OpenReadTransaction())
         {
             var value = _database.ServerStore.Cluster.GetCompareExchangeValue(ctx, key).Value;
             if (value == null)
-                return ScriptEngineHandle.Null;
+                return EngineHandle.Null;
 
             var jsValue = JsUtils.TranslateToJs(_jsonCtx, value.Clone(_jsonCtx));
             //TODO: egor was: return jsValue.AsObject().Get(Constants.CompareExchange.ObjectFieldName);
@@ -482,7 +478,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
         var name = args[1].AsString;
         if (string.IsNullOrEmpty(id) || string.IsNullOrEmpty(name))
         {
-            return ScriptEngineHandle.Undefined;
+            return EngineHandle.Undefined;
         }
 
         if (raw == false)
@@ -495,12 +491,12 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
                 var val123 = counterValue1.Value;
                 var actualValue = val123.Value;
 
-                counterValue = ScriptEngineHandle.CreateValue(actualValue);
+                counterValue = EngineHandle.CreateValue(actualValue);
                 exists = true;
             }
             else
             {
-                counterValue = ScriptEngineHandle.Null;
+                counterValue = EngineHandle.Null;
                 exists = false;
 
             }
@@ -518,10 +514,10 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
             return counterValue;
         }
 
-        var obj = ScriptEngineHandle.CreateObject();
+        var obj = EngineHandle.CreateObject();
         foreach (var partialValue in _database.DocumentsStorage.CountersStorage.GetCounterPartialValues(_docsCtx, id, name))
         {
-            obj.FastAddProperty(partialValue.ChangeVector, ScriptEngineHandle.CreateValue(partialValue.PartialValue), writable: true, enumerable: false, configurable: false);
+            obj.FastAddProperty(partialValue.ChangeVector, EngineHandle.CreateValue(partialValue.PartialValue), writable: true, enumerable: false, configurable: false);
         }
 
         return obj;
@@ -608,7 +604,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
             });
         }
 
-        return ScriptEngineHandle.True;
+        return EngineHandle.True;
     }
 
     public T DeleteCounter(T self, T[] args)
@@ -664,7 +660,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
             DebugActions.DeleteCounter.Add(name);
         }
 
-        return ScriptEngineHandle.True;
+        return EngineHandle.True;
     }
 
     public T GetLastModified(T self, T[] args)
@@ -681,15 +677,15 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
         if (args[0].AsObject() is IBlittableObjectInstance<T> doc)
         {
             if (doc.LastModified == null)
-                return ScriptEngineHandle.Undefined;
+                return EngineHandle.Undefined;
 
             // we use UTC because last modified is in UTC
             var epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
             var jsTime = doc.LastModified.Value.Subtract(epoch).TotalMilliseconds;
-            return ScriptEngineHandle.CreateValue(jsTime);
+            return EngineHandle.CreateValue(jsTime);
         }
 
-        return ScriptEngineHandle.Undefined;
+        return EngineHandle.Undefined;
     }
 
     public T StartsWith(T self, T[] args)
@@ -697,7 +693,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
         if (args.Length != 2 || args[0].IsStringEx == false || args[1].IsStringEx == false)
             throw new InvalidOperationException("startsWith(text, contained) must be called with two string parameters");
 
-        return ScriptEngineHandle.CreateValue(args[0].AsString.StartsWith(args[1].AsString, StringComparison.OrdinalIgnoreCase));
+        return EngineHandle.CreateValue(args[0].AsString.StartsWith(args[1].AsString, StringComparison.OrdinalIgnoreCase));
     }
 
     public T EndsWith(T self, T[] args)
@@ -705,7 +701,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
         if (args.Length != 2 || args[0].IsStringEx == false || args[1].IsStringEx == false)
             throw new InvalidOperationException("endsWith(text, contained) must be called with two string parameters");
 
-        return ScriptEngineHandle.CreateValue(args[0].AsString.EndsWith(args[1].AsString, StringComparison.OrdinalIgnoreCase));
+        return EngineHandle.CreateValue(args[0].AsString.EndsWith(args[1].AsString, StringComparison.OrdinalIgnoreCase));
     }
 
     public T Regex(T self, T[] args)
@@ -715,7 +711,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
 
         var regex = _regexCache.Get(args[1].AsString);
 
-        return regex.IsMatch(args[0].AsString) ? ScriptEngineHandle.True : ScriptEngineHandle.False;
+        return regex.IsMatch(args[0].AsString) ? EngineHandle.True : EngineHandle.False;
     }
 
     public T ConvertJsTimeToTimeSpanString(T self, T[] args)
@@ -727,7 +723,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
 
         var asTimeSpan = new TimeSpan(ticks);
 
-        return ScriptEngineHandle.CreateValue(asTimeSpan.ToString());
+        return EngineHandle.CreateValue(asTimeSpan.ToString());
     }
 
     public T ConvertToTimeSpanString(T self, T[] args)
@@ -739,7 +735,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
 
             var ticks = Convert.ToInt64(args[0].AsDouble);
             var asTimeSpan = new TimeSpan(ticks);
-            return ScriptEngineHandle.CreateValue(asTimeSpan.ToString());
+            return EngineHandle.CreateValue(asTimeSpan.ToString());
         }
 
         if (args.Length == 3)
@@ -752,7 +748,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
             var seconds = Convert.ToInt32(args[2].AsInt32);
 
             var asTimeSpan = new TimeSpan(hours, minutes, seconds);
-            return ScriptEngineHandle.CreateValue(asTimeSpan.ToString());
+            return EngineHandle.CreateValue(asTimeSpan.ToString());
         }
 
         if (args.Length == 4)
@@ -766,7 +762,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
             var seconds = Convert.ToInt32(args[3].AsInt32);
 
             var asTimeSpan = new TimeSpan(days, hours, minutes, seconds);
-            return ScriptEngineHandle.CreateValue(asTimeSpan.ToString());
+            return EngineHandle.CreateValue(asTimeSpan.ToString());
         }
 
         if (args.Length == 5)
@@ -781,7 +777,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
             var milliseconds = Convert.ToInt32(args[4].AsInt32);
 
             var asTimeSpan = new TimeSpan(days, hours, minutes, seconds, milliseconds);
-            return ScriptEngineHandle.CreateValue(asTimeSpan.ToString());
+            return EngineHandle.CreateValue(asTimeSpan.ToString());
         }
 
         throw new InvalidOperationException("supported overloads are: " +
@@ -828,19 +824,19 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
         switch (binaryOperationType)
         {
             case ExpressionType.Subtract:
-                return ScriptEngineHandle.CreateValue((date1 - date2).ToString());
+                return EngineHandle.CreateValue((date1 - date2).ToString());
             case ExpressionType.GreaterThan:
-                return date1 > date2 ? ScriptEngineHandle.True : ScriptEngineHandle.False;
+                return date1 > date2 ? EngineHandle.True : EngineHandle.False;
             case ExpressionType.GreaterThanOrEqual:
-                return date1 >= date2 ? ScriptEngineHandle.True : ScriptEngineHandle.False;
+                return date1 >= date2 ? EngineHandle.True : EngineHandle.False;
             case ExpressionType.LessThan:
-                return date1 < date2 ? ScriptEngineHandle.True : ScriptEngineHandle.False;
+                return date1 < date2 ? EngineHandle.True : EngineHandle.False;
             case ExpressionType.LessThanOrEqual:
-                return date1 <= date2 ? ScriptEngineHandle.True : ScriptEngineHandle.False;
+                return date1 <= date2 ? EngineHandle.True : EngineHandle.False;
             case ExpressionType.Equal:
-                return date1 == date2 ? ScriptEngineHandle.True : ScriptEngineHandle.False;
+                return date1 == date2 ? EngineHandle.True : EngineHandle.False;
             case ExpressionType.NotEqual:
-                return date1 != date2 ? ScriptEngineHandle.True : ScriptEngineHandle.False;
+                return date1 != date2 ? EngineHandle.True : EngineHandle.False;
             default:
                 throw new InvalidOperationException($"compareDates(date1, date2, binaryOp) : unsupported binary operation '{binaryOperationType}'");
         }
@@ -902,16 +898,16 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
         {
             var date = args[0].AsDate;
             return format != null ?
-                ScriptEngineHandle.CreateValue(date.ToString(format, cultureInfo)) :
-                ScriptEngineHandle.CreateValue(date.ToString(cultureInfo));
+                EngineHandle.CreateValue(date.ToString(format, cultureInfo)) :
+                EngineHandle.CreateValue(date.ToString(cultureInfo));
         }
 
         if (args[0].IsNumberOrIntEx)
         {
             var num = args[0].AsDouble;
             return format != null ?
-                ScriptEngineHandle.CreateValue(num.ToString(format, cultureInfo)) :
-                ScriptEngineHandle.CreateValue(num.ToString(cultureInfo));
+                EngineHandle.CreateValue(num.ToString(format, cultureInfo)) :
+                EngineHandle.CreateValue(num.ToString(cultureInfo));
         }
 
         if (args[0].IsStringEx)
@@ -924,8 +920,8 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
                 {
                     case LazyStringParser.Result.DateTime:
                         return format != null ?
-                            ScriptEngineHandle.CreateValue(dt.ToString(format, cultureInfo)) :
-                            ScriptEngineHandle.CreateValue(dt.ToString(cultureInfo));
+                            EngineHandle.CreateValue(dt.ToString(format, cultureInfo)) :
+                            EngineHandle.CreateValue(dt.ToString(cultureInfo));
                     default:
                         throw new InvalidOperationException("toStringWithFormat(dateString) : 'dateString' is not a valid DateTime string");
                 }
@@ -938,7 +934,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
         }
 
         var boolean = args[0].AsBoolean;
-        return ScriptEngineHandle.CreateValue(boolean.ToString(cultureInfo));
+        return EngineHandle.CreateValue(boolean.ToString(cultureInfo));
     }
 
     public T ScalarToRawString(T self, T[] args)
@@ -967,7 +963,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
 
                 if (propertyIndex == -1)
                 {
-                    return ScriptEngineHandle.CreateObject();
+                    return EngineHandle.CreateObject();
                 }
 
                 BlittableJsonReaderObject.PropertyDetails propDetails = new BlittableJsonReaderObject.PropertyDetails();
@@ -977,14 +973,14 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
                 switch (type)
                 {
                     case BlittableJsonToken.Null:
-                        return ScriptEngineHandle.Null;
+                        return EngineHandle.Null;
                     case BlittableJsonToken.Boolean:
-                        return (bool)value ? ScriptEngineHandle.True : ScriptEngineHandle.False;
+                        return (bool)value ? EngineHandle.True : EngineHandle.False;
                     case BlittableJsonToken.Integer:
                         switch (value)
                         {
                             case int intValue:
-                                return ScriptEngineHandle.CreateValue(intValue);
+                                return EngineHandle.CreateValue(intValue);
                             case long:
                                 return CreateObjectBinder(type, value);
                             default:
@@ -1001,7 +997,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
         throw new InvalidOperationException("scalarToRawString(document, lambdaToField) may be called with a document first parameter only");
     }
 
-    public abstract void SetContext();
+    public abstract void CleanInternal();
     protected abstract T CreateObjectBinder(BlittableJsonToken type, object value);
 
     public T OutputDebug(T self, T[] args)
@@ -1070,7 +1066,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
         for (int i = 0; i < 4; i++)
         {
             if (args[i].IsNumber == false)
-                return ScriptEngineHandle.Undefined;
+                return EngineHandle.Undefined;
         }
 
         var lat1 = args[0].AsDouble;
@@ -1082,7 +1078,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
         if (args.Length > 4 && args[4].IsStringEx)
         {
             if (string.Equals("cartesian", args[4].AsString, StringComparison.OrdinalIgnoreCase))
-                return ScriptEngineHandle.CreateValue(SpatialDistanceFieldComparatorSource.SpatialDistanceFieldComparator.CartesianDistance(lat1, lng1, lat2, lng2));
+                return EngineHandle.CreateValue(SpatialDistanceFieldComparatorSource.SpatialDistanceFieldComparator.CartesianDistance(lat1, lng1, lat2, lng2));
 
             if (Enum.TryParse(args[4].AsString, ignoreCase: true, out units) == false)
                 throw new ArgumentException("Unable to parse units " + args[5] + ", expected: 'kilometers' or 'miles'");
@@ -1092,7 +1088,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
         if (units == SpatialUnits.Kilometers)
             result *= DistanceUtils.MILES_TO_KM;
 
-        return ScriptEngineHandle.CreateValue(result);
+        return EngineHandle.CreateValue(result);
     }
 
     public T IncludeDoc(T self, T[] args)
@@ -1175,7 +1171,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
     public T IncludeRevisions(T self, T[] args)
     {
         if (args == null)
-            return ScriptEngineHandle.Null;
+            return EngineHandle.Null;
 
         IncludeRevisionsChangeVectors ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -1208,7 +1204,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
             }
         }
 
-        return ScriptEngineHandle.Null;
+        return EngineHandle.Null;
     }
 
     public T InvokeTimeSeriesFunction(string name, T[] args)
@@ -1242,12 +1238,12 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
         if (args.Length != 2)
             throw new ArgumentException($"{_timeSeriesSignature}: This method requires 2 arguments but was called with {args.Length}");
 
-        var obj = ScriptEngineHandle.CreateObject();
-        obj.SetProperty("append", ScriptEngineHandle.CreateClrCallBack("append", AppendTimeSeries));
-        obj.SetProperty("increment", ScriptEngineHandle.CreateClrCallBack("increment", IncrementTimeSeries));
-        obj.SetProperty("delete", ScriptEngineHandle.CreateClrCallBack("delete", DeleteRangeTimeSeries));
-        obj.SetProperty("get", ScriptEngineHandle.CreateClrCallBack("get", GetRangeTimeSeries));
-        obj.SetProperty("getStats", ScriptEngineHandle.CreateClrCallBack("getStats", GetStatsTimeSeries));
+        var obj = EngineHandle.CreateObject();
+        obj.SetProperty("append", EngineHandle.CreateClrCallBack("append", AppendTimeSeries));
+        obj.SetProperty("increment", EngineHandle.CreateClrCallBack("increment", IncrementTimeSeries));
+        obj.SetProperty("delete", EngineHandle.CreateClrCallBack("delete", DeleteRangeTimeSeries));
+        obj.SetProperty("get", EngineHandle.CreateClrCallBack("get", GetRangeTimeSeries));
+        obj.SetProperty("getStats", EngineHandle.CreateClrCallBack("getStats", GetStatsTimeSeries));
         obj.SetProperty("doc", args[0]);
         obj.SetProperty("name", args[1]);
         return obj;
@@ -1289,14 +1285,14 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
             var jsSpanItems = new T[valuesSpan.Length];
             for (int i = 0; i < valuesSpan.Length; i++)
             {
-                jsSpanItems[i] = ScriptEngineHandle.CreateValue(valuesSpan[i]);
+                jsSpanItems[i] = EngineHandle.CreateValue(valuesSpan[i]);
             }
 
-            var entry = ScriptEngineHandle.CreateObject();
-            entry.SetProperty(nameof(TimeSeriesEntry.Timestamp), ScriptEngineHandle.CreateValue(singleResult.Timestamp.GetDefaultRavenFormat(isUtc: true)));
-            entry.SetProperty(nameof(TimeSeriesEntry.Tag), singleResult.Tag == null ? ScriptEngineHandle.Null : ScriptEngineHandle.CreateValue(singleResult.Tag.ToString()));
-            entry.SetProperty(nameof(TimeSeriesEntry.Values), ScriptEngineHandle.CreateArray(jsSpanItems));
-            entry.SetProperty(nameof(TimeSeriesEntry.IsRollup), ScriptEngineHandle.CreateValue(singleResult.Type == SingleResultType.RolledUp));
+            var entry = EngineHandle.CreateObject();
+            entry.SetProperty(nameof(TimeSeriesEntry.Timestamp), EngineHandle.CreateValue(singleResult.Timestamp.GetDefaultRavenFormat(isUtc: true)));
+            entry.SetProperty(nameof(TimeSeriesEntry.Tag), singleResult.Tag == null ? EngineHandle.Null : EngineHandle.CreateValue(singleResult.Tag.ToString()));
+            entry.SetProperty(nameof(TimeSeriesEntry.Values), EngineHandle.CreateArray(jsSpanItems));
+            entry.SetProperty(nameof(TimeSeriesEntry.IsRollup), EngineHandle.CreateValue(singleResult.Type == SingleResultType.RolledUp));
 
             entries.Add(entry);
 
@@ -1324,9 +1320,9 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
         }
 
         if (entries.Count == 0)
-            return ScriptEngineHandle.CreateEmptyArray();
+            return EngineHandle.CreateEmptyArray();
 
-        return ScriptEngineHandle.CreateArray(entries);
+        return EngineHandle.CreateArray(entries);
     }
 
     private string GetIdFromArg(T docArg, string signature)
@@ -1372,7 +1368,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
 
         var count = _database.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(_docsCtx, id, timeSeries).Count;
         if (count == 0)
-            return ScriptEngineHandle.Undefined;
+            return EngineHandle.Undefined;
 
         var deletionRangeRequest = new TimeSeriesStorage.DeletionRangeRequest
         {
@@ -1400,7 +1396,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
                 ["To"] = to
             });
         }
-        return ScriptEngineHandle.Undefined;
+        return EngineHandle.Undefined;
     }
 
     private T IncrementTimeSeries(T self, T[] args)
@@ -1479,7 +1475,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
                 ArrayPool<double>.Shared.Return(valuesBuffer);
         }
 
-        return ScriptEngineHandle.Undefined;
+        return EngineHandle.Undefined;
     }
 
     private T AppendTimeSeries(T self, T[] args)
@@ -1566,7 +1562,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
                 ArrayPool<double>.Shared.Return(valuesBuffer);
         }
 
-        return ScriptEngineHandle.Undefined;
+        return EngineHandle.Undefined;
     }
 
     private DateTime GetTimeSeriesDateArg(T arg, string signature, string argName)
@@ -1622,10 +1618,10 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
         var timeSeries = GetStringArg(name, _timeSeriesSignature, "name");
         var stats = _database.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(_docsCtx, id, timeSeries);
 
-        var tsStats = ScriptEngineHandle.CreateObject();
-        tsStats.SetProperty(nameof(stats.Start), ScriptEngineHandle.CreateValue(stats.Start));
-        tsStats.SetProperty(nameof(stats.End), ScriptEngineHandle.CreateValue(stats.End));
-        tsStats.SetProperty(nameof(stats.Count), ScriptEngineHandle.CreateValue(stats.Count));
+        var tsStats = EngineHandle.CreateObject();
+        tsStats.SetProperty(nameof(stats.Start), EngineHandle.CreateValue(stats.Start));
+        tsStats.SetProperty(nameof(stats.End), EngineHandle.CreateValue(stats.End));
+        tsStats.SetProperty(nameof(stats.Count), EngineHandle.CreateValue(stats.Count));
         return tsStats;
     }
 
@@ -1866,7 +1862,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
 
     public T CreateEmptyObject()
     {
-        return ScriptEngineHandle.CreateObject();
+        return EngineHandle.CreateObject();
     }
 
     public object Translate(IScriptRunnerResult result, JsonOperationContext context, IResultModifier modifier = null, BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None)
@@ -1989,13 +1985,14 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
         OriginalDocumentId = null;
         RefreshOriginalDocument = false;
 
-        ScriptEngineHandle.ResetCallStack();
-        ScriptEngineHandle.ResetConstraints();
+        EngineHandle.ResetCallStack();
+        EngineHandle.ResetConstraints();
     }
 
     protected abstract void DisposeArgs();
 
     protected abstract JavaScriptException CreateFullError(Exception e);
+
 }
 
 public interface ISingleRun

@@ -7,6 +7,7 @@ using Jint.Native.Function;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes.Static.JavaScript.Jint;
+using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Patch.Jint;
 using Raven.Server.Extensions.Jint;
 
@@ -17,7 +18,8 @@ public abstract class AbstractJavaScriptIndexJint : AbstractJavaScriptIndex<JsHa
     public JintEngineEx EngineEx;
     public Engine Engine;
 
-    protected AbstractJavaScriptIndexJint(IndexDefinition definition, RavenConfiguration configuration, Action<List<string>> modifyMappingFunctions, string mapCode, long indexVersion)
+    protected AbstractJavaScriptIndexJint(IndexDefinition definition, RavenConfiguration configuration, Action<List<string>> modifyMappingFunctions, string mapCode,
+        long indexVersion)
         : base(definition)
     {
         // we create the engine instance directly instead of using SingleRun
@@ -25,15 +27,11 @@ public abstract class AbstractJavaScriptIndexJint : AbstractJavaScriptIndex<JsHa
         var refResolver = new JintPreventResolvingTasksReferenceResolver();
         EngineEx = new JintEngineEx(configuration, refResolver);
         Engine = EngineEx.Engine;
-        _engineForParsing = EngineEx.Engine;
+        _engineForParsing = EngineEx;
         EngineHandle = EngineEx;
         JsUtils = JavaScriptUtilsJint.Create(null, EngineEx);
         JsIndexUtils = new JavaScriptIndexUtilsJint(JsUtils, Engine);
-
-        lock (EngineHandle)
-        {
-            Initialize(modifyMappingFunctions, mapCode, indexVersion);
-        }
+        Initialize(modifyMappingFunctions, mapCode, indexVersion);
     }
 
     public override IDisposable DisableConstraintsOnInit()
@@ -51,59 +49,10 @@ public abstract class AbstractJavaScriptIndexJint : AbstractJavaScriptIndex<JsHa
     {
         OnInitializeEngine();
 
-        EngineHandle.ExecuteWithReset(Code, "Code");
-        EngineHandle.ExecuteWithReset(mapCode, "MapCode");
-        ////TODO: egor add those to v8
-      //  _engineForParsing.ExecuteWithReset(Code);
-       // _engineForParsing.ExecuteWithReset(mapCode);
-
-        var sb = new StringBuilder();
-        if (Definition.AdditionalSources != null)
-        {
-            foreach (var script in Definition.AdditionalSources.Values)
-            {
-                EngineHandle.ExecuteWithReset(script);
-                // TODO: egor add _engineFOrParsing
-                sb.Append(Environment.NewLine);
-                sb.AppendLine(script);
-            }
-        }
-
-        var additionalSources = sb.ToString();
-        var mapReferencedCollections = new List<MapMetadata>();
-        foreach (var map in maps)
-        {
-            var result = ExecuteCodeAndCollectReferencedCollections(map, additionalSources);
-            mapReferencedCollections.Add(result);
-        }
-
-        if (Definition.Reduce != null)
-        {
-            EngineHandle.ExecuteWithReset(Definition.Reduce, "reduce");
-             //   _engineForParsing.ExecuteWithReset(Definition.Reduce);
-        }
-
+        var mapReferencedCollections = InitializeEngineInternal(this.EngineHandle, this.Definition, maps, mapCode);
         return mapReferencedCollections;
     }
-    private MapMetadata ExecuteCodeAndCollectReferencedCollections(string code, string additionalSources)
-    {
-
-        var javascriptParser = new JavaScriptParser(code, DefaultParserOptions);
-        var program = javascriptParser.ParseScript();
-        //   engine.ExecuteWithReset(program);
-        EngineHandle.ExecuteWithReset(code, "map");
-        var loadVisitor = new EsprimaReferencedCollectionVisitor();
-        if (string.IsNullOrEmpty(additionalSources) == false)
-            loadVisitor.Visit(new JavaScriptParser(additionalSources, DefaultParserOptions).ParseScript());
-
-        loadVisitor.Visit(program);
-        return new MapMetadata
-        {
-            ReferencedCollections = loadVisitor.ReferencedCollection,
-            HasCompareExchangeReferences = loadVisitor.HasCompareExchangeReferences
-        };
-    }
-
+    
     public override JsHandleJint ConvertToJsHandle(object value)
     {
         switch (value)

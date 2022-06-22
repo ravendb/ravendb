@@ -338,7 +338,8 @@ public abstract class JsBlittableBridge<T>
         IResultModifier modifier = null, BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None, bool isRoot = true)
     {
         var objectInstance = instance.AsObject();
-        if (objectInstance == null)
+        //TODO: egor here its 100% IsObject == true check if I can jsut continue here (without returning null) in jint because thats what we do in v8.
+        if (objectInstance == null && instance.IsObject == false)
             return null;
 
         if (objectInstance is IBlittableObjectInstance<T> boi && boi.Changed == false && isRoot)

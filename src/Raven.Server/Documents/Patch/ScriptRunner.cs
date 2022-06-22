@@ -124,16 +124,8 @@ namespace Raven.Server.Documents.Patch
         public abstract Holder<T> GetSingleRunHolder(bool executeScriptsSource = true);
         //public abstract ReturnRun GetRunnerTyped(out SingleRun<T> run, bool executeScriptsSource = true);
 
-        public void ReturnRunner(Holder<T> holder)
-        {
-            if (holder == null)
-                return;
-
-            if (holder.Generation != _parent.Generation)
-                return;
-
-            _cache.Enqueue(holder);
-        }
+        public abstract void ReturnRunner(Holder<T> holder);
+ 
 
 
         public static unsafe DateTime GetDateArg(T arg, string signature, string argName)
@@ -239,6 +231,19 @@ namespace Raven.Server.Documents.Patch
             return holder;
         }
 
+        public override void ReturnRunner(Holder<JsHandleV8> holder)
+        {
+                if (holder == null)
+                    return;
+
+                if (holder.Generation != _parent.Generation)
+                    return;
+                
+                // we dont the script for v8 since  the engine is back to pool
+                //TODO: egor consider keeping here singleruns in cache
+                //_cache.Enqueue(holder);
+        }
+
         public ReturnRun GetRunner(out SingleRunV8 run, bool executeScriptsSource = true)
         {
             _lastRun = DateTime.UtcNow;
@@ -281,6 +286,17 @@ namespace Raven.Server.Documents.Patch
             }
 
             return holder;
+        }
+
+        public override void ReturnRunner(Holder<JsHandleJint> holder)
+        {
+            if (holder == null)
+                return;
+
+            if (holder.Generation != _parent.Generation)
+                return;
+
+            _cache.Enqueue(holder);
         }
 
         public ReturnRun GetRunner(out SingleRunJint run, bool executeScriptsSource = true)

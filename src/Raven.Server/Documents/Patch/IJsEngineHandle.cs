@@ -33,9 +33,7 @@ public interface IJsEngineHandle<T> : /*IJavaScriptEngineForParsing<T>,*/ IScrip
 
     void SetGlobalProperty(string name, T value);
 
-    void Execute(string source, string sourceName = "anonymousCode.js", bool throwExceptionOnError = true);
-
-    void ExecuteWithReset(string source, string sourceName = "anonymousCode.js", bool throwExceptionOnError = true);
+   
 
     IDisposable DisableConstraints();
     JavaScriptEngineType EngineType { get; }
@@ -113,4 +111,8 @@ public interface IScriptEngineChanges
     IDisposable ChangeMaxDuration(int value);
 
     void TryCompileScript(string script);
+    
+    void Execute(string source, string sourceName = "anonymousCode.js", bool throwExceptionOnError = true);
+
+    void ExecuteWithReset(string source, string sourceName = "anonymousCode.js", bool throwExceptionOnError = true);
 }

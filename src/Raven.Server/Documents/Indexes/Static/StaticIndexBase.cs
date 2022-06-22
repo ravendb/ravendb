@@ -5,6 +5,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using Lucene.Net.Documents;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
@@ -656,7 +657,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         protected readonly IndexDefinition Definition;
 
-        public static AbstractStaticIndexBase Create(IndexDefinition definition, RavenConfiguration configuration, long indexVersion)
+        public static AbstractStaticIndexBase Create(IndexDefinition definition, RavenConfiguration configuration, long indexVersion, CancellationToken token)
         {
             switch (definition.SourceType)
             {
@@ -666,7 +667,7 @@ namespace Raven.Server.Documents.Indexes.Static
                         case JavaScriptEngineType.Jint:
                             return new JavaScriptIndexJint(definition, configuration, indexVersion);
                         case JavaScriptEngineType.V8:
-                            return new JavaScriptIndexV8(definition, configuration, indexVersion);
+                            return new JavaScriptIndexV8(definition, configuration, indexVersion, token);
                         default:
                             throw new ArgumentOutOfRangeException(nameof(configuration.JavaScript.EngineType));
                     }
@@ -676,7 +677,7 @@ namespace Raven.Server.Documents.Indexes.Static
                         case JavaScriptEngineType.Jint:
                             return new TimeSeriesJavaScriptIndexJint(definition, configuration, indexVersion);
                         case JavaScriptEngineType.V8:
-                            return new TimeSeriesJavaScriptIndexV8(definition, configuration, indexVersion);
+                            return new TimeSeriesJavaScriptIndexV8(definition, configuration, indexVersion, token);
                         default:
                             throw new ArgumentOutOfRangeException(nameof(configuration.JavaScript.EngineType));
                     }
@@ -686,7 +687,7 @@ namespace Raven.Server.Documents.Indexes.Static
                         case JavaScriptEngineType.Jint:
                             return new CountersJavaScriptIndexJint(definition, configuration, indexVersion);
                         case JavaScriptEngineType.V8:
-                            return new CountersJavaScriptIndexV8(definition, configuration, indexVersion);
+                            return new CountersJavaScriptIndexV8(definition, configuration, indexVersion, token);
                         default:
                             throw new ArgumentOutOfRangeException(nameof(configuration.JavaScript.EngineType));
                     }

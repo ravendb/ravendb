@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client;
@@ -30,6 +31,7 @@ public abstract class AbstractIndexCreateController
     protected abstract string GetDatabaseName();
 
     protected abstract SystemTime GetDatabaseTime();
+    protected abstract CancellationToken GetDatabaseToken();
 
     protected abstract RavenConfiguration GetDatabaseConfiguration();
 
@@ -66,7 +68,7 @@ public abstract class AbstractIndexCreateController
         ValidateAnalyzers(definition);
 
         var databaseConfiguration = GetDatabaseConfiguration();
-        var instance = IndexCompilationCache.GetIndexInstance(definition, databaseConfiguration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion); // pre-compile it and validate
+        var instance = IndexCompilationCache.GetIndexInstance(definition, databaseConfiguration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion, GetDatabaseToken()); // pre-compile it and validate
 
         if (definition.Type == IndexType.MapReduce)
         {

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Util;
@@ -23,6 +24,10 @@ public class ShardedIndexCreateController : AbstractIndexCreateController
     protected override string GetDatabaseName() => _context.DatabaseName;
 
     protected override SystemTime GetDatabaseTime() => _context.Time;
+    protected override CancellationToken GetDatabaseToken()
+    {
+        return _context.DatabaseShutdown;
+    }
 
     protected override RavenConfiguration GetDatabaseConfiguration() => _context.Configuration;
 

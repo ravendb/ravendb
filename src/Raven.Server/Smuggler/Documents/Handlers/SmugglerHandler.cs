@@ -47,7 +47,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
         [RavenAction("/databases/*/smuggler/validate-options", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task ValidateOptions()
         {
-            using (var processor = new SmugglerHandlerProcessorForValidateOptions<DocumentsOperationContext>(this, Database.Configuration))
+            using (var processor = new SmugglerHandlerProcessorForValidateOptions<DocumentsOperationContext>(this, Database.Configuration, Database.DatabaseShutdown))
             {
                 await processor.ExecuteAsync();
             }
