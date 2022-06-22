@@ -42,11 +42,14 @@
                             </div>
                             <div class="patch-controls">
                                 <div class="flex-separator"></div>
-                                <button class="btn btn-primary btn-block btn-lg text-center" data-bind="click: runPatch" title="Execute patch">
-                                    <i class="icon-play2 icon-lg"></i><br />
-                                    <small class="kbd"><kbd>ctrl</kbd> <strong>+</strong> <kbd>enter</kbd></small>
-                                </button>
-                                <button class="btn btn-default btn-block text-center margin-top" data-bind="click: test.enterTestMode" title="Dry patch run. No data is modified.">
+                                <span class="has-disable-reason" data-bind="attr: { title: spinners.countMatchingDocuments() ? 'Calculating matching documents before patching' : 'Execute patch' }">
+                                    <button class="btn btn-primary btn-block btn-lg text-center"
+                                            data-bind="click: runPatch, css: { 'btn-spinner': spinners.countMatchingDocuments }, disable: spinners.countMatchingDocuments">
+                                        <i class="icon-play2 icon-lg"></i><br />
+                                        <small class="kbd"><kbd>ctrl</kbd> <strong>+</strong> <kbd>enter</kbd></small>
+                                    </button>
+                                </span>
+                                <button class="btn btn-default btn-block text-center margin-top-sm" data-bind="click: test.enterTestMode" title="Dry patch run. No data is modified.">
                                     <i class="icon-rocket"></i><span>Test</span>
                                 </button>
                             </div>
