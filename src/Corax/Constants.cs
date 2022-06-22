@@ -80,6 +80,11 @@ namespace Corax
             }
         }
 
+        public static class Analyzers
+        {
+            public const int DefaultBufferForAnalyzers = 4 * Size.Kilobyte; //is this enough?
+        }
+        
         public static class Suggestions
         {
             public const int DefaultNGramSize = 4;
@@ -94,5 +99,12 @@ namespace Corax
             }
         }
         
+        internal static class Size
+        {
+            public const int Kilobyte = 1024;
+            public const int Megabyte = 1024 * Kilobyte;
+            public const int Gigabyte = 1024 * Megabyte;
+            public const long Terabyte = 1024 * (long)Gigabyte;
+        }
     }
 }

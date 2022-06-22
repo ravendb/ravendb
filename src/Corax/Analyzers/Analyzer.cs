@@ -12,12 +12,11 @@ namespace Corax
     public unsafe class Analyzer : IDisposable
     {
         public static Analyzer DefaultAnalyzer = Create(default(KeywordTokenizer), default(ExactTransformer));
-        public const int MaximumSingleTokenLength = Voron.Global.Constants.CompactTree.MaximumKeySize;
         public static readonly ArrayPool<byte> BufferPool = ArrayPool<byte>.Create();
         public static readonly ArrayPool<Token> TokensPool = ArrayPool<Token>.Create();
-        public readonly int MaximumOutputSize;
-        public readonly int MaximumTokenSize;
-        
+        public readonly int DefaultOutputSize;
+        public readonly int DefaultTokenSize;
+        public int MaxCurrentLengthForSingleTerm;
         
         private readonly delegate*<Analyzer, ReadOnlySpan<byte>, ref Span<byte>, ref Span<Token>, void> _funcUtf8;
         private readonly delegate*<Analyzer, ReadOnlySpan<char>, ref Span<char>, ref Span<Token>, void> _funcUtf16;
@@ -66,7 +65,8 @@ namespace Corax
             _sourceBufferMultiplier = sourceBufferMultiplier;
             _tokenBufferMultiplier = tokenBufferMultiplier;
             
-            GetOutputBuffersSize(MaximumSingleTokenLength, out MaximumOutputSize, out MaximumTokenSize);
+            GetOutputBuffersSize(Constants.Analyzers.DefaultBufferForAnalyzers, out DefaultOutputSize, out DefaultTokenSize);
+            MaxCurrentLengthForSingleTerm = Constants.Analyzers.DefaultBufferForAnalyzers;
         }
 
         public void GetOutputBuffersSize(int inputSize, out int outputSize, out int tokenSize )
@@ -476,7 +476,7 @@ namespace Corax
         {
             Debug.Assert(output.Length >= (int)(_sourceBufferMultiplier * source.Length));
             Debug.Assert(tokens.Length >= (int)(_tokenBufferMultiplier * source.Length));
-
+            
             _funcUtf8(this, source, ref output, ref tokens);
         }
 

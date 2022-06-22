@@ -45,8 +45,8 @@ namespace Corax
         public readonly Transaction Transaction;
         private readonly TransactionPersistentContext _transactionPersistentContext;
 
-        private readonly Token[] _tokensBufferHandler;
-        private readonly byte[] _encodingBufferHandler;
+        private Token[] _tokensBufferHandler;
+        private byte[] _encodingBufferHandler;
 
         // CPU bound - embarassingly parallel
         // 
@@ -74,8 +74,8 @@ namespace Corax
         {
             _fieldsMapping = fieldsMapping;
             fieldsMapping.UpdateMaximumOutputAndTokenSize();
-            _encodingBufferHandler = ArrayPool<byte>.Shared.Rent(fieldsMapping.MaximumOutputSize);
-            _tokensBufferHandler = ArrayPool<Token>.Shared.Rent(fieldsMapping.MaximumTokenSize);
+            _encodingBufferHandler = Analyzer.BufferPool.Rent(fieldsMapping.MaximumOutputSize);
+            _tokensBufferHandler = Analyzer.TokensPool.Rent(fieldsMapping.MaximumTokenSize);
 
 
             var bufferSize = fieldsMapping!.Count;
@@ -292,6 +292,7 @@ namespace Corax
                 default:
                     if (entryReader.Read(fieldId, out var value) == false)
                         break;
+                    
                     Insert(value);
                     break;
             }
@@ -306,11 +307,16 @@ namespace Corax
 
             void AnalyzeInsert(Span<byte> wordsBuffer, Span<Token> tokens, ReadOnlySpan<byte> value)
             {
-                if (wordsBuffer.Length < value.Length)
+                ref var analyzer = ref binding.Analyzer;
+                if (value.Length > analyzer.MaxCurrentLengthForSingleTerm)
                 {
-                    throw new Exception($"Passed value with length: {value.Length}. Contains {Encodings.Utf8.GetString(value)} but buffer is only {wordsBuffer.Length}");
+                    analyzer.GetOutputBuffersSize(value.Length, out var outputSize, out var tokenSize);
+                    if (wordsBuffer.Length < outputSize || tokens.Length < tokenSize)
+                        UnlikelyGrowBuffer(out wordsBuffer, out tokens, outputSize, tokenSize);
+                    analyzer.MaxCurrentLengthForSingleTerm = value.Length;
                 }
-                binding.Analyzer.Execute(value, ref wordsBuffer, ref tokens);
+
+                analyzer.Execute(value, ref wordsBuffer, ref tokens);
                 for (int i = 0; i < tokens.Length; i++)
                 {
                     ref var token = ref tokens[i];
@@ -351,20 +357,8 @@ namespace Corax
             var llt = Transaction.LowLevelTransaction;
 
             List<long> ids = null;
-            int maxWordsSpaceLength = 0;
-            int maxTokensSpaceLength = 0;
-            foreach (var binding in _fieldsMapping)
-            {
-                if (binding.IsAnalyzed == false)
-                    continue;
-
-                binding.Analyzer.GetOutputBuffersSize(Analyzer.MaximumSingleTokenLength, out var tempOutputSize, out var tempTokenSize);
-                maxWordsSpaceLength = Math.Max(maxWordsSpaceLength, tempOutputSize);
-                maxTokensSpaceLength = Math.Max(maxTokensSpaceLength, tempTokenSize);
-            }
-
-            Span<byte> tempWordsSpace = stackalloc byte[maxWordsSpaceLength];
-            Span<Token> tempTokenSpace = stackalloc Token[maxTokensSpaceLength];
+            Span<byte> tempWordsSpace = _encodingBufferHandler;
+            Span<Token> tempTokenSpace = _tokensBufferHandler;
 
             foreach (var id in _entriesToDelete)
             {
@@ -409,8 +403,7 @@ namespace Corax
                 ids?.Clear();
                 Container.Delete(llt, _entriesContainerId, id);
                 llt.RootObjects.Increment(Constants.IndexWriter.NumberOfEntriesSlice, -1);
-                var numberOfEntries = llt.RootObjects.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0;
-                Debug.Assert(numberOfEntries >= 0);
+                Debug.Assert((llt.RootObjects.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? -1) >= 0);
 
                 void DeleteToken(ReadOnlySpan<byte> termValue, Span<byte> tmpBuf, IndexFieldBinding binding, Span<byte> wordSpace, Span<Token> tokenSpace)
                 {
@@ -424,6 +417,13 @@ namespace Corax
                     }
 
                     var analyzer = binding.Analyzer;
+                    if (termValue.Length > analyzer.MaxCurrentLengthForSingleTerm)
+                    {
+                        analyzer.GetOutputBuffersSize(termValue.Length, out int outputSize, out int tokenSize);
+                        if (outputSize > wordSpace.Length)
+                            UnlikelyGrowBuffer(out wordSpace, out tokenSpace, outputSize, tokenSize);
+                    }
+                    
                     analyzer.Execute(termValue, ref wordSpace, ref tokenSpace);
 
                     for (int i = 0; i < tokenSpace.Length; i++)
@@ -511,6 +511,19 @@ namespace Corax
             return true;
         }
 
+        private void UnlikelyGrowBuffer(out Span<byte> buffer, out Span<Token> tokens, int newBufferSize, int newTokenSize)
+        {
+            Debug.Assert(buffer.Length <= newBufferSize);
+            Analyzer.BufferPool.Return(_encodingBufferHandler);
+            Analyzer.TokensPool.Return(_tokensBufferHandler);
+
+            _encodingBufferHandler = Analyzer.BufferPool.Rent(newBufferSize);
+            _tokensBufferHandler = Analyzer.TokensPool.Rent(newTokenSize);
+
+            buffer = _encodingBufferHandler.AsSpan();
+            tokens = _tokensBufferHandler.AsSpan();
+        }
+        
         public void Commit()
         {
             using var _ = Transaction.Allocator.Allocate(Container.MaxSizeInsideContainerPage, out Span<byte> tmpBuf);
@@ -672,9 +685,9 @@ namespace Corax
                 Transaction?.Dispose();
 
             if (_encodingBufferHandler != null)
-                ArrayPool<byte>.Shared.Return(_encodingBufferHandler);
+                Analyzer.BufferPool.Return(_encodingBufferHandler);
             if (_tokensBufferHandler != null)
-                ArrayPool<Token>.Shared.Return(_tokensBufferHandler);
+                Analyzer.TokensPool.Return(_tokensBufferHandler);
         }
     }
 }

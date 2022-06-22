@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -110,16 +111,14 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         if (term == Constants.NullValue)
             return Constants.NullValueSlice;
 
-        var encoded = Encoding.UTF8.GetBytes(term);
-        Slice termSlice;
+        Slice.From(Allocator, term, ByteStringType.Immutable, out var rawTerm);
         if (fieldId == Constants.IndexSearcher.NonAnalyzer)
         {
-            Slice.From(Allocator, encoded, out termSlice);
-            return termSlice;
+            return rawTerm;
         }
 
-        Slice.From(Allocator, ApplyAnalyzer(encoded, fieldId), out termSlice);
-        return termSlice;
+        Slice.From(Allocator, ApplyAnalyzer(rawTerm, fieldId), out var encodedTerm);
+        return encodedTerm;
     }
 
     //todo maciej: notice this is very inefficient. We need to improve it in future. 
@@ -139,15 +138,17 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         
         Debug.Assert(outputSize < 1024 * 1024, "Term size is too big for analyzer.");
         Debug.Assert(Unsafe.SizeOf<Token>() * tokenSize < 1024 * 1024, "Analyzer wants to create too much tokens.");
-        
-        Span<byte> encoded = new byte[outputSize];
-        Token* tokensPtr = stackalloc Token[tokenSize];
-        var tokens = new Span<Token>(tokensPtr, tokenSize);
-        
-        analyzer.Execute(originalTerm, ref encoded, ref tokens);
-        Debug.Assert(tokens.Length == 1, $"{nameof(ApplyAnalyzer)} should create only 1 token as a result.");
 
-        return encoded;
+        var buffer = ArrayPool<byte>.Shared.Rent(outputSize); // We can release it only on dispose. todo maciej: write stack of arrays to return.
+        var tokens = Analyzer.TokensPool.Rent(tokenSize);
+
+        Span<byte> bufferSpan = buffer.AsSpan();
+        Span<Token> tokensSpan = tokens.AsSpan();
+        analyzer.Execute(originalTerm, ref bufferSpan, ref tokensSpan);
+        Debug.Assert(tokens.Length == 1, $"{nameof(ApplyAnalyzer)} should create only 1 token as a result.");
+        
+        Analyzer.TokensPool.Return(tokens);
+        return bufferSpan;
     }
 
     public AllEntriesMatch AllEntries()
