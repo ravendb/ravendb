@@ -128,7 +128,7 @@ public static class SettingsZipFileHelper
                 
                 string certPath = parameters.OnGetCertificatePath?.Invoke(certificateFileName);
 
-                if (parameters.SetupInfo.ZipOnly == false)
+                if (parameters.SetupInfo.ZipOnly == false && certPath != null)
                 {
                     await using (var certFile = SafeFileStream.Create(certPath, FileMode.Create))
                     {
