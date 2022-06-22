@@ -76,8 +76,8 @@ public class IndexFieldsMapping : IEnumerable<IndexFieldBinding>
             if (analyzer.Analyzer == null)
                 continue;
             
-            _maximumOutputSize = Math.Max(_maximumOutputSize, analyzer.Analyzer.MaximumOutputSize);
-            _maximumTokenSize = Math.Max(_maximumTokenSize, analyzer.Analyzer.MaximumTokenSize);
+            _maximumOutputSize = Math.Max(_maximumOutputSize, analyzer.Analyzer.DefaultOutputSize);
+            _maximumTokenSize = Math.Max(_maximumTokenSize, analyzer.Analyzer.DefaultTokenSize);
         }
     }
         

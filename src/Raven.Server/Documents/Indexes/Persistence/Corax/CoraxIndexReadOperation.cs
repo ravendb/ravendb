@@ -494,9 +494,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             var ids = QueryPool.Rent(CoraxGetPageSize(_indexSearcher, take, query, isBinary));
 
             HashSet<string> itemList = new(32);
-            var bufferSizes = GetMaximumSizeOfBuffer();
-            var tokensBuffer = ArrayPool<Token>.Shared.Rent(bufferSizes.TokenSize);
-            var encodedBuffer = ArrayPool<byte>.Shared.Rent(bufferSizes.OutputSize);
+            var encodedBuffer = Analyzer.BufferPool.Rent(_fieldMappings.MaximumOutputSize);
+            var tokensBuffer = Analyzer.TokensPool.Rent(_fieldMappings.MaximumTokenSize);
 
             int docsToLoad = pageSize;
 
@@ -518,8 +517,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             }
 
             QueryPool.Return(ids);
-            ArrayPool<byte>.Shared.Return(encodedBuffer);
-            ArrayPool<Token>.Shared.Return(tokensBuffer);
+            Analyzer.BufferPool.Return(encodedBuffer);
+            Analyzer.TokensPool.Return(tokensBuffer);
 
             DynamicJsonValue GetRawDocument(in IndexEntryReader reader)
             {
@@ -593,6 +592,21 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 var tokens = tokensBuffer.AsSpan();
                 var encoded = encodedBuffer.AsSpan();
                 itemList?.Clear();
+                if (binding.Analyzer.MaxCurrentLengthForSingleTerm < value.Length)
+                {
+                    binding.Analyzer.GetOutputBuffersSize(value.Length, out var outputSize, out var tokenSize);
+                    if (outputSize > encodedBuffer.Length)
+                    {
+                        Analyzer.BufferPool.Return(encodedBuffer);
+                        Analyzer.TokensPool.Return(tokensBuffer);
+                        
+                        encodedBuffer = Analyzer.BufferPool.Rent(_fieldMappings.MaximumOutputSize);
+                        tokensBuffer = Analyzer.TokensPool.Rent(_fieldMappings.MaximumTokenSize);
+                    }
+
+                    binding.Analyzer.MaxCurrentLengthForSingleTerm = value.Length;
+                }
+                
                 binding.Analyzer.Execute(value, ref encoded, ref tokens);
                 for (var index = 0; index < tokens.Length; ++index)
                 {
@@ -607,26 +621,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     _ => string.Empty
                 };
             }
-
-            (int OutputSize, int TokenSize) GetMaximumSizeOfBuffer()
-            {
-                int outputSize = 512;
-                int tokenSize = 512;
-                foreach (var binding in _fieldMappings)
-                {
-                    token.ThrowIfCancellationRequested();
-                    if (binding.Analyzer is null)
-                        continue;
-
-                    binding.Analyzer.GetOutputBuffersSize(512, out int tempOutputSize, out int tempTokenSize);
-                    tokenSize = Math.Max(tempTokenSize, tokenSize);
-                    outputSize = Math.Max(tempOutputSize, outputSize);
-                }
-
-                return (outputSize, tokenSize);
-            }
-
-
+            
             int Skip()
             {
                 while (true)
