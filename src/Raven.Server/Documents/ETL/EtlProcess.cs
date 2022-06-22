@@ -333,12 +333,6 @@ namespace Raven.Server.Documents.ETL
 
                     CancellationToken.ThrowIfCancellationRequested();
 
-                    if (CanContinueBatch(stats, item, batchSize, context) == false)
-                    {
-                        batchStopped = true;
-                        break;
-                    }
-
                     if (AlreadyLoadedByDifferentNode(item, state))
                     {
                         stats.RecordChangeVector(item.ChangeVector);
@@ -372,6 +366,11 @@ namespace Raven.Server.Documents.ETL
 
                             batchSize++;
 
+                            if (CanContinueBatch(stats, item, batchSize, context) == false)
+                            {
+                                batchStopped = true;
+                                break;
+                            }
                         }
                         catch (JavaScriptParseException e)
                         {
