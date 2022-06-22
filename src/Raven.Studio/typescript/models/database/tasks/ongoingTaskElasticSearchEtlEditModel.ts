@@ -12,6 +12,14 @@ class ongoingTaskElasticSearchEtlEditModel extends ongoingTaskEditModel {
     validationGroup: KnockoutValidationGroup;
     enterTestModeValidationGroup: KnockoutValidationGroup;
     dirtyFlag: () => DirtyFlag;
+
+    get studioTaskType(): StudioTaskType {
+        return "ElasticSearchEtl";
+    }
+
+    get destinationType(): TaskDestinationType {
+        return "Index";
+    }
     
     constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtlDetails) {
         super();

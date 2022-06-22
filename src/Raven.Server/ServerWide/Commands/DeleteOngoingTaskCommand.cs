@@ -130,6 +130,13 @@ namespace Raven.Server.ServerWide.Commands
                         record.ElasticSearchEtls.Remove(elasticSearchEtl);
                     }
                     break;
+                case OngoingTaskType.QueueEtl:
+                    var queueEtl = record.QueueEtls.Find(x => x.TaskId == TaskId);
+                    if (queueEtl != null)
+                    {
+                        record.QueueEtls.Remove(queueEtl);
+                    }
+                    break;
             }
         }
 

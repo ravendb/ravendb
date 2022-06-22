@@ -12,6 +12,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
+using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Json.Serialization;
@@ -300,12 +301,20 @@ namespace Raven.Server.Dashboard
 
             var elasticSearchEtlCount = database.EtlLoader.ElasticSearchDestinations.Count;
             long elasticSearchEtlCountOnNode = GetTaskCountOnNode<ElasticSearchEtlConfiguration>(database, dbRecord, serverStore, database.EtlLoader.ElasticSearchDestinations,
-                task => EtlLoader.GetProcessState(task.Transforms, database,task.Name));
+                task => EtlLoader.GetProcessState(task.Transforms, database, task.Name));
 
             var olapEtlCount = database.EtlLoader.OlapDestinations.Count;
             long olapEtlCountOnNode = GetTaskCountOnNode<OlapEtlConfiguration>(database, dbRecord, serverStore, database.EtlLoader.OlapDestinations,
                 task => EtlLoader.GetProcessState(task.Transforms, database, task.Name));
 
+            var kafkaEtlCount = database.EtlLoader.GetQueueDestinationCountByBroker(QueueBrokerType.Kafka);
+            long kafkaEtlCountOnNode = GetTaskCountOnNode<QueueEtlConfiguration>(database, dbRecord, serverStore, database.EtlLoader.QueueDestinations,
+                task => EtlLoader.GetProcessState(task.Transforms, database, task.Name), task => task.BrokerType == QueueBrokerType.Kafka);
+            
+            var rabbitMqEtlCount = database.EtlLoader.GetQueueDestinationCountByBroker(QueueBrokerType.RabbitMq);
+            long rabbitMqEtlCountOnNode = GetTaskCountOnNode<QueueEtlConfiguration>(database, dbRecord, serverStore, database.EtlLoader.QueueDestinations,
+                task => EtlLoader.GetProcessState(task.Transforms, database, task.Name), task => task.BrokerType == QueueBrokerType.RabbitMq);
+            
             var periodicBackupCount = database.PeriodicBackupRunner.PeriodicBackups.Count;
             long periodicBackupCountOnNode = GetTaskCountOnNode<PeriodicBackupConfiguration>(database, dbRecord, serverStore,
                 database.PeriodicBackupRunner.PeriodicBackups.Select(x => x.Configuration),
@@ -316,8 +325,8 @@ namespace Raven.Server.Dashboard
             long subscriptionCountOnNode = GetSubscriptionCountOnNode(database, dbRecord, serverStore, context);
 
             ongoingTasksCount = extRepCount + replicationHubCount + replicationSinkCount +
-                                ravenEtlCount + sqlEtlCount + elasticSearchEtlCount + olapEtlCount + periodicBackupCount + subscriptionCount;
-
+                                ravenEtlCount + sqlEtlCount + elasticSearchEtlCount + olapEtlCount + kafkaEtlCount + rabbitMqEtlCount +
+                                periodicBackupCount + subscriptionCount;
             return new DatabaseOngoingTasksInfoItem()
             {
                 Database = database.Name,
@@ -328,6 +337,8 @@ namespace Raven.Server.Dashboard
                 SqlEtlCount = sqlEtlCountOnNode,
                 ElasticSearchEtlCount = elasticSearchEtlCountOnNode,
                 OlapEtlCount = olapEtlCountOnNode,
+                KafkaEtlCount = kafkaEtlCountOnNode,
+                RabbitMqEtlCount = rabbitMqEtlCountOnNode,
                 PeriodicBackupCount = periodicBackupCountOnNode,
                 SubscriptionCount = subscriptionCountOnNode
             };

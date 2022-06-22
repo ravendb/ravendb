@@ -147,7 +147,7 @@ class sqlTaskTestMode {
                 Connection: this.connectionProvider()
             } as Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters.TestSqlEtlScript;
 
-            eventsCollector.default.reportEvent("sql-etl", "test-replication");
+            eventsCollector.default.reportEvent("sql-etl", "test-script");
             
             new testSqlReplicationCommand(this.db, dto)
                 .execute()
@@ -218,7 +218,7 @@ class editSqlEtlTask extends shardViewModelBase {
     constructor(db: database) {
         super(db);
         this.bindToCurrentInstance("useConnectionString",
-                                   "testConnection",
+                                   "onTestConnectionSql",
                                    "removeTransformationScript",
                                    "cancelEditedTransformation",
                                    "cancelEditedSqlTable",
@@ -334,6 +334,11 @@ class editSqlEtlTask extends shardViewModelBase {
             this.newConnectionString().connectionStringName(connectionStringName);
             this.editedSqlEtl().connectionStringName(null);
         }
+
+        // Discard test connection result when needed
+        this.createNewConnectionString.subscribe(() => this.testConnectionResult(null));
+        this.newConnectionString().factoryName.subscribe(() => this.testConnectionResult(null));
+        this.newConnectionString().connectionString.subscribe(() => this.testConnectionResult(null));
         
         this.connectionStringDefined = ko.pureComputed(() => {
             const editedEtl = this.editedSqlEtl();
@@ -443,7 +448,7 @@ class editSqlEtlTask extends shardViewModelBase {
         this.editedSqlEtl().connectionStringName(connectionStringToUse);
     }
 
-    testConnection() {
+    onTestConnectionSql() {
         eventsCollector.default.reportEvent("SQL-ETL-connection-string", "test-connection");
         this.spinners.test(true);
         this.testConnectionResult(null);
@@ -557,7 +562,7 @@ class editSqlEtlTask extends shardViewModelBase {
     }
 
     syntaxHelp() {
-        const viewmodel = new transformationScriptSyntax("Sql");
+        const viewmodel = new transformationScriptSyntax("Sql", this.editedSqlEtl().destinationType);
         app.showBootstrapDialog(viewmodel);
     }
    

@@ -31,6 +31,10 @@ namespace Raven.Server.Dashboard
         public long ElasticSearchEtlCount { get; set; }
         
         public long OlapEtlCount { get; set; }
+        
+        public long KafkaEtlCount { get; set; }
+        
+        public long RabbitMqEtlCount { get; set; }
 
         public long PeriodicBackupCount { get; set; }
 
@@ -48,6 +52,8 @@ namespace Raven.Server.Dashboard
                 [nameof(SqlEtlCount)] = SqlEtlCount,
                 [nameof(ElasticSearchEtlCount)] = ElasticSearchEtlCount,
                 [nameof(OlapEtlCount)] = OlapEtlCount,
+                [nameof(KafkaEtlCount)] = KafkaEtlCount,
+                [nameof(RabbitMqEtlCount)] = RabbitMqEtlCount,
                 [nameof(PeriodicBackupCount)] = PeriodicBackupCount,
                 [nameof(SubscriptionCount)] = SubscriptionCount
             };

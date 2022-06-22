@@ -61,6 +61,7 @@ namespace Raven.Server.Documents.ETL
                             });
 
                             result.EtlType = process.EtlType;
+                            result.EtlSubType = process.EtlSubType;
                             result.TaskId = process.TaskId;
                         }
 
@@ -134,6 +135,7 @@ namespace Raven.Server.Documents.ETL
                 List<EtlProcessPerformanceStats> processesStats = null;
 
                 var type = EtlType.Raven;
+                var subType = string.Empty;
                 long taskId = -1;
 
                 foreach (var etlItem in taskProcesses.Value)
@@ -167,6 +169,7 @@ namespace Raven.Server.Documents.ETL
                         });
 
                         type = etl.EtlType;
+                        subType = etl.EtlSubType;
                         taskId = etl.TaskId;
                     }
                 }
@@ -178,6 +181,7 @@ namespace Raven.Server.Documents.ETL
                         TaskName = taskProcesses.Key,
                         TaskId = taskId,
                         EtlType = type,
+                        EtlSubType = subType,
                         Stats = processesStats.ToArray()
                     });
                 }

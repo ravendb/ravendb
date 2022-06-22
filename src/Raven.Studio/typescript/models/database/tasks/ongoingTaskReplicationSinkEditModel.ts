@@ -17,6 +17,10 @@ class ongoingTaskReplicationSinkEditModel extends ongoingTaskEditModel {
     
     validationGroup: KnockoutValidationGroup;
 
+    get studioTaskType(): StudioTaskType {
+        return "PullReplicationAsSink";
+    }
+    
     constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsSink, 
                 private serverCertificate: replicationCertificateModel) {
         super();

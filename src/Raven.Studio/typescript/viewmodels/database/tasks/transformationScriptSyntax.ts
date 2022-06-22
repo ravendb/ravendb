@@ -1,17 +1,22 @@
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import copyToClipboard = require("common/copyToClipboard");
 import { highlight, languages } from "prismjs";
+import genUtils from "common/generalUtils";
 
 class transformationScriptSyntax extends dialogViewModelBase {
 
     view = require("views/database/tasks/transformationScriptSyntax.html");
     
-    etlType = ko.observable<Raven.Client.Documents.Operations.ETL.EtlType>();
+    etlType = ko.observable<StudioEtlType>();
+    destinationType = ko.observable<TaskDestinationType>();
+    
     dialogContainer: Element;
 
-    constructor(etlType: Raven.Client.Documents.Operations.ETL.EtlType) {
+    constructor(etlType: StudioEtlType, destination: TaskDestinationType) {
         super();
+        
         this.etlType(etlType);
+        this.destinationType(destination);
     }
     
     compositionComplete() {
@@ -22,8 +27,9 @@ class transformationScriptSyntax extends dialogViewModelBase {
 
     copySample(sampleTitle?: string) {
         let sampleText;
+        const type = this.etlType();
         
-        switch (this.etlType()) {
+        switch (type) {
             case "Raven":
                 sampleText = transformationScriptSyntax.ravenEtlSamples.find(x => x.title === sampleTitle).text;
                 break;
@@ -49,6 +55,14 @@ class transformationScriptSyntax extends dialogViewModelBase {
                         break;
                 }
                 break;
+            case "Kafka":
+                sampleText = transformationScriptSyntax.kafkaEtlSampleText;
+                break;
+            case "RabbitMQ":
+                sampleText = transformationScriptSyntax.rabbitMqEtlSampleText;
+                break;
+            default:
+                genUtils.assertUnreachable(type, "Unknown studioEtlType: " + type);
         }
         
         copyToClipboard.copy(sampleText, "Sample has been copied to clipboard", this.dialogContainer);
@@ -134,8 +148,8 @@ loadToOrders(orderData);`;
 
     sqlEtlSampleHtml = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.sqlEtlSampleText);
 
-    static readonly elasticSearchEtlSampleText = // todo...
-        `var orderData = {
+    static readonly elasticSearchEtlSampleText =
+`var orderData = {
     Id: id(this), // property with RavenDB document ID
     OrderLinesCount: this.Lines.length,
     TotalCost: 0
@@ -144,18 +158,56 @@ loadToOrders(orderData);`;
 for (var i = 0; i < this.Lines.length; i++) {
     var line = this.Lines[i];
     var cost = (line.Quantity * line.PricePerUnit) * ( 1 - line.Discount);
-    orderData.TotalCost += line.Cost * line.Quantity;
+    orderData.TotalCost += cost;
     loadToOrderLines({
         OrderId: id(this), // property with RavenDB document ID
         Qty: line.Quantity,
         Product: line.Product,
-        Cost: line.Cost
+        Cost: line.PricePerUnit
     });
 }
 
 loadToOrders(orderData); // load to Elasticsearch Index 'orders'`;
 
     elasticSearchEtlSampleHtml = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.elasticSearchEtlSampleText);
+
+    static readonly queueEtlBaseSampleText =
+`var orderData = {
+    Id: id(this), // property with RavenDB document ID
+    OrderLinesCount: this.Lines.length,
+    TotalCost: 0
+};
+
+for (var i = 0; i < this.Lines.length; i++) {
+    var line = this.Lines[i];
+    var cost = (line.Quantity * line.PricePerUnit) * ( 1 - line.Discount);
+    orderData.TotalCost += cost;
+}`;
+
+    static readonly kafkaEtlSampleText =
+`${transformationScriptSyntax.queueEtlBaseSampleText}
+
+loadToOrders(orderData, {  // load to the 'Orders' Topic with optional params
+    Id: id(this),
+    PartitionKey: id(this),
+    Type: 'com.github.users',
+    Source: '/registrations/direct-signup'
+});`;
+
+    static readonly rabbitMqEtlSampleText =
+`${transformationScriptSyntax.queueEtlBaseSampleText}
+
+loadToOrders(orderData, {  // load to the 'Orders' Queue with optional params
+    Id: id(this),
+    PartitionKey: id(this),
+    Type: 'com.github.users',
+    Source: '/registrations/direct-signup',
+    Exchange: 'users-topic'
+});`;
+    
+    kafkaEtlSampleHtml = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.kafkaEtlSampleText);
+    
+    rabbitMqEtlSampleHtml = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.rabbitMqEtlSampleText);
     
     static readonly olapEtlSamplePartitionText =
 `var orderDate = new Date(this.OrderedAt);

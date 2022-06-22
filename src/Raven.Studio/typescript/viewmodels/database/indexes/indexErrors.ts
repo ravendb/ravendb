@@ -212,7 +212,10 @@ class indexErrors extends shardViewModelBase {
             return value.Errors.map((errorDto: Raven.Client.Documents.Indexes.IndexingError): IndexErrorPerDocument =>
                 ({
                     ...errorDto,
-                    IndexName: value.Name
+                    Timestamp: moment.utc(errorDto.Timestamp).format(),
+                    IndexName: value.Name,
+                    LocalTime: generalUtils.formatUtcDateAsLocal(error.Timestamp),
+                    RelativeTime: generalUtils.formatDurationByDate(moment.utc(error.Timestamp), true)
                 }));
         });
 

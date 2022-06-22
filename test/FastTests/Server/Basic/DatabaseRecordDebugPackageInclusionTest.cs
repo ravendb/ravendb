@@ -32,6 +32,8 @@ namespace FastTests.Server.Basic
                 nameof(DatabaseRecord.Integrations),
                 nameof(DatabaseRecord.ElasticSearchConnectionStrings),
                 nameof(DatabaseRecord.ElasticSearchEtls),
+                nameof(DatabaseRecord.QueueConnectionStrings),
+                nameof(DatabaseRecord.QueueEtls),
             };
             
             foreach (var safe in ServerWideDebugInfoPackageHandler.FieldsThatShouldBeExposedForDebug)

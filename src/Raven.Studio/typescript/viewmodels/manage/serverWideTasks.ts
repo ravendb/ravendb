@@ -133,9 +133,9 @@ class serverWideTasks extends viewModelBase {
     }
 
     confirmRemoveServerWideTask(model: ongoingTaskModel) {
-        const taskType = ongoingTaskModel.mapTaskType(model.taskType());
+        const formattedTaskType = ongoingTaskModel.formatStudioTaskType(model.studioTaskType);
 
-        this.confirmationMessage("Delete Task", "You're deleting " + taskType + ": " + model.taskName(), {
+        this.confirmationMessage("Delete Task", "You're deleting " + formattedTaskType + ": " + model.taskName(), {
             buttons: ["Cancel", "Delete"]
         })
             .done(result => {

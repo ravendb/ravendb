@@ -98,7 +98,8 @@ namespace SlowTests.Issues
                 nameof(DatabaseRecord.RavenEtls),
                 nameof(DatabaseRecord.SqlEtls),
                 nameof(DatabaseRecord.OlapEtls),
-                nameof(DatabaseRecord.ElasticSearchEtls)
+                nameof(DatabaseRecord.ElasticSearchEtls),
+                nameof(DatabaseRecord.QueueEtls)
             };
 
             var dbRecordType = typeof(DatabaseRecord);

@@ -140,6 +140,8 @@ class ravenTaskTestMode {
                 Configuration: this.configurationProvider()
             };
 
+            eventsCollector.default.reportEvent("ravendb-etl", "test-script");
+
             new testRavenEtlCommand(this.db, dto)
                 .execute()
                 .done(simulationResult => {
@@ -518,7 +520,7 @@ class editRavenEtlTask extends shardViewModelBase {
     }
 
     syntaxHelp() {
-        const viewmodel = new transformationScriptSyntax("Raven");
+        const viewmodel = new transformationScriptSyntax("Raven",this.editedRavenEtl().destinationType);
         app.showBootstrapDialog(viewmodel);
     }
 

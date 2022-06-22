@@ -5,6 +5,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
+using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
@@ -82,6 +83,7 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
         public Dictionary<string, SqlConnectionString> SqlConnectionStrings { get; set; }
         public Dictionary<string, OlapConnectionString> OlapConnectionStrings { get; set; }
         public Dictionary<string, ElasticSearchConnectionString> ElasticSearchConnectionStrings { get; set; }
+        public Dictionary<string, QueueConnectionString> QueueConnectionStrings { get; set; }
 
         public DynamicJsonValue ToJson()
         {
@@ -89,6 +91,7 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
             var sqlConnections = new DynamicJsonValue();
             var elasticSearchConnections = new DynamicJsonValue();
             var olapConnections = new DynamicJsonValue();
+            var queueConnections = new DynamicJsonValue();
 
             foreach (var kvp in RavenConnectionStrings)
             {
@@ -106,13 +109,19 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
             {
                 olapConnections[kvp.Key] = kvp.Value.ToJson();
             }
+            foreach (var kvp in QueueConnectionStrings)
+            {
+                queueConnections[kvp.Key] = kvp.Value.ToJson();
+            }
+
 
             return new DynamicJsonValue
             {
                 [nameof(RavenConnectionStrings)] = ravenConnections,
                 [nameof(SqlConnectionStrings)] = sqlConnections,
                 [nameof(OlapConnectionStrings)] = olapConnections,
-                [nameof(ElasticSearchConnectionStrings)] = elasticSearchConnections
+                [nameof(ElasticSearchConnectionStrings)] = elasticSearchConnections,
+                [nameof(QueueConnectionStrings)] = queueConnections,
             };
         }
     }

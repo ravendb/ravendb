@@ -89,6 +89,12 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
                         case OngoingTaskType.OlapEtl:
                             Result = JsonDeserializationClient.GetOngoingTaskOlapEtlResult(response);
                             break;
+                        case OngoingTaskType.ElasticSearchEtl:
+                            Result = JsonDeserializationClient.GetOngoingTaskElasticSearchEtlResult(response);
+                            break;
+                        case OngoingTaskType.QueueEtl:
+                            Result = JsonDeserializationClient.GetOngoingTaskQueueEtlResult(response);
+                            break;
                         case OngoingTaskType.Backup:
                             Result = JsonDeserializationClient.GetOngoingTaskBackupResult(response);
                             break;

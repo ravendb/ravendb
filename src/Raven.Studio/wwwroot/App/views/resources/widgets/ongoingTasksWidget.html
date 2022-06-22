@@ -13,7 +13,7 @@
         <div data-bind="foreach: taskList">
             <div data-bind="attr: { class: 'task-item ' + typeClass() }">
                 <div class="task-name" data-bind="css: { 'text-muted': !taskCount() }">
-                    <i data-bind="attr: { class: iconClass }"></i><span data-bind="text: getTaskNameForUI()"></span>
+                    <i data-bind="attr: { class: iconClass }"></i><span data-bind="text: getFormattedTaskName()"></span>
                 </div>
                 <div class="task-count" data-bind="text: taskCount, visible: taskCount"></div>
                 <div class="task-count no-count" data-bind="visible: !taskCount()"><i class="icon-cancel text-muted"></i></div>

@@ -85,6 +85,8 @@ interface IndexErrorPerDocument {
     Action: string;
     IndexName: string;
     Timestamp: string;
+    LocalTime: string;
+    RelativeTime: string;
 }
 
 interface revisionTimeSeriesDto {
@@ -387,9 +389,7 @@ interface IOMetricsRecentStatsWithCache extends Raven.Server.Utils.IoMetrics.IOM
 
 type subscriptionType =  "SubscriptionConnection" | "SubscriptionBatch" | "AggregatedBatchesInfo";
 
-type ongoingTaskStatType = Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceType |
-                           Raven.Client.Documents.Operations.ETL.EtlType |
-                           subscriptionType;
+type ongoingTaskStatType = Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceType | StudioEtlType | subscriptionType;
 
 interface ReplicationPerformanceBaseWithCache extends Raven.Client.Documents.Replication.ReplicationPerformanceBase {
     StartedAsDate: Date;
@@ -402,7 +402,7 @@ interface ReplicationPerformanceBaseWithCache extends Raven.Client.Documents.Rep
 interface EtlPerformanceBaseWithCache extends Raven.Server.Documents.ETL.Stats.EtlPerformanceStats {
     StartedAsDate: Date;
     CompletedAsDate: Date;
-    Type: Raven.Client.Documents.Operations.ETL.EtlType;
+    Type: StudioEtlType;
     HasErrors: boolean;
     HasLoadErrors: boolean;
     HasTransformErrors: boolean;
@@ -651,6 +651,11 @@ declare module Raven.Server.Documents.ETL.Providers.ElasticSearch.Test {
     }
 }
 
+declare module Raven.Server.Documents.ETL.Providers.Queue.Test {
+    interface QueueEtlTestScriptResult extends testEtlScriptResult {
+    }
+}
+
 type backupOptions = "None" | "Local" | "Azure" | "AmazonGlacier" | "AmazonS3" | "FTP" | "GoogleCloud";
 
 interface periodicBackupServerLimitsResponse {
@@ -737,11 +742,12 @@ interface scrollColorConfig {
 }
 
 type etlScriptDefinitionCacheItem = {
-    etlType: Raven.Client.Documents.Operations.ETL.EtlType;
+    etlType: StudioEtlType;
     task: JQueryPromise<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtlDetails |
                         Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtlDetails |
                         Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtlDetails |
-                        Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtlDetails>;
+                        Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtlDetails |
+                        Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtlDetails>;
 }
 
 type addressType = "ipv4" | "ipv6" | "hostname" | "invalid";
@@ -835,7 +841,12 @@ interface TimeSeriesOperation extends Raven.Client.Documents.Operations.TimeSeri
     Increments: Raven.Client.Documents.Operations.TimeSeries.TimeSeriesOperation.IncrementOperation[];
 }
 
-type TasksNamesInUI = "External Replication" | "RavenDB ETL" | "SQL ETL" | "OLAP ETL" | "Backup" | "Subscription" | "Replication Hub" | "Replication Sink" | "Elasticsearch ETL";
+type StudioTaskType =  "Replication" | "PullReplicationAsHub" | "PullReplicationAsSink" | "Backup" | "Subscription" |
+                       "RavenEtl" | "SqlEtl" | "OlapEtl" | "ElasticSearchEtl" | "KafkaQueueEtl" | "RabbitQueueEtl";
+    
+type StudioEtlType = "Raven" | "Sql" | "Olap" | "ElasticSearch" | "Kafka" | "RabbitMQ";
+
+type TaskDestinationType = "Collection" | "Table" | "Queue" | "Topic" | "Index";
 
 interface sampleCode {
     title: string;

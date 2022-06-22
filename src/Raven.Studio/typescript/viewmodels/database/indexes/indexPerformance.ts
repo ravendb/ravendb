@@ -290,6 +290,10 @@ class indexPerformance extends shardViewModelBase {
             "SaveOutputDocuments": undefined as string,
             "DeleteOutputDocuments": undefined as string,
             "LoadCompareExchangeValue": undefined as string,
+            "Corax/Delete": undefined as string,
+            "Corax/Commit": undefined as string,
+            "Corax/Convert": undefined as string,
+            "Corax/AddDocument": undefined as string,
             "UnknownOperation": undefined as string
         }
     };

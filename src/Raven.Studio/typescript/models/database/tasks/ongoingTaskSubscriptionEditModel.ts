@@ -20,6 +20,10 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
     
     dirtyFlag: () => DirtyFlag;
 
+    get studioTaskType(): StudioTaskType {
+        return "Subscription";
+    }
+    
     constructor(dto: Raven.Client.Documents.Subscriptions.SubscriptionStateWithNodeDetails) {
         super();
         

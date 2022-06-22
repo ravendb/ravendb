@@ -3,6 +3,7 @@ import database = require("models/resources/database");
 import getOngoingTaskInfoCommand = require("commands/database/tasks/getOngoingTaskInfoCommand");
 import app = require("durandal/app");
 import etlScriptDefinitionPreview = require("viewmodels/database/status/etlScriptDefinitionPreview");
+import genUtils from "common/generalUtils";
 
 class etlScriptDefinitionCache {
     private readonly taskInfoCache = new Map<number, etlScriptDefinitionCacheItem>();
@@ -12,7 +13,7 @@ class etlScriptDefinitionCache {
         this.db = db;
     }
 
-    showDefinitionFor(etlType: Raven.Client.Documents.Operations.ETL.EtlType, taskId: number, transformationName: string) {
+    showDefinitionFor(studioEtlType: StudioEtlType, taskId: number, transformationName: string) {
         let cachedItem = this.taskInfoCache.get(taskId);
 
         if (!cachedItem || cachedItem.task.state() === "rejected") {
@@ -21,8 +22,9 @@ class etlScriptDefinitionCache {
             let command: getOngoingTaskInfoCommand<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtlDetails |
                                                    Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtlDetails |
                                                    Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtlDetails |
-                                                   Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtlDetails>;
-            switch (etlType) {
+                                                   Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtlDetails |
+                                                   Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtlDetails>;
+            switch (studioEtlType) {
                 case "Raven":
                     command = getOngoingTaskInfoCommand.forRavenEtl(this.db, taskId);
                     break;
@@ -35,17 +37,23 @@ class etlScriptDefinitionCache {
                 case "ElasticSearch":
                     command = getOngoingTaskInfoCommand.forElasticSearchEtl(this.db, taskId);
                     break;
+                case "Kafka":
+                case "RabbitMQ":
+                    command = getOngoingTaskInfoCommand.forQueueEtl(this.db, taskId);
+                    break;
+                default: 
+                    genUtils.assertUnreachable(studioEtlType, "Unknown studioEtlType: " + studioEtlType);
             }
 
             cachedItem = {
-                etlType: etlType,
+                etlType: studioEtlType,
                 task: command.execute()
             };
 
             this.taskInfoCache.set(taskId, cachedItem);
         }
 
-        const dialog = new etlScriptDefinitionPreview(cachedItem.etlType, transformationName, cachedItem.task);
+        const dialog = new etlScriptDefinitionPreview(studioEtlType, transformationName, cachedItem.task);
         app.showBootstrapDialog(dialog);
     }
 }

@@ -7,7 +7,8 @@ class etlScriptDefinitionPreview extends dialogViewModelBase {
     
     taskName = ko.observable<string>();
     transformationName = ko.observable<string>();
-    etlType = ko.observable<Raven.Client.Documents.Operations.ETL.EtlType>();
+    
+    etlType = ko.observable<Raven.Client.Documents.Operations.ETL.EtlType | StudioEtlType>();
     
     transformation = ko.observable<Raven.Client.Documents.Operations.ETL.Transformation>();
     
@@ -17,12 +18,13 @@ class etlScriptDefinitionPreview extends dialogViewModelBase {
         loading: ko.observable<boolean>(true)
     };
     
-    constructor(etlType: Raven.Client.Documents.Operations.ETL.EtlType, 
+    constructor(studioEtlType: StudioEtlType,
                 transformationName: string,
                 task: JQueryPromise<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtlDetails |
                                     Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtlDetails |
                                     Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtlDetails |
-                                    Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtlDetails>) {
+                                    Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtlDetails |
+                                    Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtlDetails>) {
         super();
 
         aceEditorBindingHandler.install();
@@ -33,7 +35,7 @@ class etlScriptDefinitionPreview extends dialogViewModelBase {
                 
                 this.taskName(result.TaskName);
                 this.transformationName(matchedTransformation.Name);
-                this.etlType(etlType);
+                this.etlType(studioEtlType);
                 this.transformation(matchedTransformation);
                 
                 if (matchedTransformation.Script) {

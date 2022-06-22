@@ -26,6 +26,7 @@ import popoverUtils = require("common/popoverUtils");
 import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 import testElasticSearchEtlCommand = require("commands/database/tasks/testElasticSearchEtlCommand");
 import ongoingTaskElasticSearchTransformationModel = require("models/database/tasks/ongoingTaskElasticSearchEtlTransformationModel");
+import discoveryUrl = require("models/database/settings/discoveryUrl");
 import { highlight, languages } from "prismjs";
 import shardViewModelBase from "viewmodels/shardViewModelBase";
 
@@ -137,7 +138,7 @@ class elasticSearchTaskTestMode {
                 Configuration: this.configurationProvider()
             };
 
-            eventsCollector.default.reportEvent("elastic-search-etl", "test-replication");
+            eventsCollector.default.reportEvent("elastic-search-etl", "test-script");
 
             new testElasticSearchEtlCommand(this.db, dto)
                 .execute()
@@ -211,6 +212,7 @@ class editElasticSearchEtlTask extends shardViewModelBase {
     constructor(db: database) {
         super(db);
         this.bindToCurrentInstance("useConnectionString",
+            "onTestConnectionElasticSearch",
             "removeTransformationScript",
             "cancelEditedTransformation",
             "cancelEditedElasticSearchIndex",
@@ -408,6 +410,21 @@ class editElasticSearchEtlTask extends shardViewModelBase {
         this.editedElasticSearchEtl().connectionStringName(connectionStringToUse);
     }
 
+    onTestConnectionElasticSearch(urlToTest: discoveryUrl) {
+        eventsCollector.default.reportEvent("elastic-search-connection-string", "test-connection");
+        this.spinners.test(true);
+        this.testConnectionResult(null);
+        this.newConnectionString().selectedUrlToTest(urlToTest.discoveryUrlName());
+
+        this.newConnectionString()
+            .testConnection(this.activeDatabase(), urlToTest)
+            .done(result => this.testConnectionResult(result))
+            .always(() => {
+                this.spinners.test(false);
+                this.fullErrorDetailsVisible(false);
+            });
+    }
+
     saveElasticSearchEtl() {
         let hasAnyErrors = false;
         this.spinners.save(true);
@@ -500,7 +517,7 @@ class editElasticSearchEtlTask extends shardViewModelBase {
     }
 
     syntaxHelp() {
-        const viewmodel = new transformationScriptSyntax("ElasticSearch");
+        const viewmodel = new transformationScriptSyntax("ElasticSearch", this.editedElasticSearchEtl().destinationType);
         app.showBootstrapDialog(viewmodel);
     }
     
@@ -607,7 +624,7 @@ class editElasticSearchEtlTask extends shardViewModelBase {
     }
     
     private makeSureSandboxIsVisible() {
-        const $editArea = $(".edit-raven-sql-task");
+        const $editArea = $(".edit-elastic-search-task");
         if ($editArea.scrollTop() > 300) {
             $editArea.scrollTop(0);
         }

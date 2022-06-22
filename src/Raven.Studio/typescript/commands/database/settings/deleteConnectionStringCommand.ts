@@ -3,13 +3,17 @@ import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
 class deleteConnectionStringCommand extends commandBase {
-
-    constructor(private db: database, private type: Raven.Client.Documents.Operations.ConnectionStrings.ConnectionStringType, private connectionStringName: string) {
+    
+    constructor(private db: database, private type: Raven.Client.Documents.Operations.ETL.EtlType, private connectionStringName: string) {
         super();
     }
 
     execute(): JQueryPromise<void> {
-        const args = { type: this.type, connectionString: this.connectionStringName };
+        const args = {
+            type: this.type,
+            connectionString: this.connectionStringName
+        };
+        
         const url = endpoints.databases.ongoingTasks.adminConnectionStrings + this.urlEncodeArgs(args);
 
         return this.del<void>(url, null, this.db)

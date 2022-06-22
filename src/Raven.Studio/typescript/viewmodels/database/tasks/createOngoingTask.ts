@@ -65,6 +65,20 @@ class createOngoingTask extends dialogViewModelBase {
         this.close();
     }
 
+    newKafkaEtlTask() {
+        eventsCollector.default.reportEvent("KafkaETL", "new");
+        const url = appUrl.forEditKafkaEtl(this.activeDatabase());
+        router.navigate(url);
+        this.close();
+    }
+
+    newRabbitMqEtlTask() {
+        eventsCollector.default.reportEvent("RabbitMqETL", "new");
+        const url = appUrl.forEditRabbitMqEtl(this.activeDatabase());
+        router.navigate(url);
+        this.close();
+    }
+
     newReplicationHubTask() {
         eventsCollector.default.reportEvent("ReplicationHub", "new");
         const url = appUrl.forEditReplicationHub(this.db);

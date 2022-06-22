@@ -5,13 +5,17 @@ import connectionStringRavenEtlModel = require("models/database/settings/connect
 import connectionStringSqlEtlModel = require("models/database/settings/connectionStringSqlEtlModel");
 import connectionStringOlapEtlModel = require("models/database/settings/connectionStringOlapEtlModel");
 import connectionStringElasticSearchEtlModel = require("models/database/settings/connectionStringElasticSearchEtlModel");
+import connectionStringKafkaEtlModel from "models/database/settings/connectionStringKafkaEtlModel";
+import connectionStringRabbitMqEtlModel from "models/database/settings/connectionStringRabbitMqEtlModel";
 
 class saveConnectionStringCommand extends commandBase {
 
-    constructor(private db: database, private connectionString: connectionStringRavenEtlModel |
-                                                                connectionStringSqlEtlModel   |
-                                                                connectionStringOlapEtlModel  |
-                                                                connectionStringElasticSearchEtlModel) {
+    constructor(private db: database, private connectionString: connectionStringRavenEtlModel         |
+                                                                connectionStringSqlEtlModel           |
+                                                                connectionStringOlapEtlModel          |
+                                                                connectionStringElasticSearchEtlModel |
+                                                                connectionStringKafkaEtlModel         |
+                                                                connectionStringRabbitMqEtlModel) {
         super();
     }
  

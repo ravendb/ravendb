@@ -169,6 +169,8 @@ namespace Raven.Server.Commercial
         public bool HasConcurrentDataSubscriptions => GetValue<bool>("concurrentSubscriptions");
 
         public bool HasElasticSearchEtl => GetValue<bool>("elasticSearchEtl");
+        
+        public bool HasQueueEtl => true;
 
         public bool HasPowerBI => GetValue<bool>("powerBI");
 
@@ -219,6 +221,7 @@ namespace Raven.Server.Commercial
                 [nameof(HasTcpDataCompression)] = HasTcpDataCompression,
                 [nameof(HasConcurrentDataSubscriptions)] = HasConcurrentDataSubscriptions,
                 [nameof(HasElasticSearchEtl)] = HasElasticSearchEtl,
+                [nameof(HasQueueEtl)] = HasQueueEtl,
                 [nameof(HasPowerBI)] = HasPowerBI,
                 [nameof(HasPostgreSqlIntegration)] = HasPostgreSqlIntegration
             };

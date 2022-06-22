@@ -9,6 +9,7 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
+using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Server.Config;
@@ -16,6 +17,7 @@ using Raven.Server.Config.Categories;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.ElasticSearch;
 using Raven.Server.Documents.ETL.Providers.OLAP;
+using Raven.Server.Documents.ETL.Providers.Queue;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.NotificationCenter;
@@ -198,6 +200,8 @@ namespace SlowTests.Server.Documents.ETL
                 tag = RavenEtl.RavenEtlTag;
             else if (typeof(T) == typeof(OlapConnectionString))
                 tag = OlapEtl.OlaptEtlTag;
+            else if (typeof(T) == typeof(QueueConnectionString))
+                tag = QueueEtl.QueueEtlTag;
             else
                 throw new NotSupportedException($"Unknown ETL type: {typeof(T)}");
 
@@ -228,6 +232,8 @@ namespace SlowTests.Server.Documents.ETL
                 tag = RavenEtl.RavenEtlTag;
             else if (typeof(T) == typeof(OlapConnectionString))
                 tag = OlapEtl.OlaptEtlTag;
+            else if (typeof(T) == typeof(QueueConnectionString))
+                tag = QueueEtl.QueueEtlTag;
             else
                 throw new NotSupportedException($"Unknown ETL type: {typeof(T)}");
 
