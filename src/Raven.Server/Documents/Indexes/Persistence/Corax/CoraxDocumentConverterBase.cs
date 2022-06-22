@@ -87,7 +87,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         if (index.Type.IsMapReduce())
         {
             Slice.From(allocator, RavenConstants.Documents.Indexing.Fields.AllStoredFields, ByteStringType.Immutable, out var storedKey);
-            knownFields = knownFields.AddBinding(knownFields.Count, storedKey, null, true);
+            knownFields = knownFields.AddBinding(knownFields.Count, storedKey, null, false, FieldIndexingMode.No);
         }
 
         return knownFields;
