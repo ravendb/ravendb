@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Raven.Server.Documents.ETL.Providers.Queue.RabbitMq;
 using Raven.Server.Documents.ETL.Providers.Queue.Test;
 using Raven.Server.ServerWide.Context;
 
@@ -18,7 +19,8 @@ public class QueueWriterSimulator
             var messageSummary = new MessageSummary()
             {
                 Body = message.TransformationResult.ToString(),
-                Attributes = message.Attributes
+                Attributes = message.Attributes,
+                RoutingKey = (message as RabbitMqItem)?.RoutingKey
             };
             
             result.Add(messageSummary);

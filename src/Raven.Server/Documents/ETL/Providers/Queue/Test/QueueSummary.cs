@@ -14,5 +14,7 @@ namespace Raven.Server.Documents.ETL.Providers.Queue.Test
         public string Body { get; set; }
 
         public CloudEventAttributes Attributes { get; set; }
+
+        public string RoutingKey { get; set; }
     }
 }
