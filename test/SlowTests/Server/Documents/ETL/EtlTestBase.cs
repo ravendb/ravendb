@@ -201,7 +201,7 @@ namespace SlowTests.Server.Documents.ETL
             else if (typeof(T) == typeof(OlapConnectionString))
                 tag = OlapEtl.OlaptEtlTag;
             else if (typeof(T) == typeof(QueueConnectionString))
-                tag = QueueEtl.QueueEtlTag;
+                tag = QueueEtl<QueueItem>.QueueEtlTag;
             else
                 throw new NotSupportedException($"Unknown ETL type: {typeof(T)}");
 
@@ -233,7 +233,7 @@ namespace SlowTests.Server.Documents.ETL
             else if (typeof(T) == typeof(OlapConnectionString))
                 tag = OlapEtl.OlaptEtlTag;
             else if (typeof(T) == typeof(QueueConnectionString))
-                tag = QueueEtl.QueueEtlTag;
+                tag = QueueEtl<QueueItem>.QueueEtlTag;
             else
                 throw new NotSupportedException($"Unknown ETL type: {typeof(T)}");
 

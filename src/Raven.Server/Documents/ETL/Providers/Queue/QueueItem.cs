@@ -18,14 +18,8 @@ namespace Raven.Server.Documents.ETL.Providers.Queue
         {
         }
 
-        public QueueItem(Tombstone tombstone, string collection) : base(tombstone, collection, EtlItemType.Document)
-        {
-        }
-
         public BlittableJsonReaderObject TransformationResult { get; set; }
 
-        public QueueLoadOptions Options { get; set; }
-
-        public bool DeleteAfterProcessing { get; set; }
+        public CloudEventAttributes Attributes { get; set; }
     }
 }

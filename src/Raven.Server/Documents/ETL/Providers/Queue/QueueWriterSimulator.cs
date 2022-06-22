@@ -1,6 +1,4 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using Raven.Server.Documents.ETL.Providers.Queue.Test;
 using Raven.Server.ServerWide.Context;
 
@@ -8,18 +6,19 @@ namespace Raven.Server.Documents.ETL.Providers.Queue;
 
 public class QueueWriterSimulator
 {
-    public List<MessageSummary> SimulateExecuteMessages(QueueWithMessages queueMessages, DocumentsOperationContext context)
+    public List<MessageSummary> SimulateExecuteMessages<T>(QueueWithItems<T> queueMessages, DocumentsOperationContext context)
+        where T : QueueItem
     {
         List<MessageSummary> result = new();
-        if (queueMessages.Messages.Count <= 0) return result;
+        if (queueMessages.Items.Count <= 0) return result;
 
         
-        foreach (var message in queueMessages.Messages)
+        foreach (var message in queueMessages.Items)
         {
             var messageSummary = new MessageSummary()
             {
                 Body = message.TransformationResult.ToString(),
-                Options = message.Options
+                Attributes = message.Attributes
             };
             
             result.Add(messageSummary);
