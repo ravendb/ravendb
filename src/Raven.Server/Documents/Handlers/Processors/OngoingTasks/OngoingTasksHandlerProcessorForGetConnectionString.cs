@@ -71,6 +71,15 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                     }
 
                     break;
+                
+                case ConnectionStringType.Queue:
+                    var recordQueueConnectionStrings = rawRecord.QueueConnectionStrings;
+                    if (recordQueueConnectionStrings != null && recordQueueConnectionStrings.TryGetValue(connectionStringName, out var queueConnectionString))
+                    {
+                        recordQueueConnectionStrings.TryAdd(connectionStringName, queueConnectionString);
+                    }
+
+                    break;
 
                 case ConnectionStringType.Queue:
                     var recordQueueConnectionStrings = rawRecord.QueueConnectionStrings;
