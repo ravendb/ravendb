@@ -13,6 +13,6 @@ namespace Raven.Server.Documents.ETL.Providers.Queue.Test
     {
         public string Body { get; set; }
 
-        public QueueLoadOptions Options { get; set; }
+        public CloudEventAttributes Attributes { get; set; }
     }
 }

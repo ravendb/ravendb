@@ -199,6 +199,7 @@ public class KafkaEtlTests : KafkaEtlTestBase
         {
             Name = "test",
             ConnectionStringName = "test",
+            BrokerType = QueueBrokerType.Kafka,
             Transforms = { new Transformation { Name = "test", Collections = { "Orders" }, Script = @"this.TotalCost = 10;" } }
         };
 
@@ -247,7 +248,7 @@ public class KafkaEtlTests : KafkaEtlTestBase
 
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                using (QueueEtl.TestScript(
+                using (QueueEtl<QueueItem>.TestScript(
                            new TestQueueEtlScript
                            {
                                DocumentId = "orders/1-A",
@@ -256,6 +257,7 @@ public class KafkaEtlTests : KafkaEtlTestBase
                                    Name = "simulate",
                                    ConnectionStringName = "simulate",
                                    Queues = { new EtlQueue() { Name = "Orders" } },
+                                   BrokerType = QueueBrokerType.Kafka,
                                    Transforms =
                                    {
                                        new Transformation
@@ -296,7 +298,7 @@ output('test output')"
     }
 
     [RequiresKafkaFact]
-    public void CanPassOptionsToLoadToMethod()
+    public void CanPassAttributesToLoadToMethod()
     {
         using (var store = GetDocumentStore())
         {

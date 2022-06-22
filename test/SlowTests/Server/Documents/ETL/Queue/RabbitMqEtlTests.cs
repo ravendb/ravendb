@@ -49,7 +49,7 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
 
             AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
-            var channel = CreateRabbitMqChannel();
+            using var channel = CreateRabbitMqChannel();
             var consumer = new TestRabbitMqConsumer(channel);
 
             channel.BasicConsume(queue: DefaultExchanges.First().Name,
@@ -69,7 +69,150 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
             Assert.Equal(order.TotalCost, 10);
         }
     }
-    
+
+    [RequiresRabbitMqFact]
+    public void CanUseRoutingKeyWithAutomaticDeclarations()
+    {
+        using var store = GetDocumentStore();
+
+        var config = SetupQueueEtlToRabbitMq(store,
+            @"var userData = { UserId: id(this), Name: this.Name }; loadToUsers" + ExchangeSuffix + @"(userData, this['@metadata']['@collection'])",
+            new[] { "Users", "People" }, skipAutomaticQueueDeclaration: false);
+
+        var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+
+        using (var session = store.OpenSession())
+        {
+            session.Store(new User { Name = "Joe Doe" }, "users/1");
+            session.Store(new Person { Name = "James Smith" }, "people/1");
+            session.SaveChanges();
+        }
+        
+        AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+
+        using var channel = CreateRabbitMqChannel();
+        var consumer = new TestRabbitMqConsumer(channel);
+
+        channel.BasicConsume(queue: $"Users{ExchangeSuffix}", autoAck: true, consumer: consumer);
+
+        var ea = consumer.Consume();
+
+        var body = ea.Body.ToArray();
+        var bytesAsString = Encoding.UTF8.GetString(body);
+
+        var user = JsonConvert.DeserializeObject<UserData>(bytesAsString);
+
+        Assert.NotNull(user);
+        Assert.Equal("users/1", user.UserId);
+        Assert.Equal("Joe Doe", user.Name);
+
+        ea = consumer.Consume();
+
+        body = ea.Body.ToArray();
+        bytesAsString = Encoding.UTF8.GetString(body);
+
+        user = JsonConvert.DeserializeObject<UserData>(bytesAsString);
+
+        Assert.NotNull(user);
+        Assert.Equal("people/1", user.UserId);
+        Assert.Equal("James Smith", user.Name);
+    }
+
+    [RequiresRabbitMqFact]
+    public void CanUseRoutingKeyWithCustomDeclarations()
+    {
+        using var store = GetDocumentStore();
+
+        using var channel = CreateRabbitMqChannel();
+
+        var consumer = new TestRabbitMqConsumer(channel);
+
+        var exchangeName = "Users" + ExchangeSuffix;
+        var queueName = "MyPeople" + ExchangeSuffix;
+
+        consumer.Model.ExchangeDeclare(exchangeName, ExchangeType.Direct, true, true);
+
+        consumer.Model.QueueDeclare(queueName);
+        consumer.Model.QueueBind(queueName, exchangeName, "Users");
+        consumer.Model.QueueBind(queueName, exchangeName, "People");
+
+        var config = SetupQueueEtlToRabbitMq(store,
+            @"var userData = { UserId: id(this), Name: this.Name }; loadToUsers" + ExchangeSuffix + @"(userData, this['@metadata']['@collection'])",
+            new[] { "Users", "People" }, skipAutomaticQueueDeclaration: true);
+
+        var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+
+        using (var session = store.OpenSession())
+        {
+            session.Store(new User { Name = "Joe Doe" }, "users/1");
+            session.Store(new Person { Name = "James Smith" }, "people/1");
+            session.SaveChanges();
+        }
+
+        AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+
+        channel.BasicConsume(queue: queueName, autoAck: true, consumer: consumer);
+
+        var ea = consumer.Consume();
+
+        var body = ea.Body.ToArray();
+        var bytesAsString = Encoding.UTF8.GetString(body);
+
+        var user = JsonConvert.DeserializeObject<UserData>(bytesAsString);
+
+        Assert.NotNull(user);
+        Assert.Equal("users/1", user.UserId);
+        Assert.Equal("Joe Doe", user.Name);
+
+        ea = consumer.Consume();
+
+        body = ea.Body.ToArray();
+        bytesAsString = Encoding.UTF8.GetString(body);
+
+        user = JsonConvert.DeserializeObject<UserData>(bytesAsString);
+
+        Assert.NotNull(user);
+        Assert.Equal("people/1", user.UserId);
+        Assert.Equal("James Smith", user.Name);
+    }
+
+
+    [RequiresRabbitMqFact]
+    public void CanPushDirectlyToTheQueue()
+    {
+        using var store = GetDocumentStore();
+
+        var config = SetupQueueEtlToRabbitMq(store,
+            @$"loadTo('', {{ UserId: id(this), Name: this.Name }}, 'Users{ExchangeSuffix}')",
+            new[] { "Users" }, new List<EtlQueue>() { new EtlQueue() { Name = $"Users{ExchangeSuffix}" } });
+
+        var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+
+        using (var session = store.OpenSession())
+        {
+            session.Store(new User { Name = "Joe Doe" }, "users/1");
+            session.SaveChanges();
+        }
+
+        AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+
+        using var channel = CreateRabbitMqChannel();
+        var consumer = new TestRabbitMqConsumer(channel);
+
+        channel.BasicConsume(queue: $"Users{ExchangeSuffix}", autoAck: true, consumer: consumer);
+
+        var ea = consumer.Consume();
+
+        var body = ea.Body.ToArray();
+        var bytesAsString = Encoding.UTF8.GetString(body);
+
+        var user = JsonConvert.DeserializeObject<UserData>(bytesAsString);
+
+        Assert.NotNull(user);
+        Assert.Equal("users/1", user.UserId);
+        Assert.Equal("Joe Doe", user.Name);
+    }
+
     [RequiresRabbitMqFact]
     public void TestAreHeadersPresent()
     {
@@ -94,7 +237,7 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
 
             AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
-            var channel = CreateRabbitMqChannel();
+            using var channel = CreateRabbitMqChannel();
 
             var consumer = new TestRabbitMqConsumer(channel);
 
@@ -144,7 +287,7 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
 
         AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
         
-        var channel = CreateRabbitMqChannel();
+        using var channel = CreateRabbitMqChannel();
         var consumer = new TestRabbitMqConsumer(channel);
 
         channel.BasicConsume(queue: DefaultExchanges.First().Name, autoAck: true, consumer: consumer);
@@ -184,7 +327,7 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
 
         AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
         
-        var channel = CreateRabbitMqChannel();
+        using var channel = CreateRabbitMqChannel();
         var consumer = new TestRabbitMqConsumer(channel);
 
         channel.BasicConsume(queue: $"Users{ExchangeSuffix}", autoAck: true, consumer: consumer);
@@ -269,7 +412,7 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
 
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                using (QueueEtl.TestScript(
+                using (QueueEtl<QueueItem>.TestScript(
                            new TestQueueEtlScript
                            {
                                DocumentId = "orders/1-A",
@@ -278,6 +421,7 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
                                    Name = "simulate",
                                    ConnectionStringName = "simulate",
                                    Queues = { new EtlQueue() { Name = "Orders" } },
+                                   BrokerType = QueueBrokerType.RabbitMq,
                                    Transforms =
                                    {
                                        new Transformation
@@ -301,8 +445,7 @@ loadToOrders(orderData, {
                                                             Id: id(this),
                                                             PartitionKey: id(this),
                                                             Type: 'com.github.users',
-                                                            Source: '/registrations/direct-signup',
-                                                            Exchange: 'users-topic',
+                                                            Source: '/registrations/direct-signup'
                                                      });
 
 output('test output')"
@@ -324,7 +467,7 @@ output('test output')"
     }
 
     [RequiresRabbitMqFact]
-    public void CanPassOptionsToLoadToMethod()
+    public void CanPassAttributesToLoadToMethod()
     {
         using (var store = GetDocumentStore())
         {
@@ -334,20 +477,19 @@ output('test output')"
                                                             PartitionKey: id(this),
                                                             Type: 'com.github.users',
                                                             Source: '/registrations/direct-signup',
-                                                            Exchange: 'users-topic',
                                                      }})", new[] { "Users" });
 
             var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
             using (var session = store.OpenSession())
             {
-                session.Store(new User { Name = "Arek" });
+                session.Store(new User { Name = "Arek" }, "users/1");
                 session.SaveChanges();
             }
 
             AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
             
-            var channel = CreateRabbitMqChannel();
+            using var channel = CreateRabbitMqChannel();
             var consumer = new TestRabbitMqConsumer(channel);
 
             channel.BasicConsume(queue: $"Users{ExchangeSuffix}", autoAck: true, consumer: consumer);
@@ -361,6 +503,13 @@ output('test output')"
 
             Assert.NotNull(user);
             Assert.Equal(user.Name, "Arek");
+
+            var headers = ea.Properties.Headers;
+
+            Assert.Equal("users/1", Encoding.UTF8.GetString((byte[])headers["cloudEvents:id"]));
+            Assert.Equal("com.github.users", Encoding.UTF8.GetString((byte[])headers["cloudEvents:type"]));
+            Assert.Equal("users/1", Encoding.UTF8.GetString((byte[])headers["cloudEvents:partitionkey"]));
+            Assert.Equal("/registrations/direct-signup", Encoding.UTF8.GetString((byte[])headers["cloudEvents:source"]));
         }
     }
 
@@ -383,7 +532,7 @@ output('test output')"
 
             AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
             
-            var channel = CreateRabbitMqChannel();
+            using var channel = CreateRabbitMqChannel();
             var consumer = new TestRabbitMqConsumer(channel);
 
             channel.BasicConsume(queue: $"Users{ExchangeSuffix}", autoAck: true, consumer: consumer);

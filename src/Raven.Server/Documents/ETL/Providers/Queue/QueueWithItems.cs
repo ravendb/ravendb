@@ -3,11 +3,11 @@ using Raven.Client.Documents.Operations.ETL.Queue;
 
 namespace Raven.Server.Documents.ETL.Providers.Queue;
 
-public class QueueWithMessages : EtlQueue
+public class QueueWithItems<T> : EtlQueue where T: QueueItem
 {
-    public readonly List<QueueItem> Messages = new();
+    public readonly List<T> Items = new();
 
-    public QueueWithMessages(EtlQueue queue)
+    public QueueWithItems(EtlQueue queue)
     {
         Name = queue.Name;
         DeleteProcessedDocuments = queue.DeleteProcessedDocuments;

@@ -39,7 +39,7 @@ public class RabbitMqEtlTestBase : QueueEtlTestBase
         }
     }
 
-    private readonly HashSet<string> _definedTopics = new();
+    private readonly HashSet<string> _definedExchangesAndQueues = new();
 
     protected RabbitMqEtlTestBase(ITestOutputHelper output) : base(output)
     {
@@ -71,7 +71,7 @@ loadToOrders" + ExchangeSuffix + @"(orderData);
     protected QueueEtlConfiguration SetupQueueEtlToRabbitMq(DocumentStore store, string script,
         IEnumerable<string> collections, IEnumerable<EtlQueue> queues = null, bool applyToAllDocuments = false, string configurationName = null,
         string transformationName = null,
-        Dictionary<string, string> configuration = null, string connectionString = null)
+        Dictionary<string, string> configuration = null, string connectionString = null, bool skipAutomaticQueueDeclaration = false)
     {
         var connectionStringName = $"{store.Database}@{store.Urls.First()} to RabbitMq";
 
@@ -91,12 +91,13 @@ loadToOrders" + ExchangeSuffix + @"(orderData);
                 transformation
             },
             Queues = queues?.ToList(),
-            BrokerType = QueueBrokerType.RabbitMq
+            BrokerType = QueueBrokerType.RabbitMq,
+            SkipAutomaticQueueDeclaration = skipAutomaticQueueDeclaration
         };
 
         foreach (var queue in queues?.Select(x => x.Name).ToArray() ?? transformation.GetCollectionsFromScript())
         {
-            _definedTopics.Add(queue);
+            _definedExchangesAndQueues.Add(queue);
         }
 
         AddEtl(store, config,
@@ -118,23 +119,24 @@ loadToOrders" + ExchangeSuffix + @"(orderData);
         return channel;
     }
     
-    private void CleanupQueues()
+    private void CleanupExchangesAndQueues()
     {
-        if (_definedTopics.Count == 0 || RequiresRabbitMqFactAttribute.CanConnect == false)
+        if (_definedExchangesAndQueues.Count == 0 || RequiresRabbitMqFactAttribute.CanConnect == false)
             return;
 
-        var channel = CreateRabbitMqChannel();
+        using var channel = CreateRabbitMqChannel();
         var consumer = new EventingBasicConsumer(channel);
 
-        foreach (string definedTopic in _definedTopics)
+        foreach (string definedExchangeAndQueue in _definedExchangesAndQueues)
         {
-            consumer.Model.QueueDelete(definedTopic);
+            consumer.Model.ExchangeDelete(definedExchangeAndQueue);
+            consumer.Model.QueueDelete(definedExchangeAndQueue);
         }
     }
 
     public override void Dispose()
     {
         base.Dispose();
-        CleanupQueues();
+        CleanupExchangesAndQueues();
     }
 }
