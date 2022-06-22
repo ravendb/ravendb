@@ -5,6 +5,7 @@ import { d3adaptor, ID3StyleLayoutAdaptor, Link, Node, Layout } from "webcola";
 import ongoingTaskBackupListModel = require("models/database/tasks/ongoingTaskBackupListModel");
 import ongoingTaskModel = require("models/database/tasks/ongoingTaskModel");
 import icomoonHelpers from "common/helpers/view/icomoonHelpers";
+import TaskUtils from "../../../components/utils/TaskUtils";
 
 abstract class layoutable {
     x: number;
@@ -81,7 +82,7 @@ class taskNode extends layoutable {
     }
 
     updateWith(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTask, responsibleNode: databaseNode) {
-        this.type = ongoingTaskModel.getStudioTaskTypeFromServerType(dto);
+        this.type = TaskUtils.ongoingTaskToStudioTaskType(dto);
         
         this.uniqueId = databaseGroupGraph.getUniqueTaskId(dto);
         this.taskId = dto.TaskId;

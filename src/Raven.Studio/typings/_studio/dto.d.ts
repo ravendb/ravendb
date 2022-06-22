@@ -742,7 +742,7 @@ interface scrollColorConfig {
 }
 
 type etlScriptDefinitionCacheItem = {
-    etlType: StudioEtlType;
+    etlType: EtlType;
     task: JQueryPromise<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtlDetails |
                         Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtlDetails |
                         Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtlDetails |

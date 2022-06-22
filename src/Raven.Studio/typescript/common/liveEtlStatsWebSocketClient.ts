@@ -5,6 +5,7 @@ import d3 = require("d3");
 import abstractWebSocketClient = require("common/abstractWebSocketClient");
 import endpoints = require("endpoints");
 import ongoingTaskModel from "models/database/tasks/ongoingTaskModel";
+import TaskUtils from "../components/utils/TaskUtils";
 
 class liveEtlStatsWebSocketClient extends abstractWebSocketClient<resultsDto<Raven.Server.Documents.ETL.Stats.EtlTaskPerformanceStats>> {
 
@@ -112,8 +113,7 @@ class liveEtlStatsWebSocketClient extends abstractWebSocketClient<resultsDto<Rav
                 });
                 
                 perTaskStatsFromEndpoint.Performance.forEach(perf => {
-                    liveEtlStatsWebSocketClient.fillCache(perf,
-                        ongoingTaskModel.getStudioEtlTypeFromServerType(etlStatsFromEndpoint.EtlType, etlStatsFromEndpoint.EtlSubType));
+                    liveEtlStatsWebSocketClient.fillCache(perf, TaskUtils.etlTypeToStudioType(etlStatsFromEndpoint.EtlType, etlStatsFromEndpoint.EtlSubType));
 
                     if (this.dateCutOff && this.dateCutOff.getTime() >= (perf as EtlPerformanceBaseWithCache).StartedAsDate.getTime()) {
                         return;

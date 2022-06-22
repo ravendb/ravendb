@@ -20,6 +20,7 @@ import testPeriodicBackupCredentialsCommand = require("commands/serverWide/testP
 import ongoingTaskModel from "models/database/tasks/ongoingTaskModel";
 import popoverUtils = require("common/popoverUtils");
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
+import TaskUtils from "../../../components/utils/TaskUtils";
 
 class connectionStrings extends viewModelBase {
 
@@ -192,21 +193,24 @@ class connectionStrings extends viewModelBase {
     
     private processData(result: Raven.Server.Web.System.OngoingTasksResult) {
         const tasksThatUseConnectionStrings = result.OngoingTasksList.filter((task) =>
-                                                                              task.TaskType === "RavenEtl"         ||
-                                                                              task.TaskType === "SqlEtl"           ||
-                                                                              task.TaskType === "OlapEtl"          ||
-                                                                              task.TaskType === "ElasticSearchEtl" ||
-                                                                              task.TaskType === "QueueEtl"         ||
-                                                                              task.TaskType === "Replication"      ||
-                                                                              task.TaskType === "PullReplicationAsSink");
+            task.TaskType === "RavenEtl" ||
+            task.TaskType === "SqlEtl" ||
+            task.TaskType === "OlapEtl" ||
+            task.TaskType === "ElasticSearchEtl" ||
+            task.TaskType === "QueueEtl" ||
+            task.TaskType === "Replication" ||
+            task.TaskType === "PullReplicationAsSink");
+        
         for (let i = 0; i < tasksThatUseConnectionStrings.length; i++) {
             const task = tasksThatUseConnectionStrings[i];
             
-            const studioTaskType = ongoingTaskModel.getStudioTaskTypeFromServerType(task);
+            const studioTaskType = TaskUtils.ongoingTaskToStudioTaskType(task);
             
-            let taskData = { TaskId: task.TaskId,
-                             TaskName: task.TaskName,
-                             TaskType: studioTaskType };
+            let taskData = {
+                TaskId: task.TaskId,
+                TaskName: task.TaskName,
+                TaskType: studioTaskType
+            };
             
             let stringName: string;
             
@@ -292,31 +296,7 @@ class connectionStrings extends viewModelBase {
     }
 
     confirmDelete(connectionStringName: string, connectionStringType: StudioEtlType) {
-        let stringName: string;
-        switch (connectionStringType) {
-            case "Raven":
-                stringName = "RavenDB"; 
-                break;
-            case "Sql":
-                stringName = "SQL";
-                break;
-            case "Olap":
-                stringName = "OLAP";
-                break;
-            case "ElasticSearch":
-                stringName = "Elasticsearch"
-                break;
-            case "Kafka":
-                stringName = "Kafka";
-                break;
-            case "RabbitMQ":
-                stringName = "RabbitMQ";
-                break;
-            default:
-                console.warn("Invalid connection string type: " + connectionStringType);
-                break;
-        }
-
+        const stringName = TaskUtils.formatStudioEtlType(connectionStringType);
         this.confirmationMessage("Delete connection string?",
             `You're deleting ${stringName} connection string: <br><ul><li><strong>${generalUtils.escapeHtml(connectionStringName)}</strong></li></ul>`, {
                 buttons: ["Cancel", "Delete"],
@@ -330,7 +310,7 @@ class connectionStrings extends viewModelBase {
     }
 
     private deleteConnectionString(connectionStringType: StudioEtlType, connectionStringName: string) {
-        new deleteConnectionStringCommand(this.activeDatabase(), ongoingTaskModel.getServerEtlTypeFromStudioType(connectionStringType), connectionStringName)
+        new deleteConnectionStringCommand(this.activeDatabase(), TaskUtils.studioEtlTypeToEtlType(connectionStringType), connectionStringName)
             .execute()
             .done(() => {
                 this.getAllConnectionStrings();

@@ -1,5 +1,6 @@
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
+import EtlType = Raven.Client.Documents.Operations.ETL.EtlType;
 
 class etlScriptDefinitionPreview extends dialogViewModelBase {
 
@@ -8,7 +9,7 @@ class etlScriptDefinitionPreview extends dialogViewModelBase {
     taskName = ko.observable<string>();
     transformationName = ko.observable<string>();
     
-    etlType = ko.observable<Raven.Client.Documents.Operations.ETL.EtlType | StudioEtlType>();
+    etlType = ko.observable<EtlType>();
     
     transformation = ko.observable<Raven.Client.Documents.Operations.ETL.Transformation>();
     
@@ -18,7 +19,7 @@ class etlScriptDefinitionPreview extends dialogViewModelBase {
         loading: ko.observable<boolean>(true)
     };
     
-    constructor(studioEtlType: StudioEtlType,
+    constructor(etlType: EtlType,
                 transformationName: string,
                 task: JQueryPromise<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtlDetails |
                                     Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtlDetails |
@@ -35,7 +36,7 @@ class etlScriptDefinitionPreview extends dialogViewModelBase {
                 
                 this.taskName(result.TaskName);
                 this.transformationName(matchedTransformation.Name);
-                this.etlType(studioEtlType);
+                this.etlType(etlType);
                 this.transformation(matchedTransformation);
                 
                 if (matchedTransformation.Script) {

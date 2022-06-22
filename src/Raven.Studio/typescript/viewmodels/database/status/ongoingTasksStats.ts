@@ -18,6 +18,8 @@ import fileImporter = require("common/fileImporter");
 import moment = require("moment");
 import shardViewModelBase from "viewmodels/shardViewModelBase";
 import database from "models/resources/database";
+import TaskUtils from "../../../components/utils/TaskUtils";
+import EtlType = Raven.Client.Documents.Operations.ETL.EtlType;
 
 type treeActionType = "toggleTrack" | "trackItem" | "gapItem" | "previewEtlScript" |
                       "subscriptionErrorItem" | "subscriptionPendingItem" | "subscriptionConnectionItem" | "previewSubscriptionQuery";
@@ -61,7 +63,7 @@ type trackItemContext = {
 type previewEtlScriptItemContext = {
     transformationName: string;
     taskId: number;
-    etlType: StudioEtlType;
+    etlType: EtlType;
 }
 
 type previewSubscriptionQueryItemContext = {
@@ -941,7 +943,7 @@ class ongoingTasksStats extends shardViewModelBase {
             
             trackInfos.push({
                 name: etlTask.TaskName,
-                type: ongoingTaskModel.getStudioEtlTypeFromServerType(etlTask.EtlType, etlTask.EtlSubType),
+                type: TaskUtils.etlTypeToStudioType(etlTask.EtlType, etlTask.EtlSubType),
                 openedHeight: openedHeight,
                 closedHeight: closedHeight
             });
@@ -1495,7 +1497,7 @@ class ongoingTasksStats extends shardViewModelBase {
                     
                     this.drawScriptName(context, yStartBase + offset + extraPadding, {
                         transformationName: etlStat.TransformationName,
-                        etlType: ongoingTaskModel.getStudioEtlTypeFromServerType(etlItem.EtlType, etlItem.EtlSubType),
+                        etlType: etlItem.EtlType,
                         taskId: etlItem.TaskId
                     });
                 });
@@ -1623,7 +1625,7 @@ class ongoingTasksStats extends shardViewModelBase {
             case "AggregatedBatchesInfo":
                 return "Aggregated History Batches Info";
             default:
-                generalUtils.assertUnreachable(type, "Unknown stats type: " + type);
+                throw new Error("Unknown stats type: " + type);
         }
         return "";
     }
@@ -2210,7 +2212,7 @@ class ongoingTasksStats extends shardViewModelBase {
             etlTaskData.Stats.forEach(etlStats => {
                 etlStats.Performance.forEach(perfStat => {
                     liveEtlStatsWebSocketClient.fillCache(perfStat,
-                        ongoingTaskModel.getStudioEtlTypeFromServerType(etlTaskData.EtlType, etlTaskData.EtlSubType));
+                        TaskUtils.etlTypeToStudioType(etlTaskData.EtlType, etlTaskData.EtlSubType));
                 });
             })
         });

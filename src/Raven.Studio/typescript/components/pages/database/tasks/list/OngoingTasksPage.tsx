@@ -104,7 +104,12 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
 
     const deleteTask = useCallback(
         async (task: OngoingTaskSharedInfo) => {
-            await tasksService.deleteOngoingTask(database, task.taskType, task.taskId, task.taskName);
+            await tasksService.deleteOngoingTask(
+                database,
+                TaskUtils.studioTaskTypeToTaskType(task.taskType),
+                task.taskId,
+                task.taskName
+            );
 
             await reload();
         },
@@ -113,7 +118,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
 
     const onDeleteConfirmation = useCallback(
         (task: OngoingTaskSharedInfo) => {
-            const taskType = ongoingTaskModel.mapTaskType(task.taskType);
+            const taskType = ongoingTaskModel.formatStudioTaskType(task.taskType);
             viewHelpers
                 .confirmationMessage(
                     "Delete Ongoing Task?",
@@ -136,7 +141,13 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
 
     const toggleOngoingTask = useCallback(
         async (task: OngoingTaskSharedInfo, enable: boolean) => {
-            await tasksService.toggleOngoingTask(database, task.taskType, task.taskId, task.taskName, enable);
+            await tasksService.toggleOngoingTask(
+                database,
+                TaskUtils.studioTaskTypeToTaskType(task.taskType),
+                task.taskId,
+                task.taskName,
+                enable
+            );
             await reload();
         },
         [database, tasksService]
@@ -145,7 +156,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
     const onToggleStateConfirmation = useCallback(
         (task: OngoingTaskSharedInfo, enable: boolean) => {
             const confirmationTitle = enable ? "Enable Task" : "Disable Task";
-            const taskType = ongoingTaskModel.mapTaskType(task.taskType);
+            const taskType = ongoingTaskModel.formatStudioTaskType(task.taskType);
             const confirmationMsg = enable
                 ? `You're enabling ${taskType} task:<br><ul><li><strong>${task.taskName}</strong></li></ul>`
                 : `You're disabling ${taskType} task:<br><ul><li><strong>${task.taskName}</strong></li></ul>`;
@@ -177,11 +188,9 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
     );
 
     const showItemPreview = useCallback((task: OngoingTaskInfo, scriptName: string) => {
-        definitionCache.showDefinitionFor(
-            TaskUtils.taskTypeToEtlType(task.shared.taskType),
-            task.shared.taskId,
-            scriptName
-        );
+        const taskType = TaskUtils.studioTaskTypeToTaskType(task.shared.taskType);
+        const etlType = TaskUtils.taskTypeToEtlType(taskType);
+        definitionCache.showDefinitionFor(etlType, task.shared.taskId, scriptName);
     }, []);
 
     const canNavigateToServerWideTasks = isClusterAdminOrClusterNode();

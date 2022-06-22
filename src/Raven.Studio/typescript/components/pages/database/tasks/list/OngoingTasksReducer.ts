@@ -95,7 +95,7 @@ function mapSharedInfo(task: OngoingTask): OngoingTaskSharedInfo {
     const taskType = task.TaskType;
 
     const commonProps: OngoingTaskSharedInfo = {
-        taskType,
+        taskType: TaskUtils.ongoingTaskToStudioTaskType(task),
         taskName: task.TaskName,
         taskId: task.TaskId,
         mentorName: task.MentorNode,
