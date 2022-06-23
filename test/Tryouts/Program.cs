@@ -1,41 +1,71 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.Documents.Revisions;
 using Tests.Infrastructure;
+using FastTests.Client.Subscriptions;
+using FastTests.Voron;
+using SlowTests.Voron.CompactTrees;
 
-namespace Tryouts
+namespace Tryouts;
+
+public static class Program
 {
-    public static class Program
+    static Program()
     {
-        static Program()
-        {
-            XunitLogging.RedirectStreams = false;
-        }
+        XunitLogging.RedirectStreams = false;
+    }
 
-        public static async Task Main(string[] args)
+    public static void Main(string[] args)
+    {
+        using (var testOutputHelper = new ConsoleTestOutputHelper())
+            new CompactTreeSlowTests(testOutputHelper).CanDeleteLargeNumberOfItemsInRandomInsertionOrder(60597, 54632);
+
+        Console.WriteLine(Process.GetCurrentProcess().Id);
+        for (int i = 0; i < 100; i++)
         {
-            Console.WriteLine(Process.GetCurrentProcess().Id);
-            for (int i = 0; i < 10_000; i++)
+            Console.WriteLine($"Starting to run {i}");
+            try
             {
-                Console.WriteLine($"Starting to run {i}");
-                try
-                {
-                    using (var testOutputHelper = new ConsoleTestOutputHelper())
-                    //using (var test = new RollingIndexesClusterTests(testOutputHelper))
-                    using (var test = new RevisionsTests(testOutputHelper))
+                using (var testOutputHelper = new ConsoleTestOutputHelper())
+                {                    
+                    int minFailure = int.MaxValue;
+                    int failureRandom = -1;                    
+
+                    var rnd = new Random();
+                    int number = 500000;
+                    while (number > 16)
                     {
-                        //await test.RemoveNodeFromDatabaseGroupWhileRollingDeployment();
-                        await test.CanGetRevisionsCountFor(RavenTestBase.Options.ForMode(RavenDatabaseMode.Sharded));
+                        int seed = rnd.Next(100000);
+                        try
+                        {
+                            //new CompactTreeTests(testOutputHelper).CanDeleteLargeNumberOfItemsInRandomInsertionOrder(2023, 13878);
+                            new CompactTreeSlowTests(testOutputHelper).CanDeleteLargeNumberOfItemsInRandomInsertionOrder(number, seed);
+                        }
+                        catch (Exception ex)
+                        {
+                            if (number < minFailure)
+                            {
+                                minFailure = number;
+                                failureRandom = seed;
+                                Console.WriteLine($"[N:{minFailure}, Rnd:{failureRandom}]");
+                                Console.WriteLine($"--> {ex}");
+                            }
+                        }
+
+                        number = rnd.Next(Math.Min(500000, minFailure));
                     }
+
+                    Console.ReadLine();
                 }
-                catch (Exception e)
-                {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine(e);
-                    Console.ForegroundColor = ConsoleColor.White;
-                }
+            }
+            catch (Exception e)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine(e);
+                Console.ForegroundColor = ConsoleColor.White;
             }
         }
     }

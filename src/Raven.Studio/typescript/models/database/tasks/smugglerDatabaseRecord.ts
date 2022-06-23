@@ -22,10 +22,12 @@ class smugglerDatabaseRecord {
     includeSqlConnectionStrings = ko.observable<boolean>(true);
     includeOlapConnectionStrings = ko.observable<boolean>(true);
     includeElasticSearchConnectionStrings = ko.observable<boolean>(true);
+    includeQueueConnectionStrings = ko.observable<boolean>(true);
     includeRavenEtls = ko.observable<boolean>(true);
     includeSqlEtls = ko.observable<boolean>(true);
     includeOlapEtls = ko.observable<boolean>(true);
     includeElasticSearchEtls = ko.observable<boolean>(true);
+    includeQueueEtls = ko.observable<boolean>(true);
     includeClient = ko.observable<boolean>(true);
     includeSorters = ko.observable<boolean>(true);
     includeAnalyzers = ko.observable<boolean>(true);
@@ -74,6 +76,12 @@ class smugglerDatabaseRecord {
                 content: `Elasticsearch Connection strings were not selected.`,
                 placement: 'right'
             });
+
+        popoverUtils.longWithHover($(".js-warning-queue-etl"),
+            {
+                content: `Queue Connection strings were not selected.`,
+                placement: 'right'
+            });
     }
     
     getDatabaseRecordTypes(): Array<Raven.Client.Documents.Smuggler.DatabaseRecordItemType> {
@@ -113,6 +121,9 @@ class smugglerDatabaseRecord {
         if (this.includeElasticSearchConnectionStrings()) {
             result.push("ElasticSearchConnectionStrings");
         }
+        if (this.includeQueueConnectionStrings()) {
+            result.push("QueueConnectionStrings");
+        }
         if (this.includeRavenEtls()) {
             result.push("RavenEtls");
         }
@@ -124,6 +135,9 @@ class smugglerDatabaseRecord {
         }
         if (this.includeElasticSearchEtls()) {
             result.push("ElasticSearchEtls");
+        }
+        if (this.includeQueueEtls()) {
+            result.push("QueueEtls");
         }
         if (this.includeClient()) {
             result.push("Client");

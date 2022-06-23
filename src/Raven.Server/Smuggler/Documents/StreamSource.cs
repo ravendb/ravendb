@@ -12,6 +12,7 @@ using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
+using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Queries.Sorting;
@@ -572,6 +573,51 @@ namespace Raven.Server.Smuggler.Documents
                         databaseRecord.ElasticSearchConnectionStrings.Clear();
                         if (_log.IsInfoEnabled)
                             _log.Info("Wasn't able to import the Elastic Search connection strings from smuggler file. Skipping.", e);
+                    }
+                }
+
+                if (reader.TryGet(nameof(databaseRecord.QueueEtls), out BlittableJsonReaderArray queueEtls) &&
+                    queueEtls != null)
+                {
+                    databaseRecord.QueueEtls = new List<QueueEtlConfiguration>();
+                    foreach (BlittableJsonReaderObject etl in queueEtls)
+                    {
+                        try
+                        {
+                            databaseRecord.QueueEtls.Add(JsonDeserializationCluster.QueueEtlConfiguration(etl));
+                        }
+                        catch (Exception e)
+                        {
+                            if (_log.IsInfoEnabled)
+                                _log.Info("Wasn't able to import the Queue ETLs configuration from smuggler file. Skipping.", e);
+                        }
+                    }
+                }
+
+                if (reader.TryGet(nameof(databaseRecord.QueueConnectionStrings), out BlittableJsonReaderObject queueConnectionStrings) &&
+                    queueConnectionStrings != null)
+                {
+                    try
+                    {
+                        foreach (var connectionName in queueConnectionStrings.GetPropertyNames())
+                        {
+                            if (queueConnectionStrings.TryGet(connectionName, out BlittableJsonReaderObject connection) == false)
+                            {
+                                if (_log.IsInfoEnabled)
+                                    _log.Info($"Wasn't able to import the Queue connection string {connectionName} from smuggler file. Skipping.");
+
+                                continue;
+                            }
+
+                            var connectionString = JsonDeserializationCluster.QueueConnectionString(connection);
+                            databaseRecord.QueueConnectionStrings[connectionName] = connectionString;
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        databaseRecord.QueueConnectionStrings.Clear();
+                        if (_log.IsInfoEnabled)
+                            _log.Info("Wasn't able to import the Queue connection strings from smuggler file. Skipping.", e);
                     }
                 }
 

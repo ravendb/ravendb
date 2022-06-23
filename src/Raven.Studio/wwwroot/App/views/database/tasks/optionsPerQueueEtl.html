@@ -1,0 +1,33 @@
+<div class="flex-horizontal flex-header margin-top-sm">
+    <div><h3 data-bind="text: 'Options Per ' + $data.destinationType"></h3></div>
+    <div>
+        <button type="button" class="btn btn-info margin-bottom-sm margin-left" data-bind="click: addNewQueueOptions">
+            <i class="icon-plus"></i><span data-bind="text: 'Add ' + $data.destinationType.toLowerCase() + ' options'"></span>
+        </button>
+    </div>
+</div>
+<div class="margin-bottom">
+    <div class="text-center text-muted" data-bind="if: optionsPerQueue().length === 0">
+        <i class="icon-lg icon-empty-set"></i>
+        <h3 class="margin-top margin-top-sm">No queue options have been defined</h3>
+    </div>
+    <div data-bind="foreach: optionsPerQueue">
+        <div class="flex-horizontal margin-bottom-sm item">
+            <div class="flex-grow margin-right" data-bind="validationElement: queueName">
+                <input type="text" class="form-control" data-bind="textInput: queueName, attr: { placeholder: $parent.destinationType + ' name'}"/>
+            </div>
+            <div class="toggle input-sm flex-noshrink">
+                <input id="toggleMode" class="styled" type="checkbox" data-bind="checked: deleteProcessedDocuments">
+                <label for="toggleMode">Delete processed documents</label>
+            </div>
+            <div class="">
+                <a href="#" class="btn" data-bind="click: $parent.removeQueueOptions.bind($parent, $data), attr: { title: 'Remove this ' + $parent.destinationType.toLocaleLowerCase() + ' option'}">
+                    <i class="icon-trash"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+    <div data-bind="validationElement: optionsPerQueue">
+        <div class="help-block margin-bottom-sm" data-bind="validationMessage: optionsPerQueue"></div>
+    </div>
+</div>

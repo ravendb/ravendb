@@ -36,6 +36,14 @@ class getConnectionStringInfoCommand extends commandBase {
     static forElasticSearchEtl(db: database, connectionStringName: string) {
         return new getConnectionStringInfoCommand(db, "ElasticSearch", connectionStringName);
     }
+
+    static forKafkaEtl(db: database, connectionStringName: string) {
+        return new getConnectionStringInfoCommand(db, "Queue", connectionStringName);
+    }
+
+    static forRabbitMqEtl(db: database, connectionStringName: string) {
+        return new getConnectionStringInfoCommand(db, "Queue", connectionStringName);
+    }
 }
 
 export = getConnectionStringInfoCommand; 

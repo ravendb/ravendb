@@ -12,6 +12,10 @@ class ongoingTaskReplicationEditModel extends ongoingTaskEditModel {
      
     validationGroup: KnockoutValidationGroup;
 
+    get studioTaskType(): StudioTaskType {
+        return "Replication";
+    }
+
     constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskReplication) {
         super();
 

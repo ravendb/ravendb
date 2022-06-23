@@ -7,7 +7,7 @@ import database from "models/resources/database";
 import getIndexesErrorCountCommand from "commands/database/index/getIndexesErrorCountCommand";
 import indexErrorInfoModel from "models/database/index/indexErrorInfoModel";
 import getIndexesErrorCommand from "commands/database/index/getIndexesErrorCommand";
-import IndexErrors = Raven.Client.Documents.Indexes.IndexErrors;
+import moment = require("moment");
 
 type nameAndCount = {
     name: string;
@@ -212,7 +212,10 @@ class indexErrors extends shardViewModelBase {
             return value.Errors.map((errorDto: Raven.Client.Documents.Indexes.IndexingError): IndexErrorPerDocument =>
                 ({
                     ...errorDto,
-                    IndexName: value.Name
+                    Timestamp: moment.utc(errorDto.Timestamp).format(),
+                    IndexName: value.Name,
+                    LocalTime: generalUtils.formatUtcDateAsLocal(errorDto.Timestamp),
+                    RelativeTime: generalUtils.formatDurationByDate(moment.utc(errorDto.Timestamp), true)
                 }));
         });
 

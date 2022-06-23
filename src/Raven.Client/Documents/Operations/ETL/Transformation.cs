@@ -22,7 +22,7 @@ namespace Raven.Client.Documents.Operations.ETL
 
         private static readonly Regex LoadToMethodRegex = new Regex($@"{LoadTo}(\w+)", RegexOptions.Compiled);
 
-        private static readonly Regex LoadToMethodRegexAlt = new Regex($@"{LoadTo}\(\'([\w\.]+)\'|{LoadTo}\(\""([\w\.]+)\""", RegexOptions.Compiled);
+        private static readonly Regex LoadToMethodRegexAlt = new Regex($@"{LoadTo}\(\'([\w\.]*)\'|{LoadTo}\(\""([\w\.]*)\""", RegexOptions.Compiled);
 
         private static readonly Regex LoadAttachmentMethodRegex = new Regex(LoadAttachment, RegexOptions.Compiled);
         private static readonly Regex AddAttachmentMethodRegex = new Regex(AddAttachment, RegexOptions.Compiled);
@@ -388,6 +388,9 @@ namespace Raven.Client.Documents.Operations.ETL
                                 break;
                             case EtlType.ElasticSearch:
                                 targetName = "Index";
+                                break;
+                            case EtlType.Queue:
+                                targetName = "Queue";
                                 break;
                             default:
                                 throw new ArgumentException($"Unknown ETL type: {type}");

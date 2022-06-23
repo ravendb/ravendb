@@ -91,7 +91,16 @@ namespace Raven.Server.ServerWide.Commands
                         elasticSearchEtl.Disabled = Disable;
                     }
                     break;
-                
+
+                case OngoingTaskType.QueueEtl:
+
+                    var queueEtl = record?.QueueEtls?.Find(x => x.TaskId == TaskId);
+                    if (queueEtl != null)
+                    {
+                        queueEtl.Disabled = Disable;
+                    }
+                    break;
+
                 case OngoingTaskType.PullReplicationAsHub:
                     var pullAsHub = record?.HubPullReplications?.First(x => x.TaskId == TaskId);
                     if (pullAsHub != null)

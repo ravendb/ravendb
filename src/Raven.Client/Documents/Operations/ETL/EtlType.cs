@@ -5,6 +5,7 @@
         Raven,
         Sql,
         Olap,
-        ElasticSearch
+        ElasticSearch,
+        Queue
     }
 }

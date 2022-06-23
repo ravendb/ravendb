@@ -151,6 +151,7 @@ class patch extends shardViewModelBase {
 
     spinners = {
         save: ko.observable<boolean>(false),
+        countMatchingDocuments: ko.observable<boolean>(false)
     };
 
     jsCompleter = defaultAceCompleter.completer();
@@ -307,8 +308,13 @@ class patch extends shardViewModelBase {
 
     runPatch() {
         if (this.isValid(this.patchDocument().validationGroup)) {
+            this.spinners.countMatchingDocuments(true);
+            
             this.getMatchingDocumentsNumber()
-                .done((matchingDocs: number) => this.executePatch(matchingDocs));
+                .done((matchingDocs: number) => {
+                    this.spinners.countMatchingDocuments(false);
+                    this.executePatch(matchingDocs);
+                });
         }
     }
 

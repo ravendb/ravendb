@@ -54,7 +54,7 @@ class ongoingTaskItem {
         this.iconClass(iconClass);
     }
 
-    getTaskNameForUI(): TasksNamesInUI {
+    getFormattedTaskName(): string {
         switch (this.taskName()) {
             case "ExternalReplicationCount": return "External Replication";
             case "ReplicationHubCount": return "Replication Hub";
@@ -63,6 +63,8 @@ class ongoingTaskItem {
             case "OlapEtlCount": return "OLAP ETL";
             case "SqlEtlCount": return "SQL ETL";
             case "ElasticSearchEtlCount": return "Elasticsearch ETL";
+            case "KafkaEtlCount": return "Kafka ETL";
+            case "RabbitMqEtlCount": return "RabbitMQ ETL";
             case "PeriodicBackupCount": return "Backup";
             case "SubscriptionCount": return "Subscription";
         }
@@ -97,6 +99,8 @@ class ongoingTasksWidget extends websocketBasedWidget<Raven.Server.Dashboard.Clu
             new ongoingTaskItem("OlapEtlCount", 0, "olap-etl", "icon-olap-etl"),
             new ongoingTaskItem("SqlEtlCount", 0, "sql-etl", "icon-sql-etl"),
             new ongoingTaskItem("ElasticSearchEtlCount", 0, "elastic-etl", "icon-elastic-search-etl"),
+            new ongoingTaskItem("KafkaEtlCount", 0, "kafka-etl", "icon-kafka-etl"),
+            new ongoingTaskItem("RabbitMqEtlCount", 0, "rabbitmq-etl", "icon-rabbitmq-etl"),
             new ongoingTaskItem("PeriodicBackupCount", 0, "periodic-backup", "icon-backups"),
             new ongoingTaskItem("SubscriptionCount", 0, "subscription", "icon-subscription")
         ]);

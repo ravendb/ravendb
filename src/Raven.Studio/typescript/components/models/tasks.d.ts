@@ -41,7 +41,7 @@ export interface OngoingEtlTaskNodeInfo<TNodeInfo extends OngoingTaskNodeInfoDet
 export interface OngoingTaskSharedInfo {
     taskName: string;
     taskId: number;
-    taskType: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType;
+    taskType: StudioTaskType;
     mentorName: string;
     taskState: OngoingTaskState;
     serverWide: boolean;

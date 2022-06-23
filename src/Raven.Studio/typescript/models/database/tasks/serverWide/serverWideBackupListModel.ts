@@ -20,7 +20,11 @@ class serverWideBackupListModel extends serverWideTaskListModel {
     textClass: KnockoutComputed<string>;
     
     isBackupEncrypted = ko.observable<boolean>();
-
+    
+    get studioTaskType(): StudioTaskType {
+        return "Backup";
+    }
+    
     constructor(dto: Raven.Server.Web.System.AdminStudioServerWideHandler.ServerWideTasksResult.ServerWideBackupTask) {
         super();
         

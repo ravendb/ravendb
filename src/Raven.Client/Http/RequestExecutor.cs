@@ -1492,10 +1492,13 @@ namespace Raven.Client.Http
         private async Task<bool> HandleServerDown<TResult>(string url, ServerNode chosenNode, int? nodeIndex, JsonOperationContext context, RavenCommand<TResult> command,
             HttpRequestMessage request, HttpResponseMessage response, Exception e, SessionInfo sessionInfo, bool shouldRetry, RequestContext requestContext = null, CancellationToken token = default)
         {
-            if (command.FailedNodes == null)
-                command.FailedNodes = new Dictionary<ServerNode, Exception>();
+            command.FailedNodes ??= new Dictionary<ServerNode, Exception>();
 
-            command.FailedNodes[chosenNode] = await ReadExceptionFromServer(context, request, response, e).ConfigureAwait(false);
+            var exception = await ReadExceptionFromServer(context, request, response, e).ConfigureAwait(false);
+            if (exception is RavenTimeoutException { FailImmediately: true })
+                throw exception;
+
+            command.FailedNodes[chosenNode] = exception;
 
             if (nodeIndex.HasValue == false)
             {
@@ -1806,7 +1809,7 @@ namespace Raven.Client.Http
                     ms.Position = 0;
                     using (var responseJson = await context.ReadForMemoryAsync(ms, "RequestExecutor/HandleServerDown/ReadResponseContent").ConfigureAwait(false))
                     {
-                        return ExceptionDispatcher.Get(JsonDeserializationClient.ExceptionSchema(responseJson), response.StatusCode, e);
+                        return ExceptionDispatcher.Get(responseJson, response.StatusCode, e);
                     }
                 }
                 catch

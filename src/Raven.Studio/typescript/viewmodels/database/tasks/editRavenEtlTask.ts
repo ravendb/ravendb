@@ -140,6 +140,8 @@ class ravenTaskTestMode {
                 Configuration: this.configurationProvider()
             };
 
+            eventsCollector.default.reportEvent("ravendb-etl", "test-script");
+
             new testRavenEtlCommand(this.db, dto)
                 .execute()
                 .done(simulationResult => {

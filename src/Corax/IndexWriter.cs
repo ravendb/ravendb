@@ -284,6 +284,8 @@ namespace Corax
                     }
 
                     break;
+                case IndexEntryFieldType.Raw:
+                case IndexEntryFieldType.RawList:                
                 case IndexEntryFieldType.Invalid:
                     break;
                 default:

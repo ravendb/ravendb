@@ -11,6 +11,7 @@ using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
+using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Exceptions.Documents.Patching;
@@ -21,6 +22,9 @@ using Raven.Server.Documents.ETL.Metrics;
 using Raven.Server.Documents.ETL.Providers.ElasticSearch;
 using Raven.Server.Documents.ETL.Providers.OLAP;
 using Raven.Server.Documents.ETL.Providers.OLAP.Test;
+using Raven.Server.Documents.ETL.Providers.Queue;
+using Raven.Server.Documents.ETL.Providers.Queue.Kafka;
+using Raven.Server.Documents.ETL.Providers.Queue.RabbitMq;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.ETL.Providers.Raven.Test;
 using Raven.Server.Documents.ETL.Providers.SQL;
@@ -50,6 +54,8 @@ namespace Raven.Server.Documents.ETL
         public string Tag { get; protected set; }
 
         public abstract EtlType EtlType { get; }
+        
+        public virtual string EtlSubType { get; }
 
         public abstract long TaskId { get; }
 
@@ -78,6 +84,11 @@ namespace Raven.Server.Documents.ETL
         public abstract bool ShouldTrackCounters();
 
         public abstract bool ShouldTrackTimeSeries();
+
+        public virtual bool ShouldTrackDocumentTombstones()
+        {
+            return true;
+        }
 
         public abstract EtlPerformanceStats[] GetPerformanceStats();
 
@@ -213,9 +224,12 @@ namespace Raven.Server.Documents.ETL
                 // when collection isn't specified this will get the tombstones for docs, attachments & revisions in a single enumerator
                 // otherwise we will handle attachment and documents in a dedicated enumerator
 
-                var tombstones = Database.DocumentsStorage.GetTombstonesFrom(context, fromEtag, 0, long.MaxValue).GetEnumerator();
-                scope.EnsureDispose(tombstones);
-                merged.AddEnumerator(ConvertTombstonesEnumerator(context, tombstones, null, trackAttachments: ShouldTrackAttachmentTombstones()));
+                if (ShouldTrackDocumentTombstones())
+                {
+                    var tombstones = Database.DocumentsStorage.GetTombstonesFrom(context, fromEtag, 0, long.MaxValue).GetEnumerator();
+                    scope.EnsureDispose(tombstones);
+                    merged.AddEnumerator(ConvertTombstonesEnumerator(context, tombstones, null, trackAttachments: ShouldTrackAttachmentTombstones()));
+                }
             }
             else
             {
@@ -225,9 +239,12 @@ namespace Raven.Server.Documents.ETL
                     scope.EnsureDispose(docs);
                     merged.AddEnumerator(ConvertDocsEnumerator(context, docs, collection));
 
-                    var tombstones = Database.DocumentsStorage.GetTombstonesFrom(context, collection, fromEtag, 0, long.MaxValue).GetEnumerator();
-                    scope.EnsureDispose(tombstones);
-                    merged.AddEnumerator(ConvertTombstonesEnumerator(context, tombstones, collection, trackAttachments: false));
+                    if (ShouldTrackDocumentTombstones())
+                    {
+                        var tombstones = Database.DocumentsStorage.GetTombstonesFrom(context, collection, fromEtag, 0, long.MaxValue).GetEnumerator();
+                        scope.EnsureDispose(tombstones);
+                        merged.AddEnumerator(ConvertTombstonesEnumerator(context, tombstones, collection, trackAttachments: false));
+                    }
                 }
 
                 if (ShouldTrackAttachmentTombstones())
@@ -318,12 +335,6 @@ namespace Raven.Server.Documents.ETL
 
                     CancellationToken.ThrowIfCancellationRequested();
 
-                    if (CanContinueBatch(stats, item, batchSize, context) == false)
-                    {
-                        batchStopped = true;
-                        break;
-                    }
-
                     if (AlreadyLoadedByDifferentNode(item, state))
                     {
                         stats.RecordChangeVector(item.ChangeVector);
@@ -357,6 +368,11 @@ namespace Raven.Server.Documents.ETL
 
                             batchSize++;
 
+                            if (CanContinueBatch(stats, item, batchSize, context) == false)
+                            {
+                                batchStopped = true;
+                                break;
+                            }
                         }
                         catch (JavaScriptParseException e)
                         {
@@ -477,7 +493,7 @@ namespace Raven.Server.Documents.ETL
 
             if (currentItem is ToOlapItem)
             {
-                if (stats.NumberOfExtractedItems[EtlItemType.Document] > Database.Configuration.Etl.OlapMaxNumberOfExtractedDocuments)
+                if (stats.NumberOfExtractedItems[EtlItemType.Document] >= Database.Configuration.Etl.OlapMaxNumberOfExtractedDocuments)
                 {
                     var reason = $"Stopping the batch because it has already processed max number of extracted documents : {stats.NumberOfExtractedItems[EtlItemType.Document]}";
 
@@ -492,10 +508,10 @@ namespace Raven.Server.Documents.ETL
 
             else
             {
-                if (stats.NumberOfExtractedItems[EtlItemType.Document] > Database.Configuration.Etl.MaxNumberOfExtractedDocuments ||
-                    stats.NumberOfExtractedItems.Sum(x => x.Value) > Database.Configuration.Etl.MaxNumberOfExtractedItems)
+                if (stats.NumberOfExtractedItems[EtlItemType.Document] >= Database.Configuration.Etl.MaxNumberOfExtractedDocuments ||
+                    stats.NumberOfExtractedItems.Sum(x => x.Value) >= Database.Configuration.Etl.MaxNumberOfExtractedItems)
                 {
-                var reason = $"Stopping the batch because it has already processed max number of items ({string.Join(',', stats.NumberOfExtractedItems.Select(x => $"{x.Key} - {x.Value:#,#;;0}"))})";
+                    var reason = $"Stopping the batch because it has already processed max number of items ({string.Join(',', stats.NumberOfExtractedItems.Select(x => $"{x.Key} - {x.Value:#,#;;0}"))})";
 
                     if (Logger.IsInfoEnabled)
                         Logger.Info($"[{Name}] {reason}");
@@ -664,6 +680,12 @@ namespace Raven.Server.Documents.ETL
 
             if (longRunningWork != PoolOfThreads.LongRunningWork.Current) // prevent a deadlock
                 longRunningWork.Join(int.MaxValue);
+
+            OnProcessStopped();
+        }
+
+        protected virtual void OnProcessStopped()
+        {
         }
 
         private void ReportStopReasonToStats(string msg)
@@ -1218,6 +1240,49 @@ namespace Raven.Server.Documents.ETL
 
                             return tx;
                         }
+
+                    case EtlType.Queue:
+                        using (var queueEtl = QueueEtl<QueueItem>.CreateInstance(testScript.Configuration.Transforms[0], testScript.Configuration as QueueEtlConfiguration, database,
+                                   database.ServerStore))
+                        {
+                            switch (queueEtl)
+                            {
+                                case KafkaEtl kafkaEtl:
+                                    using (kafkaEtl.EnterTestMode(out debugOutput))
+                                    {
+                                        kafkaEtl.EnsureThreadAllocationStats();
+
+                                        var queueItem = new QueueItem(document, docCollection);
+
+                                        var results = kafkaEtl.Transform(new[] { queueItem }, context, new EtlStatsScope(new EtlRunStats()),
+                                            new EtlProcessState());
+
+                                        result = kafkaEtl.RunTest(results, context);
+                                        result.DebugOutput = debugOutput;
+
+                                        return tx;
+                                    }
+                                case RabbitMqEtl rabbitMqEtl:
+                                    using (rabbitMqEtl.EnterTestMode(out debugOutput))
+                                    {
+                                        rabbitMqEtl.EnsureThreadAllocationStats();
+
+                                        var queueItem = new QueueItem(document, docCollection);
+
+                                        var results = rabbitMqEtl.Transform(new[] { queueItem }, context, new EtlStatsScope(new EtlRunStats()),
+                                            new EtlProcessState());
+
+                                        result = rabbitMqEtl.RunTest(results, context);
+                                        result.DebugOutput = debugOutput;
+
+                                        return tx;
+                                    }
+                                default:
+                                    throw new NotSupportedException($"Unknown Queue ETL type in script test: {queueEtl.GetType().FullName}");
+                            }
+                        }
+                        
+
                     default:
                         throw new NotSupportedException($"Unknown ETL type in script test: {testScript.Configuration.EtlType}");
                 }

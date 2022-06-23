@@ -26,13 +26,21 @@
 @ravendb-etl-color-dark: darken(@color-2, 10%);
 @ravendb-etl-color-light: lighten(@color-2, 5%);
 
+@kafka-etl-color: @color-2-3;
+@kafka-etl-color-dark: darken(@color-2-3, 10%);
+@kafka-etl-color-light: lighten(@color-2-3, 3%);
+
+@rabbitmq-etl-color: @color-4-2;
+@rabbitmq-etl-color-dark: darken(@color-4-2, 5%);
+@rabbitmq-etl-color-light: lighten(@color-4-2, 5%);
+
 @backup-color: @color-5;
 @backup-color-dark: darken(@color-5, 10%);
 @backup-color-light: lighten(@color-5, 5%);
 
 @subscription-color: @color-3;
 @subscription-color-dark: darken(@color-3, 10%);
-@subscription-color-light: lighten(@color-3, 10%);
+@subscription-color-light: lighten(@color-3, 5%);
 
 .bigbtn-variant(@color, @color-dark) {
     background-color: fadeout(@color-dark,80%);
@@ -55,7 +63,7 @@
 }
 
 .destinationModal {
-    .external-replication, .sql-etl, .olap-etl, .elastic-etl, .ravendb-etl, .periodic-backup, .subscription, .pull-replication-hub, .pull-replication-sink {
+    .external-replication, .sql-etl, .olap-etl, .elastic-etl, .ravendb-etl, .periodic-backup, .subscription, .pull-replication-hub, .pull-replication-sink, .kafka-etl, .rabbitmq-etl {
         display: block;
         padding: 10px;
         transition: background-color .2s ease, color .1s;
@@ -91,6 +99,15 @@
 
     .ravendb-etl {
         .bigbtn-variant (@ravendb-etl-color, @ravendb-etl-color-dark);
+    }
+
+
+    .kafka-etl {
+        .bigbtn-variant (@kafka-etl-color, @kafka-etl-color-dark);
+    }
+
+    .rabbitmq-etl {
+        .bigbtn-variant (@rabbitmq-etl-color, @rabbitmq-etl-color-dark);
     }
 
     .periodic-backup {
@@ -237,6 +254,22 @@
             background-color: @ravendb-etl-color;
         }
 
+        .kafka-etl {
+            color: @kafka-etl-color;
+        }
+
+        .task-kafka-etl {
+            background-color: @kafka-etl-color;
+        }
+
+        .rabbitmq-etl {
+            color: @rabbitmq-etl-color;
+        }
+
+        .task-rabbitmq-etl {
+            background-color: @rabbitmq-etl-color;
+        }
+
         .periodic-backup {
             color: @backup-color;
         }
@@ -295,8 +328,15 @@
             .name-variant (@brand-info, @brand-info-light);
         }
 
-        // todo ???
         &.elastic-etl {
+            .name-variant (@brand-info, @brand-info-light);
+        }
+
+        &.kafka-etl {
+            .name-variant (@brand-info, @brand-info-light);
+        }
+
+        &.rabbitmq-etl {
             .name-variant (@brand-info, @brand-info-light);
         }
 
@@ -531,7 +571,7 @@
             background-color: @gray-dark;
         }
         pre {
-            background-color: @gray-darker;
+            background-color: @well-bg;
         }
     }
     
@@ -644,21 +684,57 @@
     }
 }
 
+.edit-kafka-etl-task, .edit-rabbitmq-etl-task {
+
+    overflow-x: hidden;
+
+    .result-item {
+        .header {
+            padding: @grid-gutter-width / 2;
+            background-color: @gray-dark;
+        }
+        pre {
+            background-color: @gray-darker;
+        }
+    }
+
+    .flex-row {
+        transition: transform 0.5s;
+    }
+
+    .test-container {
+        position: absolute;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        width: 50%;
+        transform: translateX(100%);
+        transition: transform 0.5s;
+
+        .tab-content {
+            overflow: auto;
+        }
+    }
+    &.test-mode {
+        .flex-row {
+            transform: translateX(-50%);
+        }
+        .test-container {
+            transform: translateX(0%);
+        }
+    }
+}
+
 .js-test-sql-tooltip {
     z-index: @zindex-modal + 1;
 }
+
 .show-test {
     .backdrop {
         .backdrop.show;
     }
-    
-    .sql-statement {
-        pre {
-            white-space: normal;
-        }
-    }
 
-    .edit-raven-sql-task, .edit-raven-etl-task, .edit-elastic-search-task {
+    .edit-raven-sql-task, .edit-raven-etl-task, .edit-elastic-search-task, .edit-kafka-etl-task, .edit-rabbitmq-etl-task {
         & > .flex-row {
             z-index: @zindex-modal;
         }
@@ -667,7 +743,7 @@
         }
     }
     
-    #debugOutput pre {
+    .test-output pre, #debugOutput pre {
         white-space: pre-wrap;
         word-wrap: break-word;
     }

@@ -18,19 +18,9 @@
                         </small>
                     </div>
                     <div class="panel">
-                        <div class="panel-body margin-bottom">
-                            <h3>Studio Configuration</h3>
-                            <div class="form-group margin-top">
-                                <label class="control-label">&nbsp;</label>
-                                <div class="toggle margin-top disable-auto-index" data-placement="right" data-toggle="tooltip" data-animation="true">
-                                    <input id="disableAutoIndex" type="checkbox" data-bind="checked: model.disableAutoIndexCreation" />
-                                    <label for="disableAutoIndex">Disable creating new Auto-Indexes</label>
-                                </div>
-                            </div>
-                            <div class="form-group margin-top">
-                                <div>
-                                    <label class="control-label">Environment</label>
-                                </div>
+                        <div class="panel-body">
+                            <div class="form-group margin-top margin-bottom">
+                                <label class="control-label">Environment</label>
                                 <div style="position: relative">
                                     <button class="btn btn-block dropdown-toggle" type="button" data-toggle="dropdown"
                                             data-bind="requiredAccess: 'DatabaseAdmin', requiredAccessOptions: { strategy: 'disable' }">
@@ -41,6 +31,16 @@
                                         <li><a href="#" data-bind="text: $data, click: $parent.model.environment.bind($parent.model.environment, $data)"></a></li>
                                     </ul>
                                     <span class="help-block" data-bind="validationMessage: model.environment"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-body">
+                            <div class="form-group margin-left-lg">
+                                <div class="toggle margin-top disable-auto-index margin-left-lg" data-placement="right" data-toggle="tooltip" data-animation="true">
+                                    <input id="disableAutoIndex" type="checkbox" data-bind="checked: model.disableAutoIndexCreation" />
+                                    <label for="disableAutoIndex">Disable creating new Auto-Indexes</label>
                                 </div>
                             </div>
                         </div>

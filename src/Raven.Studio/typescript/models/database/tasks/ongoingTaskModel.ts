@@ -1,11 +1,14 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 
+import genUtils from "common/generalUtils";
+
 //TODO: remove?
 abstract class ongoingTaskModel { 
 
     taskId: number;
     taskName = ko.observable<string>();
-    taskType = ko.observable<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType>();
+    
+    taskType = ko.observable<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType>();   // raw type from server
     taskState = ko.observable<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskState>();
 
     mentorNode = ko.observable<string>();
@@ -23,8 +26,10 @@ abstract class ongoingTaskModel {
         
         return (preferredMentor && currentNode) ? preferredMentor !== currentNode : false;
     });
-
-    static mapTaskType(taskType: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType): TasksNamesInUI {
+    
+    abstract get studioTaskType(): StudioTaskType;
+    
+    static formatStudioTaskType(taskType: StudioTaskType): string {
         switch (taskType) {
             case "RavenEtl":
                 return "RavenDB ETL";
@@ -40,6 +45,10 @@ abstract class ongoingTaskModel {
                 return "Replication Hub";
             case "PullReplicationAsSink":
                 return "Replication Sink";
+            case "KafkaQueueEtl":
+                return "Kafka ETL";
+            case "RabbitQueueEtl":
+                return "RabbitMQ ETL";
             default:
                 return taskType;
         }

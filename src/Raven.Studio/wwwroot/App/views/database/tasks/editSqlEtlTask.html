@@ -106,12 +106,13 @@
                             <div class="flex-horizontal">
                                 <div class="flex-grow margin-top">
                                     <button type="button" class="btn btn-info" data-bind="click: $root.toggleAdvancedArea">
-                                            <i class="icon-settings"></i><span>Advanced</span>
+                                        <i class="icon-settings"></i>
+                                        <span data-bind="text: $root.showAdvancedOptions() ? 'Close Advanced' : 'Advanced'"></span>
                                     </button>
                                 </div>
                                 <div>
                                     <button class="btn btn-default btn-info" title="Test the New connection string connection"
-                                            data-bind="click: $root.testConnection, disable: !$root.connectionStringDefined() || $root.spinners.test(), css: { 'btn-spinner': $root.spinners.test }">
+                                            data-bind="click: $root.onTestConnectionSql, disable: !$root.connectionStringDefined() || $root.spinners.test(), css: { 'btn-spinner': $root.spinners.test }">
                                         <i class="icon-rocket"></i>
                                         <span>Test Connection</span>
                                     </button>
@@ -472,7 +473,7 @@ Option unchecked: <Br />No execution will take place, only generate the SQL stat
             <div role="tabpanel" class="tab-pane fade" id="testResults">
                 <h3>Generated SQL statements:</h3>
                 <div data-bind="foreach: testResults">
-                    <div class="sql-statement panel">
+                    <div class="test-output panel">
                         <pre data-bind="text: CommandText"></pre>
                         
                         <h4 class="margin-left" data-bind="visible: Params && Params.length"><strong>Parameters:</strong></h4>
