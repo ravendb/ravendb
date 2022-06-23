@@ -118,7 +118,7 @@ public abstract class IndexOperationBase : IDisposable
         var numberOfEntries = searcher.NumberOfEntries;
         
         if (numberOfEntries == 0)
-            return 2 << 4;
+            return 16;
 
         if (pageSize <= 0)
             return (int)numberOfEntries;
@@ -127,11 +127,9 @@ public abstract class IndexOperationBase : IDisposable
             return int.MaxValue;
         
         //If we have a binary operation, we need to pass a buffer large enough to hold all the individual results.
-        //We need to do this to get correct results and since we don't know how much results subqueries will have  we must create a buffer from the number of entries in index.
+        //We need to do this to get correct results and since we don't know how much results subqueries will have  we must create a buffer big enough to get all items from index
         if (query.Metadata.OrderBy is not null || query.Metadata.IsDistinct || isBoolean)
             return (int)numberOfEntries;
-
-        
 
         var result = Math.Min(numberOfEntries, pageSize);
         return (int)(result <= 0 ? 2 << 4 : result);
