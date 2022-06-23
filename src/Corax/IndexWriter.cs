@@ -312,7 +312,7 @@ namespace Corax
                 {
                     analyzer.GetOutputBuffersSize(value.Length, out var outputSize, out var tokenSize);
                     if (wordsBuffer.Length < outputSize || tokens.Length < tokenSize)
-                        UnlikelyGrowBuffer(out wordsBuffer, out tokens, outputSize, tokenSize);
+                        UnlikelyGrowBuffer(ref wordsBuffer, ref tokens, outputSize, tokenSize);
                     analyzer.MaxCurrentLengthForSingleTerm = value.Length;
                 }
 
@@ -421,7 +421,8 @@ namespace Corax
                     {
                         analyzer.GetOutputBuffersSize(termValue.Length, out int outputSize, out int tokenSize);
                         if (outputSize > wordSpace.Length)
-                            UnlikelyGrowBuffer(out wordSpace, out tokenSpace, outputSize, tokenSize);
+                            UnlikelyGrowBuffer(ref wordSpace, ref tokenSpace, outputSize, tokenSize);
+                        analyzer.MaxCurrentLengthForSingleTerm = termValue.Length;
                     }
                     
                     analyzer.Execute(termValue, ref wordSpace, ref tokenSpace);
@@ -511,7 +512,7 @@ namespace Corax
             return true;
         }
 
-        private void UnlikelyGrowBuffer(out Span<byte> buffer, out Span<Token> tokens, int newBufferSize, int newTokenSize)
+        private void UnlikelyGrowBuffer(ref Span<byte> buffer, ref Span<Token> tokens, int newBufferSize, int newTokenSize)
         {
             Debug.Assert(buffer.Length <= newBufferSize);
             Analyzer.BufferPool.Return(_encodingBufferHandler);
