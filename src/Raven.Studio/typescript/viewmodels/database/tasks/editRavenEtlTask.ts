@@ -520,7 +520,7 @@ class editRavenEtlTask extends shardViewModelBase {
     }
 
     syntaxHelp() {
-        const viewmodel = new transformationScriptSyntax("Raven",this.editedRavenEtl().destinationType);
+        const viewmodel = new transformationScriptSyntax("Raven");
         app.showBootstrapDialog(viewmodel);
     }
 

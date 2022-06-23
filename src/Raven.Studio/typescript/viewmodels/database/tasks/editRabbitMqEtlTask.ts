@@ -139,13 +139,7 @@ class rabbitMqTaskTestMode {
             new testQueueEtlCommand(this.db(), dto, "RabbitMq")
                 .execute()
                 .done(simulationResult => {
-                    const summaryFormatted =  simulationResult.Summary.map(x => ({
-                        Messages: x.Messages,
-                        QueueName: x.QueueName
-                    }));
-
-                    this.testResults(summaryFormatted);
-
+                    this.testResults(simulationResult.Summary);
                     this.debugOutput(simulationResult.DebugOutput);
                     this.transformationErrors(simulationResult.TransformationErrors);
 
@@ -541,7 +535,7 @@ class editRabbitMqEtlTask extends viewModelBase {
     }
 
     syntaxHelp() {
-        const viewmodel = new transformationScriptSyntax("RabbitMQ", this.editedRabbitMqEtl().destinationType);
+        const viewmodel = new transformationScriptSyntax("RabbitMQ");
         app.showBootstrapDialog(viewmodel);
     }
 

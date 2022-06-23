@@ -18,7 +18,7 @@ namespace Raven.Server.Documents.ETL.Providers.Queue.Handlers
                 var dbDoc = await context.ReadForMemoryAsync(RequestBodyStream(), "TestQueueEtlScript");
                 var testScript = JsonDeserializationServer.TestQueueEtlScript(dbDoc);
 
-                using (QueueEtl.TestScript(testScript, Database, ServerStore, context, out var result))
+                using (QueueEtl<QueueItem>.TestScript(testScript, Database, ServerStore, context, out var result))
                 {
                     await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                     {

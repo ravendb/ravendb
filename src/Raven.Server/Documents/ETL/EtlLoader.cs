@@ -16,6 +16,8 @@ using Raven.Client.ServerWide;
 using Raven.Server.Documents.ETL.Providers.ElasticSearch;
 using Raven.Server.Documents.ETL.Providers.OLAP;
 using Raven.Server.Documents.ETL.Providers.Queue;
+using Raven.Server.Documents.ETL.Providers.Queue.Kafka;
+using Raven.Server.Documents.ETL.Providers.Queue.RabbitMq;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.NotificationCenter.Notifications;
@@ -308,7 +310,7 @@ namespace Raven.Server.Documents.ETL
                     if (elasticSearchConfig != null)
                         process = new ElasticSearchEtl(transform, elasticSearchConfig, _database, _serverStore);
                     if(queueConfig != null)
-                        process = new QueueEtl(transform, queueConfig, _database, _serverStore);
+                        process = QueueEtl<QueueItem>.CreateInstance(transform, queueConfig, _database, _serverStore);
 
                     yield return process;
                 }
@@ -597,6 +599,52 @@ namespace Raven.Server.Documents.ETL
 
                             break;
                         }
+                    case KafkaEtl kafkaEtl:
+                    {
+                        QueueEtlConfiguration existing = null;
+
+                        foreach (var config in myQueueEtl)
+                        {
+                            var diff = kafkaEtl.Configuration.Compare(config);
+
+                            if (diff == EtlConfigurationCompareDifferences.None && kafkaEtl.Configuration.Equals(config))
+                            {
+                                existing = config;
+                                break;
+                            }
+                        }
+
+                        if (existing != null)
+                        {
+                            toRemove.Remove(processesPerConfig.Key);
+                            myQueueEtl.Remove(existing);
+                        }
+
+                        break;
+                    }
+                    case RabbitMqEtl rabbitMqEtl:
+                    {
+                        QueueEtlConfiguration existing = null;
+
+                        foreach (var config in myQueueEtl)
+                        {
+                            var diff = rabbitMqEtl.Configuration.Compare(config);
+
+                            if (diff == EtlConfigurationCompareDifferences.None && rabbitMqEtl.Configuration.Equals(config))
+                            {
+                                existing = config;
+                                break;
+                            }
+                        }
+
+                        if (existing != null)
+                        {
+                            toRemove.Remove(processesPerConfig.Key);
+                            myQueueEtl.Remove(existing);
+                        }
+
+                        break;
+                    }
                     case ElasticSearchEtl elasticSearchEtl:
                         {
                             ElasticSearchEtlConfiguration existing = null;
@@ -614,29 +662,6 @@ namespace Raven.Server.Documents.ETL
                             {
                                 toRemove.Remove(processesPerConfig.Key);
                                 myElasticSearchEtl.Remove(existing);
-                            }
-
-                            break;
-                        }
-                    case QueueEtl queueEtl:
-                        {
-                            QueueEtlConfiguration existing = null;
-
-                            foreach (var config in myQueueEtl)
-                            {
-                                var diff = queueEtl.Configuration.Compare(config);
-
-                                if (diff == EtlConfigurationCompareDifferences.None && queueEtl.Configuration.Equals(config))
-                                {
-                                    existing = config;
-                                    break;
-                                }
-                            }
-
-                            if (existing != null)
-                            {
-                                toRemove.Remove(processesPerConfig.Key);
-                                myQueueEtl.Remove(existing);
                             }
 
                             break;
@@ -716,12 +741,19 @@ namespace Raven.Server.Documents.ETL
                 if (existing != null)
                     differences = elasticSearchEtl.Configuration.Compare(existing, transformationDiffs);
             }
-            else if (process is QueueEtl queueEtl)
+            else if (process is KafkaEtl kafkaEtl)
             {
-                var existing = myQueueEtl.FirstOrDefault(x => x.Name.Equals(queueEtl.ConfigurationName, StringComparison.OrdinalIgnoreCase));
+                var existing = myQueueEtl.FirstOrDefault(x => x.Name.Equals(kafkaEtl.ConfigurationName, StringComparison.OrdinalIgnoreCase));
 
                 if (existing != null)
-                    differences = queueEtl.Configuration.Compare(existing, transformationDiffs);
+                    differences = kafkaEtl.Configuration.Compare(existing, transformationDiffs);
+            }
+            else if (process is RabbitMqEtl rabbitMqEtl)
+            {
+                var existing = myQueueEtl.FirstOrDefault(x => x.Name.Equals(rabbitMqEtl.ConfigurationName, StringComparison.OrdinalIgnoreCase));
+
+                if (existing != null)
+                    differences = rabbitMqEtl.Configuration.Compare(existing, transformationDiffs);
             }
             else
             {

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using RabbitMQ.Client;
@@ -8,13 +9,37 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.Queue;
 using Tests.Infrastructure;
 using Tests.Infrastructure.ConnectionString;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.Queue;
 
 public class RabbitMqEtlTestBase : QueueEtlTestBase
 {
-    private readonly HashSet<string> _definedTopics = new();
+    protected class TestRabbitMqConsumer : DefaultBasicConsumer
+    {
+        private readonly BlockingCollection<(byte[] Body, IBasicProperties Properties)> _deliveries = new();
+
+        public TestRabbitMqConsumer(IModel model) : base(model)
+        {
+        }
+
+        public override void HandleBasicDeliver(string consumerTag, ulong deliveryTag, bool redelivered, string exchange, string routingKey, IBasicProperties properties, ReadOnlyMemory<byte> body)
+        {
+            _deliveries.Add((body.ToArray(), properties));
+        }
+
+        public (byte[] Body, IBasicProperties Properties) Consume()
+        {
+            var result = _deliveries.TryTake(out var delivery, TimeSpan.FromMinutes(1));
+
+            Assert.True(result, "Failed to consume message");
+
+            return delivery;
+        }
+    }
+
+    private readonly HashSet<string> _definedExchangesAndQueues = new();
 
     protected RabbitMqEtlTestBase(ITestOutputHelper output) : base(output)
     {
@@ -46,7 +71,7 @@ loadToOrders" + ExchangeSuffix + @"(orderData);
     protected QueueEtlConfiguration SetupQueueEtlToRabbitMq(DocumentStore store, string script,
         IEnumerable<string> collections, IEnumerable<EtlQueue> queues = null, bool applyToAllDocuments = false, string configurationName = null,
         string transformationName = null,
-        Dictionary<string, string> configuration = null, string connectionString = null)
+        Dictionary<string, string> configuration = null, string connectionString = null, bool skipAutomaticQueueDeclaration = false)
     {
         var connectionStringName = $"{store.Database}@{store.Urls.First()} to RabbitMq";
 
@@ -66,12 +91,13 @@ loadToOrders" + ExchangeSuffix + @"(orderData);
                 transformation
             },
             Queues = queues?.ToList(),
-            BrokerType = QueueBrokerType.RabbitMq
+            BrokerType = QueueBrokerType.RabbitMq,
+            SkipAutomaticQueueDeclaration = skipAutomaticQueueDeclaration
         };
 
         foreach (var queue in queues?.Select(x => x.Name).ToArray() ?? transformation.GetCollectionsFromScript())
         {
-            _definedTopics.Add(queue);
+            _definedExchangesAndQueues.Add(queue);
         }
 
         AddEtl(store, config,
@@ -84,7 +110,7 @@ loadToOrders" + ExchangeSuffix + @"(orderData);
         return config;
     }
 
-    protected IModel CreateRabbitMqConsumer()
+    protected IModel CreateRabbitMqChannel()
     {
         var connectionFactory = new ConnectionFactory() { Uri = new Uri(RabbitMqConnectionString.Instance.VerifiedConnectionString.Value) };
         var connection = connectionFactory.CreateConnection();
@@ -93,23 +119,24 @@ loadToOrders" + ExchangeSuffix + @"(orderData);
         return channel;
     }
     
-    private void CleanupQueues()
+    private void CleanupExchangesAndQueues()
     {
-        if (_definedTopics.Count == 0 || RequiresRabbitMqFactAttribute.CanConnect == false)
+        if (_definedExchangesAndQueues.Count == 0 || RequiresRabbitMqFactAttribute.CanConnect == false)
             return;
 
-        var channel = CreateRabbitMqConsumer();
+        using var channel = CreateRabbitMqChannel();
         var consumer = new EventingBasicConsumer(channel);
 
-        foreach (string definedTopic in _definedTopics)
+        foreach (string definedExchangeAndQueue in _definedExchangesAndQueues)
         {
-            consumer.Model.QueueDelete(definedTopic);
+            consumer.Model.ExchangeDelete(definedExchangeAndQueue);
+            consumer.Model.QueueDelete(definedExchangeAndQueue);
         }
     }
 
     public override void Dispose()
     {
         base.Dispose();
-        CleanupQueues();
+        CleanupExchangesAndQueues();
     }
 }

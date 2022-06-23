@@ -517,7 +517,7 @@ class editElasticSearchEtlTask extends shardViewModelBase {
     }
 
     syntaxHelp() {
-        const viewmodel = new transformationScriptSyntax("ElasticSearch", this.editedElasticSearchEtl().destinationType);
+        const viewmodel = new transformationScriptSyntax("ElasticSearch");
         app.showBootstrapDialog(viewmodel);
     }
     

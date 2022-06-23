@@ -23,6 +23,8 @@ using Raven.Server.Documents.ETL.Providers.ElasticSearch;
 using Raven.Server.Documents.ETL.Providers.OLAP;
 using Raven.Server.Documents.ETL.Providers.OLAP.Test;
 using Raven.Server.Documents.ETL.Providers.Queue;
+using Raven.Server.Documents.ETL.Providers.Queue.Kafka;
+using Raven.Server.Documents.ETL.Providers.Queue.RabbitMq;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.ETL.Providers.Raven.Test;
 using Raven.Server.Documents.ETL.Providers.SQL;
@@ -333,12 +335,6 @@ namespace Raven.Server.Documents.ETL
 
                     CancellationToken.ThrowIfCancellationRequested();
 
-                    if (CanContinueBatch(stats, item, batchSize, context) == false)
-                    {
-                        batchStopped = true;
-                        break;
-                    }
-
                     if (AlreadyLoadedByDifferentNode(item, state))
                     {
                         stats.RecordChangeVector(item.ChangeVector);
@@ -372,6 +368,11 @@ namespace Raven.Server.Documents.ETL
 
                             batchSize++;
 
+                            if (CanContinueBatch(stats, item, batchSize, context) == false)
+                            {
+                                batchStopped = true;
+                                break;
+                            }
                         }
                         catch (JavaScriptParseException e)
                         {
@@ -1241,21 +1242,46 @@ namespace Raven.Server.Documents.ETL
                         }
 
                     case EtlType.Queue:
-                        using (var queueEtl = new QueueEtl(testScript.Configuration.Transforms[0], testScript.Configuration as QueueEtlConfiguration, database, database.ServerStore))
-                        using (queueEtl.EnterTestMode(out debugOutput))
+                        using (var queueEtl = QueueEtl<QueueItem>.CreateInstance(testScript.Configuration.Transforms[0], testScript.Configuration as QueueEtlConfiguration, database,
+                                   database.ServerStore))
                         {
-                            queueEtl.EnsureThreadAllocationStats();
+                            switch (queueEtl)
+                            {
+                                case KafkaEtl kafkaEtl:
+                                    using (kafkaEtl.EnterTestMode(out debugOutput))
+                                    {
+                                        kafkaEtl.EnsureThreadAllocationStats();
 
-                            var queueItem = new QueueItem(document, docCollection);
+                                        var queueItem = new QueueItem(document, docCollection);
 
-                            var results = queueEtl.Transform(new[] { queueItem }, context, new EtlStatsScope(new EtlRunStats()),
-                                new EtlProcessState());
+                                        var results = kafkaEtl.Transform(new[] { queueItem }, context, new EtlStatsScope(new EtlRunStats()),
+                                            new EtlProcessState());
 
-                            result = queueEtl.RunTest(results, context);
-                            result.DebugOutput = debugOutput;
+                                        result = kafkaEtl.RunTest(results, context);
+                                        result.DebugOutput = debugOutput;
 
-                            return tx;
+                                        return tx;
+                                    }
+                                case RabbitMqEtl rabbitMqEtl:
+                                    using (rabbitMqEtl.EnterTestMode(out debugOutput))
+                                    {
+                                        rabbitMqEtl.EnsureThreadAllocationStats();
+
+                                        var queueItem = new QueueItem(document, docCollection);
+
+                                        var results = rabbitMqEtl.Transform(new[] { queueItem }, context, new EtlStatsScope(new EtlRunStats()),
+                                            new EtlProcessState());
+
+                                        result = rabbitMqEtl.RunTest(results, context);
+                                        result.DebugOutput = debugOutput;
+
+                                        return tx;
+                                    }
+                                default:
+                                    throw new NotSupportedException($"Unknown Queue ETL type in script test: {queueEtl.GetType().FullName}");
+                            }
                         }
+                        
 
                     default:
                         throw new NotSupportedException($"Unknown ETL type in script test: {testScript.Configuration.EtlType}");

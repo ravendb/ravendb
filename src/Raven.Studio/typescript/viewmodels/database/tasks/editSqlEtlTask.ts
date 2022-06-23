@@ -562,7 +562,7 @@ class editSqlEtlTask extends shardViewModelBase {
     }
 
     syntaxHelp() {
-        const viewmodel = new transformationScriptSyntax("Sql", this.editedSqlEtl().destinationType);
+        const viewmodel = new transformationScriptSyntax("Sql");
         app.showBootstrapDialog(viewmodel);
     }
    

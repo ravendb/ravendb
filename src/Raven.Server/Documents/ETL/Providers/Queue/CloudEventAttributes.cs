@@ -2,11 +2,11 @@
 
 namespace Raven.Server.Documents.ETL.Providers.Queue;
 
-public class QueueLoadOptions
+public class CloudEventAttributes
 {
-    public static HashSet<string> ValidOptions = new()
+    public static HashSet<string> ValidAttributeNames = new()
     {
-        nameof(Id), nameof(Type), nameof(Source), nameof(PartitionKey), nameof(Exchange)
+        nameof(Id), nameof(Type), nameof(Source), nameof(PartitionKey)
     };
 
     public string Id { get; set; }
@@ -16,6 +16,4 @@ public class QueueLoadOptions
     public string Source { get; set; }
 
     public string PartitionKey { get; set; }
-
-    public string Exchange { get; set; }
 }
