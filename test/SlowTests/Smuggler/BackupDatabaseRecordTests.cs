@@ -165,7 +165,7 @@ namespace SlowTests.Smuggler
                         Name = "sql",
                         ParameterizeDeletes = false,
                         MentorNode = "A",
-                        Transforms = new List<Transformation>{new() {Script = "",Collections = new List<string>{"Orders"},Name ="testScript"}}
+                        Transforms = new List<Transformation>{new() {Script = "loadToOrders(this)", Collections = new List<string>{"Orders"},Name ="testScript"}}
                     }));
                     await store1.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
 
@@ -369,7 +369,7 @@ namespace SlowTests.Smuggler
                         Name = "sql",
                         ParameterizeDeletes = false,
                         MentorNode = "A",
-                        Transforms = new List<Transformation>{new() {Script = "",Collections = new List<string>{"Orders"},Name ="testScript"}}
+                        Transforms = new List<Transformation>{new() {Script = "loadToOrders(this)", Collections = new List<string>{"Orders"},Name ="testScript"}}
                     }));
                     var migrate = new Migrator(new DatabasesMigrationConfiguration
                     {
@@ -816,7 +816,7 @@ namespace SlowTests.Smuggler
                         ConnectionStringName = "scon1",
                         Name = "setl1",
                         AllowEtlOnNonEncryptedChannel = true,
-                        Transforms = new List<Transformation>{new() {Script = "",Collections = new List<string>{"Orders"},Name ="testScript"}},
+                        Transforms = new List<Transformation>{new() {Script = "loadToOrders(this)", Collections = new List<string>{"Orders"},Name ="testScript"}},
                         SqlTables =
                         {
                             new SqlEtlTable {TableName = "Orders", DocumentIdColumn = "Id"},
@@ -829,7 +829,7 @@ namespace SlowTests.Smuggler
                         ConnectionStringName = "scon2",
                         Name = "setl2",
                         AllowEtlOnNonEncryptedChannel = true,
-                        Transforms = new List<Transformation>{new() {Script = "",Collections = new List<string>{"Orders"},Name ="testScript"}},
+                        Transforms = new List<Transformation>{new() {Script = "loadToOrders(this)", Collections = new List<string>{"Orders"},Name ="testScript"}},
                         SqlTables =
                         {
                             new SqlEtlTable {TableName = "Orders", DocumentIdColumn = "Id"},
@@ -842,7 +842,7 @@ namespace SlowTests.Smuggler
                         ConnectionStringName = "scon3",
                         Name = "setl1",
                         AllowEtlOnNonEncryptedChannel = true,
-                        Transforms = new List<Transformation>{new() {Script = "",Collections = new List<string>{"Orders"},Name ="testScript"}},
+                        Transforms = new List<Transformation>{new() {Script = "loadToOrders(this)", Collections = new List<string>{"Orders"},Name ="testScript"}},
                         SqlTables =
                         {
                             new SqlEtlTable {TableName = "Orders", DocumentIdColumn = "Id"},
@@ -855,7 +855,7 @@ namespace SlowTests.Smuggler
                         ConnectionStringName = "scon4",
                         Name = "setl4",
                         AllowEtlOnNonEncryptedChannel = true,
-                        Transforms = new List<Transformation>{new() {Script = "",Collections = new List<string>{"Orders"},Name ="testScript"}},
+                        Transforms = new List<Transformation>{new() {Script = "loadToOrders(this)", Collections = new List<string>{"Orders"},Name ="testScript"}},
                         SqlTables =
                         {
                             new SqlEtlTable {TableName = "Orders", DocumentIdColumn = "Id"},
@@ -1109,7 +1109,7 @@ namespace SlowTests.Smuggler
                         Name = "sql",
                         ParameterizeDeletes = false,
                     MentorNode = "A",
-                    Transforms = new List<Transformation>{new() {Script = "",Collections = new List<string>{"Orders"},Name ="testScript"}}
+                    Transforms = new List<Transformation>{new() {Script = "loadToOrders(this)",Collections = new List<string>{"Orders"},Name ="testScript"}}
                     }));
 
                     using (var session = store.OpenAsyncSession())
