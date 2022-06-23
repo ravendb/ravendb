@@ -21,6 +21,14 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Blittable\BlittableJsonWriterTests\Jsons\*.json" />
+    <None Remove="Corax\Bugs\Corax.Set.Adds.txt" />
+    <EmbeddedResource Include="Corax\Bugs\Corax.Set.Adds.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <None Remove="Corax\Bugs\Corax.Set.Removals.txt" />
+    <EmbeddedResource Include="Corax\Bugs\Corax.Set.Removals.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
     <Compile Remove="Sparrow\BitVectors.cs" />
