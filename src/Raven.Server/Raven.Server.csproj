@@ -30,6 +30,8 @@
     <EmbeddedResource Include="Integrations\PostgreSQL\Npgsql\npgsql_types_5.csv" />
     <EmbeddedResource Include="Integrations\PostgreSQL\Npgsql\types_query.csv" />
     <EmbeddedResource Include="Integrations\PostgreSQL\Npgsql\version_query.csv" />
+    <EmbeddedResource Include="Integrations\PostgreSQL\Npgsql\version_current_setting_query.csv" />
+    <EmbeddedResource Include="Integrations\PostgreSQL\Npgsql\current_setting_query.csv" />
     <EmbeddedResource Include="Web\Assets\Unsafe.html" />
     <EmbeddedResource Include="Web\Assets\AuthError.html" />
     <EmbeddedResource Include="..\..\LICENSE.txt" Link="Commercial\RavenDB.license.txt" />
@@ -50,6 +52,8 @@
     <None Remove="Integrations\PostgreSQL\Npgsql\npgsql_types_5.csv" />
     <None Remove="Integrations\PostgreSQL\Npgsql\types_query.csv" />
     <None Remove="Integrations\PostgreSQL\Npgsql\version_query.csv" />
+    <None Remove="Integrations\PostgreSQL\Npgsql\version_current_setting_query.csv" />
+    <None Remove="Integrations\PostgreSQL\Npgsql\current_setting_query.csv" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Web\Studio\EmbeddedData\NorthwindModel.cs" />

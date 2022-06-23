@@ -91,6 +91,18 @@ namespace Raven.Server.Integrations.PostgreSQL
             else if (normalizedQuery.StartsWith("ROLLBACK", StringComparison.OrdinalIgnoreCase))
                 result = new PgTable();
 
+            else if (normalizedQuery.StartsWith("DEALLOCATE", StringComparison.OrdinalIgnoreCase))
+            {
+                var statementName = normalizedQuery.Split("\"")[1];
+                if (PgSession.NamedStatements.TryGetValue(statementName, out var statement) == false)
+                    throw new KeyNotFoundException($"Cannot deallocate prepared statement. Expected named statement '{statementName}' wasn't found.");
+                statement.IsNamedStatement = false;
+                statement.Dispose();
+                if (PgSession.NamedStatements.TryRemove(statementName, out _) == false)
+                    throw new InvalidOperationException($"Failed to remove prepared statement '{statementName}'");
+                result = new PgTable();
+            }
+                
             if (result != null)
             {
                 hardcodedQuery = new HardcodedQuery(queryText, parametersDataTypes, result);
