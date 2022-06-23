@@ -6,3 +6,4 @@
 [assembly: InternalsVisibleTo("Raven.Embedded")]
 [assembly: InternalsVisibleTo("Sparrow.Server")]
 [assembly: InternalsVisibleTo("Voron")]
+[assembly: InternalsVisibleTo("Corax")]
