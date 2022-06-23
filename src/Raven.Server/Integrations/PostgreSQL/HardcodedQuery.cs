@@ -18,7 +18,7 @@ namespace Raven.Server.Integrations.PostgreSQL
             _result = result;
         }
 
-        public static bool TryParse(string queryText, int[] parametersDataTypes, out HardcodedQuery hardcodedQuery)
+        public static bool TryParse(string queryText, int[] parametersDataTypes, PgSession session, out HardcodedQuery hardcodedQuery)
         {
             // TODO: The hardcoded queries in NpgsqlConfig might look a bit different for every user because they are generated using a function. Add support to more than just the current queries by not matching the entire string but ignoring parts of it.
             // TODO: For more accurate implementation, use the `resultsFormat` and send an appropriate _result table (Binary or Text). So for example return PowerBIConfig.TableScheamResponseBinary when the foramt is binary, and PowerBIConfig.TableScheamResponseText otherwise.
@@ -94,12 +94,10 @@ namespace Raven.Server.Integrations.PostgreSQL
             else if (normalizedQuery.StartsWith("DEALLOCATE", StringComparison.OrdinalIgnoreCase))
             {
                 var statementName = normalizedQuery.Split("\"")[1];
-                if (PgSession.NamedStatements.TryGetValue(statementName, out var statement) == false)
-                    throw new KeyNotFoundException($"Cannot deallocate prepared statement. Expected named statement '{statementName}' wasn't found.");
+                if (session.NamedStatements.TryRemove(statementName, out var statement) == false)
+                    throw new InvalidOperationException($"Failed to remove prepared statement '{statementName}'");
                 statement.IsNamedStatement = false;
                 statement.Dispose();
-                if (PgSession.NamedStatements.TryRemove(statementName, out _) == false)
-                    throw new InvalidOperationException($"Failed to remove prepared statement '{statementName}'");
                 result = new PgTable();
             }
                 

@@ -19,7 +19,7 @@ namespace Raven.Server.Integrations.PostgreSQL
     public class PgSession
     {
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<PgSession>("Postgres Server");
-        public static ConcurrentDictionary<string, PgQuery> NamedStatements { get; private set; } = new();
+        internal ConcurrentDictionary<string, PgQuery> NamedStatements { get; private set; }
         private readonly TcpClient _client;
         private readonly X509Certificate2 _serverCertificate;
         private readonly int _identifier;
@@ -154,7 +154,7 @@ namespace Raven.Server.Integrations.PostgreSQL
             {
                 username = _clientOptions["user"];
 
-                using var transaction = new PgTransaction(database, new MessageReader(), username);
+                using var transaction = new PgTransaction(database, new MessageReader(), username,this);
 
                 if (_serverCertificate != null)
                 {

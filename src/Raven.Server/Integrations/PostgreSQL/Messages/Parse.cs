@@ -81,7 +81,7 @@ namespace Raven.Server.Integrations.PostgreSQL.Messages
             if (!string.IsNullOrEmpty(StatementName))
             {
                 transaction._currentQuery.IsNamedStatement = true;
-                if (PgSession.NamedStatements.TryAdd(StatementName, transaction._currentQuery) == false)
+                if (transaction.Session.NamedStatements.TryAdd(StatementName, transaction._currentQuery) == false)
                     throw new ArgumentException($"Failed to store statement under the name '{StatementName}', there is already a statement with such name.");
 
             }
