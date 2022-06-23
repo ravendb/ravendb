@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using SlowTests.Core.Utils.Entities;
 using Tests.Infrastructure;
@@ -73,8 +74,8 @@ public class RavenDB_18762 : ClusterTestBase
 
                 session.Advanced.WaitForReplicationAfterSaveChanges(timeout: TimeSpan.FromSeconds(5), throwOnTimeout: true, replicas: 2);
 
-                var error = await Assert.ThrowsAsync<TimeoutException>(() => session.SaveChangesAsync());
-                Assert.StartsWith("System.TimeoutException", error.Message);
+                var error = await Assert.ThrowsAsync<RavenTimeoutException>(() => session.SaveChangesAsync());
+                Assert.StartsWith("Raven.Client.Exceptions.RavenTimeoutException", error.Message);
                 Assert.Contains("Could not verify that", error.Message);
                 Assert.Contains("was replicated to 2 servers", error.Message);
             }
