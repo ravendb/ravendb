@@ -82,7 +82,7 @@ namespace Corax
 
         public static class Analyzers
         {
-            public const int DefaultBufferForAnalyzers = 4 * Size.Kilobyte; //is this enough?
+            public const int DefaultBufferForAnalyzers = 4 * Size.Kilobyte;
         }
         
         public static class Suggestions

@@ -24,6 +24,7 @@ using RavenConstants = Raven.Client.Constants;
 using CoraxConstants = Corax.Constants;
 using Encoding = System.Text.Encoding;
 using System.Diagnostics;
+using Raven.Server.NotificationCenter.Notifications;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
@@ -260,7 +261,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
             case ValueType.DynamicJsonObject:
                 if (field.Indexing is not FieldIndexing.No)
                 {
-                    ThrowIndexingComplexObjectNotSupported(field);
+                    RewriteIndexDefinitionForComplexObjectAndSendNotificationAboutItToUser(field);
                 }
 
                 var dynamicJson = (DynamicBlittableJson)value;
@@ -277,7 +278,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
 
                 if (field.Indexing is not FieldIndexing.No)
                 {
-                    ThrowIndexingComplexObjectNotSupported(field);
+                    RewriteIndexDefinitionForComplexObjectAndSendNotificationAboutItToUser(field);
                 }
                 
                 var jsonScope = Scope.CreateJson(json, indexContext);
@@ -332,11 +333,27 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         
         if (field.Indexing is not FieldIndexing.No)
         {
-            ThrowIndexingComplexObjectNotSupported(field);
+            RewriteIndexDefinitionForComplexObjectAndSendNotificationAboutItToUser(field);
         }
         
         _knownFields.GetByFieldId(field.Id).Analyzer = null;
         scope.Write(field.Id, val, ref entryWriter);
+    }
+
+    private void RewriteIndexDefinitionForComplexObjectAndSendNotificationAboutItToUser(IndexField field)
+    {
+        field.Indexing = FieldIndexing.No;
+        if (_knownFields.TryGetByFieldId(field.Id, out var binding))
+        {
+            binding.OverrideFieldIndexingMode(FieldIndexingMode.No);
+        }
+        
+        var errorTitle = $"Misuse of indexing option in '{_index.Name}'";
+        var errorMsg = $"The value of '{binding.FieldName.ToString()}' field is a complex object item. Indexing it as a text isn't supported and it's supposed to have \"Indexing\" option set to \"No\". We have defaulted to that option so you won't be able to search over this field. Although in Corax the field is always stored so you can still use it in projection.If you really need to use it for searching purposes, you have to call ToString() on the field value in the index definition.";
+        var database = _index.DocumentDatabase;
+        var alert = AlertRaised.Create(database.Name, errorTitle, errorMsg, AlertType.Indexing_CoraxComplexItem, NotificationSeverity.Warning);
+
+        database.NotificationCenter.Add(alert);
     }
 
     internal static void ThrowIndexingComplexObjectNotSupported(object field)

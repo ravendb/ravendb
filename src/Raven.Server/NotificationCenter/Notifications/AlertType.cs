@@ -60,6 +60,7 @@ namespace Raven.Server.NotificationCenter.Notifications
 
         Indexing_UnexpectedIndexingThreadError,
         Indexing_CouldNotGetStats,
+        Indexing_CoraxComplexItem,
 
         CpuUsageExtensionPointError,
         TcpListenerError,
