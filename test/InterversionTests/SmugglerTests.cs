@@ -130,14 +130,31 @@ namespace InterversionTests
             if (excludeOn == ExcludeOn.Export)
                 exportOptions.OperateOnTypes &= ~(DatabaseItemType.Attachments | DatabaseItemType.RevisionDocuments | DatabaseItemType.CounterGroups);
             var exportOperation = await storeCurrent.Smuggler.ExportAsync(exportOptions, file);
-            
+
             await exportOperation.WaitForCompletionAsync(_operationTimeout);
 
             DatabaseStatistics expected = await storeCurrent.Maintenance.SendAsync(new GetStatisticsOperation());
 
             //Import
             var importOptions = new DatabaseSmugglerImportOptions { SkipRevisionCreation = true };
-            importOptions.OperateOnTypes &= ~DatabaseItemType.TimeSeries;
+
+            // Operate on types that will remain relevant for v4.2 
+            importOptions.OperateOnTypes &= ~(DatabaseItemType.TimeSeries | DatabaseItemType.ReplicationHubCertificates);
+            importOptions.OperateOnDatabaseRecordTypes = DatabaseRecordItemType.Client |
+                                                         DatabaseRecordItemType.ConflictSolverConfig |
+                                                         DatabaseRecordItemType.Expiration |
+                                                         DatabaseRecordItemType.ExternalReplications |
+                                                         DatabaseRecordItemType.PeriodicBackups |
+                                                         DatabaseRecordItemType.RavenConnectionStrings |
+                                                         DatabaseRecordItemType.RavenEtls |
+                                                         DatabaseRecordItemType.Revisions |
+                                                         DatabaseRecordItemType.Settings |
+                                                         DatabaseRecordItemType.SqlConnectionStrings |
+                                                         DatabaseRecordItemType.Sorters |
+                                                         DatabaseRecordItemType.SqlEtls |
+                                                         DatabaseRecordItemType.HubPullReplications |
+                                                         DatabaseRecordItemType.SinkPullReplications;
+
             if (excludeOn == ExcludeOn.Import)
                 importOptions.OperateOnTypes &= ~(DatabaseItemType.Attachments | DatabaseItemType.RevisionDocuments | DatabaseItemType.CounterGroups);
             var importOperation = await store42.Smuggler.ImportAsync(importOptions, file);
