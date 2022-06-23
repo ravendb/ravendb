@@ -85,6 +85,7 @@ class ongoingTaskQueueEtlTransformationModel {
         });
         
         this.script.extend({
+            required: true,
             aceValidation: true
         });
 
