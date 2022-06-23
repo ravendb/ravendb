@@ -36,12 +36,7 @@ namespace Raven.Server.Integrations.PostgreSQL.Messages
 
         protected override async Task HandleMessage(PgTransaction transaction, MessageBuilder messageBuilder, PipeWriter writer, CancellationToken token)
         {
-            // Note: It's not an error to close a non existing named portal/statement
-            if (string.IsNullOrEmpty(ObjectName))
-            {
-                transaction.Close();
-            }
-
+            transaction.Close();
             await writer.WriteAsync(messageBuilder.CloseComplete(), token);
         }
     }

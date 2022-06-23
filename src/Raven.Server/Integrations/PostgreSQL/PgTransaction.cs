@@ -22,7 +22,7 @@ namespace Raven.Server.Integrations.PostgreSQL
         public MessageReader MessageReader { get; private set; }
         public string Username { get; private set; }
         
-        private PgQuery _currentQuery;
+        internal PgQuery _currentQuery;
         
         public PgTransaction(DocumentDatabase documentDatabase, MessageReader messageReader, string username)
         {
@@ -42,8 +42,14 @@ namespace Raven.Server.Integrations.PostgreSQL
             _currentQuery = PgQuery.CreateInstance(cleanQueryText, parametersDataTypes, DocumentDatabase);
         }
 
-        public void Bind(ICollection<byte[]> parameters, short[] parameterFormatCodes, short[] resultColumnFormatCodes)
+        public void Bind(ICollection<byte[]> parameters, short[] parameterFormatCodes, short[] resultColumnFormatCodes, string statementName = null)
         {
+            if (statementName is not null)
+            {
+                State = TransactionState.InTransaction;
+                if (PgSession.NamedStatements.TryGetValue(statementName, out _currentQuery) == false)
+                    throw new KeyNotFoundException($"Expected named statement '{statementName}' wasn't found.");
+            }
             _currentQuery.Bind(parameters, parameterFormatCodes, resultColumnFormatCodes);
         }
 
@@ -73,9 +79,8 @@ namespace Raven.Server.Integrations.PostgreSQL
         public void Sync()
         {
             State = TransactionState.Idle;
-
-            _currentQuery?.Dispose();
             _currentQuery = null;
+            _currentQuery?.Dispose();
         }
 
         public void Dispose()

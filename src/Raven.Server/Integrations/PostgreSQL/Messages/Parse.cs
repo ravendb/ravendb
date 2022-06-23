@@ -54,11 +54,6 @@ namespace Raven.Server.Integrations.PostgreSQL.Messages
 
         protected override async Task HandleMessage(PgTransaction transaction, MessageBuilder messageBuilder, PipeWriter writer, CancellationToken token)
         {
-            if (!string.IsNullOrEmpty(StatementName))
-            {
-                throw new PgErrorException(PgErrorCodes.FeatureNotSupported, "Named statements are not supported.");
-            }
-
             // Extract optional parameter types (e.g. $1::int4)
             var foundParamTypes = new List<string>();
             var cleanQueryText = ParamRegex.Replace(Query, new MatchEvaluator((Match match) =>
@@ -83,6 +78,13 @@ namespace Raven.Server.Integrations.PostgreSQL.Messages
             }
 
             transaction.Init(cleanQueryText, ParametersDataTypes);
+            if (!string.IsNullOrEmpty(StatementName))
+            {
+                transaction._currentQuery.IsNamedStatement = true;
+                if (PgSession.NamedStatements.TryAdd(StatementName, transaction._currentQuery) == false)
+                    throw new ArgumentException($"Failed to store statement under the name '{StatementName}', there is already a statement with such name.");
+
+            }
             await writer.WriteAsync(messageBuilder.ParseComplete(), token);
         }
     }

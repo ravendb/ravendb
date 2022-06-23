@@ -68,13 +68,6 @@ namespace Raven.Server.Integrations.PostgreSQL.Messages
 
         protected override async Task HandleMessage(PgTransaction transaction, MessageBuilder messageBuilder, PipeWriter writer, CancellationToken token)
         {
-            // TODO: Maybe support named statements/portals
-            if (!string.IsNullOrEmpty(StatementName) || !string.IsNullOrEmpty(PortalName))
-            {
-                throw new PgErrorException(PgErrorCodes.FeatureNotSupported,
-                    "Named statements/portals are not supported.");
-            }
-
             if (ParameterFormatCodes.Length != Parameters.Count &&
                 ParameterFormatCodes.Length != 0 &&
                 ParameterFormatCodes.Length != 1)
@@ -84,7 +77,7 @@ namespace Raven.Server.Integrations.PostgreSQL.Messages
                     $"to be 0, 1 or equal to the parameters count {Parameters.Count}.");
             }
 
-            transaction.Bind(Parameters, ParameterFormatCodes, ResultColumnFormatCodes);
+            transaction.Bind(Parameters, ParameterFormatCodes, ResultColumnFormatCodes, StatementName);
             await writer.WriteAsync(messageBuilder.BindComplete(), token);
         }
     }
