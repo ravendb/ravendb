@@ -66,14 +66,19 @@ namespace Raven.Client.Http
             var state = _state;
             var stateFailures = state.Failures;
             var serverNodes = state.Nodes;
-            var len = Math.Min(serverNodes.Count, stateFailures.Length);
-            for (var i = 0; i < len; i++)
+            var numOfServers = serverNodes.Count;
+            var len = Math.Min(numOfServers, stateFailures.Length);
+            for (var i = 0; i < len; i++) 
             {
-                //In case of an error
-                //We want to reach the same node over and over  
-                if (serverNodes[i].ClusterTag == nodeTag && string.IsNullOrEmpty(serverNodes[i].Url) == false)
+                if (serverNodes[i].ClusterTag == nodeTag)
                 {
-                    return (i, serverNodes[i]);
+                    if (numOfServers == 1)
+                        return (i, serverNodes[i]);
+                    
+                    if (stateFailures[i] == 0)
+                        return (i, serverNodes[i]);
+                
+                    throw new RequestedNodeUnavailableException($"Requested node {nodeTag} currently unavailable, please try again later.");
                 }
             }
 
