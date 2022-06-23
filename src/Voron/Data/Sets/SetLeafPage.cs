@@ -164,7 +164,7 @@ namespace Voron.Data.Sets
                     do
                     {
                         compressIndex = 0;
-                        compressLength = PForDecoder.Decode(decoderState, _parent.Ptr + _compressedEntry.Position, _compressedEntry.Length, (int*)_scratchMemory.Ptr);
+                        compressLength = PForDecoder.Decode(decoderState, _parent.Ptr + _compressedEntry.Position, _compressedEntry.Length, (int*)_scratchMemory.Ptr, _scratchMemory.Size/sizeof(int));
                         if (compressLength != 0)
                             break;
 
@@ -205,7 +205,8 @@ namespace Voron.Data.Sets
 
                                 var parent = (SetLeafPage*)Unsafe.AsPointer(ref _parent);
                                 var decoderState = (PForDecoder.DecoderState*)Unsafe.AsPointer(ref _decoderState);
-                                TryReadMoreCompressedValues(parent, decoderState, ref _compressedEntry, ref compressIndex, ref compressLength, ref _compressedEntryIndex, ref _hasDecoder, scratchPtr);
+                                TryReadMoreCompressedValues(parent, decoderState, ref _compressedEntry, ref compressIndex, ref compressLength, ref _compressedEntryIndex, ref _hasDecoder, scratchPtr, 
+                                    _scratchMemory.Size /sizeof(int));
                             }
                         }
                         rawValuesIndex--;
@@ -259,7 +260,8 @@ namespace Voron.Data.Sets
                         do
                         {
                             compressIndex = 0;
-                            compressLength = PForDecoder.Decode(decoderState, parent->Ptr + _compressedEntry.Position, _compressedEntry.Length, (int*)_scratchMemory.Ptr);
+                            compressLength = PForDecoder.Decode(decoderState, parent->Ptr + _compressedEntry.Position, _compressedEntry.Length, (int*)_scratchMemory.Ptr,
+                                _scratchMemory.Size/sizeof(int));
                             if (compressLength != 0)
                                 break;
 
@@ -292,7 +294,8 @@ namespace Voron.Data.Sets
                             {
                                 compressIndex++; // skip this one
 
-                                TryReadMoreCompressedValues(parent, decoderState, ref _compressedEntry, ref compressIndex, ref compressLength, ref _compressedEntryIndex, ref _hasDecoder, scratchPtr);
+                                TryReadMoreCompressedValues(parent, decoderState, ref _compressedEntry, ref compressIndex, ref compressLength, ref _compressedEntryIndex, ref _hasDecoder, scratchPtr,
+                                    _scratchMemory.Size/sizeof(int));
                             }
                         }
 
@@ -302,19 +305,17 @@ namespace Voron.Data.Sets
                             rawValuesIndex--;
                             continue;
                         }
-                        else
-                        {
-                            long value = (long)rawValue | _parent.Header->Baseline;
-                            if (value > pruneGreaterThan)
-                            {
-                                // We are pruning, we are done. 
-                                result = false;
-                                break;
-                            }
 
-                            rawValuesIndex--;
-                            matches[i++] = value;                            
+                        long value = (long)rawValue | _parent.Header->Baseline;
+                        if (value > pruneGreaterThan)
+                        {
+                            // We are pruning, we are done. 
+                            result = false;
+                            break;
                         }
+
+                        rawValuesIndex--;
+                        matches[i++] = value;
                     }
 
                     long baseline = _parent.Header->Baseline;
@@ -356,7 +357,8 @@ namespace Voron.Data.Sets
                 ref int compressLength,
                 ref int compressedEntryIndex,
                 ref bool hasDecoder,
-                int* scratch)
+                int* scratch, 
+                int scratchSize)
             {
                 var parentPtr = parent->Ptr;
                 var parentHeader = parent->Header;
@@ -365,7 +367,7 @@ namespace Voron.Data.Sets
                 while (compressIndex == compressLength && hasDecoder)
                 {
                     compressIndex = 0;
-                    compressLength = PForDecoder.Decode(decoderState, parentPtr + compressedEntry.Position, compressedEntry.Length, scratch);
+                    compressLength = PForDecoder.Decode(decoderState, parentPtr + compressedEntry.Position, compressedEntry.Length, scratch, scratchSize);
                     if (compressLength != 0)
                         return;
 

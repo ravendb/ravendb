@@ -68,6 +68,7 @@ public static class Program
                 Console.ForegroundColor = ConsoleColor.Red;
                 Console.WriteLine(e);
                 Console.ForegroundColor = ConsoleColor.White;
+                return;
             }
         }
     }
