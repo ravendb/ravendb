@@ -372,26 +372,26 @@
                             <div class="header margin-bottom">
                                 <span>Message body:</span>
                                 <pre data-bind="text: Body" class="margin-top"></pre>
-                                <div class="margin-top-sm" data-bind="if: Options">
-                                    <div data-bind="visible: Options.Id">
+                                <div>
+                                    <span>Routing Key:</span>
+                                    <strong data-bind="text: RoutingKey || '(empty)'"></strong>
+                                </div>
+                                <div class="margin-top-sm" data-bind="with: Attributes">
+                                    <div data-bind="visible: Id">
                                         <span>Id:</span>
-                                        <strong data-bind="text: Options.Id"></strong>
+                                        <strong data-bind="text: Id"></strong>
                                     </div>
-                                    <div data-bind="visible: Options.PartitionKey">
+                                    <div data-bind="visible: PartitionKey">
                                         <span>Partition key:</span>
-                                        <strong data-bind="text: Options.PartitionKey"></strong>
+                                        <strong data-bind="text: PartitionKey"></strong>
                                     </div>
-                                    <div data-bind="visible: Options.Type">
+                                    <div data-bind="visible: Type">
                                         <span>Type:</span>
-                                        <strong data-bind="text: Options.Type"></strong>
+                                        <strong data-bind="text: Type"></strong>
                                     </div>
-                                    <div data-bind="visible: Options.Source">
+                                    <div data-bind="visible: Source">
                                         <span>Source:</span>
-                                        <strong data-bind="text: Options.Source"></strong>
-                                    </div>
-                                    <div data-bind="visible: Options.Exchange">
-                                        <span>Exchange:</span>
-                                        <strong data-bind="text: Options.Exchange"></strong>
+                                        <strong data-bind="text: Source"></strong>
                                     </div>
                                 </div>
                             </div>
