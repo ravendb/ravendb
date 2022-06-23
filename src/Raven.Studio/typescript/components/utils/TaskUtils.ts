@@ -14,6 +14,8 @@ export default class TaskUtils {
                     return "KafkaQueueEtl";
                 case "RabbitMq":
                     return "RabbitQueueEtl";
+                case "None":
+                    throw new Error("Expected non-null BrokerType");
                 default:
                     assertUnreachable(queueTask.BrokerType);
             }
