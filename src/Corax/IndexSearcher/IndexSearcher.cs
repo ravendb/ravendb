@@ -11,7 +11,6 @@ using Sparrow;
 using System.Runtime.Intrinsics.X86;
 using Corax.Pipeline;
 using Corax.Queries;
-using Corax.Utils;
 using Sparrow.Server;
 
 namespace Corax;
@@ -20,7 +19,6 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 {
     private readonly Transaction _transaction;
     private readonly IndexFieldsMapping _fieldMapping;
-
     private Page _lastPage = default;
 
     /// <summary>
@@ -99,6 +97,9 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         return data.Slice(len, size);
     }
 
+    //Function used to generate Slice from query parameters.
+    //We cannot dispose them before the whole query is executed because they are an integral part of IQueryMatch.
+    //We know that the Slices are automatically disposed when the transaction is closed so we don't need to track them.
     [SkipLocalsInit]
     private Slice EncodeAndApplyAnalyzer(string term, int fieldId)
     {
@@ -111,44 +112,77 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         if (term == Constants.NullValue)
             return Constants.NullValueSlice;
 
-        Slice.From(Allocator, term, ByteStringType.Immutable, out var rawTerm);
-        if (fieldId == Constants.IndexSearcher.NonAnalyzer)
-        {
-            return rawTerm;
-        }
-
-        Slice.From(Allocator, ApplyAnalyzer(rawTerm, fieldId), out var encodedTerm);
+        ApplyAnalyzer(term, fieldId, out var encodedTerm); 
         return encodedTerm;
     }
-
-    //todo maciej: notice this is very inefficient. We need to improve it in future. 
-    // Only for KeywordTokenizer
-    [SkipLocalsInit]
-    internal unsafe ReadOnlySpan<byte> ApplyAnalyzer(ReadOnlySpan<byte> originalTerm, int fieldId)
+    
+    internal ByteStringContext<ByteStringMemoryCache>.InternalScope ApplyAnalyzer(string originalTerm, int fieldId, out Slice value)
     {
         if (_fieldMapping.TryGetByFieldId(fieldId, out var binding) == false
             || binding.FieldIndexingMode is FieldIndexingMode.Exact or FieldIndexingMode.Search
             || binding.Analyzer is null)
         {
-            return originalTerm;
+            var disposable = Slice.From(Allocator, originalTerm, ByteStringType.Immutable, out var originalTermSliced);
+            value = originalTermSliced;
+            return disposable;
         }
 
+        using (Slice.From(Allocator, originalTerm, ByteStringType.Immutable, out var originalTermSliced))
+        {
+            return AnalyzeTerm(binding, originalTermSliced, fieldId, out value);
+        }
+    }
+    
+    internal ByteStringContext<ByteStringMemoryCache>.InternalScope ApplyAnalyzer(ReadOnlySpan<byte> originalTerm, int fieldId, out Slice value)
+    {
+        if (_fieldMapping.TryGetByFieldId(fieldId, out var binding) == false
+            || binding.FieldIndexingMode is FieldIndexingMode.Exact or FieldIndexingMode.Search
+            || binding.Analyzer is null)
+        {
+            var disposable = Slice.From(Allocator, originalTerm, ByteStringType.Immutable, out var originalTermSliced);
+            value = originalTermSliced;
+            return disposable;
+        }
+
+        return AnalyzeTerm(binding, originalTerm, fieldId, out value);
+    }
+    
+    [SkipLocalsInit]
+    internal ByteStringContext<ByteStringMemoryCache>.InternalScope ApplyAnalyzer(Slice originalTerm, int fieldId, out Slice value)
+    {
+        if (_fieldMapping.TryGetByFieldId(fieldId, out var binding) == false
+            || binding.FieldIndexingMode is FieldIndexingMode.Exact or FieldIndexingMode.Search
+            || binding.Analyzer is null)
+        {
+            value =  originalTerm;
+            return default;
+        }
+        
+        return AnalyzeTerm(binding, originalTerm.AsSpan(), fieldId, out value);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private ByteStringContext<ByteStringMemoryCache>.InternalScope AnalyzeTerm(IndexFieldBinding binding, ReadOnlySpan<byte> originalTerm, int fieldId, out Slice value)
+    {
         var analyzer = binding.Analyzer!;
         analyzer.GetOutputBuffersSize(originalTerm.Length, out int outputSize, out int tokenSize);
         
         Debug.Assert(outputSize < 1024 * 1024, "Term size is too big for analyzer.");
         Debug.Assert(Unsafe.SizeOf<Token>() * tokenSize < 1024 * 1024, "Analyzer wants to create too much tokens.");
 
-        var buffer = ArrayPool<byte>.Shared.Rent(outputSize); // We can release it only on dispose. todo maciej: write stack of arrays to return.
+        var buffer = Analyzer.BufferPool.Rent(outputSize);
         var tokens = Analyzer.TokensPool.Rent(tokenSize);
 
         Span<byte> bufferSpan = buffer.AsSpan();
         Span<Token> tokensSpan = tokens.AsSpan();
         analyzer.Execute(originalTerm, ref bufferSpan, ref tokensSpan);
         Debug.Assert(tokens.Length == 1, $"{nameof(ApplyAnalyzer)} should create only 1 token as a result.");
-        
+        var disposable = Slice.From(Allocator, bufferSpan, ByteStringType.Immutable, out value);
+
         Analyzer.TokensPool.Return(tokens);
-        return bufferSpan;
+        Analyzer.BufferPool.Return(buffer);
+
+        return disposable;
     }
 
     public AllEntriesMatch AllEntries()
