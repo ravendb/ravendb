@@ -410,6 +410,12 @@ namespace Raven.Client.Documents.Operations.ETL
                 IsEmptyScript = true;
             }
 
+            if (IsEmptyScript)
+            {
+                if (type != EtlType.Raven)
+                    errors.Add($"Script '{Name}' must not be empty");
+            }
+
             return errors.Count == 0;
         }
 

@@ -612,38 +612,41 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
         [Fact]
         public void Error_if_script_does_not_contain_any_loadTo_method()
         {
-            using (var store = GetDocumentStore())
+            var config = new ElasticSearchEtlConfiguration
             {
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new Order
-                    {
-                        OrderLines = new List<OrderLine>
-                        {
-                            new OrderLine {Cost = 3, Product = "Cheese", Quantity = 3}, new OrderLine {Cost = 4, Product = "Bear", Quantity = 2},
-                        }
-                    });
-                    session.SaveChanges();
-                }
+                Name = "test",
+                ConnectionStringName = "test",
+                Transforms = { new Transformation { Name = "test", Collections = { "Orders" }, Script = @"this.TotalCost = 10;" } }
+            };
 
-                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+            config.Initialize(new ElasticSearchConnectionString { Name = "Foo", Nodes = new[] { "http://localhost:9200" } });
 
-                var config = new ElasticSearchEtlConfiguration
-                {
-                    Name = "test",
-                    ConnectionStringName = "test",
-                    Transforms = { new Transformation { Name = "test", Collections = { "Orders" }, Script = @"this.TotalCost = 10;" } }
-                };
+            List<string> errors;
+            config.Validate(out errors);
 
-                config.Initialize(new ElasticSearchConnectionString { Name = "Foo", Nodes = new[] { "http://localhost:9200" } });
+            Assert.Equal(1, errors.Count);
 
-                List<string> errors;
-                config.Validate(out errors);
+            Assert.Equal("No `loadTo<IndexName>()` method call found in 'test' script", errors[0]);
+        }
 
-                Assert.Equal(1, errors.Count);
+        [Fact]
+        public void Error_if_script_is_empty()
+        {
+            var config = new ElasticSearchEtlConfiguration
+            {
+                Name = "test",
+                ConnectionStringName = "test",
+                Transforms = { new Transformation { Name = "test", Collections = { "Orders" }, Script = @"" } }
+            };
 
-                Assert.Equal("No `loadTo<IndexName>()` method call found in 'test' script", errors[0]);
-            }
+            config.Initialize(new ElasticSearchConnectionString { Name = "Foo", Nodes = new[] { "http://localhost:9200" } });
+
+            List<string> errors;
+            config.Validate(out errors);
+
+            Assert.Equal(1, errors.Count);
+
+            Assert.Equal("Script 'test' must not be empty", errors[0]);
         }
 
         [RequiresElasticSearchFact]

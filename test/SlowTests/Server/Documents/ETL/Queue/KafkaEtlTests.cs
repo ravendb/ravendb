@@ -219,6 +219,32 @@ public class KafkaEtlTests : KafkaEtlTestBase
     }
 
     [Fact]
+    public void Error_if_script_is_empty()
+    {
+        var config = new QueueEtlConfiguration
+        {
+            Name = "test",
+            ConnectionStringName = "test",
+            BrokerType = QueueBrokerType.Kafka,
+            Transforms = { new Transformation { Name = "test", Collections = { "Orders" }, Script = @"" } }
+        };
+
+        config.Initialize(new QueueConnectionString
+        {
+            Name = "Foo",
+            BrokerType = QueueBrokerType.Kafka,
+            KafkaConnectionSettings = new KafkaConnectionSettings() { ConnectionOptions = new Dictionary<string, string> { }, BootstrapServers = "localhost:29092" }
+        });
+
+        List<string> errors;
+        config.Validate(out errors);
+
+        Assert.Equal(1, errors.Count);
+
+        Assert.Equal("Script 'test' must not be empty", errors[0]);
+    }
+
+    [Fact]
     public async Task CanTestScript()
     {
         using (var store = GetDocumentStore())
