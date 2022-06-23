@@ -145,6 +145,7 @@ namespace Sparrow.Json
 
         public void WriteValue(BlittableJsonToken token, object val)
         {
+            RuntimeHelpers.EnsureSufficientExecutionStack();
             switch (token)
             {
                 case BlittableJsonToken.String:
