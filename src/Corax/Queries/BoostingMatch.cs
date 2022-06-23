@@ -158,10 +158,8 @@ namespace Corax.Queries
             var bufferHandler = _searcher.Allocator.Allocate(size, out var buffer);
             
             // Ensure we copy the content and then switch the buffers. 
-            new Span<long>(_buffer, _bufferIdx).CopyTo(new Span<long>(buffer.Ptr, size));// == false)
-           // {
-           //     throw new Exception("Failed to copy the content of the buffer");
-           // }
+            new Span<long>(_buffer, _bufferIdx).CopyTo(new Span<long>(buffer.Ptr, size));
+
             _bufferHandler.Dispose();
 
             _buffer = (long*)buffer.Ptr;
