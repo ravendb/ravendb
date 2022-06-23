@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
+using NCrontab.Advanced.Extensions;
 using Raven.Server.Documents;
 using Raven.Server.Integrations.PostgreSQL.Messages;
 
@@ -23,12 +24,14 @@ namespace Raven.Server.Integrations.PostgreSQL
         public string Username { get; private set; }
         
         internal PgQuery _currentQuery;
+        internal PgSession Session { get; init; }
         
-        public PgTransaction(DocumentDatabase documentDatabase, MessageReader messageReader, string username)
+        public PgTransaction(DocumentDatabase documentDatabase, MessageReader messageReader, string username, PgSession session)
         {
             DocumentDatabase = documentDatabase;
             MessageReader = messageReader;
             Username = username;
+            Session = session;
         }
 
         public void Init(string cleanQueryText, int[] parametersDataTypes)
@@ -39,15 +42,15 @@ namespace Raven.Server.Integrations.PostgreSQL
             MessageReader = new MessageReader();
 
             _currentQuery?.Dispose();
-            _currentQuery = PgQuery.CreateInstance(cleanQueryText, parametersDataTypes, DocumentDatabase);
+            _currentQuery = PgQuery.CreateInstance(cleanQueryText, parametersDataTypes, DocumentDatabase, Session);
         }
 
         public void Bind(ICollection<byte[]> parameters, short[] parameterFormatCodes, short[] resultColumnFormatCodes, string statementName = null)
         {
-            if (statementName is not null)
+            if (statementName.IsNullOrWhiteSpace() == false)
             {
                 State = TransactionState.InTransaction;
-                if (PgSession.NamedStatements.TryGetValue(statementName, out _currentQuery) == false)
+                if (Session.NamedStatements.TryGetValue(statementName, out _currentQuery) == false)
                     throw new KeyNotFoundException($"Expected named statement '{statementName}' wasn't found.");
             }
             _currentQuery.Bind(parameters, parameterFormatCodes, resultColumnFormatCodes);
