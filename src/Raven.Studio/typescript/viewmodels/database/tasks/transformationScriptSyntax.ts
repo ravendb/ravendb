@@ -8,15 +8,13 @@ class transformationScriptSyntax extends dialogViewModelBase {
     view = require("views/database/tasks/transformationScriptSyntax.html");
     
     etlType = ko.observable<StudioEtlType>();
-    destinationType = ko.observable<TaskDestinationType>();
     
     dialogContainer: Element;
 
-    constructor(etlType: StudioEtlType, destination: TaskDestinationType) {
+    constructor(etlType: StudioEtlType) {
         super();
         
         this.etlType(etlType);
-        this.destinationType(destination);
     }
     
     compositionComplete() {
@@ -197,12 +195,11 @@ loadToOrders(orderData, {  // load to the 'Orders' Topic with optional params
     static readonly rabbitMqEtlSampleText =
 `${transformationScriptSyntax.queueEtlBaseSampleText}
 
-loadToOrders(orderData, {  // load to the 'Orders' Queue with optional params
+loadToOrders(orderData, "routingKey", {  // load to the 'Orders' Exchange with optional params
     Id: id(this),
     PartitionKey: id(this),
     Type: 'com.github.users',
-    Source: '/registrations/direct-signup',
-    Exchange: 'users-topic'
+    Source: '/registrations/direct-signup'
 });`;
     
     kafkaEtlSampleHtml = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.kafkaEtlSampleText);

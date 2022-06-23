@@ -62,6 +62,8 @@ abstract class ongoingTaskModel {
                     return "KafkaQueueEtl";
                 case "RabbitMq":
                     return "RabbitQueueEtl";
+                case "None":
+                    throw new Error("Expected non-null broker type");
                 default:
                     genUtils.assertUnreachable(task.BrokerType, "Unknown BrokerType: " + task.BrokerType);
             }
