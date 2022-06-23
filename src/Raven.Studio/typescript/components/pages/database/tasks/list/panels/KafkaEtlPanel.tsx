@@ -9,26 +9,20 @@ import {
     OngoingTaskStatus,
     useTasksOperations,
 } from "../shared";
-import { OngoingTaskOlapEtlInfo } from "../../../../../models/tasks";
+import { OngoingTaskKafkaEtlInfo } from "../../../../../models/tasks";
 import { useAccessManager } from "hooks/useAccessManager";
 import { useAppUrls } from "hooks/useAppUrls";
-import { RichPanel, RichPanelDetailItem, RichPanelDetails, RichPanelHeader } from "../../../../../common/RichPanel";
+import { RichPanel, RichPanelDetails, RichPanelHeader } from "../../../../../common/RichPanel";
 import { OngoingEtlTaskDistribution } from "./OngoingEtlTaskDistribution";
 
-type OlapEtlPanelProps = BaseOngoingTaskPanelProps<OngoingTaskOlapEtlInfo>;
+type KafkaEtlPanelProps = BaseOngoingTaskPanelProps<OngoingTaskKafkaEtlInfo>;
 
-function Details(props: OlapEtlPanelProps & { canEdit: boolean }) {
+function Details(props: KafkaEtlPanelProps & { canEdit: boolean }) {
     const { data, canEdit, db } = props;
     const { appUrl } = useAppUrls();
-    const connectionStringsUrl = appUrl.forConnectionStrings(db, "Olap", data.shared.connectionStringName);
+    const connectionStringsUrl = appUrl.forConnectionStrings(db, "Kafka", data.shared.connectionStringName);
     return (
         <RichPanelDetails>
-            {data.shared.destinations.map((dst) => (
-                <RichPanelDetailItem key={dst}>
-                    Destination:
-                    <div className="value">{dst}</div>
-                </RichPanelDetailItem>
-            ))}
             <ConnectionStringItem
                 connectionStringDefined
                 canEdit={canEdit}
@@ -40,14 +34,14 @@ function Details(props: OlapEtlPanelProps & { canEdit: boolean }) {
     );
 }
 
-export function OlapEtlPanel(props: OlapEtlPanelProps & ICanShowTransformationScriptPreview) {
+export function KafkaEtlPanel(props: KafkaEtlPanelProps & ICanShowTransformationScriptPreview) {
     const { db, data, showItemPreview } = props;
 
     const { isAdminAccessOrAbove } = useAccessManager();
     const { forCurrentDatabase } = useAppUrls();
 
     const canEdit = isAdminAccessOrAbove(db) && !data.shared.serverWide;
-    const editUrl = forCurrentDatabase.editOlapEtl(data.shared.taskId)();
+    const editUrl = forCurrentDatabase.editKafkaEtl(data.shared.taskId)();
 
     const { detailsVisible, toggleDetails, toggleStateHandler, onEdit, onDeleteHandler } = useTasksOperations(
         editUrl,

@@ -76,7 +76,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                     var recordQueueConnectionStrings = rawRecord.QueueConnectionStrings;
                     if (recordQueueConnectionStrings != null && recordQueueConnectionStrings.TryGetValue(connectionStringName, out var queueConnectionString))
                     {
-                        recordQueueConnectionStrings.TryAdd(connectionStringName, queueConnectionString);
+                        queueConnectionStrings.TryAdd(connectionStringName, queueConnectionString);
                     }
 
                     break;

@@ -137,7 +137,8 @@ class connectionStrings extends viewModelBase {
         return $.when<any>(this.getAllConnectionStrings(), this.fetchOngoingTasks(), this.loadServerSideConfiguration())
                 .done(() => {
                     if (args.name) {
-                        switch (args.type) {
+                        const type: StudioEtlType = args.type;
+                        switch (type) {
                             case "Sql":
                                 this.onEditSqlEtl(args.name);
                                 break;

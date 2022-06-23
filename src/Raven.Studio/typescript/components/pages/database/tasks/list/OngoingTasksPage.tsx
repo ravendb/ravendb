@@ -12,7 +12,7 @@ import { ExternalReplicationPanel } from "./panels/ExternalReplicationPanel";
 import {
     OngoingTaskElasticSearchEtlInfo,
     OngoingTaskExternalReplicationInfo,
-    OngoingTaskInfo,
+    OngoingTaskInfo, OngoingTaskKafkaEtlInfo,
     OngoingTaskOlapEtlInfo,
     OngoingTaskPeriodicBackupInfo,
     OngoingTaskRavenEtlInfo,
@@ -41,6 +41,8 @@ import EtlTaskProgress = Raven.Server.Documents.ETL.Stats.EtlTaskProgress;
 import "./OngoingTaskPage.scss";
 import etlScriptDefinitionCache from "models/database/stats/etlScriptDefinitionCache";
 import TaskUtils from "../../../../utils/TaskUtils";
+import { KafkaEtlPanel } from "./panels/KafkaEtlPanel";
+import { RabbitMqEtlPanel } from "./panels/RabbitMqEtlPanel";
 
 interface OngoingTasksPageProps {
     database: database;
@@ -202,6 +204,8 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
     const ravenEtls = tasks.tasks.filter((x) => x.shared.taskType === "RavenEtl") as OngoingTaskRavenEtlInfo[];
     const sqlEtls = tasks.tasks.filter((x) => x.shared.taskType === "SqlEtl") as OngoingTaskSqlEtlInfo[];
     const olapEtls = tasks.tasks.filter((x) => x.shared.taskType === "OlapEtl") as OngoingTaskOlapEtlInfo[];
+    const kafkaEtls = tasks.tasks.filter(x => x.shared.taskType === "KafkaQueueEtl") as OngoingTaskKafkaEtlInfo[];
+    const rabbitMqEtls = tasks.tasks.filter(x => x.shared.taskType === "RabbitQueueEtl") as OngoingTaskKafkaEtlInfo[];
     const elasticSearchEtls = tasks.tasks.filter(
         (x) => x.shared.taskType === "ElasticSearchEtl"
     ) as OngoingTaskElasticSearchEtlInfo[];
@@ -331,6 +335,52 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                             <div>
                                 {olapEtls.map((x) => (
                                     <OlapEtlPanel
+                                        {...sharedPanelProps}
+                                        key={taskKey(x.shared)}
+                                        data={x}
+                                        onToggleDetails={startTrackingProgress}
+                                        showItemPreview={showItemPreview}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {kafkaEtls.length > 0 && (
+                        <div key="kafka-etls">
+                            <div className="hr-title">
+                                <h5 className="tasks-list-item kafka-etl no-text-transform">
+                                    <i className="icon-kafka-etl"></i>
+                                    <span>KAFKA ETL ({kafkaEtls.length})</span>
+                                </h5>
+                                <hr />
+                            </div>
+                            <div>
+                                {kafkaEtls.map((x) => (
+                                    <KafkaEtlPanel
+                                        {...sharedPanelProps}
+                                        key={taskKey(x.shared)}
+                                        data={x}
+                                        onToggleDetails={startTrackingProgress}
+                                        showItemPreview={showItemPreview}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {rabbitMqEtls.length > 0 && (
+                        <div key="rabbitmq-etls">
+                            <div className="hr-title">
+                                <h5 className="tasks-list-item rabbitmq-etl no-text-transform">
+                                    <i className="icon-rabbitmq-etl"></i>
+                                    <span>RABBITMQ ETL ({rabbitMqEtls.length})</span>
+                                </h5>
+                                <hr />
+                            </div>
+                            <div>
+                                {rabbitMqEtls.map((x) => (
+                                    <RabbitMqEtlPanel
                                         {...sharedPanelProps}
                                         key={taskKey(x.shared)}
                                         data={x}
