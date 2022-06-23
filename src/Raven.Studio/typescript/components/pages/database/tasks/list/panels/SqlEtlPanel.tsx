@@ -21,7 +21,7 @@ function Details(props: SqlEtlPanelProps & { canEdit: boolean }) {
     const { data, canEdit, db } = props;
     const { appUrl } = useAppUrls();
     const connectionStringDefined = !!data.shared.destinationDatabase;
-    const connectionStringsUrl = appUrl.forConnectionStrings(db, "sql", data.shared.connectionStringName);
+    const connectionStringsUrl = appUrl.forConnectionStrings(db, "Sql", data.shared.connectionStringName);
 
     return (
         <RichPanelDetails>

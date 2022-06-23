@@ -16,7 +16,7 @@ function Details(props: ExternalReplicationPanelProps & { canEdit: boolean }) {
     const delayHumane = genUtils.formatTimeSpan(1000 * (data.shared.delayReplicationTime ?? 0), true);
     const connectionStringDefined = !!data.shared.destinationDatabase;
     const { appUrl } = useAppUrls();
-    const connectionStringsUrl = appUrl.forConnectionStrings(db, "ravendb", data.shared.connectionStringName);
+    const connectionStringsUrl = appUrl.forConnectionStrings(db, "Raven", data.shared.connectionStringName);
 
     //TODO: task status
 

@@ -6,10 +6,12 @@ import {
     OngoingTaskExternalReplicationSharedInfo,
     OngoingTaskHubDefinitionInfo,
     OngoingTaskInfo,
+    OngoingTaskKafkaEtlSharedInfo,
     OngoingTaskNodeInfo,
     OngoingTaskNodeInfoDetails,
     OngoingTaskNodeProgressDetails,
     OngoingTaskOlapEtlSharedInfo,
+    OngoingTaskRabbitMqEtlSharedInfo,
     OngoingTaskRavenEtlSharedInfo,
     OngoingTaskReplicationHubSharedInfo,
     OngoingTaskReplicationSinkSharedInfo,
@@ -35,6 +37,7 @@ import EtlProcessProgress = Raven.Server.Documents.ETL.Stats.EtlProcessProgress;
 import TaskUtils from "../../../../utils/TaskUtils";
 import { WritableDraft } from "immer/dist/types/types-external";
 import OngoingTaskSubscription = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSubscription;
+import OngoingTaskQueueEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtlListView;
 
 interface ActionTasksLoaded {
     location: databaseLocationSpecifier;
@@ -153,6 +156,27 @@ function mapSharedInfo(task: OngoingTask): OngoingTaskSharedInfo {
             };
             return result;
         }
+        case "QueueEtl": {
+            const incoming = task as OngoingTaskQueueEtlListView;
+            switch (incoming.BrokerType) {
+                case "Kafka": {
+                    // noinspection UnnecessaryLocalVariableJS
+                    const result: OngoingTaskKafkaEtlSharedInfo = {
+                        ...commonProps,
+                        connectionStringName: incoming.ConnectionStringName,
+                    };
+                    return result;
+                }
+                case "RabbitMq": {
+                    // noinspection UnnecessaryLocalVariableJS
+                    const result: OngoingTaskRabbitMqEtlSharedInfo = {
+                        ...commonProps,
+                        connectionStringName: incoming.ConnectionStringName,
+                    };
+                    return result;
+                }
+            }
+        }
         case "OlapEtl": {
             const incoming = task as OngoingTaskOlapEtlListView;
             // noinspection UnnecessaryLocalVariableJS
@@ -235,8 +259,9 @@ export const ongoingTasksReducer: Reducer<OngoingTasksState, OngoingTaskReducerA
 
             return produce(state, (draft) => {
                 const newTasks = incomingTasks.OngoingTasksList.map((incomingTask) => {
+                    const incomingTaskType = TaskUtils.ongoingTaskToStudioTaskType(incomingTask);
                     const existingTask = state.tasks.find(
-                        (x) => x.shared.taskType === incomingTask.TaskType && x.shared.taskId === incomingTask.TaskId
+                        (x) => x.shared.taskType === incomingTaskType && x.shared.taskId === incomingTask.TaskId
                     );
                     const nodesInfo = existingTask ? existingTask.nodesInfo : initNodesInfo(state.locations);
                     const newNodeInfo: OngoingTaskNodeInfo = {

@@ -20,7 +20,7 @@ function Details(props: RavenEtlPanelProps & { canEdit: boolean }) {
     const { data, canEdit, db } = props;
     const connectionStringDefined = !!data.shared.destinationDatabase;
     const { appUrl } = useAppUrls();
-    const connectionStringsUrl = appUrl.forConnectionStrings(db, "ravendb", data.shared.connectionStringName);
+    const connectionStringsUrl = appUrl.forConnectionStrings(db, "Raven", data.shared.connectionStringName);
 
     return (
         <RichPanelDetails>

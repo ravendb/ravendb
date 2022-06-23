@@ -10,6 +10,7 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
+using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
@@ -175,6 +176,22 @@ internal abstract class AbstractOngoingTasksHandlerProcessorForGetOngoingTasks<T
 
                         var olapTaskInfo = GetOlapEtlTaskInfo(record, clusterTopology, olapEtl);
                         await WriteResultAsync(context, olapTaskInfo);
+                        break;
+                    
+                    case OngoingTaskType.QueueEtl:
+
+                        var queueEtl = taskName != null ?
+                            record.QueueEtls.Find(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase))
+                            : record.QueueEtls?.Find(x => x.TaskId == key);
+
+                        if (queueEtl == null)
+                        {
+                            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                            break;
+                        }
+
+                        var queueTaskInfo = GetQueueEtlTaskInfo(record, clusterTopology, queueEtl);
+                        await WriteResultAsync(context, queueTaskInfo);
                         break;
 
                     case OngoingTaskType.RavenEtl:
@@ -424,6 +441,21 @@ internal abstract class AbstractOngoingTasksHandlerProcessorForGetOngoingTasks<T
     protected OngoingTaskOlapEtlDetails GetOlapEtlTaskInfo(DatabaseRecord record, ClusterTopology clusterTopology, OlapEtlConfiguration config)
     {
         return new OngoingTaskOlapEtlDetails
+        {
+            TaskId = config.TaskId,
+            TaskName = config.Name,
+            MentorNode = config.MentorNode,
+            Configuration = config,
+            TaskState = OngoingTasksHandler.GetEtlTaskState(config),
+            TaskConnectionStatus = GetEtlTaskConnectionStatusAsync(record, config, out var sqlNode, out var sqlEtlError).Result,
+            ResponsibleNode = new NodeId { NodeTag = sqlNode, NodeUrl = clusterTopology.GetUrlFromTag(sqlNode) },
+            Error = sqlEtlError
+        };
+    }
+    
+    protected OngoingTaskQueueEtlDetails GetQueueEtlTaskInfo(DatabaseRecord record, ClusterTopology clusterTopology, QueueEtlConfiguration config)
+    {
+        return new OngoingTaskQueueEtlDetails
         {
             TaskId = config.TaskId,
             TaskName = config.Name,

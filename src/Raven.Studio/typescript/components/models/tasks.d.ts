@@ -1,5 +1,6 @@
 ﻿import { loadStatus } from "./common";
 import OngoingTaskState = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskState;
+import QueueBrokerType = Raven.Client.Documents.Operations.ETL.Queue.QueueBrokerType;
 
 export interface OngoingTaskHubDefinitionSharedInfo extends OngoingTaskSharedInfo {
     delayReplicationTime: number;
@@ -91,6 +92,14 @@ export interface OngoingTaskReplicationSinkSharedInfo extends OngoingTaskSharedI
     mode: PullReplicationMode;
 }
 
+export interface OngoingTaskKafkaEtlSharedInfo extends OngoingTaskQueueEtlSharedInfo {}
+
+export interface OngoingTaskRabbitMqEtlSharedInfo extends OngoingTaskQueueEtlSharedInfo {}
+
+export interface OngoingTaskQueueEtlSharedInfo extends OngoingTaskSharedInfo {
+    connectionStringName: string;
+}
+
 export interface OngoingTaskSqlEtlSharedInfo extends OngoingTaskSharedInfo {
     destinationServer: string;
     destinationDatabase: string;
@@ -131,11 +140,17 @@ export interface OngoingTaskSqlEtlNodeInfoDetails extends OngoingTaskNodeInfoDet
 
 export interface OngoingTaskSubscriptionNodeInfoDetails extends OngoingTaskNodeInfoDetails {}
 
+export interface OngoingTaskKafkaEtlNodeInfoDetails extends OngoingTaskNodeInfoDetails {}
+
+export interface OngoingTaskRabbitMqEtlNodeInfoDetails extends OngoingTaskNodeInfoDetails {}
+
 export type AnyEtlOngoingTaskInfo =
     | OngoingTaskSqlEtlInfo
     | OngoingTaskOlapEtlInfo
     | OngoingTaskElasticSearchEtlInfo
-    | OngoingTaskRavenEtlInfo;
+    | OngoingTaskRavenEtlInfo
+    | OngoingTaskKafkaEtlInfo
+    | OngoingTaskRabbitMqEtlInfo;
 
 export interface OngoingTaskInfo<
     TSharded extends OngoingTaskSharedInfo = OngoingTaskSharedInfo,
@@ -185,6 +200,16 @@ type OngoingTaskReplicationSinkInfo = OngoingTaskInfo<
 type OngoingTaskSqlEtlInfo = OngoingTaskInfo<
     OngoingTaskSqlEtlSharedInfo,
     OngoingEtlTaskNodeInfo<OngoingTaskSqlEtlNodeInfoDetails>
+>;
+
+type OngoingTaskKafkaEtlInfo = OngoingTaskInfo<
+    OngoingTaskKafkaEtlSharedInfo,
+    OngoingEtlTaskNodeInfo<OngoingTaskKafkaEtlNodeInfoDetails>
+>;
+
+type OngoingTaskRabbitMqEtlInfo = OngoingTaskInfo<
+    OngoingTaskRabbitMqEtlSharedInfo,
+    OngoingEtlTaskNodeInfo<OngoingTaskRabbitMqEtlNodeInfoDetails>
 >;
 
 type OngoingTaskSubscriptionInfo = OngoingTaskInfo<

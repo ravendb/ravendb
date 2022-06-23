@@ -20,7 +20,7 @@ type ElasticSearchEtlPanelProps = BaseOngoingTaskPanelProps<OngoingTaskElasticSe
 function Details(props: ElasticSearchEtlPanelProps & { canEdit: boolean }) {
     const { data, canEdit, db } = props;
     const { appUrl } = useAppUrls();
-    const connectionStringsUrl = appUrl.forConnectionStrings(db, "elasticSearch", data.shared.connectionStringName);
+    const connectionStringsUrl = appUrl.forConnectionStrings(db, "ElasticSearch", data.shared.connectionStringName);
 
     return (
         <RichPanelDetails>
