@@ -41,8 +41,13 @@ namespace SlowTests.Issues
             using (var session = store.OpenSession())
             {
                 var query = session.Query<User>().ProjectInto<User>();
+                var documentQuery = session.Advanced.DocumentQuery<User>().SelectFields<User>();
                 Assert.Equal("from 'Users' select Name, name", query.ToString());
+                Assert.Equal("from 'Users' select Name, name", documentQuery.ToString());
                 var results = query.ToList();
+                Assert.Equal(user.Name, results.First().Name);
+                Assert.Equal(user.name, results.First().name);
+                results = documentQuery.ToList();
                 Assert.Equal(user.Name, results.First().Name);
                 Assert.Equal(user.name, results.First().name);
             }
@@ -66,10 +71,12 @@ namespace SlowTests.Issues
             using (var session = store.OpenSession())
             {
                 var query = session.Query<Item, Item_Content>().ProjectInto<Item>();
+                var documentQuery = session.Advanced.DocumentQuery<Item, Item_Content>().SelectFields<Item>();
                 Assert.Equal("from index 'Item/Content' select content, Content", query.ToString());
-
+                Assert.Equal("from index 'Item/Content' select content, Content", documentQuery.ToString());
                 var l = query.ToList();
-
+                Assert.Equal(12, l.First().Content);
+                l = documentQuery.ToList();
                 Assert.Equal(12, l.First().Content);
             }
         }
