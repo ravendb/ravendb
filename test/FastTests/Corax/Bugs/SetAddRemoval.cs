@@ -38,11 +38,9 @@ public class SetAddRemoval : StorageTest
         using (var wtx = Env.WriteTransaction())
         {
             var set = wtx.OpenSet("test");
-            DebugStuff.RenderAndShow(set);
             foreach (long id in removals)
             {
                 set.Remove(id);
-                DebugStuff.RenderAndShow(set);
             }                
             wtx.Commit();
         }
@@ -53,7 +51,6 @@ public class SetAddRemoval : StorageTest
         using (var rtx = Env.ReadTransaction())
         {
             var set = rtx.OpenSet("test");
-            DebugStuff.RenderAndShow(set);
 
             Assert.Equal(items.Count, set.State.NumberOfEntries);
         }

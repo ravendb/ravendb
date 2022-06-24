@@ -134,7 +134,7 @@ namespace FastTests.Corax
                 setState = set.State;
                 Assert.Equal(count - previousIds.Count, setState.NumberOfEntries);
 
-                using var iterator = set.Iterate();
+                var iterator = set.Iterate();
                 previousIds.Sort();
                 
                 // Look for "list/9" in the set
