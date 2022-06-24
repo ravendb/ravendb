@@ -323,7 +323,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         if (_index.GetIndexDefinition().Fields.TryGetValue(field.Name, out var fieldFromDefinition) &&
             fieldFromDefinition.Indexing != FieldIndexing.No)
         {
-            ThrowIndexingComplexObjectNotSupported(field.Name);
+            ThrowIndexingComplexObjectNotSupported(field.Name, _index.Type);
         }
 
         DisableIndexingForComplexObject(field);
@@ -356,7 +356,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         }
     }
 
-    internal static void ThrowIndexingComplexObjectNotSupported(object field)
+    internal static void ThrowIndexingComplexObjectNotSupported(object field, IndexType indexType)
     {
         var fieldName = field switch
         {
@@ -364,9 +364,22 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
             IndexFieldBinding indexFieldBinding => indexFieldBinding.FieldNameAsString,
             _ => throw new InvalidDataException($"{nameof(ThrowIndexingComplexObjectNotSupported)} requires as input instance of {nameof(IndexField)} or {nameof(IndexFieldBinding)}.")
         };
-        
-        throw new NotSupportedException(
-            $"The value of '{fieldName}' field is a complex object item. Indexing it as a text isn't supported and it's supposed to have \\\"Indexing\\\" option set to \\\"No\\\". Note that you can still store it and use it in projections.\nIf you need to use it for searching purposes, you have to call ToString() on the field value in the index definition.");
+
+        string exceptionMessage;
+
+        if (indexType.IsStatic())
+        {
+            exceptionMessage =
+                $"The value of '{fieldName}' field is a complex object. Indexing it as a text isn't supported and it's supposed to have \\\"Indexing\\\" option set to \\\"No\\\". " +
+                $"Note that you can still store it and use it in projections.{Environment.NewLine}" +
+                "If you need to use it for searching purposes, you have to call ToString() on the field value in the index definition.";
+        }
+        else
+        {
+            exceptionMessage =
+                $"The value of '{fieldName}' field is a complex object. Indexing it as a text isn't supported. You should consider querying on individual fields of that object.";
+        }
+        throw new NotSupportedException(exceptionMessage);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
