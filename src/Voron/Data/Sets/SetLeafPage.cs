@@ -248,7 +248,113 @@ namespace Voron.Data.Sets
                 var parent = (SetLeafPage*)Unsafe.AsPointer(ref _parent);
                 var parentRawValues = parent->RawValues;
                 var scratchPtr = (int*)_scratchMemory.Ptr;
-                var rawValuesIndex = _rawValuesIndex;                
+                var rawValuesIndex = _rawValuesIndex;
+
+                i = 0;
+                bool result = true;
+                int matchesLength = matches.Length;
+                long baseline = _parent.Header->Baseline;
+                while (i < matchesLength && result == true)
+                {
+                    TryReadMoreCompressedValues(parent, decoderState, ref _compressedEntry, ref compressIndex, ref compressLength, ref _compressedEntryIndex, ref _hasDecoder, scratchPtr, _scratchMemory.Size / sizeof(int));
+
+                    // There are two different ways we can get values, they either come "from the raw values" OR "from the compressed sections"
+                    // We write the raw values in reverse order (that we guarantee through sorting) but they can become intermixed with the
+                    // compressed values. Therefore, we have to take care of all the possible combinations. We can have only raw values,
+                    // only compressed and a mixture of the two. And whatever we do, we are always required to return them in order. 
+
+                    // We will initialize the raw values index to int.MinValue to indicate that we have not yet read any raw values.
+                    int rawValue = -1;
+                    int rawValueMasked = rawValue & int.MaxValue;
+                    int compressedValue = int.MaxValue;
+                    int maxCompressedValue = _compressedEntryIndex < _parent.Positions.Length ? _parent.GetCompressRangeEnd(ref _parent.Positions[_compressedEntryIndex]) : int.MaxValue;
+                    while (i < matchesLength && result == true)
+                    {
+                        if (rawValuesIndex >= 0 && rawValue == -1)
+                        {
+                            rawValue = parentRawValues[rawValuesIndex];
+                            rawValueMasked = rawValue & int.MaxValue;
+                        }
+
+                        if (compressedValue == int.MaxValue)
+                        {
+                            if (compressIndex >= compressLength)
+                                TryReadMoreCompressedValues(parent, decoderState, ref _compressedEntry, ref compressIndex, ref compressLength, ref _compressedEntryIndex, ref _hasDecoder, scratchPtr, _scratchMemory.Size / sizeof(int));
+
+                            // We havent got any compressed value yet, so we are getting it from the scratch pad.
+                            if (compressIndex < compressLength)
+                            {
+                                compressedValue = scratchPtr[compressIndex];
+                                compressIndex++; // We advance now that we know we are going to use the value;
+                            }
+                        }
+
+                        if (rawValueMasked >= maxCompressedValue && compressedValue == int.MaxValue)
+                        {
+                            //result = maxCompressedValue != int.MaxValue || rawValueMasked != int.MaxValue;
+                            goto END; // There are no more values to be used in this range.                         
+                        }
+                            
+
+                        long value;
+                        if (rawValueMasked <= compressedValue)
+                        {
+                            // since the only way to get a negative value is to have been removed, we can skip it and signal to move to the next.
+                            rawValuesIndex--;
+                            value = rawValue;
+                            
+                            rawValue = -1; // We signal that we are consuming it.
+                            rawValueMasked = rawValue & int.MaxValue;
+
+                            // This is a removed value, so we remove it. 
+                            if (value < 0)
+                            {
+                                // It is a removal of an existing compressed value, then we signal that we have consumed the compressed value too. 
+                                if (compressedValue == (value & int.MaxValue))
+                                    compressedValue = int.MaxValue;
+
+                                continue;
+                            }
+
+                            value &= int.MaxValue;
+                        }
+                        else // we have a raw value, but it is bigger than the current compressed value, therefore we need to read the compressed value
+                        {                            
+                            value = compressedValue;
+                            compressedValue = int.MaxValue; // We signal that we are consuming it.
+                        }
+
+                        // The value is actually signaling that we are done for this range.                        
+                        value = value | baseline;
+                        if (value > pruneGreaterThan)
+                        {
+                            // We are pruning, we are done
+                            result = false;
+                            goto END;
+                        }
+
+                        //Console.WriteLine(value);
+                        matches[i++] = value;
+                    }
+                }
+
+                END:
+                _rawValuesIndex = rawValuesIndex;
+                _compressIndex = compressIndex;
+                _compressLength = compressLength;
+                return result;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public bool FillOld(Span<long> matches, out int i, long pruneGreaterThan = long.MaxValue)
+            {
+                var compressIndex = _compressIndex;
+                var compressLength = _compressLength;
+                var decoderState = (PForDecoder.DecoderState*)Unsafe.AsPointer(ref _decoderState);
+                var parent = (SetLeafPage*)Unsafe.AsPointer(ref _parent);
+                var parentRawValues = parent->RawValues;
+                var scratchPtr = (int*)_scratchMemory.Ptr;
+                var rawValuesIndex = _rawValuesIndex;
 
                 i = 0;
                 bool result = true;
@@ -261,7 +367,7 @@ namespace Voron.Data.Sets
                         {
                             compressIndex = 0;
                             compressLength = PForDecoder.Decode(decoderState, parent->Ptr + _compressedEntry.Position, _compressedEntry.Length, (int*)_scratchMemory.Ptr,
-                                _scratchMemory.Size/sizeof(int));
+                                _scratchMemory.Size / sizeof(int));
                             if (compressLength != 0)
                                 break;
 
@@ -294,8 +400,8 @@ namespace Voron.Data.Sets
                             {
                                 compressIndex++; // skip this one
 
-                                TryReadMoreCompressedValues(parent, decoderState, ref _compressedEntry, ref compressIndex, ref compressLength, ref _compressedEntryIndex, ref _hasDecoder, scratchPtr,
-                                    _scratchMemory.Size/sizeof(int));
+                                if (compressIndex == compressLength)
+                                    TryReadMoreCompressedValues(parent, decoderState, ref _compressedEntry, ref compressIndex, ref compressLength, ref _compressedEntryIndex, ref _hasDecoder, scratchPtr, _scratchMemory.Size / sizeof(int));
                             }
                         }
 
@@ -338,7 +444,7 @@ namespace Voron.Data.Sets
                     {
                         _hasDecoder = false;
                         break;
-                    }                
+                    }
                 }
 
                 _rawValuesIndex = rawValuesIndex;

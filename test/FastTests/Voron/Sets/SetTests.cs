@@ -354,6 +354,7 @@ namespace FastTests.Voron.Sets
 
         [RavenTheory(RavenTestCategory.Voron)]
         [InlineData(1337, 200000)]
+        [InlineData(73014, 35)]
         public void CanDeleteAndInsertInRandomOrder(int seed, int size)
         {
             static void Shuffle(int[] list, Random rng)
@@ -409,11 +410,23 @@ namespace FastTests.Voron.Sets
                         set.Remove(values[i]);                        
                         inTreeKeys.Remove(values[i]);
                         removedKeys.Add(values[i]);
-
-                        Assert.Equal(uniqueKeys.Count - removedKeys.Count, set.State.NumberOfEntries);
+                        
+                        // Assert.Equal(uniqueKeys.Count - removedKeys.Count, set.State.NumberOfEntries);
                     }
                     
                     wtx.Commit();
+                }
+
+                using (var rtx = Env.ReadTransaction())
+                {
+                    var matches = new long[size * 4];
+                    var set = rtx.OpenSet($"Set({name})");
+                    set.Iterate().Fill(matches, out int read);
+                    Assert.Equal(inTreeKeys.Count, read);
+                    for (int i = 0; i < read; i++)
+                    {
+                        Assert.True(inTreeKeys.TryGetValue((int)matches[i], out var _));
+                    }
                 }
             }
         }
