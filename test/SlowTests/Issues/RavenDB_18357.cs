@@ -16,7 +16,7 @@ public class RavenDB_18357 : RavenTestBase
 
     [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes | RavenTestCategory.Corax)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
-    public void AutoIndexWriterShouldThrowWhenTryingToWriteBlittable(Options options)
+    public void AutoIndexShouldThrowWhenTryingToIndexComplexObjec(Options options)
     {
         using var store = GetDocumentStore(options);
         {
@@ -37,7 +37,7 @@ public class RavenDB_18357 : RavenTestBase
 
     [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes | RavenTestCategory.Corax)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
-    public void IndexWriterShouldThrowWhenTryingToWriteBlittable(Options options)
+    public void StaticIndexShouldNotThrowWhenTryingToIndexComplexObjectAndIndexFieldOptionsWereNotExplicitlySetInDefinition(Options options)
     {
         using var store = GetDocumentStore(options);
         {
@@ -49,15 +49,33 @@ public class RavenDB_18357 : RavenTestBase
 
         index.Execute(store);
         Indexes.WaitForIndexing(store);
+        var errors = Indexes.WaitForIndexingErrors(store, errorsShouldExists: false);
+        Assert.Null(errors);
+    }
+
+    [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes | RavenTestCategory.Corax)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void StaticIndexShouldThrowWhenTryingToIndexComplexObjectAndIndexFieldOptionsWereExplicitlySetInDefinition(Options options)
+    {
+        using var store = GetDocumentStore(options);
+        {
+            using var s = store.OpenSession();
+            s.Store(new Input { Nested = new NestedItem { Name = "Matt" } });
+            s.SaveChanges();
+        }
+        var index = new InputIndex(setSearchOption: true);
+
+        index.Execute(store);
+        Indexes.WaitForIndexing(store);
         var errors = Indexes.WaitForIndexingErrors(store);
         Assert.NotEmpty(errors);
         Assert.NotEmpty(errors[0].Errors);
     }
 
-    
+
     [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes | RavenTestCategory.Corax)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
-    public void IndexWriterShouldntThrowWhenTryingToWriteBlittableFieldIsNotIndexed(Options options)
+    public void StaticIndexShouldNotThrowWhenTryingToIndexComplexObjectAndFieldIsNotIndexed(Options options)
     {
         using var store = GetDocumentStore(options);
         {
@@ -86,10 +104,13 @@ public class RavenDB_18357 : RavenTestBase
 
     private class InputIndex : AbstractIndexCreationTask<Input>
     {
-        public InputIndex()
+        public InputIndex(bool setSearchOption = false)
         {
             Map = inputs => from input in inputs
                 select new Input {Nested = new NestedItem {Name = input.Nested.Name + "Inside"}};
+
+            if (setSearchOption == true)
+                Index(x => x.Nested, FieldIndexing.Search);
         }
     }
     
