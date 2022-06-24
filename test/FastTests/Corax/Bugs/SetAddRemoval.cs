@@ -22,6 +22,7 @@ public class SetAddRemoval : StorageTest
         var maxSize = 0;
         List<long> items = ReadNumbersFromResource("Corax.Set.Adds.txt");
         items.Sort();
+        
         maxSize = items.Count;
         using (var wtx = Env.WriteTransaction())
         {
@@ -33,7 +34,7 @@ public class SetAddRemoval : StorageTest
             wtx.Commit();
         }
 
-        var removals = ReadNumbersFromResource("Corax.Set.Removals.txt").Take(2).ToList();
+        var removals = ReadNumbersFromResource("Corax.Set.Removals.txt").ToList();
         using (var wtx = Env.WriteTransaction())
         {
             var set = wtx.OpenSet("test");
@@ -42,7 +43,7 @@ public class SetAddRemoval : StorageTest
             {
                 set.Remove(id);
                 DebugStuff.RenderAndShow(set);
-            }   
+            }                
             wtx.Commit();
         }
 
@@ -52,6 +53,8 @@ public class SetAddRemoval : StorageTest
         using (var rtx = Env.ReadTransaction())
         {
             var set = rtx.OpenSet("test");
+            DebugStuff.RenderAndShow(set);
+
             Assert.Equal(items.Count, set.State.NumberOfEntries);
         }
         

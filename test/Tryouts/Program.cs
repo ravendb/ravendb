@@ -10,6 +10,7 @@ using FastTests.Voron;
 using SlowTests.Voron.CompactTrees;
 using FastTests.Voron;
 using FastTests.Voron.Sets;
+using FastTests.Corax.Bugs;
 
 namespace Tryouts;
 
@@ -22,9 +23,6 @@ public static class Program
 
     public static void Main(string[] args)
     {
-        using (var testOutputHelper = new ConsoleTestOutputHelper())
-            new CompactTreeSlowTests(testOutputHelper).CanDeleteLargeNumberOfItemsInRandomInsertionOrder(60597, 54632);
-
         Console.WriteLine(Process.GetCurrentProcess().Id);
         for (int i = 0; i < 100; i++)
         {
@@ -32,7 +30,10 @@ public static class Program
             try
             {
                 using (var testOutputHelper = new ConsoleTestOutputHelper())
-                {                    
+                {
+                    new SetTests(testOutputHelper).CanDeleteAndInsertInRandomOrder(73014, 35);
+                    //new SetAddRemoval(testOutputHelper).AdditionsAndRemovalWork();
+
                     int minFailure = int.MaxValue;
                     int failureRandom = -1;                    
 
