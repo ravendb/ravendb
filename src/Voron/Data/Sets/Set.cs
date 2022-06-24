@@ -45,6 +45,8 @@ namespace Voron.Data.Sets
 
         public void Remove(long value)
         {
+            // caller ensures that the value *already exists* in the set
+            
             FindPageFor(value);
             ref var state = ref _stk[_pos];
             state.Page = _llt.ModifyPage(state.Page.PageNumber);
@@ -514,12 +516,10 @@ namespace Voron.Data.Sets
             private SetLeafPage.Iterator _it;
 
             public long Current;
-            private bool _hasSeek;
 
             public Iterator(Set parent)
             {
                 _parent = parent;
-                _hasSeek = false;
                 Current = default;
                 _parent.FindPageFor(long.MinValue);
                 ref var state = ref _parent._stk[_parent._pos];
@@ -544,39 +544,18 @@ namespace Voron.Data.Sets
                 var leafPage = new SetLeafPage(state.Page);
 
                 _it = leafPage.GetIterator(_parent._llt);
-                if (from != long.MinValue)
-                    _it.SkipTo(from);
-                
-                while (_it.MoveNext(out long v))
-                {
-                    if (v < from)
-                        continue;
-                    Current = v;
-                    _hasSeek = true; // TODO: Fix this, we shouldn't have to do this. 
-                    return true;
-                }
-                return false;
+                return _it.Skip(from);
             }
 
-            public bool Fill(Span<long> matches, out int total, long pruneGreaterThan = long.MaxValue)
+            public bool Fill(Span<long> matches, out int total, long pruneGreaterThanOptimization = long.MaxValue)
             {
                 // We will try to fill.
-                total = 0;
-
-                // FIXME: This is a hack, we shouldn't be doing this but I need to understand if we can make this format
-                //        high performance enough before even start thinking about consistency of usage patterns. 
-                if (_hasSeek)
-                {
-                    // We have seek so we are past one and we need to add it. 
-                    _hasSeek = false;
-                    matches[0] = Current;
-                    total++;
-                }                
-
+                total = _it.TryFill(matches, pruneGreaterThanOptimization);
+                          
                 while(true)
                 {
                     var tmp = matches.Slice(total);
-                    _it.Fill(tmp, out var read, out bool hasPrunedResults,  pruneGreaterThan);                                                                                      
+                    _it.Fill(tmp, out var read, out bool hasPrunedResults,  pruneGreaterThanOptimization);                                                                                      
 
                     // We haven't read anything, but we are not getting a pruned result.
                     if (read == 0 && hasPrunedResults == false)

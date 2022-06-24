@@ -307,7 +307,7 @@ namespace Corax.Queries
                 long* dstPtr = inputStartPtr;
                 while (inputPtr < inputEndPtr)
                 {
-                    var result = term._set.Fill(blockMatches, out int read, pruneGreaterThan: buffer[matches-1]);
+                    var result = term._set.Fill(blockMatches, out int read, pruneGreaterThanOptimization: buffer[matches-1]);
                     if (result == false)
                         break;
 

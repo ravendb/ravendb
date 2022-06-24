@@ -84,7 +84,6 @@ namespace Voron.Data.Sets
         {
             private SetLeafPage _parent;
             private const int MoveNextBufferSize = 32;
-            private fixed long _moveNextBuffer[MoveNextBufferSize];
             private int _moveNextIndex, _moveNextLength;
             private int _compressIndex, _compressLength;
             private CompressedHeader _compressedEntry;
@@ -94,7 +93,8 @@ namespace Voron.Data.Sets
             private bool _hasDecoder;
 
             private fixed int _pforBuffer[PForEncoder.BufferLen];
-            
+            private fixed long _moveNextBuffer[MoveNextBufferSize];
+
             public bool IsInRange(long v)
             {
                 if(_rawValuesIndex >= _parent.RawValues.Length  || _rawValuesIndex < 0)
@@ -159,8 +159,34 @@ namespace Voron.Data.Sets
                 }
             }
 
+            public bool Skip(long val)
+            {
+                var iVal = (int)(val & int.MaxValue);
+                _rawValuesIndex = _parent.RawValues.BinarySearch(iVal, new CompareIntsWithoutSignDescending());
+                if (_rawValuesIndex < 0)
+                    _rawValuesIndex = ~_rawValuesIndex -1;
+                SkipToCompressedEntryFor(iVal, int.MaxValue);
+
+                fixed (long* pBuf = _moveNextBuffer)
+                {
+                    while (true)
+                    {
+                        Fill(new Span<long>(pBuf, MoveNextBufferSize), out _moveNextLength, out bool _);
+                        if (_moveNextLength == 0)
+                            return false;
+                        if (val > pBuf[_moveNextLength - 1])
+                            continue;
+                        _moveNextIndex = new Span<long>(pBuf, _moveNextLength).BinarySearch(val);
+                        if (_moveNextIndex < 0)
+                            _moveNextIndex = ~_moveNextIndex;
+                        return true;
+                    }
+                }
+            }
+
+            
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void Fill(Span<long> matches, out int numberOfMatches, out bool hasPrunedResults, long pruneGreaterThan = long.MaxValue)
+            public void Fill(Span<long> matches, out int numberOfMatches, out bool hasPrunedResults, long pruneGreaterThanOptimization = long.MaxValue)
             {
                 var compressIndex = _compressIndex;
                 var compressLength = _compressLength;
@@ -221,13 +247,13 @@ namespace Voron.Data.Sets
                             hasRawValue = false;
                             rawValueMasked = int.MaxValue;
 
+                            if (compressedValue == (value & int.MaxValue))
+                                hasCompressedValue = false;
+                            
                             // This is a removed value, so we remove it. 
                             if (value < 0)
                             {
                                 // It is a removal of an existing compressed value, then we signal that we have consumed the compressed value too. 
-                                if (compressedValue == (value & int.MaxValue))
-                                    hasCompressedValue = false;
-                                
                                 continue;
                             }
 
@@ -241,14 +267,15 @@ namespace Voron.Data.Sets
 
                         // The value is actually signaling that we are done for this range.                        
                         value |= baseline;
-                        if (value > pruneGreaterThan)
+                        matches[numberOfMatches++] = value;
+                        
+                        // we need to send the value to the user before we stop the interation
+                        if (value > pruneGreaterThanOptimization)
                         {
                             hasPrunedResults = true; // We are pruning, we are done
                             break;
                         }
 
-                        matches[numberOfMatches++] = value;
-                        
                     }
 
                     if (hasCompressedValue)
@@ -293,15 +320,6 @@ namespace Voron.Data.Sets
                 }
             }
 
-            public void SkipTo(long val)
-            {
-                var iVal = (int)(val & int.MaxValue);
-                _rawValuesIndex = _parent.RawValues.BinarySearch(iVal, new CompareIntsWithoutSignDescending());
-                if (_rawValuesIndex < 0)
-                    _rawValuesIndex = ~_rawValuesIndex - 1; // we are _after_ the value, so let's go back one step
-
-                SkipToCompressedEntryFor(iVal, int.MaxValue);
-            }
 
             public int CompressedEntryIndex => _compressedEntryIndex;
 
@@ -324,6 +342,23 @@ namespace Voron.Data.Sets
                     _hasDecoder = false;
                     _decoderState = default;
                 }
+            }
+
+            public int TryFill(Span<long> matches, long pruneGreaterThanOptimization)
+            {
+                if (_moveNextIndex >= _moveNextLength)
+                    return 0;
+                
+                var copy = Math.Min(matches.Length, _moveNextLength);
+                var start = _moveNextIndex; 
+                for (; _moveNextIndex < copy; _moveNextIndex++)
+                {
+                    long match = _moveNextBuffer[_moveNextIndex];
+                    if (match > pruneGreaterThanOptimization)
+                        break;
+                    matches[_moveNextIndex - start] = match;
+                }
+                return _moveNextIndex - start;
             }
         }
 
@@ -367,7 +402,7 @@ namespace Voron.Data.Sets
                 new CompareIntsWithoutSignDescending());
             if (index >= 0)
             {
-                // overwrite it (maybe add on removed value.
+                // overwrite it (maybe add on removed value).
                 oldRawValues[index] = value;
                 return true;
             }
