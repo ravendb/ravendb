@@ -323,7 +323,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         if (_index.GetIndexDefinition().Fields.TryGetValue(field.Name, out var fieldFromDefinition) &&
             fieldFromDefinition.Indexing != FieldIndexing.No)
         {
-            ThrowIndexingComplexObjectNotSupported(field.Name, _index.Type);
+            ThrowIndexingComplexObjectNotSupported(field, _index.Type);
         }
 
         DisableIndexingForComplexObject(field);
@@ -356,14 +356,9 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         }
     }
 
-    internal static void ThrowIndexingComplexObjectNotSupported(object field, IndexType indexType)
+    internal static void ThrowIndexingComplexObjectNotSupported(IndexField field, IndexType indexType)
     {
-        var fieldName = field switch
-        {
-            IndexField indexField => indexField.OriginalName ?? indexField.Name,
-            IndexFieldBinding indexFieldBinding => indexFieldBinding.FieldNameAsString,
-            _ => throw new InvalidDataException($"{nameof(ThrowIndexingComplexObjectNotSupported)} requires as input instance of {nameof(IndexField)} or {nameof(IndexFieldBinding)}.")
-        };
+        var fieldName = field.OriginalName ?? field.Name;
 
         string exceptionMessage;
 
