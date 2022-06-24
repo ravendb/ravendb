@@ -520,7 +520,7 @@ namespace Corax
                 var setSpace = Container.GetMutable(Transaction.LowLevelTransaction, id);
                 ref var setState = ref MemoryMarshal.AsRef<SetState>(setSpace);
                 var set = new Set(Transaction.LowLevelTransaction, Slices.Empty, setState);
-                using var iterator = set.Iterate();
+                var iterator = set.Iterate();
                 while (iterator.MoveNext())
                 {
                     _entriesToDelete.Add(iterator.Current);

@@ -269,7 +269,7 @@ namespace Voron.Data.Containers
             {
                 var freeListStateSpan = rootContainer.GetItem(ContainerPageHeader.FreeListOffset);
                 var freeList = new Set(llt, FreePagesSetName, MemoryMarshal.AsRef<SetState>(freeListStateSpan));
-                using (var it = freeList.Iterate())
+                var it = freeList.Iterate();
                 {
                     if (it.Seek(0) == false)
                         break;
@@ -308,7 +308,7 @@ namespace Voron.Data.Containers
             var count = 0;
             var offset = 0;
 
-            using var it = set.Iterate();
+            var it = set.Iterate();
             if (it.Seek(0) == false)
                 return list;
 

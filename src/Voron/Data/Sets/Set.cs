@@ -94,7 +94,7 @@ namespace Voron.Data.Sets
             if (sibling.SpaceUsed + leaf.SpaceUsed > Constants.Storage.PageSize / 2 + Constants.Storage.PageSize / 4)
                 return; // if the two pages together will be bigger than 75%, can skip merging
 
-            using var it = sibling.GetIterator(_llt);
+            var it = sibling.GetIterator(_llt);
             while (it.MoveNext(out long v))
             {
                 if (leaf.Add(_llt, v) == false)
@@ -508,7 +508,7 @@ namespace Voron.Data.Sets
             return new Iterator(this);
         }
 
-        public struct Iterator : IDisposable
+        public struct Iterator 
         {
             private readonly Set _parent;
             private SetLeafPage.Iterator _it;
@@ -542,7 +542,6 @@ namespace Voron.Data.Sets
                 _parent.FindPageFor(from);
                 ref var state = ref _parent._stk[_parent._pos];
                 var leafPage = new SetLeafPage(state.Page);
-                _it.Dispose();
 
                 _it = leafPage.GetIterator(_parent._llt);
                 if (from != long.MinValue)
@@ -564,7 +563,7 @@ namespace Voron.Data.Sets
                 // We will try to fill.
                 total = 0;
 
-                // FIXME: This is a hack, we shouldnt be doing this but I need to understand if we can make this format
+                // FIXME: This is a hack, we shouldn't be doing this but I need to understand if we can make this format
                 //        high performance enough before even start thinking about consistency of usage patterns. 
                 if (_hasSeek)
                 {
@@ -577,10 +576,10 @@ namespace Voron.Data.Sets
                 while(true)
                 {
                     var tmp = matches.Slice(total);
-                    var result = _it.Fill(tmp, out var read, pruneGreaterThan);                                                                                      
+                    _it.Fill(tmp, out var read, out bool hasPrunedResults,  pruneGreaterThan);                                                                                      
 
-                    // We havent read anything, but we are not getting a pruned result.
-                    if (read == 0 && result == true)
+                    // We haven't read anything, but we are not getting a pruned result.
+                    if (read == 0 && hasPrunedResults == false)
                     {
                         var parent = _parent;
                         if (parent._pos == 0)
@@ -627,7 +626,7 @@ namespace Voron.Data.Sets
                         break; // We are done.  
 
                     // We have reached the end by prunning.
-                    if (result == false)
+                    if (hasPrunedResults)
                         break; // We are done.
                 }
 
@@ -695,11 +694,6 @@ namespace Voron.Data.Sets
             public void Reset()
             {
                 throw new NotSupportedException();
-            }
-
-            public void Dispose()
-            {
-                _it.Dispose();
             }
         }
     }

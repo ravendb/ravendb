@@ -116,7 +116,7 @@ namespace Voron.Data.Sets
             int statePrevValue = state->_prevValue;
             int numOfRepeatedValues = headerBits == 0b00 ? NumberOfValues[(int)(bits >> 5)] : (int)(bits >> 5);
             
-            if (numOfRepeatedValues >= outputBufferSize)
+            if (numOfRepeatedValues > outputBufferSize)
                 throw new ArgumentOutOfRangeException(nameof(outputBufferSize), "Invalid size for PForDecoder, not enough space for values");
             
             if (headerBits == 0b10)
