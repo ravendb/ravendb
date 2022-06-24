@@ -7,6 +7,7 @@ using System.Text;
 using Corax;
 using Corax.Pipeline;
 using Corax.Queries;
+using Corax.Utils;
 using FastTests.Voron;
 using Raven.Client.Documents.Linq;
 using Sparrow;
@@ -505,6 +506,7 @@ namespace FastTests.Corax
         [InlineData(new object[] { 8000, 18 })]
         [InlineData(new object[] { 1000, 8 })]
         [InlineData(new object[] { 1020, 7 })]
+        [InlineData(new object[] { 201, 128 })]
         public void SimpleAndOrForBiggerSet(int setSize, int stackSize)
         {
             setSize = setSize - (setSize % 3);
@@ -545,7 +547,18 @@ namespace FastTests.Corax
                 {
                     read = orMatch.Fill(ids);
                     count += read;
-                } while (read != 0);
+                    actual.AddRange(ids[..read].ToArray());
+                } 
+                while (read != 0);
+                
+                // Because there is no guarantee that multiple Fill operations would return sequential non redundant document ids,
+                // we need to sort and remove duplicates before actually testing the final condition. 
+                var sortedActual = actual.ToArray();
+                Sorting.SortAndRemoveDuplicates(sortedActual);
+                for (int i = 0; i < count; i++)
+                {
+                    Assert.Equal(matchesId[i], sortedActual[i]);
+                }
 
                 Assert.Equal((setSize / 3) * 2, count);
             }
