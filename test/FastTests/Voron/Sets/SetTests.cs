@@ -36,10 +36,10 @@ namespace FastTests.Voron.Sets
             var l = new List<long>();
             if (it.Seek(0) == false)
                 return l;
-            do
+            while (it.MoveNext())
             {
                 l.Add(it.Current);
-            } while (it.MoveNext());
+            }
 
             return l;
         }
@@ -235,13 +235,13 @@ namespace FastTests.Voron.Sets
                     for (int j = 0; j < 128; j++)
                     {
                         offset += 2;
+                        movedNext = it.MoveNext();
                         Assert.True(movedNext);
                         Assert.Equal(offset, it.Current);
-                        movedNext = it.MoveNext();
                     }
                 }
 
-                Assert.False(movedNext);
+                Assert.False(it.MoveNext());
             }
         }
 
