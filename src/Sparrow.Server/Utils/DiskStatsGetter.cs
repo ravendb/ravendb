@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.IO;
-using System.Runtime.InteropServices;
 using System.Collections.Generic;
+using System.Text;
 using System.Threading.Tasks;
 using Sparrow.Logging;
-using Sparrow.Server.Platform.Posix;
+using Mono.Unix.Native;
 
 namespace Sparrow.Server.Utils
 {
@@ -112,15 +112,9 @@ namespace Sparrow.Server.Utils
         {
             try
             {
-                // https://github.com/whotwagner/statx-fun/blob/master/statx.h
-                if (Syscall.statx(0, path, 0, 0x00000fffU, out var buf) != 0)
-                {
-                    if(Logger.IsInfoEnabled)
-                        Logger.Info($"Could not get statx of {path} - {Marshal.GetLastWin32Error()}");
-                    return null;
-                }
+                var (major, minor) = GetDiskMajorMinor(path);
 
-                var statPath = $"/sys/dev/block/{buf.stx_dev_major}:{buf.stx_dev_minor}/stat";
+                var statPath = $"/sys/dev/block/{major}:{minor}/stat";
                 using var reader = File.OpenRead(statPath);
             
                 return ReadParse(reader);
@@ -133,7 +127,31 @@ namespace Sparrow.Server.Utils
             }
         }
 
-        private static DiskStatsRawResult ReadParse(FileStream buffer)
+        private (ulong Major, ulong Minor) GetDiskMajorMinor(string path)
+        {
+            if (Syscall.stat(path, out var stats) != 0)
+            {
+                var errno = Stdlib.GetLastError();
+                var errorBuilder = new StringBuilder();
+                Syscall.strerror_r(errno, errorBuilder,1024);
+                errorBuilder.Insert(0, $"Failed to get stat for \"{path}\" : ");
+                throw new InvalidOperationException(errorBuilder.ToString());
+            }
+            
+            var deviceId = (stats.st_mode & FilePermissions.S_IFBLK) == FilePermissions.S_IFBLK
+                ? stats.st_rdev
+                : stats.st_dev;
+                
+            //https://sites.uclouvain.be/SystInfo/usr/include/sys/sysmacros.h.html
+            var major = (deviceId & 0x00000000000fff00u) >> 8;
+            major |= (deviceId & 0xfffff00000000000u) >> 32;
+                
+            var minor = (deviceId & 0x00000000000000ffu);
+            minor |= (deviceId & 0x00000ffffff00000u) >> 12;
+            return (major, minor);
+        }
+
+        private static DiskStatsRawResult ReadParse(FileStream fileStream)
         {
             const int maxLongLength = 19;
             const int maxValuesLength = 17;
@@ -144,18 +162,27 @@ namespace Sparrow.Server.Utils
             var time = DateTime.UtcNow;
             
             int valuesIndex = 0;
-            while (buffer.Position < buffer.Length && valuesIndex < maxValuesLength)
+            while (fileStream.Position < fileStream.Length && valuesIndex < maxValuesLength)
             {
-                var ch = (char)buffer.ReadByte();
+                int readByte = fileStream.ReadByte();
+                if(readByte == -1)
+                    //end of file
+                    break;
+                
+                var ch = (char)readByte;
                 if (char.IsWhiteSpace(ch))
                     continue;
 
                 var index = 0;
-                while (buffer.Position < buffer.Length)
+                while (fileStream.Position < fileStream.Length)
                 {
                     serializedValue[index++] = ch;
-                    ch = (char)buffer.ReadByte();
-
+                    readByte = fileStream.ReadByte();
+                    if(readByte == -1)
+                        //end of file
+                        break;
+                    
+                    ch = (char)readByte;
                     if (char.IsWhiteSpace(ch))
                         break;
                 }
@@ -190,7 +217,7 @@ namespace Sparrow.Server.Utils
             else
             {
                 if(Logger.IsInfoEnabled)
-                    Logger.Info($"The stats file {buffer.Name} should contain at least 4 values");
+                    Logger.Info($"The stats file {fileStream.Name} should contain at least 4 values");
                 return null;
             }
 
