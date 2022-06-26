@@ -232,45 +232,10 @@ namespace Raven.Server.Documents.Handlers.Debugging
         }
 
         [RavenAction("/databases/*/debug/storage/environment/report", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
-        public async Task EnvironmentReport()
+        public async Task GetEnvironmentReport()
         {
-            var name = GetStringQueryString("name");
-            var typeAsString = GetStringQueryString("type");
-            var details = GetBoolValueQueryString("details", required: false) ?? false;
-
-            if (Enum.TryParse(typeAsString, out StorageEnvironmentWithType.StorageEnvironmentType type) == false)
-                throw new InvalidOperationException("Query string value 'type' is not a valid environment type: " + typeAsString);
-
-            var env = Database.GetAllStoragesEnvironment()
-                .FirstOrDefault(x => string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase) && x.Type == type);
-
-            if (env == null)
-            {
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                return;
-            }
-
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            {
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    writer.WriteStartObject();
-
-                    writer.WritePropertyName("Name");
-                    writer.WriteString(env.Name);
-                    writer.WriteComma();
-
-                    writer.WritePropertyName("Type");
-                    writer.WriteString(env.Type.ToString());
-                    writer.WriteComma();
-
-                    var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(GetDetailedReport(env, details));
-                    writer.WritePropertyName("Report");
-                    writer.WriteObject(context.ReadObject(djv, env.Name));
-
-                    writer.WriteEndObject();
-                }
-            }
+            using (var processor = new StorageHandlerProcessorForGetEnvironmentReport(this))
+                await processor.ExecuteAsync();
         }
 
         private DetailedStorageReport GetDetailedReport(StorageEnvironmentWithType environment, bool details)
