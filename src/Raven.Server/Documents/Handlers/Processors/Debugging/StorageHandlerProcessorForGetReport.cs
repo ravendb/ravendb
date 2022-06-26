@@ -1,7 +1,9 @@
 ﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Raven.Server.Web.Http;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron;
@@ -9,19 +11,16 @@ using Voron.Debugging;
 
 namespace Raven.Server.Documents.Handlers.Processors.Debugging
 {
-    internal class StorageHandlerProcessorForGetReport : AbstractDatabaseHandlerProcessor<DatabaseRequestHandler, DocumentsOperationContext>
+    internal class StorageHandlerProcessorForGetReport : AbstractStorageHandlerProcessorForGetReport<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public StorageHandlerProcessorForGetReport([NotNull] DatabaseRequestHandler requestHandler)
             : base(requestHandler)
         {
         }
 
-        public override async ValueTask ExecuteAsync()
-        {
-            await GetStorageReport();
-        }
+        protected override bool SupportsCurrentNode => true;
 
-        private async ValueTask GetStorageReport()
+        protected override async ValueTask HandleCurrentNodeAsync()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
@@ -66,6 +65,8 @@ namespace Raven.Server.Documents.Handlers.Processors.Debugging
                 }
             }
         }
+
+        protected override Task HandleRemoteNodeAsync(ProxyCommand<object> command, OperationCancelToken token) => RequestHandler.ExecuteRemoteAsync(command, token.Token);
 
         private static StorageReport GetReport(StorageEnvironmentWithType environment)
         {
