@@ -12,4 +12,12 @@ public class ShardedStorageHandler : ShardedDatabaseRequestHandler
         using (var processor = new ShardedStorageHandlerProcessorForGetReport(this))
             await processor.ExecuteAsync();
     }
+
+
+    [RavenShardedAction("/databases/*/debug/storage/environment/report", "GET")]
+    public async Task GetEnvironmentReport()
+    {
+        using (var processor = new ShardedStorageHandlerProcessorForGetEnvironmentReport(this))
+            await processor.ExecuteAsync();
+    }
 }
