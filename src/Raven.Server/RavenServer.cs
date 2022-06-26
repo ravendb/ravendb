@@ -2428,7 +2428,7 @@ namespace Raven.Server
                         var shardedReplicationLoader = tcp.DatabaseContext.Replication;
                         var queue = new ReplicationQueue(result.DatabaseContext.ShardCount);
 
-                        shardedReplicationLoader.AcceptIncomingConnection(tcp, header, cert, bufferToCopy, queue);
+                        shardedReplicationLoader.AcceptIncomingConnection(tcp, bufferToCopy, queue);
 
                         for (int i = 0; i < tcp.DatabaseContext.ShardCount; i++)
                         {
