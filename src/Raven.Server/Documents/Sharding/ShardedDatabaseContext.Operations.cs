@@ -92,7 +92,7 @@ public partial class ShardedDatabaseContext
 
             operation.Operation = new MultiOperation(operation.Id, _context, onProgress);
 
-            var tasks = new Task[_context.NumberOfShardNodes];
+            var tasks = new Task[_context.ShardCount];
             using (_context.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
                 for (var shardNumber = 0; shardNumber < tasks.Length; shardNumber++)
@@ -129,6 +129,6 @@ public partial class ShardedDatabaseContext
             }
         }
 
-        private DatabaseChanges GetChanges(ShardedDatabaseIdentifier key) => _changes.GetOrAdd(key, k => new DatabaseChanges(_context.ShardExecutor.GetRequestExecutorAt(k.ShardNumber), ShardHelper.ToShardName(_context.DatabaseName, k.ShardNumber), onDispose: null, k.NodeTag));
+        internal DatabaseChanges GetChanges(ShardedDatabaseIdentifier key) => _changes.GetOrAdd(key, k => new DatabaseChanges(_context.ShardExecutor.GetRequestExecutorAt(k.ShardNumber), ShardHelper.ToShardName(_context.DatabaseName, k.ShardNumber), onDispose: null, k.NodeTag));
     }
 }

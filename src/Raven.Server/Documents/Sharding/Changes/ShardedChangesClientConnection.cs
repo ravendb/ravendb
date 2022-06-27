@@ -70,8 +70,8 @@ public class ShardedChangesClientConnection : AbstractChangesClientConnection<Tr
         if (_changes != null)
             return;
 
-        var tasks = new Task[_context.NumberOfShardNodes];
-        _changes = new ShardedDatabaseChanges[_context.NumberOfShardNodes];
+        var tasks = new Task[_context.ShardCount];
+        _changes = new ShardedDatabaseChanges[_context.ShardCount];
         for (var i = 0; i < _changes.Length; i++)
         {
             _changes[i] = new ShardedDatabaseChanges(_context.ShardExecutor.GetRequestExecutorAt(i), ShardHelper.ToShardName(_context.DatabaseName, i), onDispose: null, nodeTag: null, _throttleConnection);

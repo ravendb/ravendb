@@ -201,6 +201,90 @@ namespace Raven.Client.Documents.Smuggler
         }
     }
 
+    public class ShardedSmugglerResult : IShardedOperationResult<ShardNodeSmugglerResult>
+    {
+        public List<ShardNodeSmugglerResult> Results { get; set; }
+
+        public ShardedSmugglerResult()
+        {
+            Message = null;
+        }
+
+        public string Message { get; private set; }
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue(GetType())
+            {
+                [nameof(Results)] = new DynamicJsonArray(Results.Select(x => x.ToJson()))
+            };
+        }
+
+        public bool ShouldPersist => true;
+        public bool CanMerge => false;
+        public void MergeWith(IOperationResult result)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void CombineWith(IOperationResult result, int shardNumber, string nodeTag)
+        {
+            Results ??= new List<ShardNodeSmugglerResult>();
+
+            if (result is not SmugglerResult sr)
+                return;
+
+            Results.Add(new ShardNodeSmugglerResult
+            {
+                Result = sr,
+                ShardNumber = shardNumber,
+                NodeTag = nodeTag
+            });
+        }
+    }
+    
+    public class ShardNodeSmugglerResult : ShardNodeOperationResult<SmugglerResult>
+    {
+        public override bool ShouldPersist => true;
+    }
+
+    public class ShardedSmugglerProgress : SmugglerResult.SmugglerProgress, IShardedOperationProgress
+    {
+        public int ShardNumber { get; set; }
+        public string NodeTag { get; set; }
+
+        public void Fill(IOperationProgress progress, int shardNumber, string nodeTag)
+        {
+            ShardNumber = shardNumber;
+            NodeTag = nodeTag;
+
+            if (progress is not SmugglerResult.SmugglerProgress sp)
+                return;
+
+            _result = sp._result;
+            DatabaseRecord = sp.DatabaseRecord;
+            Documents = sp.Documents;
+            RevisionDocuments = sp.RevisionDocuments;
+            Tombstones = sp.Tombstones;
+            Conflicts = sp.Conflicts;
+            Identities = sp.Identities;
+            Indexes = sp.Indexes;
+            CompareExchange = sp.CompareExchange;
+            Subscriptions = sp.Subscriptions;
+            ReplicationHubCertificates = sp.ReplicationHubCertificates;
+            Counters = sp.Counters;
+            TimeSeries = sp.TimeSeries;
+            CompareExchangeTombstones = sp.CompareExchangeTombstones;
+        }
+
+        public override DynamicJsonValue ToJson()
+        {
+            var json = base.ToJson();
+            json[nameof(ShardNumber)] = ShardNumber;
+            json[nameof(NodeTag)] = NodeTag;
+            return json;
+        }
+    }
+
     public abstract class SmugglerProgressBase : IOperationProgress
     {
         public DatabaseRecordProgress DatabaseRecord { get; set; }

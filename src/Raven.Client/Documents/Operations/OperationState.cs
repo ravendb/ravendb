@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
 using Sparrow.Json.Parsing;
 
@@ -53,7 +54,37 @@ namespace Raven.Client.Documents.Operations
         public string NodeTag { get; set; }
         public TResult Result { get; set; }
     }
-    
+
+    public abstract class ShardNodeOperationResult<TResult> : IShardNodeOperationResult<TResult> where TResult : IOperationResult
+    {
+        public int ShardNumber { get; set; }
+        public string NodeTag { get; set; }
+        public TResult Result { get; set; }
+        public string Message { get; private set; }
+
+        protected ShardNodeOperationResult()
+        {
+            Message = null;
+        }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue(GetType())
+            {
+                [nameof(ShardNumber)] = ShardNumber,
+                [nameof(NodeTag)] = NodeTag,
+                [nameof(Result)] = Result.ToJson()
+            };
+        }
+
+        public abstract bool ShouldPersist { get; }
+        public bool CanMerge => false;
+        public void MergeWith(IOperationResult result)
+        {
+            throw new NotSupportedException();
+        }
+    }
+
     public interface IOperationDetailedDescription
     {
         DynamicJsonValue ToJson();

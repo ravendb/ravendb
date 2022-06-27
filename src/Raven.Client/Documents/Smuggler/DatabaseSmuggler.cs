@@ -1,10 +1,12 @@
 using System;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
@@ -21,16 +23,13 @@ namespace Raven.Client.Documents.Smuggler
     {
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger("Client", typeof(DatabaseSmuggler).FullName);
 
-        private readonly IDocumentStore _store;
+        private readonly Func<string, string, IDatabaseChanges> _getChanges;
         private readonly string _databaseName;
         private readonly RequestExecutor _requestExecutor;
 
-        public DatabaseSmuggler(IDocumentStore store, string databaseName = null)
+        public DatabaseSmuggler(IDocumentStore store, string databaseName = null) 
+            : this(store.Changes, store.GetRequestExecutor, databaseName ?? store.Database)
         {
-            _store = store;
-            _databaseName = databaseName ?? store.Database;
-            if (_databaseName != null)
-                _requestExecutor = store.GetRequestExecutor(_databaseName);
         }
 
         public DatabaseSmuggler(DocumentStore store, string databaseName = null)
@@ -38,12 +37,39 @@ namespace Raven.Client.Documents.Smuggler
         {
         }
 
+        internal DatabaseSmuggler(Func<string, string, IDatabaseChanges> getChanges, Func<string, RequestExecutor> getRequestExecutor, string databaseName)
+        {
+            _getChanges = getChanges;
+            _databaseName = databaseName;
+
+            if (_databaseName != null)
+                _requestExecutor = getRequestExecutor(databaseName);
+        }
+
         public DatabaseSmuggler ForDatabase(string databaseName)
         {
             if (string.Equals(databaseName, _databaseName, StringComparison.OrdinalIgnoreCase))
                 return this;
 
-            return new DatabaseSmuggler(_store, databaseName);
+            return new DatabaseSmuggler(_getChanges, _ => _requestExecutor, databaseName);
+        }
+
+        internal Task<Operation> ExportToStreamAsync(DatabaseSmugglerExportOptions options, Func<Stream, Task> handleStreamResponse, CancellationToken token = default)
+        {
+            var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+            return ExportAsync(options, async stream =>
+            {
+                try
+                {
+                    await handleStreamResponse(stream).ConfigureAwait(false);
+                    
+                    tcs.TrySetResult(null);
+                }
+                catch (Exception e)
+                {
+                    tcs.TrySetException(e);
+                }
+            }, tcs.Task, token);
         }
 
         public Task<Operation> ExportAsync(DatabaseSmugglerExportOptions options, string toFile, CancellationToken token = default)
@@ -126,7 +152,7 @@ namespace Raven.Client.Documents.Smuggler
 
                 return new Operation(
                     _requestExecutor,
-                    () => _store.Changes(_databaseName, getOperationIdCommand.NodeTag),
+                    () => _getChanges(_databaseName, getOperationIdCommand.NodeTag),
                     _requestExecutor.Conventions,
                     operationId,
                     getOperationIdCommand.NodeTag,
@@ -276,7 +302,7 @@ namespace Raven.Client.Documents.Smuggler
                     await tcs.Task.ConfigureAwait(false);
                 }
 
-                return new Operation(_requestExecutor, () => _store.Changes(_databaseName, getOperationIdCommand.NodeTag), _requestExecutor.Conventions, operationId,
+                return new Operation(_requestExecutor, () => _getChanges(_databaseName, getOperationIdCommand.NodeTag), _requestExecutor.Conventions, operationId,
                     nodeTag: getOperationIdCommand.NodeTag, additionalTask: task);
 
             }

@@ -1,4 +1,6 @@
-﻿namespace Raven.Client.Documents.Smuggler
+﻿using Sparrow.Json;
+
+namespace Raven.Client.Documents.Smuggler
 {
     public class DatabaseSmugglerOptions : IDatabaseSmugglerOptions
     {
@@ -73,6 +75,9 @@
         public int MaxStepsForTransformScript { get; set; }
 
         public string EncryptionKey { get; set; }
+
+        [ForceJsonSerialization]
+        internal bool IsShard { get; set; }
     }
 
     internal interface IDatabaseSmugglerOptions

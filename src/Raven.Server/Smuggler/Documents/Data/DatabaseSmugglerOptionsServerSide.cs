@@ -22,9 +22,7 @@ namespace Raven.Server.Smuggler.Documents.Data
         public AuthorizationStatus AuthorizationStatus { get; set; } = AuthorizationStatus.ValidUser;
 
         public bool SkipRevisionCreation { get; set; }
-
-        public bool IsShard { get; set; }
-
+        
         public static DatabaseSmugglerOptionsServerSide Create(HttpContext httpContext)
         {
             var result = new DatabaseSmugglerOptionsServerSide();
@@ -58,6 +56,23 @@ namespace Raven.Server.Smuggler.Documents.Data
             }
 
             return result;
+        }
+
+        public DatabaseSmugglerExportOptions ToExportOptions()
+        {
+            return new DatabaseSmugglerExportOptions()
+            {
+                EncryptionKey = EncryptionKey,
+                Collections = Collections,
+                IncludeArtificial = IncludeArtificial,
+                IncludeExpired = IncludeExpired,
+                MaxStepsForTransformScript = MaxStepsForTransformScript,
+                OperateOnDatabaseRecordTypes = OperateOnDatabaseRecordTypes,
+                OperateOnTypes = OperateOnTypes,
+                RemoveAnalyzers = RemoveAnalyzers,
+                TransformScript = TransformScript,
+                IsShard = IsShard
+            };
         }
     }
 }

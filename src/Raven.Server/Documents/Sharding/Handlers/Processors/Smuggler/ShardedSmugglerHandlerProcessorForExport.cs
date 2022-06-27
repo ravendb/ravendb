@@ -1,13 +1,16 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO.Compression;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Smuggler;
 using Raven.Server.Documents.Handlers.Processors.Smuggler;
-using Raven.Server.Documents.Sharding.Operations;
+using Raven.Server.Documents.Operations;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
+using Raven.Server.Utils;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Smuggler
@@ -18,24 +21,39 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Smuggler
         {
         }
 
-        protected override async ValueTask ExportAsync(JsonOperationContext context, long? operationId)
+        protected override long GetNextOperationId()
         {
+            return RequestHandler.DatabaseContext.Operations.GetNextOperationId();
+        }
 
-            operationId ??= RequestHandler.DatabaseContext.Operations.GetNextOperationId();
-            await Export(context, RequestHandler.DatabaseContext.DatabaseName, ExportShardedDatabaseInternalAsync, RequestHandler.DatabaseContext.Operations, operationId.Value);
+        protected override async ValueTask<IOperationResult> ExportAsync(JsonOperationContext context, IDisposable returnToContextPool, long operationId,
+            DatabaseSmugglerOptionsServerSide options, long startDocumentEtag,
+            long startRaftIndex, OperationCancelToken token)
+        {
+            using (returnToContextPool)
+            {
+                return await RequestHandler.DatabaseContext.Operations.AddLocalOperation(
+                    operationId,
+                    OperationType.DatabaseExport,
+                    "Export database: " + RequestHandler.DatabaseName,
+                    detailedDescription: null,
+                    onProgress => ExportShardedDatabaseInternalAsync(options, onProgress, context, token),
+                    token: token);
+            }
         }
 
         protected async Task<IOperationResult> ExportShardedDatabaseInternalAsync(
             DatabaseSmugglerOptionsServerSide options,
-            long startDocumentEtag,
-            long startRaftIndex,
             Action<IOperationProgress> onProgress,
             JsonOperationContext jsonOperationContext,
             OperationCancelToken token)
         {
-            // we use here a negative number to avoid possible collision between the server and database ids
-            var operationId = RequestHandler.DatabaseContext.Operations.GetNextOperationId();
             options.IsShard = true;
+
+            var shardedOperationStateResult = new ShardedSmugglerResult()
+            {
+                Results = new List<ShardNodeSmugglerResult>()
+            };
 
             await using (var outputStream = GetOutputStream(RequestHandler.ResponseBodyStream(), options))
             await using (var writer = new AsyncBlittableJsonTextWriter(jsonOperationContext, new GZipStream(outputStream, CompressionMode.Compress)))
@@ -43,16 +61,47 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Smuggler
                 writer.WriteStartObject();
                 writer.WritePropertyName("BuildVersion");
                 writer.WriteInteger(ServerVersion.Build);
-
-                var exportOperation = new ShardedExportOperation(RequestHandler.HttpContext.Request, options, writer, operationId);
+                
                 // we execute one by one so requests will not timeout since the export can take long
-                await RequestHandler.ShardExecutor.ExecuteOneByOneForAllAsync(exportOperation);
+                for (var shardNumber = 0; shardNumber < RequestHandler.DatabaseContext.DatabaseRecord.Shards.Length; shardNumber++)
+                {
+                    var smuggler = new DatabaseSmuggler(
+                        (_, nodeTag) => RequestHandler.DatabaseContext.Operations.GetChanges(new ShardedDatabaseIdentifier(nodeTag, shardNumber)),
+                        _ => RequestHandler.DatabaseContext.ShardExecutor.GetRequestExecutorAt(shardNumber),
+                        ShardHelper.ToShardName(RequestHandler.DatabaseContext.DatabaseName, shardNumber));
+
+                    var smugglerOperation = await smuggler.ExportToStreamAsync(options.ToExportOptions(), async stream =>
+                    {
+                        await using (var gzipStream = new GZipStream(GetInputStream(stream, options), CompressionMode.Decompress))
+                        {
+                            await writer.WriteStreamAsync(gzipStream);
+                        }
+                    } , token.Token);
+
+                    smugglerOperation.OnProgressChanged += (sender, progress) =>
+                    {
+                        if (progress is not SmugglerResult.SmugglerProgress sp)
+                            return;
+
+                        var shardProgress = new ShardedSmugglerProgress();
+                        shardProgress.Fill(sp, shardNumber, smugglerOperation.NodeTag);
+                        onProgress(shardProgress);
+                    };
+
+                    var smugglerResult = await smugglerOperation.WaitForCompletionAsync<SmugglerResult>();
+
+                    shardedOperationStateResult.Results.Add(new ShardNodeSmugglerResult()
+                    {
+                        NodeTag = smugglerOperation.NodeTag,
+                        ShardNumber = shardNumber,
+                        Result = smugglerResult
+                    });
+                }
 
                 writer.WriteEndObject();
             }
 
-            var getStateOperation = new GetShardedOperationStateOperation(HttpContext, operationId);
-            return (await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(getStateOperation)).Result;
+            return shardedOperationStateResult;
         }
     }
 }
