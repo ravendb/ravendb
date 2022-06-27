@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Sparrow.Json;
 using Sparrow.Server;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Replication
 {
@@ -64,6 +65,8 @@ namespace Raven.Server.Documents.Replication
 
             if (interrupt != null)
             {
+                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "check if we can avoid the above 'if' (fails only for sharding)");
+
                 if (_previousWait.TryGetValue(interrupt, out Task<Task> task) == false)
                 {
                     _previousWait[interrupt] = task = Task.WhenAny(_prevCall, interrupt.WaitAsync());
