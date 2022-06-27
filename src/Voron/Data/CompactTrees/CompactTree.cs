@@ -499,54 +499,7 @@ namespace Voron.Data.CompactTrees
             }
 
             return true;
-        }
-        
-        private void Verify(ref CursorState current)
-        {
-            var dictionary = _dictionaries[current.Header->DictionaryId];
-
-            int len = GetEncodedEntry(current.Page, current.EntriesOffsets[0], out var lastEncodedKey, out var l);
-
-            Span<byte> lastDecodedKey = new byte[dictionary.GetMaxDecodingBytes(lastEncodedKey)];
-            dictionary.Decode(lastEncodedKey, ref lastDecodedKey);
-
-            for (int i = 1; i < current.Header->NumberOfEntries; i++)
-            {
-                GetEncodedEntry(current.Page, current.EntriesOffsets[i], out var encodedKey, out l);
-                if (encodedKey.Length <= 0)
-                    VoronUnrecoverableErrorException.Raise(_llt, "Encoded key is corrupted.");
-                if (lastEncodedKey.SequenceCompareTo(encodedKey) >= 0)
-                    VoronUnrecoverableErrorException.Raise(_llt, "Last encoded key does not follow lexicographically.");
-
-                Span<byte> decodedKey = new byte[dictionary.GetMaxDecodingBytes(encodedKey)];
-                dictionary.Decode(encodedKey, ref decodedKey);
-
-                Span<byte> reencodedKey = new byte[dictionary.GetMaxEncodingBytes(decodedKey)];
-                dictionary.Encode(decodedKey, ref reencodedKey);
-
-                Span<byte> decodedKey1 = new byte[dictionary.GetMaxDecodingBytes(reencodedKey)];
-                dictionary.Decode(encodedKey, ref decodedKey1);
-
-                if (decodedKey1.SequenceCompareTo(decodedKey) != 0)
-                    VoronUnrecoverableErrorException.Raise(_llt, "Decoded key is not equal to the previous decoded key");
-
-                // Console.WriteLine($"{Encoding.UTF8.GetString(lastDecodedKey)} - {Encoding.UTF8.GetString(decodedKey)}");
-
-                if (lastDecodedKey.SequenceCompareTo(decodedKey) > 0 || lastEncodedKey.SequenceCompareTo(encodedKey) > 0)
-                {
-                    Console.WriteLine($"{Encoding.UTF8.GetString(lastDecodedKey)} - {Encoding.UTF8.GetString(decodedKey)}");
-
-                    decodedKey = new byte[dictionary.GetMaxDecodingBytes(encodedKey)];
-                    dictionary.Decode(encodedKey, ref decodedKey);
-
-                    dictionary.Decode(lastEncodedKey, ref lastDecodedKey);
-                    VoronUnrecoverableErrorException.Raise(_llt, "Last encoded key does not follow lexicographically.");
-                }
-
-                lastEncodedKey = encodedKey;
-                lastDecodedKey = decodedKey;
-            }
-        }
+        }                
 
         private void MaybeMergeEntries(ref CursorState destinationState)
         {
