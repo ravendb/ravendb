@@ -108,18 +108,20 @@ class document implements documentBase {
         const indexes = [id.indexOf("/"), id.indexOf("|")].filter(x => x !== -1);
         const firstSeparatorIndex = _.min(indexes.length ? indexes : [-1]);
 
+        let collectionName = id.substring(0, firstSeparatorIndex);
+        
         if (firstSeparatorIndex >= 1) {
-            let collectionName = id.substring(0, firstSeparatorIndex);
-            
             if (collectionName.toLocaleLowerCase() === collectionName) {
                 // All letters are lower case, Capitalize first 
                 collectionName = _.capitalize(collectionName);
-            } else {
-                // Find an already existing matching collection name 
-                collectionName = collections.find(collection => collection.toLocaleLowerCase() === collectionName.toLocaleLowerCase());
             }
-        
-             return collectionName;
+            return collectionName;
+        } else {
+            // Find an already existing matching collection name 
+            collectionName = collections.find(collection => collection.toLocaleLowerCase() === collectionName.toLocaleLowerCase());
+            if (collectionName) {
+                return collectionName;
+            }
         }
 
         // if no '/' or '|' at all then we want the document to be in the @empty collection
