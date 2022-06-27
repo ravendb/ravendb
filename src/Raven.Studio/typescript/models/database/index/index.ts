@@ -316,6 +316,8 @@ class index {
         
         this.type(incomingData.type());
         this.sourceType(incomingData.sourceType());
+        this.searchEngineType(incomingData.searchEngineType());
+        
         this.priority(incomingData.priority());
         this.state(incomingData.state());
         this.status(incomingData.status());
