@@ -13,7 +13,6 @@ using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Config;
 using Raven.Server.Documents.Handlers.Processors.TimeSeries;
 using Raven.Server.Documents.Replication.ReplicationItems;
-using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Exceptions;
@@ -299,13 +298,6 @@ namespace Raven.Server.Documents.Replication.Incoming
             LastHeartbeatTicks = _database.Time.GetUtcNow().Ticks;
 
             return heartbeat;
-        }
-
-        public LiveReplicationPerformanceCollector.ReplicationPerformanceType GetReplicationPerformanceType()
-        {
-            return ReplicationType == ReplicationLatestEtagRequest.ReplicationType.Internal
-                ? LiveReplicationPerformanceCollector.ReplicationPerformanceType.IncomingInternal
-                : LiveReplicationPerformanceCollector.ReplicationPerformanceType.IncomingExternal;
         }
 
         protected override void InvokeOnAttachmentStreamsReceived(int attachmentStreamCount) => AttachmentStreamsReceived?.Invoke(this, attachmentStreamCount);
