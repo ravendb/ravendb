@@ -96,9 +96,9 @@ class editIndex extends viewModelBase {
         const deploymentMode = index.deploymentMode();
         return this.formatDeploymentMode(deploymentMode);
     });
-    
-    defaultSearchEngine = ko.observable<string>();
-    searchEngine = ko.observable<string>();
+
+    defaultSearchEngine = ko.observable<Raven.Client.Documents.Indexes.SearchEngineType>();
+    searchEngineConfiguration = ko.observable<Raven.Client.Documents.Indexes.SearchEngineType>();
 
     inheritSearchEngineText: KnockoutComputed<string>;
     effectiveSearchEngineText: KnockoutComputed<string>;
@@ -203,17 +203,27 @@ class editIndex extends viewModelBase {
         });
 
         this.effectiveSearchEngineText = ko.pureComputed(() => {
-            if (this.searchEngine()) {
-                return editIndex.formatEngine(this.searchEngine());
+            if (this.searchEngineConfiguration()) {
+                return editIndex.formatEngine(this.searchEngineConfiguration());
             }
             
             return this.inheritSearchEngineText();
         });
+        
+        this.searchEngineConfiguration.subscribe((engine: Raven.Client.Documents.Indexes.SearchEngineType) => {
+            let valueToUpdate: Raven.Client.Documents.Indexes.SearchEngineType = "Lucene";
+            
+            if ((engine && engine === "Corax") || (!engine && this.defaultSearchEngine() === "Corax")) {
+                valueToUpdate = "Corax";
+            }
+
+            this.editedIndex().searchEngine(valueToUpdate);
+        }) 
     }
     
-    static formatEngine(engine: string) { 
+    static formatEngine(engine: Raven.Client.Documents.Indexes.SearchEngineType) {
         if (engine === "Corax") {
-            return engine + " - experimantal";
+            return engine + " - experimental";
         }
         return engine;
     }
@@ -262,6 +272,7 @@ class editIndex extends viewModelBase {
         if (!this.editedIndex().isAutoIndex() && !!indexToEditName) {
             this.showIndexHistory(true);
         }
+
         return $.when<any>(this.fetchCustomAnalyzers(), this.fetchServerWideCustomAnalyzers(), this.fetchIndexDefaults())
             .done(([analyzers]: [Array<Raven.Client.Documents.Indexes.Analysis.AnalyzerDefinition>],
                    [serverWideAnalyzers]: [Array<Raven.Client.Documents.Indexes.Analysis.AnalyzerDefinition>],
@@ -272,16 +283,32 @@ class editIndex extends viewModelBase {
                 this.defaultDeploymentMode(indexDefaults.StaticIndexDeploymentMode);
                 this.defaultSearchEngine(indexDefaults.StaticIndexingEngineType === "None" ? "Lucene" : indexDefaults.StaticIndexingEngineType);
                 
-                const existingSearchConfig = this.editedIndex().configuration().find(x => x.key() === editIndex.searchEngineConfigurationLabel);
-                if (existingSearchConfig) {
-                    this.editedIndex().configuration.remove(existingSearchConfig);
-                    this.searchEngine(existingSearchConfig.value());
-                }
-                
+                this.extractSearchEngineFromConfig();
+
                 this.editedIndex().registerCustomAnalyzers(analyzersList);
                 
                 this.defaultDeploymentMode(indexDefaults.StaticIndexDeploymentMode);
-        });
+            });
+    }
+    
+    extractSearchEngineFromConfig() {
+        const existingSearchConfig = this.editedIndex().configuration().find(x => x.key() === editIndex.searchEngineConfigurationLabel);
+        if (existingSearchConfig) {
+            this.editedIndex().configuration.remove(existingSearchConfig);
+            
+            const value = existingSearchConfig.value() as Raven.Client.Documents.Indexes.SearchEngineType;
+            switch (value) {
+                case "Corax":
+                case "Lucene":
+                case "None":
+                    this.searchEngineConfiguration(value);
+                    break;
+                default:
+                    generalUtils.assertUnreachable(value, "Unknown search engine type: " + value);
+            }
+        } else {
+            this.searchEngineConfiguration(null);
+        }
     }
 
     attached() {
@@ -418,6 +445,9 @@ class editIndex extends viewModelBase {
         
         this.editedIndex(newIndexDefinition);
         
+        this.extractSearchEngineFromConfig();
+        this.initFieldTooltips();
+        
         this.loadedIndexHistory(true);
     }
 
@@ -427,8 +457,13 @@ class editIndex extends viewModelBase {
         const reduceFromPreview = previewItem.Definition.Reduce;
         
         const newIndexDefinition = new indexDefinition(this.editedIndex().toDto());
+        
         newIndexDefinition.setMapsAndReduce(mapsFromPreview, reduceFromPreview);
+        
         this.editedIndex(newIndexDefinition);
+        
+        this.extractSearchEngineFromConfig();
+        this.initFieldTooltips();
 
         this.loadedIndexHistory(true);
     }
@@ -549,7 +584,7 @@ class editIndex extends viewModelBase {
             hasDefaultFieldOptions,
             hasAnyDirtyDefaultFieldOptions,
             hasAnyDirtyAdditionalAssembly,
-            this.searchEngine
+            this.searchEngineConfiguration
         ], false, jsonUtil.newLineNormalizingHashFunction);
 
         this.isSaveEnabled = ko.pureComputed(() => {
@@ -788,8 +823,8 @@ class editIndex extends viewModelBase {
 
             const indexDto = editedIndex.toDto();
             
-            if (this.searchEngine()) {
-                indexDto.Configuration[editIndex.searchEngineConfigurationLabel] = this.searchEngine();
+            if (this.searchEngineConfiguration()) {
+                indexDto.Configuration[editIndex.searchEngineConfigurationLabel] = this.searchEngineConfiguration();
             } else {
                 delete indexDto.Configuration[editIndex.searchEngineConfigurationLabel];
             }
@@ -992,7 +1027,7 @@ class editIndex extends viewModelBase {
     private initFieldTooltips() {
         this.setupDisableReasons();
 
-        popoverUtils.longWithHover($(".store-field-info"),
+        popoverUtils.longWithHover($(".store-field-info-lucene"), 
             {
                 content: `
                          <h3 class="margin-top">Please verify whether you need to store the field in the index:</h3>
