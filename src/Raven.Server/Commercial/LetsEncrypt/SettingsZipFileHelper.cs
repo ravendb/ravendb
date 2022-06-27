@@ -345,7 +345,8 @@ public static class SettingsZipFileHelper
                     var modifiedJsonObj = context.ReadObject(currentNodeSettingsJson, "modified-settings-json");
 
                     var indentedJson = JsonStringHelper.Indent(modifiedJsonObj.ToString());
-                    if (parameters.ZipOnly == false)
+                    var firstNodeTag = parameters.UnsecuredSetupInfo.NodeSetupInfos.Keys.First();
+                    if ( (node.Key == parameters.UnsecuredSetupInfo.LocalNodeTag || node.Key == firstNodeTag) && parameters.UnsecuredSetupInfo.ZipOnly == false) 
                     {
                         try
                         {

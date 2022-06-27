@@ -537,7 +537,7 @@ namespace Raven.Server.Web.System
                     operationId.Value,
                     token: operationCancelToken);
 
-                if (unsecuredSetupInfo.ZipOnly)
+                if (unsecuredSetupInfo.LocalNodeTag != null)
                 {
                     var zip = ((SetupProgressAndResult)operationResult).SettingsZipFile;
 
@@ -547,7 +547,7 @@ namespace Raven.Server.Web.System
                     HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
                     HttpContext.Response.ContentType = "application/octet-stream";
 
-                    await HttpContext.Response.Body.WriteAsync(zip, 0, zip.Length);   
+                    await HttpContext.Response.Body.WriteAsync(zip, 0, zip.Length);
                 }
             }
         }
