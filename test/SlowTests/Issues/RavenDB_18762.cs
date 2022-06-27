@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Sharding;
 using SlowTests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
@@ -27,19 +28,22 @@ public class RavenDB_18762 : ClusterTestBase
         {
             await CreateDatabaseInCluster(new DatabaseRecord(database)
             {
-                Shards = new[]
+                Sharding = new ShardingConfiguration
                 {
-                    new DatabaseTopology
+                    Shards = new[]
                     {
-                        Members = new List<string> { "A", "B", "C" }
-                    },
-                    new DatabaseTopology
-                    {
-                        Members = new List<string> { "A", "B", "C" }
-                    },
-                    new DatabaseTopology
-                    {
-                        Members = new List<string> { "A", "B", "C" }
+                        new DatabaseTopology
+                        {
+                            Members = new List<string> { "A", "B", "C" }
+                        },
+                        new DatabaseTopology
+                        {
+                            Members = new List<string> { "A", "B", "C" }
+                        },
+                        new DatabaseTopology
+                        {
+                            Members = new List<string> { "A", "B", "C" }
+                        }
                     }
                 }
             }, 3, cluster.Leader.WebUrl);
