@@ -139,17 +139,20 @@ class indexFieldOptions {
     
     showAdvancedOptions = ko.observable<boolean>(false);
 
+    searchEngine = ko.observable<Raven.Client.Documents.Indexes.SearchEngineType>();
+
     validationGroup: KnockoutObservable<any>;
     dirtyFlag: () => DirtyFlag;
     
     constructor(name: string,
                 dto: Raven.Client.Documents.Indexes.IndexFieldOptions,
                 indexHasReduce: KnockoutObservable<boolean>,
-                engineType: Raven.Client.Documents.Indexes.SearchEngineType,
+                engineType: KnockoutObservable<Raven.Client.Documents.Indexes.SearchEngineType>,
                 parentFields?: indexFieldOptions) {
         this.name(name);
         this.parent(parentFields);
         this.indexDefinitionHasReduce = indexHasReduce;
+        this.searchEngine = engineType;
         
         const analyzerPositionInName = dto.Analyzer ? dto.Analyzer.lastIndexOf(".") : 0;
         const analyzerNameInDto = analyzerPositionInName !== -1 && dto.Analyzer ? dto.Analyzer.substring(analyzerPositionInName + 1) : dto.Analyzer;
@@ -192,7 +195,6 @@ class indexFieldOptions {
         }
         
         this.storage(dto.Storage);
-        this.setStorageAccordingToEngine(engineType); // override..
         
         this.suggestions(dto.Suggestions);
         this.termVector(dto.TermVector);
@@ -221,7 +223,10 @@ class indexFieldOptions {
     
     setStorageAccordingToEngine(engine: string) {
         if (engine === "Corax") {
-            this.storage("Yes");
+            if (this.parent()) {
+                this.parent().storage("Yes");
+            }
+            this.storage(null);
         }
     }
     
@@ -263,19 +268,19 @@ class indexFieldOptions {
         this.highlighting.subscribe(() => {
             if (!changeInProgress) {
                 const newValue = this.highlighting();
+                const notCorax = this.searchEngine() !== "Corax";
 
                 changeInProgress = true;
                 
                 if (newValue) {
-                    this.storage("Yes");
+                    if (notCorax) { this.storage("Yes"); }
                     this.indexing("Search");
                     this.termVector("WithPositionsAndOffsets");
                 } else if (newValue === null) {
-                    this.storage(null);
+                    if (notCorax) { this.storage(null); }
                     this.indexing(null);
                     this.termVector(null);
                 } else {
-                    this.storage("No");
                     this.indexing("Default");
                     this.termVector("No");
                 }
@@ -497,25 +502,28 @@ class indexFieldOptions {
         });
     }
     
-    static defaultFieldOptions(indexHasReduce: KnockoutObservable<boolean>, engineType: Raven.Client.Documents.Indexes.SearchEngineType) {
+    static defaultFieldOptions(indexHasReduce: KnockoutObservable<boolean>, engineType: KnockoutObservable<Raven.Client.Documents.Indexes.SearchEngineType>) {
         return new indexFieldOptions(indexFieldOptions.DefaultFieldOptions, indexFieldOptions.getDefaultDto(), indexHasReduce, engineType,
             indexFieldOptions.globalDefaults(indexHasReduce, engineType));
     }
 
-    static empty(indexHasReduce: KnockoutObservable<boolean>, engineType: Raven.Client.Documents.Indexes.SearchEngineType) {
+    static empty(indexHasReduce: KnockoutObservable<boolean>, engineType: KnockoutObservable<Raven.Client.Documents.Indexes.SearchEngineType>) {
         return new indexFieldOptions("", indexFieldOptions.getDefaultDto(), indexHasReduce, engineType,
             indexFieldOptions.globalDefaults(indexHasReduce, engineType));
     }
 
-    static globalDefaults(indexHasReduce: KnockoutObservable<boolean>, engineType: Raven.Client.Documents.Indexes.SearchEngineType) {
+    static globalDefaults(indexHasReduce: KnockoutObservable<boolean>, engineType: KnockoutObservable<Raven.Client.Documents.Indexes.SearchEngineType>) {
+        const valueForStorage =  engineType() === "Corax" ? "Yes" : "No";
+        
         const field = new indexFieldOptions("", {
-            Storage: "No",
+            Storage: valueForStorage,
             Indexing: "Default",
             Analyzer: "StandardAnalyzer",
             Suggestions: false,
             Spatial: null as Raven.Client.Documents.Indexes.Spatial.SpatialOptions,
             TermVector: "No"
         }, indexHasReduce, engineType);
+        
         field.fullTextSearch(false);
         field.highlighting(false);
 
