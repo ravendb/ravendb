@@ -64,6 +64,8 @@ class indexDefinition {
 
     customAnalyzers = ko.observableArray<string>();
 
+    searchEngine = ko.observable<Raven.Client.Documents.Indexes.SearchEngineType>();
+
     validationGroup: KnockoutValidationGroup;
 
     constructor(dto: Raven.Client.Documents.Indexes.IndexDefinition) {
@@ -84,13 +86,13 @@ class indexDefinition {
         this.collectionNameForReferenceDocuments(dto.PatternReferencesCollectionName);
 
         this.fields(_.map(dto.Fields, (fieldDto, indexName) =>
-            new indexFieldOptions(indexName, fieldDto, this.hasReduce, indexFieldOptions.defaultFieldOptions(this.hasReduce))));
+            new indexFieldOptions(indexName, fieldDto, this.hasReduce, this.searchEngine(), indexFieldOptions.defaultFieldOptions(this.hasReduce, this.searchEngine()))));
         
         const defaultFieldOptions = this.fields().find(x => x.name() === indexFieldOptions.DefaultFieldOptions);
         if (defaultFieldOptions) {
             this.defaultFieldOptions(defaultFieldOptions);
             
-            defaultFieldOptions.parent(indexFieldOptions.globalDefaults(this.hasReduce));
+            defaultFieldOptions.parent(indexFieldOptions.globalDefaults(this.hasReduce, this.searchEngine()));
             this.fields.remove(defaultFieldOptions);
 
             this.fields().forEach(field => {
@@ -115,6 +117,10 @@ class indexDefinition {
             return _.uniqBy(nonEmptyFields, field => field.name()).length !== nonEmptyFields.length;
         });
         
+        this.searchEngine.subscribe((engine: Raven.Client.Documents.Indexes.SearchEngineType) => {
+            this.fields().forEach(x => x.setStorageAccordingToEngine(engine));
+        })
+
         if (!this.isAutoIndex()) {
             this.initValidation();
         }
@@ -317,7 +323,7 @@ class indexDefinition {
     }
 
     addField() {
-        const field = indexFieldOptions.empty(this.hasReduce);
+        const field = indexFieldOptions.empty(this.hasReduce, this.searchEngine());
         
         field.addCustomAnalyzers(this.customAnalyzers());
         
@@ -329,7 +335,7 @@ class indexDefinition {
     }
 
     addDefaultField() {
-        const fieldOptions = indexFieldOptions.defaultFieldOptions(this.hasReduce);
+        const fieldOptions = indexFieldOptions.defaultFieldOptions(this.hasReduce, this.searchEngine());
         fieldOptions.addCustomAnalyzers(this.customAnalyzers());
         this.defaultFieldOptions(fieldOptions);
 
@@ -352,7 +358,7 @@ class indexDefinition {
         this.defaultFieldOptions(null);
 
         this.fields().forEach(field => {
-            field.parent(indexFieldOptions.defaultFieldOptions(this.hasReduce));
+            field.parent(indexFieldOptions.defaultFieldOptions(this.hasReduce, this.searchEngine()));
         });
     }
 

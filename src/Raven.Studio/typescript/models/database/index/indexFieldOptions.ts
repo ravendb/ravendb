@@ -113,7 +113,7 @@ class indexFieldOptions {
     storage = ko.observable<Raven.Client.Documents.Indexes.FieldStorage>();
     effectiveStorage = this.effectiveComputed(x => x.storage());
     defaultStorage = this.defaultComputed(x => x.storage());
-    showStoreInfo: KnockoutComputed<boolean>;
+    isStoreField: KnockoutComputed<boolean>;
 
     suggestions = ko.observable<boolean>();
     effectiveSuggestions = this.effectiveComputed(x => x.suggestions(), yesNoLabelProvider);
@@ -142,7 +142,11 @@ class indexFieldOptions {
     validationGroup: KnockoutObservable<any>;
     dirtyFlag: () => DirtyFlag;
     
-    constructor(name: string, dto: Raven.Client.Documents.Indexes.IndexFieldOptions, indexHasReduce: KnockoutObservable<boolean>, parentFields?: indexFieldOptions) {
+    constructor(name: string,
+                dto: Raven.Client.Documents.Indexes.IndexFieldOptions,
+                indexHasReduce: KnockoutObservable<boolean>,
+                engineType: Raven.Client.Documents.Indexes.SearchEngineType,
+                parentFields?: indexFieldOptions) {
         this.name(name);
         this.parent(parentFields);
         this.indexDefinitionHasReduce = indexHasReduce;
@@ -169,7 +173,7 @@ class indexFieldOptions {
                                                        this.analyzerPlaceHolder() === "LowerCase Keyword Analyzer");
         
         this.showAnalyzer = ko.pureComputed(() => this.indexing() === "Search" ||
-                                                   this.indexing() === "Search (implied)" ||
+                                                  this.indexing() === "Search (implied)" ||
                                                   (!this.indexing() && this.parent().indexing() === "Search") ||
                                                   !!this.analyzer() ||
                                                   (!this.analyzer() && !!this.analyzerPlaceHolder()));
@@ -188,6 +192,8 @@ class indexFieldOptions {
         }
         
         this.storage(dto.Storage);
+        this.setStorageAccordingToEngine(engineType); // override..
+        
         this.suggestions(dto.Suggestions);
         this.termVector(dto.TermVector);
         this.hasSpatialOptions(!!dto.Spatial);
@@ -213,15 +219,21 @@ class indexFieldOptions {
         }
     }
     
+    setStorageAccordingToEngine(engine: string) {
+        if (engine === "Corax") {
+            this.storage("Yes");
+        }
+    }
+    
     private initObservables() {
         // used to avoid circular updates
-        let changeInProgess = false;
+        let changeInProgress = false;
 
         this.fullTextSearch.subscribe(() => {
-            if (!changeInProgess) {
+            if (!changeInProgress) {
                 const newValue = this.fullTextSearch();
                 
-                changeInProgess = true;
+                changeInProgress = true;
                 
                 switch (newValue) {
                     case true:
@@ -244,15 +256,15 @@ class indexFieldOptions {
                 this.computeAnalyzer();
                 this.computeHighlighting();
                 
-                changeInProgess = false;
+                changeInProgress = false;
             }
         });
 
         this.highlighting.subscribe(() => {
-            if (!changeInProgess) {
+            if (!changeInProgress) {
                 const newValue = this.highlighting();
 
-                changeInProgess = true;
+                changeInProgress = true;
                 
                 if (newValue) {
                     this.storage("Yes");
@@ -270,50 +282,50 @@ class indexFieldOptions {
                 
                 this.computeAnalyzer();
                 this.computeFullTextSearch();
-                changeInProgess = false;
+                changeInProgress = false;
             }
         });
         
         this.indexing.subscribe(() => {
-            if (!changeInProgess) {
-                changeInProgess = true;
+            if (!changeInProgress) {
+                changeInProgress = true;
                 this.computeAnalyzer();
                 this.computeFullTextSearch();
                 this.computeHighlighting();
-                changeInProgess = false;
+                changeInProgress = false;
             }
         });
 
         this.analyzer.subscribe(() => {
-            if (!changeInProgess) {
-                changeInProgess = true;
+            if (!changeInProgress) {
+                changeInProgress = true;
                 this.computeFullTextSearch();
                 this.computeHighlighting();
-                changeInProgess = false;
+                changeInProgress = false;
             }
         });
         
         this.storage.subscribe(() => {
-            if (!changeInProgess) {
-                changeInProgess = true;
+            if (!changeInProgress) {
+                changeInProgress = true;
                 this.computeFullTextSearch();
                 this.computeHighlighting();
-                changeInProgess = false;
+                changeInProgress = false;
             }
         });
 
         this.termVector.subscribe(() => {
-            if (!changeInProgess) {
-                changeInProgess = true;
+            if (!changeInProgress) {
+                changeInProgress = true;
                 this.computeFullTextSearch();
                 this.computeHighlighting();
-                changeInProgess = false;
+                changeInProgress = false;
             }
         });
 
         this.indexOrStore = ko.pureComputed(() => !(this.indexing() === "No" && this.effectiveStorage().includes("No")));
         
-        this.showStoreInfo = ko.pureComputed(() => this.effectiveStorage().includes("Yes"));
+        this.isStoreField = ko.pureComputed(() => this.effectiveStorage().includes("Yes"));
 
         this.dirtyFlag = new ko.DirtyFlag([
             this.name,
@@ -327,14 +339,14 @@ class indexFieldOptions {
         ], false, jsonUtil.newLineNormalizingHashFunction);
 
         this.parent.subscribe(() => {
-            if (!changeInProgess) {
-                changeInProgess = true;
+            if (!changeInProgress) {
+                changeInProgress = true;
                 if (!this.isDefaultFieldOptions()) {
                     this.computeAnalyzer();
                     this.computeFullTextSearch();
                     this.computeHighlighting();
                 }
-                changeInProgess = false;
+                changeInProgress = false;
             }
         });
         
@@ -485,15 +497,17 @@ class indexFieldOptions {
         });
     }
     
-    static defaultFieldOptions(indexHasReduce: KnockoutObservable<boolean>) {
-        return new indexFieldOptions(indexFieldOptions.DefaultFieldOptions, indexFieldOptions.getDefaultDto(), indexHasReduce, indexFieldOptions.globalDefaults(indexHasReduce));
+    static defaultFieldOptions(indexHasReduce: KnockoutObservable<boolean>, engineType: Raven.Client.Documents.Indexes.SearchEngineType) {
+        return new indexFieldOptions(indexFieldOptions.DefaultFieldOptions, indexFieldOptions.getDefaultDto(), indexHasReduce, engineType,
+            indexFieldOptions.globalDefaults(indexHasReduce, engineType));
     }
 
-    static empty(indexHasReduce: KnockoutObservable<boolean>) {
-        return new indexFieldOptions("", indexFieldOptions.getDefaultDto(), indexHasReduce, indexFieldOptions.globalDefaults(indexHasReduce));
+    static empty(indexHasReduce: KnockoutObservable<boolean>, engineType: Raven.Client.Documents.Indexes.SearchEngineType) {
+        return new indexFieldOptions("", indexFieldOptions.getDefaultDto(), indexHasReduce, engineType,
+            indexFieldOptions.globalDefaults(indexHasReduce, engineType));
     }
 
-    static globalDefaults(indexHasReduce: KnockoutObservable<boolean>) {
+    static globalDefaults(indexHasReduce: KnockoutObservable<boolean>, engineType: Raven.Client.Documents.Indexes.SearchEngineType) {
         const field = new indexFieldOptions("", {
             Storage: "No",
             Indexing: "Default",
@@ -501,7 +515,7 @@ class indexFieldOptions {
             Suggestions: false,
             Spatial: null as Raven.Client.Documents.Indexes.Spatial.SpatialOptions,
             TermVector: "No"
-        }, indexHasReduce);
+        }, indexHasReduce, engineType);
         field.fullTextSearch(false);
         field.highlighting(false);
 
