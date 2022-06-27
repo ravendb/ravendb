@@ -43,13 +43,15 @@ public readonly struct CoraxBooleanItem : IQueryMatch
         Unsafe.SkipInit(out BetweenRight);
 
         if (operation is UnaryMatchOperation.Equals or UnaryMatchOperation.NotEquals)
+        {
             TermAsString = QueryBuilderHelper.CoraxGetValueAsString(term);
+            Count = searcher.TermAmount(name, TermAsString);
+        }
         else
+        {
             Unsafe.SkipInit(out TermAsString);
-
-        Count = operation is UnaryMatchOperation.Equals or UnaryMatchOperation.NotEquals
-            ? searcher.TermAmount(name, TermAsString)
-            : searcher.GetEntriesAmountInField(name);
+            Count = searcher.GetEntriesAmountInField(name);
+        }
     }
 
     public CoraxBooleanItem(IndexSearcher searcher, string name, int fieldId, object term1, object term2, UnaryMatchOperation operation, UnaryMatchOperation left,
