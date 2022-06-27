@@ -263,30 +263,45 @@ namespace Voron.Data.Containers
             container.Header.OnFreeList = false; // we take it out now..., we'll add to the free list when we delete from it
             var rootPage = llt.ModifyPage(containerId);
             var rootContainer = new Container(rootPage);
-            
 
-            while (true)
-            {
+            // We wont work as hard if we know that the entry is too big.
+            bool isBigEntry = size >= (Constants.Storage.PageSize / 6);
+            int tries = isBigEntry ? 4 : 128;
+
+            // PERF: Even if this condition never happens, we need the code to ensure that we have a bounded time to find a free page.
+            // This is the case where at some point we need to just give up or end up wasting more time to find a page than the time
+            // we will use to create and store in disk a new one.
+            int i = 0;
+            for (; i < tries; i++)  
+            {                
                 var freeListStateSpan = rootContainer.GetItem(ContainerPageHeader.FreeListOffset);
                 var freeList = new Set(llt, FreePagesSetName, MemoryMarshal.AsRef<SetState>(freeListStateSpan));
                 var it = freeList.Iterate();
-                {
-                    if (it.Seek(0) == false)
-                        break;
+                if (it.MoveNext() == false)
+                    break;
+                
+                var page = llt.ModifyPage(it.Current);
+                var maybe = new Container(page);
 
-                    var page = llt.ModifyPage(it.Current);
-                    var maybe = new Container(page);
-                    // we want to ensure that the free list isn't too big...
-                    // if we don't have space here, we'll discard it from the free list
+                // we want to ensure that the free list doesnt get too big...
+                // if we don't have space here, we should discard it from the free list
+                // however we need to be sure you are not going to do so when the entries
+                // are abnormally big. In those cases, the reasonable thing to do is just
+                // skip it and create a new page for it but without discarding pages that
+                // would be reasonably used by following requests. 
+                if (!isBigEntry)
+                {
                     maybe.Header.OnFreeList = false;
                     ModifyMetadataList(llt, rootContainer, FreePagesSetName, ContainerPageHeader.FreeListOffset, add: false, page.PageNumber);
-                    if (maybe.HasEnoughSpaceFor(size + MinimumAdditionalFreeSpaceToConsider) == false)
-                        continue;
-                    // we register it as the next free page
-                    rootContainer.Header.NextFreePage = page.PageNumber;
-                    container = maybe;
-                    return;
                 }
+
+                if (maybe.HasEnoughSpaceFor(size + MinimumAdditionalFreeSpaceToConsider) == false)
+                    continue;
+                
+                // we register it as the next free page
+                rootContainer.Header.NextFreePage = page.PageNumber;
+                container = maybe;
+                return;
             }
 
             // no existing pages remaining, allocate new one
@@ -313,7 +328,7 @@ namespace Voron.Data.Containers
                 return list;
 
             Span<long> items = stackalloc long[256];
-            do
+            while (it.MoveNext())
             {
                 var page = llt.GetPage(it.Current);
                 offset = 0;
@@ -327,7 +342,7 @@ namespace Voron.Data.Containers
                     //need read to the end of page
                 } while (itemsLeftOnCurrentPage > 0);
                 
-            } while (it.MoveNext());
+            } 
 
             return list;
         }
@@ -482,7 +497,7 @@ namespace Voron.Data.Containers
 
             if (container.Header.OnFreeList)
                 return;
-
+            
             int containerSpaceUsed = container.SpaceUsed(entriesOffsets);
             if (container.Header.OnFreeList == false && // already on it, can skip. 
                 containerSpaceUsed + (Constants.Storage.PageSize/4) <= Constants.Storage.PageSize && // has at least 25% free

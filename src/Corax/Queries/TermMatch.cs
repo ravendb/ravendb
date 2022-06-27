@@ -242,7 +242,9 @@ namespace Corax.Queries
                 var it = term._set;
 
                 it.MaybeSeek(buffer[0] - 1);
-
+                if (it.MoveNext() == false)
+                    goto Fail;                    
+                
                 // We update the current value we want to work with.
                 var current = it.Current;
 
@@ -279,6 +281,10 @@ namespace Corax.Queries
                 term._set = it;
                 term._current = current;
                 return matchedIdx;
+
+                Fail:
+                term._set = it;
+                return 0;
             }
 
             [SkipLocalsInit]
