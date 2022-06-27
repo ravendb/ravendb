@@ -358,7 +358,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 var node = outgoing.GetNode();
                 if (node != null)
                 {
-                    report.LastSentEtag.Add(node, outgoing._lastSentDocumentEtag);
+                    report.LastSentEtag.Add(node, outgoing.LastSentDocumentEtag);
                 }
             }
         }

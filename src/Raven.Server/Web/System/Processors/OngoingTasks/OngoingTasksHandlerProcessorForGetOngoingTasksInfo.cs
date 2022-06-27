@@ -415,7 +415,7 @@ internal abstract class OngoingTasksHandlerProcessorForGetOngoingTasksInfo : Abs
         return ValueTask.FromResult(connectionStatus);
     }
 
-    protected List<IncomingReplicationHandler> GetIncomingHandlers() => RequestHandler.Database.ReplicationLoader.IncomingHandlers.ToList();
+    protected List<IAbstractIncomingReplicationHandler> GetIncomingHandlers() => RequestHandler.Database.ReplicationLoader.IncomingHandlers.ToList();
 
     protected override int SubscriptionsCount => (int)_database.SubscriptionStorage.GetAllSubscriptionsCount();
 

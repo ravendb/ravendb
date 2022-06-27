@@ -212,7 +212,7 @@ namespace RachisTests.DatabaseCluster
                     {
                         var db = s.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(source.Database).Result;
                         return db.ReplicationLoader.OutgoingHandlers.Where(h => h.Destination.Database == dest.Database);
-                    }).Single()._parent._server.NodeTag;
+                    }).Single().Server.NodeTag;
                 }, otherNodeTag);
 
                 using (var session = source.OpenAsyncSession())
@@ -1104,7 +1104,7 @@ namespace RachisTests.DatabaseCluster
                 {
                     foreach (var handler in database.ReplicationLoader.OutgoingHandlers)
                     {
-                        handlers.Add(handler);
+                        handlers.Add(handler as OutgoingReplicationHandlerBase);
                     }
 
                     return handlers.Count;
