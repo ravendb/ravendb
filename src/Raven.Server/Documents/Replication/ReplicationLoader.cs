@@ -32,7 +32,6 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Utils;
@@ -41,7 +40,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Replication
 {
-    public class ReplicationLoader : AbstractReplicationLoader, IDisposable, ITombstoneAware
+    public class ReplicationLoader : AbstractReplicationLoader, ITombstoneAware
     {
         private readonly ReaderWriterLockSlim _locker = new ReaderWriterLockSlim();
 
@@ -60,25 +59,23 @@ namespace Raven.Server.Documents.Replication
 
         public ResolveConflictOnReplicationConfigurationChange ConflictResolver;
 
-        private readonly ConcurrentSet<OutgoingReplicationHandlerBase> _outgoing =
-            new ConcurrentSet<OutgoingReplicationHandlerBase>();
-
-        private readonly ConcurrentDictionary<string, IncomingReplicationHandler> _incoming =
-            new ConcurrentDictionary<string, IncomingReplicationHandler>();
-
-        private readonly ConcurrentDictionary<IncomingConnectionInfo, DateTime> _incomingLastActivityTime =
-            new ConcurrentDictionary<IncomingConnectionInfo, DateTime>();
-
-        private readonly ConcurrentDictionary<IncomingConnectionInfo, ConcurrentQueue<IncomingConnectionRejectionInfo>>
-            _incomingRejectionStats =
-                new ConcurrentDictionary<IncomingConnectionInfo, ConcurrentQueue<IncomingConnectionRejectionInfo>>();
-
+        private readonly ConcurrentDictionary<IncomingConnectionInfo, DateTime> _incomingLastActivityTime = new ConcurrentDictionary<IncomingConnectionInfo, DateTime>();
+        private readonly ConcurrentDictionary<IncomingConnectionInfo, ConcurrentQueue<IncomingConnectionRejectionInfo>> _incomingRejectionStats = new ConcurrentDictionary<IncomingConnectionInfo, ConcurrentQueue<IncomingConnectionRejectionInfo>>();
         private readonly ConcurrentBag<ReplicationNode> _internalDestinations = new ConcurrentBag<ReplicationNode>();
         private readonly HashSet<ExternalReplicationBase> _externalDestinations = new HashSet<ExternalReplicationBase>();
-
+        private List<ReplicationNode> _destinations = new List<ReplicationNode>();
+        private ClusterTopology _clusterTopology = new ClusterTopology();
+        private int _numberOfSiblings;
+        public ConflictSolver ConflictSolverConfig;
+        private readonly CancellationToken _shutdownToken;
         private HubInfoForCleaner _hubInfoForCleaner;
+        private readonly ConcurrentQueue<TaskCompletionSource<object>> _waitForReplicationTasks = new ConcurrentQueue<TaskCompletionSource<object>>();
+        private readonly ConcurrentDictionary<ReplicationNode, LastEtagPerDestination> _lastSendEtagPerDestination = new ConcurrentDictionary<ReplicationNode, LastEtagPerDestination>();
 
         public event Action<IncomingReplicationHandler, int> AttachmentStreamsReceived;
+        public IReadOnlyDictionary<IncomingConnectionInfo, DateTime> IncomingLastActivityTime => _incomingLastActivityTime;
+        public IReadOnlyDictionary<IncomingConnectionInfo, ConcurrentQueue<IncomingConnectionRejectionInfo>> IncomingRejectionStats => _incomingRejectionStats;
+        public List<ReplicationNode> Destinations => _destinations;
 
         private class HubInfoForCleaner
         {
@@ -90,9 +87,6 @@ namespace Raven.Server.Documents.Replication
         {
             public long LastEtag;
         }
-
-        private readonly ConcurrentDictionary<ReplicationNode, LastEtagPerDestination> _lastSendEtagPerDestination =
-            new ConcurrentDictionary<ReplicationNode, LastEtagPerDestination>();
 
         public long GetMinimalEtagForReplication()
         {
@@ -214,27 +208,6 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        // PERF: _incoming locks if you do _incoming.Values. Using .Select
-        // directly and fetching the Value avoids this problem.
-        public IEnumerable<IncomingConnectionInfo> IncomingConnections => _incoming.Select(x => x.Value.ConnectionInfo);
-
-        public IEnumerable<ReplicationNode> OutgoingConnections => _outgoing.Select(x => x.Node);
-        public IEnumerable<OutgoingReplicationHandlerBase> OutgoingHandlers => _outgoing;
-
-        // PERF: _incoming locks if you do _incoming.Values. Using .Select
-        // directly and fetching the Value avoids this problem.
-        public IEnumerable<IncomingReplicationHandler> IncomingHandlers => _incoming.Select(x => x.Value);
-
-        private readonly ConcurrentQueue<TaskCompletionSource<object>> _waitForReplicationTasks =
-            new ConcurrentQueue<TaskCompletionSource<object>>();
-
-        public List<ReplicationNode> Destinations => _destinations;
-        private List<ReplicationNode> _destinations = new List<ReplicationNode>();
-        private ClusterTopology _clusterTopology = new ClusterTopology();
-        private int _numberOfSiblings;
-        public ConflictSolver ConflictSolverConfig;
-        private readonly CancellationToken _shutdownToken;
-
         public ReplicationLoader(DocumentDatabase database, ServerStore server) : base(server, database.Name, database.Configuration)
         {
             Database = database;
@@ -324,20 +297,12 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        public IReadOnlyDictionary<IncomingConnectionInfo, DateTime> IncomingLastActivityTime
-            => _incomingLastActivityTime;
-
-        public IReadOnlyDictionary<IncomingConnectionInfo, ConcurrentQueue<IncomingConnectionRejectionInfo>>
-            IncomingRejectionStats => _incomingRejectionStats;
-
-        public IEnumerable<ReplicationNode> ReconnectQueue => _reconnectQueue.Select(x => x.Node);
-
         public long? GetLastReplicatedEtagForDestination(ReplicationNode dest)
         {
             foreach (var replicationHandler in _outgoing)
             {
                 if (replicationHandler.Node.IsEqualTo(dest))
-                    return replicationHandler._lastSentDocumentEtag;
+                    return replicationHandler.LastSentDocumentEtag;
             }
             return null;
         }
@@ -675,16 +640,20 @@ namespace Raven.Server.Documents.Replication
 
             if (_incoming.TryGetValue(connectionInfo.SourceDatabaseId, out var value))
             {
-                var lastHeartbeat = new DateTime(value.LastHeartbeatTicks);
+                if (value is IncomingReplicationHandler incoming == false)
+                    throw new InvalidOperationException(
+                        $"An active connection for this database already exists from {value.ConnectionInfo.SourceUrl} or is not from type 'IncomingReplicationHandler'.");
+
+                var lastHeartbeat = new DateTime(incoming.LastHeartbeatTicks);
                 if (lastHeartbeat + MaxInactiveTime > Database.Time.GetUtcNow())
                     throw new InvalidOperationException(
                         $"An active connection for this database already exists from {value.ConnectionInfo.SourceUrl} (last heartbeat: {lastHeartbeat}).");
 
                 if (_logger.IsInfoEnabled)
-                    _logger.Info($"Disconnecting existing connection from {value.FromToString} because we got a new connection from the same source db " +
+                    _logger.Info($"Disconnecting existing connection from {incoming.FromToString} because we got a new connection from the same source db " +
                               $"(last heartbeat was at {lastHeartbeat}).");
 
-                IncomingReplicationRemoved?.Invoke(value);
+                IncomingReplicationRemoved?.Invoke(incoming);
 
                 value.Dispose();
             }
@@ -869,22 +838,22 @@ namespace Raven.Server.Documents.Replication
                     if (current.DelayReplicationFor != pullReplication.DelayReplicationFor)
                     {
                         current.DelayReplicationFor = pullReplication.DelayReplicationFor;
-                        instance.NextReplicateTicks = 0;
+                        asHub.NextReplicateTicks = 0;
                     }
                     current.MentorNode = pullReplication.MentorNode;
                     continue;
                 }
 
                 if (_logger.IsInfoEnabled)
-                    _logger.Info($"Stopping replication to {instance.Destination.FromString()}");
+                    _logger.Info($"Stopping replication to {asHub.Destination.FromString()}");
 
-                instance.Failed -= OnOutgoingSendingFailed;
-                instance.SuccessfulTwoWaysCommunication -= OnOutgoingSendingSucceeded;
-                instance.SuccessfulReplication -= ResetReplicationFailuresInfo;
+                asHub.Failed -= OnOutgoingSendingFailed;
+                asHub.SuccessfulTwoWaysCommunication -= OnOutgoingSendingSucceeded;
+                asHub.SuccessfulReplication -= ResetReplicationFailuresInfo;
                 instancesToDispose.Add(instance);
                 _outgoing.TryRemove(instance);
-                _lastSendEtagPerDestination.TryRemove(instance.Destination, out LastEtagPerDestination _);
-                _outgoingFailureInfo.TryRemove(instance.Destination, out ConnectionShutdownInfo info);
+                _lastSendEtagPerDestination.TryRemove(asHub.Destination, out LastEtagPerDestination _);
+                _outgoingFailureInfo.TryRemove(asHub.Destination, out ConnectionShutdownInfo info);
                 if (info != null)
                     _reconnectQueue.TryRemove(info);
             }
@@ -899,7 +868,7 @@ namespace Raven.Server.Documents.Replication
             // this is relevant for sink
             foreach (var incoming in _incoming)
             {
-                var instance = incoming.Value;
+                var instance = incoming.Value as IncomingReplicationHandler;
                 if (toRemove.Any(conn => conn.Url == instance.ConnectionInfo.SourceUrl))
                 {
                     if (_incoming.TryRemove(instance.ConnectionInfo.SourceDatabaseId, out _))
@@ -969,7 +938,7 @@ namespace Raven.Server.Documents.Replication
 
                     // ReSharper disable once PossibleUnintendedReferenceComparison
                     var handler = outgoingHandlers.Find(o => o.Destination == actual); // we explicitly compare references.
-                    if (handler == null)
+                    if (handler == null || handler is OutgoingReplicationHandlerBase outgoingHandler == false)
                         continue;
 
                     if (handler.Destination is ExternalReplicationBase erb)
@@ -981,7 +950,7 @@ namespace Raven.Server.Documents.Replication
                             newDestination is ExternalReplication newDestinationEx)
                         {
                             if (ex.DelayReplicationFor != actualEx.DelayReplicationFor)
-                                handler.NextReplicateTicks = 0;
+                                outgoingHandler.NextReplicateTicks = 0;
 
                             ex.DelayReplicationFor = newDestinationEx.DelayReplicationFor;
                         }
@@ -1219,8 +1188,11 @@ namespace Raven.Server.Documents.Replication
             if (_logger.IsInfoEnabled)
                 _logger.Info($"Dropping {outgoingChanged.Count:#,#} outgoing replications connections from {Database} on {_server.NodeTag}.");
 
-            foreach (var instance in outgoingChanged)
+            foreach (var value in outgoingChanged)
             {
+                if (value is OutgoingReplicationHandlerBase instance == false)
+                    continue;
+
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Stopping replication to {instance.Destination.FromString()}");
 
@@ -1346,10 +1318,10 @@ namespace Raven.Server.Documents.Replication
             return null;
         }
 
-        protected override void StartOutgoingReplication(TcpConnectionInfo info, ReplicationNode node)
+        protected override IAbstractOutgoingReplicationHandler GetOutgoingReplicationHandlerInstance(TcpConnectionInfo info, ReplicationNode node)
         {
             if (Database == null)
-                return;
+                return null;
 
             OutgoingReplicationHandlerBase outgoingReplication;
 
@@ -1371,18 +1343,17 @@ namespace Raven.Server.Documents.Replication
                     throw new ArgumentException($"Unknown node type {node.GetType().FullName}");
             }
 
-            if (_outgoing.TryAdd(outgoingReplication) == false)
-            {
-                outgoingReplication.Dispose();
-                return;
-            }
+            return outgoingReplication;
+        }
 
+        protected override void InvokeOnOutgoingReplicationAdded(IAbstractOutgoingReplicationHandler outgoing)
+        {
+            if (outgoing is OutgoingReplicationHandlerBase outgoingReplication == false)
+                throw new InvalidOperationException($"{outgoing} must be of type '{typeof(OutgoingReplicationHandlerBase)}'");
 
             outgoingReplication.Failed += OnOutgoingSendingFailed;
             outgoingReplication.SuccessfulTwoWaysCommunication += OnOutgoingSendingSucceeded;
             outgoingReplication.SuccessfulReplication += ResetReplicationFailuresInfo;
-
-            outgoingReplication.Start();
 
             OutgoingReplicationAdded?.Invoke(outgoingReplication);
         }
@@ -1585,13 +1556,13 @@ namespace Raven.Server.Documents.Replication
             // directly and fetching the Value avoids this problem.
             foreach (var kv in _incoming)
             {
-                var handler = kv.Value;
+                var handler = kv.Value as IncomingReplicationHandler;
                 if (handler != instance)
-                    handler.OnReplicationFromAnotherSource();
+                    handler?.OnReplicationFromAnotherSource();
             }
         }
 
-        public void Dispose()
+        public override void Dispose()
         {
             _locker.EnterWriteLock();
 

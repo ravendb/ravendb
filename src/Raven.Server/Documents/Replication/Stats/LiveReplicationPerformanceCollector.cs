@@ -46,10 +46,10 @@ namespace Raven.Server.Documents.Replication.Stats
             Database.ReplicationLoader.IncomingReplicationConnectionErrored += IncomingReplicationConnectionFailed;
 
             foreach (var handler in Database.ReplicationLoader.IncomingHandlers)
-                IncomingHandlerAdded(handler);
+                IncomingHandlerAdded(handler as IncomingReplicationHandler);
 
             foreach (var handler in Database.ReplicationLoader.OutgoingHandlers)
-                OutgoingHandlerAdded(handler);
+                OutgoingHandlerAdded(handler as OutgoingReplicationHandlerBase);
 
             try
             {
@@ -107,9 +107,9 @@ namespace Raven.Server.Documents.Replication.Stats
                     stats = new OutgoingReplicationPerformanceStats[] { new OutgoingReplicationPerformanceStats() };
                 }
 
-                yield return handler is OutgoingPullReplicationHandler
-                    ? OutgoingPerformanceStats.ForPullReplication(handler.DestinationDbId, handler.DestinationFormatted, stats)
-                    : OutgoingPerformanceStats.ForPushReplication(handler.DestinationDbId, handler.GetReplicationPerformanceType(), handler.DestinationFormatted, stats);
+                yield return handler is OutgoingPullReplicationHandler outgoingPull
+                    ? OutgoingPerformanceStats.ForPullReplication(outgoingPull.DestinationDbId, outgoingPull.DestinationFormatted, stats)
+                    : handler is OutgoingReplicationHandlerBase outgoingHandler ? OutgoingPerformanceStats.ForPushReplication(outgoingHandler.DestinationDbId, outgoingHandler.GetReplicationPerformanceType(), outgoingHandler.DestinationFormatted, stats) : null;
             }
         }
 

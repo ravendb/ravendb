@@ -16,6 +16,7 @@ using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Session;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Config;
+using Raven.Server.Documents.Replication.Incoming;
 using SlowTests.Issues;
 using Tests.Infrastructure;
 using Xunit;
@@ -120,7 +121,9 @@ namespace SlowTests.Server.Replication
             var hubDatabaseInstance = await Databases.GetDocumentDatabaseInstanceFor(hubStore);
             bool expectedError = false;
             string lastError = null;
-            hubDatabaseInstance.ReplicationLoader.IncomingHandlers.ToArray()[0].Failed += (handler, exception) =>
+
+            var incomingHandler = hubDatabaseInstance.ReplicationLoader.IncomingHandlers.ToArray()[0] as IncomingReplicationHandler;
+            incomingHandler.Failed += (handler, exception) =>
             {
                 if (exception.Message.Contains("This hub does not allow for tombstone replication via pull replication"))
                 {

@@ -37,22 +37,18 @@ namespace Raven.Server.Documents.Replication.Incoming
         private readonly DocumentDatabase _database;
         private readonly ReplicationLoader _parent;
 
-        public long LastDocumentEtag => _lastDocumentEtag;
         public long LastHeartbeatTicks;
-        public readonly ReplicationLatestEtagRequest.ReplicationType ReplicationType;
 
         public event Action<IncomingReplicationHandler, Exception> Failed;
         public event Action<IncomingReplicationHandler> DocumentsReceived;
         public event Action<IncomingReplicationHandler, int> AttachmentStreamsReceived;
-
-        public string SourceFormatted => $"{ConnectionInfo.SourceUrl}/databases/{ConnectionInfo.SourceDatabaseName} ({ConnectionInfo.SourceDatabaseId})";
 
         public IncomingReplicationHandler(
             TcpConnectionOptions options,
             ReplicationLatestEtagRequest replicatedLastEtag,
             ReplicationLoader parent,
             JsonOperationContext.MemoryBuffer bufferToCopy,
-            ReplicationLatestEtagRequest.ReplicationType replicationType) : base(options, bufferToCopy, parent._server, parent.Database.Name, replicatedLastEtag,
+            ReplicationLatestEtagRequest.ReplicationType replicationType) : base(options, bufferToCopy, parent._server, parent.Database.Name, replicationType, replicatedLastEtag,
             options.DocumentDatabase.DatabaseShutdown, options.DocumentDatabase.DocumentsStorage.ContextPool)
         {
             _database = options.DocumentDatabase;
@@ -60,7 +56,6 @@ namespace Raven.Server.Documents.Replication.Incoming
             _parent = parent;
             _attachmentStreamsTempFile = _database.DocumentsStorage.AttachmentsStorage.GetTempFile("replication");
 
-            ReplicationType = replicationType;
             LastHeartbeatTicks = _database.Time.GetUtcNow().Ticks;
         }
 

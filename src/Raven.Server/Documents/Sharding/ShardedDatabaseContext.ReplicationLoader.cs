@@ -9,11 +9,11 @@ using Raven.Client.Documents.Replication;
 using Raven.Client.Http;
 using Raven.Client.ServerWide.Commands;
 using Raven.Server.Documents.Replication;
+using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide;
-using Sparrow.Collections;
 using Sparrow.Json;
 using Voron;
 
@@ -23,20 +23,11 @@ namespace Raven.Server.Documents.Sharding
     {
         public readonly ShardedReplicationContext Replication;
 
-        public class ShardedReplicationContext : AbstractReplicationLoader, IDisposable
+        public class ShardedReplicationContext : AbstractReplicationLoader
         {
             private readonly ReaderWriterLockSlim _locker = new ReaderWriterLockSlim();
 
             private readonly ShardedDatabaseContext _context;
-
-            private readonly ConcurrentDictionary<string, ShardedIncomingReplicationHandler> _incoming =
-                new ConcurrentDictionary<string, ShardedIncomingReplicationHandler>();
-
-            private readonly ConcurrentSet<ShardedOutgoingReplicationHandler> _outgoing =
-                new ConcurrentSet<ShardedOutgoingReplicationHandler>();
-
-            public string DatabaseName => _context.DatabaseName;
-            public ServerStore Server => _server;
             public ShardedDatabaseContext Context => _context;
             public string SourceDatabaseId { get; set; }
 
@@ -49,7 +40,6 @@ namespace Raven.Server.Documents.Sharding
                 JsonOperationContext.MemoryBuffer buffer,
                 ReplicationQueue replicationQueue)
             {
-
                 var supportedVersions = GetSupportedVersions(tcpConnectionOptions);
                 GetReplicationInitialRequest(tcpConnectionOptions, supportedVersions, buffer);
 
@@ -60,7 +50,7 @@ namespace Raven.Server.Documents.Sharding
 
             private void CreateIncomingInstance(TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.MemoryBuffer buffer, ReplicationQueue queue)
             {
-                var newIncoming = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer, queue);
+                ShardedIncomingReplicationHandler newIncoming = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer, queue);
 
                 var current = _incoming.AddOrUpdate(newIncoming.ConnectionInfo.SourceDatabaseId, newIncoming,
                     (_, val) => val.IsDisposed ? newIncoming : val);
@@ -91,7 +81,7 @@ namespace Raven.Server.Documents.Sharding
             protected override TcpConnectionInfo GetConnectionInfo(ReplicationNode node)
             {
                 if (node is ShardReplicationNode shardNode == false)
-                    return null;
+                    throw new InvalidOperationException($"{node} must be of type '{typeof(ShardReplicationNode)}'");
 
                 var shardExecutor = _context.ShardExecutor;
                 using (_context.AllocateContext(out JsonOperationContext ctx))
@@ -114,62 +104,20 @@ namespace Raven.Server.Documents.Sharding
                 }
             }
 
-            protected override void StartOutgoingReplication(TcpConnectionInfo info, ReplicationNode node)
+            protected override IAbstractOutgoingReplicationHandler GetOutgoingReplicationHandlerInstance(TcpConnectionInfo info, ReplicationNode node)
             {
                 switch (node)
                 {
                     case ShardReplicationNode shardNode:
-                        var shardedOutgoingReplicationHandler = new ShardedOutgoingReplicationHandler(this, shardNode, shardNode.Shard, info, shardNode.ReplicationQueue);
-
-                        if (_outgoing.TryAdd(shardedOutgoingReplicationHandler) == false)
-                        {
-                            return;
-                        }
-
-                        shardedOutgoingReplicationHandler.Start();
-                        break;
+                        return new ShardedOutgoingReplicationHandler(this, shardNode, shardNode.Shard, info, shardNode.ReplicationQueue);
 
                     default:
                         throw new InvalidOperationException($"{node} must be of type '{typeof(ShardReplicationNode)}'");
                 }
             }
 
-            public void Dispose()
+            protected override void InvokeOnOutgoingReplicationAdded(IAbstractOutgoingReplicationHandler outgoing)
             {
-                _locker.EnterWriteLock();
-                try
-                {
-                    foreach (var incoming in _incoming)
-                    {
-                        try
-                        {
-                            incoming.Value.Dispose();
-                        }
-                        catch
-                        {
-                            // ignored
-                        }
-                    }
-                    foreach (var outgoing in _outgoing)
-                    {
-                        try
-                        {
-                            outgoing.Dispose();
-                        }
-                        catch
-                        {
-                            // ignored
-                        }
-                    }
-
-
-                    _outgoing.Clear();
-                    _incoming.Clear();
-                }
-                finally
-                {
-                    _locker.ExitWriteLock();
-                }
             }
         }
     }

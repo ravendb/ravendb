@@ -27,9 +27,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
         private readonly ReplicationQueue _replicationQueue;
 
         private readonly byte[] _tempBuffer = new byte[32 * 1024];
-        private OutgoingReplicationStatsAggregator _lastStats;
         private long _lastEtag;
-
 
         public ShardedOutgoingReplicationHandler(ShardedDatabaseContext.ShardedReplicationContext parent, ShardReplicationNode node, int shardNumber,
             TcpConnectionInfo connectionInfo, ReplicationQueue replicationQueue) :

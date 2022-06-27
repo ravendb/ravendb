@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
         public ShardedIncomingReplicationHandler(TcpConnectionOptions tcpConnectionOptions, ShardedDatabaseContext.ShardedReplicationContext parent,
             JsonOperationContext.MemoryBuffer buffer, ReplicationLatestEtagRequest replicatedLastEtag, ReplicationQueue replicationQueue)
-            : base(tcpConnectionOptions, buffer, parent.Server, parent.DatabaseName, replicatedLastEtag, parent.Context.DatabaseShutdown, parent.Server.ContextPool)
+            : base(tcpConnectionOptions, buffer, parent.Server, parent.DatabaseName, ReplicationLatestEtagRequest.ReplicationType.Sharded, replicatedLastEtag, parent.Context.DatabaseShutdown, parent.Server.ContextPool)
         {
             _parent = parent;
             _replicationQueue = replicationQueue;

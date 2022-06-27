@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.IO;
+using System.Linq;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography.X509Certificates;
@@ -34,7 +35,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Replication.Outgoing
 {
-    public abstract class AbstractOutgoingReplicationHandler<TContextPool, TOperationContext> : IDisposable
+    public abstract class AbstractOutgoingReplicationHandler<TContextPool, TOperationContext> : IAbstractOutgoingReplicationHandler
         where TContextPool : JsonContextPoolBase<TOperationContext>
         where TOperationContext : JsonOperationContext
     {
@@ -58,16 +59,21 @@ namespace Raven.Server.Documents.Replication.Outgoing
         protected TcpConnectionOptions _tcpConnectionOptions;
         protected readonly ConcurrentQueue<OutgoingReplicationStatsAggregator> _lastReplicationStats = new ConcurrentQueue<OutgoingReplicationStatsAggregator>();
         protected InterruptibleRead<TContextPool, TOperationContext> _interruptibleRead;
+        protected OutgoingReplicationStatsAggregator _lastStats;
         protected Logger Logger;
 
+        public ServerStore Server => _server;
+        public long LastSentDocumentEtag => _lastSentDocumentEtag;
         public TcpConnectionInfo ConnectionInfo => _connectionInfo;
         public TcpConnectionHeaderMessage.SupportedFeatures SupportedFeatures { get; protected set; }
         internal CancellationToken CancellationToken => _cts.Token;
         public bool IsConnectionDisposed => _connectionDisposed.IsSet;
-        public readonly ReplicationNode Destination;
+        public ReplicationNode Destination { get; }
         public string LastSentChangeVectorDuringHeartbeat;
         public string LastAcceptedChangeVector { get; set; }
         public long LastHeartbeatTicks;
+        public ReplicationNode Node => Destination;
+        public string DestinationFormatted => $"{Destination.Url}/databases/{Destination.Database}";
 
         public string OutgoingReplicationThreadName
         {
@@ -551,6 +557,16 @@ namespace Raven.Server.Documents.Replication.Outgoing
             var node = Destination as InternalReplication;
             return node?.NodeTag;
         }
+
+        public OutgoingReplicationPerformanceStats[] GetReplicationPerformance()
+        {
+            var lastStats = _lastStats;
+
+            return _lastReplicationStats
+                .Select(x => x == lastStats ? x.ToReplicationPerformanceLiveStatsWithDetails() : x.ToReplicationPerformanceStats())
+                .ToArray();
+        }
+
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected void EnsureValidStats(OutgoingReplicationStatsScope stats)
