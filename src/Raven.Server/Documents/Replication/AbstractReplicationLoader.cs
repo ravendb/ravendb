@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using Raven.Client.Documents.Operations.ETL;
@@ -13,6 +14,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Config;
+using Raven.Server.Documents.Replication.Incoming;
 using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.Documents.TcpHandlers;
@@ -30,7 +32,7 @@ using Sparrow.Server.Json.Sync;
 
 namespace Raven.Server.Documents.Replication
 {
-    public abstract class AbstractReplicationLoader
+    public abstract class AbstractReplicationLoader : IDisposable
     {
         private readonly ReaderWriterLockSlim _locker = new ReaderWriterLockSlim();
         private long _reconnectInProgress;
@@ -42,9 +44,23 @@ namespace Raven.Server.Documents.Replication
         protected readonly ConcurrentDictionary<ReplicationNode, ConnectionShutdownInfo> _outgoingFailureInfo = new ConcurrentDictionary<ReplicationNode, ConnectionShutdownInfo>();
         protected readonly ConcurrentSet<ConnectionShutdownInfo> _reconnectQueue = new ConcurrentSet<ConnectionShutdownInfo>();
         protected readonly Timer _reconnectAttemptTimer;
+        protected readonly ConcurrentDictionary<string, IAbstractIncomingReplicationHandler> _incoming = new ConcurrentDictionary<string, IAbstractIncomingReplicationHandler>();
+        protected readonly ConcurrentSet<IAbstractOutgoingReplicationHandler> _outgoing = new ConcurrentSet<IAbstractOutgoingReplicationHandler>();
+        public IEnumerable<ReplicationNode> OutgoingConnections => _outgoing.Select(x => x.Node);
+        public IEnumerable<IAbstractOutgoingReplicationHandler> OutgoingHandlers => _outgoing;
 
+        // PERF: _incoming locks if you do _incoming.Values. Using .Select
+        // directly and fetching the Value avoids this problem.
+        public IEnumerable<IncomingConnectionInfo> IncomingConnections => _incoming.Select(x => x.Value.ConnectionInfo);
+
+        // PERF: _incoming locks if you do _incoming.Values. Using .Select
+        // directly and fetching the Value avoids this problem.
+        public IEnumerable<IAbstractIncomingReplicationHandler> IncomingHandlers => _incoming.Select(x => x.Value);
+        public IEnumerable<ReplicationNode> ReconnectQueue => _reconnectQueue.Select(x => x.Node);
         internal readonly int MinimalHeartbeatInterval;
         public IReadOnlyDictionary<ReplicationNode, ConnectionShutdownInfo> OutgoingFailureInfo => _outgoingFailureInfo;
+        public string DatabaseName => _databaseName;
+        public ServerStore Server => _server;
 
         protected AbstractReplicationLoader(ServerStore serverStore, string databaseName, RavenConfiguration configuration)
         {
@@ -158,7 +174,20 @@ namespace Raven.Server.Documents.Replication
 
             try
             {
-                StartOutgoingReplication(info, node);
+                IAbstractOutgoingReplicationHandler outgoingReplication = GetOutgoingReplicationHandlerInstance(info, node);
+
+                if (outgoingReplication == null)
+                    return;
+
+                if (_outgoing.TryAdd(outgoingReplication) == false)
+                {
+                    outgoingReplication.Dispose();
+                    return;
+                }
+
+                InvokeOnOutgoingReplicationAdded(outgoingReplication);
+
+                outgoingReplication.Start();
             }
             finally
             {
@@ -418,9 +447,49 @@ namespace Raven.Server.Documents.Replication
 
         protected abstract TcpConnectionInfo GetConnectionInfo(ReplicationNode node);
 
-        protected abstract void StartOutgoingReplication(TcpConnectionInfo info, ReplicationNode node);
-
         protected abstract CancellationToken GetCancellationToken();
+
+        protected abstract void InvokeOnOutgoingReplicationAdded(IAbstractOutgoingReplicationHandler outgoingReplication);
+
+        protected abstract IAbstractOutgoingReplicationHandler GetOutgoingReplicationHandlerInstance(TcpConnectionInfo info, ReplicationNode node);
+
+        public virtual void Dispose()
+        {
+            _locker.EnterWriteLock();
+            try
+            {
+                foreach (var incoming in _incoming)
+                {
+                    try
+                    {
+                        incoming.Value.Dispose();
+                    }
+                    catch
+                    {
+                        // ignored
+                    }
+                }
+                foreach (var outgoing in _outgoing)
+                {
+                    try
+                    {
+                        outgoing.Dispose();
+                    }
+                    catch
+                    {
+                        // ignored
+                    }
+                }
+
+
+                _outgoing.Clear();
+                _incoming.Clear();
+            }
+            finally
+            {
+                _locker.ExitWriteLock();
+            }
+        }
 
         public class ConnectionShutdownInfo
         {

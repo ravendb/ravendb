@@ -43,8 +43,6 @@ namespace Raven.Server.Documents.Replication.Outgoing
 
         public event Action<OutgoingReplicationHandlerBase> DocumentsSend;
 
-        private OutgoingReplicationStatsAggregator _lastStats;
-
         protected OutgoingReplicationHandlerBase(ReplicationLoader parent, DocumentDatabase database, ReplicationNode node, TcpConnectionInfo connectionInfo)
         : base(connectionInfo, parent._server, database.Name, node, database.DatabaseShutdown, database.DocumentsStorage.ContextPool)
         {
@@ -83,15 +81,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
             return Destination.Equals(other.Destination);
         }
 
-        public OutgoingReplicationPerformanceStats[] GetReplicationPerformance()
-        {
-            var lastStats = _lastStats;
-
-            return _lastReplicationStats
-                .Select(x => x == lastStats ? x.ToReplicationPerformanceLiveStatsWithDetails() : x.ToReplicationPerformanceStats())
-                .ToArray();
-        }
-
+    
         public LiveReplicationPerformanceCollector.ReplicationPerformanceType GetReplicationPerformanceType()
         {
             switch (this)
@@ -383,9 +373,6 @@ namespace Raven.Server.Documents.Replication.Outgoing
                 }
             }
         }
-
-        public ReplicationNode Node => Destination;
-        public string DestinationFormatted => $"{Destination.Url}/databases/{Destination.Database}";
 
         protected override long GetLastHeartbeatTicks() => _parent.Database.Time.GetUtcNow().Ticks;
 

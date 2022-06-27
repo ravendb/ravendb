@@ -29,10 +29,10 @@ namespace Raven.Server.Documents.Replication.Stats
             _database.ReplicationLoader.OutgoingReplicationConnectionFailed += HandleReplicationPulse;
 
             foreach (var handler in _database.ReplicationLoader.IncomingHandlers)
-                IncomingHandlerAdded(handler);
+                IncomingHandlerAdded(handler as IncomingReplicationHandler);
 
             foreach (var handler in _database.ReplicationLoader.OutgoingHandlers)
-                OutgoingHandlerAdded(handler);
+                OutgoingHandlerAdded(handler as OutgoingReplicationHandlerBase);
         }
 
         private void OutgoingHandlerRemoved(OutgoingReplicationHandlerBase handler)

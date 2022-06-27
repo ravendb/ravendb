@@ -257,7 +257,7 @@ namespace SlowTests.Server.Replication
                     Assert.Equal(1, WaitForValue(() => db2.ReplicationLoader.IncomingHandlers.Count(), 1));
                     var outgoingReplicationConnection = db1.ReplicationLoader.OutgoingHandlers.First();
                     var incomingReplicationConnection = db2.ReplicationLoader.IncomingHandlers.First();
-                    Assert.Equal(20, WaitForValue(() => outgoingReplicationConnection._lastSentDocumentEtag, 20));
+                    Assert.Equal(20, WaitForValue(() => outgoingReplicationConnection.LastSentDocumentEtag, 20));
                     Assert.Equal(20, WaitForValue(() => incomingReplicationConnection.LastDocumentEtag, 20));
 
                     var stats1 = store1.Maintenance.Send(new GetStatisticsOperation());

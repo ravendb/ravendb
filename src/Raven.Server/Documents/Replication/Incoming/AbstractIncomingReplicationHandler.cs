@@ -34,7 +34,7 @@ using Size = Sparrow.Size;
 
 namespace Raven.Server.Documents.Replication.Incoming
 {
-    public abstract class AbstractIncomingReplicationHandler<TContextPool, TOperationContext> : IDisposable
+    public abstract class AbstractIncomingReplicationHandler<TContextPool, TOperationContext> : IAbstractIncomingReplicationHandler
     where TContextPool : JsonContextPoolBase<TOperationContext>
     where TOperationContext : JsonOperationContext
     {
@@ -57,17 +57,20 @@ namespace Raven.Server.Documents.Replication.Incoming
         protected AsyncManualResetEvent _replicationFromAnotherSource;
         protected Logger Logger;
 
+        public long LastDocumentEtag => _lastDocumentEtag;
+        public readonly ReplicationLatestEtagRequest.ReplicationType ReplicationType;
+
         protected Action<IncomingReplicationHandler.DataForReplicationCommand> AfterItemsReadFromStream;
         public event Action<LiveReplicationPulsesCollector.ReplicationPulse> HandleReplicationPulse;
         public IncomingConnectionInfo ConnectionInfo { get; protected set; }
         public TcpConnectionHeaderMessage.SupportedFeatures SupportedFeatures { get; set; }
-
+        public string SourceFormatted => $"{ConnectionInfo.SourceUrl}/databases/{ConnectionInfo.SourceDatabaseName} ({ConnectionInfo.SourceDatabaseId})";
         protected string IncomingReplicationThreadName => $"Incoming replication {FromToString}";
         public virtual string FromToString => $"In database {_server.NodeTag}-{_databaseName} @ {_server.GetNodeTcpServerUrl()} " +
                                               $"from {ConnectionInfo.SourceTag}-{ConnectionInfo.SourceDatabaseName} @ {ConnectionInfo.SourceUrl}";
 
         protected AbstractIncomingReplicationHandler(TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.MemoryBuffer buffer,
-            ServerStore server, string databaseName, ReplicationLatestEtagRequest replicatedLastEtag, CancellationToken token, TContextPool contextPool)
+            ServerStore server, string databaseName, ReplicationLatestEtagRequest.ReplicationType replicationType, ReplicationLatestEtagRequest replicatedLastEtag, CancellationToken token, TContextPool contextPool)
         {
             _disposeOnce = new DisposeOnce<SingleAttempt>(DisposeInternal);
             _tcpConnectionOptions = tcpConnectionOptions;
@@ -85,6 +88,7 @@ namespace Raven.Server.Documents.Replication.Incoming
             ConnectionInfo = IncomingConnectionInfo.FromGetLatestEtag(replicatedLastEtag);
             SupportedFeatures = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(tcpConnectionOptions.Operation, tcpConnectionOptions.ProtocolVersion);
             ConnectionInfo.RemoteIp = ((IPEndPoint)_tcpClient.Client.RemoteEndPoint)?.Address.ToString();
+            ReplicationType = replicationType;
         }
 
         public virtual void ClearEvents()
@@ -358,6 +362,13 @@ namespace Raven.Server.Documents.Replication.Incoming
         public IncomingReplicationStatsAggregator GetLatestReplicationPerformance()
         {
             return _lastStats;
+        }
+
+        public LiveReplicationPerformanceCollector.ReplicationPerformanceType GetReplicationPerformanceType()
+        {
+            return ReplicationType == ReplicationLatestEtagRequest.ReplicationType.Internal
+                ? LiveReplicationPerformanceCollector.ReplicationPerformanceType.IncomingInternal
+                : LiveReplicationPerformanceCollector.ReplicationPerformanceType.IncomingExternal;
         }
 
         private void HandleReceivedDocumentsAndAttachmentsBatch(TOperationContext context, BlittableJsonReaderObject message, long lastDocumentEtag, IncomingReplicationStatsScope stats)
