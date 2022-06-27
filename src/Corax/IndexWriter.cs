@@ -63,6 +63,9 @@ namespace Corax
         private const string SuggestionsTreePrefix = "__Suggestion_";
         private Dictionary<int, Dictionary<Slice, int>> _suggestionsAccumulator;
 
+        //Let persist maximum calculated size of word locally.
+        private readonly int[] _maxTermLengthProceedPerAnalyzer;
+
 #pragma warning disable CS0169
         private Queue<long> _lastEntries; // keep last 256 items
 #pragma warning restore CS0169
@@ -83,8 +86,10 @@ namespace Corax
             _buffer = new Dictionary<Slice, List<long>>[bufferSize];
             for (int i = 0; i < bufferSize; ++i)
                 _buffer[i] = new Dictionary<Slice, List<long>>(SliceComparer.Instance);
+
+            _maxTermLengthProceedPerAnalyzer = ArrayPool<int>.Shared.Rent(fieldsMapping.Count);
         }
-        
+
         public IndexWriter([NotNull] StorageEnvironment environment, IndexFieldsMapping fieldsMapping) : this(fieldsMapping)
         {
             _environment = environment;
@@ -308,25 +313,38 @@ namespace Corax
 
             void AnalyzeInsert(Span<byte> wordsBuffer, Span<Token> tokens, ReadOnlySpan<byte> value)
             {
-                ref var analyzer = ref binding.Analyzer;
-                if (value.Length > analyzer.MaxCurrentLengthForSingleTerm)
+                var analyzer = binding.Analyzer;
+                if (value.Length > _maxTermLengthProceedPerAnalyzer[binding.FieldId])
                 {
                     analyzer.GetOutputBuffersSize(value.Length, out var outputSize, out var tokenSize);
                     if (wordsBuffer.Length < outputSize || tokens.Length < tokenSize)
+                    {
                         UnlikelyGrowBuffer(ref wordsBuffer, ref tokens, outputSize, tokenSize);
-                    analyzer.MaxCurrentLengthForSingleTerm = value.Length;
+                    }
+
+                    _maxTermLengthProceedPerAnalyzer[binding.FieldId] = value.Length;
                 }
 
                 analyzer.Execute(value, ref wordsBuffer, ref tokens);
                 for (int i = 0; i < tokens.Length; i++)
                 {
                     ref var token = ref tokens[i];
-                    ExactInsert(wordsBuffer.Slice(token.Offset, (int)token.Length));
+
+                    if (token.Offset + token.Length > wordsBuffer.Length)
+                        throw new InvalidDataException(
+                            $"Got tokens with: OFFSET {token.Offset}  | LENGTH: {token.Length}. Buffer is {Encodings.Utf8.GetString(wordsBuffer)}");
+                    
+                    var word = wordsBuffer.Slice(token.Offset, (int)token.Length);
+                    ExactInsert(word);
                 }
             }
 
+
             void ExactInsert(ReadOnlySpan<byte> value)
             {
+                if (value.Length >= MaxTermLength)
+                    throw new InvalidDataException($"Term must be less than 1024 bytes in size. Actual length was {value.Length}");
+
                 Slice slice;
                 if (value.Length == 0)
                 {
@@ -419,14 +437,14 @@ namespace Corax
                     }
 
                     var analyzer = binding.Analyzer;
-                    if (termValue.Length > analyzer.MaxCurrentLengthForSingleTerm)
+                    if (termValue.Length > _maxTermLengthProceedPerAnalyzer[binding.FieldId])
                     {
                         analyzer.GetOutputBuffersSize(termValue.Length, out int outputSize, out int tokenSize);
                         if (outputSize > wordSpace.Length)
                             UnlikelyGrowBuffer(ref wordSpace, ref tokenSpace, outputSize, tokenSize);
-                        analyzer.MaxCurrentLengthForSingleTerm = termValue.Length;
+                        _maxTermLengthProceedPerAnalyzer[binding.FieldId] = termValue.Length;
                     }
-                    
+
                     analyzer.Execute(termValue, ref wordSpace, ref tokenSpace);
 
                     for (int i = 0; i < tokenSpace.Length; i++)
@@ -551,17 +569,21 @@ namespace Corax
 
         private void UnlikelyGrowBuffer(ref Span<byte> buffer, ref Span<Token> tokens, int newBufferSize, int newTokenSize)
         {
-            Debug.Assert(buffer.Length <= newBufferSize);
-            Analyzer.BufferPool.Return(_encodingBufferHandler);
-            Analyzer.TokensPool.Return(_tokensBufferHandler);
+            if (newBufferSize > buffer.Length)
+            {
+                Analyzer.BufferPool.Return(_encodingBufferHandler);
+                _encodingBufferHandler = Analyzer.BufferPool.Rent(newBufferSize);
+                buffer = _encodingBufferHandler.AsSpan();
+            }
 
-            _encodingBufferHandler = Analyzer.BufferPool.Rent(newBufferSize);
-            _tokensBufferHandler = Analyzer.TokensPool.Rent(newTokenSize);
-
-            buffer = _encodingBufferHandler.AsSpan();
-            tokens = _tokensBufferHandler.AsSpan();
+            if (newTokenSize > tokens.Length)
+            {
+                Analyzer.TokensPool.Return(_tokensBufferHandler);
+                _tokensBufferHandler = Analyzer.TokensPool.Rent(newTokenSize);
+                tokens = _tokensBufferHandler.AsSpan();
+            }
         }
-        
+
         public void Commit()
         {
             using var _ = Transaction.Allocator.Allocate(Container.MaxSizeInsideContainerPage, out Span<byte> tmpBuf);
@@ -659,6 +681,9 @@ namespace Corax
         //We cannot make EncodedKey nullable either because it is a read-only ref struct
         private unsafe void AddNewTerm(List<long> entries, CompactTree fieldTree, ReadOnlySpan<byte> termsSpan, Span<byte> tmpBuf, CompactTree.EncodedKey encodedKey, bool validEncodedKey = true)
         {
+            if (entries.Count == 0)
+                return;
+            
             // common for unique values (guid, date, etc)
             if (entries.Count == 1)
             {
@@ -720,6 +745,8 @@ namespace Corax
             _jsonOperationContext?.Dispose();
             if (_ownsTransaction)
                 Transaction?.Dispose();
+
+            ArrayPool<int>.Shared.Return(_maxTermLengthProceedPerAnalyzer);
 
             if (_encodingBufferHandler != null)
                 Analyzer.BufferPool.Return(_encodingBufferHandler);

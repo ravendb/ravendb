@@ -494,6 +494,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             var ids = QueryPool.Rent(CoraxGetPageSize(_indexSearcher, take, query, isBinary));
 
             HashSet<string> itemList = new(32);
+
+            var maxTermLengthProceedPerAnalyzer = ArrayPool<int>.Shared.Rent(_fieldMappings.Count);
             var encodedBuffer = Analyzer.BufferPool.Rent(_fieldMappings.MaximumOutputSize);
             var tokensBuffer = Analyzer.TokensPool.Rent(_fieldMappings.MaximumTokenSize);
 
@@ -519,7 +521,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             QueryPool.Return(ids);
             Analyzer.BufferPool.Return(encodedBuffer);
             Analyzer.TokensPool.Return(tokensBuffer);
-
+            ArrayPool<int>.Shared.Return(maxTermLengthProceedPerAnalyzer);
             DynamicJsonValue GetRawDocument(in IndexEntryReader reader)
             {
                 var doc = new DynamicJsonValue();
@@ -592,19 +594,26 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 var tokens = tokensBuffer.AsSpan();
                 var encoded = encodedBuffer.AsSpan();
                 itemList?.Clear();
-                if (binding.Analyzer.MaxCurrentLengthForSingleTerm < value.Length)
+
+                if (maxTermLengthProceedPerAnalyzer[binding.FieldId] < value.Length)
                 {
                     binding.Analyzer.GetOutputBuffersSize(value.Length, out var outputSize, out var tokenSize);
                     if (outputSize > encodedBuffer.Length)
                     {
                         Analyzer.BufferPool.Return(encodedBuffer);
-                        Analyzer.TokensPool.Return(tokensBuffer);
-                        
                         encodedBuffer = Analyzer.BufferPool.Rent(_fieldMappings.MaximumOutputSize);
-                        tokensBuffer = Analyzer.TokensPool.Rent(_fieldMappings.MaximumTokenSize);
+                        encoded = encodedBuffer.AsSpan();
+
                     }
 
-                    binding.Analyzer.MaxCurrentLengthForSingleTerm = value.Length;
+                    if (tokenSize > tokensBuffer.Length)
+                    {
+                        Analyzer.TokensPool.Return(tokensBuffer);
+                        tokensBuffer = Analyzer.TokensPool.Rent(_fieldMappings.MaximumTokenSize);
+                        tokens = tokensBuffer.AsSpan();
+                    }
+
+                    maxTermLengthProceedPerAnalyzer[binding.FieldId] = value.Length;
                 }
                 
                 binding.Analyzer.Execute(value, ref encoded, ref tokens);

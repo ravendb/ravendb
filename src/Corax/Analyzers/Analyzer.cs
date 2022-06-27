@@ -16,7 +16,6 @@ namespace Corax
         public static readonly ArrayPool<Token> TokensPool = ArrayPool<Token>.Create();
         public readonly int DefaultOutputSize;
         public readonly int DefaultTokenSize;
-        public int MaxCurrentLengthForSingleTerm;
         
         private readonly delegate*<Analyzer, ReadOnlySpan<byte>, ref Span<byte>, ref Span<Token>, void> _funcUtf8;
         private readonly delegate*<Analyzer, ReadOnlySpan<char>, ref Span<char>, ref Span<Token>, void> _funcUtf16;
@@ -66,7 +65,6 @@ namespace Corax
             _tokenBufferMultiplier = tokenBufferMultiplier;
             
             GetOutputBuffersSize(Constants.Analyzers.DefaultBufferForAnalyzers, out DefaultOutputSize, out DefaultTokenSize);
-            MaxCurrentLengthForSingleTerm = Constants.Analyzers.DefaultBufferForAnalyzers;
         }
 
         public void GetOutputBuffersSize(int inputSize, out int outputSize, out int tokenSize )
