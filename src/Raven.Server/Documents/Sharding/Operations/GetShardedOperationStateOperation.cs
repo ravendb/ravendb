@@ -28,7 +28,6 @@ namespace Raven.Server.Documents.Sharding.Operations
             var combined = new OperationState();
 
             OperationMultipleExceptionsResult operationExceptionsResult = null;
-            SmugglerResult smugglerResult = null;
             BulkOperationResult bulkResult = null;
 
             var span = results.Span;
@@ -50,15 +49,6 @@ namespace Raven.Server.Documents.Sharding.Operations
 
                         operationExceptionsResult.Exceptions.Add(operationException);
 
-                        break;
-                    case SmugglerResult smuggler:
-                        if (smugglerResult == null)
-                        {
-                            smugglerResult = new SmugglerResult();
-                            combined.Result = smugglerResult;
-                        }
-
-                        combined.Result.MergeWith(smuggler);
                         break;
                     case BulkOperationResult bulk:
                         if (bulkResult == null)

@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations;
+using Raven.Server.Documents.Operations;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
@@ -16,10 +17,21 @@ namespace Raven.Server.Documents.Handlers.Processors.Smuggler
         {
         }
 
-        protected override async ValueTask ExportAsync(JsonOperationContext context, long? operationId)
+        protected override long GetNextOperationId()
         {
-            operationId ??= RequestHandler.Database.Operations.GetNextOperationId();
-            await Export(context, RequestHandler.DatabaseName, ExportDatabaseInternalAsync, RequestHandler.Database.Operations, operationId.Value);
+            return RequestHandler.Database.Operations.GetNextOperationId();
+        }
+
+        protected override async ValueTask<IOperationResult> ExportAsync(JsonOperationContext context, IDisposable returnToContextPool, long operationId, DatabaseSmugglerOptionsServerSide options, long startDocumentEtag,
+            long startRaftIndex, OperationCancelToken token)
+        {
+            return await RequestHandler.Database.Operations.AddLocalOperation(
+                operationId,
+                OperationType.DatabaseExport,
+                "Export database: " + RequestHandler.DatabaseName,
+                detailedDescription: null,
+                onProgress => ExportDatabaseInternalAsync(options, startDocumentEtag, startRaftIndex, onProgress, context, token),
+                token: token);
         }
 
         protected async Task<IOperationResult> ExportDatabaseInternalAsync(

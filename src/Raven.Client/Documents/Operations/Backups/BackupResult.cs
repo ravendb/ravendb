@@ -89,34 +89,8 @@ namespace Raven.Client.Documents.Operations.Backups
         }
     }
 
-    public class ShardNodeBackupResult : IShardNodeOperationResult<BackupResult>
+    public class ShardNodeBackupResult : ShardNodeOperationResult<BackupResult>
     {
-        public int ShardNumber { get; set; }
-        public string NodeTag { get; set; }
-        public BackupResult Result { get; set; }
-
-        public ShardNodeBackupResult()
-        {
-            Message = null;
-        }
-
-        public string Message { get; private set; }
-
-        public DynamicJsonValue ToJson()
-        {
-            return new DynamicJsonValue(GetType()) 
-            {
-                [nameof(ShardNumber)] = ShardNumber,
-                [nameof(NodeTag)] = NodeTag,
-                [nameof(Result)] = Result.ToJson()
-            };
-        }
-
-        public bool ShouldPersist => true;
-        public bool CanMerge => false;
-        public void MergeWith(IOperationResult result)
-        {
-            throw new NotImplementedException();
-        }
+        public override bool ShouldPersist => true;
     }
 }

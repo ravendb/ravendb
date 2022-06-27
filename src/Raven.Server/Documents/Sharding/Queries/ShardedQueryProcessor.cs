@@ -113,7 +113,7 @@ public class ShardedQueryProcessor : IDisposable
         // * For collection queries that specify startsWith by id(), we need to send to all shards
         // * For collection queries without any where clause, we need to send to all shards
         // * For indexes, we sent to all shards
-        for (int i = 0; i < _parent.DatabaseContext.NumberOfShardNodes; i++)
+        for (int i = 0; i < _parent.DatabaseContext.ShardCount; i++)
         {
             //if (_filteredShardIndexes?.Contains(i) == false)
             //    continue;
@@ -159,7 +159,7 @@ public class ShardedQueryProcessor : IDisposable
             queryTemplate.Modifications[nameof(IndexQuery.QueryParameters)] = modifiedArgs = new DynamicJsonValue();
         }
 
-        var limit = ((_query.Limit ?? 0) + (_query.Offset ?? 0)) * (long)_parent.DatabaseContext.NumberOfShardNodes;
+        var limit = ((_query.Limit ?? 0) + (_query.Offset ?? 0)) * (long)_parent.DatabaseContext.ShardCount;
         if (limit > int.MaxValue) // overflow
             limit = int.MaxValue;
         modifiedArgs[limitToken] = limit;
