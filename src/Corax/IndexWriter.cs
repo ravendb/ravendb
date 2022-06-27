@@ -342,7 +342,7 @@ namespace Corax
             void ExactInsert(ReadOnlySpan<byte> value)
             {
                 if (value.Length >= MaxTermLength)
-                    throw new InvalidDataException($"Term must be less than 1024 bytes in size. Actual length was {value.Length}");
+                    throw new InvalidDataException($"Term must be less than {MaxTermLength} bytes in size. Actual length was {value.Length}");
 
                 Slice slice;
                 if (value.Length == 0)
