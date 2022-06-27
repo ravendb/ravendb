@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
+using NCrontab.Advanced.Extensions;
 using Raven.Server.Documents;
 using Raven.Server.Integrations.PostgreSQL.Messages;
 
@@ -22,13 +23,15 @@ namespace Raven.Server.Integrations.PostgreSQL
         public MessageReader MessageReader { get; private set; }
         public string Username { get; private set; }
         
-        private PgQuery _currentQuery;
+        internal PgQuery _currentQuery;
+        internal PgSession Session { get; init; }
         
-        public PgTransaction(DocumentDatabase documentDatabase, MessageReader messageReader, string username)
+        public PgTransaction(DocumentDatabase documentDatabase, MessageReader messageReader, string username, PgSession session)
         {
             DocumentDatabase = documentDatabase;
             MessageReader = messageReader;
             Username = username;
+            Session = session;
         }
 
         public void Init(string cleanQueryText, int[] parametersDataTypes)
@@ -39,11 +42,17 @@ namespace Raven.Server.Integrations.PostgreSQL
             MessageReader = new MessageReader();
 
             _currentQuery?.Dispose();
-            _currentQuery = PgQuery.CreateInstance(cleanQueryText, parametersDataTypes, DocumentDatabase);
+            _currentQuery = PgQuery.CreateInstance(cleanQueryText, parametersDataTypes, DocumentDatabase, Session);
         }
 
-        public void Bind(ICollection<byte[]> parameters, short[] parameterFormatCodes, short[] resultColumnFormatCodes)
+        public void Bind(ICollection<byte[]> parameters, short[] parameterFormatCodes, short[] resultColumnFormatCodes, string statementName = null)
         {
+            if (statementName.IsNullOrWhiteSpace() == false)
+            {
+                State = TransactionState.InTransaction;
+                if (Session.NamedStatements.TryGetValue(statementName, out _currentQuery) == false)
+                    throw new KeyNotFoundException($"Expected named statement '{statementName}' wasn't found.");
+            }
             _currentQuery.Bind(parameters, parameterFormatCodes, resultColumnFormatCodes);
         }
 
@@ -73,9 +82,8 @@ namespace Raven.Server.Integrations.PostgreSQL
         public void Sync()
         {
             State = TransactionState.Idle;
-
-            _currentQuery?.Dispose();
             _currentQuery = null;
+            _currentQuery?.Dispose();
         }
 
         public void Dispose()
