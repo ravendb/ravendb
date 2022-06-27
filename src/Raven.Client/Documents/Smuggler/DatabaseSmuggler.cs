@@ -24,6 +24,7 @@ namespace Raven.Client.Documents.Smuggler
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger("Client", typeof(DatabaseSmuggler).FullName);
 
         private readonly Func<string, string, IDatabaseChanges> _getChanges;
+        private readonly Func<string, RequestExecutor> _getRequestExecutor;
         private readonly string _databaseName;
         private readonly RequestExecutor _requestExecutor;
 
@@ -41,6 +42,7 @@ namespace Raven.Client.Documents.Smuggler
         {
             _getChanges = getChanges;
             _databaseName = databaseName;
+            _getRequestExecutor = getRequestExecutor;
 
             if (_databaseName != null)
                 _requestExecutor = getRequestExecutor(databaseName);
@@ -51,7 +53,7 @@ namespace Raven.Client.Documents.Smuggler
             if (string.Equals(databaseName, _databaseName, StringComparison.OrdinalIgnoreCase))
                 return this;
 
-            return new DatabaseSmuggler(_getChanges, _ => _requestExecutor, databaseName);
+            return new DatabaseSmuggler(_getChanges, _getRequestExecutor, databaseName);
         }
 
         internal Task<Operation> ExportToStreamAsync(DatabaseSmugglerExportOptions options, Func<Stream, Task> handleStreamResponse, CancellationToken token = default)
