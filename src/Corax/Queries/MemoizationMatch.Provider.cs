@@ -6,7 +6,7 @@ using static Voron.Global.Constants;
 namespace Corax.Queries
 {
 
-    public unsafe class MemoizationMatchProvider<TInner> : IMemoizationMatchSource
+    public unsafe struct MemoizationMatchProvider<TInner> : IMemoizationMatchSource
              where TInner : IQueryMatch
     {
         private int _replayCounter;
@@ -82,8 +82,7 @@ namespace Corax.Queries
                 count += read;
             }
 
-        End:
-
+            End:
             // The problem is that multiple Fill calls do not ensure that we will get a sequence of ordered
             // values, therefore we must ensure that we get a 'sorted' sequence ensuring those happen.
             if (iterations > 1 && count > 1)
