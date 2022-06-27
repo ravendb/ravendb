@@ -14,7 +14,6 @@ namespace Raven.Server.Documents.Handlers.Processors.Queries;
 
 internal class DatabaseQueriesHandlerProcessorForPatchTest : AbstractQueriesHandlerProcessorForPatchTest<QueriesHandler, DocumentsOperationContext>
 {
-
     public DatabaseQueriesHandlerProcessorForPatchTest([NotNull] QueriesHandler requestHandler) : base(requestHandler, requestHandler.Database.QueryMetadataCache)
     {
     }

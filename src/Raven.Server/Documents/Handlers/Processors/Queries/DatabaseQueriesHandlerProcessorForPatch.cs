@@ -14,7 +14,7 @@ internal class DatabaseQueriesHandlerProcessorForPatch : AbstractDatabaseOperati
     {
     }
 
-    protected override HttpMethod OperationMethod => HttpMethod.Patch;
+    protected override HttpMethod QueryMethod => HttpMethod.Patch;
 
     protected override (QueryOperationFunction Action, OperationType Type) GetOperation(IndexQueryServerSide query)
     {

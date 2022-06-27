@@ -28,7 +28,7 @@ namespace Raven.Server.Documents.Handlers.Batches
 {
     public class BatchRequestParser
     {
-        internal static BatchRequestParser Instance = new BatchRequestParser(); // TODO arek - remove me
+        internal static BatchRequestParser Instance = new BatchRequestParser();
 
         // TODO sharding: CommandData seems to grew beyond the good practice of struct
         public struct CommandData : IBatchCommandData

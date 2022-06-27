@@ -40,7 +40,7 @@ internal abstract class AbstractShardedOperationQueriesHandlerProcessor : Abstra
             throw new NotSupportedInShardingException("Query with limit is not supported in patch / delete by query operation");
         }
 
-        var token = RequestHandler.CreateOperationToken();
+        var token = RequestHandler.CreateTimeLimitedOperationToken();
 
         var op = GetOperation(query, operationId, options);
 
