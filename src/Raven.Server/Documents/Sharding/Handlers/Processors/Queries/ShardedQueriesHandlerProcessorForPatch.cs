@@ -16,7 +16,7 @@ internal class ShardedQueriesHandlerProcessorForPatch : AbstractShardedOperation
     public ShardedQueriesHandlerProcessorForPatch([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.DatabaseContext.QueryMetadataCache)
     {
     }
-    protected override HttpMethod OperationMethod => HttpMethod.Patch;
+    protected override HttpMethod QueryMethod => HttpMethod.Patch;
 
     protected override (Func<JsonOperationContext, int, RavenCommand<OperationIdResult>> CommandFactory, OperationType Type) GetOperation(IndexQueryServerSide query, long operationId, QueryOperationOptions options)
     {

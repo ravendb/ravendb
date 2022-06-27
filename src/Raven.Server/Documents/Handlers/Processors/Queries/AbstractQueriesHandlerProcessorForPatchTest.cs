@@ -15,6 +15,8 @@ internal abstract class AbstractQueriesHandlerProcessorForPatchTest<TRequestHand
     {
     }
 
+    protected override HttpMethod QueryMethod => HttpMethod.Patch;
+
     protected abstract ValueTask HandleDocumentPatchTestAsync(IndexQueryServerSide query, string docId, TOperationContext context);
 
     public override async ValueTask ExecuteAsync()
@@ -23,7 +25,7 @@ internal abstract class AbstractQueriesHandlerProcessorForPatchTest<TRequestHand
         {
             var docId = RequestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
 
-            var query = await GetIndexQueryAsync(context, HttpMethod.Patch, null);
+            var query = await GetIndexQueryAsync(context, QueryMethod, null);
 
             if (TrafficWatchManager.HasRegisteredClients)
                 RequestHandler.TrafficWatchQuery(query);

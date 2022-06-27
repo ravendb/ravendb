@@ -11,7 +11,7 @@ internal class DatabaseQueriesHandlerProcessorForDelete : AbstractDatabaseOperat
     {
     }
 
-    protected override HttpMethod OperationMethod => HttpMethod.Delete;
+    protected override HttpMethod QueryMethod => HttpMethod.Delete;
 
     protected override (QueryOperationFunction Action, OperationType Type) GetOperation(IndexQueryServerSide query)
     {

@@ -16,7 +16,7 @@ internal class ShardedQueriesHandlerProcessorForDelete : AbstractShardedOperatio
     public ShardedQueriesHandlerProcessorForDelete([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.DatabaseContext.QueryMetadataCache)
     {
     }
-    protected override HttpMethod OperationMethod => HttpMethod.Delete;
+    protected override HttpMethod QueryMethod => HttpMethod.Delete;
 
     protected override (Func<JsonOperationContext, int, RavenCommand<OperationIdResult>> CommandFactory, OperationType Type) GetOperation(IndexQueryServerSide query, long operationId, QueryOperationOptions options)
     {

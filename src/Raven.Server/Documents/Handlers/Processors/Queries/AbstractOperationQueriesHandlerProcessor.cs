@@ -20,8 +20,6 @@ internal abstract class AbstractOperationQueriesHandlerProcessor<TRequestHandler
     {
     }
 
-    protected abstract HttpMethod OperationMethod { get; }
-
     protected abstract long GetNextOperationId();
 
     protected abstract IDisposable AllocateContextForAsyncOperation(out TOperationContext asyncOperationContext);
@@ -31,7 +29,7 @@ internal abstract class AbstractOperationQueriesHandlerProcessor<TRequestHandler
     public override async ValueTask ExecuteAsync()
     {
         using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
-        using (var tracker = new RequestTimeTracker(HttpContext, Logger, null, "Query"))
+        using (var tracker = new RequestTimeTracker(HttpContext, Logger, (RequestHandler as DatabaseRequestHandler)?.Database, "Query"))
         {
             var operationId = RequestHandler.GetLongQueryString("operationId", required: false) ?? GetNextOperationId();
             var options = GetQueryOperationOptions();
@@ -40,7 +38,7 @@ internal abstract class AbstractOperationQueriesHandlerProcessor<TRequestHandler
 
             try
             {
-                var query = await GetIndexQueryAsync(asyncOperationContext, OperationMethod, tracker, addSpatialProperties: false);
+                var query = await GetIndexQueryAsync(asyncOperationContext, QueryMethod, tracker, addSpatialProperties: false);
 
                 query.DisableAutoIndexCreation = RequestHandler.GetBoolValueQueryString("disableAutoIndexCreation", false) ?? false;
 

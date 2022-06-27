@@ -1,7 +1,5 @@
 ﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Operations;
 using Raven.Server.Documents.Commands.Queries;
 using Raven.Server.Documents.Handlers.Processors.Queries;
 using Raven.Server.Documents.Queries;

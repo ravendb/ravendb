@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries;
 
-public struct IndexQueryReader // TODO arek - remove?
+public struct IndexQueryReader // TODO arek - remove? should be handled by abstraction of processors
 {
     private readonly int _start, _pageSize;
     private readonly HttpContext _httpContext;

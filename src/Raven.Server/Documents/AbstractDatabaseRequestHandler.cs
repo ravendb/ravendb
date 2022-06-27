@@ -18,6 +18,8 @@ public abstract class AbstractDatabaseRequestHandler<TOperationContext> : Reques
 
     public abstract OperationCancelToken CreateTimeLimitedOperationToken();
 
+    public abstract OperationCancelToken CreateTimeLimitedQueryToken();
+
     public JsonContextPoolBase<TOperationContext> ContextPool;
 
     public abstract Task WaitForIndexNotificationAsync(long index);

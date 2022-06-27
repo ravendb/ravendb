@@ -16,7 +16,7 @@ internal abstract class AbstractQueriesHandlerProcessor<TRequestHandler, TOperat
     where TOperationContext : JsonOperationContext
     where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
 {
-    private readonly QueryMetadataCache _queryMetadataCache;
+    protected readonly QueryMetadataCache QueryMetadataCache;
     private readonly int _start, _pageSize;
     private readonly HttpContext _httpContext;
     private readonly Stream _stream;
@@ -27,8 +27,9 @@ internal abstract class AbstractQueriesHandlerProcessor<TRequestHandler, TOperat
         _pageSize = requestHandler.GetPageSize();
         _httpContext = requestHandler.HttpContext;
         _stream = requestHandler.RequestBodyStream();
-        _queryMetadataCache = queryMetadataCache;
+        QueryMetadataCache = queryMetadataCache;
     }
+    protected abstract HttpMethod QueryMethod { get; }
 
     public async ValueTask<IndexQueryServerSide> GetIndexQueryAsync(JsonOperationContext context, HttpMethod method, RequestTimeTracker tracker, bool addSpatialProperties = false)
     {
@@ -52,7 +53,7 @@ internal abstract class AbstractQueriesHandlerProcessor<TRequestHandler, TOperat
             json = q;
         }
 
-        return IndexQueryServerSide.Create(_httpContext, json, _queryMetadataCache, tracker, addSpatialProperties, queryType: queryType);
+        return IndexQueryServerSide.Create(_httpContext, json, QueryMetadataCache, tracker, addSpatialProperties, queryType: queryType);
     }
 
     private async ValueTask<IndexQueryServerSide> ReadIndexQueryAsync(JsonOperationContext context, RequestTimeTracker tracker, bool addSpatialProperties)
