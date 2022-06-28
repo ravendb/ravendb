@@ -490,9 +490,6 @@ public static class QueryBuilderHelper
         {
             ThrowFieldIsNotIndexed();
         }
-
-        if (indexField?.Indexing is FieldIndexing.No || binding?.FieldIndexingMode is FieldIndexingMode.No)
-            CoraxDocumentConverterBase.ThrowIndexingComplexObjectNotSupported((object)indexField ?? binding);
         
         return indexField?.Id ?? binding?.FieldId ??
             throw new InvalidQueryException($"{nameof(IndexFieldBinding)} or {nameof(IndexFieldsMapping)} not found in {nameof(CoraxQueryBuilder)}.");
@@ -558,16 +555,7 @@ public static class QueryBuilderHelper
         null => Corax.Constants.NullValue,
         _ => value?.ToString()
     };
-
-    internal static MatchCompareFieldType TranslateOrderByForCorax(OrderByFieldType original) =>
-        original switch
-        {
-            OrderByFieldType.Double => MatchCompareFieldType.Floating,
-            OrderByFieldType.Long => MatchCompareFieldType.Integer,
-            OrderByFieldType.AlphaNumeric => MatchCompareFieldType.Sequence,
-            _ => MatchCompareFieldType.Sequence
-        };
-
+    
     internal static ComparerType GetComparerType(bool ascending, MatchCompareFieldType original, int fieldId) => (ascending, original, fieldId) switch
     {
         (true, MatchCompareFieldType.Spatial, _) => ComparerType.AscendingSpatial,

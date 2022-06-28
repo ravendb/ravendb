@@ -86,11 +86,11 @@ namespace Voron.Data.Sets
             int* outputBufferPtr = (int*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(outputBuffer));
             DecoderState* statePtr = (DecoderState*)Unsafe.AsPointer(ref state);
 
-            return Decode(statePtr, inputBufferPtr, inputBuffer.Length, outputBufferPtr);
+            return Decode(statePtr, inputBufferPtr, inputBuffer.Length, outputBufferPtr, outputBuffer.Length);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-        public static int Decode(DecoderState* state, byte* inputBufferPtr, int inputBufferSize, int* outputBuffer)
+        public static int Decode(DecoderState* state, byte* inputBufferPtr, int inputBufferSize, int* outputBuffer, int outputBufferSize)
         {
             Debug.Assert(inputBufferSize == state->BufferSize);
 
@@ -114,7 +114,11 @@ namespace Voron.Data.Sets
                 return 0;
 
             int statePrevValue = state->_prevValue;
-            int numOfRepeatedValues = headerBits == 0b00 ? NumberOfValues[(int)(bits >> 5)] : (int)(bits >> 5);            
+            int numOfRepeatedValues = headerBits == 0b00 ? NumberOfValues[(int)(bits >> 5)] : (int)(bits >> 5);
+            
+            if (numOfRepeatedValues > outputBufferSize)
+                throw new ArgumentOutOfRangeException(nameof(outputBufferSize), "Invalid size for PForDecoder, not enough space for values");
+            
             if (headerBits == 0b10)
             {
                 var repeatedDelta = (int)Read(stateBitPos, inputBufferPtr, numOfBits, out stateBitPos);

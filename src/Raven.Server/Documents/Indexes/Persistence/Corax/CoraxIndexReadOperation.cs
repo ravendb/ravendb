@@ -1,15 +1,12 @@
 ﻿using System;
 using System.Buffers;
-using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using Corax;
 using Corax.Pipeline;
 using Corax.Queries;
 using Raven.Client.Documents.Queries.Explanation;
-using Raven.Client.Documents.Queries.Highlighting;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Highlightings;
@@ -29,11 +26,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 {
     public class CoraxIndexReadOperation : IndexReadOperationBase
     {
+        private static readonly ArrayPool<long> QueryPool = ArrayPool<long>.Create();
         private readonly IndexFieldsMapping _fieldMappings;
         private readonly IndexSearcher _indexSearcher;
         private readonly ByteStringContext _allocator;
         private long _entriesCount = 0;
-        private const int BufferSize = 4096;
         
         public CoraxIndexReadOperation(Index index, Logger logger, Transaction readTransaction, QueryBuilderFactories queryBuilderFactories) : base(index, logger, queryBuilderFactories)
         {
@@ -73,14 +70,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
             IQueryMatch queryMatch;
             Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms = query.Metadata.HasHighlightings ? new() : null;
+            bool isBinary;
             using (coraxScope?.Start())
             {
-                if ((queryMatch = CoraxQueryBuilder.BuildQuery(_indexSearcher, null, null, query, _index, query.QueryParameters, QueryBuilderFactories,
+                if ((queryMatch = CoraxQueryBuilder.BuildQuery(_indexSearcher, null, null, query, _index, query.QueryParameters, QueryBuilderFactories, out isBinary,
                     _fieldMappings, fieldsToFetch, highlightingTerms: highlightingTerms, take: take)) is null)
                     yield break;
             }
 
-            var ids = ArrayPool<long>.Shared.Rent(CoraxGetPageSize(_indexSearcher, BufferSize, query));
+            
+            var ids = QueryPool.Rent(CoraxGetPageSize(_indexSearcher, take, query, isBinary ));
             int docsToLoad = pageSize;
             int queryStart = query.Start;
             bool hasHighlights = query.Metadata.HasHighlightings;
@@ -149,7 +148,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         }
                     }
                 }
-
+                
+                
                 if ((read = queryMatch.Fill(ids)) == 0)
                     break;
                 totalResults.Value += read;
@@ -282,7 +282,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 return default;
             }
 
-            ArrayPool<long>.Shared.Return(ids);
+            QueryPool.Return(ids);
         }
 
         private static int ProcessHighlightings(HighlightingField current, CoraxHighlightingTermIndex highlightingTerm, ReadOnlySpan<char> fieldFragment, List<string> fragments, int maxFragmentCount)
@@ -432,7 +432,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             Reference<int> skippedResults, Reference<int> scannedDocuments, IQueryResultRetriever retriever,
             DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException($"{nameof(Corax)} does not support intersect queries.");
         }
 
         public override SortedSet<string> Terms(string field, string fromValue, long pageSize, CancellationToken token)
@@ -486,16 +486,18 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 take = CoraxConstants.IndexSearcher.TakeAll;
 
             IQueryMatch queryMatch;
-            if ((queryMatch = CoraxQueryBuilder.BuildQuery(_indexSearcher, null, null, query, _index, null, null, 
+            bool isBinary;
+            if ((queryMatch = CoraxQueryBuilder.BuildQuery(_indexSearcher, null, null, query, _index, null, null, out isBinary,
                     _fieldMappings, take: take)) is null)
                 yield break;
 
-            var ids = ArrayPool<long>.Shared.Rent(CoraxGetPageSize(_indexSearcher, BufferSize, query));
+            var ids = QueryPool.Rent(CoraxGetPageSize(_indexSearcher, take, query, isBinary));
 
             HashSet<string> itemList = new(32);
-            var bufferSizes = GetMaximumSizeOfBuffer();
-            var tokensBuffer = ArrayPool<Token>.Shared.Rent(bufferSizes.TokenSize);
-            var encodedBuffer = ArrayPool<byte>.Shared.Rent(bufferSizes.OutputSize);
+
+            var maxTermLengthProceedPerAnalyzer = ArrayPool<int>.Shared.Rent(_fieldMappings.Count);
+            var encodedBuffer = Analyzer.BufferPool.Rent(_fieldMappings.MaximumOutputSize);
+            var tokensBuffer = Analyzer.TokensPool.Rent(_fieldMappings.MaximumTokenSize);
 
             int docsToLoad = pageSize;
 
@@ -516,10 +518,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 totalResults.Value += read;
             }
 
-            ArrayPool<long>.Shared.Return(ids);
-            ArrayPool<byte>.Shared.Return(encodedBuffer);
-            ArrayPool<Token>.Shared.Return(tokensBuffer);
-
+            QueryPool.Return(ids);
+            Analyzer.BufferPool.Return(encodedBuffer);
+            Analyzer.TokensPool.Return(tokensBuffer);
+            ArrayPool<int>.Shared.Return(maxTermLengthProceedPerAnalyzer);
             DynamicJsonValue GetRawDocument(in IndexEntryReader reader)
             {
                 var doc = new DynamicJsonValue();
@@ -571,6 +573,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                             for (int i = 1; i <= value.Length; ++i)
                                 enumerableEntries.Add(Encodings.Utf8.GetString(value.Slice(0, i)));
                             doc[binding.FieldNameAsString] = enumerableEntries.ToArray();
+                            continue;
                         }
                         
                         if (binding.FieldIndexingMode is FieldIndexingMode.Exact)
@@ -591,6 +594,28 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 var tokens = tokensBuffer.AsSpan();
                 var encoded = encodedBuffer.AsSpan();
                 itemList?.Clear();
+
+                if (maxTermLengthProceedPerAnalyzer[binding.FieldId] < value.Length)
+                {
+                    binding.Analyzer.GetOutputBuffersSize(value.Length, out var outputSize, out var tokenSize);
+                    if (outputSize > encodedBuffer.Length)
+                    {
+                        Analyzer.BufferPool.Return(encodedBuffer);
+                        encodedBuffer = Analyzer.BufferPool.Rent(_fieldMappings.MaximumOutputSize);
+                        encoded = encodedBuffer.AsSpan();
+
+                    }
+
+                    if (tokenSize > tokensBuffer.Length)
+                    {
+                        Analyzer.TokensPool.Return(tokensBuffer);
+                        tokensBuffer = Analyzer.TokensPool.Rent(_fieldMappings.MaximumTokenSize);
+                        tokens = tokensBuffer.AsSpan();
+                    }
+
+                    maxTermLengthProceedPerAnalyzer[binding.FieldId] = value.Length;
+                }
+                
                 binding.Analyzer.Execute(value, ref encoded, ref tokens);
                 for (var index = 0; index < tokens.Length; ++index)
                 {
@@ -605,26 +630,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     _ => string.Empty
                 };
             }
-
-            (int OutputSize, int TokenSize) GetMaximumSizeOfBuffer()
-            {
-                int outputSize = 512;
-                int tokenSize = 512;
-                foreach (var binding in _fieldMappings)
-                {
-                    token.ThrowIfCancellationRequested();
-                    if (binding.Analyzer is null)
-                        continue;
-
-                    binding.Analyzer.GetOutputBuffersSize(512, out int tempOutputSize, out int tempTokenSize);
-                    tokenSize = Math.Max(tempTokenSize, tokenSize);
-                    outputSize = Math.Max(tempOutputSize, outputSize);
-                }
-
-                return (outputSize, tokenSize);
-            }
-
-
+            
             int Skip()
             {
                 while (true)

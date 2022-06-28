@@ -107,7 +107,11 @@ namespace SlowTests.Issues
             }.Initialize())
             {
                 var index = new Index();
-                await index.ExecuteAsync(store);
+
+                var results = await store.Maintenance.SendAsync(new PutIndexesOperation(index.CreateIndexDefinition()));
+                var result = results[0];
+
+                await Cluster.WaitForRaftIndexToBeAppliedOnClusterNodesAsync(result.RaftCommandIndex, dbGroupNodes, TimeSpan.FromSeconds(15));
 
                 using (var session = store.OpenSession())
                 {

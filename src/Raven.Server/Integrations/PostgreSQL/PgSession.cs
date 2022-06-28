@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Pipelines;
@@ -18,7 +19,7 @@ namespace Raven.Server.Integrations.PostgreSQL
     public class PgSession
     {
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<PgSession>("Postgres Server");
-
+        internal ConcurrentDictionary<string, PgQuery> NamedStatements { get; private set; }
         private readonly TcpClient _client;
         private readonly X509Certificate2 _serverCertificate;
         private readonly int _identifier;
@@ -42,6 +43,7 @@ namespace Raven.Server.Integrations.PostgreSQL
             _databasesLandlord = databasesLandlord;
             _token = token;
             _clientOptions = null;
+            NamedStatements = new ConcurrentDictionary<string, PgQuery>();
         }
 
         private async Task<Stream> HandleInitialMessage(Stream stream, MessageBuilder messageBuilder)
@@ -152,7 +154,7 @@ namespace Raven.Server.Integrations.PostgreSQL
             {
                 username = _clientOptions["user"];
 
-                using var transaction = new PgTransaction(database, new MessageReader(), username);
+                using var transaction = new PgTransaction(database, new MessageReader(), username,this);
 
                 if (_serverCertificate != null)
                 {

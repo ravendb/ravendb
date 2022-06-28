@@ -76,8 +76,8 @@ public class IndexFieldsMapping : IEnumerable<IndexFieldBinding>
             if (analyzer.Analyzer == null)
                 continue;
             
-            _maximumOutputSize = Math.Max(_maximumOutputSize, analyzer.Analyzer.MaximumOutputSize);
-            _maximumTokenSize = Math.Max(_maximumTokenSize, analyzer.Analyzer.MaximumTokenSize);
+            _maximumOutputSize = Math.Max(_maximumOutputSize, analyzer.Analyzer.DefaultOutputSize);
+            _maximumTokenSize = Math.Max(_maximumTokenSize, analyzer.Analyzer.DefaultTokenSize);
         }
     }
         
@@ -134,7 +134,9 @@ public class IndexFieldBinding
     public Corax.Analyzer Analyzer;
     public readonly bool HasSuggestions;
     public readonly bool HasSpatial;
-    public readonly FieldIndexingMode FieldIndexingMode;
+    public FieldIndexingMode FieldIndexingMode => _silentlyChangedIndexingMode ?? _fieldIndexingMode;
+    private readonly FieldIndexingMode _fieldIndexingMode;
+    private FieldIndexingMode? _silentlyChangedIndexingMode;
     private string _fieldName;
 
     public IndexFieldBinding(int fieldId, Slice fieldName, Analyzer analyzer = null, bool hasSuggestions = false, FieldIndexingMode fieldIndexingMode = FieldIndexingMode.Normal, bool hasSpatial = false)
@@ -143,7 +145,7 @@ public class IndexFieldBinding
         FieldName = fieldName;
         Analyzer = analyzer;
         HasSuggestions = hasSuggestions;
-        FieldIndexingMode = fieldIndexingMode;
+        _fieldIndexingMode = fieldIndexingMode;
         HasSpatial = hasSpatial;
     }
 
@@ -169,5 +171,10 @@ public class IndexFieldBinding
         {
             return FieldIndexingMode != FieldIndexingMode.No;
         }
+    }
+
+    public void OverrideFieldIndexingMode(FieldIndexingMode mode)
+    {
+        _silentlyChangedIndexingMode = mode;
     }
 }

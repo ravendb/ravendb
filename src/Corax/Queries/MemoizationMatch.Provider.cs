@@ -9,6 +9,9 @@ namespace Corax.Queries
     public unsafe struct MemoizationMatchProvider<TInner> : IMemoizationMatchSource
              where TInner : IQueryMatch
     {
+        private int _replayCounter;
+        public int ReplayCounter => _replayCounter;
+        
         private TInner _inner;
         public bool IsBoosting => _inner.IsBoosting;
         public long Count => _inner.Count;
@@ -22,13 +25,14 @@ namespace Corax.Queries
         public MemoizationMatchProvider(in TInner inner)
         {
             _inner = inner;
-
+            _replayCounter = 0;
             _buffer = null;
             _bufferEndIdx = -1;
         }
 
         public MemoizationMatch Replay()
         {
+            _replayCounter++;
             return MemoizationMatch.Create(new MemoizationMatch<TInner>(this));
         }
 
@@ -43,6 +47,9 @@ namespace Corax.Queries
             return _buffer.AsSpan(0, _bufferEndIdx);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal int Fill(Span<long> matches) => _inner.Fill(matches);
+        
         private void InitializeInner()
         {
             // We rent a buffer size. 
@@ -75,8 +82,7 @@ namespace Corax.Queries
                 count += read;
             }
 
-        End:
-
+            End:
             // The problem is that multiple Fill calls do not ensure that we will get a sequence of ordered
             // values, therefore we must ensure that we get a 'sorted' sequence ensuring those happen.
             if (iterations > 1 && count > 1)

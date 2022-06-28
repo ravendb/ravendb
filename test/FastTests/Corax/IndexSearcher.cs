@@ -7,6 +7,7 @@ using System.Text;
 using Corax;
 using Corax.Pipeline;
 using Corax.Queries;
+using Corax.Utils;
 using FastTests.Voron;
 using Raven.Client.Documents.Linq;
 using Sparrow;
@@ -24,6 +25,7 @@ namespace FastTests.Corax
     {
         private class IndexEntry
         {
+            public long IndexEntryId;
             public string Id;
             public string[] Content;
         }
@@ -109,7 +111,7 @@ namespace FastTests.Corax
                 {
                     var entryWriter = new IndexEntryWriter(buffer.ToSpan(), mapping);
                     var data = CreateIndexEntry(ref entryWriter, entry);
-                    indexWriter.Index(entry.Id, data);
+                    entry.IndexEntryId = indexWriter.Index(entry.Id, data);
                 }
 
                 indexWriter.Commit();
@@ -505,9 +507,11 @@ namespace FastTests.Corax
         [InlineData(new object[] { 8000, 18 })]
         [InlineData(new object[] { 1000, 8 })]
         [InlineData(new object[] { 1020, 7 })]
+        [InlineData(new object[] { 201, 128 })]
         public void SimpleAndOrForBiggerSet(int setSize, int stackSize)
         {
             setSize = setSize - (setSize % 3);
+            var matches = new List<IndexEntry>();
 
             var entriesToIndex = new IndexEntry[setSize];
             for (int i = 0; i < setSize; i++)
@@ -524,12 +528,19 @@ namespace FastTests.Corax
                     }
                 };
 
+                if (entry.Content.Contains("lake") && entry.Content.Contains("mountain") || entry.Content.Contains("space"))
+                {
+                    matches.Add(entry);
+                }
+
                 entriesToIndex[i] = entry;
             }
 
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
             IndexEntries(bsc, entriesToIndex, CreateKnownFields(bsc));
 
+            var matchesId = matches.Select(x => x.IndexEntryId).ToList();
+            matchesId.Sort();
             {
                 using var searcher = new IndexSearcher(Env);
                 var match1 = searcher.TermQuery("Content", "lake");
@@ -538,6 +549,7 @@ namespace FastTests.Corax
                 var match3 = searcher.TermQuery("Content", "space");
                 var orMatch = searcher.Or(in andMatch, in match3);
 
+                var actual = new List<long>();
                 Span<long> ids = stackalloc long[stackSize];
                 int read;
                 int count = 0;
@@ -545,7 +557,18 @@ namespace FastTests.Corax
                 {
                     read = orMatch.Fill(ids);
                     count += read;
-                } while (read != 0);
+                    actual.AddRange(ids[..read].ToArray());
+                } 
+                while (read != 0);
+                
+                // Because there is no guarantee that multiple Fill operations would return sequential non redundant document ids,
+                // we need to sort and remove duplicates before actually testing the final condition. 
+                var sortedActual = actual.ToArray();
+                Sorting.SortAndRemoveDuplicates(sortedActual);
+                for (int i = 0; i < count; i++)
+                {
+                    Assert.Equal(matchesId[i], sortedActual[i]);
+                }
 
                 Assert.Equal((setSize / 3) * 2, count);
             }
@@ -607,6 +630,7 @@ namespace FastTests.Corax
         {
             setSize = setSize - (setSize % 3);
 
+            var matches = new List<IndexEntry>();
             var entriesToIndex = new IndexEntry[setSize];
             for (int i = 0; i < setSize; i++)
             {
@@ -623,10 +647,16 @@ namespace FastTests.Corax
                 };
 
                 entriesToIndex[i] = entry;
+                if ((entry.Content.Contains("lake") || entry.Content.Contains("mountain")) && entry.Content.Contains("sky"))
+                {
+                    matches.Add(entry);
+                }
             }
 
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
             IndexEntries(bsc, entriesToIndex, CreateKnownFields(bsc));
+
+            var matchIds = matches.Select(x => x.IndexEntryId).ToArray();
 
             using var searcher = new IndexSearcher(Env);
             {
@@ -634,16 +664,24 @@ namespace FastTests.Corax
                 var match2 = searcher.TermQuery("Content", "sky");
                 var andMatch = searcher.And(in match1, in match2);
 
+                var actual = new List<long>();
                 Span<long> ids = stackalloc long[stackSize];
                 int read;
-                int count = 0;
                 do
                 {
                     read = andMatch.Fill(ids);
-                    count += read;
+                    actual.AddRange(ids[..read].ToArray());
                 } while (read != 0);
 
-                Assert.Equal((setSize / 3), count);
+                var actualSorted = actual.ToArray();
+                var actualSize = Sorting.SortAndRemoveDuplicates(actualSorted);
+
+                for (int i = 0; i < actualSize; i++)
+                {
+                    Assert.Equal(matchIds[i], actualSorted[i]);
+                }
+
+                Assert.Equal((setSize / 3), actualSize);
             }
 
             {
@@ -651,16 +689,25 @@ namespace FastTests.Corax
                 var match2 = searcher.InQuery("Content", new() { "lake", "mountain" });
                 var andMatch = searcher.And(in match1, in match2);
 
+                var actual = new List<long>();
                 Span<long> ids = stackalloc long[stackSize];
                 int read;
                 int count = 0;
                 do
                 {
                     read = andMatch.Fill(ids);
+                    actual.AddRange(ids[..read].ToArray());
                     count += read;
                 } while (read != 0);
+                var actualSorted = actual.ToArray();
+                var actualSize = Sorting.SortAndRemoveDuplicates(actualSorted);
 
-                Assert.Equal((setSize / 3), count);
+                for (int i = 0; i < actualSize; i++)
+                {
+                    Assert.Equal(matchIds[i], actualSorted[i]);
+                }
+
+                Assert.Equal((setSize / 3), actualSize);
             }
         }
 
@@ -1422,21 +1469,22 @@ namespace FastTests.Corax
                 var match1 = searcher.InQuery("Content", new() { "lake", "mountain" });
                 var match2 = searcher.TermQuery("Content", "sky");
                 var andMatch = searcher.And(in match1, in match2);
-                var results = new List<string>();
+                
+                var actual = new List<long>();
                 Span<long> ids = stackalloc long[stackSize];
                 int read;
-                int count = 0;
                 do
                 {
+                    
                     read = andMatch.Fill(ids);
-                    count += read;
-                    for (int i = 0; i < read; ++i)
-                    {
-                        results.Add(searcher.GetIdentityFor(ids[i]));
-                    }
+                    actual.AddRange(ids[..read].ToArray());
                 } while (read != 0);
 
-                Assert.Equal((setSize / 3), count);
+                var actualSorted = actual.ToArray();
+                var actualSize = Sorting.SortAndRemoveDuplicates(actualSorted);
+
+                Assert.Equal((setSize / 3), actualSize);
+                
             }
 
             {
@@ -1444,16 +1492,22 @@ namespace FastTests.Corax
                 var match2 = searcher.InQuery("Content", new() { "lake", "mountain" });
                 var andMatch = searcher.And(in match1, in match2);
 
+                  
+                var actual = new List<long>();
                 Span<long> ids = stackalloc long[stackSize];
                 int read;
-                int count = 0;
                 do
                 {
+                    
                     read = andMatch.Fill(ids);
-                    count += read;
+                    actual.AddRange(ids[..read].ToArray());
                 } while (read != 0);
 
-                Assert.Equal((setSize / 3), count);
+                var actualSorted = actual.ToArray();
+                var actualSize = Sorting.SortAndRemoveDuplicates(actualSorted);
+
+                Assert.Equal((setSize / 3), actualSize);
+
             }
         }
 
@@ -1502,16 +1556,20 @@ namespace FastTests.Corax
                 var match2 = searcher.TermQuery("Content", "sky");
                 var andMatch = searcher.And(in match1, in match2);
 
+                var actual = new List<long>();
                 Span<long> ids = stackalloc long[stackSize];
                 int read;
-                int count = 0;
                 do
                 {
+                    
                     read = andMatch.Fill(ids);
-                    count += read;
+                    actual.AddRange(ids[..read].ToArray());
                 } while (read != 0);
 
-                Assert.Equal((setSize / 3), count);
+                var actualSorted = actual.ToArray();
+                var actualSize = Sorting.SortAndRemoveDuplicates(actualSorted);
+
+                Assert.Equal((setSize / 3), actualSize);
             }
 
             {
@@ -1519,16 +1577,20 @@ namespace FastTests.Corax
                 var match2 = searcher.InQuery("Content", new() { "lake", "mountain" });
                 var andMatch = searcher.And(in match1, in match2);
 
+                var actual = new List<long>();
                 Span<long> ids = stackalloc long[stackSize];
                 int read;
-                int count = 0;
                 do
                 {
+                    
                     read = andMatch.Fill(ids);
-                    count += read;
+                    actual.AddRange(ids[..read].ToArray());
                 } while (read != 0);
 
-                Assert.Equal((setSize / 3), count);
+                var actualSorted = actual.ToArray();
+                var actualSize = Sorting.SortAndRemoveDuplicates(actualSorted);
+
+                Assert.Equal((setSize / 3), actualSize);
             }
         }
 

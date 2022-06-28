@@ -6,7 +6,6 @@ using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.Indexes
 {
-    //todo maciej
     public abstract class IndexFieldBase
     {
         public string Name { get; set; }

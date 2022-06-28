@@ -216,12 +216,11 @@
                                        data-bind="textInput: name, disable: $root.enableTestArea() || !isNew()" />
                             </div>
                         </div>
-                        <label><strong>Script:</strong> <small>(leave empty to send documents without any modifications)</small></label>
+                        <label><strong>Script:</strong></label>
                         <span class="pull-right"><a href="#" data-bind="click: $root.syntaxHelp"><small>Syntax <i class="icon-help"></i></small></a></span>
                         <div data-bind="validationElement: script">
                             <pre class="form-control editor"
                                  data-bind="aceEditor: { code: script, fontSize: '14px', lang: 'ace/mode/javascript' }, validationOptions: { errorsAsTitle: false }, validationElement: script" style="height: 250px;"></pre>
-
                             <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: script">
                                 <div class="help-block" data-bind="validationMessage: script"></div>
                             </div>
@@ -365,14 +364,14 @@
                 <div data-bind="foreach: testResults">
                     <div class="result-item margin-bottom">
                         <div class="header margin-bottom">
-                            <span>Queue Name:</span>
-                            <strong data-bind="text: QueueName"></strong>
+                            <span>Exchange Name:</span>
+                            <strong data-bind="text: QueueName || 'Default'"></strong>
                         </div>
                         <div data-bind="foreach: Messages" class="test-output">
                             <div class="header margin-bottom">
                                 <span>Message body:</span>
                                 <pre data-bind="text: Body" class="margin-top"></pre>
-                                <div>
+                                <div class="margin-top-sm" >
                                     <span>Routing Key:</span>
                                     <strong data-bind="text: RoutingKey || '(empty)'"></strong>
                                 </div>

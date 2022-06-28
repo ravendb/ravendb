@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -35,8 +36,7 @@ namespace Corax.Queries
             QueryContext.MatchesRawPool.Return(bufferHolder);
             return result;
         }
-
-
+        
         [SkipLocalsInit]
         private static int FillFuncSequenceAny<TComparer>(ref UnaryMatch<TInner, TValueType> match, Span<long> matches)
             where TComparer : struct, IUnaryMatchComparer
@@ -96,13 +96,14 @@ namespace Corax.Queries
                                 }
                             }
 
-                            var analyzedTerm = match._searcher.ApplyAnalyzer(iterator.Sequence, match._fieldId);
-
-                            // If there is any match, then it is a match
-                            if (comparer.Compare(currentType, analyzedTerm))
+                            using (match._searcher.ApplyAnalyzer(iterator.Sequence, match._fieldId, out var analyzedTerm))
                             {
-                                isMatch = true;
-                                break;
+                                // If there is any match, then it is a match
+                                if (comparer.Compare(currentType, analyzedTerm))
+                                {
+                                    isMatch = true;
+                                    break;
+                                }
                             }
                         }
 
@@ -114,8 +115,8 @@ namespace Corax.Queries
                         var read = reader.Read(match._fieldId, out var readType, out var resultX);
                         if (read && readType != IndexEntryFieldType.Null)
                         {
-                            var analyzedTerm = match._searcher.ApplyAnalyzer(resultX, match._fieldId);
-                            if (!read || !comparer.Compare(currentType, analyzedTerm))
+                            using var _ = match._searcher.ApplyAnalyzer(resultX, match._fieldId, out var analyzedTerm);
+                            if (comparer.Compare(currentType, analyzedTerm) == false)
                                 continue; // Cant read or no match, item is not elegible.
                         }
                         else
@@ -256,8 +257,8 @@ namespace Corax.Queries
                 }
                 else
                 {
-                    var analyzedTerm = searcher.ApplyAnalyzer(readFromEntry, fieldId);
-                    index = BinarySearch(value, analyzedTerm);
+                    using (searcher.ApplyAnalyzer(readFromEntry, fieldId, out var analyzedTerm))
+                        index = BinarySearch(value, analyzedTerm.AsSpan());
                 }
                 if (index >= 0)
                     bitset.Set(index);
@@ -322,11 +323,13 @@ namespace Corax.Queries
                                 break;
                             }
 
-                            var analyzedTerm = match._searcher.ApplyAnalyzer(iterator.Sequence, match._fieldId);
-                            if (!comparer.Compare(currentType, analyzedTerm))
+                            using (match._searcher.ApplyAnalyzer(iterator.Sequence, match._fieldId, out var analyzedTerm))
                             {
-                                isNotMatch = true;
-                                break;
+                                if (comparer.Compare(currentType, analyzedTerm) == false)
+                                {
+                                    isNotMatch = true;
+                                    break;
+                                }
                             }
                         }
 
@@ -343,9 +346,11 @@ namespace Corax.Queries
                         }
                         else
                         {
-                            var analyzedTerm = match._searcher.ApplyAnalyzer(resultX, match._fieldId);
-                            if (!read || !comparer.Compare(currentType, analyzedTerm))
-                                continue; // Cant read or no match, item is not elegible.
+                            using (match._searcher.ApplyAnalyzer(resultX, match._fieldId, out var analyzedTerm))
+                            {
+                                if (read == false || !comparer.Compare(currentType, analyzedTerm))
+                                    continue; // Cant read or no match, item is not elegible.
+                            }
                         }
                     }
                     else continue;
@@ -653,7 +658,7 @@ namespace Corax.Queries
 
             return storeIdx;
         }
-
+        
         [SkipLocalsInit]
         private static int FillFuncNumericalAny<TComparer>(ref UnaryMatch<TInner, TValueType> match, Span<long> matches)
             where TComparer : struct, IUnaryMatchComparer
@@ -1186,8 +1191,7 @@ namespace Corax.Queries
                 throw new NotSupportedException($"MatchComparer does not support type {nameof(T)}");
             }
         }
-
-
+        
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static long CoherseValueTypeToLong(TValueType value)
         {
