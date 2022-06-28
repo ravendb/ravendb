@@ -219,6 +219,9 @@ namespace Sparrow.Server.Compression
             var symbol = key;
             while (symbol.Length != 0)
             {
+                if (symbol[0] == 0 && symbol.Length > 1)
+                    throw new InvalidDataException("The key cannot contain null bytes unless it is the last value.");
+
                 int prefixLen = Lookup(symbol, table, numberOfEntries, out Code code);
                 long sBuf = code.Value;
                 int sLen = code.Length;

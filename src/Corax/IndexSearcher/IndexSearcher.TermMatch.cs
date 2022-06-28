@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using Corax.Queries;
+using Sparrow.Server;
 using Sparrow.Server.Compression;
 using Voron;
 using Voron.Data.CompactTrees;
@@ -17,6 +18,7 @@ public unsafe partial class IndexSearcher
     {
         var fields = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
         var terms = fields?.CompactTreeFor(field);
+        
         if (terms == null)
         {
             // If either the term or the field does not exist the request will be empty. 
@@ -87,6 +89,25 @@ public unsafe partial class IndexSearcher
         matches.Term = term.ToString();
 #endif
         return matches;
+    }
+
+    public long TermAmount(string field, string term)
+    {
+        var fields = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
+        var terms = fields?.CompactTreeFor(field);
+        if (terms == null)
+        {
+            // If either the term or the field does not exist the request will be empty. 
+            return 0;
+        }
+
+        if (term is null)
+            return TermAmount(terms, Constants.NullValueSlice);
+        if (term.Length == 0)
+            return TermAmount(terms, Constants.EmptyStringSlice);
+
+        using var _ = Slice.From(Allocator, term, out Slice termAsSlice);
+        return TermAmount(terms, termAsSlice);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

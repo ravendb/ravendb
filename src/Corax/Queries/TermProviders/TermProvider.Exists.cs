@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Sparrow;
 using Sparrow.Server;
 using Voron;
@@ -45,10 +46,8 @@ namespace Corax.Queries
         {
             while (_iterator.MoveNext(out Span<byte> termSlice, out var _))
             {
-                // This shouldnt happen.
-                if (termSlice.Length < 1)
-                    continue;
-
+                Debug.Assert(termSlice.Length > 1);
+                
                 int termSize = termSlice.Length;
                 if (termSlice[^1] == 0)
                     termSize--;

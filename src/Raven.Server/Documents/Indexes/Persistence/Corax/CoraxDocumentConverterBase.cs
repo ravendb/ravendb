@@ -24,6 +24,7 @@ using RavenConstants = Raven.Client.Constants;
 using CoraxConstants = Corax.Constants;
 using Encoding = System.Text.Encoding;
 using System.Diagnostics;
+using Raven.Server.NotificationCenter.Notifications;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
@@ -87,7 +88,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         if (index.Type.IsMapReduce())
         {
             Slice.From(allocator, RavenConstants.Documents.Indexing.Fields.AllStoredFields, ByteStringType.Immutable, out var storedKey);
-            knownFields = knownFields.AddBinding(knownFields.Count, storedKey, null, true);
+            knownFields = knownFields.AddBinding(knownFields.Count, storedKey, null, false, FieldIndexingMode.No);
         }
 
         return knownFields;
@@ -258,10 +259,8 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 return;
 
             case ValueType.DynamicJsonObject:
-                if (field.Indexing is not FieldIndexing.No)
-                {
-                    ThrowIndexingComplexObjectNotSupported(field);
-                }
+                if (field.Indexing is not FieldIndexing.No) 
+                    AssertOrAdjustIndexingOptionForComplexObject(field);
 
                 var dynamicJson = (DynamicBlittableJson)value;
                 scope.Write(field.Id, dynamicJson.BlittableJson, ref entryWriter);
@@ -275,11 +274,9 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                     return;
                 }
 
-                if (field.Indexing is not FieldIndexing.No)
-                {
-                    ThrowIndexingComplexObjectNotSupported(field);
-                }
-                
+                if (field.Indexing is not FieldIndexing.No) 
+                    AssertOrAdjustIndexingOptionForComplexObject(field);
+
                 var jsonScope = Scope.CreateJson(json, indexContext);
                 scope.Write(field.Id, jsonScope, ref entryWriter);
                 return;
@@ -318,7 +315,20 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         }
 
     }
-    
+
+    private void AssertOrAdjustIndexingOptionForComplexObject(IndexField field)
+    {
+        Debug.Assert(field.Indexing != FieldIndexing.No, "field.Indexing != FieldIndexing.No");
+
+        if (_index.GetIndexDefinition().Fields.TryGetValue(field.Name, out var fieldFromDefinition) &&
+            fieldFromDefinition.Indexing != FieldIndexing.No)
+        {
+            ThrowIndexingComplexObjectNotSupported(field, _index.Type);
+        }
+
+        DisableIndexingForComplexObject(field);
+    }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     void HandleObject(BlittableJsonReaderObject val, IndexField field, JsonOperationContext indexContext, ref IndexEntryWriter entryWriter,
         IWriterScope scope, bool nestedArray = false)
@@ -330,26 +340,41 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
             return;
         }
         
-        if (field.Indexing is not FieldIndexing.No)
-        {
-            ThrowIndexingComplexObjectNotSupported(field);
-        }
-        
+        if (field.Indexing is not FieldIndexing.No) 
+            AssertOrAdjustIndexingOptionForComplexObject(field);
+
         _knownFields.GetByFieldId(field.Id).Analyzer = null;
         scope.Write(field.Id, val, ref entryWriter);
     }
 
-    internal static void ThrowIndexingComplexObjectNotSupported(object field)
+    private void DisableIndexingForComplexObject(IndexField field)
     {
-        var fieldName = field switch
+        field.Indexing = FieldIndexing.No;
+        if (_knownFields.TryGetByFieldId(field.Id, out var binding))
         {
-            IndexField indexField => indexField.OriginalName ?? indexField.Name,
-            IndexFieldBinding indexFieldBinding => indexFieldBinding.FieldNameAsString,
-            _ => throw new InvalidDataException($"{nameof(ThrowIndexingComplexObjectNotSupported)} requires as input instance of {nameof(IndexField)} or {nameof(IndexFieldBinding)}.")
-        };
-        
-        throw new NotSupportedException(
-            $"The value of '{fieldName}' field is a complex object item. Indexing it as a text isn't supported and it's supposed to have \\\"Indexing\\\" option set to \\\"No\\\". Note that you can still store it and use it in projections.\nIf you need to use it for searching purposes, you have to call ToString() on the field value in the index definition.");
+            binding.OverrideFieldIndexingMode(FieldIndexingMode.No);
+        }
+    }
+
+    internal static void ThrowIndexingComplexObjectNotSupported(IndexField field, IndexType indexType)
+    {
+        var fieldName = field.OriginalName ?? field.Name;
+
+        string exceptionMessage;
+
+        if (indexType.IsStatic())
+        {
+            exceptionMessage =
+                $"The value of '{fieldName}' field is a complex object. Indexing it as a text isn't supported and it's supposed to have \\\"Indexing\\\" option set to \\\"No\\\". " +
+                $"Note that you can still store it and use it in projections.{Environment.NewLine}" +
+                "If you need to use it for searching purposes, you have to call ToString() on the field value in the index definition.";
+        }
+        else
+        {
+            exceptionMessage =
+                $"The value of '{fieldName}' field is a complex object. Indexing it as a text isn't supported. You should consider querying on individual fields of that object.";
+        }
+        throw new NotSupportedException(exceptionMessage);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

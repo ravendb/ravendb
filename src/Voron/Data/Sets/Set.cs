@@ -45,6 +45,8 @@ namespace Voron.Data.Sets
 
         public void Remove(long value)
         {
+            // caller ensures that the value *already exists* in the set
+            
             FindPageFor(value);
             ref var state = ref _stk[_pos];
             state.Page = _llt.ModifyPage(state.Page.PageNumber);
@@ -94,7 +96,7 @@ namespace Voron.Data.Sets
             if (sibling.SpaceUsed + leaf.SpaceUsed > Constants.Storage.PageSize / 2 + Constants.Storage.PageSize / 4)
                 return; // if the two pages together will be bigger than 75%, can skip merging
 
-            using var it = sibling.GetIterator(_llt);
+            var it = sibling.GetIterator(_llt);
             while (it.MoveNext(out long v))
             {
                 if (leaf.Add(_llt, v) == false)
@@ -508,18 +510,16 @@ namespace Voron.Data.Sets
             return new Iterator(this);
         }
 
-        public struct Iterator : IDisposable
+        public struct Iterator 
         {
             private readonly Set _parent;
             private SetLeafPage.Iterator _it;
 
             public long Current;
-            private bool _hasSeek;
 
             public Iterator(Set parent)
             {
                 _parent = parent;
-                _hasSeek = false;
                 Current = default;
                 _parent.FindPageFor(long.MinValue);
                 ref var state = ref _parent._stk[_parent._pos];
@@ -542,45 +542,23 @@ namespace Voron.Data.Sets
                 _parent.FindPageFor(from);
                 ref var state = ref _parent._stk[_parent._pos];
                 var leafPage = new SetLeafPage(state.Page);
-                _it.Dispose();
 
                 _it = leafPage.GetIterator(_parent._llt);
-                if (from != long.MinValue)
-                    _it.SkipTo(from);
-                
-                while (_it.MoveNext(out long v))
-                {
-                    if (v < from)
-                        continue;
-                    Current = v;
-                    _hasSeek = true; // TODO: Fix this, we shouldn't have to do this. 
-                    return true;
-                }
-                return false;
+                return _it.Skip(from);
             }
 
-            public bool Fill(Span<long> matches, out int total, long pruneGreaterThan = long.MaxValue)
+            public bool Fill(Span<long> matches, out int total, long pruneGreaterThanOptimization = long.MaxValue)
             {
                 // We will try to fill.
-                total = 0;
-
-                // FIXME: This is a hack, we shouldnt be doing this but I need to understand if we can make this format
-                //        high performance enough before even start thinking about consistency of usage patterns. 
-                if (_hasSeek)
-                {
-                    // We have seek so we are past one and we need to add it. 
-                    _hasSeek = false;
-                    matches[0] = Current;
-                    total++;
-                }                
-
+                total = _it.TryFill(matches, pruneGreaterThanOptimization);
+                          
                 while(true)
                 {
                     var tmp = matches.Slice(total);
-                    var result = _it.Fill(tmp, out var read, pruneGreaterThan);                                                                                      
+                    _it.Fill(tmp, out var read, out bool hasPrunedResults,  pruneGreaterThanOptimization);                                                                                      
 
-                    // We havent read anything, but we are not getting a pruned result.
-                    if (read == 0 && result == true)
+                    // We haven't read anything, but we are not getting a pruned result.
+                    if (read == 0 && hasPrunedResults == false)
                     {
                         var parent = _parent;
                         if (parent._pos == 0)
@@ -627,7 +605,7 @@ namespace Voron.Data.Sets
                         break; // We are done.  
 
                     // We have reached the end by prunning.
-                    if (result == false)
+                    if (hasPrunedResults)
                         break; // We are done.
                 }
 
@@ -695,11 +673,6 @@ namespace Voron.Data.Sets
             public void Reset()
             {
                 throw new NotSupportedException();
-            }
-
-            public void Dispose()
-            {
-                _it.Dispose();
             }
         }
     }

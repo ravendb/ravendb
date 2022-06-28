@@ -6,6 +6,7 @@ using Sparrow.Server.Compression;
 using Voron.Exceptions;
 using Voron.Global;
 using Voron.Impl;
+using Voron.Impl.Paging;
 using static Sparrow.Hashing;
 
 namespace Voron.Data.CompactTrees
@@ -34,8 +35,6 @@ namespace Voron.Data.CompactTrees
     {
         private readonly Page _page;
         
-        public const int DefaultDictionarySize = NumberOfPagesForDictionary * Constants.Storage.PageSize - PageHeader.SizeOf - PersistentDictionaryHeader.SizeOf;
-
         public long PageNumber => _page.PageNumber;
         
         private readonly HopeEncoder<Encoder3Gram<NativeMemoryEncoderState>> _encoder;
@@ -54,12 +53,13 @@ namespace Voron.Data.CompactTrees
             }
             else
             {
-                var p = llt.AllocatePage(NumberOfPagesForDictionary);
+                var numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(DefaultAllocationSizeForTable);
+                var p = llt.AllocatePage(numberOfPages);
                 p.Flags = PageFlags.Overflow;
-                p.OverflowSize = NumberOfPagesForDictionary * Constants.Storage.PageSize;
+                p.OverflowSize = DefaultAllocationSizeForTable;
 
                 PersistentDictionaryHeader* header = (PersistentDictionaryHeader*)p.DataPointer;
-                header->TableSize = DefaultDictionarySize;
+                header->TableSize = DefaultDictionaryTableSize;
                 header->CurrentId = p.PageNumber;
                 header->PreviousId = 0;
 
@@ -78,9 +78,9 @@ namespace Voron.Data.CompactTrees
 
                 dictionary.AsSpan()
                     .Slice(4) // Discard the table size.
-                    .CopyTo(new Span<byte>(p.DataPointer + sizeof(PersistentDictionaryHeader), DefaultDictionarySize));
+                    .CopyTo(new Span<byte>(p.DataPointer + sizeof(PersistentDictionaryHeader), DefaultDictionaryTableSize));
 
-                header->TableHash = XXHash64.Calculate(p.DataPointer + sizeof(long), DefaultDictionarySize + PersistentDictionaryHeader.SizeOf - sizeof(long));
+                header->TableHash = XXHash64.Calculate(p.DataPointer + sizeof(long), DefaultDictionaryTableSize + PersistentDictionaryHeader.SizeOf - sizeof(long));
 
 #if DEBUG
                 VerifyTable(p);
@@ -99,7 +99,7 @@ namespace Voron.Data.CompactTrees
             where TKeys1 : struct, IReadOnlySpanEnumerator
             where TKeys2 : struct, IReadOnlySpanEnumerator
         {
-            var encoderState = new AdaptiveMemoryEncoderState(DefaultDictionarySize);
+            var encoderState = new AdaptiveMemoryEncoderState(DefaultDictionaryTableSize);
             using var encoder = new HopeEncoder<Encoder3Gram<AdaptiveMemoryEncoderState>>(new Encoder3Gram<AdaptiveMemoryEncoderState>(encoderState));
             encoder.Train(trainEnumerator, MaxDictionaryEntries);                
             
@@ -120,13 +120,11 @@ namespace Voron.Data.CompactTrees
                 return previousDictionary;
 
             int requiredSize = Encoder3Gram<AdaptiveMemoryEncoderState>.GetDictionarySize(encoderState);
-                
             int requiredTotalSize = requiredSize + PageHeader.SizeOf + PersistentDictionaryHeader.SizeOf;
-            int requiredPages = (requiredTotalSize / Constants.Storage.PageSize) + ((requiredTotalSize % Constants.Storage.PageSize) == 0 ? 0 : 1);
-
-            var p = llt.AllocatePage(requiredPages);
+            var numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(requiredTotalSize);
+            var p = llt.AllocatePage(numberOfPages);
             p.Flags = PageFlags.Overflow;
-            p.OverflowSize = requiredPages * Constants.Storage.PageSize;
+            p.OverflowSize = requiredTotalSize;           
 
             PersistentDictionaryHeader* header = (PersistentDictionaryHeader*)p.DataPointer;
             header->CurrentId = p.PageNumber;

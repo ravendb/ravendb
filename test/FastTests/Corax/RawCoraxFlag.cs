@@ -29,62 +29,6 @@ public class RawCoraxFlag : StorageTest
     }
 
     [Fact]
-    public unsafe void StoreBlittableWithoutSavingItIntoIndex()
-    {
-        using var ctx = JsonOperationContext.ShortTermSingleUse();
-        _analyzers = CreateKnownFields(_bsc, false);
-        using var blittable1 = ctx.ReadObject(json1, "foo");
-        using var blittable2 = ctx.ReadObject(json2, "foo");
-        {
-            Span<byte> buffer = new byte[10 * 1024];
-            using var writer = new IndexWriter(Env, _analyzers);
-            foreach (var (id, item) in new[] {("1", blittable1), ("2", blittable2)})
-            {
-                var entry = new IndexEntryWriter(buffer, _analyzers);
-                entry.Write(IndexId, Encodings.Utf8.GetBytes(id));
-                entry.WriteRaw(ContentId, new Span<byte>(item.BasePointer, item.Size));
-                entry.Finish(out var output);
-                writer.Index(id, output);
-            }
-
-            writer.Commit();
-        }
-
-        Span<long> mem = stackalloc long[1024];
-        {
-            using var searcher = new IndexSearcher(Env, _analyzers);
-            var termMatch = searcher.TermQuery("Content", Encodings.Utf8.GetString(blittable1.BasePointer, blittable1.Size));
-            Assert.Equal(0, termMatch.Fill(mem));
-
-            var match = searcher.TermQuery("Id", "1", IndexId);
-            Assert.Equal(1, match.Fill(mem));
-            var result = searcher.GetReaderFor(mem[0]);
-            result.Read(1, out Span<byte> blittableBinary);
-
-            fixed (byte* ptr = &blittableBinary.GetPinnableReference())
-            {
-                var reader = new BlittableJsonReaderObject(ptr, blittableBinary.Length, ctx);
-                Assert.Equal(blittable1.Size, reader.Size);
-                Assert.True(blittable1.Equals(reader));
-            }
-        }
-
-        //Delete part
-        using (var indexWriter = new IndexWriter(Env, _analyzers))
-        {
-            Assert.True(indexWriter.TryDeleteEntry("Id", "1"));
-            indexWriter.Commit();
-        }
-
-        {
-            using var searcher = new IndexSearcher(Env, _analyzers);
-            var match = searcher.AllEntries();
-            Assert.Equal(1, match.Fill(mem));
-            Assert.Equal("2", searcher.GetIdentityFor(mem[0]));
-        }
-    }
-
-    [Fact]
     public unsafe void CanStoreBlittableWithWriterScope()
     {
         using var ctx = JsonOperationContext.ShortTermSingleUse();
@@ -152,7 +96,7 @@ public class RawCoraxFlag : StorageTest
                 .AddBinding(ContentId, contentSlice, LuceneAnalyzerAdapter.Create(new RavenStandardAnalyzer(Lucene.Net.Util.Version.LUCENE_30)))
             : new IndexFieldsMapping(ctx)
                 .AddBinding(IndexId, idSlice)
-                .AddBinding(ContentId, contentSlice);
+                .AddBinding(ContentId, contentSlice, fieldIndexingMode: FieldIndexingMode.No);
     }
 
     public override void Dispose()

@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Tests.Infrastructure;
+using Voron;
 using Voron.Data.Sets;
 using Xunit;
 using Xunit.Abstractions;
@@ -30,14 +32,14 @@ namespace FastTests.Voron.Sets
 
         private List<long> AllValues(Set set)
         {
-            using var it = set.Iterate();
+            var it = set.Iterate();
             var l = new List<long>();
             if (it.Seek(0) == false)
                 return l;
-            do
+            while (it.MoveNext())
             {
                 l.Add(it.Current);
-            } while (it.MoveNext());
+            }
 
             return l;
         }
@@ -51,6 +53,7 @@ namespace FastTests.Voron.Sets
                 tree.Add(5);
                 wtx.Commit();
             }
+
             using (var rtx = Env.ReadTransaction())
             {
                 var tree = rtx.OpenSet("test");
@@ -59,7 +62,7 @@ namespace FastTests.Voron.Sets
             }
         }
 
-        
+
         [Fact]
         public void CanCreateSetAndAddLargeValue()
         {
@@ -69,11 +72,12 @@ namespace FastTests.Voron.Sets
                 tree.Add(5L + int.MaxValue);
                 wtx.Commit();
             }
+
             using (var rtx = Env.ReadTransaction())
             {
                 var tree = rtx.OpenSet("test");
                 var values = AllValues(tree);
-                Assert.Equal(new[] { 5L  +int.MaxValue }, values);
+                Assert.Equal(new[] { 5L + int.MaxValue }, values);
             }
         }
 
@@ -94,6 +98,7 @@ namespace FastTests.Voron.Sets
                 tree.Remove(5);
                 wtx.Commit();
             }
+
             using (var rtx = Env.ReadTransaction())
             {
                 var tree = rtx.OpenSet("test");
@@ -108,20 +113,21 @@ namespace FastTests.Voron.Sets
             using (var wtx = Env.WriteTransaction())
             {
                 var tree = wtx.OpenSet("test");
-
-                var l = new List<long>();
                 foreach (long i in _random)
                 {
-
                     tree.Add(i);
-
                 }
+
                 wtx.Commit();
             }
+
             using (var rtx = Env.ReadTransaction())
             {
                 var tree = rtx.OpenSet("test");
-                Assert.Equal(_data, AllValues(tree));
+                List<long> allValues = AllValues(tree);
+                IEnumerable<long> diff = _data.Except(allValues).ToArray();
+                Assert.Empty(diff);
+                Assert.Equal(_data, allValues);
             }
         }
 
@@ -136,6 +142,7 @@ namespace FastTests.Voron.Sets
                 {
                     tree.Add(i);
                 }
+
                 wtx.Commit();
             }
 
@@ -146,8 +153,10 @@ namespace FastTests.Voron.Sets
                 {
                     tree.Remove(i);
                 }
+
                 wtx.Commit();
             }
+
             using (var rtx = Env.ReadTransaction())
             {
                 var tree = rtx.OpenSet("test");
@@ -169,6 +178,7 @@ namespace FastTests.Voron.Sets
                 {
                     tree.Add(i);
                 }
+
                 wtx.Commit();
             }
 
@@ -179,8 +189,10 @@ namespace FastTests.Voron.Sets
                 {
                     tree.Remove(i);
                 }
+
                 wtx.Commit();
             }
+
             using (var rtx = Env.ReadTransaction())
             {
                 var tree = rtx.OpenSet("test");
@@ -207,13 +219,14 @@ namespace FastTests.Voron.Sets
                         tree.Add(offset);
                     }
                 }
+
                 wtx.Commit();
             }
 
             using (var rtx = Env.ReadTransaction())
             {
                 var tree = rtx.OpenSet("test");
-                using var it = tree.Iterate();
+                var it = tree.Iterate();
                 Assert.True(it.Seek(0));
                 bool movedNext = true;
                 for (int i = 0; i < 10_000; i++)
@@ -222,19 +235,20 @@ namespace FastTests.Voron.Sets
                     for (int j = 0; j < 128; j++)
                     {
                         offset += 2;
+                        movedNext = it.MoveNext();
                         Assert.True(movedNext);
                         Assert.Equal(offset, it.Current);
-                        movedNext = it.MoveNext();
                     }
                 }
-                Assert.False(movedNext);
+
+                Assert.False(it.MoveNext());
             }
         }
 
         [Fact]
         public void CanDeletesSmallNumberOfItems()
         {
-            int count = 3213*2;
+            int count = 3213 * 2;
             using (var wtx = Env.WriteTransaction())
             {
                 var tree = wtx.OpenSet("test");
@@ -242,6 +256,7 @@ namespace FastTests.Voron.Sets
                 {
                     tree.Add(i);
                 }
+
                 wtx.Commit();
             }
 
@@ -252,8 +267,10 @@ namespace FastTests.Voron.Sets
                 {
                     tree.Remove(i);
                 }
+
                 wtx.Commit();
             }
+
             using (var rtx = Env.ReadTransaction())
             {
                 var tree = rtx.OpenSet("test");
@@ -275,6 +292,7 @@ namespace FastTests.Voron.Sets
                 {
                     tree.Add(i);
                 }
+
                 wtx.Commit();
             }
 
@@ -285,8 +303,10 @@ namespace FastTests.Voron.Sets
                 {
                     tree.Remove(i);
                 }
+
                 wtx.Commit();
             }
+
             using (var rtx = Env.ReadTransaction())
             {
                 var tree = rtx.OpenSet("test");
@@ -308,6 +328,7 @@ namespace FastTests.Voron.Sets
                 {
                     tree.Add(i);
                 }
+
                 wtx.Commit();
             }
 
@@ -318,8 +339,10 @@ namespace FastTests.Voron.Sets
                 {
                     tree.Remove(_data[i]);
                 }
+
                 wtx.Commit();
             }
+
             using (var rtx = Env.ReadTransaction())
             {
                 var tree = rtx.OpenSet("test");
@@ -341,12 +364,91 @@ namespace FastTests.Voron.Sets
                 {
                     tree.Add(i);
                 }
+
                 wtx.Commit();
             }
+
             using (var rtx = Env.ReadTransaction())
             {
                 var tree = rtx.OpenSet("test");
                 Assert.Equal(_data, AllValues(tree));
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Voron)]
+        [InlineData(1337, 200000)]
+        [InlineData(73014, 35)]
+        public void CanDeleteAndInsertInRandomOrder(int seed, int size)
+        {
+            static void Shuffle(int[] list, Random rng)
+            {
+                int n = list.Length;
+                while (n > 1)
+                {
+                    n--;
+                    int k = rng.Next(n + 1);
+                    (list[k], list[n]) = (list[n], list[k]);
+                }
+            }
+
+            Random random = new Random(seed);
+
+            var uniqueKeys = new HashSet<int>();
+            var inTreeKeys = new HashSet<int>();
+            var removedKeys = new HashSet<int>();
+
+            int name = random.Next();
+
+            for (int iter = 0; iter < 4; iter++)
+            {
+                using (var wtx = Env.WriteTransaction())
+                {
+                    var set = wtx.OpenSet($"Set({name})");
+                    for (int i = 0; i < size; i++)
+                    {
+                        var rname = (int)(uint)random.Next();
+                        if (!uniqueKeys.Contains(rname))
+                        {
+                            uniqueKeys.Add(rname);
+                            inTreeKeys.Add(rname);
+                            set.Add(rname);
+                        }
+                    }
+
+                    Assert.Equal(inTreeKeys.Count, set.State.NumberOfEntries);
+
+                    wtx.Commit();
+                }
+
+                var values = inTreeKeys.ToArray();
+                Shuffle(values, random);
+
+                using (var wtx = Env.WriteTransaction())
+                {
+                    var set = wtx.OpenSet($"Set({name})");
+                    for (int i = 0; i < size / 2; i++)
+                    {
+                        set.Remove(values[i]);
+                        inTreeKeys.Remove(values[i]);
+                        removedKeys.Add(values[i]);
+
+                        Assert.Equal(inTreeKeys.Count, set.State.NumberOfEntries);
+                    }
+
+                    wtx.Commit();
+                }
+
+                using (var rtx = Env.ReadTransaction())
+                {
+                    var matches = new long[size * 4];
+                    var set = rtx.OpenSet($"Set({name})");
+                    set.Iterate().Fill(matches, out int read);
+                    Assert.Equal(inTreeKeys.Count, read);
+                    for (int i = 0; i < read; i++)
+                    {
+                        Assert.True(inTreeKeys.TryGetValue((int)matches[i], out var _));
+                    }
+                }
             }
         }
     }

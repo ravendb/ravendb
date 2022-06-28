@@ -23,6 +23,7 @@ namespace Raven.Server.Integrations.PostgreSQL
         public Dictionary<string, object> Parameters;
         protected readonly Dictionary<string, PgColumn> Columns;
         private short[] _resultColumnFormatCodes;
+        internal bool IsNamedStatement { get; set; }
 
         protected PgQuery(string queryString, int[] parametersDataTypes)
         {
@@ -34,7 +35,7 @@ namespace Raven.Server.Integrations.PostgreSQL
             _resultColumnFormatCodes = Array.Empty<short>();
         }
 
-        public static PgQuery CreateInstance(string queryText, int[] parametersDataTypes, DocumentDatabase documentDatabase)
+        public static PgQuery CreateInstance(string queryText, int[] parametersDataTypes, DocumentDatabase documentDatabase, PgSession session)
         {
             queryText = queryText.Trim();
 
@@ -51,7 +52,7 @@ namespace Raven.Server.Integrations.PostgreSQL
                     return powerBiQuery;
                 }
 
-                if (HardcodedQuery.TryParse(queryText, parametersDataTypes, out var hardcodedQuery))
+                if (HardcodedQuery.TryParse(queryText, parametersDataTypes, session, out var hardcodedQuery))
                     return hardcodedQuery;
 
                 throw new PgErrorException(

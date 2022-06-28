@@ -335,6 +335,8 @@ namespace Raven.Server.Integrations.PostgreSQL
 
         public override void Dispose()
         {
+            if (IsNamedStatement)
+                return;
             _queryOperationContext?.Dispose();
         }
     }

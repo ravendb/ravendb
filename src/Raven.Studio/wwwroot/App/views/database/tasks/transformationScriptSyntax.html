@@ -52,19 +52,14 @@
                <div class="margin-bottom">
                    <pre class="copy-area"><a href="#" class="copy-button-hidden" title="Copy code sample" data-bind="click: copySample"><i class="icon-copy"></i></a><span data-bind="html: rabbitMqEtlSampleHtml"></span></pre>
                </div>
-               <table class="table table-striped">
+               <table class="table table-striped table-condensed margin-top-lg">
                    <thead>
-                   <tr>
-                       <th>LoadTo Option</th>
-                       <th>Target Exchange</th>
-                       <th>Routing Key</th>
-                   </tr>
                    </thead>
                    <tbody>
                    <tr>
-                       <td><code>loadToUsers({ Name: 'Bob' }, 'admin')</code></td>
-                       <td>Users</td>
-                       <td>admin</td>
+                       <th><strong><em>loadTo</em> Option</strong></th>
+                       <th><strong>Target Exchange</strong></th>
+                       <th><strong>Routing Key</strong></th>
                    </tr>
                    <tr>
                        <td><code>loadToUsers({ Name: 'Bob')</code></td>
@@ -72,9 +67,30 @@
                        <td class="text-muted">empty (default)</td>
                    </tr>
                    <tr>
-                       <td><code>loadToUsers({ Name: 'Bob' }, { Source: ..., Type: .... })</code></td>
+                       <td><code>loadToUsers({ Name: 'Bob' }, 'admin')</code></td>
+                       <td>Users</td>
+                       <td>admin</td>
+                   </tr>
+                   <tr>
+                       <td>
+                           <code>loadToUsers({ Name: 'Bob' }, {<br />
+                               <span class="margin-left-lg">Id: ...,</span><br />
+                               <span class="margin-left-lg">PartitionKey: ...,</span><br />
+                               <span class="margin-left-lg">Source: ...,</span><br />
+                               <span class="margin-left-lg">Type: ...</span><br /> })
+                           </code>
+                       </td>
                        <td>Users</td>
                        <td class="text-muted">empty (default)</td>
+                   </tr>
+                   <tr>
+                       <td>
+                           <code>loadToUsers({ Name: 'Bob' }, 'admin', {<br />
+                               <span class="margin-left-lg">Type: ...,</span><br /> })
+                           </code>
+                       </td>
+                       <td>Users</td>
+                       <td>admin</td>
                    </tr>
                    <tr>
                        <td><code>loadTo('', { Name: 'Bob' }, 'users-queue')</code></td>

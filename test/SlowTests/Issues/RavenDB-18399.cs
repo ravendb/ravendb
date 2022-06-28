@@ -132,7 +132,7 @@ from DateAndTimeOnlies where DateOnly != null update { this.DateOnly = modifyDat
         operation.WaitForCompletion(TimeSpan.FromSeconds(5));
         {
             using var session = store.OpenSession();
-            WaitForUserToContinueTheTest(store);
+
             var result = session.Query<DateAndTimeOnly>().ToList();
             Assert.Null(result.Single(p => p.DateOnly == null).DateOnly);
             Assert.Equal(@do.AddDays(1), result.Single(p=> p.DateOnly != null).DateOnly);
@@ -200,7 +200,7 @@ from DateAndTimeOnlies where DateOnly != null update { this.DateOnly = modifyDat
             var time = default(TimeOnly);
             var resultRawQuery = session.Query<DateAndTimeOnly>().Where(p => p.DateOnly >= date && p.TimeOnly > time);
             var result = resultRawQuery.ToList();
-            WaitForUserToContinueTheTest(store);
+
             Assert.Equal(500, result.Count);
             var definitions = store.Maintenance.Send(new GetIndexesOperation(0, 1));
             foreach (var indexDefinition in definitions)
@@ -302,14 +302,10 @@ from DateAndTimeOnlies where DateOnly != null update { this.DateOnly = modifyDat
                 .OrderBy(p => p.TimeOnly)
                 .ToList();
 
-            Assert.True(
-                testData
-                    .Select(p => p.TimeOnly)
-                    .SequenceEqual(
-                        result
-                            .Select(p => p.TimeOnly)
-                    )
-            );
+            Assert.Equal(100, result.Count);
+            for (int i = 0; i < 100; ++i)
+                Assert.Equal(testData[i].TimeOnly, result[i].TimeOnly);
+            
         }
 
         {
@@ -416,7 +412,6 @@ from DateAndTimeOnlies where DateOnly != null update { this.DateOnly = modifyDat
         index.Execute(store);
         Indexes.WaitForIndexing(store);
         var indexErrors = store.Maintenance.Send(new GetIndexErrorsOperation(new[] {index.IndexName}));
-        WaitForUserToContinueTheTest(store);
         Assert.Equal(0, indexErrors[0].Errors.Length);
         return index;
     }

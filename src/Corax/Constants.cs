@@ -80,6 +80,11 @@ namespace Corax
             }
         }
 
+        public static class Analyzers
+        {
+            internal const int DefaultBufferForAnalyzers = 4 * Sparrow.Global.Constants.Size.Kilobyte;
+        }
+        
         public static class Suggestions
         {
             public const int DefaultNGramSize = 4;
@@ -93,6 +98,5 @@ namespace Corax
                 Levenshtein 
             }
         }
-        
     }
 }
