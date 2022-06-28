@@ -277,7 +277,11 @@ function execute(doc, args){
                 string.Equals(methodName, "startsWith", StringComparison.OrdinalIgnoreCase))
                 operatorType = OperatorType.Equal;
 
-            if (search || exact || spatial != null || isNegated ||
+            if (search)
+            {
+                IsCollectionQuery = AllDocumentsSearch() && IsCollectionQuery; // if AllDocumentsSearch() is false turn IsCollectionQuery into false, else leave it as it is.
+            }
+            else if (exact || spatial != null || isNegated ||
                 operatorType != OperatorType.Equal)
             {
                 IsCollectionQuery = false;
@@ -301,6 +305,21 @@ function execute(doc, args){
             }
 
             WhereFields[indexFieldName] = new WhereField(isFullTextSearch: search, isExactSearch: exact, spatial: spatial);
+
+            bool AllDocumentsSearch()
+            {
+                if (parameters.Count > 1)
+                    return false;
+                foreach (var propertyName in parameters.GetPropertyNames())
+                {
+                    if (parameters.TryGet(propertyName, out string value) == false)
+                        continue;
+
+                    return value == "*";
+                }
+
+                return false;
+            }
         }
 
         private static readonly Dictionary<StringSegment, WithEdgesExpression> EmptyEdges = new Dictionary<StringSegment, WithEdgesExpression>();
