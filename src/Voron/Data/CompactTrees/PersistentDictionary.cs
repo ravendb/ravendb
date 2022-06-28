@@ -120,7 +120,7 @@ namespace Voron.Data.CompactTrees
                 return previousDictionary;
 
             int requiredSize = Encoder3Gram<AdaptiveMemoryEncoderState>.GetDictionarySize(encoderState);
-            int requiredTotalSize = requiredSize + PageHeader.SizeOf + PersistentDictionaryHeader.SizeOf;
+            int requiredTotalSize = requiredSize + PersistentDictionaryHeader.SizeOf;
             var numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(requiredTotalSize);
             var p = llt.AllocatePage(numberOfPages);
             p.Flags = PageFlags.Overflow;
