@@ -172,8 +172,7 @@ class exportDatabaseModel {
             MaxStepsForTransformScript: 10 * 1000,
             ReadLegacyEtag: undefined,
             SkipRevisionCreation: undefined,
-            AuthorizationStatus: undefined,
-            IsShard: undefined
+            AuthorizationStatus: undefined
         };
     }
     
