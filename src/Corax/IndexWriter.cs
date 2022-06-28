@@ -223,7 +223,6 @@ namespace Corax
             var field = _buffer[binding.FieldId];
             int fieldId = binding.FieldId;
             var fieldType = entryReader.GetFieldType(fieldId, out var _);
-            var xd = fieldType;
             switch (fieldType)
             {
                 case IndexEntryFieldType.Empty:

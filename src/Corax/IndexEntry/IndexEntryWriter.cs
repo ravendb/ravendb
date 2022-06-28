@@ -305,7 +305,7 @@ public unsafe ref partial struct IndexEntryWriter
         where TEnumerator : IReadOnlySpanIndexer
     {
         // We will include null values if there are nulls to be stored.           
-        int nullBitStreamSize = values.Length / (sizeof(byte) * 8) + values.Length % (sizeof(byte) * 8) == 0 ? 0 : 1;
+        int nullBitStreamSize = values.Length / (sizeof(byte) * 8) + (values.Length % (sizeof(byte) * 8) == 0 ? 0 : 1);
         byte* nullStream = stackalloc byte[nullBitStreamSize];
         bool hasNull = false;
         for (int i = 0; i < values.Length; i++)
