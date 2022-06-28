@@ -170,6 +170,8 @@ namespace Raven.Server.Documents.Indexes.Workers
                         while (keepRunning)
                         {
                             var hasChanges = false;
+                            earlyExit = false;
+
                             var indexed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                             using (queryContext.OpenReadTransaction())
                             {
@@ -230,7 +232,15 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                                                 if (CanContinueReferenceBatch() == false)
                                                 {
-                                                    _referencesState.Set(actionType, collection, referencedItem, current.LowerSourceDocumentId ?? current.Id, lastIndexedParentEtag, indexContext);
+                                                    // updating the last reference state in order to continue from the place we left off
+                                                    referenceState = new ReferencesState.ReferenceState(referencedItem.Key, referencedItem.Etag, current.LowerSourceDocumentId ?? current.Id, lastIndexedParentEtag);
+
+                                                    if (batchContinuationResult != Index.CanContinueBatchResult.RenewTransaction)
+                                                    {
+                                                        // we save where we last stopped in order to continue running in a NEW indexing batch
+                                                        _referencesState.Set(actionType, collection, referenceState, indexContext);
+                                                    }
+
                                                     earlyExit = true;
                                                     break;
                                                 }
