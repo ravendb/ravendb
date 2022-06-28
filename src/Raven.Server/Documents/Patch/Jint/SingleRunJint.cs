@@ -8,6 +8,7 @@ using Raven.Server.Config;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using V8.Net;
 
 namespace Raven.Server.Documents.Patch.Jint
 {
@@ -28,6 +29,11 @@ namespace Raven.Server.Documents.Patch.Jint
             JsUtils = new JavaScriptUtilsJint(runner, engine);
             JsBlittableBridge = new JsBlittableBridgeJint(engine);
             Initialize(executeScriptsSource);
+        }
+
+        protected override JsHandleJint CreateErrorAndSetLastExceptionIfNeeded(Exception e, JSValueType errorType)
+        {
+            return EngineHandle.CreateError(e, errorType);
         }
 
         public override void CleanInternal()

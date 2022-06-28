@@ -32,6 +32,7 @@ using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.JavaScript;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Operations.Integrations.PostgreSQL;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
@@ -47,6 +48,7 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Analysis;
 using Raven.Server.Documents.Indexes.Sorting;
 using Raven.Server.Documents.Operations;
+using Raven.Server.Documents.Patch.V8;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Integrations.PostgreSQL.Commands;
@@ -197,6 +199,12 @@ namespace Raven.Server.ServerWide
             if (Configuration.Indexing.MaxNumberOfConcurrentlyRunningIndexes != null)
                 ServerWideConcurrentlyRunningIndexesLock = new FifoSemaphore(Configuration.Indexing.MaxNumberOfConcurrentlyRunningIndexes.Value);
 
+            /*if (configuration.JavaScript.EngineType == JavaScriptEngineType.V8)
+            {*/
+                V8EngineEx.EnginePool = new BlockingCollection<V8EngineEx>(configuration.JavaScript.MaxEngineCount);
+            /*}*/
+
+            
             CatastrophicFailureNotification = new CatastrophicFailureNotification((envId, path, exception, stacktrace) =>
             {
                 var message = $"Catastrophic failure in server storage located at '{path}', StackTrace: '{stacktrace}'";
@@ -2478,6 +2486,17 @@ namespace Raven.Server.ServerWide
                             }
                         });
 
+                    if (Configuration.JavaScript.EngineType == JavaScriptEngineType.V8)
+                    {
+                        exceptionAggregator.Execute(() =>
+                        {
+                            foreach (var eng in V8EngineEx.EnginePool.GetConsumingEnumerable())
+                            {
+                                eng.Dispose();
+                            }
+                        });
+                    }
+                    
                     exceptionAggregator.Execute(_shutdownNotification.Dispose);
 
                     exceptionAggregator.Execute(() => _timer?.Dispose());

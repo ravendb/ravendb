@@ -297,10 +297,10 @@ namespace Raven.Server.Documents.Patch.V8
             _doc = doc;
         }
 
-        ~BlittableObjectInstanceV8()
-        {            
-            Dispose(false);
-        }
+        // ~BlittableObjectInstanceV8()
+        // {            
+        //     Dispose(false);
+        // }
 
 
         public void Dispose()
@@ -624,7 +624,7 @@ namespace Raven.Server.Documents.Patch.V8
             }
             catch (Exception e) 
             {
-                return _engineEx.CreateError(e.ToString(), JSValueType.ExecutionError);
+                return _engineEx.CreateError(e, JSValueType.ExecutionError);
             }
         }
 

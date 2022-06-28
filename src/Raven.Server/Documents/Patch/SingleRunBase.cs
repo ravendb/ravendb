@@ -43,7 +43,7 @@ public abstract class SingleRunBase
 public abstract class SingleRun<T> : SingleRunBase, ISingleRun
     where T : struct, IJsHandle<T>
 {
-    public Exception LastException { get; set; }
+
     public void CleanStuff()
     {
         ReadOnly = false;
@@ -223,14 +223,19 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
         }
     }
 
+    protected abstract T CreateErrorAndSetLastExceptionIfNeeded(Exception e, JSValueType errorType);
+    
     public T LoadDocument(T self, T[] args)
     {
         using (_loadScope = _loadScope?.Start() ?? _scope?.For(nameof(QueryTimingsScope.Names.Load)))
         {
-            AssertValidDatabaseContext("load");
+            if (AssertValidDatabaseContext("load", out var val) == false)
+            {
+                return val;
+            }
 
             if (args.Length != 1)
-                throw new InvalidOperationException($"load(id | ids) must be called with a single string argument");
+                return CreateErrorAndSetLastExceptionIfNeeded(new InvalidOperationException($"load(id | ids) must be called with a single string argument"), JSValueType.ExecutionError);
 
             if (args[0].IsNull || args[0].IsUndefined)
                 return args[0];
@@ -246,7 +251,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
                     using (var jsItem = jsArray.GetProperty(i))
                     {
                         if (jsItem.IsStringEx == false)
-                            throw new InvalidOperationException("load(ids) must be called with a array of strings, but got " + jsItem.ValueType + " - " + jsItem);
+                            return CreateErrorAndSetLastExceptionIfNeeded(new InvalidOperationException("load(ids) must be called with a array of strings, but got " + jsItem.ValueType + " - " + jsItem), JSValueType.ExecutionError);
 
                         results.Add(LoadDocumentInternal(jsItem.AsString));
                     }
@@ -256,7 +261,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
             }
 
             if (args[0].IsStringEx == false)
-                throw new InvalidOperationException("load(id | ids) must be called with a single string or array argument");
+                return CreateErrorAndSetLastExceptionIfNeeded(new InvalidOperationException("load(id | ids) must be called with a single string or array argument"), JSValueType.ExecutionError);
 
             return LoadDocumentInternal(args[0].AsString);
         }
@@ -266,12 +271,15 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
     {
         using (_loadScope = _loadScope?.Start() ?? _scope?.For(nameof(QueryTimingsScope.Names.Load)))
         {
-            AssertValidDatabaseContext("loadPath");
+            if (AssertValidDatabaseContext(("loadPath"), out var val) == false)
+            {
+                return val;
+            }
 
             if (args.Length != 2 ||
                 (args[0].IsNull == false && args[0].IsUndefined == false && args[0].IsObject == false)
                 || args[1].IsString == false)
-                throw new InvalidOperationException("loadPath(doc, path) must be called with a document and path");
+                return CreateErrorAndSetLastExceptionIfNeeded(new InvalidOperationException("loadPath(doc, path) must be called with a document and path"), JSValueType.ExecutionError);
 
             if (args[0].IsNull || args[1].IsUndefined)
                 return args[0];
@@ -295,7 +303,9 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
                 return LoadDocumentInternal(_documentIds.First());
             }
 
-            throw new InvalidOperationException("loadPath(doc, path) must be called with a valid document instance, but got a JS object instead");
+            return CreateErrorAndSetLastExceptionIfNeeded(
+                new InvalidOperationException("loadPath(doc, path) must be called with a valid document instance, but got a JS object instead"),
+                JSValueType.ExecutionError);
         }
     }
 
@@ -318,10 +328,10 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
     public T DeleteDocument(T self, T[] args)
     {
         if (args.Length != 1 && args.Length != 2)
-            throw new InvalidOperationException("delete(id, changeVector) must be called with at least one parameter");
+            return CreateErrorAndSetLastExceptionIfNeeded(new InvalidOperationException("delete(id, changeVector) must be called with at least one parameter"), JSValueType.ExecutionError);
 
         if (args[0].IsString == false)
-            throw new InvalidOperationException("delete(id, changeVector) id argument must be a string");
+            return CreateErrorAndSetLastExceptionIfNeeded(new InvalidOperationException("delete(id, changeVector) id argument must be a string"), JSValueType.ExecutionError);
 
         var id = args[0].AsString;
         string changeVector = null;
@@ -330,8 +340,15 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
             changeVector = args[1].AsString;
 
         PutOrDeleteCalled = true;
-        AssertValidDatabaseContext("delete document");
-        AssertNotReadOnly();
+        if (AssertValidDatabaseContext(("delete document"), out var val) == false)
+        {
+            return val;
+        }
+
+        if (AssertNotReadOnly(out val) == false)
+        {
+            return val;
+        }
 
         var result = _database.DocumentsStorage.Delete(_docsCtx, id, changeVector);
 
@@ -351,17 +368,26 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
         string changeVector = null;
 
         if (args.Length != 2 && args.Length != 3)
-            throw new InvalidOperationException("put(id, doc, changeVector) must be called with called with 2 or 3 arguments only");
-        AssertValidDatabaseContext("put document");
-        AssertNotReadOnly();
+            return CreateErrorAndSetLastExceptionIfNeeded(new InvalidOperationException("put(id, doc, changeVector) must be called with called with 2 or 3 arguments only"),
+                JSValueType.ExecutionError);
+        if (AssertValidDatabaseContext(("put document"), out var val) == false)
+        {
+            return val;
+        }
+
+        if (AssertNotReadOnly(out val) == false)
+        {
+            return val;
+        }
+
         if (args[0].IsString == false && args[0].IsNull == false && args[0].IsUndefined == false)
-            AssertValidId();
+            return AssertValidId();
 
         var id = args[0].IsNull || args[0].IsUndefined ? null : args[0].AsString;
 
         if (args[1].IsObject == false)
-            throw new InvalidOperationException(
-                $"Created document must be a valid object which is not null or empty. Document ID: '{id}'.");
+            return CreateErrorAndSetLastExceptionIfNeeded(new InvalidOperationException(
+                $"Created document must be a valid object which is not null or empty. Document ID: '{id}'."), JSValueType.ExecutionError);
 
         PutOrDeleteCalled = true;
 
@@ -369,8 +395,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
             if (args[2].IsString)
                 changeVector = args[2].AsString;
             else if (args[2].IsNull == false && args[0].IsUndefined == false)
-                throw new InvalidOperationException(
-                    $"The change vector must be a string or null. Document ID: '{id}'.");
+                return CreateErrorAndSetLastExceptionIfNeeded(new InvalidOperationException($"The change vector must be a string or null. Document ID: '{id}'."), JSValueType.ExecutionError);
 
         BlittableJsonReaderObject reader = null;
 
@@ -410,10 +435,13 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
 
     public T CompareExchange(T self, T[] args)
     {
-        AssertValidDatabaseContext("cmpxchg");
+        if (AssertValidDatabaseContext(("cmpxchg"), out var val) == false)
+        {
+            return val;
+        }
 
         if (args.Length != 1 && args.Length != 2 || args[0].IsStringEx == false)
-            throw new InvalidOperationException("cmpxchg(key) must be called with a single string argument");
+            return CreateErrorAndSetLastExceptionIfNeeded(new InvalidOperationException("cmpxchg(key) must be called with a single string argument"), JSValueType.ExecutionError);
 
         return CmpXchangeInternal(CompareExchangeKey.GetStorageKey(_database.Name, args[0].AsString));
     }
@@ -451,10 +479,13 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
     private T GetCounterInternal(T[] args, bool raw = false)
     {
         var signature = raw ? "counterRaw(doc, name)" : "counter(doc, name)";
-        AssertValidDatabaseContext(signature);
+        if (AssertValidDatabaseContext((signature), out var val) == false)
+        {
+            return val;
+        }
 
         if (args.Length != 2)
-            throw new InvalidOperationException($"{signature} must be called with exactly 2 arguments");
+           return CreateErrorAndSetLastExceptionIfNeeded(new InvalidOperationException($"{signature} must be called with exactly 2 arguments"), JSValueType.ExecutionError);
 
         string id;
         if (args[0].IsObject && args[0].AsObject() is IBlittableObjectInstance<T> doc)
@@ -467,12 +498,12 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
         }
         else
         {
-            throw new InvalidOperationException($"{signature}: 'doc' must be a string argument (the document id) or the actual document instance itself");
+            return CreateErrorAndSetLastExceptionIfNeeded(new InvalidOperationException($"{signature}: 'doc' must be a string argument (the document id) or the actual document instance itself"), JSValueType.ExecutionError);
         }
 
         if (args[1].IsStringEx == false)
         {
-            throw new InvalidOperationException($"{signature}: 'name' must be a string argument");
+            return CreateErrorAndSetLastExceptionIfNeeded(new InvalidOperationException($"{signature}: 'name' must be a string argument"), JSValueType.ExecutionError);
         }
 
         var name = args[1].AsString;
@@ -484,7 +515,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
         if (raw == false)
         {
             T counterValue;
-            bool exists = false;
+            bool exists;
             var counterValue1 = _database.DocumentsStorage.CountersStorage.GetCounterValue(_docsCtx, id, name);
             if (counterValue1.HasValue)
             {
@@ -525,11 +556,14 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
 
     public T IncrementCounter(T self, T[] args)
     {
-        AssertValidDatabaseContext("incrementCounter");
+        if (AssertValidDatabaseContext(("incrementCounter"), out var val) == false)
+        {
+            return val;
+        }
 
         if (args.Length < 2 || args.Length > 3)
         {
-            ThrowInvalidIncrementCounterArgs(args);
+            return ThrowInvalidIncrementCounterArgs(args);
         }
 
         var signature = args.Length == 2 ? "incrementCounter(doc, name)" : "incrementCounter(doc, name, value)";
@@ -548,7 +582,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
             var document = _database.DocumentsStorage.Get(_docsCtx, id);
             if (document == null)
             {
-                ThrowMissingDocument(id);
+               return ThrowMissingDocument(id);
                 Debug.Assert(false); // never hit
             }
 
@@ -556,23 +590,23 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
         }
         else
         {
-            ThrowInvalidDocumentArgsType(signature);
+            return ThrowInvalidDocumentArgsType(signature);
         }
 
         Debug.Assert(id != null && docBlittable != null);
 
         if (args[1].IsStringEx == false)
-            ThrowInvalidCounterName(signature);
+            return ThrowInvalidCounterName(signature);
 
         var name = args[1].AsString;
         if (string.IsNullOrWhiteSpace(name))
-            ThrowInvalidCounterName(signature);
+            return ThrowInvalidCounterName(signature);
 
         double value = 1;
         if (args.Length == 3)
         {
             if (args[2].IsNumber == false)
-                ThrowInvalidCounterValue();
+                return ThrowInvalidCounterValue();
             value = args[2].AsDouble;
         }
 
@@ -609,11 +643,14 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
 
     public T DeleteCounter(T self, T[] args)
     {
-        AssertValidDatabaseContext("deleteCounter");
+        if (AssertValidDatabaseContext(("deleteCounter"), out var val) == false)
+        {
+            return val;
+        }
 
         if (args.Length != 2)
         {
-            ThrowInvalidDeleteCounterArgs();
+            return ThrowInvalidDeleteCounterArgs();
         }
 
         string id = null;
@@ -631,7 +668,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
             var document = _database.DocumentsStorage.Get(_docsCtx, id);
             if (document == null)
             {
-                ThrowMissingDocument(id);
+                return ThrowMissingDocument(id);
                 Debug.Assert(false); // never hit
             }
 
@@ -639,14 +676,14 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
         }
         else
         {
-            ThrowInvalidDeleteCounterDocumentArg();
+            return ThrowInvalidDeleteCounterDocumentArg();
         }
 
         Debug.Assert(id != null && docBlittable != null);
 
         if (args[1].IsStringEx == false)
         {
-            ThrowDeleteCounterNameArg();
+            return ThrowDeleteCounterNameArg();
         }
 
         var name = args[1].AsString;
@@ -666,13 +703,13 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
     public T GetLastModified(T self, T[] args)
     {
         if (args.Length != 1)
-            throw new InvalidOperationException("lastModified(doc) must be called with a single argument");
+           return CreateErrorAndSetLastExceptionIfNeeded(new InvalidOperationException("lastModified(doc) must be called with a single argument"), JSValueType.ExecutionError);
 
         if (args[0].IsNull || args[0].IsUndefined)
             return args[0];
 
         if (args[0].IsObject == false)
-            throw new InvalidOperationException("lastModified(doc) must be called with an object argument");
+            return CreateErrorAndSetLastExceptionIfNeeded(new InvalidOperationException("lastModified(doc) must be called with an object argument"), JSValueType.ExecutionError);
 
         if (args[0].AsObject() is IBlittableObjectInstance<T> doc)
         {
@@ -691,7 +728,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
     public T StartsWith(T self, T[] args)
     {
         if (args.Length != 2 || args[0].IsStringEx == false || args[1].IsStringEx == false)
-            throw new InvalidOperationException("startsWith(text, contained) must be called with two string parameters");
+            return CreateErrorAndSetLastExceptionIfNeeded(new InvalidOperationException("startsWith(text, contained) must be called with two string parameters"), JSValueType.ExecutionError);
 
         return EngineHandle.CreateValue(args[0].AsString.StartsWith(args[1].AsString, StringComparison.OrdinalIgnoreCase));
     }
@@ -699,7 +736,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
     public T EndsWith(T self, T[] args)
     {
         if (args.Length != 2 || args[0].IsStringEx == false || args[1].IsStringEx == false)
-            throw new InvalidOperationException("endsWith(text, contained) must be called with two string parameters");
+            return CreateErrorAndSetLastExceptionIfNeeded(new InvalidOperationException("endsWith(text, contained) must be called with two string parameters"), JSValueType.ExecutionError);
 
         return EngineHandle.CreateValue(args[0].AsString.EndsWith(args[1].AsString, StringComparison.OrdinalIgnoreCase));
     }
@@ -707,7 +744,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
     public T Regex(T self, T[] args)
     {
         if (args.Length != 2 || args[0].IsStringEx == false || args[1].IsStringEx == false)
-            throw new InvalidOperationException("regex(text, regex) must be called with two string parameters");
+            return CreateErrorAndSetLastExceptionIfNeeded(new InvalidOperationException("regex(text, regex) must be called with two string parameters"), JSValueType.ExecutionError);
 
         var regex = _regexCache.Get(args[1].AsString);
 
@@ -717,7 +754,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
     public T ConvertJsTimeToTimeSpanString(T self, T[] args)
     {
         if (args.Length != 1 || args[0].IsNumber == false)
-            throw new InvalidOperationException("convertJsTimeToTimeSpanString(ticks) must be called with a single long argument");
+            return CreateErrorAndSetLastExceptionIfNeeded(new InvalidOperationException("convertJsTimeToTimeSpanString(ticks) must be called with a single long argument"), JSValueType.ExecutionError);
 
         var ticks = Convert.ToInt64(args[0].AsDouble) * 10000;
 
@@ -731,7 +768,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
         if (args.Length == 1)
         {
             if (args[0].IsNumber == false)
-                throw new InvalidOperationException("convertToTimeSpanString(ticks) must be called with a single long argument");
+                return CreateErrorAndSetLastExceptionIfNeeded(new InvalidOperationException("convertToTimeSpanString(ticks) must be called with a single long argument"), JSValueType.ExecutionError);
 
             var ticks = Convert.ToInt64(args[0].AsDouble);
             var asTimeSpan = new TimeSpan(ticks);
@@ -741,7 +778,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
         if (args.Length == 3)
         {
             if (args[0].IsNumber == false || args[1].IsNumber == false || args[2].IsNumber == false)
-                throw new InvalidOperationException("convertToTimeSpanString(hours, minutes, seconds) must be called with integer values");
+                return CreateErrorAndSetLastExceptionIfNeeded(new InvalidOperationException("convertToTimeSpanString(hours, minutes, seconds) must be called with integer values"), JSValueType.ExecutionError);
 
             var hours = Convert.ToInt32(args[0].AsInt32);
             var minutes = Convert.ToInt32(args[1].AsInt32);
@@ -754,7 +791,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
         if (args.Length == 4)
         {
             if (args[0].IsNumber == false || args[1].IsNumber == false || args[2].IsNumber == false || args[3].IsNumber == false)
-                throw new InvalidOperationException("convertToTimeSpanString(days, hours, minutes, seconds) must be called with integer values");
+                return CreateErrorAndSetLastExceptionIfNeeded(new InvalidOperationException("convertToTimeSpanString(days, hours, minutes, seconds) must be called with integer values"), JSValueType.ExecutionError);
 
             var days = Convert.ToInt32(args[0].AsInt32);
             var hours = Convert.ToInt32(args[1].AsInt32);
@@ -768,7 +805,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
         if (args.Length == 5)
         {
             if (args[0].IsNumber == false || args[1].IsNumber == false || args[2].IsNumber == false || args[3].IsNumber == false || args[4].IsNumber == false)
-                throw new InvalidOperationException("convertToTimeSpanString(days, hours, minutes, seconds, milliseconds) must be called with integer values");
+                return CreateErrorAndSetLastExceptionIfNeeded(new InvalidOperationException("convertToTimeSpanString(days, hours, minutes, seconds, milliseconds) must be called with integer values"), JSValueType.ExecutionError);
 
             var days = Convert.ToInt32(args[0].AsInt32);
             var hours = Convert.ToInt32(args[1].AsInt32);
@@ -780,19 +817,19 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
             return EngineHandle.CreateValue(asTimeSpan.ToString());
         }
 
-        throw new InvalidOperationException("supported overloads are: " +
+        return CreateErrorAndSetLastExceptionIfNeeded(new InvalidOperationException("supported overloads are: " +
                                             "convertToTimeSpanString(ticks), " +
                                             "convertToTimeSpanString(hours, minutes, seconds), " +
                                             "convertToTimeSpanString(days, hours, minutes, seconds), " +
-                                            "convertToTimeSpanString(days, hours, minutes, seconds, milliseconds)");
+                                            "convertToTimeSpanString(days, hours, minutes, seconds, milliseconds)"), JSValueType.ExecutionError);
     }
 
     public T CompareDates(T self, T[] args)
     {
         if (args.Length < 1 || args.Length > 3)
         {
-            throw new InvalidOperationException($"No overload for method 'compareDates' takes {args.Length} arguments. " +
-                                                "Supported overloads are : compareDates(date1, date2), compareDates(date1, date2, operationType)");
+           return CreateErrorAndSetLastExceptionIfNeeded(new InvalidOperationException($"No overload for method 'compareDates' takes {args.Length} arguments. " +
+                                                "Supported overloads are : compareDates(date1, date2), compareDates(date1, date2, operationType)"), JSValueType.ExecutionError);
         }
 
         ExpressionType binaryOperationType;
@@ -803,7 +840,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
         else if (args[2].IsStringEx == false ||
                  Enum.TryParse(args[2].AsString, out binaryOperationType) == false)
         {
-            throw new InvalidOperationException("compareDates(date1, date2, operationType) : 'operationType' must be a string argument representing a valid 'ExpressionType'");
+            return CreateErrorAndSetLastExceptionIfNeeded(new InvalidOperationException("compareDates(date1, date2, operationType) : 'operationType' must be a string argument representing a valid 'ExpressionType'"), JSValueType.ExecutionError);
         }
 
         dynamic date1, date2;
@@ -817,8 +854,21 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
         else
         {
             const string signature = "compareDates(date1, date2, binaryOp)";
-            date1 = GetDateArg(args[0], signature, "date1");
-            date2 = GetDateArg(args[1], signature, "date2");
+
+            if (GetDateArg(args[0], signature, "date1", out var dt1) == false)
+            {
+                return CreateErrorAndSetLastExceptionIfNeeded(new ArgumentException($"{signature} : date1 must be of type 'DateInstance' or a DateTime string. {GetTypes(args[0])}"),
+                    JSValueType.ExecutionError);
+            }
+
+            if (GetDateArg(args[1], signature, "date2", out var dt2) == false)
+            {
+                return CreateErrorAndSetLastExceptionIfNeeded(new ArgumentException($"{signature} : date2 must be of type 'DateInstance' or a DateTime string. {GetTypes(args[1])}"),
+                    JSValueType.ExecutionError);
+            }
+
+            date1 = dt1;
+            date2 = dt2;
         }
 
         switch (binaryOperationType)
@@ -838,40 +888,45 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
             case ExpressionType.NotEqual:
                 return date1 != date2 ? EngineHandle.True : EngineHandle.False;
             default:
-                throw new InvalidOperationException($"compareDates(date1, date2, binaryOp) : unsupported binary operation '{binaryOperationType}'");
+                return CreateErrorAndSetLastExceptionIfNeeded(new InvalidOperationException($"compareDates(date1, date2, binaryOp) : unsupported binary operation '{binaryOperationType}'"), JSValueType.ExecutionError);
         }
     }
 
-    public unsafe DateTime GetDateArg(T arg, string signature, string argName)
+    public unsafe bool GetDateArg(T arg, string signature, string argName, out DateTime val)
     {
         if (arg.IsDate)
         {
-            return arg.AsDate;
+            val = arg.AsDate;
+            return true;
         }
 
         if (arg.IsStringEx == false)
-            ThrowInvalidDateArgument();
+        {
+            val = default;
+            return false;
+        }
 
         var s = arg.AsString;
         fixed (char* pValue = s)
         {
             var result = LazyStringParser.TryParseDateTime(pValue, s.Length, out DateTime dt, out _, properlyParseThreeDigitsMilliseconds: true);
             if (result != LazyStringParser.Result.DateTime)
-                ThrowInvalidDateArgument();
-
-            return dt;
+            {
+                val = default;
+                return false;
+            }
+                  
+            val = dt;
+            return true;
         }
-
-        void ThrowInvalidDateArgument() =>
-            throw new ArgumentException($"{signature} : {argName} must be of type 'DateInstance' or a DateTime string. {GetTypes(arg)}");
     }
 
     public unsafe T ToStringWithFormat(T self, T[] args)
     {
         if (args.Length < 1 || args.Length > 3)
         {
-            throw new InvalidOperationException($"No overload for method 'toStringWithFormat' takes {args.Length} arguments. " +
-                                                "Supported overloads are : toStringWithFormat(object), toStringWithFormat(object, format), toStringWithFormat(object, culture), toStringWithFormat(object, format, culture).");
+            return CreateErrorAndSetLastExceptionIfNeeded(new InvalidOperationException($"No overload for method 'toStringWithFormat' takes {args.Length} arguments. " +
+                                                                          "Supported overloads are : toStringWithFormat(object), toStringWithFormat(object, format), toStringWithFormat(object, culture), toStringWithFormat(object, format, culture)."), JSValueType.ExecutionError);
         }
 
         var cultureInfo = CultureInfo.InvariantCulture;
@@ -881,7 +936,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
         {
             if (args[i].IsStringEx == false)
             {
-                throw new InvalidOperationException("toStringWithFormat : 'format' and 'culture' must be string arguments");
+                return CreateErrorAndSetLastExceptionIfNeeded(new InvalidOperationException("toStringWithFormat : 'format' and 'culture' must be string arguments"), JSValueType.ExecutionError);
             }
 
             var arg = args[i].AsString;
@@ -923,14 +978,15 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
                             EngineHandle.CreateValue(dt.ToString(format, cultureInfo)) :
                             EngineHandle.CreateValue(dt.ToString(cultureInfo));
                     default:
-                        throw new InvalidOperationException("toStringWithFormat(dateString) : 'dateString' is not a valid DateTime string");
+                       return CreateErrorAndSetLastExceptionIfNeeded(new InvalidOperationException("toStringWithFormat(dateString) : 'dateString' is not a valid DateTime string"), JSValueType.ExecutionError);
                 }
             }
         }
 
         if (args[0].IsBoolean == false)
         {
-            throw new InvalidOperationException($"toStringWithFormat() is not supported for objects of type {args[0].ValueType} ");
+            return CreateErrorAndSetLastExceptionIfNeeded(new InvalidOperationException($"toStringWithFormat() is not supported for objects of type {args[0].ValueType} "),
+                JSValueType.ExecutionError);
         }
 
         var boolean = args[0].AsBoolean;
@@ -940,7 +996,8 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
     public T ScalarToRawString(T self, T[] args)
     {
         if (args.Length != 2)
-            throw new InvalidOperationException("scalarToRawString(document, lambdaToField) may be called on with two parameters only");
+            return CreateErrorAndSetLastExceptionIfNeeded(new InvalidOperationException("scalarToRawString(document, lambdaToField) may be called on with two parameters only"),
+                JSValueType.ExecutionError);
 
         T firstParam = args[0];
         if (firstParam.IsObject && args[0].AsObject() is IBlittableObjectInstance<T> selfInstance)
@@ -984,17 +1041,17 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
                             case long:
                                 return CreateObjectBinder(type, value);
                             default:
-                                throw new ArgumentException($"Invalid value type, expected int or long but got '{value.GetType().FullName}'");
+                                return CreateErrorAndSetLastExceptionIfNeeded(new ArgumentException($"Invalid value type, expected int or long but got '{value.GetType().FullName}'"), JSValueType.ExecutionError);
                         }
                     default:
                         return CreateObjectBinder(type, value);
                 }
             }
 
-            throw new InvalidOperationException("scalarToRawString(document, lambdaToField) must be called with a second lambda argument");
+            return CreateErrorAndSetLastExceptionIfNeeded(new InvalidOperationException("scalarToRawString(document, lambdaToField) must be called with a second lambda argument"), JSValueType.ExecutionError);
         }
 
-        throw new InvalidOperationException("scalarToRawString(document, lambdaToField) may be called with a document first parameter only");
+        return CreateErrorAndSetLastExceptionIfNeeded(new InvalidOperationException("scalarToRawString(document, lambdaToField) may be called with a document first parameter only"), JSValueType.ExecutionError);
     }
 
     public abstract void CleanInternal();
@@ -1061,7 +1118,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
     public T Spatial_Distance(T self, T[] args)
     {
         if (args.Length < 4 && args.Length > 5)
-            throw new ArgumentException("Called with expected number of arguments, expected: spatial.distance(lat1, lng1, lat2, lng2, kilometers | miles | cartesian)");
+            return CreateErrorAndSetLastExceptionIfNeeded(new ArgumentException("Called with expected number of arguments, expected: spatial.distance(lat1, lng1, lat2, lng2, kilometers | miles | cartesian)"), JSValueType.ExecutionError);
 
         for (int i = 0; i < 4; i++)
         {
@@ -1081,7 +1138,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
                 return EngineHandle.CreateValue(SpatialDistanceFieldComparatorSource.SpatialDistanceFieldComparator.CartesianDistance(lat1, lng1, lat2, lng2));
 
             if (Enum.TryParse(args[4].AsString, ignoreCase: true, out units) == false)
-                throw new ArgumentException("Unable to parse units " + args[5] + ", expected: 'kilometers' or 'miles'");
+                return CreateErrorAndSetLastExceptionIfNeeded(new ArgumentException("Unable to parse units " + args[5] + ", expected: 'kilometers' or 'miles'"), JSValueType.ExecutionError);
         }
 
         var result = SpatialDistanceFieldComparatorSource.SpatialDistanceFieldComparator.HaverstineDistanceInMiles(lat1, lng1, lat2, lng2);
@@ -1094,7 +1151,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
     public T IncludeDoc(T self, T[] args)
     {
         if (args.Length != 1)
-            throw new InvalidOperationException("include(id) must be called with a single argument");
+            return CreateErrorAndSetLastExceptionIfNeeded(new InvalidOperationException("include(id) must be called with a single argument"), JSValueType.ExecutionError);
 
         if (args[0].IsNull || args[0].IsUndefined)
             return args[0];
@@ -1119,7 +1176,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
         }
 
         if (args[0].IsStringEx == false)
-            throw new InvalidOperationException("include(doc) must be called with an string or string array argument");
+            return CreateErrorAndSetLastExceptionIfNeeded(new InvalidOperationException("include(doc) must be called with an string or string array argument"), JSValueType.ExecutionError);
 
         var id = args[0].AsString;
 
@@ -1133,7 +1190,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
     public T IncludeCompareExchangeValue(T self, T[] args)
     {
         if (args.Length != 1)
-            throw new InvalidOperationException("includes.cmpxchg(key) must be called with a single argument");
+            return CreateErrorAndSetLastExceptionIfNeeded(new InvalidOperationException("includes.cmpxchg(key) must be called with a single argument"), JSValueType.ExecutionError);
 
         if (args[0].IsNull || args[0].IsUndefined)
             return self;
@@ -1156,7 +1213,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
         }
 
         if (args[0].IsStringEx == false)
-            throw new InvalidOperationException("includes.cmpxchg(key) must be called with an string or string array argument");
+            return CreateErrorAndSetLastExceptionIfNeeded(new InvalidOperationException("includes.cmpxchg(key) must be called with an string or string array argument"), JSValueType.ExecutionError);
 
         var key = args[0].AsString;
 
@@ -1209,12 +1266,19 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
 
     public T InvokeTimeSeriesFunction(string name, T[] args)
     {
-        AssertValidDatabaseContext("InvokeTimeSeriesFunction");
+        if (AssertValidDatabaseContext(("InvokeTimeSeriesFunction"), out var val) == false)
+        {
+            return val;
+        }
 
         if (_runner.TimeSeriesDeclaration.TryGetValue(name, out var func) == false)
-            throw new InvalidOperationException($"Failed to invoke time series function. Unknown time series name '{name}'.");
+            return CreateErrorAndSetLastExceptionIfNeeded(new InvalidOperationException($"Failed to invoke time series function. Unknown time series name '{name}'."),
+                JSValueType.ExecutionError);
 
-        var tsFunctionArgs = GetTimeSeriesFunctionArgs(name, args, out string docId, out var lazyIds);
+        if (GetTimeSeriesFunctionArgs(name, args, out string docId, out var lazyIds, out var tsFunctionArgs, out var e) == false)
+        {
+            return e;
+        }
 
         var queryParams = ((Document)tsFunctionArgs[^1]).Data;
 
@@ -1233,10 +1297,13 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
 
     public T TimeSeries(T self, T[] args)
     {
-        AssertValidDatabaseContext(_timeSeriesSignature);
+        if (AssertValidDatabaseContext((_timeSeriesSignature), out var val) == false)
+        {
+            return val;
+        }
 
         if (args.Length != 2)
-            throw new ArgumentException($"{_timeSeriesSignature}: This method requires 2 arguments but was called with {args.Length}");
+            return CreateErrorAndSetLastExceptionIfNeeded(new ArgumentException($"{_timeSeriesSignature}: This method requires 2 arguments but was called with {args.Length}"), JSValueType.ExecutionError);
 
         var obj = EngineHandle.CreateObject();
         obj.SetProperty("append", EngineHandle.CreateClrCallBack("append", AppendTimeSeries));
@@ -1253,13 +1320,26 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
     {
         using var document = self.GetProperty("doc");
         using var name = self.GetProperty("name");
-        AssertValidDatabaseContext("get");
+        if (AssertValidDatabaseContext(("get"), out var val) == false)
+        {
+            return val;
+        }
 
         const string getRangeSignature = "get(from, to)";
         const string getAllSignature = "get()";
 
-        var id = GetIdFromArg(document, _timeSeriesSignature);
-        var timeSeries = GetStringArg(name, _timeSeriesSignature, "name");
+        if (GetIdFromArg(document, _timeSeriesSignature, out var id) == false)
+        {
+            return CreateErrorAndSetLastExceptionIfNeeded(
+                new InvalidOperationException(
+                    $"{_timeSeriesSignature}: 'doc' must be a string argument (the document id) or the actual document instance itself. {GetTypes(document)}"),
+                JSValueType.ExecutionError);
+        }
+
+        if (GetStringArg(name, _timeSeriesSignature, "name", out var timeSeries, out var e) == false)
+        {
+            return e;
+        }
 
         DateTime from, to;
         switch (args.Length)
@@ -1269,11 +1349,27 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
                 to = DateTime.MaxValue;
                 break;
             case 2:
-                from = GetTimeSeriesDateArg(args[0], getRangeSignature, "from");
-                to = GetTimeSeriesDateArg(args[1], getRangeSignature, "to");
+                if (GetTimeSeriesDateArg(args[0], getRangeSignature, "from", out from, out var exception) == false)
+                {
+                    return CreateErrorAndSetLastExceptionIfNeeded(
+                        exception ?? new ArgumentException($"{getRangeSignature} : 'from' must be of type 'DateInstance' or a DateTime string. {GetTypes(args[0])}"),
+                        JSValueType.ExecutionError);
+                }
+
+                if (GetTimeSeriesDateArg(args[1], getRangeSignature, "to", out to, out exception) == false)
+                {
+                    return CreateErrorAndSetLastExceptionIfNeeded(exception ??
+                                                    new ArgumentException(
+                                                        $"{getRangeSignature} : 'to' must be of type 'DateInstance' or a DateTime string. {GetTypes(args[1])}"),
+                        JSValueType.ExecutionError);
+                }
+
                 break;
             default:
-                throw new ArgumentException($"'get' method has only the overloads: '{getRangeSignature}' or '{getAllSignature}', but was called with {args.Length} arguments.");
+                return CreateErrorAndSetLastExceptionIfNeeded(
+                    new ArgumentException(
+                        $"'get' method has only the overloads: '{getRangeSignature}' or '{getAllSignature}', but was called with {args.Length} arguments."),
+                    JSValueType.ExecutionError);
         }
 
         var reader = _database.DocumentsStorage.TimeSeriesStorage.GetReader(_docsCtx, id, timeSeries, from, to);
@@ -1325,24 +1421,32 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
         return EngineHandle.CreateArray(entries);
     }
 
-    private string GetIdFromArg(T docArg, string signature)
+    private bool GetIdFromArg(T docArg, string signature, out string val)
     {
         if (docArg.IsObject && docArg.AsObject() is IBlittableObjectInstance<T> doc)
-            return doc.DocumentId;
+        {
+            val= doc.DocumentId;
+            return true;
+        }
 
         if (docArg.IsStringEx == false)
-            throw new InvalidOperationException($"{signature}: 'doc' must be a string argument (the document id) or the actual document instance itself. {GetTypes(docArg)}");
+        {
+            val = null;
+            return false;
+        }
 
-        var id = docArg.AsString;
-        return id;
-
+        val = docArg.AsString;
+        return true;
     }
 
     private T DeleteRangeTimeSeries(T self, T[] args)
     {
         using var document = self.GetProperty("doc");
         using var name = self.GetProperty("name");
-        AssertValidDatabaseContext("timeseries(doc, name).delete");
+        if (AssertValidDatabaseContext(("timeseries(doc, name).delete"), out var val) == false)
+        {
+            return val;
+        }
 
         const string deleteAll = "delete()";
         const string deleteSignature = "delete(from, to)";
@@ -1355,16 +1459,36 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
                 to = DateTime.MaxValue;
                 break;
             case 2:
-                from = GetTimeSeriesDateArg(args[0], deleteSignature, "from");
-                to = GetTimeSeriesDateArg(args[1], deleteSignature, "to");
+                if (GetTimeSeriesDateArg(args[0], deleteSignature, "from", out from, out Exception exception) == false)
+                {                    return CreateErrorAndSetLastExceptionIfNeeded(exception ??
+                                                                     new ArgumentException($"{deleteSignature} : 'from' must be of type 'DateInstance' or a DateTime string. {GetTypes(args[1])}"),
+                    JSValueType.ExecutionError);
+                    
+                }
+
+                if (GetTimeSeriesDateArg(args[1], deleteSignature, "to", out to, out exception) == false)
+                {
+                    return CreateErrorAndSetLastExceptionIfNeeded(exception ??
+                                                    new ArgumentException($"{deleteSignature} : 'to' must be of type 'DateInstance' or a DateTime string. {GetTypes(args[1])}"),
+                        JSValueType.ExecutionError);
+                }
+
                 break;
             default:
-                throw new ArgumentException($"'delete' method has only the overloads: '{deleteSignature}' or '{deleteAll}', but was called with {args.Length} arguments.");
+                return CreateErrorAndSetLastExceptionIfNeeded(
+                    new ArgumentException($"'delete' method has only the overloads: '{deleteSignature}' or '{deleteAll}', but was called with {args.Length} arguments."),
+                    JSValueType.ExecutionError);
         }
 
-        var (id, doc) = GetIdAndDocFromArg(document, _timeSeriesSignature);
+        if (GetIdAndDocFromArg(document, _timeSeriesSignature, out var id, out var doc, out var e) == false)
+        {
+            return e;
+        }
 
-        string timeSeries = GetStringArg(name, _timeSeriesSignature, "name");
+        if (GetStringArg(name, _timeSeriesSignature, "name", out var timeSeries, out e) == false)
+        {
+            return e;
+        }
 
         var count = _database.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(_docsCtx, id, timeSeries).Count;
         if (count == 0)
@@ -1404,7 +1528,10 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
         using var document = self.GetProperty("doc");
         using var name = self.GetProperty("name");
 
-        AssertValidDatabaseContext("timeseries(doc, name).increment");
+        if (AssertValidDatabaseContext(("timeseries(doc, name).increment"), out var val) == false)
+        {
+            return val;
+        }
 
         const string signature1Args = "timeseries(doc, name).increment(values)";
         const string signature2Args = "timeseries(doc, name).increment(timestamp, values)";
@@ -1422,22 +1549,36 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
                 break;
             case 2:
                 signature = signature2Args;
-                timestamp = GetTimeSeriesDateArg(args[0], signature, "timestamp");
+                if (GetTimeSeriesDateArg(args[0], signature, "timestamp", out timestamp, out Exception exception) == false)
+                {
+                    return CreateErrorAndSetLastExceptionIfNeeded(exception ??
+                                                    new ArgumentException($"{signature} : 'timestamp' must be of type 'DateInstance' or a DateTime string. {GetTypes(args[1])}"),
+                        JSValueType.ExecutionError);
+                }
                 valuesArg = args[1];
                 break;
             default:
-                throw new ArgumentException(
-                    $"There is no overload with {args.Length} arguments for this method should be {signature1Args} or {signature2Args}");
+             return   CreateErrorAndSetLastExceptionIfNeeded(new ArgumentException(
+                    $"There is no overload with {args.Length} arguments for this method should be {signature1Args} or {signature2Args}"), JSValueType.ExecutionError);
         }
 
-        var (id, doc) = GetIdAndDocFromArg(document, _timeSeriesSignature);
+        if (GetIdAndDocFromArg(document, _timeSeriesSignature, out var id, out var doc, out var e) == false)
+        {
+            return e;
+        }
 
-        string timeSeries = GetStringArg(name, _timeSeriesSignature, "name");
+       if(GetStringArg(name, _timeSeriesSignature, "name", out var timeSeries, out e) == false)
+        {
+            return e;
+        }
 
         double[] valuesBuffer = null;
         try
         {
-            GetTimeSeriesValues(valuesArg, ref valuesBuffer, signature, out var values);
+            if (GetTimeSeriesValues(valuesArg, ref valuesBuffer, signature, out var values, out T exception) == false)
+            {
+                return exception;
+            }
 
             var tss = _database.DocumentsStorage.TimeSeriesStorage;
             var newSeries = tss.Stats.GetStats(_docsCtx, id, timeSeries).Count == 0;
@@ -1480,7 +1621,10 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
 
     private T AppendTimeSeries(T self, T[] args)
     {
-        AssertValidDatabaseContext("timeseries(doc, name).append");
+        if (AssertValidDatabaseContext(("timeseries(doc, name).append"), out var e) == false)
+        {
+            return e;
+        }
 
         const string signature2Args = "timeseries(doc, name).append(timestamp, values)";
         const string signature3Args = "timeseries(doc, name).append(timestamp, values, tag)";
@@ -1495,29 +1639,51 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
             case 3:
                 signature = signature3Args;
                 var tagArgument = args.Last();
-                if (/*tagArgument != null && */tagArgument.IsNull == false && tagArgument.IsUndefined == false)
+                if ( /*tagArgument != null && */tagArgument.IsNull == false && tagArgument.IsUndefined == false)
                 {
-                    var tag = GetStringArg(tagArgument, signature, "tag");
+                    if (GetStringArg(tagArgument, signature, "tag", out var tag, out e) == false)
+                    {
+                        return e;
+                    }
+
                     lsTag = _jsonCtx.GetLazyString(tag);
                 }
+
                 break;
             default:
-                throw new ArgumentException($"There is no overload with {args.Length} arguments for this method should be {signature2Args} or {signature3Args}");
+                return CreateErrorAndSetLastExceptionIfNeeded(
+                    new ArgumentException($"There is no overload with {args.Length} arguments for this method should be {signature2Args} or {signature3Args}"),
+                    JSValueType.ExecutionError);
         }
 
         using var document = self.GetProperty("doc");
         using var name = self.GetProperty("name");
-        var (id, doc) = GetIdAndDocFromArg(document, _timeSeriesSignature);
+        if (GetIdAndDocFromArg(document, _timeSeriesSignature, out var id, out var doc, out e) == false)
+        {
+            return e;
+        }
 
-        string timeSeries = GetStringArg(name, _timeSeriesSignature, "name");
-        var timestamp = GetTimeSeriesDateArg(args[0], signature, "timestamp");
+        if (GetStringArg(name, _timeSeriesSignature, "name", out var timeSeries, out e) == false)
+        {
+            return e;
+        }
+
+        if (GetTimeSeriesDateArg(args[0], signature, "timestamp", out var timestamp, out Exception exception) == false)
+        {
+            return CreateErrorAndSetLastExceptionIfNeeded(exception ??
+                                            new ArgumentException($"{signature} : 'timestamp' must be of type 'DateInstance' or a DateTime string. {GetTypes(args[1])}"),
+                JSValueType.ExecutionError);
+        }
 
         double[] valuesBuffer = null;
         try
         {
             var valuesArg = args[1];
 
-            GetTimeSeriesValues(valuesArg, ref valuesBuffer, signature, out var values);
+            if (GetTimeSeriesValues(valuesArg, ref valuesBuffer, signature, out var values, out e) == false)
+            {
+                return e;
+            }
 
             var tss = _database.DocumentsStorage.TimeSeriesStorage;
             var newSeries = tss.Stats.GetStats(_docsCtx, id, timeSeries).Count == 0;
@@ -1528,20 +1694,14 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
                 DocumentTimeSeriesToUpdate.Add(id);
             }
 
-            var toAppend = new SingleResult
-            {
-                Values = values,
-                Tag = lsTag,
-                Timestamp = timestamp,
-                Status = TimeSeriesValuesSegment.Live
-            };
+            var toAppend = new SingleResult {Values = values, Tag = lsTag, Timestamp = timestamp, Status = TimeSeriesValuesSegment.Live};
 
             tss.AppendTimestamp(
                 _docsCtx,
                 id,
                 CollectionName.GetCollectionName(doc),
                 timeSeries,
-                new[] { toAppend },
+                new[] {toAppend},
                 AppendOptionsForScript);
 
             if (DebugMode)
@@ -1565,57 +1725,92 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
         return EngineHandle.Undefined;
     }
 
-    private DateTime GetTimeSeriesDateArg(T arg, string signature, string argName)
+    private static bool GetTimeSeriesDateArg(T arg, string signature, string argName, out DateTime val, out Exception innerException)
     {
         if (arg.IsDate)
-            return arg.AsDate;
+        {
+            val = arg.AsDate;
+            innerException = null;
+            return true;
+        }
 
         if (arg.IsStringEx == false)
-            throw new ArgumentException($"{signature} : {argName} must be of type 'DateInstance' or a DateTime string. {GetTypes(arg)}");
+        {
+            val = default;
+            innerException = null;
+            return false;
+        }
 
-        return TimeSeriesRetriever.ParseDateTime(arg.AsString);
+        var str = arg.AsString;
+        if (TimeSeriesRetriever.TryParseDateTime(str, out DateTime dt1) == false)
+        {
+            val = default;
+            innerException = TimeSeriesRetriever.GetArgumentException(str);
+            return false;
+        }
+
+        val = dt1;
+        innerException = null;
+        return true;
     }
 
-    private void GetTimeSeriesValues(T valuesArg, ref double[] valuesBuffer, string signature, out Memory<double> values)
+    private bool GetTimeSeriesValues(T valuesArg, ref double[] valuesBuffer, string signature, out Memory<double> values, out T exception)
     {
         if (valuesArg.IsArray)
         {
             valuesBuffer = ArrayPool<double>.Shared.Rent((int)valuesArg.ArrayLength);
-            FillDoubleArrayFromJsArray(valuesBuffer, valuesArg, signature);
+            int arrayLength = valuesArg.ArrayLength;
+            for (int i = 0; i < arrayLength; ++i)
+            {
+                using (var jsItem = valuesArg.GetProperty(i))
+                {
+                    if (jsItem.IsNumberOrIntEx == false)
+                    {
+                        values = null;
+                        exception = CreateErrorAndSetLastExceptionIfNeeded(
+                            new ArgumentException($"{signature}: The values argument must be an array of numbers, but got {jsItem.ValueType} key({i}) value({jsItem})"),
+                            JSValueType.ExecutionError);
+                        return false;
+                    }
+
+                    valuesBuffer[i] = jsItem.AsDouble;
+                }
+            }
+
             values = new Memory<double>(valuesBuffer, 0, (int)valuesArg.ArrayLength);
+            exception = default;
+            return true;
         }
-        else if (valuesArg.IsNumberOrIntEx)
+
+        if (valuesArg.IsNumberOrIntEx)
         {
             valuesBuffer = ArrayPool<double>.Shared.Rent(1);
             valuesBuffer[0] = valuesArg.AsDouble;
             values = new Memory<double>(valuesBuffer, 0, 1);
+            exception = default;
+            return true;
         }
-        else
-        {
-            throw new ArgumentException($"{signature}: The values should be an array but got {GetTypes(valuesArg)}");
-        }
-    }
-    private void FillDoubleArrayFromJsArray(double[] array, T jsArray, string signature)
-    {
-        int arrayLength = jsArray.ArrayLength;
-        for (int i = 0; i < arrayLength; ++i)
-        {
-            using (var jsItem = jsArray.GetProperty(i))
-            {
-                if (jsItem.IsNumberOrIntEx == false)
-                    throw new ArgumentException($"{signature}: The values argument must be an array of numbers, but got {jsItem.ValueType} key({i}) value({jsItem})");
-                array[i] = jsItem.AsDouble;
-            }
-        }
+
+        values = null;
+        exception = CreateErrorAndSetLastExceptionIfNeeded(new ArgumentException($"{signature}: The values should be an array but got {GetTypes(valuesArg)}"),
+            JSValueType.ExecutionError);
+        return false;
     }
 
     private T GetStatsTimeSeries(T self, T[] args)
     {
         using var document = self.GetProperty("doc");
         using var name = self.GetProperty("name");
-        var (id, _) = GetIdAndDocFromArg(document, _timeSeriesSignature);
+        if (GetIdAndDocFromArg(document, _timeSeriesSignature, out var id, out _, out var e) == false)
+        {
+            return e;
+        }
 
-        var timeSeries = GetStringArg(name, _timeSeriesSignature, "name");
+        if (GetStringArg(name, _timeSeriesSignature, "name", out var timeSeries, out e) == false)
+        {
+            return e;
+        }
+
         var stats = _database.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(_docsCtx, id, timeSeries);
 
         var tsStats = EngineHandle.CreateObject();
@@ -1625,35 +1820,60 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
         return tsStats;
     }
 
-    private string GetStringArg(T jsArg, string signature, string argName)
+    private bool GetStringArg(T jsArg, string signature, string argName, out string val, out T exception)
     {
         if (jsArg.IsStringEx == false)
-            throw new ArgumentException($"{signature}: The '{argName}' argument should be a string, but got {GetTypes(jsArg)}");
-        return jsArg.AsString;
+        {
+            val = null;
+            exception = CreateErrorAndSetLastExceptionIfNeeded(new ArgumentException($"{signature}: The '{argName}' argument should be a string, but got {GetTypes(jsArg)}"), JSValueType.ExecutionError);
+            return false;
+        }
+
+        exception = default;
+        val = jsArg.AsString;
+        return true;
     }
 
-    private (string Id, BlittableJsonReaderObject Doc) GetIdAndDocFromArg(T self, string signature)
+    private bool GetIdAndDocFromArg(T self, string signature, out string Id, out BlittableJsonReaderObject Doc, out T exception)
     {
         if (self.IsObject && self.AsObject() is IBlittableObjectInstance<T> doc)
-            return (doc.DocumentId, doc.Blittable);
+        {
+            Id = doc.DocumentId;
+            Doc = doc.Blittable;
+            exception = default;
+            return true;
+        }
 
         if (self.IsStringEx)
         {
             var id = self.AsString;
             var document = _database.DocumentsStorage.Get(_docsCtx, id);
             if (document == null)
-                throw new DocumentDoesNotExistException(id, "Cannot operate on a missing document.");
+            {
+                Id = null;
+                Doc = null;
+                exception = CreateErrorAndSetLastExceptionIfNeeded(new DocumentDoesNotExistException(id, "Cannot operate on a missing document."), JSValueType.ExecutionError);
+                return false;
+            }
 
-            return (id, document.Data);
+            Id = id;
+            Doc = document.Data;
+            exception = default;
+            return true;
         }
 
-        throw new InvalidOperationException($"{signature}: 'doc' must be a string argument (the document id) or the actual document instance itself. {GetTypes(self)}");
+        Id = null;
+        Doc = null;
+        exception = CreateErrorAndSetLastExceptionIfNeeded(
+            new InvalidOperationException($"{signature}: 'doc' must be a string argument (the document id) or the actual document instance itself. {GetTypes(self)}"),
+            JSValueType.ExecutionError);
+        return false;
     }
 
     public T ExplodeArgs(T self, T[] args)
     {
         if (args.Length != 2)
-            throw new InvalidOperationException("Raven_ExplodeArgs(this, args) - must be called with 2 arguments");
+            return CreateErrorAndSetLastExceptionIfNeeded(new InvalidOperationException("Raven_ExplodeArgs(this, args) - must be called with 2 arguments"), JSValueType.ExecutionError);
 
         if (args[1].IsObject && args[1].Object is IBlittableObjectInstance<T> boi)
         {
@@ -1663,24 +1883,33 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
         if (args[1].IsNull || args[1].IsUndefined)
             return self;// noop
 
-        throw new InvalidOperationException("Raven_ExplodeArgs(this, args) second argument must be BlittableObjectInstance");
+        return CreateErrorAndSetLastExceptionIfNeeded(new InvalidOperationException("Raven_ExplodeArgs(this, args) second argument must be BlittableObjectInstance"), JSValueType.ExecutionError);
     }
 
     protected abstract string GetTypes(T value);
     protected abstract void SetArgs(T[] args, IBlittableObjectInstance<T> boi);
+
     public T Raven_Min(T self, T[] args)
     {
-        GenericSortTwoElementArray(args);
+        if (GenericSortTwoElementArray(args, out var exception) == false)
+        {
+            return exception;
+        }
+
         return args[0].IsNull ? args[1] : args[0];
     }
 
     public T Raven_Max(T self, T[] args)
     {
-        GenericSortTwoElementArray(args);
+        if (GenericSortTwoElementArray(args, out var exception) == false)
+        {
+            return exception;
+        }
+
         return args[1];
     }
 
-    private void GenericSortTwoElementArray(T[] args, [CallerMemberName] string caller = null)
+    private bool GenericSortTwoElementArray(IList<T> args, out T exception, [CallerMemberName] string caller = null)
     {
         void Swap()
         {
@@ -1692,8 +1921,11 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
         // this is basically the same as Math.min / Math.max, but
         // can also be applied to strings, numbers and nulls
 
-        if (args.Length != 2)
-            throw new ArgumentException(caller + "must be called with exactly two arguments");
+        if (args.Count != 2)
+        {
+            exception = CreateErrorAndSetLastExceptionIfNeeded(new ArgumentException(caller + "must be called with exactly two arguments"), JSValueType.ExecutionError);
+            return false;
+        }
 
         switch (args[0].ValueType)
         {
@@ -1718,7 +1950,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
                     case JSValueType.Uninitialized:
                     case JSValueType.Undefined:
                     case JSValueType.Null:
-                        Swap();// a value is bigger than no value
+                        Swap(); // a value is bigger than no value
                         break;
                     case JSValueType.Bool:
                     case JSValueType.Number:
@@ -1731,38 +1963,44 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
                         {
                             Swap();
                         }
+
                         break;
                     case JSValueType.String:
                         if (string.Compare(args[0].AsString, args[1].AsString, StringComparison.InvariantCultureIgnoreCase) > 0)
                             Swap();
                         break;
                 }
+
                 break;
             case JSValueType.Object:
-                throw new ArgumentException(caller + " cannot be called on an object");
+                exception = CreateErrorAndSetLastExceptionIfNeeded(new ArgumentException(caller + " cannot be called on an object"), JSValueType.ExecutionError);
+                return false;
+            //TODO: egor maybe make default here ?
         }
+
+        exception = default;
+        return true;
     }
 
-
-    public static T ThrowOnLoadDocument(T self, T[] args)
+    public T ThrowOnLoadDocument(T self, T[] args)
     {
-        throw new MissingMethodException("The method LoadDocument was renamed to 'load'");
+        return CreateErrorAndSetLastExceptionIfNeeded(new MissingMethodException("The method LoadDocument was renamed to 'load'"), JSValueType.ExecutionError);
     }
 
-    public static T ThrowOnDeleteDocument(T self, T[] args)
+    public T ThrowOnDeleteDocument(T self, T[] args)
     {
-        throw new MissingMethodException("The method DeleteDocument was renamed to 'del'");
+        return CreateErrorAndSetLastExceptionIfNeeded(new MissingMethodException("The method DeleteDocument was renamed to 'del'"), JSValueType.ExecutionError);
     }
 
-    public static T ThrowOnPutDocument(T self, T[] args)
+    public T ThrowOnPutDocument(T self, T[] args)
     {
-        throw new MissingMethodException("The method PutDocument was renamed to 'put'");
+        return CreateErrorAndSetLastExceptionIfNeeded(new MissingMethodException("The method PutDocument was renamed to 'put'"), JSValueType.ExecutionError);
     }
 
-    private static void ThrowInvalidIncrementCounterArgs(T[] args)
+    private T ThrowInvalidIncrementCounterArgs(T[] args)
     {
-        throw new InvalidOperationException($"There is no overload of method 'incrementCounter' that takes {args.Length} arguments." +
-                                            "Supported overloads are : 'incrementCounter(doc, name)' , 'incrementCounter(doc, name, value)'");
+        return CreateErrorAndSetLastExceptionIfNeeded(new InvalidOperationException($"There is no overload of method 'incrementCounter' that takes {args.Length} arguments." +
+                                            "Supported overloads are : 'incrementCounter(doc, name)' , 'incrementCounter(doc, name, value)'"), JSValueType.ExecutionError);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1801,7 +2039,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
     public abstract IScriptRunnerResult Run(JsonOperationContext jsonCtx, DocumentsOperationContext docCtx, string method, string documentId, object[] args,
         QueryTimingsScope scope = null, CancellationToken token = default);
 
-    public object[] GetTimeSeriesFunctionArgs(string name, T[] args, out string docId, out List<IDisposable> lazyIds)
+    public bool GetTimeSeriesFunctionArgs(string name, T[] args, out string docId, out List<IDisposable> lazyIds, out object[] val, out T exception)
     {
         var tsFunctionArgs = new object[args.Length + 1];
         docId = null;
@@ -1814,11 +2052,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
             {
                 var lazyId = _docsCtx.GetLazyString(boi.DocumentId);
                 lazyIds.Add(lazyId);
-                tsFunctionArgs[index] = new Document
-                {
-                    Data = boi.Blittable,
-                    Id = lazyId
-                };
+                tsFunctionArgs[index] = new Document {Data = boi.Blittable, Id = lazyId};
 
                 if (index == 0)
                 {
@@ -1837,21 +2071,31 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
         {
             if (_args[0].IsObject == false ||
                 !(_args[0].Object is IBlittableObjectInstance<T> originalDoc))
-                throw new InvalidOperationException($"Failed to invoke time series function '{name}'. Couldn't find the document ID to operate on. " +
-                                                    "A Document instance argument was not provided to the time series function or to the ScriptRunner");
+            {
+                exception = CreateErrorAndSetLastExceptionIfNeeded(new InvalidOperationException(
+                    $"Failed to invoke time series function '{name}'. Couldn't find the document ID to operate on. " +
+                    "A Document instance argument was not provided to the time series function or to the ScriptRunner"), JSValueType.ExecutionError);
+                val = null;
+                return false;
+            }
 
             docId = originalDoc.DocumentId;
         }
 
         if (_args[_args.Length - 1].IsObject == false || !(_args[_args.Length - 1].Object is IBlittableObjectInstance<T> queryParams))
-            throw new InvalidOperationException($"Failed to invoke time series function '{name}'. ScriptRunner is missing QueryParameters argument");
-
-        tsFunctionArgs[tsFunctionArgs.Length - 1] = new Document
         {
-            Data = queryParams.Blittable
-        };
+            exception = CreateErrorAndSetLastExceptionIfNeeded(
+                new InvalidOperationException($"Failed to invoke time series function '{name}'. ScriptRunner is missing QueryParameters argument"),
+                JSValueType.ExecutionError);
+            val = null;
+            return false;
+        }
 
-        return tsFunctionArgs;
+        tsFunctionArgs[tsFunctionArgs.Length - 1] = new Document {Data = queryParams.Blittable};
+
+        val = tsFunctionArgs;
+        exception = default;
+        return true;
     }
 
 
@@ -1900,7 +2144,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
             return jsValue.AsDouble;
         if (jsValue.IsNull || jsValue.IsUndefined)
             return null;
-        throw new NotSupportedException("Unable to translate " + jsValue.ValueType);
+        return CreateErrorAndSetLastExceptionIfNeeded(new NotSupportedException("Unable to translate " + jsValue.ValueType), JSValueType.ExecutionError);
     }
 
     public override string ToString()
@@ -1908,56 +2152,69 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
         return string.Join(Environment.NewLine, _runner.ScriptsSource);
     }
 
-    protected static void AssertValidId()
+    protected T AssertValidId()
     {
-        throw new InvalidOperationException("The first parameter to put(id, doc, changeVector) must be a string");
+        return CreateErrorAndSetLastExceptionIfNeeded(new InvalidOperationException("The first parameter to put(id, doc, changeVector) must be a string"), JSValueType.ExecutionError);
     }
 
-    protected void AssertNotReadOnly()
+    protected bool AssertNotReadOnly(out T val)
     {
         if (ReadOnly)
-            throw new InvalidOperationException("Cannot make modifications in readonly context");
+        {
+            val = CreateErrorAndSetLastExceptionIfNeeded(new InvalidOperationException("Cannot make modifications in readonly context"), JSValueType.ExecutionError);
+            return false;
+        }
+
+        val = default;
+        return true;
     }
 
-    protected void AssertValidDatabaseContext(string functionName)
+    protected bool AssertValidDatabaseContext(string functionName, out T val)
     {
         if (_docsCtx == null)
-            throw new InvalidOperationException($"Unable to use `{functionName}` when this instance is not attached to a database operation");
+        {
+            val = CreateErrorAndSetLastExceptionIfNeeded(new InvalidOperationException($"Unable to use `{functionName}` when this instance is not attached to a database operation"),
+                JSValueType.ExecutionError);
+            return false;
+        }
+
+        val = default;
+        return true;
     }
 
-    protected static void ThrowInvalidCounterValue()
+    protected T ThrowInvalidCounterValue()
     {
-        throw new InvalidOperationException("incrementCounter(doc, name, value): 'value' must be a number argument");
+       return CreateErrorAndSetLastExceptionIfNeeded(new InvalidOperationException("incrementCounter(doc, name, value): 'value' must be a number argument"), JSValueType.ExecutionError);
     }
 
-    protected static void ThrowInvalidCounterName(string signature)
+    protected T ThrowInvalidCounterName(string signature)
     {
-        throw new InvalidOperationException($"{signature}: 'name' must be a non-empty string argument");
+        return CreateErrorAndSetLastExceptionIfNeeded(new InvalidOperationException($"{signature}: 'name' must be a non-empty string argument"), JSValueType.ExecutionError);
     }
 
-    protected static void ThrowInvalidDocumentArgsType(string signature)
+    protected T ThrowInvalidDocumentArgsType(string signature)
     {
-        throw new InvalidOperationException($"{signature}: 'doc' must be a string argument (the document id) or the actual document instance itself");
+        return  CreateErrorAndSetLastExceptionIfNeeded(new InvalidOperationException($"{signature}: 'doc' must be a string argument (the document id) or the actual document instance itself"), JSValueType.ExecutionError);
     }
 
-    protected static void ThrowMissingDocument(string id)
+    protected T ThrowMissingDocument(string id)
     {
-        throw new DocumentDoesNotExistException(id, "Cannot operate on counters of a missing document.");
+       return CreateErrorAndSetLastExceptionIfNeeded(new DocumentDoesNotExistException(id, "Cannot operate on counters of a missing document."), JSValueType.ExecutionError);
     }
 
-    protected static void ThrowDeleteCounterNameArg()
+    protected T ThrowDeleteCounterNameArg()
     {
-        throw new InvalidOperationException("deleteCounter(doc, name): 'name' must be a string argument");
+        return CreateErrorAndSetLastExceptionIfNeeded(new InvalidOperationException("deleteCounter(doc, name): 'name' must be a string argument"), JSValueType.ExecutionError);
     }
 
-    protected static void ThrowInvalidDeleteCounterDocumentArg()
+    protected T ThrowInvalidDeleteCounterDocumentArg()
     {
-        throw new InvalidOperationException("deleteCounter(doc, name): 'doc' must be a string argument (the document id) or the actual document instance itself");
+        return CreateErrorAndSetLastExceptionIfNeeded(new InvalidOperationException("deleteCounter(doc, name): 'doc' must be a string argument (the document id) or the actual document instance itself"), JSValueType.ExecutionError);
     }
 
-    protected static void ThrowInvalidDeleteCounterArgs()
+    protected T ThrowInvalidDeleteCounterArgs()
     {
-        throw new InvalidOperationException("deleteCounter(doc, name) must be called with exactly 2 arguments");
+        return CreateErrorAndSetLastExceptionIfNeeded(new InvalidOperationException("deleteCounter(doc, name) must be called with exactly 2 arguments"), JSValueType.ExecutionError);
     }
 
     protected static JsonOperationContext ThrowArgumentNull()

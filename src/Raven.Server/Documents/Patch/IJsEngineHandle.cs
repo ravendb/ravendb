@@ -101,7 +101,7 @@ public interface IJsEngineHandle<T> : /*IJavaScriptEngineForParsing<T>,*/ IScrip
 
     T CreateValue(DateTime value);
 
-    T CreateError(string message, JSValueType errorType);
+    T CreateError(Exception e, JSValueType errorType);
 }
 
 public interface IScriptEngineChanges

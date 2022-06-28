@@ -66,7 +66,7 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript.V8
             {
                 //  EngineEx.Context.JsContext.LastException = e;
               //  var str = engine.CreateError(e.ToString(), JSValueType.ExecutionError);
-                return EngineEx.CreateError(e.ToString(), JSValueType.ExecutionError);
+                return EngineEx.CreateError(e, JSValueType.ExecutionError);
             }
         }
 

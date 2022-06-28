@@ -377,14 +377,9 @@ var process = {
             return new JsHandleJint(Engine.FromObject(value));
         }
 
-        public JsHandleJint CreateError(string message, JSValueType errorType)
+        public JsHandleJint CreateError(Exception e, JSValueType errorType)
         {
-            throw new NotImplementedException();
+            throw e;
         }
-
-        //public JsHandleJint CreateError(string message, JSValueType errorType)
-        //{
-        //    return new JsHandleJint(message, errorType);
-        //}
     }
 }

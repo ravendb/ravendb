@@ -12,21 +12,9 @@ namespace Raven.Server.Documents.Patch.V8
 {
     public class SingleRunV8 : SingleRun<JsHandleV8>, IJavaScriptContext
     {
-        public V8Engine ScriptEngineV8;
-      //  private V8EngineEx.ContextEx _contextExV8;
-        public V8EngineEx ScriptEngineExV8;
-
-        private Exception _lastException;
-
-        public Exception LastException
-        {
-            get => _lastException;
-            set
-            {
-                _lastException = value;
-            }
-        }
-
+        private V8Engine ScriptEngineV8;
+      private V8EngineEx ScriptEngineExV8;
+        public Exception LastException { get; set; }
         public SingleRunV8(DocumentDatabase database, RavenConfiguration configuration, ScriptRunnerV8 runner, List<string> scriptsSource, bool executeScriptsSource = true)
             : base(database, configuration, runner, scriptsSource)
         {
@@ -39,7 +27,13 @@ namespace Raven.Server.Documents.Patch.V8
             JsBlittableBridge = new JsBlittableBridgeV8(engine);
             Initialize(executeScriptsSource);
         }
-        
+
+        protected override JsHandleV8 CreateErrorAndSetLastExceptionIfNeeded(Exception e, JSValueType errorType)
+        {
+            LastException = e;
+            return EngineHandle.CreateError(e, errorType);
+        }
+
         public override void CleanInternal()
         {
             V8EngineEx.ReturnEngine(ScriptEngineExV8);
@@ -123,7 +117,6 @@ namespace Raven.Server.Documents.Patch.V8
             _token = token;
 
             JsUtils.Reset(_jsonCtx);
-            //  ScriptEngineExV8.Context = _contextExV8;
             Reset();
             OriginalDocumentId = documentId;
 
@@ -164,6 +157,7 @@ namespace Raven.Server.Documents.Patch.V8
                     {
                         if (jsRes.IsError)
                         {
+                            jsRes.ThrowOnError();
                             //if (_lastException != null)
                             //{
                             //    ExceptionDispatchInfo.Capture(_lastException).Throw();
@@ -184,7 +178,6 @@ namespace Raven.Server.Documents.Patch.V8
                         //  ScriptEngineV8.AddToLastMemorySnapshotBefore(jsRes.V8.Item);
                         isMemorySnapshotMade = true;
 
-                        //  return new ScriptRunnerResult(this, jsRes);
                         return new ScriptRunnerResultV8(this, jsRes);
                     }
                 }
@@ -193,7 +186,9 @@ namespace Raven.Server.Documents.Patch.V8
             {
                 //ScriptRunnerResult is in charge of disposing of the disposable but it is not created (the clones did)
                 JsUtils.Clear();
-                throw CreateFullError(e);
+                CreateFullError(e);
+                //TODO: egor never hit?
+                throw;
             }
             catch (Exception)
             {
@@ -207,8 +202,8 @@ namespace Raven.Server.Documents.Patch.V8
                 _loadScope = null;
                 _docsCtx = null;
                 _jsonCtx = null;
-                _token = default;
-                //   _lastException = null;
+                _token = default; 
+                LastException = null;
 
                 EngineHandle.ForceGarbageCollection();
                 if (EngineHandle.IsMemoryChecksOn && isMemorySnapshotMade)
@@ -218,10 +213,12 @@ namespace Raven.Server.Documents.Patch.V8
             }
         }
 
-        protected override Client.Exceptions.Documents.Patching.JavaScriptException CreateFullError(Exception e)
+        protected override JavaScriptException CreateFullError(Exception e)
         {
-            var javaScriptException = new Client.Exceptions.Documents.Patching.JavaScriptException(e.Message, e);
-            return javaScriptException;
+            if (LastException != null)
+                throw LastException;
+
+            throw new JavaScriptException(e.Message, e);
         }
 
         protected override void SetArgs(JsHandleV8[] args, IBlittableObjectInstance<JsHandleV8> boi)

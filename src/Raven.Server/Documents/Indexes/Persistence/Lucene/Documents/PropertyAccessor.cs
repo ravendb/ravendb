@@ -36,10 +36,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             else if (instance is JsHandleV8)
             {
                 //TODO: egor cehck this
-                if (typeof(IObjectInstance<>).IsAssignableFrom(type))
-                {
+                /*if (typeof(IObjectInstance<>).IsAssignableFrom(type))
+                {*/
                     return new JsPropertyAccessorV8(null);
-                }
+                // }
             }
 
             if (instance is Dictionary<string, object> dict)
@@ -367,7 +367,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 return true;
             }
 
-            value = jsValue.AsObject();
+            // value = jsValue.AsObject();
+            value = jsValue;
             return true;
         }
     }

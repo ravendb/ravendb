@@ -223,39 +223,38 @@ namespace Raven.Server.Documents.Indexes.Static
                                 if (map.HasOwnProperty(MethodProperty) == false)
                                     ThrowIndexCreationException($"map function #{i} is missing its {MethodProperty} property");
 
-                                using (var func = map.GetProperty(MethodProperty))
-                                {
-                                    if (func.IsFunction == false)
-                                        ThrowIndexCreationException($"map function #{i} {MethodProperty} property isn't a 'FunctionInstance'");
+                                var func = map.GetProperty(MethodProperty);
 
-                                    var operation = new JavaScriptMapOperationV8(this, JsIndexUtils, funcForParsingJint, func, Definition.Name, mapList[i]);
-                                    if (mapForParsingJint.HasOwnProperty(MoreArgsProperty))
+                                if (func.IsFunction == false)
+                                    ThrowIndexCreationException($"map function #{i} {MethodProperty} property isn't a 'FunctionInstance'");
+
+                                var operation = new JavaScriptMapOperationV8(this, JsIndexUtils, funcForParsingJint, func, Definition.Name, mapList[i]);
+                                if (mapForParsingJint.HasOwnProperty(MoreArgsProperty))
+                                {
+                                    var moreArgsObjJint = mapForParsingJint.Get(MoreArgsProperty);
+                                    if (moreArgsObjJint.IsArray())
                                     {
-                                        var moreArgsObjJint = mapForParsingJint.Get(MoreArgsProperty);
-                                        if (moreArgsObjJint.IsArray())
+                                        var arrayJint = moreArgsObjJint.AsArray();
+                                        if (arrayJint.Length > 0)
                                         {
-                                            var arrayJint = moreArgsObjJint.AsArray();
-                                            if (arrayJint.Length > 0)
-                                            {
-                                                operation.MoreArguments = arrayJint;
-                                            }
+                                            operation.MoreArguments = arrayJint;
                                         }
                                     }
-
-                                    operation.Analyze(_engineForParsing.Engine);
-                                    if (ReferencedCollections.TryGetValue(mapCollection, out var collectionNames) == false)
-                                    {
-                                        collectionNames = new HashSet<CollectionName>();
-                                        ReferencedCollections.Add(mapCollection, collectionNames);
-                                    }
-
-                                    collectionNames.UnionWith(mapReferencedCollections[i].ReferencedCollections);
-
-                                    if (mapReferencedCollections[i].HasCompareExchangeReferences)
-                                        CollectionsWithCompareExchangeReferences.Add(mapCollection);
-
-                                    list.Add(operation);
                                 }
+
+                                operation.Analyze(_engineForParsing.Engine);
+                                if (ReferencedCollections.TryGetValue(mapCollection, out var collectionNames) == false)
+                                {
+                                    collectionNames = new HashSet<CollectionName>();
+                                    ReferencedCollections.Add(mapCollection, collectionNames);
+                                }
+
+                                collectionNames.UnionWith(mapReferencedCollections[i].ReferencedCollections);
+
+                                if (mapReferencedCollections[i].HasCompareExchangeReferences)
+                                    CollectionsWithCompareExchangeReferences.Add(mapCollection);
+
+                                list.Add(operation);
                             }
                         }
                     }

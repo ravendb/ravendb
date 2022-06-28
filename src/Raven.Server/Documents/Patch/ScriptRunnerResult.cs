@@ -16,12 +16,8 @@ public abstract class ScriptRunnerResult<T> : IScriptRunnerResult
     protected ScriptRunnerResult(SingleRun<T> parent, T instance)
     {
         _parent = parent;
-        Instance = instance.Clone();
-    }
-
-    ~ScriptRunnerResult()
-    {
-        Instance.Dispose();
+        var cloned = instance.Clone();
+        Instance = cloned;
     }
 
     public IJsEngineHandle<T> EngineHandle => _parent.EngineHandle;
@@ -76,6 +72,8 @@ public abstract class ScriptRunnerResult<T> : IScriptRunnerResult
 
 
         _parent?.JsUtils.Clear();
+        
+        Instance.Dispose();
     }
 
     public object TranslateRawJsValue(JsonOperationContext context, IResultModifier modifier = null,

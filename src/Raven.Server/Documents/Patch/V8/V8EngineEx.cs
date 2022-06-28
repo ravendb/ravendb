@@ -759,11 +759,13 @@ var process = {
         return new JsHandleV8(ref obj);
     }
 
-    public JsHandleV8 CreateError(string message, JSValueType errorType)
+    public JsHandleV8 CreateError(Exception e, JSValueType errorType)
     {
-        var obj = Engine.CreateError(message, errorType);
+        var obj = Engine.CreateError(e.ToString(), errorType);
+
         return new JsHandleV8(ref obj);
     }
+
 
     // ------------------------------------------ internal implementation
     public readonly V8Engine Engine;

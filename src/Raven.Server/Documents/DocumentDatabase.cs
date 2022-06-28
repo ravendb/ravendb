@@ -120,11 +120,7 @@ namespace Raven.Server.Documents
 
             Is32Bits = PlatformDetails.Is32Bits || Configuration.Storage.ForceUsing32BitsPager;
 
-            if (configuration.JavaScript.EngineType == JavaScriptEngineType.V8)
-            {
-                V8EngineEx.EnginePool = new BlockingCollection<V8EngineEx>(configuration.JavaScript.MaxEngineCount);
-            }
-            
+   
             _disposeOnce = new DisposeOnce<SingleAttempt>(DisposeInternal);
 
             try
@@ -904,19 +900,7 @@ namespace Raven.Server.Documents
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed DocumentsStorage");
 
          
-            if (Configuration.JavaScript.EngineType == JavaScriptEngineType.V8)
-            {
-                ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing V8EngineEx.EnginePool");
-                exceptionAggregator.Execute(() =>
-                {
-//TODO: egor handle dispose (currently its static and cannot dispsoe it for db)
-                    /*foreach (var eng in V8EngineEx.EnginePool.GetConsumingEnumerable())
-                    {
-                        eng.Dispose();
-                    }*/
-                });
-                ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed V8EngineEx.EnginePool");
-            }
+         
         
             
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing _databaseShutdown");

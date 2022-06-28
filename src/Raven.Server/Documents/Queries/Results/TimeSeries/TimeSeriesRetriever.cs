@@ -413,7 +413,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
                     if (right is DateTime dt)
                         rightAsDt = dt;
                     else
-                        rightAsDt = ParseDateTime(right?.ToString());
+                        rightAsDt = TryParseDateTimeAndThrow(right?.ToString());
 
                     switch (be.Operator)
                     {
@@ -439,7 +439,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
                 {
                     if (right is DateTime)
                     {
-                        var leftAsDt = ParseDateTime(lsv);
+                        var leftAsDt = TryParseDateTimeAndThrow(lsv);
                         return CompareDateTimes(leftAsDt, right);
                     }
 
@@ -467,7 +467,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
                 {
                     if (right is DateTime)
                     {
-                        var leftAsDt = ParseDateTime(s);
+                        var leftAsDt = TryParseDateTimeAndThrow(s);
                         return CompareDateTimes(leftAsDt, right);
                     }
 
@@ -1253,7 +1253,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
                     throw new ArgumentException("Unable to parse timeseries from/to values. Got a null instead of a value");
 
                 DateTime? result;
-                _valuesDictionary[ve] = result = ParseDateTime(val.ToString());
+                _valuesDictionary[ve] = result = TryParseDateTimeAndThrow(val.ToString());
 
                 return result;
             }
@@ -1261,21 +1261,35 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
             if (qe is FieldExpression fe)
             {
                 var val = GetValueFromArgument(func, args, fe);
-                return ParseDateTime(val.ToString());
+                return TryParseDateTimeAndThrow(val.ToString());
             }
 
             throw new ArgumentException("Unable to parse timeseries from/to values. Got: " + qe);
         }
 
-        public static DateTime ParseDateTime(string valueAsStr)
+        public static DateTime TryParseDateTimeAndThrow(string valueAsStr)
         {
             if (DateTime.TryParseExact(valueAsStr, SupportedDateTimeFormats, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var date) == false)
-                throw new ArgumentException($"Unable to parse timeseries from/to values. Got: {valueAsStr}{Environment.NewLine}" +
-                                            $"The supported time formats are:{Environment.NewLine}" +
-                                            $"{string.Join(Environment.NewLine, SupportedDateTimeFormats.OrderBy(f => f.Length))}");
+                throw GetArgumentException(valueAsStr);
             return DateTime.SpecifyKind(date, DateTimeKind.Utc);
         }
+        public static bool TryParseDateTime(string valueAsStr, out DateTime val)
+        {
+            if (DateTime.TryParseExact(valueAsStr, SupportedDateTimeFormats, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var date) == false)
+            {
+                val = date;
+                return false;
+            }
 
+            val =  DateTime.SpecifyKind(date, DateTimeKind.Utc);
+            return true;
+        }
+        public static Exception GetArgumentException(string valueAsStr)
+        {
+            return new ArgumentException($"Unable to parse timeseries from/to values. Got: {valueAsStr}{Environment.NewLine}" +
+                                        $"The supported time formats are:{Environment.NewLine}" +
+                                        $"{string.Join(Environment.NewLine, SupportedDateTimeFormats.OrderBy(f => f.Length))}");
+        }
         private static readonly string[] SupportedDateTimeFormats =
         {
             "yyyy-MM-ddTHH:mm:ss.fffffffZ",

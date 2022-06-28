@@ -157,7 +157,8 @@ namespace Raven.Server.Documents.Patch.V8
         public bool IsNumber
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return Item.IsNumber; }
+            /*get { return Item.IsNumber; }    */
+            get { return Item.IsNumberOrIntEx; }
         }
 
         public bool IsString
