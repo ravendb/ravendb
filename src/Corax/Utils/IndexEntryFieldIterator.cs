@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -71,7 +71,7 @@ namespace Corax
 
                 if (Type.HasFlag(IndexEntryFieldType.HasNulls))
                 {
-                    int nullBitStreamSize = Count / (sizeof(long) * 8) + Count % (sizeof(long) * 8) == 0 ? 0 : 1;
+                    int nullBitStreamSize = Count / (sizeof(long) * 8) + (Count % (sizeof(long) * 8) == 0 ? 0 : 1);
                     _spanTableOffset = _nullTableOffset + nullBitStreamSize; // Point after the null table.                             
                 }
                 else
@@ -88,7 +88,7 @@ namespace Corax
 
                 if (Type.HasFlag(IndexEntryFieldType.HasNulls))
                 {
-                    int nullBitStreamSize = Count / (sizeof(long) * 8) + Count % (sizeof(long) * 8) == 0 ? 0 : 1;
+                    int nullBitStreamSize = Count / (sizeof(long) * 8) + (Count % (sizeof(long) * 8) == 0 ? 0 : 1);
                     _spanTableOffset = _nullTableOffset + nullBitStreamSize; // Point after the null table.         
                 }
                 else
