@@ -42,14 +42,16 @@ using Sparrow.Utils;
 
 namespace Raven.Client.Documents.Subscriptions
 {
-    public abstract class AbstractSubscriptionWorker<T> : IAsyncDisposable, IDisposable where T : class
+    public abstract class AbstractSubscriptionWorker<TBatch, TType> : IAsyncDisposable, IDisposable 
+        where TBatch : SubscriptionBatchBase<TType>
+        where TType : class
     {
-        public delegate Task AfterAcknowledgmentAction(SubscriptionBatch<T> batch);
+        public delegate Task AfterAcknowledgmentAction(TBatch batch);
         protected readonly Logger _logger;
         internal readonly string _dbName;
         protected CancellationTokenSource _processingCts = new CancellationTokenSource();
         protected readonly SubscriptionWorkerOptions _options;
-        protected (Func<SubscriptionBatch<T>, Task> Async, Action<SubscriptionBatch<T>> Sync) _subscriber;
+        protected (Func<TBatch, Task> Async, Action<TBatch> Sync) _subscriber;
         internal TcpClient _tcpClient;
         protected bool _disposed;
         protected Task _subscriptionTask;
@@ -76,7 +78,7 @@ namespace Raven.Client.Documents.Subscriptions
 
             _options = options;
             _dbName = dbName;
-            _logger = LoggingSource.Instance.GetLogger<AbstractSubscriptionWorker<T>>(dbName);
+            _logger = LoggingSource.Instance.GetLogger<AbstractSubscriptionWorker<TBatch, TType>>(dbName);
         }
 
         public void Dispose()
@@ -93,12 +95,9 @@ namespace Raven.Client.Documents.Subscriptions
             AsyncHelpers.RunSync(dispose.AsTask);
         }
 
-        public ValueTask DisposeAsync()
-        {
-            return DisposeAsync(true);
-        }
+        public ValueTask DisposeAsync() => DisposeAsync(true);
 
-        public async ValueTask DisposeAsync(bool waitForSubscriptionTask)
+        public virtual async ValueTask DisposeAsync(bool waitForSubscriptionTask)
         {
             if (_disposed)
                 return;
@@ -140,6 +139,22 @@ namespace Raven.Client.Documents.Subscriptions
             }
         }
 
+        public Task Run(Action<TBatch> processDocuments, CancellationToken ct = default)
+        {
+            if (processDocuments == null)
+                throw new ArgumentNullException(nameof(processDocuments));
+            _subscriber = (null, processDocuments);
+            return RunInternalAsync(ct);
+        }
+
+        public Task Run(Func<TBatch, Task> processDocuments, CancellationToken ct = default)
+        {
+            if (processDocuments == null)
+                throw new ArgumentNullException(nameof(processDocuments));
+            _subscriber = (processDocuments, null);
+            return RunInternalAsync(ct);
+        }
+
         internal Task RunInternalAsync(CancellationToken ct)
         {
             if (_subscriptionTask != null)
@@ -164,8 +179,8 @@ namespace Raven.Client.Documents.Subscriptions
         internal int? SubscriptionTcpVersion;
 
         internal abstract RequestExecutor GetRequestExecutor();
-        internal abstract Task ProcessSubscriptionInternalAsync(JsonContextPool contextPool, Stream tcpStreamCopy, JsonOperationContext.MemoryBuffer buffer,
-            JsonOperationContext context);
+        /*internal abstract Task ProcessSubscriptionInternalAsync(JsonContextPool contextPool, Stream tcpStreamCopy, JsonOperationContext.MemoryBuffer buffer,
+            JsonOperationContext context);*/
         internal abstract void SetLocalRequestExecutor(string url, X509Certificate2 cert);
 
         internal bool ShouldUseCompression()
@@ -514,8 +529,90 @@ namespace Raven.Client.Documents.Subscriptions
             }
         }
 
+        protected abstract TBatch CreateEmptyBatch();
+
+        internal async Task ProcessSubscriptionInternalAsync(JsonContextPool contextPool, Stream tcpStreamCopy, JsonOperationContext.MemoryBuffer buffer, JsonOperationContext context)
+        {
+            Task notifiedSubscriber = Task.CompletedTask;
+
+            var batch = CreateEmptyBatch();
+
+            while (_processingCts.IsCancellationRequested == false)
+            {
+                // start reading next batch from server on 1'st thread (can be before client started processing)
+                var readFromServer = ReadSingleSubscriptionBatchFromServerAsync(contextPool, tcpStreamCopy, buffer, batch);
+                try
+                {
+                    // wait for the subscriber to complete processing on 2'nd thread
+                    await notifiedSubscriber.ConfigureAwait(false);
+                }
+                catch (Exception)
+                {
+                    // if the subscriber errored, we shut down
+                    try
+                    {
+                        CloseTcpClient();
+                        using ((await readFromServer.ConfigureAwait(false)).ReturnContext)
+                        {
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        // nothing to be done here
+                    }
+
+                    throw;
+                }
+
+                BatchFromServer incomingBatch = await readFromServer.ConfigureAwait(false); // wait for batch reading to end
+
+                _processingCts.Token.ThrowIfCancellationRequested();
+
+                var lastReceivedChangeVector = batch.Initialize(incomingBatch);
+
+                notifiedSubscriber = Task.Run(async () => // the 2'nd thread
+                {
+                    // ReSharper disable once AccessToDisposedClosure
+                    using (incomingBatch.ReturnContext)
+                    {
+                        try
+                        {
+                            if (_subscriber.Async != null)
+                                await _subscriber.Async(batch).ConfigureAwait(false);
+                            else
+                                _subscriber.Sync(batch);
+                        }
+                        catch (Exception ex)
+                        {
+                            if (_logger.IsInfoEnabled)
+                            {
+                                _logger.Info(
+                                    $"Subscription '{_options.SubscriptionName}'. Subscriber threw an exception on document batch", ex);
+                            }
+
+                            if (_options.IgnoreSubscriberErrors == false)
+                                throw new SubscriberErrorException($"Subscriber threw an exception in subscription '{_options.SubscriptionName}'", ex);
+                        }
+                    }
+
+                    try
+                    {
+                        if (tcpStreamCopy != null) //possibly prevent ObjectDisposedException
+                        {
+                            await SendAckAsync(lastReceivedChangeVector, tcpStreamCopy, context, _processingCts.Token).ConfigureAwait(false);
+                        }
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        //if this happens, this means we are disposing, so don't care..
+                        //(this piece of code happens asynchronously to external using(tcpStream) statement)
+                    }
+                });
+            }
+        }
+
         internal async Task<BatchFromServer> ReadSingleSubscriptionBatchFromServerAsync(JsonContextPool contextPool, Stream tcpStream,
-            JsonOperationContext.MemoryBuffer buffer, SubscriptionBatch<T> batch)
+            JsonOperationContext.MemoryBuffer buffer, TBatch batch)
         {
             var incomingBatch = new List<SubscriptionConnectionServerMessage>();
             var includes = new List<BlittableJsonReaderObject>();
@@ -867,7 +964,7 @@ namespace Raven.Client.Documents.Subscriptions
             }
         }
 
-        public event Action<AbstractSubscriptionWorker<T>> OnDisposed = delegate { };
+        public event Action<AbstractSubscriptionWorker<TBatch, TType>> OnDisposed = delegate { };
 
         internal TestingStuff _forTestingPurposes;
 

@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Sharding;
 using Raven.Server.Config;
 using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide;
@@ -40,6 +42,16 @@ public class ShardedDocumentDatabase : DocumentDatabase
     {
         base.SetIds(topology, shardedDatabaseId);
         ShardedDatabaseId = shardedDatabaseId;
+    }
+
+    public List<ShardBucketRange> ReadShardingState()
+    {
+        using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+        using (context.OpenReadTransaction())
+        {
+            var raw = ServerStore.Cluster.ReadRawDatabaseRecord(context, ShardedDatabaseName);
+            return raw.ShardBucketRanges;
+        }
     }
 
     protected override ClusterTransactionBatchCollector CollectCommandsBatch(TransactionOperationContext context, int take)

@@ -28,6 +28,27 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide
 {
+    public static class RawDatabaseRecordExtensions
+    {
+        public static DatabaseTopology TopologyForSubscriptions(this RawDatabaseRecord record)
+        {
+            if (record.IsSharded() == false)
+                return record.Topology;
+
+            var rehabs = new HashSet<string>();
+            foreach (var shardedTopology in record.Shards)
+            {
+                foreach (var rehab in shardedTopology.Rehabs)
+                {
+                    rehabs.Add(rehab);
+                }
+            }
+
+            record.Topology.Members.RemoveAll(rehabs.Contains);
+            return record.Topology;
+        }
+    }
+
     public class RawDatabaseRecord : IDisposable
     {
         private BlittableJsonReaderObject _record;

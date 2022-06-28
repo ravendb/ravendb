@@ -11,7 +11,6 @@ public class DummySubscriptionConnectionsState : SubscriptionConnectionsState
     {
         _subscriptionName = "dummy";
 
-        CancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(DocumentDatabase.DatabaseShutdown);
         LastChangeVectorSent = state.ChangeVectorForNextBatchStartingPoint;
         PreviouslyRecordedChangeVector = LastChangeVectorSent;
         Query = state.Query;

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Threading.Tasks;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;

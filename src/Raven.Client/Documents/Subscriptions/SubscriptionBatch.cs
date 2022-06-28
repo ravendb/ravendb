@@ -1,66 +1,21 @@
 ﻿using System;
-using System.Collections.Generic;
 using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Session;
-using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Http;
-using Raven.Client.Json;
-using Sparrow.Json;
 using Sparrow.Logging;
 
 namespace Raven.Client.Documents.Subscriptions
 {
-    public class SubscriptionBatch<T>
+    public class SubscriptionBatch<T> : SubscriptionBatchBase<T>
     {
-        /// <summary>
-        /// Represents a single item in a subscription batch results. This class should be used only inside the subscription's Run delegate, using it outside this scope might cause unexpected behavior.
-        /// </summary>
-        public struct Item
-        {
-            private T _result;
-            public string ExceptionMessage { get; internal set; }
-            public string Id { get; internal set; }
-            public string ChangeVector { get; internal set; }
-            public bool Projection { get; internal set; }
-            public bool Revision { get; internal set; }
-
-            private void ThrowItemProcessException()
-            {
-                throw new InvalidOperationException($"Failed to process document {Id} with Change Vector {ChangeVector} because:{Environment.NewLine}{ExceptionMessage}");
-            }
-
-            public T Result
-            {
-                get
-                {
-                    if (ExceptionMessage != null)
-                        ThrowItemProcessException();
-
-                    return _result;
-                }
-                internal set => _result = value;
-            }
-
-            public BlittableJsonReaderObject RawResult { get; internal set; }
-            public BlittableJsonReaderObject RawMetadata { get; internal set; }
-
-            private IMetadataDictionary _metadata;
-            public IMetadataDictionary Metadata => _metadata ?? (_metadata = new MetadataAsDictionary(RawMetadata));
-        }
-
-        public int NumberOfItemsInBatch => Items?.Count ?? 0;
-        internal int NumberOfIncludes => _includes?.Count ?? 0;
-
-        private readonly RequestExecutor _requestExecutor;
         private readonly IDocumentStore _store;
-        private readonly string _dbName;
-        private readonly Logger _logger;
         private readonly GenerateEntityIdOnTheClient _generateEntityIdOnTheClient;
 
-        public List<Item> Items { get; } = new List<Item>();
-        private List<BlittableJsonReaderObject> _includes;
-        private List<(BlittableJsonReaderObject Includes, Dictionary<string, string[]> IncludedCounterNames)> _counterIncludes;
-        private List<BlittableJsonReaderObject> _timeSeriesIncludes;
+        public SubscriptionBatch(RequestExecutor requestExecutor, IDocumentStore store, string dbName, Logger logger) : base(requestExecutor, dbName, logger)
+        {
+            _store = store;
+            _generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(_requestExecutor.Conventions, entity => throw new InvalidOperationException("Shouldn't be generating new ids here"));
+        }
 
         public IDocumentSession OpenSession()
         {
@@ -170,77 +125,6 @@ namespace Raven.Client.Documents.Subscriptions
             }
         }
 
-        public SubscriptionBatch(RequestExecutor requestExecutor, IDocumentStore store, string dbName, Logger logger)
-        {
-            _requestExecutor = requestExecutor;
-            _store = store;
-            _dbName = dbName;
-            _logger = logger;
-
-            _generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(_requestExecutor.Conventions, entity => throw new InvalidOperationException("Shouldn't be generating new ids here"));
-        }
-
-        internal string Initialize(BatchFromServer batch)
-        {
-            _includes = batch.Includes;
-            _counterIncludes = batch.CounterIncludes;
-            _timeSeriesIncludes = batch.TimeSeriesIncludes;
-
-            Items.Capacity = Math.Max(Items.Capacity, batch.Messages.Count);
-            Items.Clear();
-
-            var revision = typeof(T).IsConstructedGenericType && typeof(T).GetGenericTypeDefinition() == typeof(Revision<>);
-            string lastReceivedChangeVector = null;
-
-            foreach (var item in batch.Messages)
-            {
-                var curDoc = item.Data;
-                (BlittableJsonReaderObject metadata, string id, string changeVector) = BatchFromServer.GetMetadataFromBlittable(curDoc);
-                lastReceivedChangeVector = changeVector;
-                metadata.TryGet(Constants.Documents.Metadata.Projection, out bool projection);
-
-                if (_logger.IsInfoEnabled)
-                {
-                    _logger.Info($"Got {id} (change vector: [{lastReceivedChangeVector}], size {curDoc.Size}");
-                }
-
-                var instance = default(T);
-
-                if (item.Exception == null)
-                {
-                    if (typeof(T) == typeof(BlittableJsonReaderObject))
-                    {
-                        instance = (T)(object)curDoc;
-                    }
-                    else
-                    {
-                        try
-                        {
-                            instance = _requestExecutor.Conventions.Serialization.DefaultConverter.FromBlittable<T>(curDoc, id);
-                        }
-                        catch (InvalidOperationException e)
-                        {
-                            throw new SubscriptionClosedException($"Could not serialize document '{id}' to '{typeof(T)}'. Closing the subscription.", e);
-                        }
-                    }
-
-                    if (string.IsNullOrEmpty(id) == false)
-                        _generateEntityIdOnTheClient.TrySetIdentity(instance, id);
-                }
-
-                Items.Add(new Item
-                {
-                    ChangeVector = changeVector,
-                    Id = id,
-                    RawResult = curDoc,
-                    RawMetadata = metadata,
-                    Result = instance,
-                    ExceptionMessage = item.Exception,
-                    Projection = projection,
-                    Revision = revision
-                });
-            }
-            return lastReceivedChangeVector;
-        }
+        protected override void EnsureDocumentId(T item, string id) => _generateEntityIdOnTheClient.TrySetIdentity(item, id);
     }
 }

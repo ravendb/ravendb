@@ -22,7 +22,35 @@ using Voron;
 
 namespace Raven.Server.Documents.Subscriptions;
 
-public abstract class SubscriptionConnectionsStateBase<TSubscriptionConnection> : IDisposable
+
+public abstract class SubscriptionConnectionsStateBase
+{
+    private AsyncManualResetEvent _waitForMoreDocuments;
+    public readonly CancellationTokenSource CancellationTokenSource;
+
+    protected SubscriptionConnectionsStateBase(CancellationToken token)
+    {
+        CancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token);
+        _waitForMoreDocuments = new AsyncManualResetEvent(CancellationTokenSource.Token);
+    }
+
+    public void NotifyHasMoreDocs()
+    {
+        while (true)
+        {
+            var current = _waitForMoreDocuments;
+            var last = Interlocked.CompareExchange(ref _waitForMoreDocuments, new AsyncManualResetEvent(CancellationTokenSource.Token), current);
+            last.Set();
+            
+            if (last == current)
+                break;
+        }
+    }
+
+    public Task<bool> WaitForMoreDocs() => _waitForMoreDocuments.WaitAsync();
+}
+
+public abstract class SubscriptionConnectionsStateBase<TSubscriptionConnection> : SubscriptionConnectionsStateBase, IDisposable
     where TSubscriptionConnection : SubscriptionConnectionBase
 {
     protected readonly ServerStore _server;
@@ -47,13 +75,12 @@ public abstract class SubscriptionConnectionsStateBase<TSubscriptionConnection> 
     public IEnumerable<TSubscriptionConnection> RecentRejectedConnections => _rejectedConnections;
     public ConcurrentSet<TSubscriptionConnection> PendingConnections => _pendingConnections;
 
-    public CancellationTokenSource CancellationTokenSource;
 
     private readonly SemaphoreSlim _subscriptionActivelyWorkingLock;
 
     public string PreviouslyRecordedChangeVector;
 
-    protected SubscriptionConnectionsStateBase(ServerStore server, string databaseName, long subscriptionId)
+    protected SubscriptionConnectionsStateBase(ServerStore server, string databaseName, long subscriptionId, CancellationToken token) : base(token)
     {
         if (databaseName.Contains('$'))
             throw new ArgumentException($"Database name {databaseName} can't have the shard name with '$'");
@@ -65,8 +92,7 @@ public abstract class SubscriptionConnectionsStateBase<TSubscriptionConnection> 
         _subscriptionActivelyWorkingLock = new SemaphoreSlim(1);
     }
 
-    public abstract void NotifyHasMoreDocs();
-    
+
     public abstract Task UpdateClientConnectionTime();
 
     public abstract Task WaitForIndexNotificationAsync(long index);
@@ -80,7 +106,7 @@ public abstract class SubscriptionConnectionsStateBase<TSubscriptionConnection> 
         Query = connection.SubscriptionState.Query;
     }
 
-    public async Task<(IDisposable DisposeOnDisconnect, long RegisterConnectionDurationInTicks)> SubscribeAsync(TSubscriptionConnection connection)
+    public virtual async Task<(IDisposable DisposeOnDisconnect, long RegisterConnectionDurationInTicks)> SubscribeAsync(TSubscriptionConnection connection)
     {
         var random = new Random();
         var registerConnectionDuration = Stopwatch.StartNew();
@@ -105,14 +131,14 @@ public abstract class SubscriptionConnectionsStateBase<TSubscriptionConnection> 
                     if (connection._logger.IsInfoEnabled)
                     {
                         connection._logger.Info(
-                            $"A connection from IP {connection.TcpConnection.TcpClient.Client.RemoteEndPoint} is starting to wait until previous connection from " +
+                            $"A connection from IP {connection.ClientUri} is starting to wait until previous connection from " +
                             $"{GetConnectionsAsString()} is released");
                     }
 
                     var timeout = TimeSpan.FromMilliseconds(Math.Max(250, (long)connection.Options.TimeToWaitBeforeConnectionRetry.TotalMilliseconds / 2) + random.Next(15, 50));
                     await Task.Delay(timeout, connection.CancellationTokenSource.Token);
                     await connection.SendHeartBeatAsync(
-                        $"A connection from IP {connection.TcpConnection.TcpClient.Client.RemoteEndPoint} is waiting for Subscription Task that is serving a connection from IP " +
+                        $"A connection from IP {connection.ClientUri} is waiting for Subscription Task that is serving a connection from IP " +
                         $"{GetConnectionsAsString()} to be released");
                 }
             }
@@ -542,7 +568,7 @@ public abstract class SubscriptionConnectionsStateBase<TSubscriptionConnection> 
         foreach (var connection in _connections)
         {
             sb ??= new StringBuilder();
-            sb.AppendLine($"{connection.TcpConnection.TcpClient.Client.RemoteEndPoint}");
+            sb.AppendLine($"{connection.ClientUri}");
         }
         return sb?.ToString();
     }
