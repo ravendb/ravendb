@@ -10,6 +10,7 @@ using System.Runtime.InteropServices;
 using Corax.Pipeline;
 using Corax.Utils;
 using Sparrow;
+using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Server;
 using Sparrow.Server.Compression;
@@ -34,8 +35,6 @@ namespace Corax
 
     public class IndexWriter : IDisposable // single threaded, controlled by caller
     {
-        public const int MaxTermLength = 1024;
-
         private readonly IndexFieldsMapping _fieldsMapping;
 
         private readonly StorageEnvironment _environment;
@@ -214,7 +213,7 @@ namespace Corax
                 return;
 
             term.Add(entryId);
-        }
+        }        
 
         [SkipLocalsInit]
         private unsafe void InsertToken(ByteStringContext context, ref IndexEntryReader entryReader, long entryId,
@@ -345,23 +344,23 @@ namespace Corax
                     var word = wordsBuffer.Slice(token.Offset, (int)token.Length);
                     ExactInsert(word);
                 }
-            }
-
+            }            
 
             void ExactInsert(ReadOnlySpan<byte> value)
             {
-                if (value.Length >= MaxTermLength)
-                    throw new InvalidDataException($"Term must be less than {MaxTermLength} bytes in size. Actual length was {value.Length}");
+                ByteStringContext<ByteStringMemoryCache>.InternalScope? scope;
 
                 Slice slice;
                 if (value.Length == 0)
                 {
                     slice = Constants.EmptyStringSlice;
+                    scope = null;
                 }
                 else
                 {
-                    using var _ = Slice.From(context, value, ByteStringType.Mutable, out slice);
+                    scope = CreateNormalizedTerm(context, value, out slice);
                 }
+
                 if (field.TryGetValue(slice, out var term) == false)
                 {
                     var fieldName = slice.Clone(context);
@@ -372,6 +371,30 @@ namespace Corax
 
                 if (binding.HasSuggestions)
                     AddSuggestions(binding, slice);
+
+                scope?.Dispose();
+            }
+        }
+
+        private static unsafe ByteStringContext<ByteStringMemoryCache>.InternalScope CreateNormalizedTerm(ByteStringContext context, ReadOnlySpan<byte> value, out Slice slice)
+        {
+            ulong hash = 0;
+            int length = value.Length;
+            if (length > Constants.Terms.MaxLength)
+            {
+                int hashStartingPoint = Constants.Terms.MaxLength - 2 * sizeof(ulong);
+                hash = Hashing.XXHash64.Calculate(value.Slice(hashStartingPoint));
+
+                Span<byte> localValue = stackalloc byte[Constants.Terms.MaxLength];
+                value.Slice(0, Constants.Terms.MaxLength).CopyTo(localValue);
+                int hexSize = Numbers.FillAsHex(localValue.Slice(hashStartingPoint), hash);
+                Debug.Assert(Constants.Terms.MaxLength == hashStartingPoint + hexSize);
+
+                return Slice.From(context, localValue, ByteStringType.Mutable, out slice);
+            }
+            else
+            {
+                return Slice.From(context, value, ByteStringType.Mutable, out slice);
             }
         }
 
@@ -470,8 +493,12 @@ namespace Corax
             
             void DeleteIdFromExactTerm(long id, Slice fieldName, Span<byte> tmpBuffer, ReadOnlySpan<byte> termValue)
             {
+                // We need to normalize the term in case we have a term bigger than MaxTermLength.
+                using var _ = CreateNormalizedTerm(Transaction.Allocator, termValue, out Slice termSlice);
+                termValue = termSlice.AsReadOnlySpan();
+
                 var fieldTree = fieldsTree.CompactTreeFor(fieldName);
-                if (termValue.Length == 0 || fieldTree.TryGetValue(termValue, out var containerId) == false)
+                if (termValue.Length == 0 || fieldTree.TryGetValue(termSlice.AsReadOnlySpan(), out var containerId) == false)
                     return;
 
                 if ((containerId & (long)TermIdMask.Set) != 0)
@@ -486,7 +513,7 @@ namespace Corax
                     if (setState.NumberOfEntries == 0)
                     {
                         //If we get rid off all terms we have to remove container. Probably we can do this in a better way
-                        fieldTree.TryRemove(termValue, out _);
+                        fieldTree.TryRemove(termValue, out var __);
                         Container.Delete(llt, _postingListContainerId, setId);
                     }
                 }
@@ -515,7 +542,7 @@ namespace Corax
 
                     // Due to encoding we have to encode new set again so we remove previous small set from container.
                     Container.Delete(llt, _postingListContainerId, smallSetId);
-                    fieldTree.TryRemove(termValue, out _); // term also disappears from the field tree
+                    fieldTree.TryRemove(termValue, out var __); // term also disappears from the field tree
 
                     AddNewTerm(temporaryStorageForIds, fieldTree, termValue, tmpBuffer, default, false);
                 }
@@ -536,9 +563,13 @@ namespace Corax
             var entriesCount = Transaction.LowLevelTransaction.RootObjects.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0;
             Debug.Assert(entriesCount - _entriesToDelete.Count >= 0);
 
-            if (fieldTree.TryGetValue(term, out long idInTree, out var _) == false)
-                return false;
+            // We need to normalize the term in case we have a term bigger than MaxTermLength.
+            using var _ = Slice.From(Transaction.Allocator, term, out var termSlice);
+            using var __ = CreateNormalizedTerm(Transaction.Allocator, termSlice.AsReadOnlySpan(), out termSlice);
 
+            var termValue = termSlice.AsReadOnlySpan();
+            if (fieldTree.TryGetValue(termValue, out long idInTree, out var _) == false)
+                return false;
 
             if ((idInTree & (long)TermIdMask.Set) != 0)
             {
