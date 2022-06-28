@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Jint.Native;
@@ -10,6 +9,8 @@ using Raven.Client;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Documents.Sharding;
+using Raven.Server.Documents.Sharding.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -85,16 +86,37 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
 
         protected int BatchSize => Options.MaxDocsPerBatch;
 
-        public static SubscriptionProcessor Create(SubscriptionConnection connection)
+        public static SubscriptionProcessor Create(SubscriptionConnectionBase connection)
         {
-            var database = connection.TcpConnection.DocumentDatabase;
-            var server = database.ServerStore;
-            if (connection.Subscription.Revisions)
+            if (connection is SubscriptionConnectionForShard sharded)
+                return Create(sharded);
+
+            if (connection is SubscriptionConnection subscriptionConnection)
             {
-                return new RevisionsSubscriptionProcessor(server, database, connection);
+                var database = connection.TcpConnection.DocumentDatabase;
+                var server = database.ServerStore;
+                if (connection.Subscription.Revisions)
+                {
+                    return new RevisionsSubscriptionProcessor(server, database, subscriptionConnection);
+                }
+
+                return new DocumentsSubscriptionProcessor(server, database, subscriptionConnection);
             }
 
-            return new DocumentsSubscriptionProcessor(server, database, connection);
+            throw new ArgumentException($"Unknown connection type {connection.GetType().FullName}");
+        }
+
+        public static SubscriptionProcessor Create(SubscriptionConnectionForShard connection)
+        {
+            var database = connection.TcpConnection.DocumentDatabase as ShardedDocumentDatabase;
+            var server = database.ServerStore;
+
+            if (connection.Subscription.Revisions)
+            {
+                return new ShardedRevisionsSubscriptionProcessor(server, database, connection);
+            }
+
+            return new ShardedDocumentsSubscriptionProcessor(server, database, connection);
         }
 
         protected SubscriptionProcessor(ServerStore server, DocumentDatabase database, SubscriptionConnection connection)

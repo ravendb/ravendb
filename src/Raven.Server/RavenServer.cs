@@ -2481,6 +2481,7 @@ namespace Raven.Server
             catch (Exception)
             {
                 subscriptionConnectionInProgress?.Dispose();
+                tcpConnectionOptions.Dispose();
                 throw;
             }
         }

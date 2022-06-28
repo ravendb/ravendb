@@ -32,7 +32,8 @@ namespace Raven.Server.Documents.Subscriptions
         private static readonly byte[] Heartbeat = Encoding.UTF8.GetBytes("\r\n");
         public const long NonExistentBatch = -1;
         public const int WaitForChangedDocumentsTimeoutInMs = 3000;
-
+        public readonly TimeSpan HeartbeatTimeout = TimeSpan.FromSeconds(1);
+        
         protected readonly ServerStore _serverStore;
         private readonly IDisposable _tcpConnectionDisposable;
         internal readonly (IDisposable ReleaseBuffer, JsonOperationContext.MemoryBuffer Buffer) _copiedBuffer;
@@ -52,7 +53,51 @@ namespace Raven.Server.Documents.Subscriptions
         public SubscriptionOpeningStrategy Strategy => _options.Strategy;
         public readonly string ClientUri;
 
-        public abstract Task ReportExceptionAsync(SubscriptionError error, Exception e);
+        public async Task ReportExceptionAsync(SubscriptionError error, Exception e)
+        {
+            Stats.ConnectionScope.RecordException(error, e.ToString());
+            if (ConnectionException == null && e is SubscriptionException se)
+            {
+                ConnectionException = se;
+            }
+
+            try
+            {
+                await LogExceptionAndReportToClientAsync(ConnectionException ?? e);
+            }
+            catch (Exception)
+            {
+                // ignored
+            }
+        }
+
+        protected async Task<bool> WaitForChangedDocsAsync(SubscriptionConnectionsStateBase state, Task pendingReply)
+        {
+            AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info, "Start waiting for changed documents"));
+            do
+            {
+                var hasMoreDocsTask = state.WaitForMoreDocs();
+
+                var resultingTask = await Task
+                    .WhenAny(hasMoreDocsTask, pendingReply, TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(WaitForChangedDocumentsTimeoutInMs))).ConfigureAwait(false);
+              
+                TcpConnection.DocumentDatabase?.ForTestingPurposes?.Subscription_ActionToCallDuringWaitForChangedDocuments?.Invoke();
+
+                if (CancellationTokenSource.IsCancellationRequested)
+                    return false;
+
+                if (resultingTask == pendingReply)
+                    return false;
+
+                if (hasMoreDocsTask == resultingTask)
+                    return true;
+
+                await SendHeartBeatAsync("Waiting for changed documents");
+                await SendNoopAckAsync();
+            } while (CancellationTokenSource.IsCancellationRequested == false);
+            return false;
+        }
+
         protected abstract Task OnClientAckAsync();
         public abstract Task SendNoopAckAsync();
 
@@ -161,7 +206,7 @@ namespace Raven.Server.Documents.Subscriptions
             using (var record = GetRecord(context))
             {
                 var subscription = _serverStore.Cluster.Subscriptions.ReadSubscriptionStateByName(context, DatabaseName, name);
-                var topology = record.Topology;
+                var topology = record.TopologyForSubscriptions();
 
                 var whoseTaskIsIt = _serverStore.WhoseTaskIsIt(topology, subscription, subscription);
                 if (whoseTaskIsIt == null && record.DeletionInProgress.ContainsKey(_serverStore.NodeTag))
@@ -284,6 +329,20 @@ namespace Raven.Server.Documents.Subscriptions
             }
         }
 
+        protected void AssertCloseWhenNoDocsLeft()
+        {
+            if (_options.CloseWhenNoDocsLeft)
+            {
+                if (_logger.IsInfoEnabled)
+                {
+                    _logger.Info(
+                        $"Closing subscription {Options.SubscriptionName} because did not find any documents to send and it's in '{nameof(SubscriptionWorkerOptions.CloseWhenNoDocsLeft)}' mode");
+                }
+
+                throw new SubscriptionClosedException($"Closing subscription {Options.SubscriptionName} because there were no documents left and client connected in '{nameof(SubscriptionWorkerOptions.CloseWhenNoDocsLeft)}' mode");
+            }
+        }
+
         protected async Task LogExceptionAndReportToClientAsync(Exception e)
         {
             var errorMessage = CreateStatusMessage(ConnectionStatus.Fail, e.ToString());
@@ -394,7 +453,7 @@ namespace Raven.Server.Documents.Subscriptions
                         }
                     case SubscriptionChangeVectorUpdateConcurrencyException:
                         {
-                            AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info, $"Subscription change vector update concurrency error, reporting to '{TcpConnection.TcpClient.Client.RemoteEndPoint}'"));
+                            AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info, $"Subscription change vector update concurrency error, reporting to '{ClientUri}'"));
                             if (_logger.IsInfoEnabled)
                             {
                                 _logger.Info("Subscription change vector update concurrency error", ex);
@@ -574,8 +633,7 @@ namespace Raven.Server.Documents.Subscriptions
             SubscriptionConnectionClientMessage clientReply;
             while (true)
             {
-                var result = await Task.WhenAny(replyFromClientTask,
-                    TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(5000), CancellationTokenSource.Token)).ConfigureAwait(false);
+                var result = await Task.WhenAny(replyFromClientTask, TimeoutManager.WaitFor(HeartbeatTimeout, CancellationTokenSource.Token));
                 CancellationTokenSource.Token.ThrowIfCancellationRequested();
                 if (result == replyFromClientTask)
                 {

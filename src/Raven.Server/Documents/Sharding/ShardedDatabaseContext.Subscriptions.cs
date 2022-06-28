@@ -34,7 +34,7 @@ public partial class ShardedDatabaseContext
             ConcurrentConnectionsSemiSemaphore = new SemaphoreSlim(context.Configuration.Subscriptions.MaxNumberOfConcurrentConnections);
         }
 
-        public void Update(DatabaseRecord databaseRecord)
+        public void Update(RawDatabaseRecord databaseRecord)
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal,
                 "This is almost identical as the one from the subscription storage");
@@ -80,7 +80,7 @@ public partial class ShardedDatabaseContext
                         continue;
                     }*/
 
-                    var whoseTaskIsIt = _serverStore.WhoseTaskIsIt(databaseRecord.Topology, subscriptionState, subscriptionState);
+                    var whoseTaskIsIt = _serverStore.WhoseTaskIsIt(databaseRecord.TopologyForSubscriptions(), subscriptionState, subscriptionState);
                     if (whoseTaskIsIt != _serverStore.NodeTag)
                     {
                         subscriptionConnectionsState.DropSubscription(

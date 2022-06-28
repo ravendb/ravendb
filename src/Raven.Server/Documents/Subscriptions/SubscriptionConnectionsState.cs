@@ -19,14 +19,11 @@ namespace Raven.Server.Documents.Subscriptions
         private readonly SubscriptionStorage _subscriptionStorage;
         public DocumentDatabase DocumentDatabase => _subscriptionStorage._db;
         private IDisposable _disposableNotificationsRegistration;
-        private readonly AsyncManualResetEvent _waitForMoreDocuments;
         public string LastChangeVectorSent;
 
-        public SubscriptionConnectionsState(string databaseName, long subscriptionId, SubscriptionStorage storage) : base(storage._db.ServerStore, databaseName, subscriptionId)
+        public SubscriptionConnectionsState(string databaseName, long subscriptionId, SubscriptionStorage storage) : base(storage._db.ServerStore, databaseName, subscriptionId, storage._db.DatabaseShutdown)
         {
             _subscriptionStorage = storage;
-            CancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(storage._db.DatabaseShutdown);
-            _waitForMoreDocuments = new AsyncManualResetEvent(CancellationTokenSource.Token);
         }
 
         public Task GetSubscriptionInUseAwaiter => Task.WhenAll(_connections.Select(c => c.SubscriptionConnectionTask));
@@ -55,7 +52,7 @@ namespace Raven.Server.Documents.Subscriptions
                 if (Client.Constants.Documents.Collections.AllDocumentsCollection.Equals(connection.Subscription.Collection, StringComparison.OrdinalIgnoreCase) ||
                     notification.CollectionName.Equals(connection.Subscription.Collection, StringComparison.OrdinalIgnoreCase))
                 {
-                    _waitForMoreDocuments.Set();
+                    NotifyHasMoreDocs();
                 }
             }
 
@@ -103,12 +100,6 @@ namespace Raven.Server.Documents.Subscriptions
 
             return set;
         }
-
-        public override void NotifyHasMoreDocs() => _waitForMoreDocuments.Set();
-
-        public void NotifyNoMoreDocs() => _waitForMoreDocuments.Reset();
-
-        public Task<bool> WaitForMoreDocs() => _waitForMoreDocuments.WaitAsync();
 
         public override void Dispose()
         {

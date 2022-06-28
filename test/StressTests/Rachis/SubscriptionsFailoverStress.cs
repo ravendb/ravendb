@@ -76,7 +76,7 @@ namespace StressTests.Rachis
 
         [RavenTheory(RavenTestCategory.Subscriptions)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded, Skip = "Fix me")]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
         public async Task SubscriptionFailoverWhileModifying(Options options)
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
@@ -119,14 +119,23 @@ namespace StressTests.Rachis
 
                     await generateTask;
 
-                    await AssertWaitForTrueAsync(async () =>
+                    var count = await WaitForValueAsync(async () =>
                     {
                         using (var session = store.OpenAsyncSession())
                         {
                             var result = await session.Query<User>().Where(u => u.Count > 0).ToListAsync(token: cts.Token);
-                            return result.Count == 0;
+                            return result.Count;
                         }
-                    }, timeout: 60_000);
+                    }, 0, timeout: 60_000);
+
+                    if (count > 0)
+                    {
+                        using (var session = store.OpenAsyncSession())
+                        {
+                            var result = await session.Query<User>().Where(u => u.Count > 0).ToListAsync(token: cts.Token);
+                            Assert.True(false, string.Join(Environment.NewLine, result.Select(r => $"{r.Id} has {r.Count}")));
+                        }
+                    }
                 }
             }
             finally

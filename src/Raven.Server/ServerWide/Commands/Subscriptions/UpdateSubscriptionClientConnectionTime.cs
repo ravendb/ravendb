@@ -33,7 +33,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
             var subscription = JsonDeserializationCluster.SubscriptionState(existingValue);
 
-            var topology = record.Topology;
+            var topology = record.TopologyForSubscriptions();
             var lastResponsibleNode = AcknowledgeSubscriptionBatchCommand.GetLastResponsibleNode(HasHighlyAvailableTasks, topology, NodeTag);
             var appropriateNode = topology.WhoseTaskIsIt(RachisState.Follower, subscription, lastResponsibleNode);
 

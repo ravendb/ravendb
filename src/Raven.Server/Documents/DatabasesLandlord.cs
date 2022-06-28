@@ -332,7 +332,8 @@ namespace Raven.Server.Documents
         {
             using (DatabasesCache.RemoveLockAndReturn(databaseName, CompleteDatabaseUnloading, out _, caller))
             {
-
+                if (ShardedDatabasesCache.TryRemove(databaseName, out var databaseContextTask)) 
+                    databaseContextTask.Result.Dispose();
             }
         }
 
