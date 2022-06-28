@@ -26,7 +26,6 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Properties;
 using Raven.Client.Util;
-using Raven.Server.Config.Categories;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Patch;
@@ -691,7 +690,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                                         BlittableJsonReaderObject blittableJson;
                                         if (section.Headers.ContainsKey("Content-Encoding") && section.Headers["Content-Encoding"] == "gzip")
                                         {
-                                            using (var gzipStream = new GZipStream(section.Body, CompressionMode.Decompress))
+                                            await using (var gzipStream = new GZipStream(section.Body, CompressionMode.Decompress))
                                             {
                                                 blittableJson = await context.ReadForMemoryAsync(gzipStream, Constants.Smuggler.ImportOptions);
                                             }
@@ -701,8 +700,19 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                                             blittableJson = await context.ReadForMemoryAsync(section.Body, Constants.Smuggler.ImportOptions);
                                         }
 
-                                        options = JsonDeserializationServer.DatabaseSmugglerOptions(blittableJson);
-                                        continue;
+                                        IgnoreDatabaseItemTypesIfCurrentVersionIsOlderThenClientVersion(context, ref blittableJson);
+
+                                        try
+                                        {
+                                            options = JsonDeserializationServer.DatabaseSmugglerOptions(blittableJson);
+                                            continue;
+                                        }
+                                        catch (Exception e)
+                                        {
+                                            if (RequestRouter.TryGetClientVersion(HttpContext, out var version) == false || version.Build <= RavenVersionAttribute.Instance.BuildVersion)
+                                                throw new InvalidOperationException("Could not find the client version or the build version is equal to/older than the current version");
+                                        }
+
                                     }
 
                                     if (MultipartRequestHelper.HasFileContentDisposition(contentDisposition) == false)
@@ -728,6 +738,80 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 
                 WriteImportResult(context, result, ResponseBodyStream());
             }
+        }
+
+        private void IgnoreDatabaseItemTypesIfCurrentVersionIsOlderThenClientVersion(DocumentsOperationContext context, ref BlittableJsonReaderObject blittableJson)
+        {
+            if (blittableJson.TryGet(nameof(DatabaseSmugglerOptions.OperateOnTypes), out string operateOnTypes) == false)
+                throw new InvalidOperationException($"{nameof(DatabaseSmugglerOptions.OperateOnTypes)} field can not be empty");
+
+            if (blittableJson.TryGet(nameof(DatabaseSmugglerOptions.OperateOnDatabaseRecordTypes), out string operateOnDatabaseRecordTypes) == false)
+                throw new InvalidOperationException($"{nameof(DatabaseSmugglerOptions.OperateOnDatabaseRecordTypes)} field can not be empty");
+
+            DynamicJsonValue djv = null;
+            if (Enum.TryParse(typeof(DatabaseItemType), operateOnTypes, out _) == false)
+            {
+                CheckClientVersion();
+
+                var itemsTypes = DatabaseItemType.None;
+                var types = operateOnTypes.Split(", ");
+
+                foreach (var type in types)
+                {
+                    if (Enum.TryParse(typeof(DatabaseItemType), type, true, out var result) == false || result is DatabaseItemType existing == false)
+                        continue;
+
+                    itemsTypes |= existing;
+                }
+
+                djv = new DynamicJsonValue(blittableJson)
+                {
+                    [nameof(DatabaseSmugglerOptions.OperateOnTypes)] = itemsTypes
+                };
+            }
+
+            if (Enum.TryParse(typeof(DatabaseRecordItemType), operateOnDatabaseRecordTypes, out _) == false)
+            {
+                CheckClientVersion();
+
+                var databaseRecordItemsTypes = DatabaseRecordItemType.None;
+                var types = operateOnTypes.Split(", ");
+
+                foreach (var type in types)
+                {
+                    if (Enum.TryParse(typeof(DatabaseRecordItemType), type, true, out var result) == false || result is DatabaseRecordItemType existing == false)
+                        continue;
+
+                    databaseRecordItemsTypes |= existing;
+                }
+
+                if (djv == null)
+                {
+                    djv = new DynamicJsonValue(blittableJson)
+                    {
+                        [nameof(DatabaseSmugglerOptions.OperateOnDatabaseRecordTypes)] = databaseRecordItemsTypes
+                    };
+                }
+                else
+                {
+                    djv[nameof(DatabaseSmugglerOptions.OperateOnDatabaseRecordTypes)] = databaseRecordItemsTypes;
+                }
+            }
+
+            if (djv == null)
+                return;
+
+            blittableJson.Modifications = djv;
+            using (var old = blittableJson)
+            {
+                blittableJson = context.ReadObject(blittableJson, "item-types");
+            }
+        }
+
+        private void CheckClientVersion()
+        {
+            if (RequestRouter.TryGetClientVersion(HttpContext, out var version) == false || version.Build <= RavenVersionAttribute.Instance.BuildVersion)
+                throw new InvalidOperationException("Could not find the client version or the build version is equal to/older than the current version");
         }
 
         [RavenAction("/databases/*/smuggler/import/csv", "POST", AuthorizationStatus.ValidUser, DisableOnCpuCreditsExhaustion = true)]
