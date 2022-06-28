@@ -37,16 +37,14 @@ namespace Raven.Server.Documents.Indexes.Workers
                 dictionary.Clear();
             }
 
-            public void Set(ActionType actionType, string collection, Reference reference, string itemId, long lastIndexedParentEtag, TransactionOperationContext indexContext)
+            public void Set(ActionType actionType, string collection, ReferenceState referenceState, TransactionOperationContext indexContext)
             {
                 var dictionary = GetDictionary(actionType);
-                var referencedItemId = (string)reference.Key;
-                var referenceEtag = reference.Etag;
 
                 indexContext.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewTransactionsPrevented += _ =>
                 {
                     // we update this only after the transaction was committed
-                    dictionary[collection] = new ReferenceState(referencedItemId, referenceEtag, itemId, lastIndexedParentEtag);
+                    dictionary[collection] = referenceState;
 
 #if DEBUG
                     if (_setCollections.Add((actionType, collection)) == false)
