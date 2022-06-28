@@ -78,6 +78,10 @@ class notificationCenter {
 
     showNotifications = ko.observable<boolean>(false);
     pinNotifications = ko.observable<boolean>(false);
+    
+    isShowingAllNotifications = ko.observable<boolean>(false);
+    static readonly numberOfNotificationsToShow = 300;
+    
     includeInDom = ko.observable<boolean>(false); // to avoid RavenDB-10660
 
     globalNotifications = ko.observableArray<abstractNotification>();
@@ -87,7 +91,10 @@ class notificationCenter {
     databaseOperationsWatch = new notificationCenterOperationsWatch();
 
     allNotifications: KnockoutComputed<abstractNotification[]>;
+    notificationsToShow: KnockoutComputed<abstractNotification[]>;
+    
     visibleNotifications: KnockoutComputed<abstractNotification[]>;
+    visibleNotificationsTrimmed: KnockoutComputed<abstractNotification[]>;
 
     totalItemsCount: KnockoutComputed<number>;
     successItemsCount: KnockoutComputed<number>;
@@ -189,6 +196,12 @@ class notificationCenter {
             return allNotifications.filter(x => x.severity() === severity);
         });
 
+        this.visibleNotificationsTrimmed = ko.pureComputed(() =>
+            this.visibleNotifications().slice(0, notificationCenter.numberOfNotificationsToShow));
+
+        this.notificationsToShow = ko.pureComputed(() =>
+            this.isShowingAllNotifications() ? this.visibleNotifications() : this.visibleNotificationsTrimmed());
+
         this.totalItemsCount = ko.pureComputed(() => this.allNotifications().length);
 
         const bySeverityCounter = (severity: Raven.Server.NotificationCenter.Notifications.NotificationSeverity) => {
@@ -223,6 +236,7 @@ class notificationCenter {
         this.showNotifications.subscribe((show: boolean) => {
             if (show) {
                 this.includeInDom(true);
+                this.isShowingAllNotifications(false);
                 window.addEventListener("click", this.hideHandler, true);
             } else {
                 window.removeEventListener("click", this.hideHandler, true);
@@ -395,6 +409,7 @@ class notificationCenter {
 
     dismissAll() {
         this.allNotifications().forEach(notification => this.dismiss(notification));
+        this.isShowingAllNotifications(false);
     }
 
     dismiss(notification: abstractNotification) {
@@ -498,6 +513,10 @@ class notificationCenter {
 
     filterBySeverity(severity: Raven.Server.NotificationCenter.Notifications.NotificationSeverity) {
         this.severityFilter(severity);
+    }
+
+    showAllNotifications() {
+        this.isShowingAllNotifications(true);
     }
 }
 

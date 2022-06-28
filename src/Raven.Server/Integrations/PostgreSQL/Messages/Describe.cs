@@ -43,12 +43,6 @@ namespace Raven.Server.Integrations.PostgreSQL.Messages
                 throw new PgErrorException(PgErrorCodes.NoActiveSqlTransaction,
                     "Describe message was received when no transaction is taking place.");
 
-            if (!string.IsNullOrEmpty(ObjectName))
-            {
-                throw new PgErrorException(PgErrorCodes.FeatureNotSupported,
-                    "Describe: Named statements/portals are not supported.");
-            }
-
             var (schema, parameterDataTypes) = await transaction.Describe();
 
             if (PgObjectType == PgObjectType.PreparedStatement)

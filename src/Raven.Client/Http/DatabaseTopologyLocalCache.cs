@@ -39,7 +39,7 @@ namespace Raven.Client.Http
         public static Task<Topology> TryLoadAsync(string databaseName, string topologyHash, DocumentConventions conventions, JsonOperationContext context)
         {
             if (conventions.DisableTopologyCache)
-                return null;
+                return Task.FromResult((Topology)null);
 
             var path = GetPath(databaseName, topologyHash, conventions);
             return TryLoadAsync(path, context);

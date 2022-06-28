@@ -23,7 +23,7 @@ namespace FastTests
         public class BackupTestBase
         {
             private readonly RavenTestBase _parent;
-            private readonly int _reasonableTimeout = Debugger.IsAttached ? 60000 : 15000;
+            private readonly int _reasonableTimeout = Debugger.IsAttached ? 60000 : 30000;
 
             public BackupTestBase(RavenTestBase parent)
             {

@@ -18,7 +18,7 @@ namespace Raven.Server.Integrations.PostgreSQL
             _result = result;
         }
 
-        public static bool TryParse(string queryText, int[] parametersDataTypes, out HardcodedQuery hardcodedQuery)
+        public static bool TryParse(string queryText, int[] parametersDataTypes, PgSession session, out HardcodedQuery hardcodedQuery)
         {
             // TODO: The hardcoded queries in NpgsqlConfig might look a bit different for every user because they are generated using a function. Add support to more than just the current queries by not matching the entire string but ignoring parts of it.
             // TODO: For more accurate implementation, use the `resultsFormat` and send an appropriate _result table (Binary or Text). So for example return PowerBIConfig.TableScheamResponseBinary when the foramt is binary, and PowerBIConfig.TableScheamResponseText otherwise.
@@ -51,6 +51,12 @@ namespace Raven.Server.Integrations.PostgreSQL
 
             else if (normalizedQuery.Replace("\n", "").Equals(NpgsqlConfig.VersionQuery, StringComparison.OrdinalIgnoreCase))
                 result = NpgsqlConfig.VersionResponse;
+                
+            else if (normalizedQuery.Equals(NpgsqlConfig.VersionCurrentSettingQuery, StringComparison.OrdinalIgnoreCase))
+                result = NpgsqlConfig.VersionCurrentSettingResponse;
+            
+            else if (normalizedQuery.Equals(NpgsqlConfig.CurrentSettingQuery, StringComparison.OrdinalIgnoreCase))
+                result = NpgsqlConfig.CurrentSettingResponse;
 
             else if (normalizedQuery.Equals(NpgsqlConfig.Npgsql5TypesQuery, StringComparison.OrdinalIgnoreCase))
                 result = NpgsqlConfig.Npgsql5TypesResponse;
@@ -85,6 +91,16 @@ namespace Raven.Server.Integrations.PostgreSQL
             else if (normalizedQuery.StartsWith("ROLLBACK", StringComparison.OrdinalIgnoreCase))
                 result = new PgTable();
 
+            else if (normalizedQuery.StartsWith("DEALLOCATE", StringComparison.OrdinalIgnoreCase))
+            {
+                var statementName = normalizedQuery.Split("\"")[1];
+                if (session.NamedStatements.TryRemove(statementName, out var statement) == false)
+                    throw new InvalidOperationException($"Failed to remove prepared statement '{statementName}'");
+                statement.IsNamedStatement = false;
+                statement.Dispose();
+                result = new PgTable();
+            }
+                
             if (result != null)
             {
                 hardcodedQuery = new HardcodedQuery(queryText, parametersDataTypes, result);
