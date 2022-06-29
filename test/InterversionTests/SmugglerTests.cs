@@ -138,23 +138,6 @@ namespace InterversionTests
             //Import
             var importOptions = new DatabaseSmugglerImportOptions { SkipRevisionCreation = true };
 
-            // Operate on types that will remain relevant for v4.2 
-            importOptions.OperateOnTypes &= ~(DatabaseItemType.TimeSeries | DatabaseItemType.ReplicationHubCertificates);
-            importOptions.OperateOnDatabaseRecordTypes = DatabaseRecordItemType.Client |
-                                                         DatabaseRecordItemType.ConflictSolverConfig |
-                                                         DatabaseRecordItemType.Expiration |
-                                                         DatabaseRecordItemType.ExternalReplications |
-                                                         DatabaseRecordItemType.PeriodicBackups |
-                                                         DatabaseRecordItemType.RavenConnectionStrings |
-                                                         DatabaseRecordItemType.RavenEtls |
-                                                         DatabaseRecordItemType.Revisions |
-                                                         DatabaseRecordItemType.Settings |
-                                                         DatabaseRecordItemType.SqlConnectionStrings |
-                                                         DatabaseRecordItemType.Sorters |
-                                                         DatabaseRecordItemType.SqlEtls |
-                                                         DatabaseRecordItemType.HubPullReplications |
-                                                         DatabaseRecordItemType.SinkPullReplications;
-
             if (excludeOn == ExcludeOn.Import)
                 importOptions.OperateOnTypes &= ~(DatabaseItemType.Attachments | DatabaseItemType.RevisionDocuments | DatabaseItemType.CounterGroups);
             var importOperation = await store42.Smuggler.ImportAsync(importOptions, file);
@@ -341,7 +324,7 @@ namespace InterversionTests
         private static async Task<Operation> Migrate(DocumentStore @from, DocumentStore to, DatabaseItemType exclude = DatabaseItemType.None)
         {
             using var client = new HttpClient();
-            var url = Uri.EscapeDataString($"{to.Urls.First()}/admin/remote-server/build/version?serverUrl={@from.Urls.First()}");
+            var url = $"{to.Urls.First()}/admin/remote-server/build/version?serverUrl={@from.Urls.First()}";
             var rawVersionRespond = (await client.GetAsync(url)).Content.ReadAsStringAsync().Result;
             var versionRespond = JsonConvert.DeserializeObject<BuildInfo>(rawVersionRespond);
 
