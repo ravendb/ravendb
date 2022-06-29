@@ -160,6 +160,42 @@ namespace Raven.Server.Documents.Sharding
                     pagingContinuation);
             }
 
+            public IAsyncEnumerable<ShardStreamItem<BlittableJsonReaderObject>> PagedShardedDocumentsBlittableByLastModified(
+                CombinedReadContinuationState combinedState,
+                string name,
+                ShardedPagingContinuation pagingContinuation)
+            {
+                return PagedShardedStream(
+                    combinedState,
+                    name,
+                    x => x,
+                    DocumentLastModifiedComparer.Instance,
+                    pagingContinuation);
+            }
+
+            public IAsyncEnumerable<ShardStreamItem<BlittableJsonReaderObject>> PagedShardedDocumentsBlittableById(
+                CombinedReadContinuationState combinedState,
+                string name,
+                ShardedPagingContinuation pagingContinuation)
+            {
+                return PagedShardedStream(
+                    combinedState,
+                    name,
+                    x => x,
+                    DocumentIdComparer.Instance,
+                    pagingContinuation);
+            }
+
+            public class DocumentIdComparer : Comparer<ShardStreamItem<BlittableJsonReaderObject>>
+            {
+                public override int Compare(ShardStreamItem<BlittableJsonReaderObject> x, ShardStreamItem<BlittableJsonReaderObject> y)
+                {
+                    return String.Compare(x.Item.GetMetadata().GetId(), y.Item.GetMetadata().GetId(), StringComparison.OrdinalIgnoreCase);
+                }
+
+                public static DocumentIdComparer Instance = new();
+            }
+
             public class DocumentLastModifiedComparer : Comparer<ShardStreamItem<BlittableJsonReaderObject>>
             {
                 public override int Compare(ShardStreamItem<BlittableJsonReaderObject> x, ShardStreamItem<BlittableJsonReaderObject> y)

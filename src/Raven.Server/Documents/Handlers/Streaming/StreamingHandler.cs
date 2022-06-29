@@ -7,17 +7,15 @@ using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Indexes;
+using Raven.Server.Documents.Handlers.Processors.Streaming;
 using Raven.Server.Documents.Handlers.Processors.TimeSeries;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.TimeSeries;
-using Raven.Server.Json;
 using Raven.Server.NotificationCenter;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.TrafficWatch;
-using Raven.Server.Utils;
-using Raven.Server.Utils.Enumerators;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Streaming
@@ -27,55 +25,8 @@ namespace Raven.Server.Documents.Handlers.Streaming
         [RavenAction("/databases/*/streams/docs", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, DisableOnCpuCreditsExhaustion = true)]
         public async Task StreamDocsGet()
         {
-            var start = GetStart();
-            var pageSize = GetPageSize();
-
-            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                var initialState = new DocsStreamingIterationState(context, Database.Configuration.Databases.PulseReadTransactionLimit)
-                {
-                    Start = start,
-                    Take = pageSize
-                };
-
-                if (HttpContext.Request.Query.ContainsKey("startsWith"))
-                {
-                    initialState.StartsWith = HttpContext.Request.Query["startsWith"];
-                    initialState.Excludes = HttpContext.Request.Query["excludes"];
-                    initialState.Matches = HttpContext.Request.Query["matches"];
-                    initialState.StartAfter = HttpContext.Request.Query["startAfter"];
-                    initialState.Skip = new Reference<long>();
-                }
-
-                var documentsEnumerator = new PulsedTransactionEnumerator<Document, DocsStreamingIterationState>(context, state =>
-                    {
-                        if (string.IsNullOrEmpty(state.StartsWith) == false)
-                        {
-                            return Database.DocumentsStorage.GetDocumentsStartingWith(context, state.StartsWith, state.Matches, state.Excludes, state.StartAfter,
-                                state.LastIteratedEtag == null ? state.Start : 0, // if we iterated already some docs then we pass 0 as Start and rely on state.Skip
-                                state.Take,
-                                state.Skip);
-                        }
-
-                        if (state.LastIteratedEtag != null)
-                            return Database.DocumentsStorage.GetDocumentsInReverseEtagOrderFrom(context, state.LastIteratedEtag.Value, state.Take, skip: 1); // we seek to LastIteratedEtag but skip 1 item because we iterated it already
-
-                        return Database.DocumentsStorage.GetDocumentsInReverseEtagOrder(context, state.Start, state.Take);
-                    },
-                    initialState);
-
-                using (var token = CreateOperationToken())
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    writer.WriteStartObject();
-                    writer.WritePropertyName("Results");
-
-                    await writer.WriteDocumentsAsync(context, documentsEnumerator, metadataOnly: false, token.Token);
-
-                    writer.WriteEndObject();
-                }
-            }
+            using (var processor = new StreamingHandlerProcessorForGetDocs(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/streams/timeseries", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]

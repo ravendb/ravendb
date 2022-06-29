@@ -1,5 +1,9 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Globalization;
+using System.Threading.Tasks;
 using FastTests;
+using Raven.Client;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -18,10 +22,11 @@ namespace SlowTests.Issues
             public string Description { get; set; }
         }
 
-        [Fact]
-        public async Task CanStreamStartWithAsync()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanStreamStartWithAsync(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -37,9 +42,51 @@ namespace SlowTests.Issues
                 }
 
                 int count = 0;
+                var id = "";
+                string tmp;
                 using (var session = store.OpenAsyncSession())
                 {
                     await using (var reader = await session.Advanced.StreamAsync<User>(startsWith: "users/"))
+                    {
+                        while (await reader.MoveNextAsync())
+                        {
+                            count++;
+                            tmp = reader.Current.Id;
+                            Assert.True(String.Compare(id,tmp, StringComparison.OrdinalIgnoreCase) < 0);
+                            id = tmp;
+                            Assert.IsType<User>(reader.Current.Document);
+                        }
+                    }
+                }
+                Assert.Equal(10, count);
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanStreamWithSkipAsync(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                using (var session = store.OpenSession())
+                {
+                    for (var i = 0; i < 10; i++)
+                    {
+                        session.Store(new User
+                        {
+                            Name = "Geralt of Rivia " + i,
+                            Description = "If I'm to choose between one evil and another, I'd rather not choose at all."
+                        });
+                    }
+                    session.SaveChanges();
+                }
+
+                int count = 0;
+                var id = "";
+                string tmp;
+                using (var session = store.OpenAsyncSession())
+                {
+                    await using (var reader = await session.Advanced.StreamAsync<User>(startsWith: "users/", start: 6, pageSize: 10))
                     {
                         while (await reader.MoveNextAsync())
                         {
@@ -48,7 +95,48 @@ namespace SlowTests.Issues
                         }
                     }
                 }
-                Assert.Equal(10, count);
+                Assert.Equal(4, count);
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanStreamByLastModifiedOrderAsync(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                using (var session = store.OpenSession())
+                {
+                    for (var i = 0; i < 10; i++)
+                    {
+                        session.Store(new User
+                        {
+                            Name = "Geralt of Rivia " + i,
+                            Description = "If I'm to choose between one evil and another, I'd rather not choose at all."
+                        });
+                    }
+                    session.SaveChanges();
+                }
+
+                int count = 0;
+                var lastModified = DateTime.MaxValue;
+                DateTime tmp;
+                using (var session = store.OpenAsyncSession())
+                {
+                    await using (var reader = await session.Advanced.StreamAsync<User>(""))
+                    {
+                        while (await reader.MoveNextAsync())
+                        {
+                            count++;
+                            tmp = DateTime.ParseExact(reader.Current.Metadata[Constants.Documents.Metadata.LastModified].ToString(), "yyyy-MM-dd'T'HH:mm:ss.fffffff'Z'",
+                                CultureInfo.InvariantCulture, DateTimeStyles.None);
+                            Assert.True(lastModified > tmp);
+                            lastModified = tmp;
+                            Assert.IsType<User>(reader.Current.Document);
+                        }
+                    }
+                }
+                Assert.Equal(11, count);
             }
         }
 
@@ -86,10 +174,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task CanStreamStartWithAndStartAfter()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanStreamStartWithAndStartAfter(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
