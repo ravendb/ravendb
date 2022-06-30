@@ -110,7 +110,6 @@ namespace Raven.Server.ServerWide.Commands.Indexes
                     IsNameQuoted = autoField.HasQuotedName,
                     GroupByArrayBehavior = autoField.GroupByArrayBehavior,
                     Suggestions = autoField.HasSuggestions,
-                    Id = autoField.Id
                 };
             }
 

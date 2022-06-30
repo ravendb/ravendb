@@ -57,9 +57,6 @@ namespace Raven.Server.Documents.Indexes.Auto
 
                 writer.WriteComma();
 
-                writer.WritePropertyName(nameof(field.Id));
-                writer.WriteInteger(field.Id);
-
                 writer.WriteEndObject();
 
                 first = false;

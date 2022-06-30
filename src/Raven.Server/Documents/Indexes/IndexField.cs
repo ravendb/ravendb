@@ -168,7 +168,6 @@ namespace Raven.Server.Documents.Indexes
             {
                 Name = name,
                 HasQuotedName = options.IsNameQuoted,
-                Id = options.Id
             };
 
             if (options.Indexing.HasValue)
