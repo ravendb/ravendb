@@ -15,7 +15,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
     public class CoraxIndexWriteOperation : IndexWriteOperationBase
     {
         public const int MaximumPersistedCapacityOfCoraxWriter = 512;
-        protected const int DocumentBufferSize = 1024 * 1024 * 5;
+
+        // WORKAROUND: RavenDB-18872
+        // https://issues.hibernatingrhinos.com/issue/RavenDB-18872
+        protected const int DocumentBufferSize = 1024 * 1024 * 128;
 
         private readonly IndexWriter _indexWriter;
         private readonly CoraxDocumentConverterBase _converter;
