@@ -126,8 +126,8 @@
   </ItemGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
-    <PackageReference Include="AWSSDK.Glacier" Version="3.7.0.175" />
-    <PackageReference Include="AWSSDK.S3" Version="3.7.9.18" />
+    <PackageReference Include="AWSSDK.Glacier" Version="3.7.0.177" />
+    <PackageReference Include="AWSSDK.S3" Version="3.7.9.20" />
     <PackageReference Include="Azure.Storage.Blobs" Version="12.12.0" />
     <PackageReference Include="CsvHelper" Version="27.2.1" />
     <PackageReference Include="DasMulli.Win32.ServiceUtils.Signed" Version="1.1.0" />
