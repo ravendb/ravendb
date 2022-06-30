@@ -11,6 +11,7 @@ using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
+using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.ServerWide.Context;
 using Xunit;
 
@@ -145,6 +146,34 @@ public partial class ClusterTestBase
         {
             var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
             return record.Sharding?.Shards;
+        }
+
+        public async Task EnsureNoReplicationLoopForSharding(RavenServer server, string database)
+        {
+            var stores = server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(database);
+
+            foreach (var store in stores)
+            {
+                var storage = await store;
+                using (var collector = new LiveReplicationPulsesCollector(storage))
+                {
+                    var etag1 = storage.DocumentsStorage.GenerateNextEtag();
+
+                    await Task.Delay(3000);
+
+                    var etag2 = storage.DocumentsStorage.GenerateNextEtag();
+
+                    Assert.True(etag1 + 1 == etag2, "Replication loop found :(");
+
+                    var groups = collector.Pulses.GetAll().GroupBy(p => p.Direction);
+                    foreach (var group in groups)
+                    {
+                        var key = group.Key;
+                        var count = group.Count();
+                        Assert.True(count < 50, $"{key} seems to be excessive ({count})");
+                    }
+                }
+            }
         }
     }
 }
