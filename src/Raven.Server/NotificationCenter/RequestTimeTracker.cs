@@ -3,9 +3,8 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Raven.Client;
-using Raven.Server.Documents;
+using Raven.Server.Config;
 using Sparrow.Logging;
-using Sparrow.Utils;
 
 namespace Raven.Server.NotificationCenter
 {
@@ -13,16 +12,18 @@ namespace Raven.Server.NotificationCenter
     {
         private readonly HttpContext _context;
         private readonly Logger _logger;
-        private readonly DocumentDatabase _database;
+        private readonly AbstractDatabaseNotificationCenter _notificationCenter;
+        private readonly RavenConfiguration _configuration;
         private readonly string _source;
         private readonly bool _doPerformanceHintIfTooLong;
         private readonly Stopwatch _sw;
         
-        public RequestTimeTracker(HttpContext context, Logger logger, DocumentDatabase database, string source, bool doPerformanceHintIfTooLong = true)
+        public RequestTimeTracker(HttpContext context, Logger logger, AbstractDatabaseNotificationCenter notificationCenter, RavenConfiguration configuration, string source, bool doPerformanceHintIfTooLong = true)
         {
             _context = context;
             _logger = logger;
-            _database = database;
+            _notificationCenter = notificationCenter;
+            _configuration = configuration;
             _source = source;
             _doPerformanceHintIfTooLong = doPerformanceHintIfTooLong;
             
@@ -41,13 +42,7 @@ namespace Raven.Server.NotificationCenter
 
         public void Dispose()
         {
-            if (_database == null)
-            {
-                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Sharding - fix this for queries");
-                return;
-            }
-
-            if (_sw.Elapsed <= _database.Configuration.PerformanceHints.TooLongRequestThreshold.AsTimeSpan)
+            if (_sw.Elapsed <= _configuration.PerformanceHints.TooLongRequestThreshold.AsTimeSpan)
                 return;
 
             if (_doPerformanceHintIfTooLong == false)
@@ -55,9 +50,7 @@ namespace Raven.Server.NotificationCenter
             
             try
             {
-                _database
-                    .NotificationCenter
-                    .RequestLatency
+                _notificationCenter.RequestLatency
                     .AddHint(_sw.ElapsedMilliseconds, _source, Query);
             }
             catch (Exception e)

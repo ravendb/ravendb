@@ -4,9 +4,11 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
+using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Queries;
+using Raven.Server.NotificationCenter;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 
@@ -21,6 +23,10 @@ internal abstract class AbstractDatabaseOperationQueriesHandlerProcessor : Abstr
     protected AbstractDatabaseOperationQueriesHandlerProcessor([NotNull] QueriesHandler requestHandler) : base(requestHandler, requestHandler.Database.QueryMetadataCache)
     {
     }
+
+    protected override AbstractDatabaseNotificationCenter NotificationCenter => RequestHandler.Database.NotificationCenter;
+
+    protected override RavenConfiguration Configuration => RequestHandler.Database.Configuration;
 
     protected override long GetNextOperationId()
     {
