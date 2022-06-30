@@ -13,7 +13,6 @@ using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Tcp;
-using Raven.Server.Config;
 using Raven.Server.Documents.Replication.Incoming;
 using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.Documents.Replication.Stats;
@@ -43,7 +42,7 @@ namespace Raven.Server.Documents.Replication
         protected readonly Logger _logger;
         protected readonly ConcurrentDictionary<ReplicationNode, ConnectionShutdownInfo> _outgoingFailureInfo = new ConcurrentDictionary<ReplicationNode, ConnectionShutdownInfo>();
         protected readonly ConcurrentSet<ConnectionShutdownInfo> _reconnectQueue = new ConcurrentSet<ConnectionShutdownInfo>();
-        protected readonly Timer _reconnectAttemptTimer;
+
         protected readonly ConcurrentDictionary<string, IAbstractIncomingReplicationHandler> _incoming = new ConcurrentDictionary<string, IAbstractIncomingReplicationHandler>();
         protected readonly ConcurrentSet<IAbstractOutgoingReplicationHandler> _outgoing = new ConcurrentSet<IAbstractOutgoingReplicationHandler>();
         public IEnumerable<ReplicationNode> OutgoingConnections => _outgoing.Select(x => x.Node);
@@ -57,22 +56,16 @@ namespace Raven.Server.Documents.Replication
         // directly and fetching the Value avoids this problem.
         public IEnumerable<IAbstractIncomingReplicationHandler> IncomingHandlers => _incoming.Select(x => x.Value);
         public IEnumerable<ReplicationNode> ReconnectQueue => _reconnectQueue.Select(x => x.Node);
-        internal readonly int MinimalHeartbeatInterval;
+
         public IReadOnlyDictionary<ReplicationNode, ConnectionShutdownInfo> OutgoingFailureInfo => _outgoingFailureInfo;
         public string DatabaseName => _databaseName;
         public ServerStore Server => _server;
 
-        protected AbstractReplicationLoader(ServerStore serverStore, string databaseName, RavenConfiguration configuration)
+        protected AbstractReplicationLoader(ServerStore serverStore, string databaseName)
         {
             _databaseName = databaseName;
             _server = serverStore;
             _logger = LoggingSource.Instance.GetLogger(GetType().FullName, databaseName);
-
-            var config = configuration.Replication;
-            var reconnectTime = config.RetryReplicateAfter.AsTimeSpan;
-            _reconnectAttemptTimer = new Timer(state => ForceTryReconnectAll(),
-                null, reconnectTime, reconnectTime);
-            MinimalHeartbeatInterval = (int)config.ReplicationMinimalHeartbeat.AsTimeSpan.TotalMilliseconds;
         }
 
         protected void ForceTryReconnectAll()
@@ -488,53 +481,6 @@ namespace Raven.Server.Documents.Replication
             finally
             {
                 _locker.ExitWriteLock();
-            }
-        }
-
-        public class ConnectionShutdownInfo
-        {
-            private readonly TimeSpan _initialTimeout = TimeSpan.FromMilliseconds(1000);
-            private readonly int _retriesCount = 0;
-
-            public ConnectionShutdownInfo()
-            {
-                NextTimeout = _initialTimeout;
-                RetriesCount = _retriesCount;
-            }
-
-            public string DestinationDbId;
-
-            public long LastHeartbeatTicks;
-
-            public double MaxConnectionTimeout;
-
-            public readonly Queue<Exception> Errors = new Queue<Exception>();
-
-            public TimeSpan NextTimeout { get; set; }
-
-            public DateTime RetryOn { get; set; }
-
-            public ReplicationNode Node { get; set; }
-
-            public int RetriesCount { get; set; }
-
-            public void Reset()
-            {
-                NextTimeout = _initialTimeout;
-                RetriesCount = _retriesCount;
-                Errors.Clear();
-            }
-
-            public void OnError(Exception e)
-            {
-                Errors.Enqueue(e);
-                while (Errors.Count > 25)
-                    Errors.TryDequeue(out _);
-
-                RetriesCount++;
-                NextTimeout *= 2;
-                NextTimeout = TimeSpan.FromMilliseconds(Math.Min(NextTimeout.TotalMilliseconds, MaxConnectionTimeout));
-                RetryOn = DateTime.UtcNow + NextTimeout;
             }
         }
     }

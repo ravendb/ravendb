@@ -31,7 +31,7 @@ namespace Raven.Server.Documents.Sharding
             public ShardedDatabaseContext Context => _context;
             public string SourceDatabaseId { get; set; }
 
-            public ShardedReplicationContext([NotNull] ShardedDatabaseContext context, ServerStore serverStore) : base(serverStore, context.DatabaseName, context.Configuration)
+            public ShardedReplicationContext([NotNull] ShardedDatabaseContext context, ServerStore serverStore) : base(serverStore, context.DatabaseName)
             {
                 _context = context ?? throw new ArgumentNullException(nameof(context));
             }
