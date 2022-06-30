@@ -65,6 +65,8 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
 
                     var debug = RequestHandler.GetStringQueryString("debug", required: false);
 
+                    EnsureValidQueryContext(queryContext, indexQuery);
+
                     if (string.IsNullOrWhiteSpace(debug) == false)
                     {
                         await HandleDebug(indexQuery, queryContext, debug, existingResultEtag, token);
@@ -148,6 +150,11 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
                 throw;
             }
         }
+    }
+
+    protected virtual void EnsureValidQueryContext(TQueryContext queryContext, IndexQueryServerSide indexQuery)
+    {
+
     }
 
     private Action<AbstractBlittableJsonTextWriter> WriteAdditionalData(IndexQueryServerSide indexQuery, bool shouldReturnServerSideQuery)
