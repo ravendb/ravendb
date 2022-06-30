@@ -5,6 +5,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
@@ -22,8 +23,11 @@ using Raven.Client.ServerWide.Sharding;
 using Raven.Server;
 using Raven.Server.Documents;
 using Raven.Server.Documents.PeriodicBackup;
+using Raven.Server.Documents.Sharding.Handlers;
+using Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Raven.Server.Web;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
@@ -153,7 +157,22 @@ public partial class RavenTestBase
             return true;
         }
 
-        public class ShardedBackupTestsBase
+        internal async Task<ShardedOngoingTasksHandlerProcessorForGetOngoingTasks> InstantiateShardedOutgoingTaskProcessor(string name, RavenServer server)
+        {
+            Assert.True(server.ServerStore.DatabasesLandlord.ShardedDatabasesCache.TryGetValue(name, out var db));
+            var database = await db;
+            var handler = new ShardedOngoingTasksHandler();
+            var ctx = new RequestHandlerContext
+            {
+                RavenServer = server,
+                DatabaseContext = database,
+                HttpContext = new DefaultHttpContext()
+            };
+            handler.Init(ctx);
+            return new ShardedOngoingTasksHandlerProcessorForGetOngoingTasks(handler);
+        }
+
+        public class ShardedBackupTestsBase 
         {
             internal readonly RavenTestBase _parent;
 
