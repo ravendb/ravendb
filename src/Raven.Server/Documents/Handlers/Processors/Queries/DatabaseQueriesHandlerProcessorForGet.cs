@@ -107,6 +107,11 @@ internal class DatabaseQueriesHandlerProcessorForGet : AbstractQueriesHandlerPro
         return await RequestHandler.Database.QueryRunner.ExecuteQuery(query, queryContext, existingResultEtag, token).ConfigureAwait(false);
     }
 
+    protected override void EnsureQueryContextInitialized(QueryOperationContext queryContext, IndexQueryServerSide indexQuery)
+    {
+        queryContext.WithQuery(indexQuery.Metadata);
+    }
+
     private async Task IndexEntries(QueryOperationContext queryContext, IndexQueryServerSide indexQuery, long? existingResultEtag, OperationCancelToken token, bool ignoreLimit)
     {
         var result = await RequestHandler.Database.QueryRunner.ExecuteIndexEntriesQuery(indexQuery, queryContext, ignoreLimit, existingResultEtag, token);
