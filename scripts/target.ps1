@@ -27,7 +27,7 @@ $TARGET_SPECS = (
         "Runtime"   = "osx-x64";
         "PkgType"   = "tar.bz2";
         "IsUnix"    = $True;
-        "TargetId" = "macos";
+        "TargetId" = "macos-x64";
         "NativeBinExtension" = "dylib";
     },
     @{
