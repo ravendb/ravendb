@@ -130,14 +130,14 @@ namespace InterversionTests
             if (excludeOn == ExcludeOn.Export)
                 exportOptions.OperateOnTypes &= ~(DatabaseItemType.Attachments | DatabaseItemType.RevisionDocuments | DatabaseItemType.CounterGroups);
             var exportOperation = await storeCurrent.Smuggler.ExportAsync(exportOptions, file);
-            
+
             await exportOperation.WaitForCompletionAsync(_operationTimeout);
 
             DatabaseStatistics expected = await storeCurrent.Maintenance.SendAsync(new GetStatisticsOperation());
 
             //Import
             var importOptions = new DatabaseSmugglerImportOptions { SkipRevisionCreation = true };
-            importOptions.OperateOnTypes &= ~DatabaseItemType.TimeSeries;
+
             if (excludeOn == ExcludeOn.Import)
                 importOptions.OperateOnTypes &= ~(DatabaseItemType.Attachments | DatabaseItemType.RevisionDocuments | DatabaseItemType.CounterGroups);
             var importOperation = await store42.Smuggler.ImportAsync(importOptions, file);
@@ -324,7 +324,7 @@ namespace InterversionTests
         private static async Task<Operation> Migrate(DocumentStore @from, DocumentStore to, DatabaseItemType exclude = DatabaseItemType.None)
         {
             using var client = new HttpClient();
-            var url = Uri.EscapeDataString($"{to.Urls.First()}/admin/remote-server/build/version?serverUrl={@from.Urls.First()}");
+            var url = $"{to.Urls.First()}/admin/remote-server/build/version?serverUrl={@from.Urls.First()}";
             var rawVersionRespond = (await client.GetAsync(url)).Content.ReadAsStringAsync().Result;
             var versionRespond = JsonConvert.DeserializeObject<BuildInfo>(rawVersionRespond);
 
