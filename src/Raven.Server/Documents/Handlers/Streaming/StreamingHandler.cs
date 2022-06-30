@@ -132,7 +132,7 @@ namespace Raven.Server.Documents.Handlers.Streaming
         public async Task StreamQueryGet()
         {
             // ReSharper disable once ArgumentsStyleLiteral
-            using (var tracker = new RequestTimeTracker(HttpContext, Logger, Database, "StreamQuery", doPerformanceHintIfTooLong: false))
+            using (var tracker = new RequestTimeTracker(HttpContext, Logger, Database.NotificationCenter, Database.Configuration, "StreamQuery", doPerformanceHintIfTooLong: false))
             using (var token = CreateTimeLimitedQueryToken())
             using (var queryContext = QueryOperationContext.Allocate(Database))
             {
@@ -225,7 +225,7 @@ namespace Raven.Server.Documents.Handlers.Streaming
         public async Task StreamQueryPost()
         {
             // ReSharper disable once ArgumentsStyleLiteral
-            using (var tracker = new RequestTimeTracker(HttpContext, Logger, Database, "StreamQuery", doPerformanceHintIfTooLong: false))
+            using (var tracker = new RequestTimeTracker(HttpContext, Logger, Database.NotificationCenter, Database.Configuration, "StreamQuery", doPerformanceHintIfTooLong: false))
             using (var token = CreateTimeLimitedQueryToken())
             using (var queryContext = QueryOperationContext.Allocate(Database))
             {

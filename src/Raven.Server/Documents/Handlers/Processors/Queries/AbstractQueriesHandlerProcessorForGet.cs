@@ -44,7 +44,7 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
 
     public override async ValueTask ExecuteAsync()
     {
-        using (var tracker = new RequestTimeTracker(HttpContext, Logger, (RequestHandler as DatabaseRequestHandler)?.Database, "Query"))
+        using (var tracker = CreateRequestTimeTracker())
         {
             try
             {
@@ -65,7 +65,7 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
 
                     var debug = RequestHandler.GetStringQueryString("debug", required: false);
 
-                    EnsureValidQueryContext(queryContext, indexQuery);
+                    EnsureQueryContextInitialized(queryContext, indexQuery);
 
                     if (string.IsNullOrWhiteSpace(debug) == false)
                     {
@@ -152,7 +152,7 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
         }
     }
 
-    protected virtual void EnsureValidQueryContext(TQueryContext queryContext, IndexQueryServerSide indexQuery)
+    protected virtual void EnsureQueryContextInitialized(TQueryContext queryContext, IndexQueryServerSide indexQuery)
     {
 
     }

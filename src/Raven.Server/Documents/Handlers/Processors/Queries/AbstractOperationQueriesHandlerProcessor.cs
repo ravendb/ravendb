@@ -1,12 +1,10 @@
 ﻿using System;
-using System.Net.Http;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Json;
-using Raven.Server.NotificationCenter;
 using Raven.Server.TrafficWatch;
 using Sparrow.Json;
 
@@ -29,7 +27,7 @@ internal abstract class AbstractOperationQueriesHandlerProcessor<TRequestHandler
     public override async ValueTask ExecuteAsync()
     {
         using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
-        using (var tracker = new RequestTimeTracker(HttpContext, Logger, (RequestHandler as DatabaseRequestHandler)?.Database, "Query"))
+        using (var tracker = CreateRequestTimeTracker())
         {
             var operationId = RequestHandler.GetLongQueryString("operationId", required: false) ?? GetNextOperationId();
             var options = GetQueryOperationOptions();

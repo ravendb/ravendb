@@ -1,8 +1,10 @@
 ﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Server.Config;
 using Raven.Server.Documents.Commands.Queries;
 using Raven.Server.Documents.Handlers.Processors.Queries;
 using Raven.Server.Documents.Queries;
+using Raven.Server.NotificationCenter;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.Http;
 
@@ -13,6 +15,10 @@ internal class ShardedQueriesHandlerProcessorForPatchTest : AbstractQueriesHandl
     public ShardedQueriesHandlerProcessorForPatchTest([NotNull] ShardedQueriesHandler requestHandler) : base(requestHandler, requestHandler.DatabaseContext.QueryMetadataCache)
     {
     }
+
+    protected override AbstractDatabaseNotificationCenter NotificationCenter => RequestHandler.DatabaseContext.NotificationCenter;
+
+    protected override RavenConfiguration Configuration => RequestHandler.DatabaseContext.Configuration;
 
     protected override async ValueTask HandleDocumentPatchTestAsync(IndexQueryServerSide query, string docId, TransactionOperationContext context)
     {

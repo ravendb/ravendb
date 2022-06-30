@@ -5,9 +5,11 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client;
 using Raven.Client.Extensions;
+using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Json;
+using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -29,6 +31,10 @@ internal class DatabaseQueriesHandlerProcessorForGet : AbstractQueriesHandlerPro
 
         return queryContext;
     }
+
+    protected override AbstractDatabaseNotificationCenter NotificationCenter => RequestHandler.Database.NotificationCenter;
+
+    protected override RavenConfiguration Configuration => RequestHandler.Database.Configuration;
 
     protected override async ValueTask HandleDebug(IndexQueryServerSide query, QueryOperationContext queryContext, string debug, long? existingResultEtag,
         OperationCancelToken token)

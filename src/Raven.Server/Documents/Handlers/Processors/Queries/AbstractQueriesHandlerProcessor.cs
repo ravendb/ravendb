@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Exceptions;
+using Raven.Server.Config;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.NotificationCenter;
@@ -30,6 +31,15 @@ internal abstract class AbstractQueriesHandlerProcessor<TRequestHandler, TOperat
         QueryMetadataCache = queryMetadataCache;
     }
     protected abstract HttpMethod QueryMethod { get; }
+
+    protected abstract AbstractDatabaseNotificationCenter NotificationCenter { get; }
+
+    protected abstract RavenConfiguration Configuration { get; }
+
+    protected RequestTimeTracker CreateRequestTimeTracker()
+    {
+        return new RequestTimeTracker(HttpContext, Logger, NotificationCenter, Configuration, "Query");
+    }
 
     public async ValueTask<IndexQueryServerSide> GetIndexQueryAsync(JsonOperationContext context, HttpMethod method, RequestTimeTracker tracker, bool addSpatialProperties = false)
     {

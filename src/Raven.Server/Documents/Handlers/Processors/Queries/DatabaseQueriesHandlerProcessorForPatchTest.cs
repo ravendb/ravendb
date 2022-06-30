@@ -3,8 +3,10 @@ using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations;
+using Raven.Server.Config;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries;
+using Raven.Server.NotificationCenter;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -17,6 +19,10 @@ internal class DatabaseQueriesHandlerProcessorForPatchTest : AbstractQueriesHand
     public DatabaseQueriesHandlerProcessorForPatchTest([NotNull] QueriesHandler requestHandler) : base(requestHandler, requestHandler.Database.QueryMetadataCache)
     {
     }
+
+    protected override AbstractDatabaseNotificationCenter NotificationCenter => RequestHandler.Database.NotificationCenter;
+
+    protected override RavenConfiguration Configuration => RequestHandler.Database.Configuration;
 
     protected override async ValueTask HandleDocumentPatchTestAsync(IndexQueryServerSide query, string docId, DocumentsOperationContext context)
     {
