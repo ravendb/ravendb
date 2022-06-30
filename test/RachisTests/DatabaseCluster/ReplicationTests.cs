@@ -964,6 +964,260 @@ namespace RachisTests.DatabaseCluster
         }
 
         [Fact]
+        public async Task ExternalReplicationFailoverFromNonShardedToShardedDatabase()
+        {
+            var clusterSize = 3;
+            var replicationFactor = 2;
+
+            var (_, srcLeader) = await CreateRaftCluster(clusterSize);
+            var (dstNodes, dstLeader) = await CreateRaftCluster(clusterSize);
+
+            var srcDB = GetDatabaseName();
+            var dstDB = GetDatabaseName();
+
+            var srcTopology = await CreateDatabaseInCluster(srcDB, clusterSize, srcLeader.WebUrl);
+            var dstTopology = await ShardingCluster.CreateShardedDatabaseInCluster(dstDB, replicationFactor, (dstNodes, dstLeader), shards: 3);
+
+            using (var srcStore = new DocumentStore()
+                   {
+                       Urls = new[] { srcLeader.WebUrl },
+                       Database = srcDB,
+                   }.Initialize())
+            {
+                using (var session = srcStore.OpenSession())
+                {
+                    session.Advanced.WaitForReplicationAfterSaveChanges(timeout: TimeSpan.FromSeconds(30), replicas: clusterSize - 1);
+                    session.Store(new User
+                    {
+                        Name = "Karmel"
+                    }, "users/1");
+                    session.SaveChanges();
+                }
+
+                // add watcher with invalid url to test the failover on database topology discovery
+                var watcher = new ExternalReplication(dstDB, "connection")
+                {
+                    MentorNode = "B"
+                };
+                await AddWatcherToReplicationTopology((DocumentStore)srcStore, watcher, new[] { "http://127.0.0.1:1234", dstLeader.WebUrl });
+
+                using (var dstStore = new DocumentStore
+                {
+                    Urls = dstTopology.Servers.Select(s => s.WebUrl).ToArray(),
+                    Database = watcher.Database,
+                }.Initialize())
+                {
+                    using (var dstSession = dstStore.OpenSession())
+                    {
+                        dstSession.Load<User>("Karmel");
+                        Assert.True(await WaitForDocumentInClusterAsync<User>(
+                            dstNodes,
+                            dstDB,
+                            "users/1",
+                            u => u.Name.Equals("Karmel"),
+                            TimeSpan.FromSeconds(60)));
+                    }
+
+                    var responsibale = srcLeader.ServerStore.GetClusterTopology().GetUrlFromTag("B");
+                    var server = Servers.Single(s => s.WebUrl == responsibale);
+                    using (var processor = await Databases.InstantiateOutgoingTaskProcessor(srcDB, server))
+                    {
+                        Assert.True(WaitForValue(
+                            () => ((OngoingTaskReplication)processor.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskReplication)).DestinationUrl !=
+                                  null,
+                            true));
+
+                        var watcherTaskUrl = ((OngoingTaskReplication)processor.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskReplication))
+                            .DestinationUrl;
+
+                        // fail the node to to where the data is sent
+                        await DisposeServerAndWaitForFinishOfDisposalAsync(Servers.Single(s => s.WebUrl == watcherTaskUrl));
+                    }
+
+                    using (var session = srcStore.OpenSession())
+                    {
+                        session.Advanced.WaitForReplicationAfterSaveChanges(timeout: TimeSpan.FromSeconds(30), replicas: clusterSize - 1);
+                        session.Store(new User
+                        {
+                            Name = "Karmel2"
+                        }, "users/2");
+                        session.SaveChanges();
+                    }
+
+                    Assert.True(WaitForDocument(dstStore, "users/2", 30_000));
+                }
+            }
+        }
+
+        [Fact]
+        public async Task ExternalReplicationFailoverFromShardedToNonShardedDatabase()
+        {
+            var clusterSize = 3;
+            var replicationFactor = 3;
+
+            var (srcNodes, srcLeader) = await CreateRaftCluster(clusterSize);
+            var (dstNodes, dstLeader) = await CreateRaftCluster(clusterSize);
+
+            var srcDB = GetDatabaseName();
+            var dstDB = GetDatabaseName();
+
+            var srcTopology = await ShardingCluster.CreateShardedDatabaseInCluster(srcDB, replicationFactor, (srcNodes, srcLeader), shards: 3);
+            var dstTopology = await CreateDatabaseInCluster(dstDB, clusterSize, dstLeader.WebUrl);
+
+            using (var srcStore = new DocumentStore()
+                   {
+                       Urls = srcTopology.Servers.Select(s => s.WebUrl).ToArray(),
+                       Database = srcDB,
+                   }.Initialize())
+            {
+                using (var session = srcStore.OpenSession())
+                {
+                    session.Advanced.WaitForReplicationAfterSaveChanges(timeout: TimeSpan.FromSeconds(30), replicas: clusterSize - 1);
+                    session.Store(new User
+                    {
+                        Name = "Karmel"
+                    }, "users/1");
+                    session.SaveChanges();
+                }
+
+                // add watcher with invalid url to test the failover on database topology discovery
+                var watcher = new ExternalReplication(dstDB, "connection")
+                {
+                    MentorNode = "B"
+                };
+                await AddWatcherToReplicationTopology((DocumentStore)srcStore, watcher, new[] { "http://127.0.0.1:1234", dstLeader.WebUrl });
+
+                using (var dstStore = new DocumentStore
+                {
+                    Urls = new[] { dstLeader.WebUrl },
+                    Database = watcher.Database,
+                }.Initialize())
+                {
+                    using (var dstSession = dstStore.OpenSession())
+                    {
+                        dstSession.Load<User>("Karmel");
+                        Assert.True(await WaitForDocumentInClusterAsync<User>(
+                            dstNodes,
+                            dstDB,
+                            "users/1",
+                            u => u.Name.Equals("Karmel"),
+                            TimeSpan.FromSeconds(60)));
+                    }
+
+                    var responsibale = srcLeader.ServerStore.GetClusterTopology().GetUrlFromTag("B");
+                    var server = Servers.Single(s => s.WebUrl == responsibale);
+                    using (var processor = await Sharding.InstantiateShardedOutgoingTaskProcessor(srcDB, server))
+                    {
+                        // TODO: change after fixing ShardedOngoingTasksHandlerProcessorForGetOngoingTasksInfo.GetOngoingTasksInternal().CollectExternalReplicationTasks()
+                        Assert.True(WaitForValue(
+                            () => ((OngoingTaskReplication)processor.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskReplication)).TaskName !=
+                                  null,
+                            true));
+
+                        // fail the node to to where the data is sent
+                        await DisposeServerAndWaitForFinishOfDisposalAsync(Servers.Single(s => s.WebUrl == dstLeader.WebUrl));
+                    }
+
+                    using (var session = srcStore.OpenSession())
+                    {
+                        session.Advanced.WaitForReplicationAfterSaveChanges(timeout: TimeSpan.FromSeconds(30), replicas: clusterSize - 1);
+                        session.Store(new User
+                        {
+                            Name = "Karmel2"
+                        }, "users/2");
+                        session.SaveChanges();
+                    }
+
+                    Assert.True(WaitForDocument(dstStore, "users/2", 30_000));
+                }
+            }
+        }
+
+        [Fact]
+        public async Task ExternalReplicationFailoverFromShardedToShardedDatabase()
+        {
+            var clusterSize = 3;
+            var replicationFactor = 3;
+
+            var (srcNodes, srcLeader) = await CreateRaftCluster(clusterSize);
+            var (dstNodes, dstLeader) = await CreateRaftCluster(clusterSize);
+
+            var srcDB = GetDatabaseName();
+            var dstDB = GetDatabaseName();
+
+            var srcTopology = await ShardingCluster.CreateShardedDatabaseInCluster(srcDB, replicationFactor, (srcNodes, srcLeader), shards: 3);
+            var dstTopology = await ShardingCluster.CreateShardedDatabaseInCluster(dstDB, replicationFactor, (dstNodes, dstLeader), shards: 3);
+
+            using (var srcStore = new DocumentStore()
+            {
+                Urls = srcTopology.Servers.Select(s => s.WebUrl).ToArray(),
+                Database = srcDB,
+            }.Initialize())
+            {
+                using (var session = srcStore.OpenSession())
+                {
+                    session.Advanced.WaitForReplicationAfterSaveChanges(timeout: TimeSpan.FromSeconds(30), replicas: clusterSize - 1);
+                    session.Store(new User
+                    {
+                        Name = "Karmel"
+                    }, "users/1");
+                    session.SaveChanges();
+                }
+
+                // add watcher with invalid url to test the failover on database topology discovery
+                var watcher = new ExternalReplication(dstDB, "connection")
+                {
+                    MentorNode = "B"
+                };
+                await AddWatcherToReplicationTopology((DocumentStore)srcStore, watcher, new[] { "http://127.0.0.1:1234", dstLeader.WebUrl });
+
+                using (var dstStore = new DocumentStore
+                {
+                    Urls = dstTopology.Servers.Select(s => s.WebUrl).ToArray(),
+                    Database = watcher.Database,
+                }.Initialize())
+                {
+                    using (var dstSession = dstStore.OpenSession())
+                    {
+                        dstSession.Load<User>("Karmel");
+                        Assert.True(await WaitForDocumentInClusterAsync<User>(
+                            dstNodes,
+                            dstDB,
+                            "users/1",
+                            u => u.Name.Equals("Karmel"),
+                            TimeSpan.FromSeconds(60)));
+                    }
+
+                    var responsibale = srcLeader.ServerStore.GetClusterTopology().GetUrlFromTag("B");
+                    var server = Servers.Single(s => s.WebUrl == responsibale);
+                    using (var processor = await Sharding.InstantiateShardedOutgoingTaskProcessor(srcDB, server))
+                    {
+                        // TODO: change after fixing ShardedOngoingTasksHandlerProcessorForGetOngoingTasksInfo.GetOngoingTasksInternal().CollectExternalReplicationTasks()
+                        Assert.True(WaitForValue(
+                            () => ((OngoingTaskReplication)processor.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskReplication)).TaskName !=
+                                  null,
+                            true));
+
+                        // fail the node to to where the data is sent
+                        await DisposeServerAndWaitForFinishOfDisposalAsync(Servers.Single(s => s.WebUrl == dstLeader.WebUrl));
+                    }
+
+                    using (var session = srcStore.OpenSession())
+                    {
+                        session.Advanced.WaitForReplicationAfterSaveChanges(timeout: TimeSpan.FromSeconds(30), replicas: clusterSize - 1);
+                        session.Store(new User
+                        {
+                            Name = "Karmel2"
+                        }, "users/2");
+                        session.SaveChanges();
+                    }
+
+                    Assert.True(WaitForDocument(dstStore, "users/2", 30_000));
+                }
+            }
+        }
+
+        [Fact]
         public async Task GetFirstTopologyShouldTimeout()
         {
             var clusterSize = 1;

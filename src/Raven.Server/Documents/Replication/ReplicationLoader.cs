@@ -42,6 +42,8 @@ namespace Raven.Server.Documents.Replication
 {
     public class ReplicationLoader : AbstractReplicationLoader, ITombstoneAware
     {
+        private readonly Timer _reconnectAttemptTimer;
+
         private readonly ReaderWriterLockSlim _locker = new ReaderWriterLockSlim();
 
         public event Action<IncomingReplicationHandler> IncomingReplicationAdded;
@@ -53,6 +55,7 @@ namespace Raven.Server.Documents.Replication
         public event Action<OutgoingReplicationHandlerBase> OutgoingReplicationRemoved;
 
         internal ManualResetEventSlim DebugWaitAndRunReplicationOnce;
+        internal readonly int MinimalHeartbeatInterval;
 
         public DocumentDatabase Database;
         private SingleUseFlag _isInitialized = new SingleUseFlag();
@@ -86,6 +89,19 @@ namespace Raven.Server.Documents.Replication
         private class LastEtagPerDestination
         {
             public long LastEtag;
+        }
+
+        public ReplicationLoader(DocumentDatabase database, ServerStore server) : base(server, database.Name)
+        {
+            Database = database;
+            _shutdownToken = database.DatabaseShutdown;
+            database.TombstoneCleaner.Subscribe(this);
+            server.Cluster.Changes.DatabaseChanged += DatabaseValueChanged;
+            var config = database.Configuration.Replication;
+            var reconnectTime = config.RetryReplicateAfter.AsTimeSpan;
+            _reconnectAttemptTimer = new Timer(state => ForceTryReconnectAll(),
+                null, reconnectTime, reconnectTime);
+            MinimalHeartbeatInterval = (int)config.ReplicationMinimalHeartbeat.AsTimeSpan.TotalMilliseconds;
         }
 
         public long GetMinimalEtagForReplication()
@@ -206,14 +222,6 @@ namespace Raven.Server.Documents.Replication
                     max = newTombstone.Etag;
                 }
             }
-        }
-
-        public ReplicationLoader(DocumentDatabase database, ServerStore server) : base(server, database.Name, database.Configuration)
-        {
-            Database = database;
-            _shutdownToken = database.DatabaseShutdown;
-            database.TombstoneCleaner.Subscribe(this);
-            server.Cluster.Changes.DatabaseChanged += DatabaseValueChanged;
         }
 
         private Task DatabaseValueChanged(string databaseName, long index, string type, DatabasesLandlord.ClusterDatabaseChangeType changeType, object changeState)

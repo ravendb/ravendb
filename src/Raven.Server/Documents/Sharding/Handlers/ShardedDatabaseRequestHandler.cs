@@ -65,12 +65,16 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
             var request = HttpContext.Request;
             var url = request.Path.Value;
-            var relativeIndex = url.IndexOf('/', 11); //start after "/databases/" and skip the database name
 
-            BaseShardUrl = url.Substring(relativeIndex);
-            RelativeShardUrl = BaseShardUrl + request.QueryString;
-            Method = new HttpMethod(request.Method);
+            if (string.IsNullOrEmpty(url) == false)
+            {
+                var relativeIndex = url.IndexOf('/', 11); //start after "/databases/" and skip the database name
+                BaseShardUrl = url.Substring(relativeIndex);
 
+                RelativeShardUrl = BaseShardUrl + request.QueryString;
+                Method = new HttpMethod(request.Method);
+            }
+            
             context.HttpContext.Response.OnStarting(() => CheckForChanges(context));
         }
 
