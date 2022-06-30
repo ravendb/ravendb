@@ -185,14 +185,30 @@ namespace SlowTests.Issues
                 {
                     await session.StoreAsync(c);
                     if (cluster)
-                        session.Advanced.WaitForReplicationAfterSaveChanges(replicas: 1);
+                        session.Advanced.WaitForReplicationAfterSaveChanges(replicas: 1); //Wait for replication
                     await session.SaveChangesAsync();
                     categoryId = c.Id;
                 }
 
+                // Wait for indexing in first node
                 var index = new Categoroies_Details();
                 index.Execute(store);
                 Indexes.WaitForIndexing(store);
+
+                // Wait for indexing in second node (if it's cluster test)
+                if (cluster)
+                {
+                    var storeReversedTopology = new DocumentStore()
+                    {
+                        Urls = (from node in nodes select node.WebUrl).Reverse().ToArray<string>(),
+                        Database = store.Database,
+                        Conventions = new DocumentConventions() {DisableTopologyUpdates = true}
+                    }.Initialize();
+
+                    var index2 = new Categoroies_Details();
+                    index2.Execute(storeReversedTopology);
+                    Indexes.WaitForIndexing(storeReversedTopology);
+                }
 
                 // Test
                 CompactSettings settings = new CompactSettings {DatabaseName = store.Database, Documents = true, Indexes = new[] { index.IndexName } };
