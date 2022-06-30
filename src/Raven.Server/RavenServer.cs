@@ -2466,7 +2466,7 @@ namespace Raven.Server
             var subscriptionConnectionInProgress = tcpConnectionOptions.ConnectionProcessingInProgress("Subscription");
             try
             {
-                var binder = SubscriptionBinder.CreateSubscriptionBinder(server, databaseResult, tcpConnectionOptions, buffer,subscriptionConnectionInProgress, out var connection);
+                var binder = SubscriptionBinder.CreateSubscriptionBinder(server, databaseResult, tcpConnectionOptions, buffer, subscriptionConnectionInProgress, out var connection);
 
                 try
                 {
@@ -2478,10 +2478,9 @@ namespace Raven.Server
                     throw;
                 }
             }
-            catch (Exception)
+            catch
             {
                 subscriptionConnectionInProgress?.Dispose();
-                tcpConnectionOptions.Dispose();
                 throw;
             }
         }

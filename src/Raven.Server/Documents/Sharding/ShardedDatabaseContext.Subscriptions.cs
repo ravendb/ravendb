@@ -1,4 +1,5 @@
-﻿using System.Collections.Concurrent;
+﻿using System;
+using System.Collections.Concurrent;
 using System.Threading;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Json.Serialization;
@@ -73,14 +74,20 @@ public partial class ShardedDatabaseContext
                         continue;
                     }
                     
-                    /*if (subscriptionState.LastClientConnectionTime == null && 
+                    DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "check modifying of starting point");
+                    /*
+                    if (subscriptionState.LastClientConnectionTime == null && 
                         subscriptionState.ChangeVectorForNextBatchStartingPoint != subscriptionConnectionsState.LastChangeVectorSent)
                     {
                         subscriptionConnectionsState.DropSubscription(new SubscriptionClosedException($"The subscription {subscriptionName} was modified, connection must be restarted", canReconnect: true));
                         continue;
-                    }*/
+                    }
+                    */
 
-                    var whoseTaskIsIt = _serverStore.WhoseTaskIsIt(databaseRecord.TopologyForSubscriptions(), subscriptionState, subscriptionState);
+                    DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "create subscription WhosTaskIsIt");
+                    DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "Need to handle NodeTag, currently is isn't used for sharded because it is shared");
+
+                    var whoseTaskIsIt = databaseRecord.TopologyForSubscriptions().WhoseTaskIsIt(_serverStore.Engine.CurrentState, subscriptionState);
                     if (whoseTaskIsIt != _serverStore.NodeTag)
                     {
                         subscriptionConnectionsState.DropSubscription(

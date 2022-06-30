@@ -12,11 +12,14 @@ using Sparrow;
 
 namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
 {
-    public class DocumentsSubscriptionProcessor : SubscriptionProcessor<Document>
+    public class DocumentsDatabaseSubscriptionProcessor : DatabaseSubscriptionProcessor<Document>
     {
-        public DocumentsSubscriptionProcessor(ServerStore server, DocumentDatabase database, SubscriptionConnection connection) :
+        private readonly SubscriptionConnection _connection;
+
+        public DocumentsDatabaseSubscriptionProcessor(ServerStore server, DocumentDatabase database, SubscriptionConnection connection) :
             base(server, database, connection)
         {
+            _connection = connection;
         }
 
         public override IEnumerable<(Document Doc, Exception Exception)> GetBatch()
@@ -84,7 +87,7 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
                 }
             }
 
-            await SubscriptionConnectionsState.AcknowledgeBatch(Connection, batchId, BatchItems);
+            await SubscriptionConnectionsState.AcknowledgeBatch(_connection, batchId, BatchItems);
 
             if (BatchItems?.Count > 0)
             {
@@ -162,7 +165,10 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
                 if (match == false)
                 {
                     if (Fetcher.FetchingFrom == SubscriptionFetcher.FetchingOrigin.Resend)
+                    {
+                        item.ChangeVector = string.Empty;
                         ItemsToRemoveFromResend.Add(item.Id);
+                    }
 
                     result.Data = null;
                     reason = $"{item.Id} filtered out by criteria";

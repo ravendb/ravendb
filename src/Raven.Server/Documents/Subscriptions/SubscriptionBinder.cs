@@ -101,7 +101,7 @@ public class SubscriptionBinder<TState, TConnection> : ISubscriptionBinder
                     }
 
                     await NotifyClientAboutSuccessAsync(registerConnectionDurationInTicks);
-                    await _connection.ProcessSubscriptionAsync();
+                    await _connection.ProcessSubscriptionAsync<TState, TConnection>(_subscriptionConnectionsState);
                 }
                 finally
                 {
@@ -141,11 +141,7 @@ public class SubscriptionBinder<TState, TConnection> : ISubscriptionBinder
         _subscriptionConnectionsState.Initialize(_connection, afterSubscribe: true);
 
         await _connection.SendNoopAckAsync();
-        await _connection.WriteJsonAsync(new DynamicJsonValue
-        {
-            [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
-            [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.Accepted)
-        });
+        await _connection.SendAcceptMessageAsync();
 
         await _subscriptionConnectionsState.UpdateClientConnectionTime();
     }

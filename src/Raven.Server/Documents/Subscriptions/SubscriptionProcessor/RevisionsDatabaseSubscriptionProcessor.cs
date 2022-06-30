@@ -14,11 +14,14 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
 {
-    public class RevisionsSubscriptionProcessor : SubscriptionProcessor<(Document Previous, Document Current)>
+    public class RevisionsDatabaseSubscriptionProcessor : DatabaseSubscriptionProcessor<(Document Previous, Document Current)>
     {
-        public RevisionsSubscriptionProcessor(ServerStore server, DocumentDatabase database, SubscriptionConnection connection) :
+        private readonly SubscriptionConnection _connection;
+
+        public RevisionsDatabaseSubscriptionProcessor(ServerStore server, DocumentDatabase database, SubscriptionConnection connection) :
             base(server, database, connection)
         {
+            _connection = connection;
         }
 
         public List<RevisionRecord> BatchItems = new List<RevisionRecord>();
@@ -75,7 +78,7 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
             SubscriptionConnectionsState.RecordBatchRevisions(BatchItems, lastChangeVectorSentInThisBatch);
 
         public override Task AcknowledgeBatch(long batchId) => 
-            SubscriptionConnectionsState.AcknowledgeBatch(Connection, batchId, null);
+            SubscriptionConnectionsState.AcknowledgeBatch(_connection, batchId, null);
 
         public override long GetLastItemEtag(DocumentsOperationContext context, string collection)
         {

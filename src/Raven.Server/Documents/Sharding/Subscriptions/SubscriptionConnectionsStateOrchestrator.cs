@@ -16,6 +16,21 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Subscriptions;
 
+
+/*
+ * The subscription worker (client) connects to an orchestrator (SendShardedSubscriptionDocuments). 
+ * The orchestrator initializes shard subscription workers (StartShardSubscriptionWorkersAsync).
+ * ShardedSubscriptionWorkers are maintaining the connection with subscription on each shard.
+ * The orchestrator maintains the connection with the client and checks if there is an available batch on each Sharded Worker (MaintainConnectionWithClientWorkerAsync).
+ * Handle batch flow:
+ * Orchestrator sends the batch to the client (WriteBatchToClientAndAckAsync).
+ * Orchestrator receive batch ACK request from client.
+ * Orchestrator advances the sharded worker and waits for the sharded worker.
+ * Sharded worker sends an ACK to the shard and waits for CONFIRM from shard (ACK command in cluster)
+ * Sharded worker advances the Orchestrator
+ * Orchestrator sends the CONFIRM to client
+ */
+
 public class SubscriptionConnectionsStateOrchestrator : SubscriptionConnectionsStateBase<OrchestratedSubscriptionConnection>
 {
     private readonly ShardedDatabaseContext _databaseContext;
@@ -43,6 +58,8 @@ public class SubscriptionConnectionsStateOrchestrator : SubscriptionConnectionsS
             _options = connection.Options;
             _shardWorkers = new Dictionary<string, SubscriptionShardHolder>();
             StartShardSubscriptionWorkers();
+
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "Instead of this MaintainConnection task, we should maybe override the worker's ShouldRetry?");
             _maintenanceTask = Task.Run(MaintainConnectionWithShardedWorkerAsync);
             _initialConnection.SetResult();
             return result;
@@ -75,6 +92,7 @@ public class SubscriptionConnectionsStateOrchestrator : SubscriptionConnectionsS
         // we want to limit the batch of each shard, to not hold too much memory if there are other batches while batch is proceed
         options.MaxDocsPerBatch = Math.Max(Math.Min(_options.MaxDocsPerBatch / _databaseContext.ShardCount, _options.MaxDocsPerBatch), 1);
 
+        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "need to ensure the sharded workers has the same sub definition. by sending my raft index?");
         var shardWorker = new ShardedSubscriptionWorker(options, shard, re, this);
         var t = shardWorker.Run(shardWorker.TryPublishBatchAsync, CancellationTokenSource.Token);
 
@@ -250,10 +268,7 @@ public class SubscriptionConnectionsStateOrchestrator : SubscriptionConnectionsS
 
         foreach (var subscriptionConnection in connections)
         {
-            using (subscriptionConnection)
-            {
-                DropSingleConnection(subscriptionConnection, e);
-            }
+            DropSingleConnection(subscriptionConnection, e);
         }
     }
 
@@ -305,6 +320,14 @@ public class SubscriptionConnectionsStateOrchestrator : SubscriptionConnectionsS
         var workers = _shardWorkers;
         var connection = _initialConnection;
 
+        while (Batches.TryTake(out var batch))
+        {
+            using (batch.ReturnContext)
+            {
+                batch.SetCancel();
+            }
+        }
+
         if (workers == null || workers.Count == 0)
             return;
 
@@ -319,6 +342,7 @@ public class SubscriptionConnectionsStateOrchestrator : SubscriptionConnectionsS
                 // ignore
             }
         });
+
 
         if (Interlocked.CompareExchange(ref _initialConnection, null, connection) == connection)
         {

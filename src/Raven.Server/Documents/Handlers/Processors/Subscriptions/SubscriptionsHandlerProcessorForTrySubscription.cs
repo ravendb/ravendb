@@ -37,9 +37,6 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
                 Query = tryout.Query
             };
 
-
-            var includeCmd = new IncludeDocumentsCommand(RequestHandler.Database.DocumentsStorage, context, subscription.Includes, isProjection: patch != null);
-
             if (Enum.TryParse(
                 tryout.ChangeVector,
                 out Constants.Documents.SubscriptionChangeVectorSpecialStates changeVectorSpecialValue))
@@ -71,21 +68,20 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
             var timeLimit = TimeSpan.FromSeconds(RequestHandler.GetIntValueQueryString("timeLimit", false) ?? 15);
             var startEtag = cv.Etag;
 
-            SubscriptionProcessor processor;
+            DatabaseSubscriptionProcessor processor;
             if (subscription.Revisions)
-                processor = new TestRevisionsSubscriptionProcessor(RequestHandler.Server.ServerStore, RequestHandler.Database, state, subscription.Collection, new SubscriptionWorkerOptions("dummy"), new IPEndPoint(HttpContext.Connection.RemoteIpAddress, HttpContext.Connection.RemotePort));
+                processor = new TestRevisionsDatabaseSubscriptionProcessor(RequestHandler.Server.ServerStore, RequestHandler.Database, state, subscription, new SubscriptionWorkerOptions("dummy"), new IPEndPoint(HttpContext.Connection.RemoteIpAddress, HttpContext.Connection.RemotePort));
             else
-                processor = new TestDocumentsSubscriptionProcessor(RequestHandler.Server.ServerStore, RequestHandler.Database, state, subscription.Collection, new SubscriptionWorkerOptions("dummy"), new IPEndPoint(HttpContext.Connection.RemoteIpAddress, HttpContext.Connection.RemotePort));
-            processor.AddScript(patch);
+                processor = new TestDocumentsDatabaseSubscriptionProcessor(RequestHandler.Server.ServerStore, RequestHandler.Database, state, subscription, new SubscriptionWorkerOptions("dummy"), new IPEndPoint(HttpContext.Connection.RemoteIpAddress, HttpContext.Connection.RemotePort));
+            
+            processor.Patch = patch;
 
             using (processor)
             await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
             using (RequestHandler.Database.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext clusterOperationContext))
             using (clusterOperationContext.OpenReadTransaction())
-            using (context.OpenReadTransaction())
+            using (processor.InitializeForNewBatch(clusterOperationContext, out var includeCmd))
             {
-                processor.InitializeForNewBatch(clusterOperationContext, context, includeCmd);
-
                 writer.WriteStartObject();
                 writer.WritePropertyName("Results");
                 writer.WriteStartArray();
@@ -103,7 +99,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
                         {
                             using (itemDetails.Doc.Data)
                             {
-                                includeCmd.Gather(itemDetails.Doc);
+                                includeCmd.IncludeDocumentsCommand?.Gather(itemDetails.Doc);
 
                                 if (first == false)
                                     writer.WriteComma();
@@ -147,7 +143,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
                 writer.WriteComma();
                 writer.WritePropertyName("Includes");
                 var includes = new List<Document>();
-                includeCmd.Fill(includes, includeMissingAsNull: false);
+                includeCmd.IncludeDocumentsCommand?.Fill(includes, includeMissingAsNull: false);
                 await writer.WriteIncludesAsync(context, includes);
                 writer.WriteEndObject();
             }
