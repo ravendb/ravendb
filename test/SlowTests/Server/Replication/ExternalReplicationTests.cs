@@ -415,6 +415,87 @@ namespace SlowTests.Server.Replication
         }
 
         [Fact]
+        public async Task EnsureNoReplicationLoopInExternalReplicationBetweenTwoShardedDBs()
+        {
+            using (var store1 = Sharding.GetDocumentStore())
+            using (var store2 = Sharding.GetDocumentStore())
+            {
+                using (var s1 = store1.OpenSession())
+                {
+                    for (int i = 0; i < 50; i++)
+                    {
+                        s1.Store(new User(), $"foo/bar/{i}");
+                    }
+
+                    s1.SaveChanges();
+                }
+
+                using (var s2 = store2.OpenSession())
+                {
+                    for (int i = 0; i < 50; i++)
+                    {
+                        s2.Store(new User(), $"users/{i}");
+                    }
+
+                    s2.SaveChanges();
+                }
+
+                await SetupReplicationAsync(store1, store2);
+                await SetupReplicationAsync(store2, store1);
+
+                await EnsureReplicatingAsync(store1, store2);
+                await EnsureReplicatingAsync(store2, store1);
+
+                await ShardingCluster.EnsureNoReplicationLoopForSharding(Server, store1.Database);
+                await ShardingCluster.EnsureNoReplicationLoopForSharding(Server, store2.Database);
+
+                for (int i = 0; i < 50; i++)
+                {
+                    var id = $"foo/bar/{i}";
+                    Assert.True(WaitForDocument<User>(store2, id, predicate: null, timeout: 30_000));
+                }
+
+                for (int i = 0; i < 50; i++)
+                {
+                    var id = $"users/{i}";
+                    Assert.True(WaitForDocument<User>(store1, id, predicate: null, timeout: 30_000));
+                }
+            }
+        }
+
+        [Fact]
+        public async Task EnsureNoReplicationLoopInExternalReplicationBetweenTwoShardedDBs2()
+        {
+            using (var store1 = Sharding.GetDocumentStore())
+            using (var store2 = Sharding.GetDocumentStore())
+            {
+                using (var s1 = store1.OpenSession())
+                {
+                    s1.Store(new User() { Name = "Shiran" }, "users/1");
+                    s1.SaveChanges();
+                }
+
+                using (var s2 = store2.OpenSession())
+                {
+                    s2.Store(new User() { Name = "Queeni" }, "users/1");
+                    s2.SaveChanges();
+                }
+
+                await SetupReplicationAsync(store1, store2);
+                await EnsureReplicatingAsync(store1, store2);
+
+                await SetupReplicationAsync(store2, store1);
+                await EnsureReplicatingAsync(store2, store1);
+
+                await ShardingCluster.EnsureNoReplicationLoopForSharding(Server, store1.Database);
+                await ShardingCluster.EnsureNoReplicationLoopForSharding(Server, store2.Database);
+
+                Assert.True(WaitForDocument<User>(store1, "users/1", predicate: u => u.Name == "Queeni", timeout: 30_000));
+                Assert.True(WaitForDocument<User>(store2, "users/1", predicate: u => u.Name == "Queeni", timeout: 30_000));
+            }
+        }
+
+        [Fact]
         public async Task ExternalReplicationFromShardedToNonShardedShouldWork()
         {
             using (var store1 = Sharding.GetDocumentStore())
