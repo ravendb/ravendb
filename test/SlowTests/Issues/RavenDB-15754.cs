@@ -740,6 +740,80 @@ namespace SlowTests.Issues
             }
         }
 
+        [Fact]
+        public async Task Can_Index_Referenced_Document_Change_With_New_Transactions()
+        {
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseRecord = x =>
+                {
+                    x.Settings[RavenConfiguration.GetKey(x => x.Indexing.MaxTimeForDocumentTransactionToRemainOpen)] = "1";
+                }
+            }))
+            {
+                var company = new Company
+                {
+                    Name = _companyName1
+                };
+
+                var employeesCount = _employeesCount * 5;
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(company);
+                    await session.SaveChangesAsync();
+
+                    using (var bulk = store.BulkInsert())
+                    {
+                        for (var i = 0; i < employeesCount; i++)
+                        {
+                            await bulk.StoreAsync(new Employee
+                            {
+                                CompanyId = company.Id
+                            });
+                        }
+                    }
+                }
+
+                var index = new DocumentsIndex();
+                await index.ExecuteAsync(store);
+
+                Indexes.WaitForIndexing(store, timeout: TimeSpan.FromMinutes(3));
+                await AssertCount(store, _companyName1, employeesCount);
+
+                var database = await GetDatabase(store.Database);
+                var indexFromDatabase = database.IndexStore.GetIndex(index.IndexName);
+
+                var batchCount = 0;
+                var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+                store.Changes().ForIndex(index.IndexName).Subscribe(x =>
+                {
+                    if (x.Type == IndexChangeTypes.BatchCompleted)
+                    {
+                        if (Interlocked.Increment(ref batchCount) > 1)
+                            tcs.TrySetResult(null);
+                    }
+                });
+
+                indexFromDatabase.ForTestingPurposesOnly().ShouldRenewTransaction = true;
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    company.Name = _companyName2;
+                    await session.StoreAsync(company, company.Id);
+                    await session.SaveChangesAsync();
+                }
+
+                Indexes.WaitForIndexing(store, timeout: TimeSpan.FromMinutes(5));
+
+                await AssertCount(store, _companyName1, 0);
+                await AssertCount(store, _companyName2, employeesCount);
+                Assert.True(await Task.WhenAny(tcs.Task, Task.Delay(10_000)) == tcs.Task);
+
+                Assert.True(batchCount > 1);
+            }
+        }
+
         private static async Task AssertCount(DocumentStore store, string companyName, int expectedCount)
         {
             using (var session = store.OpenAsyncSession())

@@ -4258,7 +4258,7 @@ namespace Raven.Server.Documents.Indexes
 
             if (parameters.Sw.Elapsed > maxTimeForDocumentTransactionToRemainOpen)
             {
-                if (parameters.QueryContext.Documents.ShouldRenewTransactionsToAllowFlushing())
+                if (parameters.QueryContext.Documents.ShouldRenewTransactionsToAllowFlushing() || _forTestingPurposes is { ShouldRenewTransaction: true })
                     return CanContinueBatchResult.RenewTransaction;
 
                 // if we haven't had writes in the meantime, there is no point
@@ -5063,6 +5063,8 @@ namespace Raven.Server.Documents.Indexes
         internal class TestingStuff
         {
             internal Action ActionToCallInFinallyOfExecuteIndexing;
+
+            internal bool ShouldRenewTransaction;
 
             internal IDisposable CallDuringFinallyOfExecuteIndexing(Action action)
             {
