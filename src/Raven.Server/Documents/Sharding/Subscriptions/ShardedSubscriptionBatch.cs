@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Http;
@@ -13,6 +14,19 @@ public class ShardedSubscriptionBatch : SubscriptionBatchBase<BlittableJsonReade
     public TaskCompletionSource ConfirmFromShardSubscriptionConnectionTcs;
     public string LastSentChangeVectorInBatch;
     public string ShardName;
+    public IDisposable ReturnContext;
+
+    public void SetCancel()
+    {
+        SendBatchToClientTcs.TrySetCanceled();
+        ConfirmFromShardSubscriptionConnectionTcs.TrySetCanceled();
+    }
+
+    public void SetException(Exception e)
+    {
+        SendBatchToClientTcs.TrySetException(e);
+        ConfirmFromShardSubscriptionConnectionTcs.TrySetException(e);
+    }
 
     public ShardedSubscriptionBatch(RequestExecutor requestExecutor, string dbName, Logger logger) : base(requestExecutor, dbName, logger)
     {
@@ -26,6 +40,10 @@ public class ShardedSubscriptionBatch : SubscriptionBatchBase<BlittableJsonReade
         SendBatchToClientTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         ConfirmFromShardSubscriptionConnectionTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         LastSentChangeVectorInBatch = null;
+        
+        ReturnContext = batch.ReturnContext;
+        batch.ReturnContext = null; // move the release responsibility to the OrchestratedSubscriptionProcessor
+
         return base.Initialize(batch);
     }
 }

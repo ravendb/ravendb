@@ -576,6 +576,19 @@ namespace Raven.Server.Documents
                 });
                 DatabasesCache.Clear();
 
+                Parallel.ForEach(ShardedDatabasesCache.Values, new ParallelOptions
+                {
+                    // we limit the number of resources we dispose concurrently to avoid
+                    // putting too much pressure on the I/O system if a disposing db need
+                    // to flush data to disk
+                    MaxDegreeOfParallelism = Math.Max(1, ProcessorInfo.ProcessorCount / 2)
+                }, dbTask =>
+                {
+                    // this is not really a task
+                    exceptionAggregator.Execute(dbTask.Result.Dispose);
+                });
+                ShardedDatabasesCache.Clear();
+
                 exceptionAggregator.ThrowIfNeeded();
             }
             finally
@@ -610,70 +623,73 @@ namespace Raven.Server.Documents
 
         public DatabaseSearchResult TryGetOrCreateDatabase(StringSegment databaseName)
         {
-            if (DatabasesCache.TryGetValue(databaseName, out var databaseTask))
+            using (EnterReadLockImmediately(databaseName))
             {
-                return new DatabaseSearchResult
-                {
-                    DatabaseStatus = DatabaseSearchResult.Status.Database,
-                    DatabaseTask = databaseTask
-                };
-            }
-
-            if (ShardedDatabasesCache.TryGetValue(databaseName, out var database))
-            {
-                return new DatabaseSearchResult
-                {
-                    DatabaseStatus = DatabaseSearchResult.Status.Sharded,
-                    DatabaseContext = database.Result
-                };
-            }
-
-            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                var databaseRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, databaseName.Value);
-                if (databaseRecord == null)
+                if (DatabasesCache.TryGetValue(databaseName, out var databaseTask))
                 {
                     return new DatabaseSearchResult
                     {
-                        DatabaseStatus = DatabaseSearchResult.Status.Missing,
-                        DatabaseTask = Task.FromResult((DocumentDatabase)null)
+                        DatabaseStatus = DatabaseSearchResult.Status.Database,
+                        DatabaseTask = databaseTask
                     };
                 }
 
-                if (databaseRecord.IsSharded())
+                if (ShardedDatabasesCache.TryGetValue(databaseName, out var database))
                 {
-                    var newTask = new Task<ShardedDatabaseContext>(() => new ShardedDatabaseContext(_serverStore, databaseRecord));
-                    var currentTask = ShardedDatabasesCache.GetOrAdd(databaseName, newTask);
-
-                    ShardedDatabaseContext databaseContext;
-                    try
-                    {
-                        if (newTask == currentTask)
-                            currentTask.Start();
-
-                        databaseContext = currentTask.Result;
-                    }
-                    catch (Exception)
-                    {
-                        ShardedDatabasesCache.TryRemove(databaseName, out _);
-
-                        throw;
-                    }
-
                     return new DatabaseSearchResult
                     {
                         DatabaseStatus = DatabaseSearchResult.Status.Sharded,
-                        DatabaseContext = databaseContext
+                        DatabaseContext = database.Result
                     };
                 }
-            }
 
-            return new DatabaseSearchResult
-            {
-                DatabaseStatus = DatabaseSearchResult.Status.Database,
-                DatabaseTask = TryGetOrCreateResourceStore(databaseName)
-            };
+                using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var databaseRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, databaseName.Value);
+                    if (databaseRecord == null)
+                    {
+                        return new DatabaseSearchResult
+                        {
+                            DatabaseStatus = DatabaseSearchResult.Status.Missing,
+                            DatabaseTask = Task.FromResult((DocumentDatabase)null)
+                        };
+                    }
+
+                    if (databaseRecord.IsSharded())
+                    {
+                        var newTask = new Task<ShardedDatabaseContext>(() => new ShardedDatabaseContext(_serverStore, databaseRecord));
+                        var currentTask = ShardedDatabasesCache.GetOrAdd(databaseName, newTask);
+
+                        ShardedDatabaseContext databaseContext;
+                        try
+                        {
+                            if (newTask == currentTask)
+                                currentTask.Start();
+
+                            databaseContext = currentTask.Result;
+                        }
+                        catch (Exception)
+                        {
+                            ShardedDatabasesCache.TryRemove(databaseName, out _);
+
+                            throw;
+                        }
+
+                        return new DatabaseSearchResult
+                        {
+                            DatabaseStatus = DatabaseSearchResult.Status.Sharded,
+                            DatabaseContext = databaseContext
+                        };
+                    }
+                }
+
+                return new DatabaseSearchResult
+                {
+                    DatabaseStatus = DatabaseSearchResult.Status.Database,
+                    DatabaseTask = TryGetOrCreateResourceStore(databaseName)
+                };
+            }
         }
 
         public IEnumerable<Task<DocumentDatabase>> TryGetOrCreateShardedResourcesStore(StringSegment databaseName, DateTime? wakeup = null, bool ignoreDisabledDatabase = false, bool ignoreBeenDeleted = false, bool ignoreNotRelevant = false)

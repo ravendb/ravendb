@@ -9,28 +9,21 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Esprima;
-using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions;
-using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.TimeSeries;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.Subscriptions.Stats;
 using Raven.Server.Documents.Subscriptions.SubscriptionProcessor;
-using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Logging;
-using Constants = Voron.Global.Constants;
 using Exception = System.Exception;
 using QueryParser = Raven.Server.Documents.Queries.Parser.QueryParser;
 
@@ -52,16 +45,8 @@ namespace Raven.Server.Documents.TcpHandlers
 
     public class SubscriptionConnection : SubscriptionConnectionBase
     {
-        private static readonly StringSegment DataSegment = new StringSegment("Data");
-        private static readonly StringSegment IncludesSegment = new StringSegment(nameof(QueryResult.Includes));
-        private static readonly StringSegment CounterIncludesSegment = new StringSegment(nameof(QueryResult.CounterIncludes));
-        private static readonly StringSegment TimeSeriesIncludesSegment = new StringSegment(nameof(QueryResult.TimeSeriesIncludes));
-        private static readonly StringSegment IncludedCounterNamesSegment = new StringSegment(nameof(QueryResult.IncludedCounterNames));
-        private static readonly StringSegment ExceptionSegment = new StringSegment("Exception");
-        private static readonly StringSegment TypeSegment = new StringSegment("Type");
         private static readonly TimeSpan InitialConnectionTimeout = TimeSpan.FromMilliseconds(16);
 
-        private readonly MemoryStream _buffer = new MemoryStream();
         private readonly DocumentDatabase _database;
 
         public long CurrentBatchId;
@@ -75,15 +60,6 @@ namespace Raven.Server.Documents.TcpHandlers
             CurrentBatchId = NonExistentBatch;
         }
 
-        internal static async Task FlushBufferToNetworkAsync(MemoryStream buffer, TcpConnectionOptions tcpConnection, CancellationToken token = default)
-        {
-            buffer.TryGetBuffer(out ArraySegment<byte> bytes);
-            await tcpConnection.Stream.WriteAsync(bytes.Array, bytes.Offset, bytes.Count, token);
-            await tcpConnection.Stream.FlushAsync(token);
-            tcpConnection.RegisterBytesSent(bytes.Count);
-            buffer.SetLength(0);
-        }
-
         protected SubscriptionConnectionsState _subscriptionConnectionsState;
 
         public SubscriptionConnectionsState GetSubscriptionConnectionState()
@@ -91,378 +67,6 @@ namespace Raven.Server.Documents.TcpHandlers
             var subscriptions = TcpConnection.DocumentDatabase.SubscriptionStorage.Subscriptions;
             _subscriptionConnectionsState =  subscriptions.GetOrAdd(SubscriptionId, subId => new SubscriptionConnectionsState(_database.Name, subId, TcpConnection.DocumentDatabase.SubscriptionStorage));
             return _subscriptionConnectionsState;
-        }
-
-        private SubscriptionProcessor _processor;
-
-        public override async Task ProcessSubscriptionAsync()
-        {
-            AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info, "Starting to process subscription"));
-            if (_logger.IsInfoEnabled)
-            {
-                _logger.Info($"Starting processing documents for subscription {SubscriptionId} received from {ClientUri}");
-            }
-
-            using (_processor = SubscriptionProcessor.Create(this))
-            {
-                var replyFromClientTask = GetReplyFromClientAsync();
-
-                _processor.AddScript(SetupFilterAndProjectionScript());
-
-                while (CancellationTokenSource.IsCancellationRequested == false)
-                {
-                    _buffer.SetLength(0);
-
-                    var inProgressBatchStats = Stats.CreateInProgressBatchStats();
-
-                    using (var batchScope = inProgressBatchStats.CreateScope())
-                    {
-                        try
-                        {
-                            using (TcpConnection.DocumentDatabase.DatabaseInUse(skipUsagesCount: false))
-                            using (TcpConnection.DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext docsContext))
-                            {
-                                var sendingCurrentBatchStopwatch = Stopwatch.StartNew();
-
-                                var anyDocumentsSentInCurrentIteration =
-                                    await TrySendingBatchToClient(docsContext, sendingCurrentBatchStopwatch, batchScope, inProgressBatchStats);
-
-                                if (anyDocumentsSentInCurrentIteration == false)
-                                {
-                                    if (_logger.IsInfoEnabled)
-                                    {
-                                        _logger.Info($"Did not find any documents to send for subscription {Options.SubscriptionName}");
-                                    }
-
-                                    AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info,
-                                        $"Acknowledging docs processing progress without sending any documents to client. CV: {_subscriptionConnectionsState.LastChangeVectorSent ?? "None"}"));
-
-                                    Stats.UpdateBatchPerformanceStats(0, false);
-
-                                    if (sendingCurrentBatchStopwatch.ElapsedMilliseconds > 1000)
-                                        await SendHeartBeatAsync("Didn't find any documents to send and more then 1000ms passed");
-
-                                    using (docsContext.OpenReadTransaction())
-                                    {
-                                        var globalEtag = _processor.GetLastItemEtag(docsContext, Subscription.Collection);
-                                        if (globalEtag > _subscriptionConnectionsState.GetLastEtagSent())
-                                        {
-                                            _subscriptionConnectionsState.NotifyHasMoreDocs();
-                                        }
-                                    }
-
-                                    AssertCloseWhenNoDocsLeft();
-
-                                    if (await WaitForChangedDocsAsync(_subscriptionConnectionsState, replyFromClientTask))
-                                        continue;
-                                }
-                            }
-
-                            using (batchScope.For(SubscriptionOperationScope.BatchWaitForAcknowledge))
-                            {
-                                replyFromClientTask = await WaitForClientAck(replyFromClientTask);
-                            }
-
-                            var last = Stats.UpdateBatchPerformanceStats(batchScope.GetBatchSize());
-                            TcpConnection.DocumentDatabase.SubscriptionStorage.RaiseNotificationForBatchEnded(_options.SubscriptionName, last);
-
-                        }
-                        catch (Exception e)
-                        {
-                            batchScope.RecordException(e.ToString());
-                            throw;
-                        }
-                    }
-                }
-
-                CancellationTokenSource.Token.ThrowIfCancellationRequested();
-            }
-        }
-
-        /// <summary>
-        /// Iterates on a batch in document collection, process it and send documents if found any match
-        /// </summary>
-        /// <param name="docsContext"></param>
-        /// <param name="sendingCurrentBatchStopwatch"></param>
-        /// <returns>Whether succeeded finding any documents to send</returns>
-        private async Task<bool> TrySendingBatchToClient(DocumentsOperationContext docsContext, Stopwatch sendingCurrentBatchStopwatch,
-            SubscriptionBatchStatsScope batchScope, SubscriptionBatchStatsAggregator batchStatsAggregator)
-        {
-            if (await _subscriptionConnectionsState.WaitForSubscriptionActiveLock(300) == false)
-            {
-                return false;
-            }
-
-            try
-            {
-                AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info, "Start trying to send docs to client"));
-                bool anyDocumentsSentInCurrentIteration = false;
-
-                using (batchScope.For(SubscriptionOperationScope.BatchSendDocuments))
-                {
-                    batchScope.RecordBatchInfo(_subscriptionConnectionsState.SubscriptionId, _subscriptionConnectionsState.SubscriptionName,
-                        Stats.ConnectionStatsIdForConnection,
-                        batchStatsAggregator.Id);
-
-                    int docsToFlush = 0;
-                    string lastChangeVectorSentInThisBatch = null;
-
-                    await using (var writer = new AsyncBlittableJsonTextWriter(docsContext, _buffer))
-                    {
-                        using (TcpConnection.DocumentDatabase.ServerStore.Engine.ContextPool.AllocateOperationContext(
-                                   out ClusterOperationContext clusterOperationContext))
-                        using (clusterOperationContext.OpenReadTransaction())
-                        using (docsContext.OpenReadTransaction())
-                        {
-                            IncludeDocumentsCommand includeDocumentsCommand = null;
-                            IncludeCountersCommand includeCountersCommand = null;
-                            IncludeTimeSeriesCommand includeTimeSeriesCommand = null;
-
-                            if (_supportedFeatures.Subscription.Includes)
-                                includeDocumentsCommand = new IncludeDocumentsCommand(TcpConnection.DocumentDatabase.DocumentsStorage, docsContext, Subscription.Includes,
-                                    isProjection: string.IsNullOrWhiteSpace(Subscription.Script) == false);
-                            if (_supportedFeatures.Subscription.CounterIncludes && Subscription.CounterIncludes != null)
-                                includeCountersCommand = new IncludeCountersCommand(TcpConnection.DocumentDatabase, docsContext, Subscription.CounterIncludes);
-                            if (_supportedFeatures.Subscription.TimeSeriesIncludes && Subscription.TimeSeriesIncludes != null)
-                                includeTimeSeriesCommand = new IncludeTimeSeriesCommand(docsContext, Subscription.TimeSeriesIncludes.TimeSeries);
-
-                            CancellationTokenSource.Token.ThrowIfCancellationRequested();
-
-                            _processor.InitializeForNewBatch(clusterOperationContext, docsContext, includeDocumentsCommand);
-
-                            foreach (var result in _processor.GetBatch())
-                            {
-                                CancellationTokenSource.Token.ThrowIfCancellationRequested();
-
-                                lastChangeVectorSentInThisBatch = ChangeVectorUtils.MergeVectors(
-                                    lastChangeVectorSentInThisBatch,
-                                    ChangeVectorUtils.NewChangeVector(_database, result.Doc.Etag),
-                                    result.Doc.ChangeVector); //merge with this node's local etag
-
-                                if (result.Doc.Data == null)
-                                {
-                                    if (sendingCurrentBatchStopwatch.ElapsedMilliseconds > 1000)
-                                    {
-                                        await SendHeartBeatAsync("Skipping docs for more than 1000ms without sending any data");
-                                        sendingCurrentBatchStopwatch.Restart();
-                                    }
-
-                                    continue;
-                                }
-
-                                anyDocumentsSentInCurrentIteration = true;
-                                result.Doc.EnsureMetadata();
-                                BlittableJsonReaderObject metadata = null;
-                                string exceptionString = null;
-                                if (result.Exception != null)
-                                {
-                                    exceptionString = result.Exception.ToString();
-                                    if (result.Doc.Data.Modifications != null)
-                                    {
-                                        using (var old = result.Doc.Data)
-                                        {
-                                            result.Doc.Data = docsContext.ReadObject(result.Doc.Data, "subsDocAfterModifications");
-                                        }
-                                    }
-
-                                    result.Doc.Data.TryGet(Client.Constants.Documents.Metadata.Key, out metadata);
-                                }
-
-                                WriteDocumentOrException(docsContext, writer, result.Doc, rawDocument: null, metadata, exceptionString, result.Doc.Id,
-                                    includeDocumentsCommand, includeCountersCommand, includeTimeSeriesCommand);
-
-                                docsToFlush++;
-                                batchScope.RecordDocumentInfo(result.Doc.Data.Size);
-
-                                TcpConnection._lastEtagSent = -1;
-                                // perform flush for current batch after 1000ms of running or 1 MB
-                                if (await FlushBatchIfNeededAsync(sendingCurrentBatchStopwatch, SubscriptionId, writer, _buffer, TcpConnection, Stats.Metrics, _logger,
-                                        docsToFlush, CancellationTokenSource.Token))
-                                {
-                                    docsToFlush = 0;
-                                    sendingCurrentBatchStopwatch.Restart();
-
-                                }
-                            }
-
-                            if (anyDocumentsSentInCurrentIteration)
-                            {
-                                if (includeDocumentsCommand != null && includeDocumentsCommand.HasIncludesIds())
-                                {
-                                    var includes = new List<Document>();
-                                    includeDocumentsCommand.Fill(includes, includeMissingAsNull: false);
-                                    writer.WriteStartObject();
-
-                                    writer.WritePropertyName(docsContext.GetLazyStringForFieldWithCaching(TypeSegment));
-                                    writer.WriteValue(BlittableJsonToken.String, docsContext.GetLazyStringForFieldWithCaching(IncludesSegment));
-                                    writer.WriteComma();
-
-                                    writer.WritePropertyName(docsContext.GetLazyStringForFieldWithCaching(IncludesSegment));
-
-                                    var (count, sizeInBytes) = await writer.WriteIncludesAsync(docsContext, includes);
-
-                                    batchScope.RecordIncludedDocumentsInfo(count, sizeInBytes);
-
-                                    writer.WriteEndObject();
-                                }
-
-                                if (includeCountersCommand != null)
-                                {
-                                    writer.WriteStartObject();
-
-                                    writer.WritePropertyName(docsContext.GetLazyStringForFieldWithCaching(TypeSegment));
-                                    writer.WriteValue(BlittableJsonToken.String, docsContext.GetLazyStringForFieldWithCaching(CounterIncludesSegment));
-                                    writer.WriteComma();
-
-                                    writer.WritePropertyName(docsContext.GetLazyStringForFieldWithCaching(CounterIncludesSegment));
-                                    writer.WriteCounters(includeCountersCommand.Results);
-                                    writer.WriteComma();
-
-                                    writer.WritePropertyName(docsContext.GetLazyStringForFieldWithCaching(IncludedCounterNamesSegment));
-                                    writer.WriteIncludedCounterNames(includeCountersCommand.CountersToGetByDocId);
-
-                                    var size = includeCountersCommand.CountersToGetByDocId.Sum(kvp =>
-                                                   kvp.Key.Length + kvp.Value.Sum(name => name.Length)) //CountersToGetByDocId
-                                               + includeCountersCommand.Results.Sum(kvp =>
-                                                   kvp.Value.Sum(counter => counter == null
-                                                           ? 0
-                                                           : counter.CounterName.Length
-                                                             + counter.DocumentId.Length
-                                                             + sizeof(long) //Etag
-                                                             + sizeof(long) //Total Value
-                                                   ));
-                                    batchScope.RecordIncludedCountersInfo(includeCountersCommand.Results.Sum(x => x.Value.Count), size);
-
-                                    writer.WriteEndObject();
-                                }
-
-                                if (includeTimeSeriesCommand != null)
-                                {
-                                    writer.WriteStartObject();
-
-                                    writer.WritePropertyName(docsContext.GetLazyStringForFieldWithCaching(TypeSegment));
-                                    writer.WriteValue(BlittableJsonToken.String, docsContext.GetLazyStringForFieldWithCaching(TimeSeriesIncludesSegment));
-                                    writer.WriteComma();
-
-                                    writer.WritePropertyName(docsContext.GetLazyStringForFieldWithCaching(TimeSeriesIncludesSegment));
-                                    var size = await writer.WriteTimeSeriesAsync(includeTimeSeriesCommand.Results, CancellationTokenSource.Token);
-
-                                    batchScope.RecordIncludedTimeSeriesInfo(includeTimeSeriesCommand.Results.Sum(x =>
-                                        x.Value.Sum(y => y.Value.Sum(z => z.Entries.Length))), size);
-
-                                    writer.WriteEndObject();
-                                }
-
-                                WriteEndOfBatch(writer);
-
-                                AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info, "Flushing sent docs to client"));
-
-                                await FlushDocsToClientAsync(SubscriptionId, writer, _buffer, TcpConnection, Stats.Metrics, _logger, docsToFlush, true,
-                                    CancellationTokenSource.Token);
-                            }
-
-                            if (lastChangeVectorSentInThisBatch != null)
-                            {
-                                //Entire unsent batch could contain docs that have to be skipped, but we still want to update the etag in the cv
-                                LastSentChangeVectorInThisConnection = lastChangeVectorSentInThisBatch;
-                                CurrentBatchId = await _processor.RecordBatch(lastChangeVectorSentInThisBatch);
-
-                                _subscriptionConnectionsState.LastChangeVectorSent = ChangeVectorUtils.MergeVectors(_subscriptionConnectionsState.LastChangeVectorSent,
-                                    lastChangeVectorSentInThisBatch);
-                                _subscriptionConnectionsState.PreviouslyRecordedChangeVector =
-                                    ChangeVectorUtils.MergeVectors(_subscriptionConnectionsState.PreviouslyRecordedChangeVector, lastChangeVectorSentInThisBatch);
-                            }
-                        }
-                    }
-                }
-
-                return anyDocumentsSentInCurrentIteration;
-            }
-            finally
-            {
-                _subscriptionConnectionsState.ReleaseSubscriptionActiveLock();
-            }
-        }
-
-        internal static void WriteDocumentOrException(JsonOperationContext context, AsyncBlittableJsonTextWriter writer, Document document, BlittableJsonReaderObject rawDocument, BlittableJsonReaderObject metadata, string exception, string id,
-            IncludeDocumentsCommand includeDocumentsCommand, IncludeCountersCommand includeCountersCommand, IncludeTimeSeriesCommand includeTimeSeriesCommand)
-        {
-            writer.WriteStartObject();
-
-            writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(TypeSegment));
-            writer.WriteValue(BlittableJsonToken.String, context.GetLazyStringForFieldWithCaching(DataSegment));
-            writer.WriteComma();
-            writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(DataSegment));
-
-            if (string.IsNullOrEmpty(exception) == false)
-            {
-                writer.WriteValue(BlittableJsonToken.StartObject,
-                    context.ReadObject(new DynamicJsonValue { [Client.Constants.Documents.Metadata.Key] = metadata }, id)
-                );
-                writer.WriteComma();
-                writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(ExceptionSegment));
-                writer.WriteValue(BlittableJsonToken.String, context.GetLazyStringForFieldWithCaching(exception));
-            }
-            else
-            {
-                if (rawDocument == null && document == null)
-                    throw new InvalidOperationException($"Could not write document to subscription batch, because both {nameof(rawDocument)} and {nameof(document)} are null.");
-
-                if (rawDocument == null)
-                {
-                    includeDocumentsCommand?.Gather(document);
-                    includeCountersCommand?.Fill(document);
-                    includeTimeSeriesCommand?.Fill(document);
-                    writer.WriteDocument(context, document, metadataOnly: false);
-                }
-                else
-                {
-                    writer.WriteValue(BlittableJsonToken.StartObject, rawDocument);
-                }
-
-            }
-            writer.WriteEndObject();
-        }
-
-        internal static void WriteEndOfBatch(AsyncBlittableJsonTextWriter writer)
-        {
-            writer.WriteStartObject();
-            writer.WritePropertyName(nameof(SubscriptionConnectionServerMessage.Type));
-            writer.WriteString(nameof(SubscriptionConnectionServerMessage.MessageType.EndOfBatch));
-            writer.WriteEndObject();
-        }
-        internal static async Task<bool> FlushBatchIfNeededAsync(Stopwatch sendingCurrentBatchStopwatch, long subscriptionId, AsyncBlittableJsonTextWriter writer, MemoryStream buffer, TcpConnectionOptions tcpConnection, SubscriptionConnectionMetrics metrics, Logger logger, int docsToFlush, CancellationToken token = default)
-        {
-            // perform flush for current batch after 1000ms of running or 1 MB
-            if (buffer.Length < Constants.Size.Megabyte && sendingCurrentBatchStopwatch.ElapsedMilliseconds < 1000)
-                return false;
-
-            await FlushDocsToClientAsync(subscriptionId, writer, buffer, tcpConnection, metrics, logger, docsToFlush, endOfBatch: false, token: token);
-            if (logger.IsInfoEnabled)
-            {
-                logger.Info($"Finished flushing a batch with {docsToFlush} documents for subscription {subscriptionId}");
-            }
-            return true;
-        }
-        internal static async Task FlushDocsToClientAsync(long subscriptionId, AsyncBlittableJsonTextWriter writer, MemoryStream buffer, TcpConnectionOptions tcpConnection, SubscriptionConnectionMetrics metrics, Logger logger, int flushedDocs, bool endOfBatch = false, CancellationToken token = default)
-        {
-            token.ThrowIfCancellationRequested();
-
-            if (logger != null && logger.IsInfoEnabled)
-                logger.Info($"Flushing {flushedDocs} documents for subscription {subscriptionId} sending to {tcpConnection.TcpClient.Client.RemoteEndPoint} {(endOfBatch ? ", ending batch" : string.Empty)}");
-
-            await writer.FlushAsync(token);
-            var bufferSize = buffer.Length;
-            await FlushBufferToNetworkAsync(buffer, tcpConnection, token);
-
-            tcpConnection.RegisterBytesSent(bufferSize);
-
-            if (metrics != null)
-            {
-                metrics.LastMessageSentAt = DateTime.UtcNow;
-                metrics.DocsRate?.Mark(flushedDocs);
-                metrics.BytesRate?.Mark(bufferSize);
-            }
         }
 
         private SubscriptionPatchDocument SetupFilterAndProjectionScript()
@@ -480,6 +84,7 @@ namespace Raven.Server.Documents.TcpHandlers
         {
             if (_isDisposed)
                 return;
+
             _isDisposed = true;
 
             Stats.LastConnectionStats.Complete();
@@ -770,20 +375,61 @@ namespace Raven.Server.Documents.TcpHandlers
 
         protected override async Task OnClientAckAsync()
         {
-            await _processor.AcknowledgeBatch(CurrentBatchId);
-
-            Stats.Metrics.LastAckReceivedAt = TcpConnection.DocumentDatabase.Time.GetUtcNow();
-            Stats.Metrics.AckRate?.Mark();
-            await WriteJsonAsync(new DynamicJsonValue
-            {
-                [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.Confirm)
-            });
+            await Processor.AcknowledgeBatch(CurrentBatchId);
+            await SendConfirmAsync(TcpConnection.DocumentDatabase.Time.GetUtcNow());
         }
 
         public override Task SendNoopAckAsync()
         {
             return _subscriptionConnectionsState.AcknowledgeBatchProcessed(nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange),
                 NonExistentBatch, docsToResend: null);
+        }
+
+        protected override bool FoundAboutMoreDocs()
+        {
+            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var p = Processor as DatabaseSubscriptionProcessor;
+                var globalEtag = p.GetLastItemEtag(context, Subscription.Collection);
+                return globalEtag > _subscriptionConnectionsState.GetLastEtagSent();
+            }
+        }
+
+        public override IDisposable MarkInUse() => _database.DatabaseInUse(skipUsagesCount: false);
+
+        protected override void AfterProcessorCreation()
+        {
+            var p = Processor as DatabaseSubscriptionProcessor;
+            p.Patch = SetupFilterAndProjectionScript();
+        }
+
+        protected override void RaiseNotificationForBatchEnd(string name, SubscriptionBatchStatsAggregator last) => _database.SubscriptionStorage.RaiseNotificationForBatchEnded(name, last);
+
+        protected override string SetLastChangeVectorInThisBatch(string currentLast, Document sentDocument)
+        {
+            if (sentDocument.Etag == 0) // got this document from resend
+                return currentLast;
+
+            return ChangeVectorUtils.MergeVectors(
+                currentLast,
+                ChangeVectorUtils.NewChangeVector(_database, sentDocument.Etag),
+                sentDocument.ChangeVector);
+            //merge with this node's local etag
+        }
+
+        protected override async Task UpdateStateAfterBatchSentAsync(string lastChangeVectorSentInThisBatch)
+        {
+            //Entire unsent batch could contain docs that have to be skipped, but we still want to update the etag in the cv
+            LastSentChangeVectorInThisConnection = lastChangeVectorSentInThisBatch;
+            CurrentBatchId = await Processor.RecordBatch(lastChangeVectorSentInThisBatch);
+
+            _subscriptionConnectionsState.LastChangeVectorSent = ChangeVectorUtils.MergeVectors(
+                _subscriptionConnectionsState.LastChangeVectorSent,
+                lastChangeVectorSentInThisBatch);
+
+            _subscriptionConnectionsState.PreviouslyRecordedChangeVector =
+                ChangeVectorUtils.MergeVectors(_subscriptionConnectionsState.PreviouslyRecordedChangeVector, lastChangeVectorSentInThisBatch);
         }
 
         protected virtual StatusMessageDetails GetDefault()

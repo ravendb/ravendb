@@ -75,8 +75,7 @@ namespace StressTests.Rachis
         }
 
         [RavenTheory(RavenTestCategory.Subscriptions)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task SubscriptionFailoverWhileModifying(Options options)
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
@@ -154,7 +153,7 @@ namespace StressTests.Rachis
                     using (var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionName)
                     {
                         TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(500),
-                        MaxDocsPerBatch = 5,
+                        MaxDocsPerBatch = 15,
                         MaxErroneousPeriod = TimeSpan.FromSeconds(5),
                         Strategy = strategy,
                     }))

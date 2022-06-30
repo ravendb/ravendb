@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Util;
+using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.Subscriptions;
@@ -34,27 +35,21 @@ public abstract class SubscriptionConnectionsStateBase
         _waitForMoreDocuments = new AsyncManualResetEvent(CancellationTokenSource.Token);
     }
 
-    public void NotifyHasMoreDocs()
-    {
-        while (true)
-        {
-            var current = _waitForMoreDocuments;
-            var last = Interlocked.CompareExchange(ref _waitForMoreDocuments, new AsyncManualResetEvent(CancellationTokenSource.Token), current);
-            last.Set();
-            
-            if (last == current)
-                break;
-        }
-    }
+    public void NotifyHasMoreDocs() => _waitForMoreDocuments.Set();
 
-    public Task<bool> WaitForMoreDocs() => _waitForMoreDocuments.WaitAsync();
+    public Task<bool> WaitForMoreDocs()
+    {
+        var t = _waitForMoreDocuments.WaitAsync();
+        _waitForMoreDocuments.Reset();
+        return t;
+    }
 }
 
 public abstract class SubscriptionConnectionsStateBase<TSubscriptionConnection> : SubscriptionConnectionsStateBase, IDisposable
     where TSubscriptionConnection : SubscriptionConnectionBase
 {
     protected readonly ServerStore _server;
-    private readonly string _databaseName;
+    protected readonly string _databaseName;
     private readonly long _subscriptionId;
     private SubscriptionState _subscriptionState;
     protected ConcurrentSet<TSubscriptionConnection> _connections;
@@ -77,8 +72,6 @@ public abstract class SubscriptionConnectionsStateBase<TSubscriptionConnection> 
 
 
     private readonly SemaphoreSlim _subscriptionActivelyWorkingLock;
-
-    public string PreviouslyRecordedChangeVector;
 
     protected SubscriptionConnectionsStateBase(ServerStore server, string databaseName, long subscriptionId, CancellationToken token) : base(token)
     {
@@ -210,81 +203,6 @@ public abstract class SubscriptionConnectionsStateBase<TSubscriptionConnection> 
         }
     }
 
-    public IEnumerable<RevisionRecord> GetRevisionsFromResend(ClusterOperationContext context, HashSet<long> activeBatches)
-    {
-        var subscriptionState = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.SubscriptionStateSchema, ClusterStateMachine.SubscriptionState);
-        using (GetDatabaseAndSubscriptionKeyPrefix(context, _databaseName, SubscriptionId, SubscriptionType.Revision, out var prefix))
-        using (Slice.External(context.Allocator, prefix, out var prefixSlice))
-        {
-            foreach (var (_, tvh) in subscriptionState.SeekByPrimaryKeyPrefix(prefixSlice, Slices.Empty, 0))
-            {
-                var batchId = Bits.SwapBytes(tvh.Reader.ReadLong((int)ClusterStateMachine.SubscriptionStateTable.BatchId));
-                if (activeBatches.Contains(batchId))
-                    continue;
-
-                string current = tvh.Reader.ReadStringWithPrefix((int)ClusterStateMachine.SubscriptionStateTable.Key, prefix.Length);
-                string previous = tvh.Reader.ReadString((int)ClusterStateMachine.SubscriptionStateTable.ChangeVector);
-                    
-                yield return new RevisionRecord
-                {
-                    Current = current,
-                    Previous = previous
-                };
-            }
-        }
-    }
-
-    public bool IsDocumentInActiveBatch(ClusterOperationContext context, string documentId, HashSet<long> activeBatches)
-    {
-        var subscriptionState = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.SubscriptionStateSchema, ClusterStateMachine.SubscriptionState);
-        using (GetDatabaseAndSubscriptionAndDocumentKey(context, _databaseName, SubscriptionId, documentId, out var key))
-        using (Slice.External(context.Allocator,key, out var keySlice))
-        {
-            if (subscriptionState.ReadByKey(keySlice, out var reader) == false)
-                return false;
-
-            var batchId = Bits.SwapBytes(reader.ReadLong((int)ClusterStateMachine.SubscriptionStateTable.BatchId));
-            return activeBatches.Contains(batchId);
-        }
-    }
-        
-    public bool IsRevisionInActiveBatch(ClusterOperationContext context, string current, HashSet<long> activeBatches)
-    {
-        var subscriptionState = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.SubscriptionStateSchema, ClusterStateMachine.SubscriptionState);
-        using (GetDatabaseAndSubscriptionAndRevisionKey(context, _databaseName, SubscriptionId, current, out var key))
-        using (Slice.External(context.Allocator,key, out var keySlice))
-        {
-            if (subscriptionState.ReadByKey(keySlice, out var reader) == false)
-                return false;
-
-            var batchId = Bits.SwapBytes(reader.ReadLong((int)ClusterStateMachine.SubscriptionStateTable.BatchId));
-            return activeBatches.Contains(batchId);
-        }
-    }
-
-    public Task AcknowledgeBatch(SubscriptionConnection connection, long batchId, List<DocumentRecord> addDocumentsToResend)
-    {
-        return AcknowledgeBatchProcessed(
-            connection.LastSentChangeVectorInThisConnection ?? nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange),
-            batchId,
-            addDocumentsToResend);
-    }
-
-    protected virtual AcknowledgeSubscriptionBatchCommand GetAcknowledgeSubscriptionBatchCommand(string changeVector, long? batchId, List<DocumentRecord> docsToResend)
-    {
-        return new AcknowledgeSubscriptionBatchCommand(_databaseName, RaftIdGenerator.NewId())
-        {
-            ChangeVector = changeVector,
-            NodeTag = _server.NodeTag,
-            HasHighlyAvailableTasks = _server.LicenseManager.HasHighlyAvailableTasks(),
-            SubscriptionId = SubscriptionId,
-            SubscriptionName = SubscriptionName,
-            LastTimeServerMadeProgressWithDocuments = DateTime.UtcNow,
-            BatchId = batchId,
-            DocumentsToResend = docsToResend,
-        };
-    }
-
     protected virtual UpdateSubscriptionClientConnectionTime GetUpdateSubscriptionClientConnectionTime()
     {
         return new UpdateSubscriptionClientConnectionTime(_databaseName, RaftIdGenerator.NewId())
@@ -295,58 +213,6 @@ public abstract class SubscriptionConnectionsStateBase<TSubscriptionConnection> 
             LastClientConnectionTime = DateTime.UtcNow,
         };
     }
-
-
-    public async Task AcknowledgeBatchProcessed(string changeVector, long? batchId, List<DocumentRecord> docsToResend)
-    {
-        var command = GetAcknowledgeSubscriptionBatchCommand(changeVector, batchId, docsToResend);
-            
-        var (etag, _) = await _server.SendToLeaderAsync(command);
-        await WaitForIndexNotificationAsync(etag);
-    }
-
-
-    public async Task<long> RecordBatchRevisions(List<RevisionRecord> list, string lastRecordedChangeVector)
-    {
-        var command = new RecordBatchSubscriptionDocumentsCommand(
-            _databaseName, 
-            SubscriptionId, 
-            SubscriptionName, 
-            list, 
-            PreviouslyRecordedChangeVector, 
-            lastRecordedChangeVector, 
-            _server.NodeTag, 
-            _server.LicenseManager.HasHighlyAvailableTasks(), 
-            RaftIdGenerator.NewId());
-
-        return await RecordBatchInternal(command);
-    }
-
-    public async Task<long> RecordBatchDocuments(List<DocumentRecord> list, List<string> deleted, string lastRecordedChangeVector)
-    {
-        var command = new RecordBatchSubscriptionDocumentsCommand(
-            _databaseName, 
-            SubscriptionId, 
-            SubscriptionName, 
-            list, 
-            PreviouslyRecordedChangeVector, 
-            lastRecordedChangeVector, 
-            _server.NodeTag, 
-            _server.LicenseManager.HasHighlyAvailableTasks(), 
-            RaftIdGenerator.NewId());
-
-        command.Deleted = deleted;
-        return await RecordBatchInternal(command);
-    }
-
-    protected virtual async Task<long> RecordBatchInternal(RecordBatchSubscriptionDocumentsCommand command)
-    {
-        var (etag, _) = await _server.SendToLeaderAsync(command);
-        await WaitForIndexNotificationAsync(etag);
-        return etag;
-    }
-    
-    
     public bool IsSubscriptionActive()
     {
         return _connections.Count != 0;
@@ -607,7 +473,7 @@ public abstract class SubscriptionConnectionsStateBase<TSubscriptionConnection> 
         }
     }
 
-    private static ByteStringContext<ByteStringMemoryCache>.InternalScope GetDatabaseAndSubscriptionKeyPrefix(ClusterOperationContext context, string database, long subscriptionId, SubscriptionType type, out ByteString prefix)
+    public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetDatabaseAndSubscriptionKeyPrefix(ClusterOperationContext context, string database, long subscriptionId, SubscriptionType type, out ByteString prefix)
     {
         using var _ = Slice.From(context.Allocator, database.ToLowerInvariant(), out var dbName);
         var rc = context.Allocator.Allocate(dbName.Size + sizeof(byte) + sizeof(long) + sizeof(byte) + sizeof(byte) + sizeof(byte), out prefix);

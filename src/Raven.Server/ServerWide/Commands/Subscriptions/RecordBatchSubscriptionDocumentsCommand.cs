@@ -12,6 +12,7 @@ using Raven.Server.Utils;
 using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Utils;
 using Voron;
 using Voron.Data.Tables;
 
@@ -86,8 +87,14 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
                 var subscriptionState = JsonDeserializationClient.SubscriptionState(existingValue);
 
+                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "create subscription WhosTaskIsIt");
+                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "Need to handle NodeTag, currently is isn't used for sharded because it is shared");
+
                 var topology = string.IsNullOrEmpty(ShardName) ? record.TopologyForSubscriptions() : record.Shards[ShardHelper.GetShardNumber(ShardName)];
-                var lastResponsibleNode = AcknowledgeSubscriptionBatchCommand.GetLastResponsibleNode(HasHighlyAvailableTasks, topology, NodeTag);
+                var lastResponsibleNode = string.IsNullOrEmpty(ShardName)
+                    ? AcknowledgeSubscriptionBatchCommand.GetLastResponsibleNode(HasHighlyAvailableTasks, topology, NodeTag)
+                    : null;
+
                 var appropriateNode = topology.WhoseTaskIsIt(RachisState.Follower, subscriptionState, lastResponsibleNode);
                 if (appropriateNode == null && record.DeletionInProgress.ContainsKey(NodeTag))
                     throw new DatabaseDoesNotExistException($"Stopping subscription '{subscriptionName}' on node {NodeTag}, because database '{DatabaseName}' is being deleted.");

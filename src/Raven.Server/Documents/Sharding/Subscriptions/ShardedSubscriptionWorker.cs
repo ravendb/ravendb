@@ -57,24 +57,18 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
                 _processingCts.Token.ThrowIfCancellationRequested();
                 _state.Batches.Add(batch);
 
-                // Set the start handling worker MRE on ShardedSubscriptionConnection
                 _state.NotifyHasMoreDocs();
-                await using (_processingCts.Token.Register(() =>
-                             {
-                                 batch.SendBatchToClientTcs.TrySetCanceled();
-                                 batch.ConfirmFromShardSubscriptionConnectionTcs.TrySetCanceled();
-                             }))
+                await using (_processingCts.Token.Register(batch.SetCancel))
                 {
+                    // wait for ShardedSubscriptionConnection to redirect the batch to client worker
                     await batch.SendBatchToClientTcs.Task;
                 }
             }
             catch (Exception e)
             {
-                batch.SendBatchToClientTcs.TrySetException(e);
-                batch.ConfirmFromShardSubscriptionConnectionTcs.TrySetException(e);
+                batch.SetException(e);
                 throw;
             }
-            // wait for ShardedSubscriptionConnection to redirect the batch to client worker
         }
     }
 }
