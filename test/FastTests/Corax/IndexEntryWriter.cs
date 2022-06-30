@@ -8,6 +8,7 @@ using FastTests.Voron;
 using Sparrow;
 using Sparrow.Extensions;
 using Sparrow.Server;
+using Tests.Infrastructure;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
@@ -345,8 +346,10 @@ namespace FastTests.Corax
             fieldIterator = reader.ReadMany(1);
             Assert.Equal(0, fieldIterator.Count);
             Assert.True(fieldIterator.IsEmpty);
-            Assert.False(fieldIterator.IsNull);
 
+            try
+            { var __ = fieldIterator.IsNull; }
+            catch (InvalidOperationException) { }
             try
             { var __ = fieldIterator.Sequence; }
             catch (IndexOutOfRangeException) { }
@@ -360,8 +363,10 @@ namespace FastTests.Corax
             fieldIterator = reader.ReadMany(0);
             Assert.Equal(0, fieldIterator.Count);
             Assert.True(fieldIterator.IsEmpty);
-            Assert.False(fieldIterator.IsNull);
 
+            try
+            { var __ = fieldIterator.IsNull; }
+            catch (InvalidOperationException) { }
             try
             { var __ = fieldIterator.Sequence; }
             catch (IndexOutOfRangeException) { }
@@ -371,6 +376,134 @@ namespace FastTests.Corax
             try
             { var __ = fieldIterator.Long; }
             catch (InvalidOperationException) { }            
+        }
+
+        [RavenTheory(RavenTestCategory.Corax)]
+        [InlineData(1337)]
+        public void WriteMultipleLongLists(int seed)
+        {
+            Span<byte> buffer = new byte[1024 * 1024];
+
+            using var _ = StorageEnvironment.GetStaticContext(out var ctx);
+            Slice.From(ctx, "A", ByteStringType.Immutable, out Slice aSlice);
+            Slice.From(ctx, "B", ByteStringType.Immutable, out Slice bSlice);
+            Slice.From(ctx, "C", ByteStringType.Immutable, out Slice cSlice);
+            Slice.From(ctx, "D", ByteStringType.Immutable, out Slice dSlice);
+
+            // The idea is that GetField will return an struct we can use later on a loop (we just get it once).
+
+            var knownFields = new IndexFieldsMapping(ctx)
+                                    .AddBinding(0, aSlice)
+                                    .AddBinding(1, bSlice)
+                                    .AddBinding(2, cSlice)
+                                    .AddBinding(3, dSlice);
+            var random = new Random(seed);
+            
+            string RandomString(int length)
+            {
+                const string chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890 ";
+                var str = new char[length];
+                for (int i = 0; i < length; i++)
+                {
+                    str[i] = chars[random.Next(chars.Length)];
+                }
+                return new string(str);
+            }
+
+            string[] values = new string[64];
+            long[] longs = new long[64];
+            double[] doubles = new double[64];
+            for (int ii = 0; ii < values.Length; ii++)
+            {
+                if (random.Next(0, 10) == 0)
+                    continue;
+
+                if (random.Next(0, 10) == 0)
+                    values[ii] = String.Empty;
+                else
+                    values[ii] = $"{ii}-{RandomString(random.Next(64))}";
+                                    
+                longs[ii] = ii;
+                doubles[ii] = ii + (ii / 65.0);
+            }
+
+            var writer = new IndexEntryWriter(buffer, knownFields);
+            writer.Write(2, new StringArrayIterator(values), longs, doubles);
+            writer.Write(0, new StringArrayIterator(values));
+            writer.Write(1, new StringArrayIterator(new string[0]));
+            writer.Write(3, new StringArrayIterator(values), longs, doubles);
+            var length = writer.Finish(out var element);
+
+            var reader = new IndexEntryReader(element);
+
+            var iterator = reader.ReadMany(0);
+            Assert.True(iterator.IsValid);
+            Assert.False(iterator.IsEmpty);
+            int i = 0;
+            while (iterator.ReadNext())
+            {
+                if (values[i] == null)
+                {
+                    Assert.True(iterator.IsNull);
+                }
+                else
+                {
+                    Assert.False(iterator.IsNull);
+                    Assert.False(iterator.IsEmpty);
+                    Assert.Equal(values[i], Encoding.UTF8.GetString(iterator.Sequence));
+                }
+                i++;
+            }
+
+            Assert.Equal(64, i);
+
+            iterator = reader.ReadMany(1);
+            Assert.True(iterator.IsValid);
+            Assert.True(iterator.IsEmpty);
+
+            iterator = reader.ReadMany(2);
+            Assert.True(iterator.IsValid);
+            Assert.False(iterator.IsEmpty);
+
+            i = 0;
+            while (iterator.ReadNext())
+            {
+                if (values[i] == null)
+                {
+                    Assert.True(iterator.IsNull);
+                }
+                else
+                {
+                    Assert.False(iterator.IsNull);
+                    Assert.False(iterator.IsEmpty);
+                    Assert.Equal(values[i], Encoding.UTF8.GetString(iterator.Sequence));
+                    Assert.Equal(i, iterator.Long);
+                    Assert.True((i + (i / 65.0) - iterator.Double) < 0.0001);
+                }
+                i++;
+            }
+
+            iterator = reader.ReadMany(3);
+            Assert.True(iterator.IsValid);
+            Assert.False(iterator.IsEmpty);
+
+            i = 0;
+            while (iterator.ReadNext())
+            {
+                if (values[i] == null)
+                {
+                    Assert.True(iterator.IsNull);
+                }
+                else
+                {
+                    Assert.False(iterator.IsNull);
+                    Assert.False(iterator.IsEmpty);
+                    Assert.Equal(values[i], Encoding.UTF8.GetString(iterator.Sequence));
+                    Assert.Equal(i, iterator.Long);
+                    Assert.True((i + (i / 65.0) - iterator.Double) < 0.0001);
+                }
+                i++;
+            }
         }
     }
 }

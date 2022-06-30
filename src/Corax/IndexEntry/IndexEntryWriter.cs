@@ -336,8 +336,10 @@ public unsafe ref partial struct IndexEntryWriter
     public unsafe void Write(int field, IReadOnlySpanIndexer values, ReadOnlySpan<long> longValues, ReadOnlySpan<double> doubleValues)
     {
         Debug.Assert(field < _knownFields.Count);
-        Debug.Assert(_knownFieldsLocations[field] == Invalid);
-        Debug.Assert(values.Length == longValues.Length && values.Length == doubleValues.Length);
+        Debug.Assert(_knownFieldsLocations[field] == Invalid);        
+        
+        if (values.Length != longValues.Length || values.Length != doubleValues.Length)
+            throw new ArgumentException("The lengths of the values and longValues and doubleValues must be the same.");
 
         int dataLocation = _dataIndex;
 
