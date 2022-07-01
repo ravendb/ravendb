@@ -221,8 +221,7 @@ namespace Voron.Data.Fixed
                 throw new InvalidOperationException($"The value size must be of size '{_valSize}' but was of size '{val.Size}'.");
 
             bool isNew;
-            byte* ptr;
-            using (DirectAdd(key, out isNew, out ptr))
+            using (DirectAdd(key, out isNew, out byte* ptr))
             {
                 if (val.HasValue && val.Size != 0)
                     val.CopyTo(ptr);
@@ -233,8 +232,15 @@ namespace Voron.Data.Fixed
 
         public bool Add(long key, byte[] val)
         {
-            Slice str;
-            using (Slice.From(_tx.Allocator, val, ByteStringType.Immutable, out str))
+            using (Slice.From(_tx.Allocator, val, ByteStringType.Immutable, out Slice str))
+            {
+                return Add(key, str);
+            }
+        }
+        
+        public bool Add(long key, long val)
+        {
+            using (Slice.From(_tx.Allocator, (byte*)&val, sizeof(long), ByteStringType.Immutable, out Slice str))
             {
                 return Add(key, str);
             }
@@ -1533,7 +1539,7 @@ namespace Voron.Data.Fixed
             switch (Type)
             {
                 case null:
-                    return new NullIterator();
+                    return NullIterator.Instance;
                 case RootObjectType.EmbeddedFixedSizeTree:
                     return new EmbeddedIterator(this);
                 case RootObjectType.FixedSizeTree:

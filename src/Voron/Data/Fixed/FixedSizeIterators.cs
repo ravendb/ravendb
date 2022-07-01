@@ -27,6 +27,7 @@ namespace Voron.Data.Fixed
 
         public class NullIterator : IFixedSizeIterator
         {
+            public readonly static NullIterator Instance = new NullIterator();
             public bool SeekToLast()
             {
                 return false;
@@ -75,9 +76,9 @@ namespace Voron.Data.Fixed
             private readonly FixedSizeTree _fst;
             private readonly ByteStringContext _allocator;
             private long _pos;
-            private FixedSizeTreeHeader.Embedded* _header;
-            private byte* _dataStart;
-            private int _changesAtStart;
+            private readonly FixedSizeTreeHeader.Embedded* _header;
+            private readonly byte* _dataStart;
+            private readonly int _changesAtStart;
 
             public EmbeddedIterator(FixedSizeTree fst)
             {

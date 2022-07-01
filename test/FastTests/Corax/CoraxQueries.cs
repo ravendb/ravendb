@@ -113,6 +113,27 @@ namespace FastTests.Corax
         }
         
         [Fact]
+        public void BetweenQueryNumeric()
+        {
+            PrepareData();
+            IndexEntries();
+            using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
+            using var searcher = new IndexSearcher(Env);
+            Slice.From(ctx, "Content", out var field);
+            Slice.From(ctx, "Content-I64", out var fieldLong);
+
+
+            var match1 = searcher.BetweenQuery(field, fieldLong, 95, 212);
+            var expectedList = _entries.Where(x => x.LongValue is >= 95 and <= 212).Select(x => x.Id).ToList();
+            expectedList.Sort();
+            var outputList = FetchFromCorax(ref match1);
+            outputList.Sort();
+            Assert.Equal(expectedList.Count, outputList.Count);
+            for (int i = 0; i < expectedList.Count; ++i) 
+                Assert.Equal(expectedList[i], outputList[i]);
+        }
+        
+        [Fact]
         public void UnaryMatchWithNumerical()
         {
             PrepareData();

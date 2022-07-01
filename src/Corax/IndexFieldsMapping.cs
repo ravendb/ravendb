@@ -30,11 +30,37 @@ public class IndexFieldsMapping : IEnumerable<IndexFieldBinding>
         _fieldsList = new List<IndexFieldBinding>();
     }
 
+    
+    private const int I64Postfix = 875972909; //"-I64"
+    private const int DblPostfix = 1818379309; //"-Dbl"
+
+    public ByteStringContext<ByteStringMemoryCache>.InternalScope GetFieldNameForLongs(Slice fieldName, out Slice fieldNameForLongs)
+    {
+        return GetFieldNameWithPostfix(fieldName, I64Postfix, out fieldNameForLongs);
+    }
+    
+    public ByteStringContext<ByteStringMemoryCache>.InternalScope GetFieldNameForDoubles(Slice fieldName, out Slice fieldNameForDoubles)
+    {
+        return GetFieldNameWithPostfix(fieldName, DblPostfix, out fieldNameForDoubles);
+    }
+
+    private unsafe ByteStringContext<ByteStringMemoryCache>.InternalScope GetFieldNameWithPostfix(Slice fieldName, int postfix, out Slice fieldWithPostfix)
+    {
+        var scope = _context.Allocate(fieldName.Size + sizeof(int), out ByteString output);
+        fieldName.Content.CopyTo(output.Ptr);
+        *(int*)(output.Ptr + fieldName.Size) = postfix;
+        fieldWithPostfix = new Slice(SliceOptions.Key, output);
+        return scope;
+    }
+
     public IndexFieldsMapping AddBinding(int fieldId, Slice fieldName, Analyzer analyzer = null, bool hasSuggestion = false, FieldIndexingMode fieldIndexingMode = FieldIndexingMode.Normal, bool hasSpatial = false)
     {
         if (!_fieldsById.TryGetValue(fieldId, out var storedAnalyzer))
         {
-            var binding = new IndexFieldBinding(fieldId, fieldName, analyzer, hasSuggestion, fieldIndexingMode, hasSpatial);
+            GetFieldNameForDoubles(fieldName, out var fieldNameDouble);
+            GetFieldNameForLongs(fieldName, out var fieldNameLong);
+            var binding = new IndexFieldBinding(fieldId, fieldName,  fieldNameLong,fieldNameDouble, 
+                analyzer, hasSuggestion, fieldIndexingMode, hasSpatial);
             _fields[fieldName] = binding;
             _fieldsById[fieldId] = binding;
             _fieldsList.Add(binding);
@@ -131,6 +157,8 @@ public class IndexFieldBinding
 {
     public readonly int FieldId;
     public readonly Slice FieldName;
+    public readonly Slice FieldNameLong;
+    public readonly Slice FieldNameDouble;
     public Corax.Analyzer Analyzer;
     public readonly bool HasSuggestions;
     public readonly bool HasSpatial;
@@ -139,10 +167,15 @@ public class IndexFieldBinding
     private FieldIndexingMode? _silentlyChangedIndexingMode;
     private string _fieldName;
 
-    public IndexFieldBinding(int fieldId, Slice fieldName, Analyzer analyzer = null, bool hasSuggestions = false, FieldIndexingMode fieldIndexingMode = FieldIndexingMode.Normal, bool hasSpatial = false)
+    public IndexFieldBinding(int fieldId, Slice fieldName, Slice fieldNameLong,Slice fieldNameDouble,
+        Analyzer analyzer = null, bool hasSuggestions = false, 
+        FieldIndexingMode fieldIndexingMode = FieldIndexingMode.Normal, 
+        bool hasSpatial = false)
     {
         FieldId = fieldId;
         FieldName = fieldName;
+        FieldNameDouble = fieldNameDouble;
+        FieldNameLong = fieldNameLong;
         Analyzer = analyzer;
         HasSuggestions = hasSuggestions;
         _fieldIndexingMode = fieldIndexingMode;
@@ -153,7 +186,7 @@ public class IndexFieldBinding
     {
         get
         {
-            return _fieldName ?? (_fieldName = FieldName.ToString());
+            return _fieldName ??= FieldName.ToString();
         }
     }
     
