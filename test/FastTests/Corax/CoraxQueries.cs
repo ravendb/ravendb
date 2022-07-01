@@ -120,7 +120,7 @@ namespace FastTests.Corax
             using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
             using var searcher = new IndexSearcher(Env);
             Slice.From(ctx, "Content", out var field);
-            Slice.From(ctx, "Content-I64", out var fieldLong);
+            Slice.From(ctx, "Content-L", out var fieldLong);
 
 
             var match1 = searcher.BetweenQuery(field, fieldLong, 95, 212);
@@ -142,7 +142,7 @@ namespace FastTests.Corax
             using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
             using var searcher = new IndexSearcher(Env);
             Slice.From(ctx, "Content", out var field);
-            Slice.From(ctx, "Content-Dbl", out var fieldLong);
+            Slice.From(ctx, "Content-D", out var fieldLong);
 
 
             var match1 = searcher.BetweenQuery(field, fieldLong, 95.2, 213.2);
