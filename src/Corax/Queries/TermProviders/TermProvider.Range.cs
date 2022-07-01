@@ -182,9 +182,9 @@ namespace Corax.Queries
             }     
 
 
-            var cmp = _high - curVal;
-            if (typeof(THigh) == typeof(Range.Exclusive) && cmp <= TVal.Zero || 
-                typeof(THigh) == typeof(Range.Inclusive) && cmp < TVal.Zero)
+            var cmp = _high.CompareTo(curVal);
+            if (typeof(THigh) == typeof(Range.Exclusive) && cmp <= 0 || 
+                typeof(THigh) == typeof(Range.Inclusive) && cmp < 0)
             {
                 goto Empty;
             }

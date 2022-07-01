@@ -128,26 +128,26 @@ namespace Voron.Data.Fixed
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void SetKey(TVal key, int position)
         {
-            GetEntry(position)->Key = key;
+            GetEntry(position)->SetKey(key);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public TVal GetKey(int position)
         {
-            return GetEntry(Pointer + StartPosition, position, _entrySize)->Key;
+            return GetEntry(Pointer + StartPosition, position, _entrySize)->GetKey<TVal>();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal FixedSizeTreeEntry<TVal>* GetEntry(int position)
+        internal FixedSizeTreeEntry* GetEntry(int position)
         {
             Debug.Assert(position >= 0 && ((position == 0 && NumberOfEntries == 0) || position < NumberOfEntries) ,$"FixedSizeTreePage: Requested an out of range entry {position} from [0-{NumberOfEntries-1}]");
             return GetEntry(Pointer + StartPosition, position, _entrySize);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static FixedSizeTreeEntry<TVal>* GetEntry(byte* p, int position, int size)
+        public static FixedSizeTreeEntry* GetEntry(byte* p, int position, int size)
         {
-            return (FixedSizeTreeEntry<TVal>*)(p + position * size);
+            return (FixedSizeTreeEntry*)(p + position * size);
         }
 
         public void ResetStartPosition()
