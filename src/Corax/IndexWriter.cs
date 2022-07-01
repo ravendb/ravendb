@@ -303,15 +303,6 @@ namespace Corax
 
             void Insert(ReadOnlySpan<byte> value)
             {
-                if (value.Length > _encodingBufferHandler.Length)
-                {
-                    Analyzer.BufferPool.Return(_encodingBufferHandler);
-                    Analyzer.TokensPool.Return(_tokensBufferHandler);
-
-                    _encodingBufferHandler = Analyzer.BufferPool.Rent(value.Length);
-                    _tokensBufferHandler = Analyzer.TokensPool.Rent(value.Length);
-                }
-
                 if (binding.IsAnalyzed)
                     AnalyzeInsert(_encodingBufferHandler.AsSpan(), _tokensBufferHandler.AsSpan(), value);
                 else
