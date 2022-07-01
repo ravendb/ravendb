@@ -267,22 +267,6 @@ namespace Raven.Server.Documents.Indexes
             {
                 _documentDatabase.DatabaseShutdown.ThrowIfCancellationRequested();
 
-                // This will handle the case of indexes that are been migrated from v5.3 and older databases.
-                // Since the id does not exist in those cases we will assign to each field a new value starting
-                // from 1 in order to do not collide with the 0 which is reserved for the document id. 
-                var i = 0;
-                foreach (var field in kvp.Value.MapFields)
-                {
-                    if (field.Value.Id == 0)
-                        field.Value.Id = ++i;
-                }
-
-                foreach (var field in kvp.Value.GroupByFields)
-                {
-                    if (field.Value.Id == 0)
-                        field.Value.Id = ++i;
-                }
-                
                 var name = kvp.Key;
                 try
                 {
