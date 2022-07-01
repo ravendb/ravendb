@@ -947,7 +947,7 @@ namespace Corax.Queries
                 return new UnaryMatch<TInner, TValueType>(
                     in inner, UnaryMatchOperation.GreaterThan,
                     searcher, fieldId, value,
-                    mode == UnaryMatchOperationMode.Any ? &FillFuncNumericalAny<GreaterThanMatchComparer> : &FillFuncSequenceAll<GreaterThanMatchComparer>, &AndWith,
+                    mode == UnaryMatchOperationMode.Any ? &FillFuncNumericalAny<GreaterThanMatchComparer> : &FillFuncNumericalAll<GreaterThanMatchComparer>, &AndWith,
                     inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), mode, take: take);
             }
         }
