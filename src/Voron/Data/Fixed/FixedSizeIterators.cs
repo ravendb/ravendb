@@ -114,7 +114,7 @@ namespace Voron.Data.Fixed
                 {
                     if (_pos >= _header->NumberOfEntries)
                         throw new InvalidOperationException("Invalid position, cannot read past end of tree");
-                    return FixedSizeTreePage<TVal>.GetEntry(_dataStart, (int)_pos, _fst._entrySize)->Key;
+                    return FixedSizeTreePage<TVal>.GetEntry(_dataStart, (int)_pos, _fst._entrySize)->GetKey<TVal>();
                 }
             }
 

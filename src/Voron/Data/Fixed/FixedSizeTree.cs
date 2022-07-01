@@ -505,7 +505,7 @@ namespace Voron.Data.Fixed
                 }
 
                 var entry = parentPage.GetEntry(0);
-                entry->Key = TVal.MinValue;
+                entry->SetKey(TVal.MinValue);
                 entry->PageNumber = page.PageNumber;
             }
 
@@ -574,7 +574,7 @@ namespace Voron.Data.Fixed
                     newPage.NumberOfEntries++;
                     page.NumberOfEntries--;
 
-                    AddSeparatorToParentPage(parentPage, parentPage.LastSearchPosition + 1, entry->Key,
+                    AddSeparatorToParentPage(parentPage, parentPage.LastSearchPosition + 1, entry->GetKey<TVal>(),
                         newPage.PageNumber);
 
                     return newPage; // this is where the new entry needs to go
@@ -626,8 +626,8 @@ namespace Voron.Data.Fixed
             }
             parentPage.NumberOfEntries++;
 
-            var newEntry = (FixedSizeTreeEntry<TVal>*)newEntryPos;
-            newEntry->Key = key;
+            var newEntry = (FixedSizeTreeEntry*)newEntryPos;
+            newEntry->SetKey(key);
             newEntry->PageNumber = pageNum;
         }
 
@@ -774,7 +774,7 @@ namespace Voron.Data.Fixed
             while (low <= high)
             {
                 position = (low + high) >> 1;
-                var curKey = FixedSizeTreePage<TVal>.GetEntry(p, position, size)->Key;
+                var curKey = FixedSizeTreePage<TVal>.GetEntry(p, position, size)->GetKey<TVal>();
                 lastMatch = val.CompareTo(curKey);
                 if (lastMatch == 0)
                     break;
