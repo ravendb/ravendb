@@ -650,6 +650,7 @@ namespace Corax
             {
                 InsertTextualField(fieldsTree, fieldId, tmpBuf);
                 InsertNumericFieldLongs(fieldsTree, fieldId, tmpBuf);
+                InsertNumericFieldDoubles(fieldsTree, fieldId, tmpBuf);
             }
 
             // Check if we have suggestions to deal with. 
@@ -688,26 +689,39 @@ namespace Corax
 
             foreach (var term in sortedTerms)
             {
+                long termId;
                 ReadOnlySpan<byte> termsSpan = term.AsSpan();
                 var entries = _buffer[fieldId][term];
                 if (fieldTree.TryGetValue(termsSpan, out var existing, out var encodedKey) == false)
                 {
-                    if(AddNewTerm(entries,  tmpBuf, out var termId))
+                    if(AddNewTerm(entries,  tmpBuf, out  termId))
                         fieldTree.Add(termsSpan, termId, encodedKey);
                     continue;
                 }
 
-                if ((existing & (long)TermIdMask.Set) != 0)
-                {
-                    var id = existing & ~0b11;
-                    var setSpace = Container.GetMutable(llt, id);
-                    ref var setState = ref MemoryMarshal.AsRef<SetState>(setSpace);
-                    var set = new Set(llt, Slices.Empty, setState);
-                    entries.Sort();
-                    set.Add(entries);
-                    setState = set.State;
-                }
-                else if ((existing & (long)TermIdMask.Small) != 0)
+                if(AddEntriesToTerm(tmpBuf, existing, llt, entries, out  termId))
+                    fieldTree.Add(termsSpan, termId, encodedKey);
+
+            }
+        }
+
+        private bool AddEntriesToTerm(Span<byte> tmpBuf, long existing, LowLevelTransaction llt, List<long> entries, out long termId)
+        {
+            if ((existing & (long)TermIdMask.Set) != 0)
+            {
+                var id = existing & ~0b11;
+                var setSpace = Container.GetMutable(llt, id);
+                ref var setState = ref MemoryMarshal.AsRef<SetState>(setSpace);
+                var set = new Set(llt, Slices.Empty, setState);
+                entries.Sort();
+                set.Add(entries);
+                setState = set.State;
+                termId = -1;
+                return false; // it's already there, no need
+            }
+            else
+            {
+                if ((existing & (long)TermIdMask.Small) != 0)
                 {
                     var id = existing & ~0b11;
                     var smallSet = Container.Get(llt, id).ToSpan();
@@ -723,22 +737,22 @@ namespace Corax
                     }
 
                     Container.Delete(llt, _postingListContainerId, id);
-                    if(AddNewTerm(entries, tmpBuf, out var termId))
-                        fieldTree.Add(termsSpan, termId, encodedKey);
+                    return AddNewTerm(entries, tmpBuf, out  termId);
                 }
-                else // single
+                // single
+                
+                if (entries.Count == 1 && entries[0] == existing)
                 {
-                    // Same element to add, nothing to do here. 
-                    if (entries.Count == 1 && entries[0] == existing)
-                        continue;
-
-                    entries.Add(existing);
-                    if(AddNewTerm(entries, tmpBuf, out var termId))
-                        fieldTree.Add(termsSpan, termId, encodedKey);
+                    // Same element to add, nothing to do here.
+                    termId = -1;
+                    return false;
                 }
+
+                entries.Add(existing);
+                return AddNewTerm(entries, tmpBuf, out  termId);
             }
         }
-        
+
         private unsafe void InsertNumericFieldLongs(Tree fieldsTree, int fieldId, Span<byte> tmpBuf)
         {
             FixedSizeTree fieldTree = fieldsTree.FixedTreeFor(_fieldsMapping.GetByFieldId(fieldId).FieldNameLong, sizeof(long));
@@ -751,54 +765,43 @@ namespace Corax
                 using var _ = fieldTree.Read(term, out var result);
                 var entries = _bufferLongs[fieldId][term];
 
+                long termId;
                 if (result.Size == 0) // no existing value
                 {
-                    if (AddNewTerm(entries, tmpBuf, out var termId))
+                    if (AddNewTerm(entries, tmpBuf, out termId))
                         fieldTree.Add(term, termId);
                     continue;
                 }
 
                 var existing = *((long*)result.Content.Ptr);
-                
-                if ((existing & (long)TermIdMask.Set) != 0)
-                {
-                    var id = existing & ~0b11;
-                    var setSpace = Container.GetMutable(llt, id);
-                    ref var setState = ref MemoryMarshal.AsRef<SetState>(setSpace);
-                    var set = new Set(llt, Slices.Empty, setState);
-                    entries.Sort();
-                    set.Add(entries);
-                    setState = set.State;
-                }
-                else if ((existing & (long)TermIdMask.Small) != 0)
-                {
-                    var id = existing & ~0b11;
-                    var smallSet = Container.Get(llt, id).ToSpan();
-                    // combine with existing value
-                    var cur = 0L;
-                    ZigZagEncoding.Decode<int>(smallSet, out var pos); // discard the first entry, the count
-                    while (pos < smallSet.Length)
-                    {
-                        var value = ZigZagEncoding.Decode<long>(smallSet, out var len, pos);
-                        pos += len;
-                        cur += value;
-                        entries.Add(cur);
-                    }
+                if (AddEntriesToTerm(tmpBuf, existing, llt, entries, out termId))
+                    fieldTree.Add(term, termId);
+            }
+        }
+        
+        private unsafe void InsertNumericFieldDoubles(Tree fieldsTree, int fieldId, Span<byte> tmpBuf)
+        {
+            var fieldTree = fieldsTree.FixedTreeForDouble(_fieldsMapping.GetByFieldId(fieldId).FieldNameDouble, sizeof(long));
+            var llt = Transaction.LowLevelTransaction;
+            var sortedTerms = _bufferDoubles[fieldId].Keys.ToArray();// TODO: let's avoid this allocation
+            Array.Sort(sortedTerms);
 
-                    Container.Delete(llt, _postingListContainerId, id);
-                    if (AddNewTerm(entries, tmpBuf, out var termId))
-                        fieldTree.Add(term, termId);
-                }
-                else // single
-                {
-                    // Same element to add, nothing to do here. 
-                    if (entries.Count == 1 && entries[0] == existing)
-                        continue;
+            foreach (var term in sortedTerms)
+            {
+                using var _ = fieldTree.Read(term, out var result);
+                var entries = _bufferDoubles[fieldId][term];
 
-                    entries.Add(existing);
-                    if (AddNewTerm(entries, tmpBuf, out var termId))
+                long termId;
+                if (result.Size == 0) // no existing value
+                {
+                    if (AddNewTerm(entries, tmpBuf, out termId))
                         fieldTree.Add(term, termId);
+                    continue;
                 }
+
+                var existing = *((long*)result.Content.Ptr);
+                if (AddEntriesToTerm(tmpBuf, existing, llt, entries, out termId))
+                    fieldTree.Add(term, termId);
             }
         }
 

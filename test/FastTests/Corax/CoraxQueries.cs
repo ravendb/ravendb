@@ -146,7 +146,7 @@ namespace FastTests.Corax
 
 
             var match1 = searcher.BetweenQuery(field, fieldLong, 95.2, 213.2);
-            var expectedList = _entries.Where(x => x.LongValue is >= 95 and <= 213).Select(x => x.Id).ToList();
+            var expectedList = _entries.Where(x => (double)x.LongValue is >= 95.2 and <= 213.2).Select(x => x.Id).ToList();
             expectedList.Sort();
             var outputList = FetchFromCorax(ref match1);
             outputList.Sort();
