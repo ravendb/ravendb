@@ -9,13 +9,13 @@ using Sparrow.Server;
 
 namespace Voron.Data.Fixed
 {
-    public unsafe partial class FixedSizeTree
+    public unsafe partial class FixedSizeTree<TVal>
     {
         public interface IFixedSizeIterator : IDisposable
         {
             bool SeekToLast();
-            bool Seek(long key);
-            long CurrentKey { get; }
+            bool Seek(TVal key);
+            TVal CurrentKey { get; }
             ByteStringContext.Scope Value(out Slice slice);
             bool MoveNext();
             bool MovePrev();
@@ -33,12 +33,12 @@ namespace Voron.Data.Fixed
                 return false;
             }
 
-            public bool Seek(long key)
+            public bool Seek(TVal key)
             {
                 return false;
             }
 
-            public long CurrentKey { get { throw new InvalidOperationException("Invalid position, cannot read past end of tree"); } }
+            public TVal CurrentKey { get { throw new InvalidOperationException("Invalid position, cannot read past end of tree"); } }
             public Slice Value { get { throw new InvalidOperationException("Invalid position, cannot read past end of tree"); } }
             ByteStringContext.Scope IFixedSizeIterator.Value(out Slice slice)
             {
@@ -73,14 +73,14 @@ namespace Voron.Data.Fixed
 
         public class EmbeddedIterator : IFixedSizeIterator
         {
-            private readonly FixedSizeTree _fst;
+            private readonly FixedSizeTree<TVal> _fst;
             private readonly ByteStringContext _allocator;
             private long _pos;
             private readonly FixedSizeTreeHeader.Embedded* _header;
             private readonly byte* _dataStart;
             private readonly int _changesAtStart;
 
-            public EmbeddedIterator(FixedSizeTree fst)
+            public EmbeddedIterator(FixedSizeTree<TVal> fst)
             {
                 _fst = fst;
                 _allocator = fst._tx.Allocator;
@@ -98,7 +98,7 @@ namespace Voron.Data.Fixed
                 return true;
             }
 
-            public bool Seek(long key)
+            public bool Seek(TVal key)
             {
                 if (_header == null)
                     return false;
@@ -108,13 +108,13 @@ namespace Voron.Data.Fixed
                 return _pos != _header->NumberOfEntries;
             }
 
-            public long CurrentKey
+            public TVal CurrentKey
             {
                 get
                 {
                     if (_pos >= _header->NumberOfEntries)
                         throw new InvalidOperationException("Invalid position, cannot read past end of tree");
-                    return FixedSizeTreePage.GetEntry(_dataStart, (int)_pos, _fst._entrySize)->Key;
+                    return FixedSizeTreePage<TVal>.GetEntry(_dataStart, (int)_pos, _fst._entrySize)->Key;
                 }
             }
 
@@ -178,12 +178,12 @@ namespace Voron.Data.Fixed
 
         public class LargeIterator : IFixedSizeIterator
         {
-            private readonly FixedSizeTree _parent;
+            private readonly FixedSizeTree<TVal> _parent;
             private readonly ByteStringContext _allocator;
-            private FixedSizeTreePage _currentPage;
+            private FixedSizeTreePage<TVal> _currentPage;
             private int _changesAtStart;
 
-            public LargeIterator(FixedSizeTree parent)
+            public LargeIterator(FixedSizeTree<TVal> parent)
             {
                 _parent = parent;
                 _allocator = parent._tx.Allocator;               
@@ -201,7 +201,7 @@ namespace Voron.Data.Fixed
 
             }
 
-            public bool Seek(long key)
+            public bool Seek(TVal key)
             {
                 _currentPage = _parent.FindPageFor(key);
                 return _currentPage.LastMatch <= 0 || MoveNext();
@@ -209,11 +209,11 @@ namespace Voron.Data.Fixed
 
             public bool SeekToLast()
             {
-                _currentPage = _parent.FindPageFor(long.MaxValue);
+                _currentPage = _parent.FindPageFor(TVal.MaxValue);
                 return true;
             }
 
-            public long CurrentKey
+            public TVal CurrentKey
             {
                 get
                 {

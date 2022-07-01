@@ -5,6 +5,8 @@
     <AssemblyName>TypingsGenerator</AssemblyName>
     <OutputType>Exe</OutputType>
     <PackageId>TypingsGenerator</PackageId>
+    <EnablePreviewFeatures>True</EnablePreviewFeatures>
+
     <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
     <GenerateAssemblyCompanyAttribute>false</GenerateAssemblyCompanyAttribute>
     <GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>

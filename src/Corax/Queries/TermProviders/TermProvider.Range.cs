@@ -115,24 +115,25 @@ namespace Corax.Queries
     }
     
      [DebuggerDisplay("{DebugView,nq}")]
-    public unsafe struct TermNumericRangeProvider<TLow, THigh> : ITermProvider
+    public unsafe struct TermNumericRangeProvider<TLow, THigh, TVal> : ITermProvider
         where TLow : struct, Range.Marker
         where THigh  : struct, Range.Marker
+        where TVal : unmanaged, IBinaryNumber<TVal>, IMinMaxValue<TVal>, INumber<TVal>
     {
         private readonly IndexSearcher _searcher;
         private readonly Slice _fieldName;
-        private readonly long _low, _high;
+        private readonly TVal _low, _high;
         private readonly CompactTree _tree;
-        private readonly FixedSizeTree _set;
-        private readonly FixedSizeTree.IFixedSizeIterator _iterator;
+        private readonly FixedSizeTree<TVal> _set;
+        private readonly FixedSizeTree<TVal>.IFixedSizeIterator _iterator;
         private bool _first;
 
         private const int TermBufferSize = 32;
         private fixed byte _termsBuffer[TermBufferSize];
         private ByteStringContext<ByteStringMemoryCache>.ExternalScope _prevTermScope;
 
-        public TermNumericRangeProvider(IndexSearcher searcher, FixedSizeTree set,
-            CompactTree tree, Slice fieldName, long low, long high)
+        public TermNumericRangeProvider(IndexSearcher searcher, FixedSizeTree<TVal> set,
+            CompactTree tree, Slice fieldName, TVal low, TVal high)
         {
             _searcher = searcher;
             _fieldName = fieldName;
@@ -171,7 +172,7 @@ namespace Corax.Queries
             if (hasNext == false)
                 goto Empty;
             
-            long curVal = _iterator.CurrentKey;
+            var curVal = _iterator.CurrentKey;
             if (typeof(TLow) == typeof(Range.Exclusive))
             {
                 if (wasFirst && curVal == _low)
@@ -182,8 +183,8 @@ namespace Corax.Queries
 
 
             var cmp = _high - curVal;
-            if (typeof(THigh) == typeof(Range.Exclusive) && cmp <= 0 || 
-                typeof(THigh) == typeof(Range.Inclusive) && cmp < 0)
+            if (typeof(THigh) == typeof(Range.Exclusive) && cmp <= TVal.Zero || 
+                typeof(THigh) == typeof(Range.Inclusive) && cmp < TVal.Zero)
             {
                 goto Empty;
             }
@@ -192,9 +193,24 @@ namespace Corax.Queries
             
             fixed (byte* p = _termsBuffer)
             {
-                if (Utf8Formatter.TryFormat(curVal, new Span<byte>(p, TermBufferSize), out int termLen) == false)
+                int termLen;
+                if (typeof(TVal) == typeof(long))
                 {
-                    throw new InvalidOperationException("Cannot format long value " + curVal);
+                    if (Utf8Formatter.TryFormat((long)(object)curVal, new Span<byte>(p, TermBufferSize), out termLen) == false)
+                    {
+                        throw new InvalidOperationException("Cannot format long value " + curVal);
+                    }
+                }
+                else if(typeof(TVal) == typeof(double))
+                {
+                    if (Utf8Formatter.TryFormat((double)(object)curVal, new Span<byte>(p, TermBufferSize), out termLen) == false)
+                    {
+                        throw new InvalidOperationException("Cannot format double value " + curVal);
+                    }
+                }
+                else
+                {
+                    throw new NotSupportedException("Unknown type: " + typeof(TVal));
                 }
 
                 _prevTermScope = Slice.External(_set.Llt.Allocator, p, termLen, ByteStringType.Immutable, out termSlice);
