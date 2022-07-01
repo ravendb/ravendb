@@ -31,24 +31,24 @@ public class IndexFieldsMapping : IEnumerable<IndexFieldBinding>
     }
 
     
-    private const int I64Postfix = 875972909; //"-I64"
-    private const int DblPostfix = 1818379309; //"-Dbl"
+    private const short LongSuffix = 19501; //"-L"
+    private const short DoubleSuffix = 17453; //"-D"
 
     public ByteStringContext<ByteStringMemoryCache>.InternalScope GetFieldNameForLongs(Slice fieldName, out Slice fieldNameForLongs)
     {
-        return GetFieldNameWithPostfix(fieldName, I64Postfix, out fieldNameForLongs);
+        return GetFieldNameWithPostfix(fieldName, LongSuffix, out fieldNameForLongs);
     }
     
     public ByteStringContext<ByteStringMemoryCache>.InternalScope GetFieldNameForDoubles(Slice fieldName, out Slice fieldNameForDoubles)
     {
-        return GetFieldNameWithPostfix(fieldName, DblPostfix, out fieldNameForDoubles);
+        return GetFieldNameWithPostfix(fieldName, DoubleSuffix, out fieldNameForDoubles);
     }
 
-    private unsafe ByteStringContext<ByteStringMemoryCache>.InternalScope GetFieldNameWithPostfix(Slice fieldName, int postfix, out Slice fieldWithPostfix)
+    private unsafe ByteStringContext<ByteStringMemoryCache>.InternalScope GetFieldNameWithPostfix(Slice fieldName, short postfix, out Slice fieldWithPostfix)
     {
-        var scope = _context.Allocate(fieldName.Size + sizeof(int), out ByteString output);
+        var scope = _context.Allocate(fieldName.Size + sizeof(short), out ByteString output);
         fieldName.Content.CopyTo(output.Ptr);
-        *(int*)(output.Ptr + fieldName.Size) = postfix;
+        *(short*)(output.Ptr + fieldName.Size) = postfix;
         fieldWithPostfix = new Slice(SliceOptions.Key, output);
         return scope;
     }
