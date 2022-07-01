@@ -62,9 +62,6 @@ namespace Corax
         private const string SuggestionsTreePrefix = "__Suggestion_";
         private Dictionary<int, Dictionary<Slice, int>> _suggestionsAccumulator;
 
-        //Let persist maximum calculated size of word locally.
-        private readonly int[] _maxTermLengthProceedPerAnalyzer;
-
 #pragma warning disable CS0169
         private Queue<long> _lastEntries; // keep last 256 items
 #pragma warning restore CS0169
@@ -85,8 +82,6 @@ namespace Corax
             _buffer = new Dictionary<Slice, List<long>>[bufferSize];
             for (int i = 0; i < bufferSize; ++i)
                 _buffer[i] = new Dictionary<Slice, List<long>>(SliceComparer.Instance);
-
-            _maxTermLengthProceedPerAnalyzer = ArrayPool<int>.Shared.Rent(fieldsMapping.Count);
         }
 
         public IndexWriter([NotNull] StorageEnvironment environment, IndexFieldsMapping fieldsMapping) : this(fieldsMapping)
@@ -312,15 +307,13 @@ namespace Corax
             void AnalyzeInsert(Span<byte> wordsBuffer, Span<Token> tokens, ReadOnlySpan<byte> value)
             {
                 var analyzer = binding.Analyzer;
-                if (value.Length > _maxTermLengthProceedPerAnalyzer[binding.FieldId])
+                if (value.Length > _encodingBufferHandler.Length)
                 {
                     analyzer.GetOutputBuffersSize(value.Length, out var outputSize, out var tokenSize);
-                    if (wordsBuffer.Length < outputSize || tokens.Length < tokenSize)
+                    if (_encodingBufferHandler.Length < outputSize || _tokensBufferHandler.Length < tokenSize)
                     {
                         UnlikelyGrowBuffer(ref wordsBuffer, ref tokens, outputSize, tokenSize);
                     }
-
-                    _maxTermLengthProceedPerAnalyzer[binding.FieldId] = value.Length;
                 }
 
                 analyzer.Execute(value, ref wordsBuffer, ref tokens);
@@ -459,12 +452,11 @@ namespace Corax
                     }
 
                     var analyzer = binding.Analyzer;
-                    if (termValue.Length > _maxTermLengthProceedPerAnalyzer[binding.FieldId])
+                    if (termValue.Length > _encodingBufferHandler.Length)
                     {
                         analyzer.GetOutputBuffersSize(termValue.Length, out int outputSize, out int tokenSize);
                         if (outputSize > wordSpace.Length)
                             UnlikelyGrowBuffer(ref wordSpace, ref tokenSpace, outputSize, tokenSize);
-                        _maxTermLengthProceedPerAnalyzer[binding.FieldId] = termValue.Length;
                     }
 
                     analyzer.Execute(termValue, ref wordSpace, ref tokenSpace);
@@ -776,7 +768,6 @@ namespace Corax
             if (_ownsTransaction)
                 Transaction?.Dispose();
 
-            ArrayPool<int>.Shared.Return(_maxTermLengthProceedPerAnalyzer);
 
             if (_encodingBufferHandler != null)
                 Analyzer.BufferPool.Return(_encodingBufferHandler);
