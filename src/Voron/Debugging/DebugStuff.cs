@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Sparrow;
 using Sparrow.Platform;
 using Voron.Data;
 using Voron.Data.BTrees;
@@ -137,7 +138,8 @@ namespace Voron.Debugging
 }";
 
         [Conditional("DEBUG")]
-        public static void RenderAndShow_FixedSizeTree(LowLevelTransaction tx, FixedSizeTree fst)
+        public static void RenderAndShow_FixedSizeTree<TVal>(LowLevelTransaction tx, FixedSizeTree<TVal> fst) 
+            where TVal : unmanaged, IBinaryNumber<TVal>, IMinMaxValue<TVal>
         {
             var name = fst.Name;
             var tree = fst.Parent;
@@ -147,7 +149,8 @@ namespace Voron.Debugging
             });
         }
 
-        private static unsafe Task DumpFixedSizeTreeToStreamAsync(LowLevelTransaction tx, FixedSizeTree fst, TextWriter writer, Slice name, Tree tree)
+        private static unsafe Task DumpFixedSizeTreeToStreamAsync<TVal>(LowLevelTransaction tx, FixedSizeTree<TVal> fst, TextWriter writer, Slice name, Tree tree)
+            where TVal : unmanaged, IBinaryNumber<TVal>, IMinMaxValue<TVal>
         {
             var ptr = tree.DirectRead(name);
             if (ptr == null)
@@ -164,7 +167,8 @@ namespace Voron.Debugging
             return RenderLargeFixedSizeTreeAsync(large, tx, fst, writer);
         }
 
-        private static async Task RenderLargeFixedSizeTreeAsync(FixedSizeTreeSafe.LargeFixedSizeTreeSafe tree, LowLevelTransaction tx, FixedSizeTree fst, TextWriter writer)
+        private static async Task RenderLargeFixedSizeTreeAsync<TVal>(FixedSizeTreeSafe.LargeFixedSizeTreeSafe tree, LowLevelTransaction tx, FixedSizeTree<TVal> fst, TextWriter writer)
+            where TVal : unmanaged, IBinaryNumber<TVal>, IMinMaxValue<TVal>
         {
             await writer.WriteLineAsync(string.Format("<p>Number of entries: {0:#,#;;0}, val size: {1:#,#;;0}.</p>", tree.NumberOfEntries, tree.ValueSize));
             await writer.WriteLineAsync("<div class='css-treeview'><ul>");
@@ -249,7 +253,8 @@ namespace Voron.Debugging
 
         }
 
-        private static async Task RenderFixedSizeTreePageAsync(LowLevelTransaction tx, FixedSizeTreePage page, TextWriter sw, FixedSizeTreeSafe.LargeFixedSizeTreeSafe tree, string text, bool open)
+        private static async Task RenderFixedSizeTreePageAsync<TVal>(LowLevelTransaction tx, FixedSizeTreePage<TVal> page, TextWriter sw, FixedSizeTreeSafe.LargeFixedSizeTreeSafe tree, string text, bool open)
+            where TVal : unmanaged, IBinaryNumber<TVal>, IMinMaxValue<TVal>
         {
             await sw.WriteLineAsync(
                 string.Format("<ul><li><input type='checkbox' id='page-{0}' {3} /><label for='page-{0}'>{4}: Page {0:#,#;;0} - {1} - {2:#,#;;0} entries</label><ul>",
@@ -277,7 +282,7 @@ namespace Voron.Debugging
                     }
 
                     var fstPage = tx.GetPage(pageNum);
-                    await RenderFixedSizeTreePageAsync(tx, CreateFixedSizeTreePage(fstPage, tree), sw, tree, s, false);
+                    await RenderFixedSizeTreePageAsync(tx, CreateFixedSizeTreePage<TVal>(fstPage, tree), sw, tree, s, false);
                 }
             }
 
@@ -338,7 +343,8 @@ namespace Voron.Debugging
             sw.WriteLine("</ul></li></ul>");
         }
 
-        private static unsafe long GetFixedSizeTreeKey(FixedSizeTreePage page, FixedSizeTreeSafe.LargeFixedSizeTreeSafe tree, int i)
+        private static unsafe long GetFixedSizeTreeKey<TVal>(FixedSizeTreePage<TVal> page, FixedSizeTreeSafe.LargeFixedSizeTreeSafe tree, int i)
+            where TVal : unmanaged, IBinaryNumber<TVal>, IMinMaxValue<TVal>
         {
             if (page.IsLeaf)
                 return *(long*)(page.Pointer + page.StartPosition + (((sizeof(long) + tree.ValueSize)) * i));
@@ -346,14 +352,16 @@ namespace Voron.Debugging
             return *(long*)(page.Pointer + page.StartPosition + (((sizeof(long) + sizeof(long))) * i));
         }
 
-        private static unsafe long GetFixedSizeTreePageNumber(FixedSizeTreePage page, int i)
+        private static unsafe long GetFixedSizeTreePageNumber<TVal>(FixedSizeTreePage<TVal> page, int i)
+            where TVal : unmanaged, IBinaryNumber<TVal>, IMinMaxValue<TVal>
         {
             return *(long*)(page.Pointer + page.StartPosition + (((sizeof(long) + sizeof(long))) * i) + sizeof(long));
         }
 
-        private static unsafe FixedSizeTreePage CreateFixedSizeTreePage(Page page, FixedSizeTreeSafe.LargeFixedSizeTreeSafe tree)
+        private static unsafe FixedSizeTreePage<TVal> CreateFixedSizeTreePage<TVal>(Page page, FixedSizeTreeSafe.LargeFixedSizeTreeSafe tree)
+            where TVal : unmanaged, IBinaryNumber<TVal>, IMinMaxValue<TVal>
         {
-            return new FixedSizeTreePage(page.Pointer, tree.ValueSize + sizeof(long), Constants.Storage.PageSize);
+            return new FixedSizeTreePage<TVal>(page.Pointer, tree.ValueSize + sizeof(long), Constants.Storage.PageSize);
         }
 
  

@@ -1,11 +1,13 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Sparrow;
 using Voron.Global;
 
 namespace Voron.Data.Fixed
 {
-    public unsafe class FixedSizeTreePage
+    public unsafe class FixedSizeTreePage<TVal>
+        where TVal : unmanaged, IBinaryNumber<TVal>, IMinMaxValue<TVal>
     {
         private readonly byte* _ptr;
         private readonly int _entrySize;
@@ -21,7 +23,7 @@ namespace Voron.Data.Fixed
             _pageSize = pageSize;
 
             if (IsBranch)
-                _entrySize = FixedSizeTree.BranchEntrySize;
+                _entrySize = FixedSizeTree<TVal>.BranchEntrySize;
             else
                 _entrySize = entrySize;
         }
@@ -124,28 +126,28 @@ namespace Voron.Data.Fixed
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void SetKey(long key, int position)
+        public void SetKey(TVal key, int position)
         {
             GetEntry(position)->Key = key;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public long GetKey(int position)
+        public TVal GetKey(int position)
         {
             return GetEntry(Pointer + StartPosition, position, _entrySize)->Key;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal FixedSizeTreeEntry* GetEntry(int position)
+        internal FixedSizeTreeEntry<TVal>* GetEntry(int position)
         {
             Debug.Assert(position >= 0 && ((position == 0 && NumberOfEntries == 0) || position < NumberOfEntries) ,$"FixedSizeTreePage: Requested an out of range entry {position} from [0-{NumberOfEntries-1}]");
             return GetEntry(Pointer + StartPosition, position, _entrySize);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static FixedSizeTreeEntry* GetEntry(byte* p, int position, int size)
+        public static FixedSizeTreeEntry<TVal>* GetEntry(byte* p, int position, int size)
         {
-            return (FixedSizeTreeEntry*)(p + position * size);
+            return (FixedSizeTreeEntry<TVal>*)(p + position * size);
         }
 
         public void ResetStartPosition()
@@ -156,7 +158,7 @@ namespace Voron.Data.Fixed
             // we need to move it back, then add the new item
             Memory.Move(Pointer + Constants.FixedSizeTree.PageHeaderSize,
                 Pointer + StartPosition,
-                NumberOfEntries * (IsLeaf ? _entrySize : FixedSizeTree.BranchEntrySize));
+                NumberOfEntries * (IsLeaf ? _entrySize : FixedSizeTree<TVal>.BranchEntrySize));
 
             StartPosition = Constants.FixedSizeTree.PageHeaderSize;
         }

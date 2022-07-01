@@ -1,12 +1,14 @@
-﻿using System.Runtime.InteropServices;
+﻿using System;
+using System.Runtime.InteropServices;
 
 namespace Voron.Data.Fixed
 {
     [StructLayout(LayoutKind.Explicit, Pack = 1)]
-    public unsafe struct FixedSizeTreeEntry
+    public unsafe struct FixedSizeTreeEntry<TVal>
+        where TVal : unmanaged, IBinaryNumber<TVal> 
     {
         [FieldOffset(0)]
-        public long Key;
+        public TVal Key;
 
         [FieldOffset(8)]
         public byte* Value;

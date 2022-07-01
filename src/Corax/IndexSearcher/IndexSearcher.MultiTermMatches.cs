@@ -28,6 +28,12 @@ public partial class IndexSearcher
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public MultiTermMatch BetweenQuery(Slice field, Slice fieldLongs, double low, double high, bool isNegated = false, int fieldId = Constants.IndexSearcher.NonAnalyzer)
+    {
+        return RangeBuilder<NullScoreFunction, Range.Inclusive, Range.Inclusive>(field, fieldLongs, low, high, default, isNegated);
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public MultiTermMatch GreaterThanQuery(Slice field, Slice value, bool isNegated = false, int fieldId = Constants.IndexSearcher.NonAnalyzer)
     {
         return RangeBuilder<NullScoreFunction, Range.Exclusive, Range.Inclusive>(field, value, Slices.AfterAllKeys, default, isNegated);
@@ -386,7 +392,7 @@ public partial class IndexSearcher
         };
     }
 
-    private unsafe MultiTermMatch RangeBuilder<TScoreFunction, TLow, THigh>(Slice fieldName, Slice fieldLong, long low, long high, TScoreFunction scoreFunction, bool isNegated)
+    private MultiTermMatch RangeBuilder<TScoreFunction, TLow, THigh>(Slice fieldName, Slice fieldLong, long low, long high, TScoreFunction scoreFunction, bool isNegated)
         where TScoreFunction : IQueryScoreFunction
         where TLow : struct, Range.Marker
         where THigh : struct, Range.Marker
@@ -400,8 +406,39 @@ public partial class IndexSearcher
 
         return (isNegated, scoreFunction) switch
         {
-            (false, NullScoreFunction) => MultiTermMatch.Create(new MultiTermMatch<TermNumericRangeProvider<TLow, THigh>>(_transaction.Allocator,
-                new TermNumericRangeProvider<TLow, THigh>(this, set, terms, fieldName, low, high))),
+            (false, NullScoreFunction) => MultiTermMatch.Create(new MultiTermMatch<TermNumericRangeProvider<TLow, THigh, long>>(_transaction.Allocator,
+                new TermNumericRangeProvider<TLow, THigh, long>(this, set, terms, fieldName, low, high))),
+
+            _ => throw new NotSupportedException()
+            // (true, NullScoreFunction) => MultiTermMatch.Create(new MultiTermMatch<NotStartWithTermProvider>(_transaction.Allocator,
+            //     new NotStartWithTermProvider(this, _transaction.Allocator, terms, fieldName, fieldId, slicedTerm))),
+            //
+            // (false, _) => MultiTermMatch.Create(
+            //     MultiTermBoostingMatch<StartWithTermProvider>.Create(
+            //         this, new StartWithTermProvider(this, _transaction.Allocator, terms, fieldName, fieldId, slicedTerm), scoreFunction)),
+            //
+            // (true, _) => MultiTermMatch.Create(
+            //     MultiTermBoostingMatch<NotStartWithTermProvider>.Create(
+            //         this, new NotStartWithTermProvider(this, _transaction.Allocator, terms, fieldName, fieldId, slicedTerm), scoreFunction))
+        };
+    }
+    
+    private MultiTermMatch RangeBuilder<TScoreFunction, TLow, THigh>(Slice fieldName, Slice fieldLong, double low, double high, TScoreFunction scoreFunction, bool isNegated)
+        where TScoreFunction : IQueryScoreFunction
+        where TLow : struct, Range.Marker
+        where THigh : struct, Range.Marker
+    {
+        var fields = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
+        var terms = fields?.CompactTreeFor(fieldName);
+        if (terms == null)
+            return MultiTermMatch.CreateEmpty(_transaction.Allocator);
+
+        var set = fields?.FixedTreeForDouble(fieldLong, sizeof(long));
+
+        return (isNegated, scoreFunction) switch
+        {
+            (false, NullScoreFunction) => MultiTermMatch.Create(new MultiTermMatch<TermNumericRangeProvider<TLow, THigh, double>>(_transaction.Allocator,
+                new TermNumericRangeProvider<TLow, THigh, double>(this, set, terms, fieldName, low, high))),
 
             _ => throw new NotSupportedException()
             // (true, NullScoreFunction) => MultiTermMatch.Create(new MultiTermMatch<NotStartWithTermProvider>(_transaction.Allocator,
