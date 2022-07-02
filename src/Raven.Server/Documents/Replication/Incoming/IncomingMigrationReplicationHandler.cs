@@ -1,7 +1,4 @@
-﻿using System;
-using Raven.Client.Documents.Replication.Messages;
-using Raven.Server.Documents.Replication.ReplicationItems;
-using Raven.Server.Documents.Sharding;
+﻿using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -20,11 +17,9 @@ namespace Raven.Server.Documents.Replication.Incoming
             return new MergedIncomingMigrationCommand(data, lastDocumentEtag);
         }
 
-        protected override TransactionOperationsMerger.MergedTransactionCommand GetUpdateChangeVectorCommand(string changeVector, long lastDocumentEtag, string sourceDatabaseId, AsyncManualResetEvent trigger)
+        protected override void HandleHeartbeatMessage(DocumentsOperationContext documentsContext, BlittableJsonReaderObject message)
         {
-            // TODO: noop command here?
-            return null;
-            return base.GetUpdateChangeVectorCommand(changeVector, lastDocumentEtag, sourceDatabaseId, trigger);
+            // do nothing
         }
 
         internal class MergedIncomingMigrationCommand : MergedDocumentReplicationCommand
