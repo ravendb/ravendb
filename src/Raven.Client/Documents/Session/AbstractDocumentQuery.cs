@@ -1411,7 +1411,8 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         {
             QueryStats.UpdateQueryStats(queryResult);
             QueryHighlightings.Update(queryResult);
-            Explanations?.Update(queryResult);
+            if (Explanations.Included)
+                Explanations.Update(queryResult);
             QueryTimings?.Update(queryResult);
         }
 
