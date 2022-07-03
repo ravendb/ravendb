@@ -32,9 +32,9 @@ namespace Raven.Client.Documents.Subscriptions
             _store = documentStore;
         }
 
-        internal override RequestExecutor GetRequestExecutor() => _store.GetRequestExecutor(_dbName);
+        protected override RequestExecutor GetRequestExecutor() => _store.GetRequestExecutor(_dbName);
 
-        internal override void SetLocalRequestExecutor(string url, X509Certificate2 cert)
+        protected override void SetLocalRequestExecutor(string url, X509Certificate2 cert)
         {
             using (var old = _subscriptionLocalRequestExecutor)
             {

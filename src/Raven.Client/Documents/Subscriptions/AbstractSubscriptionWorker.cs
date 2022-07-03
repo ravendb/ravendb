@@ -107,7 +107,7 @@ namespace Raven.Client.Documents.Subscriptions
                 _disposed = true;
                 _processingCts?.Cancel();
 
-                CloseTcpClient(false); // we disconnect immediately, freeing the subscription task
+                CloseTcpClient(); // we disconnect immediately, freeing the subscription task
 
                 if (_subscriptionTask != null && waitForSubscriptionTask)
                 {
@@ -177,11 +177,6 @@ namespace Raven.Client.Documents.Subscriptions
         public string CurrentNodeTag => _redirectNode?.ClusterTag;
         public string SubscriptionName => _options?.SubscriptionName;
         internal int? SubscriptionTcpVersion;
-
-        internal abstract RequestExecutor GetRequestExecutor();
-        /*internal abstract Task ProcessSubscriptionInternalAsync(JsonContextPool contextPool, Stream tcpStreamCopy, JsonOperationContext.MemoryBuffer buffer,
-            JsonOperationContext context);*/
-        internal abstract void SetLocalRequestExecutor(string url, X509Certificate2 cert);
 
         internal bool ShouldUseCompression()
         {
@@ -400,7 +395,7 @@ namespace Raven.Client.Documents.Subscriptions
             await writer.FlushAsync().ConfigureAwait(false);
         }
 
-        internal void AssertConnectionState(SubscriptionConnectionServerMessage connectionStatus)
+        private void AssertConnectionState(SubscriptionConnectionServerMessage connectionStatus)
         {
             if (connectionStatus.Type == SubscriptionConnectionServerMessage.MessageType.Error)
             {
@@ -486,7 +481,7 @@ namespace Raven.Client.Documents.Subscriptions
             }
         }
 
-        internal async Task ProcessSubscriptionAsync()
+        private async Task ProcessSubscriptionAsync()
         {
             try
             {
@@ -529,9 +524,7 @@ namespace Raven.Client.Documents.Subscriptions
             }
         }
 
-        protected abstract TBatch CreateEmptyBatch();
-
-        internal async Task ProcessSubscriptionInternalAsync(JsonContextPool contextPool, Stream tcpStreamCopy, JsonOperationContext.MemoryBuffer buffer, JsonOperationContext context)
+        private async Task ProcessSubscriptionInternalAsync(JsonContextPool contextPool, Stream tcpStreamCopy, JsonOperationContext.MemoryBuffer buffer, JsonOperationContext context)
         {
             Task notifiedSubscriber = Task.CompletedTask;
 
@@ -785,7 +778,7 @@ namespace Raven.Client.Documents.Subscriptions
                         (bool shouldTryToReconnect, _redirectNode) = CheckIfShouldReconnectWorker(ex, _processingCts, AssertLastConnectionFailure, OnUnexpectedSubscriptionError);
                         if (shouldTryToReconnect)
                         {
-                            await TimeoutManager.WaitFor(_options.TimeToWaitBeforeConnectionRetry).ConfigureAwait(false);
+                            await TimeoutManager.WaitFor(_options.TimeToWaitBeforeConnectionRetry, _processingCts.Token).ConfigureAwait(false);
 
                             if (_redirectNode == null)
                             {
@@ -850,13 +843,10 @@ namespace Raven.Client.Documents.Subscriptions
             }
         }
 
-        internal (bool ShouldTryToReconnect, ServerNode NodeRedirectTo) CheckIfShouldReconnectWorker(Exception ex, CancellationTokenSource processingCts, Action assertLastConnectionFailure, Action<Exception> onUnexpectedSubscriptionError, bool throwOnRedirectNodeNotFound = true)
+        protected virtual (bool ShouldTryToReconnect, ServerNode NodeRedirectTo) CheckIfShouldReconnectWorker(Exception ex, CancellationTokenSource processingCts, Action assertLastConnectionFailure, Action<Exception> onUnexpectedSubscriptionError, bool throwOnRedirectNodeNotFound = true)
         {
             if (ex is AggregateException ae)
             {
-                if (ex is ShardedSubscriptionException)
-                    return (false, null);
-
                 foreach (var exception in ae.InnerExceptions)
                 {
                     if (CheckIfShouldReconnectWorker(exception, processingCts, assertLastConnectionFailure, onUnexpectedSubscriptionError).ShouldTryToReconnect)
@@ -875,9 +865,8 @@ namespace Raven.Client.Documents.Subscriptions
 
                     if (se.AppropriateNode == null)
                     {
-                        
                         assertLastConnectionFailure?.Invoke();
-                        return (true,null);
+                        return (true, null);
                     }
 
                     var nodeToRedirectTo = requestExecutor.TopologyNodes
@@ -898,7 +887,7 @@ namespace Raven.Client.Documents.Subscriptions
                     if (sce.CanReconnect)
                         return (true, null);
 
-                    processingCts.Cancel();
+                    processingCts?.Cancel();
                     return (false, null);
 
                 case SubscriptionMessageTypeException _:
@@ -912,7 +901,7 @@ namespace Raven.Client.Documents.Subscriptions
                 case AllTopologyNodesDownException _:
                 case SubscriberErrorException _:
                 case RavenException _:
-                    processingCts.Cancel();
+                    processingCts?.Cancel();
                     return (false, null);
 
                 default:
@@ -922,7 +911,7 @@ namespace Raven.Client.Documents.Subscriptions
             }
         }
 
-        protected void CloseTcpClient(bool disposeReqExecutor = true)
+        protected void CloseTcpClient()
         {
             if (_stream != null)
             {
@@ -949,20 +938,13 @@ namespace Raven.Client.Documents.Subscriptions
                     // nothing to be done
                 }
             }
-
-            if (disposeReqExecutor && _subscriptionLocalRequestExecutor != null)
-            {
-                try
-                {
-                    _subscriptionLocalRequestExecutor.Dispose();
-                    _subscriptionLocalRequestExecutor = null;
-                }
-                catch (Exception)
-                {
-                    // nothing to be done
-                }
-            }
         }
+
+        protected abstract RequestExecutor GetRequestExecutor();
+       
+        protected abstract void SetLocalRequestExecutor(string url, X509Certificate2 cert);
+
+        protected abstract TBatch CreateEmptyBatch();
 
         public event Action<AbstractSubscriptionWorker<TBatch, TType>> OnDisposed = delegate { };
 
