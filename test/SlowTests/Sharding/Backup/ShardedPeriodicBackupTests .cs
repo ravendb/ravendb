@@ -473,7 +473,7 @@ namespace SlowTests.Sharding.Backup
 
                 }
 
-                Assert.Equal(dbRecord.Shards.Length, shardNumToDocIds.Count);
+                Assert.Equal(dbRecord.Sharding.Shards.Length, shardNumToDocIds.Count);
             }
 
             await AssertDocsInShardedDb(store, shardNumToDocIds);
