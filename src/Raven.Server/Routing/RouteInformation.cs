@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
@@ -142,6 +143,9 @@ namespace Raven.Server.Routing
             {
                 case DatabasesLandlord.DatabaseSearchResult.Status.Sharded:
                     context.DatabaseContext = result.DatabaseContext;
+                    if (context.DatabaseContext.DatabaseRecord.Sharding.Orchestrator.Topology.AllNodes.Contains(context.RavenServer.ServerStore.NodeTag) == false)
+                        DatabaseDoesNotExistException.Throw(databaseName.Value);
+
                     return null;
                 default:
                     var database = result.DatabaseTask;

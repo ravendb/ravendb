@@ -20,6 +20,7 @@ using Raven.Server;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Server.Documents.ETL.Olap;
 using Tests.Infrastructure;
@@ -39,6 +40,8 @@ namespace SlowTests.Sharding.ETL
         [InlineData(3)]
         public async Task ReplicateFromSingleSource(int replicationFactor)
         {
+            DebuggerAttachedTimeout.DisableLongTimespan = true;
+
             var srcDb = "ReplicateFromSingleSourceSrc";
             var dstDb = "ReplicateFromSingleSourceDst";
             var srcCluster = await CreateRaftCluster(3);
@@ -104,7 +107,18 @@ namespace SlowTests.Sharding.ETL
 
                 Assert.True(WaitForDocument<User>(dest, "users/1", u => u.Name == "Joe Doe", 30_000));
 
-                await ActionWithLeader(l => l.ServerStore.RemoveFromClusterAsync(node), srcNodes.Servers);
+                await ActionWithLeader(async l =>
+                {
+                    try
+                    {
+                        await l.ServerStore.RemoveFromClusterAsync(node);
+                    }
+                    catch
+                    {
+                        l.ServerStore.Engine.CurrentLeader.StepDown();
+                    }
+                }, srcNodes.Servers);
+
                 await originalTaskNode.ServerStore.WaitForState(RachisState.Passive, CancellationToken.None);
 
                 using (var session = src.OpenSession())

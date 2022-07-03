@@ -63,7 +63,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Smuggler
                 writer.WriteInteger(ServerVersion.Build);
                 
                 // we execute one by one so requests will not timeout since the export can take long
-                for (var shardNumber = 0; shardNumber < RequestHandler.DatabaseContext.DatabaseRecord.Shards.Length; shardNumber++)
+                for (var shardNumber = 0; shardNumber < RequestHandler.DatabaseContext.NumberOfShardNodes; shardNumber++)
                 {
                     var smuggler = new DatabaseSmuggler(
                         (_, nodeTag) => RequestHandler.DatabaseContext.Operations.GetChanges(new ShardedDatabaseIdentifier(nodeTag, shardNumber)),
