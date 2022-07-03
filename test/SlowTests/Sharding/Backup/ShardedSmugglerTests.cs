@@ -851,18 +851,36 @@ namespace SlowTests.Sharding.Backup
                             op = store2.Maintenance.Send(new GetOperationStateOperation(operation.Id));
                             return op.Status == OperationStatus.Completed;
                         }, true);
-                        var res = (SmugglerResult)op.Result;
-                        Assert.Equal(5, res.Documents.ReadCount);
-                        Assert.Equal(1, res.Tombstones.ReadCount);
-                        Assert.Equal(2, res.TimeSeries.ReadCount);
-                        Assert.Equal(1, res.Counters.ReadCount);
-                        Assert.Equal(3, res.Documents.Attachments.ReadCount);
-                        Assert.Equal(21, res.RevisionDocuments.ReadCount);
-                        Assert.Equal(1, res.Subscriptions.ReadCount);
-                        Assert.Equal(1, res.Identities.ReadCount);
-                        Assert.Equal(3, res.CompareExchange.ReadCount);
-                        //Assert.Equal(0, res.CompareExchangeTombstones.ReadCount);
-                        Assert.Equal(1, res.Indexes.ReadCount);
+
+                        var res = (ShardedSmugglerResult)op.Result;
+
+                        var smugglerRes = new SmugglerResult();
+                        foreach (var shardResult in res.Results)
+                        {
+                            smugglerRes.Documents.ReadCount += shardResult.Result.Documents.ReadCount;
+                            smugglerRes.Tombstones.ReadCount += shardResult.Result.Tombstones.ReadCount;
+                            smugglerRes.TimeSeries.ReadCount += shardResult.Result.TimeSeries.ReadCount;
+                            smugglerRes.Counters.ReadCount += shardResult.Result.Counters.ReadCount;
+                            smugglerRes.Documents.Attachments.ReadCount += shardResult.Result.Documents.Attachments.ReadCount;
+                            smugglerRes.RevisionDocuments.ReadCount += shardResult.Result.RevisionDocuments.ReadCount;
+                            smugglerRes.Subscriptions.ReadCount += shardResult.Result.Subscriptions.ReadCount;
+                            smugglerRes.Identities.ReadCount += shardResult.Result.Identities.ReadCount;
+                            smugglerRes.CompareExchange.ReadCount += shardResult.Result.CompareExchange.ReadCount;
+                            smugglerRes.CompareExchangeTombstones.ReadCount += shardResult.Result.CompareExchangeTombstones.ReadCount;
+                            smugglerRes.Indexes.ReadCount += shardResult.Result.Indexes.ReadCount;
+                        }
+
+                        Assert.Equal(5, smugglerRes.Documents.ReadCount);
+                        Assert.Equal(1, smugglerRes.Tombstones.ReadCount);
+                        Assert.Equal(2, smugglerRes.TimeSeries.ReadCount);
+                        Assert.Equal(1, smugglerRes.Counters.ReadCount);
+                        Assert.Equal(3, smugglerRes.Documents.Attachments.ReadCount);
+                        Assert.Equal(21, smugglerRes.RevisionDocuments.ReadCount);
+                        Assert.Equal(1, smugglerRes.Subscriptions.ReadCount);
+                        Assert.Equal(1, smugglerRes.Identities.ReadCount);
+                        Assert.Equal(3, smugglerRes.CompareExchange.ReadCount);
+                        //Assert.Equal(0, smugglerRes.CompareExchangeTombstones.ReadCount);
+                        Assert.Equal(1, smugglerRes.Indexes.ReadCount);
                     }
                 }
             }
