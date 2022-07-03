@@ -3,6 +3,9 @@
 import document = require("models/database/documents/document");
 
 class documentHelpers {
+
+    static readonly idRegex = /\w+\/\w+/ig;
+    
     static findRelatedDocumentsCandidates(doc: documentBase): string[] {
         const results: string[] = [];
         const initialDocumentFields = doc.getDocumentPropertyNames();
@@ -15,8 +18,8 @@ class documentHelpers {
 
         for (let documentNodesCursor = 0; documentNodesCursor < documentNodesFlattenedList.length; documentNodesCursor++) {
             const curField = documentNodesFlattenedList[documentNodesCursor];
-            if (typeof curField === "string" && curField.length < 512 && /\w+\/\w+/ig.test(curField)) {
-
+            
+            if (typeof curField === "string" && curField.length < 512 && curField.match(documentHelpers.idRegex)) {
                 if (!results.find(x => x === curField.toString())) {
                     results.push(curField.toString());
                 }

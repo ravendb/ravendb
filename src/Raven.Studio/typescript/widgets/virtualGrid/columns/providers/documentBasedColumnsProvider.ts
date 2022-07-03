@@ -18,6 +18,7 @@ import virtualGridUtils = require("widgets/virtualGrid/virtualGridUtils");
 import app = require("durandal/app");
 import showDataDialog = require("viewmodels/common/showDataDialog");
 import generalUtils = require("common/generalUtils");
+import documentHelpers = require("common/helpers/database/documentHelpers");
 
 
 type columnOptionsDto = {
@@ -55,8 +56,6 @@ class documentBasedColumnsProvider {
     private readonly collectionTracker: collectionsTracker;
     private readonly customColumnProvider: () => virtualColumn[];
     private readonly timeSeriesActionHandler: (type: timeSeriesColumnEventType, documentId: string, name: string, value: timeSeriesQueryResultDto, event: JQueryEventObject) => void;
-
-    private static readonly externalIdRegex = /^\w+\/\w+/ig;
 
     constructor(db: database, gridController: virtualGridController<document>, opts: documentBasedColumnsProviderOpts) {
         this.showRowSelectionCheckbox = _.isBoolean(opts.showRowSelectionCheckbox) ? opts.showRowSelectionCheckbox : false;
@@ -259,10 +258,10 @@ class documentBasedColumnsProvider {
             const value = (item as any)[property];
 
             //TODO: support url's in data as well
-            if (_.isString(value) && value.match(documentBasedColumnsProvider.externalIdRegex)) {
+            if (_.isString(value) && value.match(documentHelpers.idRegex)) {
                 const extractedCollectionName = value.split("/")[0].toLowerCase();
                 const matchedCollection = this.collectionTracker.getCollectionNames().find(collection => extractedCollectionName.startsWith(collection.toLowerCase()));
-                return matchedCollection ? appUrl.forEditDoc(value, this.db, matchedCollection) : null;
+                return matchedCollection ? appUrl.forEditDoc(value, this.db, matchedCollection) : appUrl.forEditDoc(value, this.db);
             }
         }
         return null;
