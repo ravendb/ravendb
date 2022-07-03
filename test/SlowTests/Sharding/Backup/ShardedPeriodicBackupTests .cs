@@ -343,9 +343,9 @@ namespace SlowTests.Sharding.Backup
                 var operation = await store.Maintenance.SendAsync(new BackupOperation(config));
 
                 var result = await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(95));
-                var backupResult = (BackupResult)result;
+                var backupResult = (ShardedBackupResult)result;
                 Assert.NotNull(backupResult);
-                Assert.Equal(100, backupResult.Documents.ReadCount);
+                Assert.Equal(100, backupResult.Results.Sum(x => x.Result.Documents.ReadCount));
 
                 var dirs = Directory.GetDirectories(backupPath);
                 Assert.Equal(3, dirs.Length);
