@@ -23,7 +23,7 @@ class nodeTagColumn<T extends { nodeTag: string, database: string, noData: boole
         
         if (item.nodeTag) {
             const description = this.hrefProvider(item).targetDescription;
-            const titleText = description ? `Go to ${description}` : "";
+            const titleText = description ? `Go to ${description} on node ${nodeTag}` : "";
             return `<span class="node-label ${extraClass}" title="${titleText}">${nodeTag}</span>`;
         } else {
             return "";
