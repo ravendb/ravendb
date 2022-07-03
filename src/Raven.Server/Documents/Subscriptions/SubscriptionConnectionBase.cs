@@ -927,6 +927,7 @@ namespace Raven.Server.Documents.Subscriptions
                 [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.Confirm)
             });
         }
+
         protected abstract StatusMessageDetails GetStatusMessageDetails();
 
         protected abstract Task OnClientAckAsync();

@@ -3,6 +3,8 @@ using Raven.Server.Documents.Subscriptions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents.TcpHandlers;
 
@@ -24,6 +26,12 @@ public class SubscriptionConnectionForShard : SubscriptionConnection
             ClientType = "'sharded worker'",
             SubscriptionType = "sharded subscription"
         };
+    }
+    
+    protected override DynamicJsonValue AcceptMessage()
+    {
+        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "need to ensure the sharded workers has the same sub definition. by sending my raft index?");
+        return base.AcceptMessage();
     }
 
     protected override RawDatabaseRecord GetRecord(TransactionOperationContext context) => _serverStore.Cluster.ReadRawDatabaseRecord(context, ShardName);

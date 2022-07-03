@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Util;
-using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.Subscriptions;
@@ -213,6 +212,7 @@ public abstract class SubscriptionConnectionsStateBase<TSubscriptionConnection> 
             LastClientConnectionTime = DateTime.UtcNow,
         };
     }
+
     public bool IsSubscriptionActive()
     {
         return _connections.Count != 0;
