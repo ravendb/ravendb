@@ -10,14 +10,14 @@ class ioStats extends shardViewModelBase {
     
     private readonly graph: ioStatsGraph;
     
-    constructor(db: database) {
-        super(db);
+    constructor(db: database, location: databaseLocationSpecifier) {
+        super(db, location);
 
         this.graph = new ioStatsGraph(
             () => `database-${this.db.name}`,
             ["Documents", "Index", "Configuration"],
             true,
-            (onUpdate, cutOff) => new dbLiveIOStatsWebSocketClient(this.db, onUpdate, cutOff));
+            (onUpdate, cutOff) => new dbLiveIOStatsWebSocketClient(this.db, this.location, onUpdate, cutOff));
     }
 
     compositionComplete() {
