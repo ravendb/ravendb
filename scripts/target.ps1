@@ -62,6 +62,10 @@ function GetBuildTargets( $targets ) {
         return $TARGET_SPECS;
     }
 
+    if ($targets.Contains("macos")) {
+        $targets += "macos-x64"
+    }
+
     $result = @( );
 
     foreach ($spec in $TARGET_SPECS) {
