@@ -15,9 +15,10 @@ abstract class liveIOStatsWebSocketClient extends abstractWebSocketClient<Raven.
     loading = ko.observable<boolean>(true);
 
     protected constructor(db: database, 
+                location: databaseLocationSpecifier,
                 onData: (data: Raven.Server.Utils.IoMetrics.IOMetricsResponse) => void,
                 dateCutOff?: Date) {
-        super(db);
+        super(db, location);
         this.onData = onData;
         this.mergedData = { Environments: [], Performances: [] };
         this.dateCutOff = dateCutOff;

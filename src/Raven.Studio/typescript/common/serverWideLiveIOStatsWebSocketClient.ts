@@ -6,7 +6,7 @@ class serverWideLiveIOStatsWebSocketClient extends liveIOStatsWebSocketClient {
 
     constructor(onData: (data: Raven.Server.Utils.IoMetrics.IOMetricsResponse) => void,
                 dateCutOff?: Date) {
-        super(null, onData, dateCutOff);
+        super(null, null, onData, dateCutOff);
     }
 
     get connectionDescription() {
