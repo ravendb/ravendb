@@ -311,24 +311,25 @@ namespace Corax
             void Insert(ReadOnlySpan<byte> value)
             {
                 if (binding.IsAnalyzed)
-                    AnalyzeInsert(_encodingBufferHandler.AsSpan(), _tokensBufferHandler.AsSpan(), value);
+                    AnalyzeInsert(value);
                 else
                     ExactInsert(value);
             }
 
-            void AnalyzeInsert(Span<byte> wordsBuffer, Span<Token> tokens, ReadOnlySpan<byte> value)
+            void AnalyzeInsert(ReadOnlySpan<byte> value)
             {
                 var analyzer = binding.Analyzer;
                 if (value.Length > _encodingBufferHandler.Length)
                 {
                     analyzer.GetOutputBuffersSize(value.Length, out var outputSize, out var tokenSize);
                     if (outputSize > _encodingBufferHandler.Length || tokenSize >  _tokensBufferHandler.Length)
-                    {
-                        UnlikelyGrowBuffer(ref wordsBuffer, ref tokens, outputSize, tokenSize);
-                    }
+                        UnlikelyGrowBuffer(outputSize, tokenSize);
                 }
 
+                Span<byte> wordsBuffer = _encodingBufferHandler;
+                Span<Token> tokens = _tokensBufferHandler;
                 analyzer.Execute(value, ref wordsBuffer, ref tokens);
+                
                 for (int i = 0; i < tokens.Length; i++)
                 {
                     ref var token = ref tokens[i];
@@ -479,7 +480,7 @@ namespace Corax
                     {
                         analyzer.GetOutputBuffersSize(termValue.Length, out int outputSize, out int tokenSize);
                         if (outputSize > _encodingBufferHandler.Length || tokenSize > _tokensBufferHandler.Length)
-                            UnlikelyGrowBuffer(ref wordSpace, ref tokenSpace, outputSize, tokenSize);
+                            UnlikelyGrowBuffer(outputSize, tokenSize);
                     }
 
                     analyzer.Execute(termValue, ref wordSpace, ref tokenSpace);
@@ -613,20 +614,18 @@ namespace Corax
             return true;
         }
 
-        private void UnlikelyGrowBuffer(ref Span<byte> buffer, ref Span<Token> tokens, int newBufferSize, int newTokenSize)
+        private void UnlikelyGrowBuffer(int newBufferSize, int newTokenSize)
         {
-            if (newBufferSize > buffer.Length)
-            {
+            if (newBufferSize > _encodingBufferHandler.Length)
+            { 
                 Analyzer.BufferPool.Return(_encodingBufferHandler);
                 _encodingBufferHandler = Analyzer.BufferPool.Rent(newBufferSize);
-                buffer = _encodingBufferHandler.AsSpan();
             }
 
-            if (newTokenSize > tokens.Length)
+            if (newTokenSize > _tokensBufferHandler.Length)
             {
                 Analyzer.TokensPool.Return(_tokensBufferHandler);
                 _tokensBufferHandler = Analyzer.TokensPool.Rent(newTokenSize);
-                tokens = _tokensBufferHandler.AsSpan();
             }
         }
 
@@ -856,9 +855,16 @@ namespace Corax
                 Transaction?.Dispose();
 
             if (_encodingBufferHandler != null)
+            {
                 Analyzer.BufferPool.Return(_encodingBufferHandler);
+                _encodingBufferHandler = null;
+            }
+                
             if (_tokensBufferHandler != null)
+            {
                 Analyzer.TokensPool.Return(_tokensBufferHandler);
+                _tokensBufferHandler = null;
+            }
         }
     }
 }
