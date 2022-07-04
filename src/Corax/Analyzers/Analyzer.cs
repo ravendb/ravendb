@@ -316,7 +316,7 @@ namespace Corax
 
             static void RunUtf8WithConversion(Analyzer analyzer, ReadOnlySpan<byte> source, ref Span<byte> output, ref Span<Token> tokens)
             {
-                var buffer = BufferPool.Rent(source.Length * 5);
+                var buffer = BufferPool.Rent(source.Length * 10);
                 
                 Span<char> charBuffer = MemoryMarshal.Cast<byte, char>(buffer.AsSpan());
                 int characters = Encoding.UTF8.GetChars(source, charBuffer);
@@ -472,9 +472,12 @@ namespace Corax
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Execute(ReadOnlySpan<byte> source, ref Span<byte> output, ref Span<Token> tokens)
         {
-            Debug.Assert(output.Length >= (int)(_sourceBufferMultiplier * source.Length));
-            Debug.Assert(tokens.Length >= (int)(_tokenBufferMultiplier * source.Length));
-            
+            if (output.Length < (int)(_sourceBufferMultiplier * source.Length))
+                throw new ArgumentException("Buffer is too small");
+            if (tokens.Length < (int)(_tokenBufferMultiplier * source.Length))
+                throw new ArgumentException("Buffer is too small");
+
+                    
             _funcUtf8(this, source, ref output, ref tokens);
         }
 
