@@ -9,7 +9,7 @@ namespace Raven.Server.ServerWide.Sharding;
 
 public class RawShardingConfiguration
 {
-    private readonly ShardingConfiguration _materializedSharding;
+    private ShardingConfiguration _materializedSharding;
 
     private readonly BlittableJsonReaderObject _sharding;
     private readonly JsonOperationContext _context;
@@ -152,6 +152,18 @@ public class RawShardingConfiguration
             }
 
             return _orchestrator;
+        }
+    }
+
+    public ShardingConfiguration Value
+    {
+        get
+        {
+            if (_materializedSharding != null)
+                return _materializedSharding;
+
+            _materializedSharding = JsonDeserializationCluster.ShardingConfiguration(_sharding);
+            return _materializedSharding;
         }
     }
 }
