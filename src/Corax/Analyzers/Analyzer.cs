@@ -102,10 +102,12 @@ namespace Corax
             }
 
             int result = transformer.Transform(source, tokens, ref outputBufferSpace, ref outputTokenSpace);
+            output = output.Slice(0, outputBufferSpace.Length);
+            outputTokens = outputTokens.Slice(0, outputTokenSpace.Length);
 
             if (transformer.RequiresBufferSpace)
             {
-                outputBufferSpace.CopyTo(output);
+                outputBufferSpace.CopyTo(output);                
                 BufferPool.Return(sourceTempBufferHolder);
             }
 
@@ -113,10 +115,7 @@ namespace Corax
             {
                 outputTokenSpace.CopyTo(outputTokens);
                 TokensPool.Return(tokensTempBufferHolder);
-            }
-
-            output = output.Slice(0, outputBufferSpace.Length);
-            outputTokens = outputTokens.Slice(0, outputTokenSpace.Length);
+            }                      
 
             return result;
         }
@@ -143,10 +142,12 @@ namespace Corax
             }
 
             int result = transformer.Transform(source, tokens, ref outputBufferSpace, ref outputTokenSpace);
+            output = output.Slice(0, outputBufferSpace.Length);
+            outputTokens = outputTokens.Slice(0, outputTokenSpace.Length);
 
             if (transformer.RequiresBufferSpace)
             {
-                outputBufferSpace.CopyTo(output);
+                outputBufferSpace.CopyTo(output);                
                 BufferPool.Return(sourceTempBufferHolder);
             }
 
@@ -155,9 +156,6 @@ namespace Corax
                 outputTokenSpace.CopyTo(outputTokens);
                 TokensPool.Return(tokensTempBufferHolder);
             }
-
-            output = output.Slice(0, outputBufferSpace.Length);
-            outputTokens = outputTokens.Slice(0, outputTokenSpace.Length);
 
             return result;
         }
