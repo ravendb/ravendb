@@ -8,6 +8,7 @@ using Sparrow;
 using Sparrow.Server;
 using Voron.Data.Sets;
 using Voron.Debugging;
+using Voron.Exceptions;
 using Voron.Global;
 using Voron.Impl;
 using Voron.Impl.Paging;
@@ -154,39 +155,6 @@ namespace Voron.Data.Containers
             tmpSpan.CopyTo(_page.AsSpan());
         }
 
-        public static bool TryAdjustSize(LowLevelTransaction llt, long id, int newSize, out Span<byte> buffer)
-        {
-            var offset = (int)(id % Constants.Storage.PageSize);
-            var pageNum = id / Constants.Storage.PageSize;
-            var page = llt.GetPage(pageNum);
-            var container = new Container(page);
-            var existing = container.Get(offset);
-            var containerOffsets = container.Offsets;
-            if (container.SpaceUsed(containerOffsets) + (newSize - existing.Length) > Constants.Storage.PageSize)
-            {
-                buffer = default;
-                return false;
-            }
-
-            page = llt.ModifyPage(pageNum);
-            container = new Container(page);
-            using var _ = llt.Allocator.Allocate(existing.Length, out Span<byte> tmp);
-            existing.CopyTo(tmp);
-            existing.Clear();
-            ref var metadata = ref containerOffsets[OffsetToIndex(offset)];
-            if (container.HasEnoughSpaceFor(newSize) == false)
-            {
-                metadata.Size = 0;
-                container.Defrag(llt);
-            }
-
-            container.Header.FloorOfData -= (ushort)newSize;
-            buffer = container._page.AsSpan(container.Header.FloorOfData, newSize);
-            tmp.CopyTo(buffer);
-            metadata.Offset = container.Header.FloorOfData;
-            metadata.Size = (ushort)newSize;
-            return true;
-        }
 
         public static long Allocate(LowLevelTransaction llt, long containerId, int size, out Span<byte> allocatedSpace)
         {
@@ -195,7 +163,6 @@ namespace Voron.Data.Containers
             
             if(size <= 0)
                 throw new ArgumentOutOfRangeException(nameof(size));
-            
             Container rootContainer;
             if (size > MaxSizeInsideContainerPage)
             {
@@ -224,13 +191,19 @@ namespace Voron.Data.Containers
             if (container.HasEnoughSpaceFor(reqSize) == false)
             {
                 container.Defrag(llt);
-                if (container.HasEnoughSpaceFor(reqSize) == false) 
+                // IMPORTANT: We have to account for the *larger* size here, otherwise we may
+                // have a size based on existing item metadata, but after the defrag, need
+                // to allocate a metadata slot as well. Therefor, we *always* assume that this
+                // is requiring the additional metadata size
+                if (container.HasEnoughSpaceFor(sizeof(ItemMetadata) + size) == false) 
                     MoveToNextPage(llt, containerId, ref container, size);
                 
                 (reqSize, pos) = GetRequiredSizeAndPosition(size, container);
             }
+
+            if (container.HasEnoughSpaceFor(reqSize) == false)
+                throw new VoronErrorException($"After checking for space and defrag, we ended up with not enough free space ({reqSize}) on page {container.Header.PageNumber}");
             
-            Debug.Assert(container.HasEnoughSpaceFor(reqSize));
             return container.Allocate(size, pos, out allocatedSpace);
         }
 
@@ -432,6 +405,7 @@ namespace Voron.Data.Containers
 
         public static void Delete(LowLevelTransaction llt, long containerId, long id)
         {
+            //_log.WriteLine( "del " + containerId + " " + id);
             var offset = (int)(id % Constants.Storage.PageSize);
             var pageNum = id / Constants.Storage.PageSize;
             var page = llt.ModifyPage(pageNum);
@@ -452,8 +426,10 @@ namespace Voron.Data.Containers
             Debug.Assert(entriesOffsets.Length > 0);            
             var index = (offset - PageHeader.SizeOf) / sizeof(ItemMetadata);
             var metadata = entriesOffsets[index];
-            Debug.Assert(metadata.Size != 0);
             
+            if (metadata.Size == 0)
+                throw new VoronErrorException("Attempt to delete a container item that was ALREADY DELETED! Item " + id + " on page " + page.PageNumber);
+
             int totalSize = 0, count = 0;
             for (var i = 0; i < entriesOffsets.Length; i++)
             {
