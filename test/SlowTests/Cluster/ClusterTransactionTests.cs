@@ -363,6 +363,14 @@ namespace SlowTests.Cluster
                 options.ModifyDatabaseRecord = r =>
                 {
                     r.Sharding ??= new ShardingConfiguration();
+                    r.Sharding.Orchestrator = new OrchestratorConfiguration
+                    {
+                        Topology = new OrchestratorTopology
+                        {
+                            Members = members
+                        }
+                    };
+
                     r.Sharding.Shards = new[]
                     {
                         new DatabaseTopology
