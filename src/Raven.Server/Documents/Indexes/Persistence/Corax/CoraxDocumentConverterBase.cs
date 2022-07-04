@@ -63,7 +63,8 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         keyFieldName, storeValueFieldName, fields)
     {
         _allocator = new ByteStringContext(SharedMultipleUseFlag.None);
-        _knownFields = GetKnownFields();
+        _knownFields = GetKnownFields(_allocator, index);
+        _knownFields.UpdateAnalyzersInBindings( CoraxIndexingHelpers.CreateCoraxAnalyzers(_allocator, index, index.Definition));
         Scope = new();
     }
 
@@ -94,10 +95,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         return knownFields;
     }
 
-    public IndexFieldsMapping GetKnownFields()
-    {
-        return _knownFields ?? GetKnownFields(_allocator, _index);
-    }
+    public IndexFieldsMapping GetKnownFields() => _knownFields;
 
     protected void InsertRegularField(IndexField field, object value, JsonOperationContext indexContext, ref IndexEntryWriter entryWriter,
         IWriterScope scope, bool nestedArray = false)

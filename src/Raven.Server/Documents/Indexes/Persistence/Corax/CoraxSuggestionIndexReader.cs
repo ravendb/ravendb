@@ -29,7 +29,7 @@ public class CoraxSuggestionReader : SuggestionIndexReaderBase
 
     public CoraxSuggestionReader(Index index, Logger logger, IndexFieldBinding binding, Transaction readTransaction) : base(index, logger)
     {
-        _fieldMappings = CoraxDocumentConverter.GetKnownFields(readTransaction.Allocator, index);
+        _fieldMappings = CoraxDocumentConverterBase.GetKnownFields(readTransaction.Allocator, index);
         _fieldMappings.UpdateAnalyzersInBindings(CoraxIndexingHelpers.CreateCoraxAnalyzers(readTransaction.Allocator, index, index.Definition, true));
         _binding = binding;
         _indexSearcher = new IndexSearcher(readTransaction, _fieldMappings);

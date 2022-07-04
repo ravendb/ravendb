@@ -54,7 +54,7 @@ namespace Corax
 
         private readonly Dictionary<Slice, List<long>>[] _buffer;
 
-        private readonly List<long> _entriesToDelete = new List<long>();
+        private readonly HashSet<long> _entriesToDelete = new();
 
 
         private readonly long _postingListContainerId, _entriesContainerId;
@@ -208,7 +208,7 @@ namespace Corax
                 return;
 
             term.Add(entryId);
-        }        
+        }
 
         [SkipLocalsInit]
         private unsafe void InsertToken(ByteStringContext context, ref IndexEntryReader entryReader, long entryId,
@@ -263,7 +263,7 @@ namespace Corax
                         ExactInsert(valueInEntry.Slice(0, i));
 
                     break;
-                
+
                 case IndexEntryFieldType.TupleListWithNulls:
                 case IndexEntryFieldType.ListWithNulls:
                 case IndexEntryFieldType.List:
@@ -285,13 +285,13 @@ namespace Corax
 
                     break;
                 case IndexEntryFieldType.Raw:
-                case IndexEntryFieldType.RawList:                
+                case IndexEntryFieldType.RawList:
                 case IndexEntryFieldType.Invalid:
                     break;
                 default:
                     if (entryReader.Read(fieldId, out var value) == false)
                         break;
-                    
+
                     Insert(value);
                     break;
             }
@@ -299,12 +299,12 @@ namespace Corax
             void Insert(ReadOnlySpan<byte> value)
             {
                 if (binding.IsAnalyzed)
-                    AnalyzeInsert(_encodingBufferHandler.AsSpan(), _tokensBufferHandler.AsSpan(), value);
+                    AnalyzeInsert(value);
                 else
                     ExactInsert(value);
             }
 
-            void AnalyzeInsert(Span<byte> wordsBuffer, Span<Token> tokens, ReadOnlySpan<byte> value)
+            void AnalyzeInsert(ReadOnlySpan<byte> value)
             {
                 var analyzer = binding.Analyzer;
                 if (value.Length > _encodingBufferHandler.Length)
@@ -312,10 +312,12 @@ namespace Corax
                     analyzer.GetOutputBuffersSize(value.Length, out var outputSize, out var tokenSize);
                     if (_encodingBufferHandler.Length < outputSize || _tokensBufferHandler.Length < tokenSize)
                     {
-                        UnlikelyGrowBuffer(ref wordsBuffer, ref tokens, outputSize, tokenSize);
+                        UnlikelyGrowBuffer(outputSize, tokenSize);
                     }
                 }
 
+                var wordsBuffer = _encodingBufferHandler.AsSpan();
+                var tokens = _tokensBufferHandler.AsSpan();
                 analyzer.Execute(value, ref wordsBuffer, ref tokens);
                 for (int i = 0; i < tokens.Length; i++)
                 {
@@ -323,12 +325,19 @@ namespace Corax
 
                     if (token.Offset + token.Length > wordsBuffer.Length)
                         throw new InvalidDataException(
-                            $"Got tokens with: OFFSET {token.Offset}  | LENGTH: {token.Length}. Buffer is {Encodings.Utf8.GetString(wordsBuffer)}");
-                    
+                            $"\nGot token with: \n\tOFFSET {token.Offset}\n\tLENGTH: {token.Length}.\n" +
+                            $"Total amount of tokens: {tokens.Length}" +
+                            $"\nBuffer contains '{Encodings.Utf8.GetString(wordsBuffer)}' and total length is {wordsBuffer.Length}" +
+                            $"\nBuffer from ArrayPool: \n\tbyte buffer is {_encodingBufferHandler.Length} \n\ttokens buffer is {_tokensBufferHandler.Length}" +
+                            $"\nOriginal span cointains '{Encodings.Utf8.GetString(value)}' with total length {value.Length}" +
+                            $"\nField " +
+                            $"\n\tid: {binding.FieldId}" +
+                            $"\n\tname: {binding.FieldName}");
+
                     var word = wordsBuffer.Slice(token.Offset, (int)token.Length);
                     ExactInsert(word);
                 }
-            }            
+            }
 
             void ExactInsert(ReadOnlySpan<byte> value)
             {
@@ -360,7 +369,8 @@ namespace Corax
             }
         }
 
-        private static unsafe ByteStringContext<ByteStringMemoryCache>.InternalScope CreateNormalizedTerm(ByteStringContext context, ReadOnlySpan<byte> value, out Slice slice)
+        private static unsafe ByteStringContext<ByteStringMemoryCache>.InternalScope CreateNormalizedTerm(ByteStringContext context, ReadOnlySpan<byte> value,
+            out Slice slice)
         {
             ulong hash = 0;
             int length = value.Length;
@@ -382,7 +392,7 @@ namespace Corax
             }
         }
 
-        private unsafe void DeleteCommit(Span<byte> tmpBuf, Tree fieldsTree)
+        private unsafe void DeleteCommit(Span<byte> workingBuffer, Tree fieldsTree)
         {
             if (_entriesToDelete.Count == 0)
                 return;
@@ -390,9 +400,7 @@ namespace Corax
             Page lastVisitedPage = default;
             var llt = Transaction.LowLevelTransaction;
             List<long> temporaryStorageForIds = null;
-            Span<byte> tempWordsSpace = stackalloc byte[_fieldsMapping.MaximumOutputSize];
-            Span<Token> tempTokenSpace = stackalloc Token[_fieldsMapping.MaximumTokenSize];
-            
+
             foreach (var entryToDelete in _entriesToDelete)
             {
                 var entryReader = IndexSearcher.GetReaderFor(Transaction, ref lastVisitedPage, entryToDelete);
@@ -402,45 +410,92 @@ namespace Corax
                         continue;
 
                     var fieldType = entryReader.GetFieldType(binding.FieldId, out var intOffset);
-                    if (fieldType.HasFlag(IndexEntryFieldType.List))
+                    switch (fieldType)
                     {
-                        if (fieldType.HasFlag(IndexEntryFieldType.SpatialPoint))
-                        {
-                            var iterator = entryReader.ReadManySpatialPoint(binding.FieldId);
+                        case IndexEntryFieldType.Empty:
+                        case IndexEntryFieldType.Null:
+                            var fieldName = fieldType == IndexEntryFieldType.Null ? Constants.NullValueSlice : Constants.EmptyStringSlice;
+                            DeleteIdFromExactTerm(binding.FieldId, binding.FieldName, workingBuffer, fieldName.AsReadOnlySpan());
+                            break;
+
+                        case IndexEntryFieldType.TupleList:
+                            if (entryReader.TryReadMany(binding.FieldId, out var iterator) == false)
+                                break;
+
                             while (iterator.ReadNext())
                             {
-                                for (int i = 1; i <= iterator.Count; ++i)
-                                    DeleteIdFromTerm(iterator.Geohash.Slice(0, i), tmpBuf, binding, tempWordsSpace, tempTokenSpace);
+                                DeleteIdFromExactTerm(binding.FieldId, binding.FieldName, workingBuffer, iterator.Sequence);
                             }
-                        }
-                        else
-                        {
-                            var it = entryReader.ReadMany(binding.FieldId);
-                            while (it.ReadNext())
+
+                            break;
+
+                        case IndexEntryFieldType.Tuple:
+                            if (entryReader.Read(binding.FieldId, out Span<byte> valueInEntry) == false)
+                                break;
+                            DeleteIdFromExactTerm(binding.FieldId, binding.FieldName, workingBuffer, valueInEntry);
+                            break;
+
+                        case IndexEntryFieldType.SpatialPointList:
+                            if (entryReader.TryReadManySpatialPoint(binding.FieldId, out var spatialIterator) == false)
+                                break;
+
+                            while (spatialIterator.ReadNext())
                             {
-                                if (it.IsNull)
-                                    DeleteIdFromTerm(Constants.NullValueSlice.AsSpan(), tmpBuf, binding, tempWordsSpace, tempTokenSpace);
-                                else
-                                    DeleteIdFromTerm(it.Sequence, tmpBuf, binding, tempWordsSpace, tempTokenSpace);
+                                for (int i = 1; i <= spatialIterator.Geohash.Length; ++i)
+                                    DeleteIdFromExactTerm(binding.FieldId, binding.FieldName, workingBuffer, spatialIterator.Geohash.Slice(0, i));
                             }
-                        }
-                    }
-                    else
-                    {
-                        entryReader.Read(binding.FieldId, out var termValue);
-                        DeleteIdFromTerm(termValue, tmpBuf, binding, tempWordsSpace, tempTokenSpace);
+
+                            break;
+
+                        case IndexEntryFieldType.SpatialPoint:
+                            if (entryReader.Read(binding.FieldId, out valueInEntry) == false)
+                                break;
+
+                            for (int i = 1; i <= valueInEntry.Length; ++i)
+                                DeleteIdFromExactTerm(binding.FieldId, binding.FieldName, workingBuffer, valueInEntry.Slice(0, i));
+
+                            break;
+
+                        case IndexEntryFieldType.TupleListWithNulls:
+                        case IndexEntryFieldType.ListWithNulls:
+                        case IndexEntryFieldType.List:
+                            if (entryReader.TryReadMany(binding.FieldId, out iterator) == false)
+                                break;
+
+                            while (iterator.ReadNext())
+                            {
+                                if ((fieldType & IndexEntryFieldType.HasNulls) != 0 && (iterator.IsEmpty || iterator.IsNull))
+                                {
+                                    var fieldValue = iterator.IsNull ? Constants.NullValueSlice : Constants.EmptyStringSlice;
+                                    DeleteIdFromExactTerm(binding.FieldId, binding.FieldName, workingBuffer, fieldValue.AsReadOnlySpan());
+                                }
+                                else
+                                {
+                                    DeleteIdFromTerm(iterator.Sequence, workingBuffer, binding);
+                                }
+                            }
+
+                            break;
+                        case IndexEntryFieldType.Raw:
+                        case IndexEntryFieldType.RawList:
+                        case IndexEntryFieldType.Invalid:
+                            break;
+                        default:
+                            if (entryReader.Read(binding.FieldId, out var value) == false)
+                                break;
+
+                            DeleteIdFromTerm(value, workingBuffer, binding);
+                            break;
                     }
                 }
-                
+
                 Container.Delete(llt, _entriesContainerId, entryToDelete); // delete raw index entry
                 llt.RootObjects.Increment(Constants.IndexWriter.NumberOfEntriesSlice, -1); // update number of entries
                 temporaryStorageForIds?.Clear();
-                
-                
-                var numberOfEntries = llt.RootObjects.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0;
-                Debug.Assert(numberOfEntries >= 0);
 
-                void DeleteIdFromTerm(ReadOnlySpan<byte> termValue, Span<byte> tmpBuf, IndexFieldBinding binding, Span<byte> wordSpace, Span<Token> tokenSpace)
+                Debug.Assert((llt.RootObjects.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0) >= 0);
+
+                void DeleteIdFromTerm(ReadOnlySpan<byte> termValue, Span<byte> tmpBuf, IndexFieldBinding binding)
                 {
                     if (binding.IsAnalyzed == false)
                     {
@@ -455,9 +510,12 @@ namespace Corax
                     if (termValue.Length > _encodingBufferHandler.Length)
                     {
                         analyzer.GetOutputBuffersSize(termValue.Length, out int outputSize, out int tokenSize);
-                        if (outputSize > wordSpace.Length)
-                            UnlikelyGrowBuffer(ref wordSpace, ref tokenSpace, outputSize, tokenSize);
+                        if (outputSize > _encodingBufferHandler.Length || tokenSize > _tokensBufferHandler.Length)
+                            UnlikelyGrowBuffer(outputSize, tokenSize);
                     }
+
+                    var wordSpace = _encodingBufferHandler.AsSpan();
+                    var tokenSpace = _tokensBufferHandler.AsSpan();
 
                     analyzer.Execute(termValue, ref wordSpace, ref tokenSpace);
 
@@ -472,66 +530,73 @@ namespace Corax
                             RemoveSuggestions(binding, termValue);
                     }
                 }
-            }
-            
-            void DeleteIdFromExactTerm(long id, Slice fieldName, Span<byte> tmpBuffer, ReadOnlySpan<byte> termValue)
-            {
-                // We need to normalize the term in case we have a term bigger than MaxTermLength.
-                using var _ = CreateNormalizedTerm(Transaction.Allocator, termValue, out Slice termSlice);
-                termValue = termSlice.AsReadOnlySpan();
 
-                var fieldTree = fieldsTree.CompactTreeFor(fieldName);
-                if (termValue.Length == 0 || fieldTree.TryGetValue(termSlice.AsReadOnlySpan(), out var containerId) == false)
-                    return;
 
-                if ((containerId & (long)TermIdMask.Set) != 0)
+                void DeleteIdFromExactTerm(long id, Slice fieldName, Span<byte> tmpBuffer, ReadOnlySpan<byte> termValue)
                 {
-                    var setId = containerId & ~0b11;
-                    var setStateSpan = Container.GetMutable(llt, setId);
-                    ref var setState = ref MemoryMarshal.AsRef<SetState>(setStateSpan);
-                    var set = new Set(llt, fieldName, in setState);
-                    set.Remove(id);
-                    setState = set.State;
-
-                    if (setState.NumberOfEntries == 0)
+                    if (termValue.Length == 0)
                     {
-                        //If we get rid off all terms we have to remove container. Probably we can do this in a better way
-                        fieldTree.TryRemove(termValue, out var __);
-                        Container.Delete(llt, _postingListContainerId, setId);
-                    }
-                }
-                else if ((containerId & (long)TermIdMask.Small) != 0)
-                {
-                    var smallSetId = containerId & ~0b11;
-                    var buffer = Container.GetMutable(llt, smallSetId);
-
-                    //Fetch all the ids from the set into temporaryStorageForIds
-                    var itemsCount = ZigZagEncoding.Decode<int>(buffer, out var len);
-                    temporaryStorageForIds ??= new List<long>(itemsCount);
-                    temporaryStorageForIds.Clear();
-                    
-                    long pos = len;
-                    var currentId = 0L;
-
-                    while (pos < buffer.Length)
-                    {
-                        var delta = ZigZagEncoding.Decode<long>(buffer, out len, (int)pos);
-                        pos += len;
-                        currentId += delta;
-                        if (currentId == id)
-                            continue;
-                        temporaryStorageForIds.Add(currentId);
+                        Debugger.Launch();
+                        Debugger.Break();
                     }
 
-                    // Due to encoding we have to encode new set again so we remove previous small set from container.
-                    Container.Delete(llt, _postingListContainerId, smallSetId);
-                    fieldTree.TryRemove(termValue, out var __); // term also disappears from the field tree
+                    // We need to normalize the term in case we have a term bigger than MaxTermLength.
+                    using var _ = CreateNormalizedTerm(Transaction.Allocator, termValue, out Slice termSlice);
+                    termValue = termSlice.AsReadOnlySpan();
 
-                    AddNewTerm(temporaryStorageForIds, fieldTree, termValue, tmpBuffer, default, false);
-                }
-                else
-                {
-                    fieldTree.TryRemove(termValue, out var _);
+                    var fieldTree = fieldsTree.CompactTreeFor(fieldName);
+                    if (termValue.Length == 0 || fieldTree.TryGetValue(termSlice.AsReadOnlySpan(), out var containerId) == false)
+                        return;
+
+                    if ((containerId & (long)TermIdMask.Set) != 0)
+                    {
+                        var setId = containerId & ~0b11;
+                        var setStateSpan = Container.GetMutable(llt, setId);
+                        ref var setState = ref MemoryMarshal.AsRef<SetState>(setStateSpan);
+                        var set = new Set(llt, fieldName, in setState);
+                        set.Remove(id);
+                        setState = set.State;
+
+                        if (setState.NumberOfEntries == 0)
+                        {
+                            //If we get rid off all terms we have to remove container. Probably we can do this in a better way
+                            fieldTree.TryRemove(termValue, out var __);
+                            Container.Delete(llt, _postingListContainerId, setId);
+                        }
+                    }
+                    else if ((containerId & (long)TermIdMask.Small) != 0)
+                    {
+                        var smallSetId = containerId & ~0b11;
+                        var buffer = Container.GetMutable(llt, smallSetId);
+
+                        //Fetch all the ids from the set into temporaryStorageForIds
+                        var itemsCount = ZigZagEncoding.Decode<int>(buffer, out var len);
+                        temporaryStorageForIds ??= new List<long>(itemsCount);
+                        temporaryStorageForIds.Clear();
+
+                        long pos = len;
+                        var currentId = 0L;
+
+                        while (pos < buffer.Length)
+                        {
+                            var delta = ZigZagEncoding.Decode<long>(buffer, out len, (int)pos);
+                            pos += len;
+                            currentId += delta;
+                            if (currentId == id)
+                                continue;
+                            temporaryStorageForIds.Add(currentId);
+                        }
+
+                        // Due to encoding we have to encode new set again so we remove previous small set from container.
+                        Container.Delete(llt, _postingListContainerId, smallSetId);
+                        fieldTree.TryRemove(termValue, out var __); // term also disappears from the field tree
+
+                        AddNewTerm(temporaryStorageForIds, fieldTree, termValue, tmpBuffer, default, false);
+                    }
+                    else
+                    {
+                        fieldTree.TryRemove(termValue, out var _);
+                    }
                 }
             }
         }
@@ -585,34 +650,34 @@ namespace Corax
             {
                 _entriesToDelete.Add(idInTree);
             }
-            
+
             return true;
         }
 
-        private void UnlikelyGrowBuffer(ref Span<byte> buffer, ref Span<Token> tokens, int newBufferSize, int newTokenSize)
+        private void UnlikelyGrowBuffer(int newBufferSize, int newTokenSize)
         {
-            if (newBufferSize > buffer.Length)
+            if (newBufferSize > _encodingBufferHandler.Length)
             {
                 Analyzer.BufferPool.Return(_encodingBufferHandler);
+                _encodingBufferHandler = null;
                 _encodingBufferHandler = Analyzer.BufferPool.Rent(newBufferSize);
-                buffer = _encodingBufferHandler.AsSpan();
             }
 
-            if (newTokenSize > tokens.Length)
+            if (newTokenSize > _tokensBufferHandler.Length)
             {
                 Analyzer.TokensPool.Return(_tokensBufferHandler);
+                _tokensBufferHandler = null;
                 _tokensBufferHandler = Analyzer.TokensPool.Rent(newTokenSize);
-                tokens = _tokensBufferHandler.AsSpan();
             }
         }
 
         public void Commit()
         {
-            using var _ = Transaction.Allocator.Allocate(Container.MaxSizeInsideContainerPage, out Span<byte> tmpBuf);
+            using var _ = Transaction.Allocator.Allocate(Container.MaxSizeInsideContainerPage, out Span<byte> workingBuffer);
             Tree fieldsTree = Transaction.CreateTree(Constants.IndexWriter.FieldsSlice);
 
             if (_fieldsMapping.Count != 0)
-                DeleteCommit(tmpBuf, fieldsTree);
+                DeleteCommit(workingBuffer, fieldsTree);
 
             for (int fieldId = 0; fieldId < _fieldsMapping.Count; ++fieldId)
             {
@@ -628,7 +693,7 @@ namespace Corax
                     var entries = _buffer[fieldId][term];
                     if (fieldTree.TryGetValue(termsSpan, out var existing, out var encodedKey) == false)
                     {
-                        AddNewTerm(entries, fieldTree, termsSpan, tmpBuf, encodedKey);
+                        AddNewTerm(entries, fieldTree, termsSpan, workingBuffer, encodedKey);
                         continue;
                     }
 
@@ -658,7 +723,7 @@ namespace Corax
                         }
 
                         Container.Delete(llt, _postingListContainerId, id);
-                        AddNewTerm(entries, fieldTree, termsSpan, tmpBuf, encodedKey);
+                        AddNewTerm(entries, fieldTree, termsSpan, workingBuffer, encodedKey);
                     }
                     else // single
                     {
@@ -667,7 +732,7 @@ namespace Corax
                             continue;
 
                         entries.Add(existing);
-                        AddNewTerm(entries, fieldTree, termsSpan, tmpBuf, encodedKey);
+                        AddNewTerm(entries, fieldTree, termsSpan, workingBuffer, encodedKey);
                     }
                 }
             }
@@ -701,11 +766,13 @@ namespace Corax
 
         //Rationale behind passing in the validEncodedKey: because encodedKey could be out of date (due to deletion) so we have to generate it before we add the term.
         //We cannot make EncodedKey nullable either because it is a read-only ref struct
-        private unsafe void AddNewTerm(List<long> entries, CompactTree fieldTree, ReadOnlySpan<byte> termsSpan, Span<byte> tmpBuf, CompactTree.EncodedKey encodedKey, bool validEncodedKey = true)
+        private unsafe void AddNewTerm(List<long> entries, CompactTree fieldTree, ReadOnlySpan<byte> termsSpan, Span<byte> tmpBuf,
+            CompactTree.EncodedKey encodedKey,
+            bool validEncodedKey = true)
         {
             if (entries.Count == 0)
                 return;
-            
+
             // common for unique values (guid, date, etc)
             if (entries.Count == 1)
             {
@@ -770,9 +837,16 @@ namespace Corax
 
 
             if (_encodingBufferHandler != null)
+            {
                 Analyzer.BufferPool.Return(_encodingBufferHandler);
+                _encodingBufferHandler = null;
+            }
+
             if (_tokensBufferHandler != null)
+            {
                 Analyzer.TokensPool.Return(_tokensBufferHandler);
+                _tokensBufferHandler = null;
+            }
         }
     }
 }
