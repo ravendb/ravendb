@@ -399,6 +399,8 @@ public unsafe ref partial struct IndexEntryWriter
         longPtrLocation = dataLocation;
         dataLocation += VariableSizeEncoding.WriteMany(_buffer, longValues, pos: dataLocation);
 
+        ArrayPool<int>.Shared.Return(stringLengths);
+        
         Done:
         _dataIndex = dataLocation;
     }
