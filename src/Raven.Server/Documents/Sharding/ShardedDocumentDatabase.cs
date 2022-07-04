@@ -7,6 +7,7 @@ using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.ServerWide.Sharding;
 using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.Sharding;
@@ -44,13 +45,13 @@ public class ShardedDocumentDatabase : DocumentDatabase
         ShardedDatabaseId = shardedDatabaseId;
     }
 
-    public List<ShardBucketRange> ReadShardingState()
+    public ShardingConfiguration ReadShardingState()
     {
         using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
         using (context.OpenReadTransaction())
         {
             var raw = ServerStore.Cluster.ReadRawDatabaseRecord(context, ShardedDatabaseName);
-            return raw.ShardBucketRanges;
+            return raw.Sharding.Value;
         }
     }
 

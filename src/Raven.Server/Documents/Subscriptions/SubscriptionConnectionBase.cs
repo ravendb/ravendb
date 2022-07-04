@@ -434,7 +434,7 @@ namespace Raven.Server.Documents.Subscriptions
                 DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "create subscription WhosTaskIsIt");
                 DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "Need to handle NodeTag, currently is isn't used for sharded because it is shared");
 
-                var whoseTaskIsIt = record.IsSharded()
+                var whoseTaskIsIt = record.IsSharded
                     ? topology.WhoseTaskIsIt(_serverStore.Engine.CurrentState, subscription)
                     : _serverStore.WhoseTaskIsIt(topology, subscription, subscription);
 

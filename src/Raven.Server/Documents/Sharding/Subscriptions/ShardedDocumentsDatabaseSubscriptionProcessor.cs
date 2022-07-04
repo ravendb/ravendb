@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.Subscriptions.SubscriptionProcessor;
@@ -12,7 +11,7 @@ namespace Raven.Server.Documents.Sharding.Subscriptions;
 public class ShardedDocumentsDatabaseSubscriptionProcessor : DocumentsDatabaseSubscriptionProcessor
 {
     private readonly ShardedDocumentDatabase _database;
-    private List<ShardBucketRange> _ranges;
+    private ShardingConfiguration _sharding;
 
     public ShardedDocumentsDatabaseSubscriptionProcessor(ServerStore server, ShardedDocumentDatabase database, SubscriptionConnection connection) : base(server, database, connection)
     {
@@ -21,7 +20,7 @@ public class ShardedDocumentsDatabaseSubscriptionProcessor : DocumentsDatabaseSu
 
     protected override SubscriptionFetcher<Document> CreateFetcher()
     {
-        _ranges = _database.ReadShardingState();
+        _sharding = _database.ReadShardingState();
         return base.CreateFetcher();
     }
 
@@ -33,7 +32,7 @@ public class ShardedDocumentsDatabaseSubscriptionProcessor : DocumentsDatabaseSu
         if (Fetcher.FetchingFrom == SubscriptionFetcher.FetchingOrigin.Resend)
         {
             var bucket = ShardHelper.GetBucket(item.Id);
-            var shard = ShardHelper.GetShardNumber(_ranges, bucket);
+            var shard = ShardHelper.GetShardNumber(_sharding.BucketRanges, bucket);
             if (shard != _database.ShardNumber)
             {
                 reason = $"The owner of {item.Id} is shard {shard} (current shard number: {_database.ShardNumber})";
