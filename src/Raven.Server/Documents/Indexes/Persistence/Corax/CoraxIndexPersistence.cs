@@ -41,9 +41,9 @@ public class CoraxIndexPersistence : IndexPersistenceBase
                         _converter = new JintCoraxDocumentConverter((MapIndex)index);
                         break;
                     case IndexSourceType.TimeSeries:
-                        throw new NotSupportedException($"Currently, {nameof(TimeSeries)} are not supported by Corax");
+                        throw new NotSupportedException($"Currently, {nameof(TimeSeries)} is not supported by Corax");
                     case IndexSourceType.Counters:
-                        throw new NotSupportedException($"Currently, {nameof(IndexSourceType.Counters)} are not supported by Corax");
+                        throw new NotSupportedException($"Currently, {nameof(IndexSourceType.Counters)} is not supported by Corax");
                 }
                 break;
             case IndexType.JavaScriptMapReduce:

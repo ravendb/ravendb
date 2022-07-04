@@ -18,7 +18,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
         // WORKAROUND: RavenDB-18872
         // https://issues.hibernatingrhinos.com/issue/RavenDB-18872
-        protected const int DocumentBufferSize = 1024 * 1024 * 128;
+        protected const int DocumentBufferSize = 128 * Sparrow.Global.Constants.Size.Megabyte;
 
         private readonly IndexWriter _indexWriter;
         private readonly CoraxDocumentConverterBase _converter;
@@ -34,7 +34,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             _knownFields = _converter.GetKnownFields();
             try
             {
-                _knownFields.UpdateAnalyzersInBindings(CoraxIndexingHelpers.CreateCoraxAnalyzers(writeTransaction.Allocator, index, index.Definition));
                 _indexWriter = new IndexWriter(writeTransaction, _knownFields);
                 _entriesCount = Convert.ToInt32(_indexWriter.GetNumberOfEntries());
             }
@@ -98,10 +97,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         {
             EnsureValidStats(stats);
             using (Stats.DeleteStats.Start())
+            {
                 if (_indexWriter.TryDeleteEntry(Constants.Documents.Indexing.Fields.DocumentIdFieldName, key.ToString()))
                 {
                     _entriesCount--;
                 }
+            }
         }
 
         public override void DeleteBySourceDocument(LazyStringValue sourceDocumentId, IndexingStatsScope stats)
@@ -112,11 +113,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         public override void DeleteReduceResult(LazyStringValue reduceKeyHash, IndexingStatsScope stats)
         {
             EnsureValidStats(stats);
-
-            if (_indexWriter.TryDeleteEntry(Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName, reduceKeyHash.ToString()))
+            using (Stats.DeleteStats.Start())
             {
-                _entriesCount--;
+                if (_indexWriter.TryDeleteEntry(Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName, reduceKeyHash.ToString()))
+                {
+                    _entriesCount--;
+                }
             }
+            
+            if (_logger.IsInfoEnabled)
+                _logger.Info($"Deleted document for '{_indexName}'. Reduce key hash: {reduceKeyHash}.");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
