@@ -349,6 +349,17 @@ namespace Corax
                 }
             }            
 
+            void NumericInsert(long lVal, double dVal)
+            {
+                if (fieldDoubles.TryGetValue(dVal, out var doublesTerms) == false)
+                    fieldDoubles[dVal] = doublesTerms = new List<long>();
+                if(fieldLongs.TryGetValue(lVal, out var longsTerms) == false)
+                    fieldLongs[lVal] = longsTerms = new List<long>();
+
+                AddMaybeAvoidDuplicate(doublesTerms, entryId);
+                AddMaybeAvoidDuplicate(longsTerms, entryId);
+            }
+            
             void ExactInsert(ReadOnlySpan<byte> value)
             {
                 ByteStringContext<ByteStringMemoryCache>.InternalScope? scope;
@@ -398,17 +409,6 @@ namespace Corax
             else
             {
                 return Slice.From(context, value, ByteStringType.Mutable, out slice);
-            }
-            
-            void NumericInsert(long lVal, double dVal)
-            {
-                if (fieldDoubles.TryGetValue(dVal, out var doublesTerms) == false)
-                    fieldDoubles[dVal] = doublesTerms = new List<long>();
-                if(fieldLongs.TryGetValue(lVal, out var longsTerms) == false)
-                    fieldLongs[lVal] = longsTerms = new List<long>();
-
-                AddMaybeAvoidDuplicate(doublesTerms, entryId);
-                AddMaybeAvoidDuplicate(longsTerms, entryId);
             }
         }
 
