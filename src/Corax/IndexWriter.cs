@@ -334,7 +334,7 @@ namespace Corax
                 {
                     ref var token = ref tokens[i];
 
-                    if (token.Offset + token.Length > wordsBuffer.Length)
+                    if (token.Offset + token.Length > _encodingBufferHandler.Length)
                         throw new InvalidDataException(
                             $"\nGot token with: \n\tOFFSET {token.Offset}\n\tLENGTH: {token.Length}.\n" +
                             $"Total amount of tokens: {tokens.Length}" +
@@ -345,7 +345,7 @@ namespace Corax
                             $"\n\tid: {binding.FieldId}" +
                             $"\n\tname: {binding.FieldName}");
 
-                    var word = wordsBuffer.Slice(token.Offset, (int)token.Length);
+                    var word = new Span<byte>(_encodingBufferHandler, token.Offset, (int)token.Length);
                     ExactInsert(word);
                 }
             }
@@ -468,36 +468,6 @@ namespace Corax
                             }
 
                             break;
-
-                        case IndexEntryFieldType.SpatialPoint:
-                            if (entryReader.Read(binding.FieldId, out valueInEntry) == false)
-                                break;
-
-                            for (int i = 1; i <= valueInEntry.Length; ++i)
-                                DeleteIdFromExactTerm(binding.FieldId, binding.FieldName, workingBuffer, valueInEntry.Slice(0, i));
-
-                            break;
-
-                        case IndexEntryFieldType.TupleListWithNulls:
-                        case IndexEntryFieldType.ListWithNulls:
-                        case IndexEntryFieldType.List:
-                            if (entryReader.TryReadMany(binding.FieldId, out iterator) == false)
-                                break;
-
-                            while (iterator.ReadNext())
-                            {
-                                if ((fieldType & IndexEntryFieldType.HasNulls) != 0 && (iterator.IsEmpty || iterator.IsNull))
-                                {
-                                    var fieldValue = iterator.IsNull ? Constants.NullValueSlice : Constants.EmptyStringSlice;
-                                    DeleteIdFromExactTerm(binding.FieldId, binding.FieldName, workingBuffer, fieldValue.AsReadOnlySpan());
-                                }
-                                else
-                                {
-                                    DeleteIdFromTerm(iterator.Sequence, workingBuffer, binding);
-                                }
-                            }
-
-                            break;
                         case IndexEntryFieldType.Raw:
                         case IndexEntryFieldType.RawList:
                         case IndexEntryFieldType.Invalid:
@@ -515,13 +485,11 @@ namespace Corax
                 llt.RootObjects.Increment(Constants.IndexWriter.NumberOfEntriesSlice, -1); // update number of entries
                 temporaryStorageForIds?.Clear();
 
-                Debug.Assert((llt.RootObjects.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0) >= 0);
-
-                void DeleteIdFromTerm(ReadOnlySpan<byte> termValue, Span<byte> tmpBuf, IndexFieldBinding binding)
+                void DeleteIdFromTerm(ReadOnlySpan<byte> termValue, Span<byte> tmpBuffer, IndexFieldBinding binding)
                 {
                     if (binding.IsAnalyzed == false)
                     {
-                        DeleteIdFromExactTerm(entryToDelete, binding.FieldName, tmpBuf, termValue);
+                        DeleteIdFromExactTerm(entryToDelete, binding.FieldName, tmpBuffer, termValue);
                         if (binding.HasSuggestions)
                             RemoveSuggestions(binding, termValue);
 
@@ -536,9 +504,8 @@ namespace Corax
                             UnlikelyGrowBuffer(outputSize, tokenSize);
                     }
 
-                    var wordSpace = _encodingBufferHandler.AsSpan();
                     var tokenSpace = _tokensBufferHandler.AsSpan();
-
+                    var wordSpace = _encodingBufferHandler.AsSpan();
                     analyzer.Execute(termValue, ref wordSpace, ref tokenSpace);
 
                     for (int i = 0; i < tokenSpace.Length; i++)
@@ -546,7 +513,7 @@ namespace Corax
                         ref var token = ref tokenSpace[i];
 
                         var term = wordSpace.Slice(token.Offset, (int)token.Length);
-                        DeleteIdFromExactTerm(entryToDelete, binding.FieldName, tmpBuf, term);
+                        DeleteIdFromExactTerm(entryToDelete, binding.FieldName, tmpBuffer, term);
 
                         if (binding.HasSuggestions)
                             RemoveSuggestions(binding, termValue);
