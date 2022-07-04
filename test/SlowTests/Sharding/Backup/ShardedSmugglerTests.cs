@@ -466,7 +466,7 @@ namespace SlowTests.Sharding.Backup
                              {
                                  Name = $"ETL : 2",
                                  Collections = new List<string>(new[] {"Users"}),
-                                 Script = null,
+                                 Script = "loadToOrders(this)",
                                  ApplyToAllDocuments = false,
                                  Disabled = false
                              }
