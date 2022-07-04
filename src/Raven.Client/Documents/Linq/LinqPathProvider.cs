@@ -80,15 +80,24 @@ namespace Raven.Client.Documents.Linq
 
                 if (callExpression.Method.Name == "get_Item")
                 {
-                    var parent = GetPath(callExpression.Object);
-
                     var itemKey = GetValueFromExpression(callExpression.Arguments[0], callExpression.Method.GetParameters()[0].ParameterType).ToString();
 
+                    string parentPath;
+
+                    if (callExpression.Object.NodeType == ExpressionType.Parameter)
+                    {
+                        parentPath = itemKey;
+                    }
+                    else
+                    {
+                        var parent = GetPath(callExpression.Object);
+                        parentPath = $"{parent.Path}.{itemKey}";
+                    }
                     return new Result
                     {
                         MemberType = callExpression.Method.ReturnType,
                         IsNestedPath = true,
-                        Path = parent.Path + "." + itemKey
+                        Path = parentPath
                     };
                 }
 
