@@ -58,7 +58,6 @@ namespace Raven.Server.Documents.Replication.Incoming
         protected Logger Logger;
 
         public long LastDocumentEtag => _lastDocumentEtag;
-        public readonly ReplicationLatestEtagRequest.ReplicationType ReplicationType;
 
         protected Action<IncomingReplicationHandler.DataForReplicationCommand> AfterItemsReadFromStream;
         public event Action<LiveReplicationPulsesCollector.ReplicationPulse> HandleReplicationPulse;
@@ -70,7 +69,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                                               $"from {ConnectionInfo.SourceTag}-{ConnectionInfo.SourceDatabaseName} @ {ConnectionInfo.SourceUrl}";
 
         protected AbstractIncomingReplicationHandler(TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.MemoryBuffer buffer,
-            ServerStore server, string databaseName, ReplicationLatestEtagRequest.ReplicationType replicationType, ReplicationLatestEtagRequest replicatedLastEtag, CancellationToken token, TContextPool contextPool)
+            ServerStore server, string databaseName, ReplicationLatestEtagRequest replicatedLastEtag, CancellationToken token, TContextPool contextPool)
         {
             _disposeOnce = new DisposeOnce<SingleAttempt>(DisposeInternal);
             _tcpConnectionOptions = tcpConnectionOptions;
@@ -88,7 +87,6 @@ namespace Raven.Server.Documents.Replication.Incoming
             ConnectionInfo = IncomingConnectionInfo.FromGetLatestEtag(replicatedLastEtag);
             SupportedFeatures = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(tcpConnectionOptions.Operation, tcpConnectionOptions.ProtocolVersion);
             ConnectionInfo.RemoteIp = ((IPEndPoint)_tcpClient.Client.RemoteEndPoint)?.Address.ToString();
-            ReplicationType = replicationType;
         }
 
         public virtual void ClearEvents()
@@ -364,13 +362,6 @@ namespace Raven.Server.Documents.Replication.Incoming
             return _lastStats;
         }
 
-        public LiveReplicationPerformanceCollector.ReplicationPerformanceType GetReplicationPerformanceType()
-        {
-            return ReplicationType == ReplicationLatestEtagRequest.ReplicationType.Internal
-                ? LiveReplicationPerformanceCollector.ReplicationPerformanceType.IncomingInternal
-                : LiveReplicationPerformanceCollector.ReplicationPerformanceType.IncomingExternal;
-        }
-
         private void HandleReceivedDocumentsAndAttachmentsBatch(TOperationContext context, BlittableJsonReaderObject message, long lastDocumentEtag, IncomingReplicationStatsScope stats)
         {
             if (!message.TryGet(nameof(ReplicationMessageHeader.ItemsCount), out int itemsCount))
@@ -484,6 +475,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                     using (stats.For(ReplicationOperation.Incoming.Storage))
                     {
                         task = HandleBatchAsync(context, dataForReplicationCommand, lastEtag);
+
                         //We need a new context here
                         using (_contextPool.AllocateOperationContext(out JsonOperationContext msgContext))
                         using (var writer = new BlittableJsonTextWriter(msgContext, _stream))
@@ -495,6 +487,8 @@ namespace Raven.Server.Documents.Replication.Incoming
                             while (task.Wait(Math.Min(3000, (int)(configuration.Replication.ActiveConnectionTimeout.AsTimeSpan.TotalMilliseconds * 2 / 3))) ==
                                    false)
                             {
+                                HandleMissingAttachmentsIfNeeded(ref task);
+
                                 // send heartbeats while batch is processed in TxMerger. We wait until merger finishes with this command without timeouts
                                 msgContext.Write(writer, msg);
                                 writer.Flush();
@@ -599,6 +593,10 @@ namespace Raven.Server.Documents.Replication.Incoming
         protected abstract int GetNextReplicationStatsId();
 
         protected abstract void HandleHeartbeatMessage(TOperationContext jsonOperationContext, BlittableJsonReaderObject blittableJsonReaderObject);
+
+        public abstract LiveReplicationPerformanceCollector.ReplicationPerformanceType GetReplicationPerformanceType();
+
+        protected abstract void HandleMissingAttachmentsIfNeeded(ref Task task);
 
         public bool IsDisposed => _disposeOnce.Disposed;
 

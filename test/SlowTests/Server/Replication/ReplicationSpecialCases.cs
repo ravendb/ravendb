@@ -390,6 +390,66 @@ namespace SlowTests.Server.Replication
         }
 
         [Theory]
+        [InlineData("users/1")]
+        [InlineData("users/1-A")]
+        [InlineData("FoObAr")]
+        public async Task ReplicationShouldSendMissingAttachmentsFromNonShardedToShardedDatabase(string documentId)
+        {
+            using (var source = GetDocumentStore())
+            using (var destination = Sharding.GetDocumentStore())
+            {
+                await SetupReplicationAsync(source, destination);
+
+                using (var session = source.OpenAsyncSession())
+                using (var fooStream = new MemoryStream(new byte[] { 1, 2, 3 }))
+                {
+                    await session.StoreAsync(new User { Name = "Foo" }, documentId);
+                    session.Advanced.Attachments.Store(documentId, "foo.png", fooStream, "image/png");
+                    await session.SaveChangesAsync();
+                }
+
+                Assert.NotNull(WaitForDocumentToReplicate<User>(destination, documentId, 15 * 1000));
+
+                using (var session = destination.OpenAsyncSession())
+                {
+                    session.Delete(documentId);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = source.OpenAsyncSession())
+                using (var fooStream2 = new MemoryStream(new byte[] { 4, 5, 6 }))
+                {
+                    session.Advanced.Attachments.Store(documentId, "foo2.png", fooStream2, "image/png");
+                    await session.SaveChangesAsync();
+                }
+
+                Assert.NotNull(WaitForDocumentWithAttachmentToReplicate<User>(destination, documentId, "foo2.png", 30 * 1000));
+
+                var buffer = new byte[3];
+                using (var session = destination.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>(documentId);
+                    var attachments = session.Advanced.Attachments.GetNames(user);
+                    Assert.Equal(2, attachments.Length);
+                    foreach (var name in attachments)
+                    {
+                        using (var attachment = await session.Advanced.Attachments.GetAsync(user, name.Name))
+                        {
+                            Assert.NotNull(attachment);
+                            Assert.Equal(3, await attachment.Stream.ReadAsync(buffer, 0, 3));
+                            if (attachment.Details.Name == "foo.png")
+                            {
+                                Assert.Equal(1, buffer[0]);
+                                Assert.Equal(2, buffer[1]);
+                                Assert.Equal(3, buffer[2]);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        [Theory]
         [InlineData("users/1", "users/2")]
         [InlineData("users/1-A", "users/2-A")]
         [InlineData("foo", "foo-2")]

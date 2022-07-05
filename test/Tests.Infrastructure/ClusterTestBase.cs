@@ -250,6 +250,12 @@ namespace Tests.Infrastructure
         protected static async Task EnsureNoReplicationLoop(RavenServer server, string database)
         {
             var storage = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
+
+            await EnsureNoReplicationLoop(storage);
+        }
+
+        protected static async Task EnsureNoReplicationLoop(DocumentDatabase storage)
+        {
             using (var collector = new LiveReplicationPulsesCollector(storage))
             {
                 var etag1 = storage.DocumentsStorage.GenerateNextEtag();

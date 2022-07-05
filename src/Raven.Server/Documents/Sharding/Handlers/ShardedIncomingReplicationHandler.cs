@@ -9,7 +9,9 @@ using Raven.Server.Config;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.Incoming;
 using Raven.Server.Documents.Replication.ReplicationItems;
+using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.Documents.TcpHandlers;
+using Raven.Server.Exceptions;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Server;
@@ -25,7 +27,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
         public ShardedIncomingReplicationHandler(TcpConnectionOptions tcpConnectionOptions, ShardedDatabaseContext.ShardedReplicationContext parent,
             JsonOperationContext.MemoryBuffer buffer, ReplicationLatestEtagRequest replicatedLastEtag, ReplicationQueue replicationQueue)
-            : base(tcpConnectionOptions, buffer, parent.Server, parent.DatabaseName, ReplicationLatestEtagRequest.ReplicationType.Sharded, replicatedLastEtag, parent.Context.DatabaseShutdown, parent.Server.ContextPool)
+            : base(tcpConnectionOptions, buffer, parent.Server, parent.DatabaseName, replicatedLastEtag, parent.Context.DatabaseShutdown, parent.Server.ContextPool)
         {
             _parent = parent;
             _replicationQueue = replicationQueue;
@@ -63,6 +65,17 @@ namespace Raven.Server.Documents.Sharding.Handlers
             return _replicationQueue.SendToShardCompletion.WaitAsync();
         }
 
+        protected override void HandleMissingAttachmentsIfNeeded(ref Task task)
+        {
+            if (_replicationQueue.MissingAttachments.IsSet)
+            {
+                task = null;
+                _replicationQueue.MissingAttachments.Reset();
+
+                throw new MissingAttachmentException(_replicationQueue.MissingAttachmentMessage);
+            }
+        }
+
         private void PrepareReplicationDataForShards(TransactionOperationContext context, IncomingReplicationHandler.DataForReplicationCommand dataForReplicationCommand)
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "Optimization possibility: instead of iterating over materialized batch, we can do it while reading from the stream");
@@ -94,23 +107,21 @@ namespace Raven.Server.Documents.Sharding.Handlers
                     {
                         var shardAttachments = _replicationQueue.AttachmentsPerShard[shard];
 
-                        if (shardAttachments == null)
+                        if (shardAttachments == null || shardAttachments.ContainsKey(attachment.Key) == false)
                             continue;
 
-                        if (shardAttachments.ContainsKey(attachment.Key))
+                        var buffer = GetBufferFromAttachmentStream(attachment.Value.Stream);
+
+                        var attachmentStream = new AttachmentReplicationItem
                         {
-                            var attachmentStream = new AttachmentReplicationItem
-                            {
-                                Type = ReplicationBatchItem.ReplicationItemType.AttachmentStream,
-                                Base64Hash = attachment.Key,
-                                Stream = new MemoryStream()
-                            };
+                            Type = ReplicationBatchItem.ReplicationItemType.AttachmentStream,
+                            Base64Hash = attachment.Key,
+                            Stream = new MemoryStream(buffer)
+                        };
 
-                            _attachmentStreamsTempFile._file.InnerStream.CopyTo(attachmentStream.Stream);
-                            shardAttachments[attachment.Key] = attachmentStream;
+                        shardAttachments[attachment.Key] = attachmentStream;
 
-                            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "Optimization required");
-                        }
+                        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "Optimization required");
                     }
                 }
             }
@@ -120,6 +131,23 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 var shard = kvp.Key;
                 _replicationQueue.Items[shard].TryAdd(kvp.Value);
             }
+        }
+
+        private byte[] GetBufferFromAttachmentStream(Stream stream)
+        {
+            var length = (int)stream.Length;
+            var buffer = new byte[length];
+
+            stream.Position = 0;
+            int read = stream.Read(buffer, 0, buffer.Length);
+            stream.Position = 0;
+
+            return buffer;
+        }
+
+        public override LiveReplicationPerformanceCollector.ReplicationPerformanceType GetReplicationPerformanceType()
+        {
+            return LiveReplicationPerformanceCollector.ReplicationPerformanceType.IncomingExternal;
         }
 
         protected override ByteStringContext GetContextAllocator(TransactionOperationContext context) => context.Allocator;
