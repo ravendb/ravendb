@@ -216,6 +216,26 @@ namespace FastTests.Client
         }
 
         [Fact]
+        public void Query_Dictionary_Simple()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var newSession = store.OpenSession())
+                {
+                    newSession.Store(new Dictionary<string, object?> { { "Name", "John" } }, "users/1");
+                    newSession.Store(new Dictionary<string, object?> { { "Name", "Jane" } }, "users/2");
+                    newSession.Store(new Dictionary<string, object?> { { "Name", "Tarzan" } }, "users/3");
+                    newSession.SaveChanges();
+
+                    var queryResult = newSession.Query<Dictionary<string,object?>>()
+                        .ToList();
+
+                    Assert.Equal(queryResult.Count, 3);
+                }
+            }
+        }
+
+        [Fact]
         public void Query_With_Where_Clause()
         {
             using (var store = GetDocumentStore())
@@ -245,7 +265,41 @@ namespace FastTests.Client
                 }
             }
         }
-        
+
+        [Fact]
+        public void Query_Dictionary_With_Where_Clause()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var newSession = store.OpenSession())
+                {
+                    newSession.Store(new Dictionary<string, object?> { { "Name", "John" } }, "users/1");
+                    newSession.Store(new Dictionary<string, object?> { { "Name", "Jane" } }, "users/2");
+                    newSession.Store(new Dictionary<string, object?> { { "Name", "Tarzan" } }, "users/3");
+                    newSession.SaveChanges();
+
+                    var query = newSession.Query<Dictionary<string, object?>>()
+                        .Where(x => ((string)x["Name"]).StartsWith("J")).ToString();
+
+                    var queryResult = newSession.Query<Dictionary<string, object?>>()
+                        .Where(x => ((string)x["Name"]).StartsWith("J"))
+                        .ToList();
+
+                    var queryResult2 = newSession.Query<Dictionary<string, object?>>()
+                        .Where(x => ((string)x["Name"]).Equals("Tarzan"))
+                        .ToList();
+
+                    var queryResult3 = newSession.Query<Dictionary<string, object?>>()
+                        .Where(x => ((string)x["Name"]).EndsWith("n"))
+                        .ToList();
+
+                    Assert.Equal(queryResult.Count, 2);
+                    Assert.Equal(queryResult2.Count, 1);
+                    Assert.Equal(queryResult3.Count, 2);
+                }
+            }
+        }
+
         [Fact]
         public async Task QueryWithWhere_WhenUsingStringEquals_ShouldWork()
         {

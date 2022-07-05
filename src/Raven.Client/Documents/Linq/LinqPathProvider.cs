@@ -82,23 +82,25 @@ namespace Raven.Client.Documents.Linq
                 {
                     var itemKey = GetValueFromExpression(callExpression.Arguments[0], callExpression.Method.GetParameters()[0].ParameterType).ToString();
 
-                    string parentPath;
-
                     if (callExpression.Object.NodeType == ExpressionType.Parameter)
                     {
-                        parentPath = itemKey;
+                        return new Result
+                        {
+                            MemberType = callExpression.Method.ReturnType,
+                            IsNestedPath = false,
+                            Path = itemKey
+                        };
                     }
                     else
                     {
                         var parent = GetPath(callExpression.Object);
-                        parentPath = $"{parent.Path}.{itemKey}";
+                        return new Result
+                        {
+                            MemberType = callExpression.Method.ReturnType,
+                            IsNestedPath = true,
+                            Path = parent.Path + "." + itemKey
+                        };
                     }
-                    return new Result
-                    {
-                        MemberType = callExpression.Method.ReturnType,
-                        IsNestedPath = true,
-                        Path = parentPath
-                    };
                 }
 
                 if (callExpression.Method.Name == "ToString" && callExpression.Method.ReturnType == typeof(string))
