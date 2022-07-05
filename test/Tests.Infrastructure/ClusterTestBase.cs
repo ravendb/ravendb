@@ -355,17 +355,17 @@ namespace Tests.Infrastructure
                 await Task.Delay(TimeSpan.FromSeconds(1));
             }
 
-            throw new InvalidOperationException($"Failed to get leader after 5 retries. {Environment.NewLine}{GetNodesStatus()}", err);
+            throw new InvalidOperationException($"Failed to get leader after 5 retries. {Environment.NewLine}{GetNodesStatus(servers ?? Servers)}", err);
         }
 
-        private string GetNodesStatus()
+        private string GetNodesStatus(List<RavenServer> servers)
         {
-            var servers = Servers.Select(s =>
+            var servers2 = servers.Select(s =>
             {
                 var engine = s.ServerStore.Engine;
                 return $"{s.ServerStore.NodeTag} in {engine.CurrentState} at term {engine.CurrentTerm}";
             });
-            return string.Join(Environment.NewLine, servers);
+            return string.Join(Environment.NewLine, servers2);
         }
 
         protected async Task<T> WaitForValueOnGroupAsync<T>(DatabaseTopology topology, Func<ServerStore, T> func, T expected, int timeout = 15000)
