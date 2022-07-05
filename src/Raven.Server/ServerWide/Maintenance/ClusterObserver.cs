@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Builder;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Backups;
@@ -26,6 +27,7 @@ using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Utils;
 using static Raven.Server.ServerWide.Maintenance.DatabaseStatus;
 using Index = Raven.Server.Documents.Indexes.Index;
 
@@ -178,6 +180,8 @@ namespace Raven.Server.ServerWide.Maintenance
             }
         }
 
+        
+
         private async Task AnalyzeLatestStats(
             Dictionary<string, ClusterNodeStatusReport> newStats,
             Dictionary<string, ClusterNodeStatusReport> prevStats
@@ -219,6 +223,26 @@ namespace Raven.Server.ServerWide.Maintenance
                         {
                             LogMessage($"Can't analyze the stats of database the {database}, because the database record is null.", database: database);
                             continue;
+                        }
+
+                        if (rawRecord.IsSharded)
+                        {
+                            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "We need to refactor this class and reuse most of UpdateDatabaseTopology");
+                            var databaseName = rawRecord.DatabaseName;
+                            var topology = rawRecord.Sharding.Orchestrator.Topology;
+                            var updateReason = UpdateOrchestratorTopology(databaseName, newStats, prevStats, topology, clusterTopology);
+                            if (updateReason != null)
+                            {
+                                AddToDecisionLog(databaseName, updateReason);
+
+                                var cmd = new UpdateTopologyCommand(databaseName, now, RaftIdGenerator.NewId())
+                                {
+                                    Topology = topology, 
+                                    RaftCommandIndex = etag,
+                                };
+
+                                updateCommands.Add((cmd, updateReason));
+                            }
                         }
 
                         var mergedState = new MergedDatabaseObservationState(rawRecord);
@@ -362,6 +386,43 @@ namespace Raven.Server.ServerWide.Maintenance
                     await _engine.PutAsync(cmd);
                 }
             }
+        }
+
+        private string UpdateOrchestratorTopology(
+            string database, 
+            Dictionary<string, ClusterNodeStatusReport> newStats, 
+            Dictionary<string, ClusterNodeStatusReport> prevStats, 
+            OrchestratorTopology topology, 
+            ClusterTopology clusterTopology)
+        {
+            foreach (var member in topology.Members)
+            {
+                
+                if (newStats.TryGetValue(member, out var current) && prevStats.TryGetValue(member, out var prev))
+                {
+                    if (current.Status == ClusterNodeStatusReport.ReportStatus.Ok || prev.Status == ClusterNodeStatusReport.ReportStatus.Ok)
+                        continue;
+
+                    if (TryMoveToRehab(database, topology, newStats, member))
+                    {
+                        return $"Node {member} is currently not responding and moved to rehab";
+                    }
+                }
+            }
+
+            foreach (var rehab in topology.Rehabs)
+            {
+                if (CheckNodeHealth(rehab, clusterTopology, newStats) == DatabaseHealth.Good)
+                {
+                    topology.Members.Add(rehab);
+                    topology.Rehabs.Remove(rehab);
+                    topology.ReorderMembers();
+
+                    return $"Node {rehab} was recovered from rehabilitation and promoted back to member";
+                }
+            }
+
+            return null;
         }
 
         private bool SkipAnalyzingDatabaseGroup(DatabaseObservationState state, Leader currentLeader, DateTime now)
@@ -1498,6 +1559,27 @@ namespace Raven.Server.ServerWide.Maintenance
             var current = state.Current;
             var db = state.Name;
 
+            var nodeHealth = CheckNodeHealth(node, clusterTopology, current);
+            if (CheckNodeHealth(node, clusterTopology, current) != DatabaseHealth.Good)
+                return nodeHealth;
+
+            var currentNodeStats = current[node];
+
+            if (currentNodeStats.LastGoodDatabaseStatus.TryGetValue(db, out var lastGoodTime) == false)
+            {
+                // here we have a problem, the databaseTopology says that the db needs to be in the node, but the node
+                // doesn't know that the db is on it, that probably indicate some problem and we'll move it
+                // to another node to resolve it.
+                return DatabaseHealth.NotEnoughInfo;
+            }
+            if (lastGoodTime == default(DateTime) || lastGoodTime == DateTime.MinValue)
+                return DatabaseHealth.NotEnoughInfo;
+
+            return DateTime.UtcNow - lastGoodTime > _breakdownTimeout ? DatabaseHealth.Bad : DatabaseHealth.Good;
+        }
+
+        private DatabaseHealth CheckNodeHealth(string node, ClusterTopology clusterTopology, Dictionary<string, ClusterNodeStatusReport> current)
+        {
             if (clusterTopology.Contains(node) == false) // this node is no longer part of the *Cluster* databaseTopology and need to be replaced.
                 return DatabaseHealth.Bad;
 
@@ -1516,17 +1598,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 return DatabaseHealth.Bad;
             }
 
-            if (currentNodeStats.LastGoodDatabaseStatus.TryGetValue(db, out var lastGoodTime) == false)
-            {
-                // here we have a problem, the databaseTopology says that the db needs to be in the node, but the node
-                // doesn't know that the db is on it, that probably indicate some problem and we'll move it
-                // to another node to resolve it.
-                return DatabaseHealth.NotEnoughInfo;
-            }
-            if (lastGoodTime == default(DateTime) || lastGoodTime == DateTime.MinValue)
-                return DatabaseHealth.NotEnoughInfo;
-
-            return DateTime.UtcNow - lastGoodTime > _breakdownTimeout ? DatabaseHealth.Bad : DatabaseHealth.Good;
+            return DatabaseHealth.Good;
         }
 
         private bool TryFindFitNode(string badNode, DatabaseObservationState state, out string bestNode)

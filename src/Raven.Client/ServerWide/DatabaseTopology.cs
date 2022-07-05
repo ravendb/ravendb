@@ -130,6 +130,20 @@ namespace Raven.Client.ServerWide
 
     public class OrchestratorTopology : DatabaseTopology
     {
+        public void Update(DatabaseTopology topology)
+        {
+            Members = topology.Members;
+            Promotables = topology.Promotables;
+            Rehabs = topology.Rehabs;
+
+            PredefinedMentors = topology.PredefinedMentors;
+            DemotionReasons = topology.DemotionReasons;
+            PromotablesStatus = topology.PromotablesStatus;
+
+            Stamp = topology.Stamp;
+            PriorityOrder = topology.PriorityOrder;
+            NodesModifiedAt = topology.NodesModifiedAt;
+        }
     }
 
     public class DatabaseTopology

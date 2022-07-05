@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using Raven.Client.ServerWide;
 using Raven.Server.Rachis;
 using Raven.Server.Utils;
@@ -33,7 +35,11 @@ namespace Raven.Server.ServerWide.Commands
             if (Shard == null)
             {
                 if (record.IsSharded)
-                    throw new RachisApplyException($"The request database '{record.DatabaseName}' is sharded, Shard number must be provided");
+                {
+                    record.Sharding.Orchestrator.Topology.Update(Topology);
+                    SetLeaderStampForTopology(record.Sharding.Orchestrator.Topology, etag);
+                    return;
+                }
 
                 record.Topology = Topology;
                 return;
@@ -44,7 +50,7 @@ namespace Raven.Server.ServerWide.Commands
 
             record.Sharding.Shards[Shard.Value] = Topology;
         }
-        
+
         private static void SetLeaderStampForTopology(DatabaseTopology topology, long etag)
         {
             topology.Stamp ??= new LeaderStamp {Term = -1, LeadersTicks = -1, Index = -1};
