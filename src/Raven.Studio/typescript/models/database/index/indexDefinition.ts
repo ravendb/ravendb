@@ -118,7 +118,7 @@ class indexDefinition {
         });
         
         this.searchEngine.subscribe((engine: Raven.Client.Documents.Indexes.SearchEngineType) => {
-            this.fields().forEach(x => x.setStorageAccordingToEngine(engine));
+            this.fields().forEach(x => x.searchEngine(engine));
         })
 
         if (!this.isAutoIndex()) {

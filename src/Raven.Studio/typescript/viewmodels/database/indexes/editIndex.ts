@@ -121,8 +121,8 @@ class editIndex extends viewModelBase {
             "addReduce",
             "removeAssembly",
             "addNamespaceToAssemblyWithBlink",
-            "loadIndexDefinitionFromHistory",
-            "loadMapReduceFromHistory",
+            "loadFullIndexDefinitionFromHistory",
+            "loadOnlyMapAndReduceFromHistory",
             "useIndexRevisionItem",
             "previewIndex");
 
@@ -213,7 +213,7 @@ class editIndex extends viewModelBase {
         this.searchEngineConfiguration.subscribe((engine: Raven.Client.Documents.Indexes.SearchEngineType) => {
             let valueToUpdate: Raven.Client.Documents.Indexes.SearchEngineType = "Lucene";
             
-            if ((engine && engine === "Corax") || (!engine && this.defaultSearchEngine() === "Corax")) {
+            if ((engine === "Corax") || (!engine && this.defaultSearchEngine() === "Corax")) {
                 valueToUpdate = "Corax";
             }
 
@@ -293,19 +293,13 @@ class editIndex extends viewModelBase {
     
     extractSearchEngineFromConfig() {
         const existingSearchConfig = this.editedIndex().configuration().find(x => x.key() === editIndex.searchEngineConfigurationLabel);
+        
         if (existingSearchConfig) {
             this.editedIndex().configuration.remove(existingSearchConfig);
-            
+
             const value = existingSearchConfig.value() as Raven.Client.Documents.Indexes.SearchEngineType;
-            switch (value) {
-                case "Corax":
-                case "Lucene":
-                case "None":
-                    this.searchEngineConfiguration(value);
-                    break;
-                default:
-                    generalUtils.assertUnreachable(value, "Unknown search engine type: " + value);
-            }
+            this.searchEngineConfiguration(value);
+            
         } else {
             this.searchEngineConfiguration(null);
         }
@@ -397,8 +391,9 @@ class editIndex extends viewModelBase {
 
     private fetchIndexHistory() {
         const db = this.activeDatabase();
+        const indexNameToUse = this.isEditingExistingIndex() ? (this.editedIndex().name() || this.originalIndexName) : this.originalIndexName;
         
-        return new getIndexHistoryCommand(db, this.editedIndex().name() || this.originalIndexName)
+        return new getIndexHistoryCommand(db, indexNameToUse)
             .execute()
             .done((indexHistory) => this.indexHistory(indexHistory.History));
     }
@@ -432,39 +427,37 @@ class editIndex extends viewModelBase {
 
     useIndexRevisionItem(item: Raven.Client.ServerWide.IndexHistoryEntry) {
         this.previewItem(item);
-        this.loadIndexDefinitionFromHistory();
+        this.loadFullIndexDefinitionFromHistory();
     }
     
-    loadIndexDefinitionFromHistory() {
+    loadFullIndexDefinitionFromHistory() {
+        const currentIndexName = this.editedIndex().name();
+        
         const newIndexDefinition = new indexDefinition(this.previewItem().Definition);
 
         if (!this.isEditingExistingIndex()) {
-            // if editing a clone then load the index definition without the index name
-            newIndexDefinition.name(null);
+            // if editing a clone then keep the clone name
+            newIndexDefinition.name(currentIndexName);
         }
         
-        this.editedIndex(newIndexDefinition);
-        
-        this.extractSearchEngineFromConfig();
-        this.initFieldTooltips();
-        
-        this.loadedIndexHistory(true);
+        this.loadIndexDefinition(newIndexDefinition);
     }
 
-    loadMapReduceFromHistory() {
+    loadOnlyMapAndReduceFromHistory() {
         const previewItem = this.previewItem();
         const mapsFromPreview = previewItem.Definition.Maps;
         const reduceFromPreview = previewItem.Definition.Reduce;
         
         const newIndexDefinition = new indexDefinition(this.editedIndex().toDto());
-        
         newIndexDefinition.setMapsAndReduce(mapsFromPreview, reduceFromPreview);
         
-        this.editedIndex(newIndexDefinition);
-        
+        this.loadIndexDefinition(newIndexDefinition);
+    }
+    
+    private loadIndexDefinition(indexDefinitionToLoad: indexDefinition) {
+        this.editedIndex(indexDefinitionToLoad);
         this.extractSearchEngineFromConfig();
         this.initFieldTooltips();
-
         this.loadedIndexHistory(true);
     }
 
