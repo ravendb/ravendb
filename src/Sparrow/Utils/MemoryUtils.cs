@@ -10,14 +10,16 @@ public static class MemoryUtils
         var message =
             $"Commit charge: {memoryInfo.CurrentCommitCharge} / {memoryInfo.TotalCommittableMemory}, " +
             $"Memory: {memoryInfo.TotalPhysicalMemory - memoryInfo.AvailableMemory} / {memoryInfo.TotalPhysicalMemory}, " +
-            $"Calculated Available memory: {memoryInfo.AvailableMemoryForProcessing}, " +
+            $"Available memory for processing: {memoryInfo.AvailableMemoryForProcessing}, " +
             $"Dirty memory: {memoryInfo.TotalScratchDirtyMemory}, " +
             $"Managed memory: {new Size(AbstractLowMemoryMonitor.GetManagedMemoryInBytes(), SizeUnit.Bytes)}, " +
-            $"Unmanaged allocations: {new Size(AbstractLowMemoryMonitor.GetUnmanagedAllocationsInBytes(), SizeUnit.Bytes)}," +
-            "Top 5 unmanaged allocations: ";
+            $"Unmanaged allocations: {new Size(AbstractLowMemoryMonitor.GetUnmanagedAllocationsInBytes(), SizeUnit.Bytes)}";
 
-        var top5 = string.Empty;
+        var topThreadsText = string.Empty;
+        const int minAllocatedThresholdInBytes = 10 * 1024 * 1024;
+        var numberOfLoggedUnmanagedThreads = 0;
         var first = true;
+
         foreach (var stats in NativeMemory.AllThreadStats
                      .Where(x => x.IsThreadAlive())
                      .GroupBy(x => x.Name)
@@ -30,19 +32,29 @@ public static class MemoryUtils
                      .OrderByDescending(x => x.Allocated)
                      .Take(5))
         {
+            if (stats.Allocated < minAllocatedThresholdInBytes)
+                continue;
+            
             if (first == false)
-                top5 += ", ";
+                topThreadsText += ", ";
 
             first = false;
 
-            top5 += $"name: {stats.Name}, allocations: {new Size(stats.Allocated, SizeUnit.Bytes)}";
+            topThreadsText += $"name: {stats.Name}, allocations: {new Size(stats.Allocated, SizeUnit.Bytes)}";
 
             if (stats.Count > 1)
             {
-                top5 += $" (threads count: {stats.Count})";
+                topThreadsText += $" (threads count: {stats.Count})";
             }
+
+            numberOfLoggedUnmanagedThreads++;
         }
 
-        return message + top5;
+        if (numberOfLoggedUnmanagedThreads > 0)
+        {
+            message += $", Top {numberOfLoggedUnmanagedThreads} unmanaged allocations: {topThreadsText}";
+        }
+
+        return message;
     }
 }
