@@ -155,24 +155,8 @@ public partial class ClusterTestBase
             foreach (var store in stores)
             {
                 var storage = await store;
-                using (var collector = new LiveReplicationPulsesCollector(storage))
-                {
-                    var etag1 = storage.DocumentsStorage.GenerateNextEtag();
 
-                    await Task.Delay(3000);
-
-                    var etag2 = storage.DocumentsStorage.GenerateNextEtag();
-
-                    Assert.True(etag1 + 1 == etag2, "Replication loop found :(");
-
-                    var groups = collector.Pulses.GetAll().GroupBy(p => p.Direction);
-                    foreach (var group in groups)
-                    {
-                        var key = group.Key;
-                        var count = group.Count();
-                        Assert.True(count < 50, $"{key} seems to be excessive ({count})");
-                    }
-                }
+                await EnsureNoReplicationLoop(storage);
             }
         }
     }

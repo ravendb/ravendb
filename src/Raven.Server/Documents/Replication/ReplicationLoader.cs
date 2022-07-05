@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Replication;
@@ -43,7 +44,7 @@ namespace Raven.Server.Documents.Replication
     public class ReplicationLoader : AbstractReplicationLoader, ITombstoneAware
     {
         private readonly Timer _reconnectAttemptTimer;
-
+        private long _reconnectInProgress;
         private readonly ReaderWriterLockSlim _locker = new ReaderWriterLockSlim();
 
         public event Action<IncomingReplicationHandler> IncomingReplicationAdded;
@@ -867,6 +868,113 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
+        private void ForceTryReconnectAll()
+        {
+            if (_reconnectQueue.Count == 0)
+                return;
+
+            if (Interlocked.CompareExchange(ref _reconnectInProgress, 1, 0) == 1)
+                return;
+
+            try
+            {
+                DatabaseTopology topology;
+                Dictionary<string, RavenConnectionString> ravenConnectionStrings;
+
+                using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    var raw = _server.Cluster.ReadRawDatabaseRecord(ctx, Database.Name);
+                    if (raw == null)
+                    {
+                        _reconnectQueue.Clear();
+                        return;
+                    }
+
+                    topology = raw.Topology;
+                    ravenConnectionStrings = raw.RavenConnectionStrings;
+                }
+
+                var cts = GetCancellationToken();
+                foreach (var failure in _reconnectQueue)
+                {
+                    if (cts.IsCancellationRequested)
+                        return;
+
+                    try
+                    {
+                        if (_reconnectQueue.TryRemove(failure) == false)
+                            continue;
+
+                        if (_outgoingFailureInfo.Values.Contains(failure) == false)
+                            continue; // this connection is no longer exists
+
+                        if (failure.RetryOn > DateTime.UtcNow)
+                        {
+                            _reconnectQueue.Add(failure);
+                            continue;
+                        }
+
+                        if (failure.Node is ExternalReplicationBase exNode &&
+                            IsMyTask(ravenConnectionStrings, topology, exNode) == false)
+                            // no longer my task
+                            continue;
+
+                        if (failure.Node is BucketMigrationReplication migration &&
+                            topology.WhoseTaskIsIt(RachisState.Follower, migration.ShardBucketMigration, getLastResponsibleNode: null) != _server.NodeTag)
+                            // no longer my task
+                            continue;
+
+                        AddAndStartOutgoingReplication(failure.Node);
+                    }
+                    catch (Exception e)
+                    {
+                        if (_logger.IsOperationsEnabled)
+                        {
+                            _logger.Operations($"Failed to start outgoing replication to {failure.Node}", e);
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                if (_logger.IsOperationsEnabled)
+                {
+                    _logger.Operations("Unexpected exception during ForceTryReconnectAll", e);
+                }
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _reconnectInProgress, 0);
+            }
+        }
+
+        private bool IsMyTask(Dictionary<string, RavenConnectionString> connectionStrings, DatabaseTopology topology, ExternalReplicationBase task)
+        {
+            if (ValidateConnectionString(connectionStrings, task, out _) == false)
+                return false;
+
+            var taskStatus = GetExternalReplicationState(_server, Database.Name, task.TaskId);
+            var whoseTaskIsIt = Database.WhoseTaskIsIt(topology, task, taskStatus);
+            return whoseTaskIsIt == _server.NodeTag;
+        }
+
+        public static ExternalReplicationState GetExternalReplicationState(ServerStore server, string database, long taskId)
+        {
+            using (server.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                return GetExternalReplicationState(server, database, taskId, context);
+            }
+        }
+
+        private static ExternalReplicationState GetExternalReplicationState(ServerStore server, string database, long taskId, TransactionOperationContext context)
+        {
+            var stateBlittable = server.Cluster.Read(context, ExternalReplicationState.GenerateItemName(database, taskId));
+
+            return stateBlittable != null ? JsonDeserializationCluster.ExternalReplicationState(stateBlittable) : new ExternalReplicationState();
+        }
+
         private void DropIncomingConnections(IEnumerable<ReplicationNode> connectionsToRemove, List<IDisposable> instancesToDispose)
         {
             var toRemove = connectionsToRemove?.ToList();
@@ -992,13 +1100,6 @@ namespace Raven.Server.Documents.Replication
                     // here we might have blocking calls to fetch the tcp info.
                     try
                     {
-                        if (newRecord.IsSharded)
-                        {
-                            foreach (var dest in newDestinations)
-                            {
-                                dest.ConnectionString.Database += "$0";
-                            }
-                        }
                         StartOutgoingConnections(newDestinations);
                     }
                     catch (Exception e)
