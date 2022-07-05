@@ -12,6 +12,7 @@ using Raven.Server.Documents.Sharding.Streaming;
 using Raven.Server.Documents.Sharding.Streaming.Comparers;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding
 {
@@ -190,6 +191,7 @@ namespace Raven.Server.Documents.Sharding
             {
                 public override int Compare(ShardStreamItem<BlittableJsonReaderObject> x, ShardStreamItem<BlittableJsonReaderObject> y)
                 {
+                    DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Stav, DevelopmentHelper.Severity.Normal, "Avoid allocation here");
                     return String.Compare(x.Item.GetMetadata().GetId(), y.Item.GetMetadata().GetId(), StringComparison.OrdinalIgnoreCase);
                 }
 
