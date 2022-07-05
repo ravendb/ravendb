@@ -31,7 +31,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         {
             _bufferScope = writeTransaction.Allocator.Allocate(DocumentBufferSize, out _buffer);
             _converter = converter;
-            _knownFields = _converter.GetKnownFields();
+            _knownFields = _converter.GetKnownFieldsForWriter();
             try
             {
                 _indexWriter = new IndexWriter(writeTransaction, _knownFields);
