@@ -130,6 +130,10 @@ namespace Raven.Server.Documents.Sharding
 
         public Dictionary<int, Dictionary<Slice, AttachmentReplicationItem>> AttachmentsPerShard = new Dictionary<int, Dictionary<Slice, AttachmentReplicationItem>>();
 
+        public AsyncManualResetEvent MissingAttachments = new AsyncManualResetEvent(false);
+
+        public string MissingAttachmentMessage;
+
         public ReplicationQueue(int numberOfShards)
         {
             SendToShardCompletion = new AsyncCountdownEvent(numberOfShards);

@@ -34,17 +34,17 @@ namespace Raven.Server.Documents.Replication
     public abstract class AbstractReplicationLoader : IDisposable
     {
         private readonly ReaderWriterLockSlim _locker = new ReaderWriterLockSlim();
-        private long _reconnectInProgress;
         private int _replicationStatsId;
+        private readonly string _databaseName;
 
         internal readonly ServerStore _server;
-        private readonly string _databaseName;
+        
         protected readonly Logger _logger;
         protected readonly ConcurrentDictionary<ReplicationNode, ConnectionShutdownInfo> _outgoingFailureInfo = new ConcurrentDictionary<ReplicationNode, ConnectionShutdownInfo>();
         protected readonly ConcurrentSet<ConnectionShutdownInfo> _reconnectQueue = new ConcurrentSet<ConnectionShutdownInfo>();
-
         protected readonly ConcurrentDictionary<string, IAbstractIncomingReplicationHandler> _incoming = new ConcurrentDictionary<string, IAbstractIncomingReplicationHandler>();
         protected readonly ConcurrentSet<IAbstractOutgoingReplicationHandler> _outgoing = new ConcurrentSet<IAbstractOutgoingReplicationHandler>();
+        
         public IEnumerable<ReplicationNode> OutgoingConnections => _outgoing.Select(x => x.Node);
         public IEnumerable<IAbstractOutgoingReplicationHandler> OutgoingHandlers => _outgoing;
 
@@ -66,87 +66,6 @@ namespace Raven.Server.Documents.Replication
             _databaseName = databaseName;
             _server = serverStore;
             _logger = LoggingSource.Instance.GetLogger(GetType().FullName, databaseName);
-        }
-
-        protected void ForceTryReconnectAll()
-        {
-            if (_reconnectQueue.Count == 0)
-                return;
-
-            if (Interlocked.CompareExchange(ref _reconnectInProgress, 1, 0) == 1)
-                return;
-
-            try
-            {
-                DatabaseTopology topology;
-                Dictionary<string, RavenConnectionString> ravenConnectionStrings;
-
-                using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-                using (ctx.OpenReadTransaction())
-                {
-                    var raw = _server.Cluster.ReadRawDatabaseRecord(ctx, _databaseName);
-                    if (raw == null)
-                    {
-                        _reconnectQueue.Clear();
-                        return;
-                    }
-
-                    topology = raw.Topology;
-                    ravenConnectionStrings = raw.RavenConnectionStrings;
-                }
-
-                var cts = GetCancellationToken();
-                foreach (var failure in _reconnectQueue)
-                {
-                    if (cts.IsCancellationRequested)
-                        return;
-
-                    try
-                    {
-                        if (_reconnectQueue.TryRemove(failure) == false)
-                            continue;
-
-                        if (_outgoingFailureInfo.Values.Contains(failure) == false)
-                            continue; // this connection is no longer exists
-
-                        if (failure.RetryOn > DateTime.UtcNow)
-                        {
-                            _reconnectQueue.Add(failure);
-                            continue;
-                        }
-
-                        if (failure.Node is ExternalReplicationBase exNode &&
-                            IsMyTask(ravenConnectionStrings, topology, exNode) == false)
-                            // no longer my task
-                            continue;
-
-                        if (failure.Node is BucketMigrationReplication migration &&
-                            topology.WhoseTaskIsIt(RachisState.Follower, migration.ShardBucketMigration, getLastResponsibleNode: null) != _server.NodeTag)
-                            // no longer my task
-                            continue;
-
-                        AddAndStartOutgoingReplication(failure.Node);
-                    }
-                    catch (Exception e)
-                    {
-                        if (_logger.IsOperationsEnabled)
-                        {
-                            _logger.Operations($"Failed to start outgoing replication to {failure.Node}", e);
-                        }
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                if (_logger.IsOperationsEnabled)
-                {
-                    _logger.Operations("Unexpected exception during ForceTryReconnectAll", e);
-                }
-            }
-            finally
-            {
-                Interlocked.Exchange(ref _reconnectInProgress, 0);
-            }
         }
 
         internal virtual void AddAndStartOutgoingReplication(ReplicationNode node)
@@ -190,16 +109,6 @@ namespace Raven.Server.Documents.Replication
 
         public int GetNextReplicationStatsId() => Interlocked.Increment(ref _replicationStatsId);
 
-        protected bool IsMyTask(Dictionary<string, RavenConnectionString> connectionStrings, DatabaseTopology topology, ExternalReplicationBase task)
-        {
-            if (ValidateConnectionString(connectionStrings, task, out _) == false)
-                return false;
-
-            var taskStatus = GetExternalReplicationState(_server, _databaseName, task.TaskId);
-            var whoseTaskIsIt = _server.WhoseTaskIsIt(topology, task, taskStatus);
-            return whoseTaskIsIt == _server.NodeTag;
-        }
-
         protected bool ValidateConnectionString(Dictionary<string, RavenConnectionString> ravenConnectionStrings, ExternalReplicationBase externalReplication, out RavenConnectionString connectionString)
         {
             connectionString = null;
@@ -242,22 +151,6 @@ namespace Raven.Server.Documents.Replication
                 return false;
             }
             return true;
-        }
-
-        public static ExternalReplicationState GetExternalReplicationState(ServerStore server, string database, long taskId)
-        {
-            using (server.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                return GetExternalReplicationState(server, database, taskId, context);
-            }
-        }
-
-        protected static ExternalReplicationState GetExternalReplicationState(ServerStore server, string database, long taskId, TransactionOperationContext context)
-        {
-            var stateBlittable = server.Cluster.Read(context, ExternalReplicationState.GenerateItemName(database, taskId));
-
-            return stateBlittable != null ? JsonDeserializationCluster.ExternalReplicationState(stateBlittable) : new ExternalReplicationState();
         }
 
         protected TcpConnectionHeaderMessage.SupportedFeatures GetSupportedVersions(TcpConnectionOptions tcpConnectionOptions)

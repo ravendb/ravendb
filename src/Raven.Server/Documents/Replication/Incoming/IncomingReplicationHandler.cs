@@ -13,6 +13,7 @@ using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Config;
 using Raven.Server.Documents.Handlers.Processors.TimeSeries;
 using Raven.Server.Documents.Replication.ReplicationItems;
+using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Exceptions;
@@ -34,6 +35,7 @@ namespace Raven.Server.Documents.Replication.Incoming
         private readonly ReplicationLoader _parent;
 
         public long LastHeartbeatTicks;
+        public readonly ReplicationLatestEtagRequest.ReplicationType ReplicationType;
 
         public event Action<IncomingReplicationHandler, Exception> Failed;
         public event Action<IncomingReplicationHandler> DocumentsReceived;
@@ -44,7 +46,7 @@ namespace Raven.Server.Documents.Replication.Incoming
             ReplicationLatestEtagRequest replicatedLastEtag,
             ReplicationLoader parent,
             JsonOperationContext.MemoryBuffer bufferToCopy,
-            ReplicationLatestEtagRequest.ReplicationType replicationType) : base(options, bufferToCopy, parent._server, parent.Database.Name, replicationType, replicatedLastEtag,
+            ReplicationLatestEtagRequest.ReplicationType replicationType) : base(options, bufferToCopy, parent._server, parent.Database.Name, replicatedLastEtag,
             options.DocumentDatabase.DatabaseShutdown, options.DocumentDatabase.DocumentsStorage.ContextPool)
         {
             _database = options.DocumentDatabase;
@@ -53,6 +55,7 @@ namespace Raven.Server.Documents.Replication.Incoming
             _attachmentStreamsTempFile = _database.DocumentsStorage.AttachmentsStorage.GetTempFile("replication");
 
             LastHeartbeatTicks = _database.Time.GetUtcNow().Ticks;
+            ReplicationType = replicationType;
         }
 
         [ThreadStatic]
@@ -258,6 +261,18 @@ namespace Raven.Server.Documents.Replication.Incoming
 
                 ReplicatedItems = null;
             }
+        }
+
+        public override LiveReplicationPerformanceCollector.ReplicationPerformanceType GetReplicationPerformanceType()
+        {
+            return ReplicationType == ReplicationLatestEtagRequest.ReplicationType.Internal
+                ? LiveReplicationPerformanceCollector.ReplicationPerformanceType.IncomingInternal
+                : LiveReplicationPerformanceCollector.ReplicationPerformanceType.IncomingExternal;
+        }
+
+
+        protected override void HandleMissingAttachmentsIfNeeded(ref Task task)
+        {
         }
 
         protected override void HandleTaskCompleteIfNeeded()

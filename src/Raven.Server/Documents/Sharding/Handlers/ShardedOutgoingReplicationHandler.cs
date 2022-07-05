@@ -67,15 +67,15 @@ namespace Raven.Server.Documents.Sharding.Handlers
                                 continue;
                             }
 
+                            MissingAttachmentsInLastBatch = false;
+
                             using (_stats.Network.Start())
                             {
-                                MissingAttachmentsInLastBatch = false;
-
                                 var didWork = SendDocumentsBatch(context, items, _stats.Network);
 
                                 if (MissingAttachmentsInLastBatch)
                                 {
-                                    DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "Handle missing attachments");
+                                    _replicationQueue.MissingAttachments.Set();
                                     continue;
                                 }
 
@@ -142,11 +142,12 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 _stream.Flush();
                 sw.Stop();
 
-                var (type, _) = HandleServerResponse();
+                var (type, reply) = HandleServerResponse(getFullResponse: true);
 
                 if (type == ReplicationMessageReply.ReplyType.MissingAttachments)
                 {
                     MissingAttachmentsInLastBatch = true;
+                    _replicationQueue.MissingAttachmentMessage = reply?.Exception;
                     return false;
                 }
 
