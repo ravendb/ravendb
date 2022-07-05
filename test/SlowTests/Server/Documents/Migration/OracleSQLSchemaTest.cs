@@ -37,7 +37,7 @@ namespace SlowTests.Server.Documents.Migration
                 var orderTable = tables.First(x => x.TableName == "Order");
 
                 Assert.Equal(4, orderTable.Columns.Count);
-                Assert.Equal(new[] { "ID", "ORDERDATE", "CUSTOMERID", "TOTALAMOUNT" }, orderTable.Columns.Select(x => x.Name).ToList());
+                Assert.Equal(new[] { "ID", "ORDERDATE", "CUSTOMERID", "TOTALAMOUNT" }.ToHashSet(), orderTable.Columns.Select(x => x.Name).ToHashSet());
                 Assert.Equal(new[] { "ID" }, orderTable.PrimaryKeyColumns);
 
                 var orderReferences = orderTable.References;
@@ -53,11 +53,11 @@ namespace SlowTests.Server.Documents.Migration
                 // validate OrderItem (2 columns in PK)
 
                 var orderItemTable = tables.First(x => x.TableName == "ORDERITEM");
-                Assert.Equal(new[] { "ORDERID", "PRODUCTID" }, orderItemTable.PrimaryKeyColumns);
+                Assert.Equal(new[] { "ORDERID", "PRODUCTID" }.ToHashSet(), orderItemTable.PrimaryKeyColumns.ToHashSet());
 
                 Assert.Equal(1, orderItemTable.References.Count);
                 Assert.Equal("DETAILS", orderItemTable.References[0].Table);
-                Assert.Equal(new[] { "ORDERID", "PRODUCTID" }, orderItemTable.References[0].Columns);
+                Assert.Equal(new[] { "ORDERID", "PRODUCTID" }.ToHashSet(), orderItemTable.References[0].Columns.ToHashSet());
 
                 // all types are supported (except UnsupportedTable)
                 Assert.True(tables.Where(x => x.TableName != "UNSUPPORTEDTABLE")

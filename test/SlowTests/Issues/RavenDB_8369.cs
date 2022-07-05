@@ -178,7 +178,9 @@ namespace SlowTests.Issues
             var backupPath = NewDataPath(suffix: "BackupFolder");
             using (var store = GetDocumentStore())
             {
-                var config = Backup.CreateBackupConfiguration(backupPath, backupType: backupType, incrementalBackupFrequency: "* */6 * * *");
+                int hour = (DateTime.Now.Hour + 1) % 24;
+                var timeCronExpression = $"30 {hour} * * *"; // happen in the middle of the next hour - cause the periodic backups to happen in a 30 minutes at least 
+                var config = Backup.CreateBackupConfiguration(backupPath, backupType: backupType, incrementalBackupFrequency: timeCronExpression);
                 var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
 
                 using (var session = store.OpenSession())
