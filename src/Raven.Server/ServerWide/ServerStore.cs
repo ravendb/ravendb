@@ -2792,6 +2792,8 @@ namespace Raven.Server.ServerWide
             }
             else
             {
+                InitializeTopology(record.Sharding.Orchestrator.Topology);
+
                 foreach (var shardTopology in record.Sharding.Shards)
                 {
                     InitializeTopology(shardTopology);
