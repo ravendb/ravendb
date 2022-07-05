@@ -574,14 +574,14 @@
                 <div class="properties-container">
                     <div class="properties-item">
                         <span class="properties-label">Store
-                            <a class="store-field-info-lucene pull-right" data-toggle="tooltip" data-bind="visible: isStoreField() && $root.editedIndex().searchEngine() === 'Lucene'">
+                            <a class="store-field-info-lucene pull-right" data-toggle="tooltip" data-bind="visible: isStoreField() && isLucene()">
                                 <i class="icon-info text-warning"></i>
                             </a>
                         </span>
                         <div class="btn-group properties-value has-disable-reason"
-                             data-bind="validationElement: indexOrStore, attr: { 'data-original-title': $root.editedIndex().searchEngine() === 'Corax' ? 'Fields are always stored when search engine is Corax' : '' }">
+                             data-bind="validationElement: indexOrStore, attr: { 'data-original-title': isCorax() ? 'Fields are always stored when search engine is Corax' : '' }">
                             <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false"
-                                    data-bind="css: { 'border-warning': isStoreField() && $root.editedIndex().searchEngine() === 'Lucene' }, disable: $root.editedIndex().searchEngine() === 'Corax'">
+                                    data-bind="css: { 'border-warning': isStoreField() && isLucene() }, disable: isCorax()">
                                 <span data-bind="text: effectiveStorage"></span> <span class="caret"></span>
                             </button>
                             <ul class="dropdown-menu">
@@ -816,7 +816,7 @@
                 <div class="row">
                     <div class="margin-right margin-top pull-right">
                         <div class="btn-group margin-top margin-top-sm">
-                            <button class="btn btn-success close-panel" data-bind="click: loadIndexDefinitionFromHistory" title="Load the full definition of this index revision">
+                            <button class="btn btn-success close-panel" data-bind="click: loadFullIndexDefinitionFromHistory" title="Load the full definition of this index revision">
                                 <i class="icon-load-index"></i>
                                 <span>Load Index</span>
                             </button>
@@ -826,7 +826,7 @@
                             </button>
                             <ul class="dropdown-menu dropdown-menu-right">
                                 <li title="Load the Map & Reduce methods only" class="close-panel margin-top margin-top-xs margin-bottom margin-bottom-xs">
-                                    <a href="#" data-bind="click: $root.loadMapReduceFromHistory">
+                                    <a href="#" data-bind="click: $root.loadOnlyMapAndReduceFromHistory">
                                         <i class="icon-load-map-reduce"></i><span>Load Map & Reduce Only</span>
                                     </a>
                                 </li>

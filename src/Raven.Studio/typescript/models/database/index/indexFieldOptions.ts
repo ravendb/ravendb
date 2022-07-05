@@ -140,6 +140,8 @@ class indexFieldOptions {
     showAdvancedOptions = ko.observable<boolean>(false);
 
     searchEngine = ko.observable<Raven.Client.Documents.Indexes.SearchEngineType>();
+    isLucene: KnockoutComputed<boolean>;
+    isCorax: KnockoutComputed<boolean>;
 
     validationGroup: KnockoutObservable<any>;
     dirtyFlag: () => DirtyFlag;
@@ -221,19 +223,32 @@ class indexFieldOptions {
         }
     }
     
-    setStorageAccordingToEngine(engine: string) {
-        if (engine === "Corax") {
-            if (this.parent()) {
-                this.parent().storage("Yes");
-            }
-            this.storage(null);
-        }
-    }
-    
     private initObservables() {
         // used to avoid circular updates
         let changeInProgress = false;
 
+        this.isLucene = ko.pureComputed(() => this.searchEngine() === "Lucene");
+        this.isCorax = ko.pureComputed(() => this.searchEngine() === "Corax");
+        
+        this.searchEngine.subscribe((engine: Raven.Client.Documents.Indexes.SearchEngineType) => {
+            if (!changeInProgress) {
+                changeInProgress = true;
+
+                if (this.isDefaultFieldOptions()) {
+                    if (engine === "Corax") {
+                        this.storage(indexFieldOptions.globalEngineDefaults(engine));
+                    }
+                    this.parent().storage(indexFieldOptions.globalEngineDefaults(engine));
+                } else {
+                    if (engine === "Corax") {
+                        this.storage(null);
+                    }
+                }
+                
+                changeInProgress = false;
+            }
+        });
+        
         this.fullTextSearch.subscribe(() => {
             if (!changeInProgress) {
                 const newValue = this.fullTextSearch();
@@ -273,11 +288,15 @@ class indexFieldOptions {
                 changeInProgress = true;
                 
                 if (newValue) {
-                    if (notCorax) { this.storage("Yes"); }
+                    if (notCorax) {
+                        this.storage("Yes");
+                    }
                     this.indexing("Search");
                     this.termVector("WithPositionsAndOffsets");
                 } else if (newValue === null) {
-                    if (notCorax) { this.storage(null); }
+                    if (notCorax) {
+                        this.storage(null);
+                    }
                     this.indexing(null);
                     this.termVector(null);
                 } else {
@@ -328,9 +347,8 @@ class indexFieldOptions {
             }
         });
 
-        this.indexOrStore = ko.pureComputed(() => !(this.indexing() === "No" && this.effectiveStorage().includes("No")));
-        
-        this.isStoreField = ko.pureComputed(() => this.effectiveStorage().includes("Yes"));
+        this.indexOrStore = ko.pureComputed(() => !(this.indexing() === "No" && this.effectiveStorage() && this.effectiveStorage().includes("No")));
+        this.isStoreField = ko.pureComputed(() => this.effectiveStorage() && this.effectiveStorage().includes("Yes"));
 
         this.dirtyFlag = new ko.DirtyFlag([
             this.name,
@@ -511,12 +529,14 @@ class indexFieldOptions {
         return new indexFieldOptions("", indexFieldOptions.getDefaultDto(), indexHasReduce, engineType,
             indexFieldOptions.globalDefaults(indexHasReduce, engineType));
     }
+    
+    static globalEngineDefaults(engine: Raven.Client.Documents.Indexes.SearchEngineType) {
+        return engine === "Corax" ? "Yes" : "No";
+    }
 
     static globalDefaults(indexHasReduce: KnockoutObservable<boolean>, engineType: KnockoutObservable<Raven.Client.Documents.Indexes.SearchEngineType>) {
-        const valueForStorage =  engineType() === "Corax" ? "Yes" : "No";
-        
         const field = new indexFieldOptions("", {
-            Storage: valueForStorage,
+            Storage: indexFieldOptions.globalEngineDefaults(engineType()),
             Indexing: "Default",
             Analyzer: "StandardAnalyzer",
             Suggestions: false,
