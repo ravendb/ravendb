@@ -128,11 +128,12 @@ namespace Raven.Server.Documents
                                     shardRawRecord.DatabaseName, index, type, changeType, context, shardRawRecord);
                             }
 
-                            // we need to update this upon any shard topology change
-                            // and upon migration completion
-                            if (ShardedDatabasesCache.TryGetValue(rawRecord.DatabaseName, out var databaseContextTask))
+                            var topology = rawRecord.Sharding.Orchestrator.Topology;
+                            if (topology.RelevantFor(_serverStore.NodeTag))
                             {
-                                var databaseContext = databaseContextTask.Result; // this isn't really a task
+                                // we need to update this upon any shard topology change
+                                // and upon migration completion
+                                var databaseContext = GetOrAddShardedDatabaseContext(databaseName, rawRecord);
                                 databaseContext.UpdateDatabaseRecord(rawRecord, index);
                             }
                         }
@@ -658,23 +659,7 @@ namespace Raven.Server.Documents
 
                     if (databaseRecord.IsSharded)
                     {
-                        var newTask = new Task<ShardedDatabaseContext>(() => new ShardedDatabaseContext(_serverStore, databaseRecord));
-                        var currentTask = ShardedDatabasesCache.GetOrAdd(databaseName, newTask);
-
-                        ShardedDatabaseContext databaseContext;
-                        try
-                        {
-                            if (newTask == currentTask)
-                                currentTask.Start();
-
-                            databaseContext = currentTask.Result;
-                        }
-                        catch (Exception)
-                        {
-                            ShardedDatabasesCache.TryRemove(databaseName, out _);
-
-                            throw;
-                        }
+                        var databaseContext = GetOrAddShardedDatabaseContext(databaseName, databaseRecord);
 
                         return new DatabaseSearchResult
                         {
@@ -690,6 +675,29 @@ namespace Raven.Server.Documents
                     DatabaseTask = TryGetOrCreateResourceStore(databaseName)
                 };
             }
+        }
+
+        private ShardedDatabaseContext GetOrAddShardedDatabaseContext(StringSegment databaseName, RawDatabaseRecord databaseRecord)
+        {
+            var newTask = new Task<ShardedDatabaseContext>(() => new ShardedDatabaseContext(_serverStore, databaseRecord));
+            var currentTask = ShardedDatabasesCache.GetOrAdd(databaseName, newTask);
+
+            ShardedDatabaseContext databaseContext;
+            try
+            {
+                if (newTask == currentTask)
+                    currentTask.Start();
+
+                databaseContext = currentTask.Result;
+            }
+            catch (Exception)
+            {
+                ShardedDatabasesCache.TryRemove(databaseName, out _);
+
+                throw;
+            }
+
+            return databaseContext;
         }
 
         public IEnumerable<Task<DocumentDatabase>> TryGetOrCreateShardedResourcesStore(StringSegment databaseName, DateTime? wakeup = null, bool ignoreDisabledDatabase = false, bool ignoreBeenDeleted = false, bool ignoreNotRelevant = false)

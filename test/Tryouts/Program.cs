@@ -11,6 +11,10 @@ using SlowTests.Voron.CompactTrees;
 using FastTests.Voron;
 using FastTests.Voron.Sets;
 using FastTests.Corax.Bugs;
+using RachisTests.DatabaseCluster;
+using Raven.Server.Utils;
+using SlowTests.Cluster;
+using SlowTests.Issues;
 
 namespace Tryouts;
 
@@ -21,7 +25,7 @@ public static class Program
         XunitLogging.RedirectStreams = false;
     }
 
-    public static void Main(string[] args)
+    public static async Task Main(string[] args)
     {
         Console.WriteLine(Process.GetCurrentProcess().Id);
         for (int i = 0; i < 100; i++)
@@ -30,38 +34,10 @@ public static class Program
             try
             {
                 using (var testOutputHelper = new ConsoleTestOutputHelper())
+                using (var test = new ClusterDatabaseMaintenance(testOutputHelper))
                 {
-                    new SetTests(testOutputHelper).CanDeleteAndInsertInRandomOrder(73014, 35);
-                    //new SetAddRemoval(testOutputHelper).AdditionsAndRemovalWork();
-
-                    int minFailure = int.MaxValue;
-                    int failureRandom = -1;                    
-
-                    var rnd = new Random();
-                    int number = 500000;
-                    while (number > 16)
-                    {
-                        int seed = rnd.Next(100000);
-                        try
-                        {
-                            //new CompactTreeTests(testOutputHelper).CanDeleteLargeNumberOfItemsInRandomInsertionOrder(2023, 13878);
-                            new SetTests(testOutputHelper).CanDeleteAndInsertInRandomOrder(number, seed);
-                        }
-                        catch (Exception ex)
-                        {
-                            if (number < minFailure)
-                            {
-                                minFailure = number;
-                                failureRandom = seed;
-                                Console.WriteLine($"[N:{minFailure}, Rnd:{failureRandom}]");
-                                Console.WriteLine($"--> {ex}");
-                            }
-                        }
-
-                        number = rnd.Next(Math.Min(500000, minFailure));
-                    }
-
-                    Console.ReadLine();
+                    DebuggerAttachedTimeout.DisableLongTimespan = true;
+                    await test.OnlyOneNodeShouldUpdateRehab();
                 }
             }
             catch (Exception e)

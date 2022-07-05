@@ -452,6 +452,8 @@ namespace Raven.Server.Documents.Replication.Incoming
                         ReadAttachmentStreamsFromSource(attachmentStreamCount, context, allocator, dataForReplicationCommand, reader, networkStats);
                     }
 
+                    _server.DatabasesLandlord.ForTestingPurposes?.DelayIncomingReplication?.Invoke(_cts.Token);
+
                     AfterItemsReadFromStream?.Invoke(dataForReplicationCommand);
 
                     if (Logger.IsInfoEnabled)

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -1030,6 +1031,8 @@ namespace SlowTests.Cluster
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task ClusterTransactionRequestWithRevisions(Options options)
         {
+            DefaultClusterSettings[RavenConfiguration.GetKey(x => x.Replication.RetryMaxTimeout)] = "1";
+            DefaultClusterSettings[RavenConfiguration.GetKey(x => x.Replication.RetryReplicateAfter)] = "1";
             var (_, leader) = await CreateRaftCluster(5, shouldRunInMemory: false, leaderIndex: 0);
             options.DeleteDatabaseOnDispose = false;
             options.Server = leader;
