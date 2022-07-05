@@ -195,8 +195,8 @@ namespace Voron.Data.Containers
                 // have a size based on existing item metadata, but after the defrag, need
                 // to allocate a metadata slot as well. Therefor, we *always* assume that this
                 // is requiring the additional metadata size
-                if (container.HasEnoughSpaceFor(sizeof(ItemMetadata) + size) == false) 
-                    MoveToNextPage(llt, containerId, ref container, size);
+                if (container.HasEnoughSpaceFor(sizeof(ItemMetadata) + size) == false)
+                    container = MoveToNextPage(llt, containerId, container, size);
                 
                 (reqSize, pos) = GetRequiredSizeAndPosition(size, container);
             }
@@ -229,13 +229,13 @@ namespace Voron.Data.Containers
             return PageHeader.SizeOf + pos * sizeof(ItemMetadata);
         }
 
-        private static void MoveToNextPage(LowLevelTransaction llt, long containerId, ref Container container, int size)
+        private static Container MoveToNextPage(LowLevelTransaction llt, long containerId, Container container, int size)
         {
             Debug.Assert(size <= MaxSizeInsideContainerPage);
 
-            container.Header.OnFreeList = false; // we take it out now..., we'll add to the free list when we delete from it
             var rootPage = llt.ModifyPage(containerId);
             var rootContainer = new Container(rootPage);
+            RemovePageFromContainerFreeList( rootContainer,  container);// we take it out now..., we'll add to the free list when we delete from it
 
             // We wont work as hard if we know that the entry is too big.
             bool isBigEntry = size >= (Constants.Storage.PageSize / 6);
@@ -264,8 +264,7 @@ namespace Voron.Data.Containers
                 // would be reasonably used by following requests. 
                 if (!isBigEntry)
                 {
-                    maybe.Header.OnFreeList = false;
-                    ModifyMetadataList(llt, rootContainer, FreePagesSetName, ContainerPageHeader.FreeListOffset, add: false, page.PageNumber);
+                    RemovePageFromContainerFreeList(rootContainer, maybe);
                 }
 
                 if (maybe.HasEnoughSpaceFor(size + MinimumAdditionalFreeSpaceToConsider) == false)
@@ -273,8 +272,7 @@ namespace Voron.Data.Containers
                 
                 // we register it as the next free page
                 rootContainer.Header.NextFreePage = page.PageNumber;
-                container = maybe;
-                return;
+                return  maybe;
             }
 
             // no existing pages remaining, allocate new one
@@ -283,9 +281,22 @@ namespace Voron.Data.Containers
             rootContainer.Header.NextFreePage = newPage.PageNumber;
             
             container = new Container(newPage);
-            container.Header.OnFreeList = true; // added as the next free page
+            
+            AddPageToContainerFreeList(rootContainer, container);
 
-            ModifyMetadataList(llt, rootContainer, AllPagesSetName, ContainerPageHeader.AllPagesOffset, add: true, newPage.PageNumber);
+            return container;
+
+            void RemovePageFromContainerFreeList(Container parent, Container page)
+            {
+                page.Header.OnFreeList = false;
+                ModifyMetadataList(llt, parent, FreePagesSetName, ContainerPageHeader.FreeListOffset, add: false, page.Header.PageNumber);
+            }
+
+            void AddPageToContainerFreeList(Container parent, Container page)
+            {
+                page.Header.OnFreeList = true;
+                ModifyMetadataList(llt, parent, AllPagesSetName, ContainerPageHeader.AllPagesOffset, add: true, page.Header.PageNumber);
+            }
         }
 
         public static List<long> GetAllIds(LowLevelTransaction llt, long containerId)
@@ -405,7 +416,6 @@ namespace Voron.Data.Containers
 
         public static void Delete(LowLevelTransaction llt, long containerId, long id)
         {
-            //_log.WriteLine( "del " + containerId + " " + id);
             var offset = (int)(id % Constants.Storage.PageSize);
             var pageNum = id / Constants.Storage.PageSize;
             var page = llt.ModifyPage(pageNum);
