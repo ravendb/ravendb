@@ -17,13 +17,11 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
 
         public override async ValueTask ExecuteAsync()
         {
-            var start = RequestHandler.GetStart();
-            var pageSize = RequestHandler.GetPageSize();
-
             using (ContextPool.AllocateOperationContext(out TOperationContext context))
             {
-                await GetDocumentsAndWriteAsync(context, start, pageSize, HttpContext.Request.Query["startsWith"],
-                    HttpContext.Request.Query["excludes"], HttpContext.Request.Query["matches"], HttpContext.Request.Query["startAfter"]);
+                await GetDocumentsAndWriteAsync(context, RequestHandler.GetStart(), RequestHandler.GetPageSize(), RequestHandler.GetStringQueryString("startsWith", required: false),
+                    RequestHandler.GetStringQueryString("excludes", required: false), RequestHandler.GetStringQueryString("matches", required: false),
+                    RequestHandler.GetStringQueryString("startAfter", required: false));
             }
         }
     }

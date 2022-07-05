@@ -1,12 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Server.Documents.Handlers.Streaming;
+using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Utils.Enumerators;
-using Raven.Server.Json;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Streaming
@@ -29,7 +27,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
                         Take = pageSize
                     };
 
-                if (HttpContext.Request.Query.ContainsKey("startsWith"))
+                if (startsWith != null) //startsWith can be an empty string
                 {
                     initialState.StartsWith = startsWith;
                     initialState.Excludes = excludes;
