@@ -107,17 +107,7 @@ namespace SlowTests.Sharding.ETL
 
                 Assert.True(WaitForDocument<User>(dest, "users/1", u => u.Name == "Joe Doe", 30_000));
 
-                await ActionWithLeader(async l =>
-                {
-                    try
-                    {
-                        await l.ServerStore.RemoveFromClusterAsync(node);
-                    }
-                    catch
-                    {
-                        l.ServerStore.Engine.CurrentLeader.StepDown();
-                    }
-                }, srcNodes.Servers);
+                await ActionWithLeader(l => l.ServerStore.RemoveFromClusterAsync(node), srcCluster.Nodes);
 
                 await originalTaskNode.ServerStore.WaitForState(RachisState.Passive, CancellationToken.None);
 
@@ -762,7 +752,7 @@ loadToOrders(partitionBy(key),
             var count = files.Length;
             Assert.True(count > 0);
 
-            await ActionWithLeader(l => l.ServerStore.RemoveFromClusterAsync(server.ServerStore.NodeTag), srcNodes.Servers);
+            await ActionWithLeader(l => l.ServerStore.RemoveFromClusterAsync(server.ServerStore.NodeTag), nodes.Nodes);
 
             var store2 = stores.First(s => s != store);
             using (var session = store2.OpenAsyncSession())
