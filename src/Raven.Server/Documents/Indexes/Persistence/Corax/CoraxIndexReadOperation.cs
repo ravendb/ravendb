@@ -32,11 +32,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         private readonly ByteStringContext _allocator;
         private long _entriesCount = 0;
         
-        public CoraxIndexReadOperation(Index index, Logger logger, Transaction readTransaction, QueryBuilderFactories queryBuilderFactories) : base(index, logger, queryBuilderFactories)
+        public CoraxIndexReadOperation(Index index, Logger logger, Transaction readTransaction, QueryBuilderFactories queryBuilderFactories, IndexFieldsMapping fieldsMapping) : base(index, logger, queryBuilderFactories)
         {
             _allocator = readTransaction.Allocator;
-            _fieldMappings = CoraxDocumentConverterBase.GetKnownFields(_allocator, index);
-            _fieldMappings.UpdateAnalyzersInBindings(CoraxIndexingHelpers.CreateCoraxAnalyzers(_allocator, index, index.Definition, true));
+            _fieldMappings = fieldsMapping;
             _indexSearcher = new IndexSearcher(readTransaction, _fieldMappings);
         }
 

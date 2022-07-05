@@ -34,13 +34,14 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
     public static readonly Memory<byte> EmptyString = Encoding.UTF8.GetBytes(RavenConstants.Documents.Indexing.Fields.EmptyString);
     
     //todo maciej
-    private static readonly Memory<byte> _trueLiteral = new Memory<byte>(Encoding.UTF8.GetBytes("true"));
-    private static readonly Memory<byte> _falseLiteral = new Memory<byte>(Encoding.UTF8.GetBytes("false"));
-    private static readonly StandardFormat _standardFormat = new StandardFormat('g');
-    private static readonly StandardFormat _timeSpanFormat = new StandardFormat('c');
+    private static readonly Memory<byte> _trueLiteral = new(Encoding.UTF8.GetBytes("true"));
+    private static readonly Memory<byte> _falseLiteral = new(Encoding.UTF8.GetBytes("false"));
+    private static readonly StandardFormat _standardFormat = new('g');
+    private static readonly StandardFormat _timeSpanFormat = new('c');
 
     private ConversionScope Scope;
-    protected readonly IndexFieldsMapping _knownFields;
+    protected readonly IndexFieldsMapping _knownFieldsForReaders;
+    protected IndexFieldsMapping _knownFieldsForWriter;
     protected readonly ByteStringContext _allocator;
 
     private const int InitialSizeOfEnumerableBuffer = 128;
@@ -63,19 +64,16 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         keyFieldName, storeValueFieldName, fields)
     {
         _allocator = new ByteStringContext(SharedMultipleUseFlag.None);
-        _knownFields = GetKnownFields(_allocator, index);
-        _knownFields.UpdateAnalyzersInBindings( CoraxIndexingHelpers.CreateCoraxAnalyzers(_allocator, index, index.Definition));
+        _knownFieldsForReaders = GetKnownFields(_allocator, index, _keyFieldName, _storeValue, _storeValueFieldName);
+        _knownFieldsForReaders.UpdateAnalyzersInBindings(CoraxIndexingHelpers.CreateCoraxAnalyzers(_allocator, index, index.Definition, true));
         Scope = new();
     }
 
-    public static IndexFieldsMapping GetKnownFields(ByteStringContext allocator, Index index)
+    public static IndexFieldsMapping GetKnownFields(ByteStringContext allocator, Index index, string keyFieldName, bool storeValue, string storeValueFieldName)
     {
         var knownFields = new IndexFieldsMapping(allocator);
         //todo maciej: perf
-        Slice.From(allocator, index.Type.IsMapReduce()
-            ? RavenConstants.Documents.Indexing.Fields.ReduceKeyValueFieldName
-            : RavenConstants.Documents.Indexing.Fields.DocumentIdFieldName, ByteStringType.Immutable, out var value);
-
+        Slice.From(allocator, keyFieldName, ByteStringType.Immutable, out var value);
         knownFields = knownFields.AddBinding(0, value, null, hasSuggestion: false, fieldIndexingMode: FieldIndexingMode.Normal);
         foreach (var field in index.Definition.IndexFields.Values)
         {
@@ -86,17 +84,34 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 field.Spatial is not null);
         }
 
-        if (index.Type.IsMapReduce())
+        if (storeValue)
         {
-            Slice.From(allocator, RavenConstants.Documents.Indexing.Fields.AllStoredFields, ByteStringType.Immutable, out var storedKey);
+            Slice.From(allocator, storeValueFieldName, ByteStringType.Immutable, out var storedKey);
             knownFields = knownFields.AddBinding(knownFields.Count, storedKey, null, false, FieldIndexingMode.No);
         }
 
         return knownFields;
     }
 
-    public IndexFieldsMapping GetKnownFields() => _knownFields;
+    public IndexFieldsMapping GetKnownFieldsForQuerying() => _knownFieldsForReaders;
 
+    private IndexFieldsMapping CreateKnownFieldsForWriter()
+    {
+        if (_knownFieldsForWriter == null)
+        {
+            _knownFieldsForWriter = GetKnownFields(_allocator, _index, _keyFieldName, _storeValue, _storeValueFieldName);
+            _knownFieldsForWriter.UpdateAnalyzersInBindings(CoraxIndexingHelpers.CreateCoraxAnalyzers(_allocator, _index, _index.Definition));
+        }
+
+        return _knownFieldsForWriter;
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public IndexFieldsMapping GetKnownFieldsForWriter()
+    {
+        return _knownFieldsForWriter ?? CreateKnownFieldsForWriter();
+    }
+    
     protected void InsertRegularField(IndexField field, object value, JsonOperationContext indexContext, ref IndexEntryWriter entryWriter,
         IWriterScope scope, bool nestedArray = false)
     {
@@ -341,14 +356,14 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         if (field.Indexing is not FieldIndexing.No) 
             AssertOrAdjustIndexingOptionForComplexObject(field);
 
-        _knownFields.GetByFieldId(field.Id).Analyzer = null;
+        GetKnownFieldsForWriter().GetByFieldId(field.Id).Analyzer = null;
         scope.Write(field.Id, val, ref entryWriter);
     }
 
     private void DisableIndexingForComplexObject(IndexField field)
     {
         field.Indexing = FieldIndexing.No;
-        if (_knownFields.TryGetByFieldId(field.Id, out var binding))
+        if (GetKnownFieldsForWriter().TryGetByFieldId(field.Id, out var binding))
         {
             binding.OverrideFieldIndexingMode(FieldIndexingMode.No);
         }
