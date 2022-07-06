@@ -967,7 +967,7 @@ namespace RachisTests.DatabaseCluster
         public async Task ExternalReplicationFailoverFromNonShardedToShardedDatabase()
         {
             var clusterSize = 3;
-            var replicationFactor = 2;
+            var replicationFactor = 3;
 
             var (_, srcLeader) = await CreateRaftCluster(clusterSize);
             var (dstNodes, dstLeader) = await CreateRaftCluster(clusterSize);
