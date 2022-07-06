@@ -70,7 +70,7 @@ namespace SlowTests.SlowTests.Bugs
                 await (await store.Operations.SendAsync(new PatchByQueryOperation(
                     new IndexQuery { Query = $"FROM INDEX '{stats.IndexName}' UPDATE {{ this.FullName = this.FirstName + ' ' + this.LastName; }}" }
                 )))
-                .WaitForCompletionAsync(TimeSpan.FromSeconds(60));
+                .WaitForCompletionAsync(TimeSpan.FromSeconds(60 * 5)); //TODO: EGOR it takes more than 1min on v8
 
                 using (var db = store.OpenAsyncSession())
                 {

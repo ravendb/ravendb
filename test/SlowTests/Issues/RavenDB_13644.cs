@@ -55,7 +55,8 @@ namespace SlowTests.Issues
         {
             using (var store =  GetDocumentStore(options))
             {
-                var termsCountNull = options.JavascriptEngineMode.ToString() is null or "Jint" ? 0 : 1;
+            // TODO: EGOR remove such lines
+                var termsCountNull = options.JavascriptEngineMode.ToString() is null or "Jint" ? 0 : 0;
 
                 var index = new TIndex();
                 var indexName = index.IndexName;
@@ -271,7 +272,7 @@ namespace SlowTests.Issues
         {
             using (var store =  GetDocumentStore(options))
             {
-                var termsCountNull = options.JavascriptEngineMode.ToString() is null or "Jint" ? 0 : 1;
+                var termsCountNull = options.JavascriptEngineMode.ToString() is null or "Jint" ? 0 : 0;
 
                 var index = new TIndex();
                 var indexName = index.IndexName;
@@ -467,7 +468,7 @@ namespace SlowTests.Issues
 
         [Theory]
         [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
-        public void anLoadCompareExchangeInIndexes_Query_JavaScript(Options options)
+        public void CanLoadCompareExchangeInIndexes_Query_JavaScript(Options options)
         {
             switch (options.JavascriptEngineMode.ToString())
             {
@@ -487,7 +488,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore(options))
             {
-                var termsCountNull = options.JavascriptEngineMode.ToString() is null or "Jint" ? 0 : 1;
+                var termsCountNull = options.JavascriptEngineMode.ToString() is null or "Jint" ? 0 : 0;
 
                 var index = new TIndex();
                 var indexName = index.IndexName;
