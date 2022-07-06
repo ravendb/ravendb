@@ -40,7 +40,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
     private static readonly StandardFormat _timeSpanFormat = new('c');
 
     private ConversionScope Scope;
-    protected readonly IndexFieldsMapping _knownFieldsForReaders;
+    protected readonly Lazy<IndexFieldsMapping> _knownFieldsForReaders;
     protected IndexFieldsMapping _knownFieldsForWriter;
     protected readonly ByteStringContext _allocator;
 
@@ -54,8 +54,8 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
     public List<double> DoublesListForEnumerableScope;
     public List<BlittableJsonReaderObject> BlittableJsonReaderObjectsListForEnumerableScope;
     public List<CoraxSpatialPointEntry> CoraxSpatialPointEntryListForEnumerableScope;
-
-
+    
+    
     public abstract Span<byte> SetDocumentFields(LazyStringValue key, LazyStringValue sourceDocumentId, object doc, JsonOperationContext indexContext,
         out LazyStringValue id, Span<byte> writerBuffer);
 
@@ -64,9 +64,20 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         keyFieldName, storeValueFieldName, fields)
     {
         _allocator = new ByteStringContext(SharedMultipleUseFlag.None);
-        _knownFieldsForReaders = GetKnownFields(_allocator, index, _keyFieldName, _storeValue, _storeValueFieldName);
-        _knownFieldsForReaders.UpdateAnalyzersInBindings(CoraxIndexingHelpers.CreateCoraxAnalyzers(_allocator, index, index.Definition, true));
         Scope = new();
+        _knownFieldsForReaders = new(() =>
+        {
+            try
+            {
+                var map = GetKnownFields(_allocator, _index, _keyFieldName, _storeValue, _storeValueFieldName);
+                map.UpdateAnalyzersInBindings(CoraxIndexingHelpers.CreateCoraxAnalyzers(_allocator, _index, _index.Definition, true));
+                return map;
+            }
+            catch (Exception e)
+            {
+                throw new IndexAnalyzerException(e);
+            }
+        });
     }
 
     public static IndexFieldsMapping GetKnownFields(ByteStringContext allocator, Index index, string keyFieldName, bool storeValue, string storeValueFieldName)
@@ -93,14 +104,21 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         return knownFields;
     }
 
-    public IndexFieldsMapping GetKnownFieldsForQuerying() => _knownFieldsForReaders;
+    public IndexFieldsMapping GetKnownFieldsForQuerying() => _knownFieldsForReaders.Value;
 
     private IndexFieldsMapping CreateKnownFieldsForWriter()
     {
         if (_knownFieldsForWriter == null)
         {
-            _knownFieldsForWriter = GetKnownFields(_allocator, _index, _keyFieldName, _storeValue, _storeValueFieldName);
-            _knownFieldsForWriter.UpdateAnalyzersInBindings(CoraxIndexingHelpers.CreateCoraxAnalyzers(_allocator, _index, _index.Definition));
+            try
+            {
+                _knownFieldsForWriter = GetKnownFields(_allocator, _index, _keyFieldName, _storeValue, _storeValueFieldName);
+                _knownFieldsForWriter.UpdateAnalyzersInBindings(CoraxIndexingHelpers.CreateCoraxAnalyzers(_allocator, _index, _index.Definition));
+            }
+            catch (Exception e)
+            {
+                throw new IndexAnalyzerException(e);
+            }
         }
 
         return _knownFieldsForWriter;
