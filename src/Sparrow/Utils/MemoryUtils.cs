@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Linq;
+using System.Collections.Generic;
 using System.Text;
 using Sparrow.LowMemory;
 
@@ -8,11 +8,11 @@ namespace Sparrow.Utils;
 public static class MemoryUtils
 {
     private const string GenericOutMemoryException = "Failed to generate an out of memory exception";
+    private static readonly InvertedComparer InvertedComparerInstance = new InvertedComparer();
+    private const int MinAllocatedThresholdInBytes = 10 * 1024 * 1024;
 
     public static string GetExtendedMemoryInfo(MemoryInfoResult memoryInfo)
     {
-
-
         try
         {
             var sb = new StringBuilder();
@@ -25,9 +25,48 @@ public static class MemoryUtils
 
             try
             {
-                var threadsMessage = GenerateThreadsMessage();
-                if (threadsMessage != null)
-                    TryAppend(() => threadsMessage);
+                var sorted = new SortedDictionary<long, string>(InvertedComparerInstance);
+
+                long totalAllocatedForUnknownThreads = 0;
+                var unknownThreadsCount = 0;
+                foreach (var stats in NativeMemory.AllThreadStats)
+                {
+                    if (stats.Name == null)
+                    {
+                        totalAllocatedForUnknownThreads += stats.TotalAllocated;
+                        unknownThreadsCount++;
+                        continue;
+                    }
+
+                    sorted[stats.TotalAllocated] = stats.Name;
+                }
+
+                sorted[totalAllocatedForUnknownThreads] = null;
+
+                var count = 0;
+                var first = true;
+                foreach (var keyValue in sorted)
+                {
+                    if (keyValue.Key < MinAllocatedThresholdInBytes)
+                        break;
+
+                    if (++count > 5)
+                        break;
+                    
+                    if (first)
+                    {
+                        sb.Append(", Top unmanaged allocations: ");
+                        first = false;
+                    }
+                    else
+                    {
+                        sb.Append(", ");
+                    }
+
+                    TryAppend(() => $"name: {keyValue.Value}, allocations: {new Size(keyValue.Key, SizeUnit.Bytes)}");
+                    if (keyValue.Value == null)
+                        TryAppend(() => $" (threads count: {unknownThreadsCount})");
+                }
             }
             catch
             {
@@ -54,48 +93,11 @@ public static class MemoryUtils
         }
     }
 
-    private static string GenerateThreadsMessage()
+    private class InvertedComparer : IComparer<long>
     {
-        try
+        public int Compare(long x, long y)
         {
-            var topThreadsText = new StringBuilder();
-            const int minAllocatedThresholdInBytes = 10 * 1024 * 1024;
-            var first = true;
-
-            foreach (var stats in NativeMemory.AllThreadStats
-                         .Where(x => x.IsThreadAlive())
-                         .GroupBy(x => x.Name)
-                         .Select(x => new
-                         {
-                             Name = x.Key,
-                             Allocated = x.Sum(y => y.TotalAllocated),
-                             Count = x.Count()
-                         })
-                         .OrderByDescending(x => x.Allocated)
-                         .Take(5))
-            {
-                if (stats.Allocated < minAllocatedThresholdInBytes)
-                    break;
-
-                if (first == false)
-                    topThreadsText.Append(", ");
-
-                first = false;
-
-                topThreadsText.Append($"name: {stats.Name}, allocations: {new Size(stats.Allocated, SizeUnit.Bytes)}");
-
-                if (stats.Count > 1)
-                {
-                    topThreadsText.Append($" (threads count: {stats.Count})");
-                }
-            }
-
-            
-            return topThreadsText.Length > 0 ? $", Top unmanaged allocations: {topThreadsText}" : null;
-        }
-        catch
-        {
-            return null;
+            return y.CompareTo(x);
         }
     }
 }
