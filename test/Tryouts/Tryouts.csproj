@@ -6,9 +6,7 @@
     <AssemblyName>Tryouts</AssemblyName>
     <OutputType>Exe</OutputType>
     <PackageId>Tryouts</PackageId>
-    <EnablePreviewFeatures>True</EnablePreviewFeatures>
     <CodeAnalysisRuleSet>..\..\RavenDB.ruleset</CodeAnalysisRuleSet>
-    <LangVersion>latest</LangVersion>
     <DefineConstants>$(DefineConstants);IsAnyOS</DefineConstants>
     <PlatformTarget>AnyCPU</PlatformTarget>
   </PropertyGroup>
