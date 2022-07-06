@@ -335,18 +335,23 @@ namespace Corax
                     ref var token = ref tokens[i];
 
                     if (token.Offset + token.Length > _encodingBufferHandler.Length)
-                        throw new InvalidDataException(
-                            $"\nGot token with: \n\tOFFSET {token.Offset}\n\tLENGTH: {token.Length}.\n" +
-                            $"Total amount of tokens: {tokens.Length}" +
-                            $"\nBuffer contains '{Encodings.Utf8.GetString(wordsBuffer)}' and total length is {wordsBuffer.Length}" +
-                            $"\nBuffer from ArrayPool: \n\tbyte buffer is {_encodingBufferHandler.Length} \n\ttokens buffer is {_tokensBufferHandler.Length}" +
-                            $"\nOriginal span cointains '{Encodings.Utf8.GetString(value)}' with total length {value.Length}" +
-                            $"\nField " +
-                            $"\n\tid: {binding.FieldId}" +
-                            $"\n\tname: {binding.FieldName}");
+                        ThrowInvalidTokenFoundOnBuffer(binding, value, wordsBuffer, tokens, token);
 
                     var word = new Span<byte>(_encodingBufferHandler, token.Offset, (int)token.Length);
                     ExactInsert(word);
+                }
+
+                unsafe void ThrowInvalidTokenFoundOnBuffer(IndexFieldBinding binding, ReadOnlySpan<byte> value, Span<byte> wordsBuffer, Span<Token> tokens, Token token)
+                {
+                    throw new InvalidDataException(
+                        $"{Environment.NewLine}Got token with: {Environment.NewLine}\tOFFSET {token.Offset}{Environment.NewLine}\tLENGTH: {token.Length}.{Environment.NewLine}" +
+                        $"Total amount of tokens: {tokens.Length}" +
+                        $"{Environment.NewLine}Buffer contains '{Encodings.Utf8.GetString(wordsBuffer)}' and total length is {wordsBuffer.Length}" +
+                        $"{Environment.NewLine}Buffer from ArrayPool: {Environment.NewLine}\tbyte buffer is {_encodingBufferHandler.Length} {Environment.NewLine}\ttokens buffer is {_tokensBufferHandler.Length}" +
+                        $"{Environment.NewLine}Original span cointains '{Encodings.Utf8.GetString(value)}' with total length {value.Length}" +
+                        $"{Environment.NewLine}Field " +
+                        $"{Environment.NewLine}\tid: {binding.FieldId}" +
+                        $"{Environment.NewLine}\tname: {binding.FieldName}");
                 }
             }
 
@@ -523,12 +528,6 @@ namespace Corax
 
                 void DeleteIdFromExactTerm(long id, Slice fieldName, Span<byte> tmpBuffer, ReadOnlySpan<byte> termValue)
                 {
-                    if (termValue.Length == 0)
-                    {
-                        Debugger.Launch();
-                        Debugger.Break();
-                    }
-
                     // We need to normalize the term in case we have a term bigger than MaxTermLength.
                     using var _ = CreateNormalizedTerm(Transaction.Allocator, termValue, out Slice termSlice);
                     termValue = termSlice.AsReadOnlySpan();
