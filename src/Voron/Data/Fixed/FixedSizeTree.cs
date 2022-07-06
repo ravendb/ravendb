@@ -165,6 +165,12 @@ namespace Voron.Data.Fixed
                                                   header->RootObjectType);
         }
 
+        static FixedSizeTree()
+        {
+            if (sizeof(TVal) != sizeof(long))
+                throw new NotSupportedException($"The usage of '{nameof(FixedSizeTree<TVal>)}' is restricted to fixed size values of {sizeof(long)} bytes, but the current value is {sizeof(TVal)} bytes");
+        }
+
         public FixedSizeTree(LowLevelTransaction tx, Tree parent, Slice treeName, ushort valSize, bool clone = true, bool isIndexTree = false, NewPageAllocator newPageAllocator = null)
         {
             _tx = tx;
