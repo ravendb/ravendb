@@ -4,7 +4,7 @@ import database = require("models/resources/database");
 
 class getEnvironmentStorageReportCommand extends commandBase {
 
-    constructor(private db: database, private name: string, private type: string, private detailed = false) {
+    constructor(private db: database, private location: databaseLocationSpecifier, private name: string, private type: string, private detailed = false) {
         super();
     }
 
@@ -12,7 +12,8 @@ class getEnvironmentStorageReportCommand extends commandBase {
         const args = {
             name: this.name,
             type: this.type,
-            details: this.detailed
+            details: this.detailed,
+            ...this.location
         };
         const url = endpoints.databases.storage.debugStorageEnvironmentReport + this.urlEncodeArgs(args);
         

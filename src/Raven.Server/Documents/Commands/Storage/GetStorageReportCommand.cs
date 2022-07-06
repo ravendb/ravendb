@@ -13,7 +13,7 @@ internal class GetStorageReportCommand : RavenCommand
 
     public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
     {
-        url = $"/databases/{node.Database}/debug/storage/report";
+        url = $"{node.Url}/databases/{node.Database}/debug/storage/report";
 
         return new HttpRequestMessage
         {

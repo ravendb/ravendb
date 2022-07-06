@@ -52,8 +52,8 @@ class storageReport extends shardViewModelBase {
 
     documentsCompressionUrl: KnockoutComputed<string>;
 
-    constructor(db: database) {
-        super(db);
+    constructor(db: database, location: databaseLocationSpecifier) {
+        super(db, location);
         this.bindToCurrentInstance("onClick");
     }
 
@@ -62,7 +62,7 @@ class storageReport extends shardViewModelBase {
 
         this.initObservables();
 
-        return new getStorageReportCommand(this.db)
+        return new getStorageReportCommand(this.db, this.location)
             .execute()
             .done(result => {
                 this.basePath = result.BasePath;
@@ -519,7 +519,7 @@ class storageReport extends shardViewModelBase {
             this.showLoader(true);
         }, 100);
 
-        return new getEnvironmentStorageReportCommand(this.db, env.name, _.capitalize(env.type), full)
+        return new getEnvironmentStorageReportCommand(this.db, this.location, env.name, _.capitalize(env.type), full)
             .execute()
             .done((envReport) => {
                 this.mapDetailedReport(envReport.Report, datafile);
