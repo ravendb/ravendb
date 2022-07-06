@@ -289,8 +289,11 @@ class revisions extends viewModelBase {
 
     editItem(entry: revisionsConfigurationEntry) {
         this.currentBackingItem(entry);
+        
         const clone = revisionsConfigurationEntry.empty().copyFrom(entry);
         this.currentlyEditedItem(clone);
+
+        this.currentlyEditedItem().validationGroup.errors.showAllMessages(false);
     }
 
     deleteItem(entry: revisionsConfigurationEntry) {

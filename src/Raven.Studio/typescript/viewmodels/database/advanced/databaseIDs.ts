@@ -83,7 +83,10 @@ class databaseIDs extends viewModelBase {
         return new getDatabaseDetailedStatsCommand(this.activeDatabase())
             .execute()
             .done((stats: Raven.Client.Documents.Operations.DetailedDatabaseStatistics) => {
-                this.databaseChangeVector(stats.DatabaseChangeVector.split(","));
+                if (stats.DatabaseChangeVector) {
+                    this.databaseChangeVector(stats.DatabaseChangeVector.split(","));
+                }
+                
                 this.databaseID(stats.DatabaseId);
             });
     }

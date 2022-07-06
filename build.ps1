@@ -104,7 +104,7 @@ if ([string]::IsNullOrEmpty($Target) -eq $false) {
     } 
 
     if ($MacOs) {
-        $Target = @( "macos" );
+        $Target = @( "macos-x64" );
     }
 
     if ($Rpi) {
