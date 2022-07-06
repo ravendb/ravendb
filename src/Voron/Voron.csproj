@@ -3,8 +3,6 @@
     <Description>Voron - Low level storage engine</Description>
     <Authors>Hibernating Rhinos</Authors>
     <TargetFramework>net6.0</TargetFramework>
-    <LangVersion>preview</LangVersion>
-    <EnablePreviewFeatures>True</EnablePreviewFeatures>
     <RuntimeFrameworkVersion>6.0.6</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>Voron</AssemblyName>

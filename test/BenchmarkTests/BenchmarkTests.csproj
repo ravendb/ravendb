@@ -6,7 +6,6 @@
     <AssemblyName>BenchmarkTests</AssemblyName>
     <PackageId>BenchmarkTests</PackageId>
     <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
-    <EnablePreviewFeatures>True</EnablePreviewFeatures>
     <CodeAnalysisRuleSet>..\..\RavenDB.ruleset</CodeAnalysisRuleSet>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
