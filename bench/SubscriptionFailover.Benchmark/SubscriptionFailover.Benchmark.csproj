@@ -3,7 +3,6 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>net6.0</TargetFramework>
     <RuntimeFrameworkVersion>6.0.6</RuntimeFrameworkVersion>
-    <EnablePreviewFeatures>True</EnablePreviewFeatures>
     <CodeAnalysisRuleSet>..\..\RavenDB.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemGroup>

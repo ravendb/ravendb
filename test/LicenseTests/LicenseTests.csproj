@@ -4,7 +4,6 @@
     <RuntimeFrameworkVersion>6.0.6</RuntimeFrameworkVersion>
     <AssemblyName>LicenseTests</AssemblyName>
     <PackageId>LicenseTests</PackageId>
-    <EnablePreviewFeatures>True</EnablePreviewFeatures>
     <CodeAnalysisRuleSet>..\..\RavenDB.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemGroup Condition="'$(OS)' == 'Windows_NT'">

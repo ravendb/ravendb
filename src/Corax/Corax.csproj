@@ -6,8 +6,6 @@
     <TargetFramework>net6.0</TargetFramework>
     <RuntimeFrameworkVersion>6.0.6</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <EnablePreviewFeatures>True</EnablePreviewFeatures>
-
     <AssemblyName>Corax</AssemblyName>
     <PackageId>Corax</PackageId>
     <PackageTags>storage;acid;corax;ravendb;nosql</PackageTags>

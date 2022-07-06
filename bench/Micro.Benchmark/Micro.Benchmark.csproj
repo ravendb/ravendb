@@ -4,8 +4,6 @@
     <RuntimeFrameworkVersion>6.0.6</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>Micro.Benchmark</AssemblyName>
-    <EnablePreviewFeatures>True</EnablePreviewFeatures>
-
     <OutputType>Exe</OutputType>
     <PackageId>Micro.Benchmark</PackageId>
     <RuntimeIdentifiers>win7-x64;win8-x64;win10-x64;ubuntu.14.04-x64</RuntimeIdentifiers>

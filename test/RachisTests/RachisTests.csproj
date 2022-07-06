@@ -6,7 +6,6 @@
     <AssemblyName>RachisTests</AssemblyName>
     <PackageId>RachisTests</PackageId>
     <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
-    <EnablePreviewFeatures>True</EnablePreviewFeatures>
     <CodeAnalysisRuleSet>..\..\RavenDB.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
