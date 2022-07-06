@@ -391,6 +391,11 @@ namespace Raven.Server.Commercial
             if (licenseStatus.Expiration.HasValue == false)
                 throw new LicenseExpiredException("License doesn't have an expiration date!");
 
+            if (licenseStatus.CanActivate(out DateTime? canBeActivateUntil) == false)
+            {
+                throw new LicenseExpiredException($"Cannot activate license because its max activation date has passed: {canBeActivateUntil}");
+            }
+
             if (licenseStatus.Expired)
             {
                 if (skipGettingUpdatedLicense)
@@ -692,6 +697,9 @@ namespace Raven.Server.Commercial
                 return null;
 
             if (license.Equals(currentLicense))
+                return null;
+
+            if (licenseStatus.CanActivate(out _) == false)
                 return null;
 
             return license;

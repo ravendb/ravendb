@@ -60,6 +60,12 @@ namespace Raven.Server.Commercial
 
         public DateTime? Expiration => GetValue<DateTime?>("expiration");
 
+        public bool CanActivate(out DateTime? canBeActivateUntil)
+        {
+            canBeActivateUntil = GetValue<DateTime?>("canBeActivatedUntil");
+            return canBeActivateUntil == null || canBeActivateUntil.Value < DateTime.UtcNow;
+        }
+
         public string FormattedExpiration => Expiration?.ToString("dddd, dd MMMM yyyy");
 
         public bool Expired

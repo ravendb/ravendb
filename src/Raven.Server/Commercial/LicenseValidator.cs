@@ -18,7 +18,9 @@ namespace Raven.Server.Commercial
             "externalReplication", "delayedExternalReplication", "ravenEtl", "sqlEtl", "highlyAvailableTasks",
             "pullReplicationAsHub", "pullReplicationAsSink", "encryptedBackup", "letsEncryptAutoRenewal", "cloud",
             "documentsCompression", "timeSeriesRollupsAndRetention", "additionalAssembliesNuget",
-            "monitoringEndpoints", "olapEtl", "readOnlyCertificates"
+            "monitoringEndpoints", "olapEtl", "readOnlyCertificates",
+            "tcpDataCompression", "concurrentSubscriptions", "elasticSearchEtl", "powerBI", "postgreSqlIntegration",
+            "canBeActivatedUntil"
         };
 
         private enum ValueType : byte
