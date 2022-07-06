@@ -30,12 +30,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
 public abstract class CoraxDocumentConverterBase : ConverterBase
 {
-    public static readonly Memory<byte> NullValue = Encoding.UTF8.GetBytes(RavenConstants.Documents.Indexing.Fields.NullValue);
-    public static readonly Memory<byte> EmptyString = Encoding.UTF8.GetBytes(RavenConstants.Documents.Indexing.Fields.EmptyString);
-    
-    //todo maciej
-    private static readonly Memory<byte> _trueLiteral = new(Encoding.UTF8.GetBytes("true"));
-    private static readonly Memory<byte> _falseLiteral = new(Encoding.UTF8.GetBytes("false"));
+    private static readonly Memory<byte> _nullValue = Encoding.UTF8.GetBytes(RavenConstants.Documents.Indexing.Fields.NullValue);
+    private static readonly Memory<byte> _emptyString = Encoding.UTF8.GetBytes(RavenConstants.Documents.Indexing.Fields.EmptyString);
+    private static readonly Memory<byte> _trueLiteral = new Memory<byte>(Encoding.UTF8.GetBytes("true"));
+    private static readonly Memory<byte> _falseLiteral = new Memory<byte>(Encoding.UTF8.GetBytes("false"));
+
+    public static ReadOnlySpan<byte> NullValue => _nullValue.Span;
+    public static ReadOnlySpan<byte> EmptyString => _emptyString.Span;
+    public static ReadOnlySpan<byte> TrueLiteral => _trueLiteral.Span;
+    public static ReadOnlySpan<byte> FalseLiteral => _falseLiteral.Span;
+
     private static readonly StandardFormat _standardFormat = new('g');
     private static readonly StandardFormat _timeSpanFormat = new('c');
 
@@ -213,7 +217,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 return;
 
             case ValueType.Boolean:
-                scope.Write(field.Id, ((bool)value ? _trueLiteral : _falseLiteral).Span, ref entryWriter);
+                scope.Write(field.Id, (bool)value ? TrueLiteral : FalseLiteral, ref entryWriter);
                 return;
 
             case ValueType.DateTime:

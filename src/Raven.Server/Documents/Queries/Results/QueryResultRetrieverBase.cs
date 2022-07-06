@@ -627,12 +627,12 @@ namespace Raven.Server.Documents.Queries.Results
                     retrieverInput.CoraxEntry.Read(fieldId, out data);
                     if (data.Length is 10 or 12)
                     {
-                        if (data.SequenceCompareTo(CoraxDocumentConverterBase.NullValue.Span) == 0)
+                        if (data.SequenceCompareTo(CoraxDocumentConverterBase.NullValue) == 0)
                         {
                             value = null;
                             break;
                         }
-                        if (data.SequenceCompareTo(CoraxDocumentConverterBase.EmptyString.Span) == 0)
+                        if (data.SequenceCompareTo(CoraxDocumentConverterBase.EmptyString) == 0)
                         {
                             value = string.Empty;
                             break;
