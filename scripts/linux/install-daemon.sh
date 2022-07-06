@@ -127,7 +127,7 @@ function install_ravendb_systemd {
 
     read -r -d '' RAVENDB_SYSTEMD_SERVICE_CONF << END
 [Unit]
-Description=RavenDB v5.3
+Description=RavenDB NoSQL Database
 After=network.target
 
 [Service]
@@ -135,11 +135,13 @@ LimitCORE=infinity
 LimitNOFILE=65535
 LimitRSS=infinity
 LimitAS=infinity
-User=USER
+LimitMEMLOCK=infinity
+TasksMax=infinity
 StartLimitBurst=0
 Restart=on-failure
 Type=simple
 TimeoutStopSec=300
+User=USER
 ExecStart=RAVENDB_DIR/run.sh
 
 [Install]

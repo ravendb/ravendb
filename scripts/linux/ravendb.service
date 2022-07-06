@@ -9,11 +9,11 @@ LimitRSS=infinity
 LimitAS=infinity
 LimitMEMLOCK=infinity
 TasksMax=infinity
-User=RAVENDB_USERNAME
 StartLimitBurst=0
 Restart=on-failure
 Type=simple
 TimeoutStopSec=300
+User=RAVENDB_USERNAME
 ExecStart=RAVENDB_PATH/run.sh
 
 [Install]
