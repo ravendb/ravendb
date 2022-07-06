@@ -289,6 +289,10 @@ namespace Corax
                             var fieldValue = iterator.IsNull ? Constants.NullValueSlice : Constants.EmptyStringSlice;
                             ExactInsert(fieldValue.AsReadOnlySpan());
                         }
+                        else if ((fieldType & IndexEntryFieldType.Tuple) != 0)
+                        {
+                            NumericInsert(iterator.Long, iterator.Double);
+                        }
                         else
                         {
                             Insert(iterator.Sequence);
@@ -442,7 +446,7 @@ namespace Corax
                         case IndexEntryFieldType.Empty:
                         case IndexEntryFieldType.Null:
                             var fieldName = fieldType == IndexEntryFieldType.Null ? Constants.NullValueSlice : Constants.EmptyStringSlice;
-                            DeleteIdFromExactTerm(binding.FieldId, binding.FieldName, workingBuffer, fieldName.AsReadOnlySpan());
+                            DeleteIdFromExactTerm(entryToDelete, binding.FieldName, workingBuffer, fieldName.AsReadOnlySpan());
                             break;
 
                         case IndexEntryFieldType.TupleList:
@@ -451,7 +455,7 @@ namespace Corax
 
                             while (iterator.ReadNext())
                             {
-                                DeleteIdFromExactTerm(binding.FieldId, binding.FieldName, workingBuffer, iterator.Sequence);
+                                DeleteIdFromExactTerm(entryToDelete, binding.FieldName, workingBuffer, iterator.Sequence);
                             }
 
                             break;
@@ -459,7 +463,7 @@ namespace Corax
                         case IndexEntryFieldType.Tuple:
                             if (entryReader.Read(binding.FieldId, out Span<byte> valueInEntry) == false)
                                 break;
-                            DeleteIdFromExactTerm(binding.FieldId, binding.FieldName, workingBuffer, valueInEntry);
+                            DeleteIdFromExactTerm(entryToDelete, binding.FieldName, workingBuffer, valueInEntry);
                             break;
 
                         case IndexEntryFieldType.SpatialPointList:
@@ -469,7 +473,7 @@ namespace Corax
                             while (spatialIterator.ReadNext())
                             {
                                 for (int i = 1; i <= spatialIterator.Geohash.Length; ++i)
-                                    DeleteIdFromExactTerm(binding.FieldId, binding.FieldName, workingBuffer, spatialIterator.Geohash.Slice(0, i));
+                                    DeleteIdFromExactTerm(entryToDelete, binding.FieldName, workingBuffer, spatialIterator.Geohash.Slice(0, i));
                             }
 
                             break;
@@ -526,7 +530,7 @@ namespace Corax
                 }
 
 
-                void DeleteIdFromExactTerm(long id, Slice fieldName, Span<byte> tmpBuffer, ReadOnlySpan<byte> termValue)
+                void DeleteIdFromExactTerm(long idToDelete, Slice fieldName, Span<byte> tmpBuffer, ReadOnlySpan<byte> termValue)
                 {
                     // We need to normalize the term in case we have a term bigger than MaxTermLength.
                     using var _ = CreateNormalizedTerm(Transaction.Allocator, termValue, out Slice termSlice);
@@ -542,7 +546,7 @@ namespace Corax
                         var setStateSpan = Container.GetMutable(llt, setId);
                         ref var setState = ref MemoryMarshal.AsRef<SetState>(setStateSpan);
                         var set = new Set(llt, fieldName, in setState);
-                        set.Remove(id);
+                        set.Remove(idToDelete);
                         setState = set.State;
 
                         if (setState.NumberOfEntries == 0)
@@ -570,7 +574,7 @@ namespace Corax
                             var delta = ZigZagEncoding.Decode<long>(buffer, out len, (int)pos);
                             pos += len;
                             currentId += delta;
-                            if (currentId == id)
+                            if (currentId == idToDelete)
                                 continue;
                             temporaryStorageForIds.Add(currentId);
                         }
