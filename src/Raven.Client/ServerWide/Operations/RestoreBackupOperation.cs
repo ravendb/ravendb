@@ -13,6 +13,7 @@ namespace Raven.Client.ServerWide.Operations
     public class RestoreBackupOperation : IServerOperation<OperationIdResult>
     {
         private readonly RestoreBackupConfigurationBase _restoreConfiguration;
+        private readonly long? _operationId;
         public string NodeTag;
 
         public RestoreBackupOperation(RestoreBackupConfigurationBase restoreConfiguration)
@@ -20,31 +21,38 @@ namespace Raven.Client.ServerWide.Operations
             _restoreConfiguration = restoreConfiguration;
         }
 
-        public RestoreBackupOperation(RestoreBackupConfigurationBase restoreConfiguration, string nodeTag)
+        public RestoreBackupOperation(RestoreBackupConfigurationBase restoreConfiguration, string nodeTag, long? operationId = null)
         {
             _restoreConfiguration = restoreConfiguration;
             NodeTag = nodeTag;
+            _operationId = operationId;
         }
 
         public RavenCommand<OperationIdResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
-            return new RestoreBackupCommand(_restoreConfiguration, NodeTag);
+            return new RestoreBackupCommand(_restoreConfiguration, NodeTag, _operationId);
         }
 
         private class RestoreBackupCommand : RavenCommand<OperationIdResult>
         {
             public override bool IsReadRequest => false;
             private readonly RestoreBackupConfigurationBase _restoreConfiguration;
+            private readonly long? _operationId;
 
-            public RestoreBackupCommand(RestoreBackupConfigurationBase restoreConfiguration, string nodeTag = null)
+            public RestoreBackupCommand(RestoreBackupConfigurationBase restoreConfiguration, string nodeTag = null, long? operationId = null)
             {
                 _restoreConfiguration = restoreConfiguration ?? throw new ArgumentNullException(nameof(restoreConfiguration));
+                _operationId = operationId;
                 SelectedNodeTag = nodeTag;
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/admin/restore/database";
+                if (_operationId.HasValue)
+                {
+                    url += $"?operationId={_operationId}";
+                }
 
                 var request = new HttpRequestMessage
                 {

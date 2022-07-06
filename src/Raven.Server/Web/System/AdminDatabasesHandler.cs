@@ -642,7 +642,7 @@ namespace Raven.Server.Web.System
                 {
                     restoreType = RestoreType.Local;
                 }
-                var operationId = ServerStore.Operations.GetNextOperationId();
+
                 var cancelToken = CreateOperationToken();
                 RestoreBackupTaskBase restoreBackupTask;
                 switch (restoreType)
@@ -675,10 +675,10 @@ namespace Raven.Server.Web.System
                         break;
 
                     case RestoreType.GoogleCloud:
-                        var googlCloudConfiguration = JsonDeserializationCluster.RestoreGoogleCloudBackupConfiguration(restoreConfiguration);
+                        var googleCloudConfiguration = JsonDeserializationCluster.RestoreGoogleCloudBackupConfiguration(restoreConfiguration);
                         restoreBackupTask = new RestoreFromGoogleCloud(
                             ServerStore,
-                            googlCloudConfiguration,
+                            googleCloudConfiguration,
                             ServerStore.NodeTag,
                             cancelToken);
                         break;
@@ -687,13 +687,23 @@ namespace Raven.Server.Web.System
                         throw new InvalidOperationException($"No matching backup type was found for {restoreType}");
                 }
 
-                _ = ServerStore.Operations.AddLocalOperation(
-                    operationId,
-                    OperationType.DatabaseRestore,
-                    $"Database restore: {restoreBackupTask.RestoreFromConfiguration.DatabaseName}",
-                    detailedDescription: null,
-                    taskFactory: onProgress => Task.Run(async () => await restoreBackupTask.Execute(onProgress), cancelToken.Token),
-                    token: cancelToken);
+                long operationId;
+                if (restoreBackupTask.RestoreFromConfiguration.ShardRestoreSettings.Length > 0)
+                {
+                    operationId = await restoreBackupTask.OrchestrateShardedRestore();
+                }
+                else
+                {
+                    operationId = GetLongQueryString("operationId", required: false) ?? ServerStore.Operations.GetNextOperationId();
+
+                    _ = ServerStore.Operations.AddLocalOperation(
+                        operationId,
+                        OperationType.DatabaseRestore,
+                        $"Database restore: {restoreBackupTask.RestoreFromConfiguration.DatabaseName}",
+                        detailedDescription: null,
+                        taskFactory: onProgress => Task.Run(async () => await restoreBackupTask.Execute(onProgress), cancelToken.Token),
+                        token: cancelToken);
+                }
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {

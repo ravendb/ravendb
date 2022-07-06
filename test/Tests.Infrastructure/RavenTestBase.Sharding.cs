@@ -2,14 +2,12 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.CompareExchange;
@@ -24,11 +22,9 @@ using Raven.Client.ServerWide.Sharding;
 using Raven.Server;
 using Raven.Server.Documents;
 using Raven.Server.Documents.PeriodicBackup;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
-using Sparrow.Utils;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -169,11 +165,11 @@ public partial class RavenTestBase
                 }
 
                 //subscription
-                await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>());
+                //await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>());
 
                 //Identity
                 var result1 = store.Maintenance.Send(new SeedIdentityForOperation("users", 1990));
-
+                /*
                 //CompareExchange
                 var user1 = new User
                 {
@@ -188,6 +184,7 @@ public partial class RavenTestBase
                 operationResult = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("cat/mitzi", user2, 0));
                 var result = await store.Operations.SendAsync(new DeleteCompareExchangeValueOperation<User>("cat/mitzi", operationResult.Index));
 
+                
                 //Cluster transaction
                 using (var session = store.OpenAsyncSession(new SessionOptions
                 {
@@ -199,18 +196,19 @@ public partial class RavenTestBase
                     await session.StoreAsync(new { ReservedFor = user5.Id }, "usernames/" + user5.Name);
 
                     await session.SaveChangesAsync();
-                }
+                }*/
 
                 //Index
                 await new Index().ExecuteAsync(store);
             }
 
-            public async Task CheckData(IDocumentStore store, IReadOnlyList<string> attachmentNames, RavenDatabaseMode dbMode = RavenDatabaseMode.Single)
+            public async Task CheckData(IDocumentStore store, IReadOnlyList<string> attachmentNames, RavenDatabaseMode dbMode = RavenDatabaseMode.Single, string database = null)
             {
                 long docsCount = default, tombstonesCount = default, revisionsCount = default;
+                database ??= store.Database;
                 if (dbMode == RavenDatabaseMode.Sharded)
                 {
-                    var dbs = _parent.Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store.Database);
+                    var dbs = _parent.Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(database);
                     foreach (var task in dbs)
                     {
                         var shard = await task;
@@ -230,7 +228,7 @@ public partial class RavenTestBase
                 }
                 else
                 {
-                    var db = await _parent.GetDocumentDatabaseInstanceFor(store, store.Database);
+                    var db = await _parent.GetDocumentDatabaseInstanceFor(store, database);
                     var storage = db.DocumentsStorage;
 
                     docsCount = storage.GetNumberOfDocuments();
@@ -242,7 +240,7 @@ public partial class RavenTestBase
                     }
 
                     //Index
-                    var indexes = await store.Maintenance.SendAsync(new GetIndexesOperation(0, 128));
+                    var indexes = await store.Maintenance.ForDatabase(database).SendAsync(new GetIndexesOperation(0, 128));
                     Assert.Equal(1, indexes.Length);
                 }
 
@@ -258,10 +256,10 @@ public partial class RavenTestBase
                 Assert.Equal(28, revisionsCount);
 
                 //Subscriptions
-                var subscriptionDocuments = await store.Subscriptions.GetSubscriptionsAsync(0, 10);
+                var subscriptionDocuments = await store.Subscriptions.GetSubscriptionsAsync(0, 10, database);
                 Assert.Equal(1, subscriptionDocuments.Count);
 
-                using (var session = store.OpenSession())
+                using (var session = store.OpenSession(database))
                 {
                     //Time series
                     var val = session.TimeSeriesFor("users/1", "Heartrate")
@@ -279,7 +277,7 @@ public partial class RavenTestBase
                     Assert.Equal(100, counterValue.Value);
                 }
 
-                using (var session = store.OpenAsyncSession())
+                using (var session = store.OpenAsyncSession(database))
                 {
                     for (var i = 0; i < attachmentNames.Count; i++)
                     {
@@ -313,13 +311,13 @@ public partial class RavenTestBase
                     await session.SaveChangesAsync();
                 }
                 //Identity
-                using (var session = store.OpenAsyncSession())
+                using (var session = store.OpenAsyncSession(database))
                 {
                     var user = await session.LoadAsync<User>("users/1991");
                     Assert.NotNull(user);
                 }
                 //CompareExchange
-                using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                using (var session = store.OpenAsyncSession(new SessionOptions { Database = database, TransactionMode = TransactionMode.ClusterWide }))
                 {
                     var user = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<User>("cat/toli");
                     Assert.NotNull(user);

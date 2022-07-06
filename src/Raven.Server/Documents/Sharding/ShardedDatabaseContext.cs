@@ -7,7 +7,6 @@ using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Sharding.Executors;
-using Raven.Server.Documents.Sharding.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;

@@ -1,3 +1,5 @@
+using System.Linq;
+using Raven.Client.ServerWide;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.Backups
@@ -18,6 +20,12 @@ namespace Raven.Client.Documents.Operations.Backups
 
         protected abstract RestoreType Type { get; }
 
+        public DatabaseTopology[] Shards { get; set; }
+
+        //public Dictionary<DatabaseTopology, string> ShardsTopology { get; set; }
+
+        public ShardRestoreSetting[] ShardRestoreSettings { get; set; }
+
         public BackupEncryptionSettings BackupEncryptionSettings { get; set; }
 
         public virtual DynamicJsonValue ToJson()
@@ -31,7 +39,27 @@ namespace Raven.Client.Documents.Operations.Backups
                 [nameof(DisableOngoingTasks)] = DisableOngoingTasks,
                 [nameof(SkipIndexes)] = SkipIndexes,
                 [nameof(BackupEncryptionSettings)] = BackupEncryptionSettings,
-                [nameof(Type)] = Type
+                [nameof(Type)] = Type,
+                [nameof(Shards)] = new DynamicJsonArray(Shards.Select(x => x.ToJson())),
+                [nameof(ShardRestoreSettings)] = new DynamicJsonArray(ShardRestoreSettings.Select(x => x.ToJson())),
+
+            };
+        }
+    }
+
+    public class ShardRestoreSetting : IDynamicJson
+    {
+        public int ShardNumber { get; set; }
+        public string NodeTag { get; set; }
+        public string BackupPath { get; set; }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(ShardNumber)] = ShardNumber,
+                [nameof(NodeTag)] = NodeTag,
+                [nameof(BackupPath)] = BackupPath
             };
         }
     }
