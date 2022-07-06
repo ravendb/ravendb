@@ -139,7 +139,7 @@ namespace Raven.Server.Documents.Patch.V8
 
                     if (existInObject && modifiedValue.Changed)
                     {
-                        WriteJsonValue(jsObj.CreateJsHandle(), isRoot, filterProperties, prop.Name, modifiedValue.ValueHandle);
+                        WriteJsonValue(jsObj, isRoot, filterProperties, prop.Name, modifiedValue.ValueHandle);
                     }
                     else
                     {
@@ -166,7 +166,7 @@ namespace Raven.Server.Documents.Patch.V8
 
                 _writer.WritePropertyName(propertyNameAsString);
                 IBlittableObjectProperty<JsHandleV8> blittableObjectProperty = modificationKvp.Value;
-                WriteJsonValue(jsObj.CreateJsHandle(), isRoot, filterProperties, propertyNameAsString, blittableObjectProperty.ValueHandle);
+                WriteJsonValue(jsObj, isRoot, filterProperties, propertyNameAsString, blittableObjectProperty.ValueHandle);
             }
         }
 

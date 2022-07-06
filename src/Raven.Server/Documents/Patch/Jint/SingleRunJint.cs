@@ -2,10 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using Jint;
+using Jint.Native.Function;
 using Jint.Runtime;
 using Jint.Runtime.Interop;
 using Raven.Server.Config;
 using Raven.Server.Documents.Queries.Timings;
+using Raven.Server.Extensions.Jint;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using V8.Net;
@@ -34,6 +36,24 @@ namespace Raven.Server.Documents.Patch.Jint
         protected override JsHandleJint CreateErrorAndSetLastExceptionIfNeeded(Exception e, JSValueType errorType)
         {
             return EngineHandle.CreateError(e, errorType);
+        }
+
+        protected override bool TryGetLambdaPropertyName(JsHandleJint param, out string propName)
+        {
+            if (param.IsObject && param.AsObject() is ScriptFunctionInstance lambda)
+            {
+                var functionAst = lambda.FunctionDeclaration;
+                propName = functionAst.TryGetFieldFromSimpleLambdaExpression();
+                return true;
+            }
+
+            propName = null;
+            return false;
+        }
+
+        protected override bool ScalarToRawStringInternal(JsHandleJint param)
+        {
+            return false;
         }
 
         public override void CleanInternal()

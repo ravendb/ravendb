@@ -184,6 +184,7 @@ public class V8EngineEx : IJsEngineHandle<JsHandleV8>, IDisposable
 
 
         private TypeBinder? _typeBinderTask;
+        private TypeBinder? _longBinderTask;
         private TypeBinder? _typeBinderBlittableObjectInstance;
         private TypeBinder? _typeBinderTimeSeriesSegmentObjectInstance;
         private TypeBinder? _typeBinderCounterEntryObjectInstance;
@@ -194,6 +195,7 @@ public class V8EngineEx : IJsEngineHandle<JsHandleV8>, IDisposable
         private TypeBinder? _typeBinderLazyCompressedStringValue;
         private TypeBinder? _typeBinderRavenServer;
         private TypeBinder? _typeBinderDocumentDatabase;
+        private TypeBinder? _typeBinderDynamicJsNullV8;
 
         public TypeBinder? TypeBinderBlittableObjectInstance()
         {
@@ -207,7 +209,19 @@ public class V8EngineEx : IJsEngineHandle<JsHandleV8>, IDisposable
             }
             return _typeBinderBlittableObjectInstance;
         }
-
+        
+        public TypeBinder? LongBinderTask()
+        {
+            if (_longBinderTask == null)
+            {
+                _longBinderTask = Engine.RegisterType<long>(null, false, ScriptMemberSecurity.ReadWrite, useLazy: false);
+                _longBinderTask.OnGetObjectBinder = (tb, obj, initializeBinder)
+                    => tb.CreateObjectBinder<TaskCustomBinder, object>((long)obj, initializeBinder, keepAlive: true);
+                Engine.GlobalObject.SetProperty(typeof(long), addToLastMemorySnapshotBefore: true);
+            }
+            return _longBinderTask;
+        }
+        
         public TypeBinder? TypeBinderTask()
         {
             if (_typeBinderTask == null)
@@ -326,6 +340,17 @@ public class V8EngineEx : IJsEngineHandle<JsHandleV8>, IDisposable
                 Engine.GlobalObject.SetProperty(typeof(DocumentDatabase), addToLastMemorySnapshotBefore: true);
             }
             return _typeBinderDocumentDatabase;
+        }        
+        public TypeBinder? TypeBinderDynamicJsNullV8()
+        {
+            if (_typeBinderDynamicJsNullV8 == null)
+            {
+                _typeBinderDynamicJsNullV8 = Engine.RegisterType<DynamicJsNullV8>(null, true, ScriptMemberSecurity.ReadWrite, useLazy: false);
+                _typeBinderDynamicJsNullV8.OnGetObjectBinder = (tb, obj, initializeBinder)
+                    => tb.CreateObjectBinder<ObjectBinder, DynamicJsNullV8>((DynamicJsNullV8)obj, initializeBinder, keepAlive: true);
+                Engine.GlobalObject.SetProperty(typeof(DynamicJsNullV8), addToLastMemorySnapshotBefore: true);
+            }
+            return _typeBinderDynamicJsNullV8;
         }
 
         public void InitializeGlobal()
@@ -333,6 +358,7 @@ public class V8EngineEx : IJsEngineHandle<JsHandleV8>, IDisposable
             var bindersLazy = Engine.BindersLazy;
 
             AddToBindersLazy(bindersLazy, typeof(Task), () => TypeBinderTask());
+            AddToBindersLazy(bindersLazy, typeof(long), () => LongBinderTask());
             AddToBindersLazy(bindersLazy, typeof(BlittableObjectInstanceV8), () => TypeBinderBlittableObjectInstance());
             AddToBindersLazy(bindersLazy, typeof(TimeSeriesSegmentObjectInstanceV8), () => TypeBinderTimeSeriesSegmentObjectInstance());
             AddToBindersLazy(bindersLazy, typeof(CounterEntryObjectInstanceV8), () => TypeBinderCounterEntryObjectInstance());
@@ -343,6 +369,7 @@ public class V8EngineEx : IJsEngineHandle<JsHandleV8>, IDisposable
             AddToBindersLazy(bindersLazy, typeof(LazyCompressedStringValue), () => TypeBinderLazyCompressedStringValue());
             AddToBindersLazy(bindersLazy, typeof(RavenServer), () => TypeBinderRavenServer());
             AddToBindersLazy(bindersLazy, typeof(DocumentDatabase), () => TypeBinderDocumentDatabase());
+            AddToBindersLazy(bindersLazy, typeof(DynamicJsNullV8), () => TypeBinderDynamicJsNullV8());
 
             /*var tb = TypeBinderTask();
             tb = TypeBinderBlittableObjectInstance();
@@ -793,9 +820,12 @@ var process = {
         var falseVal = Engine.CreateValue(false);
         True = new JsHandleV8(ref trueVal);
         False = new JsHandleV8(ref falseVal);
+
         var nullVal = Engine.CreateNullValue();
-        ImplicitNull = new JsHandleV8(ref nullVal);
-        ExplicitNull = new JsHandleV8(ref nullVal);
+        var null1 = Engine.CreateObjectBinder(new DynamicJsNullV8 {_isExplicitNull = true});
+        var null2 = Engine.CreateObjectBinder(new DynamicJsNullV8 {_isExplicitNull = false});
+        ImplicitNull = new JsHandleV8(ref null2);
+        ExplicitNull = new JsHandleV8(ref null1);
         return contextEx;
     }
 

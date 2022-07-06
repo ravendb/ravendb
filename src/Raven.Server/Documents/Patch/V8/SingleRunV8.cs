@@ -1,12 +1,15 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
+using Esprima.Ast;
 using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Server.Config;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using V8.Net;
+using Expression = System.Linq.Expressions.Expression;
 
 namespace Raven.Server.Documents.Patch.V8
 {
@@ -34,6 +37,62 @@ namespace Raven.Server.Documents.Patch.V8
             return EngineHandle.CreateError(e, errorType);
         }
 
+        private bool TryParseSimpleLambda(string expression, out string val)
+        {
+            var s = "=>";
+            var ex = expression.Split(s).Select(p => p.Trim()).ToArray();
+            if (ex.Length != 2)
+            {
+                // [x, x.prop]
+                val = null;
+                return false;
+            }
+
+            var ex2 = ex[1].Split(".");
+            if (ex2.Length != 2)
+            {
+                // [x, prop]
+
+                val = null;
+                return false;
+            }
+
+            if (ex2[0] != ex[0])
+            {
+                val = null;
+                return false;
+            }
+
+            var t = ex2[1].Trim();
+            if (t.Contains(" "))
+            {
+                val = null;
+                return false;
+            }
+
+            val = ex2[1];
+            return true;
+        }
+        
+        protected override bool TryGetLambdaPropertyName(JsHandleV8 param, out string propName)
+        {
+            if (param.IsFunction && param.Item.LastValue is string func)
+            {
+                if (TryParseSimpleLambda(func, out propName))
+                {
+                    return true;
+                }
+            }
+
+            propName = null;
+            return false;
+        }
+
+        protected override bool ScalarToRawStringInternal(JsHandleV8 param)
+        {
+            return param.IsFunction;
+        }
+
         public override void CleanInternal()
         {
             V8EngineEx.ReturnEngine(ScriptEngineExV8);
@@ -45,7 +104,11 @@ namespace Raven.Server.Documents.Patch.V8
             switch (type)
             {
                 case BlittableJsonToken.Integer:
-                    return EngineHandle.CreateValue((long)value);
+                //    return EngineHandle.CreateValue((long)value);
+                internalHandle = ScriptEngineV8.CreateObjectBinder((long)value);
+                break;
+                
+                //LongBinderTask
                 case BlittableJsonToken.LazyNumber:
                     internalHandle = ScriptEngineV8.CreateObjectBinder((LazyNumberValue)value);
                     break;

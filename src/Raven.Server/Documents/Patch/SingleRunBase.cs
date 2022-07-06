@@ -291,7 +291,15 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
                     _documentIds = new HashSet<string>();
 
                 _documentIds.Clear();
-                IncludeUtil.GetDocIdFromInclude(b.Blittable, path, _documentIds, _database.IdentityPartsSeparator);
+                try
+                {
+                    IncludeUtil.GetDocIdFromInclude(b.Blittable, path, _documentIds, _database.IdentityPartsSeparator);
+                }
+                catch (Exception e)
+                {
+                    return CreateErrorAndSetLastExceptionIfNeeded(e, JSValueType.ExecutionError);
+                }
+
                 if (path.IndexOf("[]", StringComparison.InvariantCulture) != -1)
                 {
                     return EngineHandle.FromObjectGen(_documentIds.Select(LoadDocumentInternal).ToList());
@@ -316,7 +324,16 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
             return EngineHandle.Undefined;
         }
 
-        var document = _database.DocumentsStorage.Get(_docsCtx, id);
+        Document document;
+        try
+        {
+            document = _database.DocumentsStorage.Get(_docsCtx, id);
+        }
+        catch (Exception e)
+        {
+            return CreateErrorAndSetLastExceptionIfNeeded(e, JSValueType.ExecutionError);
+        }
+        
         if (DebugMode)
         {
             DebugActions.LoadDocument.Add(new DynamicJsonValue { ["Id"] = id, ["Exists"] = document != null });
@@ -350,7 +367,16 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
             return val;
         }
 
-        var result = _database.DocumentsStorage.Delete(_docsCtx, id, changeVector);
+        DocumentsStorage.DeleteOperationResult? result;
+
+        try
+        {
+            result = _database.DocumentsStorage.Delete(_docsCtx, id, changeVector);
+        }
+        catch (Exception e)
+        {
+            return CreateErrorAndSetLastExceptionIfNeeded(e, JSValueType.ExecutionError);
+        }
 
         if (RefreshOriginalDocument && string.Equals(OriginalDocumentId, id, StringComparison.OrdinalIgnoreCase))
             RefreshOriginalDocument = false;
@@ -403,15 +429,24 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
         {
             reader = JsBlittableBridge.Translate(_jsonCtx, args[1], usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
-            var put = _database.DocumentsStorage.Put(
-                _docsCtx,
-                id,
-                _docsCtx.GetLazyString(changeVector),
-                reader,
-                //RavenDB-11391 Those flags were added to cause attachment/counter metadata table check & remove metadata properties if not necessary
-                nonPersistentFlags: NonPersistentDocumentFlags.ResolveAttachmentsConflict | NonPersistentDocumentFlags.ResolveCountersConflict | NonPersistentDocumentFlags.ResolveTimeSeriesConflict
-            );
+            DocumentsStorage.PutOperationResults put;
+            try
+            {
+                put= _database.DocumentsStorage.Put(
+                    _docsCtx,
+                    id,
+                    _docsCtx.GetLazyString(changeVector),
+                    reader,
+                    //RavenDB-11391 Those flags were added to cause attachment/counter metadata table check & remove metadata properties if not necessary
+                    nonPersistentFlags: NonPersistentDocumentFlags.ResolveAttachmentsConflict | NonPersistentDocumentFlags.ResolveCountersConflict | NonPersistentDocumentFlags.ResolveTimeSeriesConflict
+                );
 
+            }
+            catch (Exception e)
+            {
+                return CreateErrorAndSetLastExceptionIfNeeded(e, JSValueType.ExecutionError);
+            }
+            
             if (DebugMode)
             {
                 DebugActions.PutDocument.Add(new DynamicJsonValue
@@ -993,6 +1028,8 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
         return EngineHandle.CreateValue(boolean.ToString(cultureInfo));
     }
 
+    protected abstract bool TryGetLambdaPropertyName(T param, out string propName);
+    protected abstract bool ScalarToRawStringInternal(T param);
     public T ScalarToRawString(T self, T[] args)
     {
         if (args.Length != 2)
@@ -1002,12 +1039,9 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
         T firstParam = args[0];
         if (firstParam.IsObject && args[0].AsObject() is IBlittableObjectInstance<T> selfInstance)
         {
-            T secondParam = args[1];
-            if (secondParam.IsObject && secondParam.AsObject() is ScriptFunctionInstance lambda)
+
+            if (TryGetLambdaPropertyName(args[1], out var propName))
             {
-                var functionAst = lambda.FunctionDeclaration;
-                var propName = functionAst.TryGetFieldFromSimpleLambdaExpression();
-                
                 if (selfInstance.TryGetValue(propName, out IBlittableObjectProperty<T> existingValue, out _) && existingValue != null)
                 {
                     if (existingValue.Changed)
@@ -1372,7 +1406,15 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
                     JSValueType.ExecutionError);
         }
 
-        var reader = _database.DocumentsStorage.TimeSeriesStorage.GetReader(_docsCtx, id, timeSeries, from, to);
+        TimeSeriesReader reader;
+        try
+        {
+            reader = _database.DocumentsStorage.TimeSeriesStorage.GetReader(_docsCtx, id, timeSeries, from, to);
+        }
+        catch (Exception exception)
+        {
+            return CreateErrorAndSetLastExceptionIfNeeded(exception, JSValueType.ExecutionError);
+        }
 
         var entries = new List<T>();
         foreach (var singleResult in reader.AllValues())
@@ -1491,6 +1533,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
         }
 
         var count = _database.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(_docsCtx, id, timeSeries).Count;
+        
         if (count == 0)
             return EngineHandle.Undefined;
 
@@ -1811,7 +1854,15 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
             return e;
         }
 
-        var stats = _database.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(_docsCtx, id, timeSeries);
+        (long Count, DateTime Start, DateTime End) stats;
+        try
+        {
+            stats = _database.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(_docsCtx, id, timeSeries);
+        }
+        catch (Exception exception)
+        {
+            return CreateErrorAndSetLastExceptionIfNeeded(exception, JSValueType.ExecutionError);
+        }
 
         var tsStats = EngineHandle.CreateObject();
         tsStats.SetProperty(nameof(stats.Start), EngineHandle.CreateValue(stats.Start));

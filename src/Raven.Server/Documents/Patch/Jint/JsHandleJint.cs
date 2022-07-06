@@ -60,7 +60,7 @@ public struct JsHandleJint : IJsHandle<JsHandleJint>
     public static JsHandleJint True = new JsHandleJint() { Item = true };
     public static JsHandleJint False = new JsHandleJint() { Item = false };
     public static JsHandleJint ImplicitNull = new JsHandleJint() { Item = DynamicJsNullJint.ImplicitNullJint };
-    public static JsHandleJint ExplicitNull = new JsHandleJint() { Item = DynamicJsNullJint.ImplicitNullJint };
+    public static JsHandleJint ExplicitNull = new JsHandleJint() { Item = DynamicJsNullJint.ExplicitNullJint };
 
     private JsValue _item;
     private ObjectInstance _obj;

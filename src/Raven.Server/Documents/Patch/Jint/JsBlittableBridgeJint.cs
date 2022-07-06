@@ -122,7 +122,8 @@ public class JsBlittableBridgeJint : JsBlittableBridge<JsHandleJint>
 
                 if (existInObject && modifiedValue.Changed)
                 {
-                    WriteJsonValue(jsObj.CreateJsHandle(), isRoot, filterProperties, prop.Name, modifiedValue.ValueHandle);
+                    WriteJsonValue(jsObj, isRoot, filterProperties, prop.Name, modifiedValue.ValueHandle);
+                  //  WriteJsonValue(jsObj.CreateJsHandle(), isRoot, filterProperties, prop.Name, modifiedValue.ValueHandle);
                 }
                 else
                 {
@@ -149,7 +150,8 @@ public class JsBlittableBridgeJint : JsBlittableBridge<JsHandleJint>
 
             _writer.WritePropertyName(propertyNameAsString);
             IBlittableObjectProperty<JsHandleJint> blittableObjectProperty = modificationKvp.Value;
-            WriteJsonValue(jsObj.CreateJsHandle(), isRoot, filterProperties, propertyNameAsString, blittableObjectProperty.ValueHandle);
+            WriteJsonValue(jsObj, isRoot, filterProperties, propertyNameAsString, blittableObjectProperty.ValueHandle);
+            //WriteJsonValue(jsObj.CreateJsHandle(), isRoot, filterProperties, propertyNameAsString, blittableObjectProperty.ValueHandle);
         }
     }
 

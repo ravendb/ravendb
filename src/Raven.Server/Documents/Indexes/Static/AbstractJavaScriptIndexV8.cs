@@ -82,8 +82,8 @@ public abstract class AbstractJavaScriptIndexV8 : AbstractJavaScriptIndex<JsHand
 
             case DynamicBlittableJson dbj:
                 var jintBoi = new BlittableObjectInstanceV8((JavaScriptUtilsV8)JsUtils, null, dbj.BlittableJson, id: null, lastModified: null, changeVector: null);
-                return EngineEx.FromObjectGen(jintBoi);
 
+                return jintBoi.CreateObjectBinder(true);
             default:
                 return JsUtils.TranslateToJs(context: null, value);
         }
