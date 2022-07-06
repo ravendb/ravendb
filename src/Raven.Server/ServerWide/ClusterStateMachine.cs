@@ -3974,6 +3974,9 @@ namespace Raven.Server.ServerWide
 
         private void DeleteServerWideBackupConfigurationFromAllDatabases(DeleteServerWideTaskCommand.DeleteConfiguration deleteConfiguration, ClusterOperationContext context, string type, long index)
         {
+            if (deleteConfiguration == null)
+                throw new RachisInvalidOperationException($"No configuration was supplied to {type}");
+            
             if (string.IsNullOrWhiteSpace(deleteConfiguration.TaskName))
                 throw new RachisInvalidOperationException($"Task name to delete cannot be null or white space for command type: {type}");
 
