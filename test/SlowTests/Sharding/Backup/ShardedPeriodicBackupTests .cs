@@ -10,8 +10,10 @@ using NuGet.Versioning;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
+using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Context;
@@ -29,6 +31,22 @@ namespace SlowTests.Sharding.Backup
         {
         }
 
+
+        private const DatabaseItemType OperateOnTypes = DatabaseItemType.Documents
+                                                | DatabaseItemType.TimeSeries
+                                                | DatabaseItemType.CounterGroups
+                                                | DatabaseItemType.Attachments
+                                                | DatabaseItemType.Tombstones
+                                                | DatabaseItemType.DatabaseRecord
+                                                | DatabaseItemType.Subscriptions
+                                                | DatabaseItemType.Identities
+                                                | DatabaseItemType.CompareExchange
+                                                | DatabaseItemType.CompareExchangeTombstones
+                                                | DatabaseItemType.RevisionDocuments
+                                                | DatabaseItemType.Indexes
+                                                | DatabaseItemType.LegacyAttachments
+                                                | DatabaseItemType.LegacyAttachmentDeletions
+                                                | DatabaseItemType.LegacyDocumentDeletions;
 
         [RavenTheory(RavenTestCategory.BackupExportImport | RavenTestCategory.Sharding)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
@@ -416,6 +434,112 @@ namespace SlowTests.Sharding.Backup
             }
         }
 
+        [RavenTheory(RavenTestCategory.BackupExportImport | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
+        public async Task CanBackupAndRestoreSharded(Options options)
+        {
+            var file = GetTempFileName();
+            var names = new[]
+            {
+                "background-photo.jpg",
+                "fileNAME_#$1^%_בעברית.txt",
+                "profile.png"
+            };
+            try
+            {
+                var backupPath = NewDataPath(suffix: $"{options.DatabaseMode}_BackupFolder");
+
+                using (var store1 = GetDocumentStore(new Options { ModifyDatabaseName = s => $"{s}_1" }))
+                using (var store2 = Sharding.GetDocumentStore())
+                using (var store3 = GetDocumentStore())
+                {
+                    await Sharding.Backup.InsertData(store1, names);
+
+                    var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions
+                    {
+                        OperateOnTypes = OperateOnTypes
+                    }, file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(30));
+
+                    operation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions
+                    {
+                        OperateOnTypes = OperateOnTypes
+                                          
+                    }, file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(30));
+
+                    var waitHandles = await Sharding.Backup.WaitForBackupToComplete(store2);
+
+                    var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* * * * *");
+                    await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(Server, store2, config);
+
+                    Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
+
+                    var dirs = Directory.GetDirectories(backupPath);
+                    Assert.Equal(3, dirs.Length);
+                    
+                    var settings = new ShardRestoreSetting[dirs.Length];
+
+                    for (var i = 0; i < dirs.Length; i++)
+                    {
+                        var dir = dirs[i];
+                        settings[i] = new ShardRestoreSetting
+                        {
+                            ShardNumber = i, 
+                            BackupPath = dir, 
+                            NodeTag = "A"
+                        };
+                    }
+
+                    // restore the database with a different name
+                    var databaseName = $"restored_database-{Guid.NewGuid()}";
+                    using (ReadOnly(backupPath))
+                    using (Backup.RestoreDatabase(store3, new RestoreBackupConfiguration
+                    {
+                        DatabaseName = databaseName,
+                        ShardRestoreSettings = settings
+
+                    }, timeout: TimeSpan.FromSeconds(600))) //todo change 600 to 60
+                    {
+                        var dbRec = await store3.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
+
+                        dbRec.DatabaseState = DatabaseStateStatus.Normal;
+                        await Server.ServerStore.WriteDatabaseRecordAsync(databaseName, dbRec, null, RaftIdGenerator.NewId(), null, isRestore: true);
+
+                        WaitForUserToContinueTheTest(store3, debug: false);
+
+                        await Sharding.Backup.CheckData(store3, names, options.DatabaseMode, databaseName);
+
+                        using (var session = store3.OpenAsyncSession(databaseName))
+                        {
+                            var users = await session.LoadAsync<User>(new[] { "users/1", "users/2" });
+                            Assert.True(users.Any(x => x.Value.Name == "oren"));
+                            Assert.True(users.Any(x => x.Value.Name == "ayende"));
+
+                            var val = await session.CountersFor("users/1").GetAsync("likes");
+                            Assert.Equal(100, val);
+                            val = await session.CountersFor("users/2").GetAsync("downloads");
+                            Assert.Equal(200, val);
+                        }
+
+                        var originalDatabase = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store3.Database);
+                        var restoredDatabase = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
+                        using (restoredDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                        using (ctx.OpenReadTransaction())
+                        {
+                            var databaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(ctx);
+                            Assert.Contains($"A:7-{originalDatabase.DbBase64Id}", databaseChangeVector);
+                            Assert.Contains($"A:8-{restoredDatabase.DbBase64Id}", databaseChangeVector);
+                        }
+                    }
+                }
+            }
+            finally
+            {
+                File.Delete(file);
+            }
+        }
+
         private Task AssertDocs(IDocumentStore store, string idPrefix, RavenDatabaseMode dbMode, int count = 100)
         {
             return dbMode switch
@@ -486,6 +610,35 @@ namespace SlowTests.Sharding.Backup
                 var shard = await GetDocumentDatabaseInstanceFor(store, $"{store.Database}${shardNumber}");
                 AssertDocs(shard, ids);
             }
+        }
+
+        private static IDisposable ReadOnly(string path)
+        {
+            var allFiles = new List<string>();
+            var dirs = Directory.GetDirectories(path);
+            FileAttributes attributes = default;
+            foreach (string dir in dirs)
+            {
+                var files = Directory.GetFiles(dir);
+                if (attributes != default)
+                    attributes = new FileInfo(files[0]).Attributes;
+    
+                foreach (string file in files)
+                {
+                    File.SetAttributes(file, FileAttributes.ReadOnly);
+                }
+
+                allFiles.AddRange(files);
+            }
+
+
+            return new DisposableAction(() =>
+            {
+                foreach (string file in allFiles)
+                {
+                    File.SetAttributes(file, attributes);
+                }
+            });
         }
     }
 }

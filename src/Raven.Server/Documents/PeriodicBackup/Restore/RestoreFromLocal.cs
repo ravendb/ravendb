@@ -6,7 +6,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.ServerWide;
-using Voron.Util.Settings;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
@@ -16,6 +15,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
         public RestoreFromLocal(ServerStore serverStore, RestoreBackupConfiguration restoreConfiguration, string nodeTag, OperationCancelToken operationCancelToken) : base(serverStore, restoreConfiguration, nodeTag, operationCancelToken)
         {
+            if (restoreConfiguration.ShardRestoreSettings.Length > 0)
+                return;
+
             if (string.IsNullOrWhiteSpace(restoreConfiguration.BackupLocation))
                 throw new ArgumentException("Backup location can't be null or empty");
 

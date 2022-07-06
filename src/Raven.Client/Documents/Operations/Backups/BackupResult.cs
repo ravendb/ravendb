@@ -61,7 +61,7 @@ namespace Raven.Client.Documents.Operations.Backups
         {
             Results ??= new List<ShardNodeBackupResult>();
 
-            if(result is not BackupResult br)
+            if (result is not BackupResult br)
                 return;
 
             Results.Add(new ShardNodeBackupResult

@@ -6,6 +6,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
@@ -17,6 +18,7 @@ using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Indexes.Auto;
+using Raven.Server.Documents.Operations;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -48,7 +50,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         private readonly OperationCancelToken _operationCancelToken;
         private bool _hasEncryptionKey;
         private readonly bool _restoringToDefaultDataDirectory;
-
+        private readonly bool _isShard;
         public RestoreBackupConfigurationBase RestoreFromConfiguration { get; }
 
         protected RestoreBackupTaskBase(ServerStore serverStore,
@@ -65,7 +67,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                                        _serverStore.Configuration.Core.DataDirectory.FullPath :
                                        new PathSetting(RestoreFromConfiguration.DataDirectory, _serverStore.Configuration.Core.DataDirectory.FullPath).FullPath;
 
-            if (ResourceNameValidator.IsValidResourceName(RestoreFromConfiguration.DatabaseName, dataDirectoryThatWillBeUsed, out string errorMessage) == false)
+            _isShard = ShardHelper.IsShardedName(restoreFromConfiguration.DatabaseName);
+
+            if (ResourceNameValidator.IsValidResourceName(RestoreFromConfiguration.DatabaseName, dataDirectoryThatWillBeUsed, out string errorMessage) == false && _isShard == false)
                 throw new InvalidOperationException(errorMessage);
 
             _serverStore.EnsureNotPassiveAsync().Wait(_operationCancelToken.Token);
@@ -74,7 +78,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                if (_serverStore.Cluster.DatabaseExists(context, RestoreFromConfiguration.DatabaseName))
+                if (_serverStore.Cluster.DatabaseExists(context, RestoreFromConfiguration.DatabaseName) && _isShard == false)
                     throw new ArgumentException($"Cannot restore data to an existing database named {RestoreFromConfiguration.DatabaseName}");
 
                 clusterTopology = _serverStore.GetClusterTopology(context);
@@ -187,14 +191,14 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             try
             {
                 var filesToRestore = await GetOrderedFilesToRestore();
-
                 using (_serverStore.ContextPool.AllocateOperationContext(out JsonOperationContext serverContext))
                 {
-                    if (onProgress == null)
-                        onProgress = _ => { };
+                    onProgress ??= _ => { };
 
                     Stopwatch sw = null;
                     RestoreSettings restoreSettings = null;
+                    DatabaseRecord databaseRecord = default;
+
                     var firstFile = filesToRestore[0];
 
                     var extension = Path.GetExtension(firstFile);
@@ -232,33 +236,19 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                         onProgress.Invoke(result.Progress);
                     }
 
-                    if (restoreSettings == null)
+                    restoreSettings ??= new RestoreSettings
                     {
-                        restoreSettings = new RestoreSettings
+                        DatabaseRecord = new DatabaseRecord(databaseName)
                         {
-                            DatabaseRecord = new DatabaseRecord(databaseName)
-                            {
-                                // we only have a smuggler restore
-                                // use the encryption key to encrypt the database
-                                Encrypted = _hasEncryptionKey
-                            }
-                        };
+                            // we only have a smuggler restore
+                            // use the encryption key to encrypt the database
+                            Encrypted = _hasEncryptionKey,
+                        }
+                    };
 
-                        DatabaseHelper.Validate(databaseName, restoreSettings.DatabaseRecord, _serverStore.Configuration);
-                    }
-
-                    var databaseRecord = restoreSettings.DatabaseRecord;
-                    databaseRecord.Settings ??= new Dictionary<string, string>();
-
-                    var runInMemoryConfigurationKey = RavenConfiguration.GetKey(x => x.Core.RunInMemory);
-                    databaseRecord.Settings.Remove(runInMemoryConfigurationKey);
-                    if (_serverStore.Configuration.Core.RunInMemory)
-                        databaseRecord.Settings[runInMemoryConfigurationKey] = "false";
-
-                    var dataDirectoryConfigurationKey = RavenConfiguration.GetKey(x => x.Core.DataDirectory);
-                    databaseRecord.Settings.Remove(dataDirectoryConfigurationKey); // removing because we want to restore to given location, not to serialized in backup one
-                    if (_restoringToDefaultDataDirectory == false)
-                        databaseRecord.Settings[dataDirectoryConfigurationKey] = RestoreFromConfiguration.DataDirectory;
+                    databaseRecord = restoreSettings.DatabaseRecord;
+                    DatabaseHelper.Validate(databaseName, databaseRecord, _serverStore.Configuration);
+                    ModifyDatabaseRecordSettings(databaseRecord);
 
                     if (_hasEncryptionKey)
                     {
@@ -286,15 +276,20 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                             options |= InitializeOptions.GenerateNewDatabaseId;
 
                         database.Initialize(options);
-                        databaseRecord.Topology = new DatabaseTopology();
 
-                        // restoring to the current node only
-                        databaseRecord.Topology.Members.Add(_nodeTag);
-                        // we are currently restoring, shouldn't try to access it
-                        databaseRecord.DatabaseState = DatabaseStateStatus.RestoreInProgress;
+                        if (_isShard == false)
+                        {
+                            databaseRecord.Topology = new DatabaseTopology();
 
-                        await SaveDatabaseRecordAsync(databaseName, databaseRecord, restoreSettings.DatabaseValues, result, onProgress);
-                        database.SetIds(databaseRecord);
+                            // restoring to the current node only
+                            databaseRecord.Topology.Members.Add(_nodeTag);
+
+                            // we are currently restoring, shouldn't try to access it
+                            databaseRecord.DatabaseState = DatabaseStateStatus.RestoreInProgress;
+
+                            await SaveDatabaseRecordAsync(databaseName, databaseRecord, restoreSettings.DatabaseValues, result, onProgress);
+                            database.SetIds(databaseRecord);
+                        }
 
                         using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                         {
@@ -327,7 +322,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
                             DisableOngoingTasksIfNeeded(databaseRecord);
 
-                            Raven.Server.Smuggler.Documents.DatabaseSmuggler.EnsureProcessed(result, skipped: false);
+                            SmugglerBase.EnsureProcessed(result, skipped: false);
 
                             onProgress.Invoke(result.Progress);
                         }
@@ -336,9 +331,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                             RegenerateDatabaseIdInIndexes(configuration, database);
                     }
 
-                    // after the db for restore is done, we can safely set the db state to normal and write the DatabaseRecord
-                    databaseRecord.DatabaseState = DatabaseStateStatus.Normal;
-                    await SaveDatabaseRecordAsync(databaseName, databaseRecord, null, result, onProgress);
+                    if (_isShard == false)
+                    {
+                        // after the db for restore is done, we can safely set the db state to normal and write the DatabaseRecord
+                        databaseRecord.DatabaseState = DatabaseStateStatus.Normal;
+                        await SaveDatabaseRecordAsync(databaseName, databaseRecord, null, result, onProgress);
+                    }
 
                     return result;
                 }
@@ -424,6 +422,21 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             }
         }
 
+        private void ModifyDatabaseRecordSettings(DatabaseRecord databaseRecord)
+        {
+            databaseRecord.Settings ??= new Dictionary<string, string>();
+
+            var runInMemoryConfigurationKey = RavenConfiguration.GetKey(x => x.Core.RunInMemory);
+            databaseRecord.Settings.Remove(runInMemoryConfigurationKey);
+            if (_serverStore.Configuration.Core.RunInMemory)
+                databaseRecord.Settings[runInMemoryConfigurationKey] = "false";
+
+            var dataDirectoryConfigurationKey = RavenConfiguration.GetKey(x => x.Core.DataDirectory);
+            databaseRecord.Settings.Remove(dataDirectoryConfigurationKey); // removing because we want to restore to given location, not to serialized in backup one
+            if (_restoringToDefaultDataDirectory == false)
+                databaseRecord.Settings[dataDirectoryConfigurationKey] = RestoreFromConfiguration.DataDirectory;
+        }
+
         private async Task SaveDatabaseRecordAsync(string databaseName, DatabaseRecord databaseRecord, Dictionary<string,
             BlittableJsonReaderObject> databaseValues, RestoreResult restoreResult, Action<IOperationProgress> onProgress)
         {
@@ -458,8 +471,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     {
                         _operationCancelToken.Token.ThrowIfCancellationRequested();
 
-                        restoreResult.AddInfo(infoMessage);
-                        onProgress.Invoke(restoreResult.Progress);
+                        restoreResult?.AddInfo(infoMessage);
+                        onProgress?.Invoke(restoreResult?.Progress);
 
                         return await action();
                     }
@@ -468,8 +481,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                         if (++retries < maxRetries)
                             continue;
 
-                        restoreResult.AddError(errorMessage);
-                        onProgress.Invoke(restoreResult.Progress);
+                        restoreResult?.AddError(errorMessage);
+                        onProgress?.Invoke(restoreResult?.Progress);
                         throw;
                     }
                 }
@@ -487,7 +500,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
             if (orderedFiles.Any() == false)
                 throw new ArgumentException($"No files to restore from the backup location, path: {GetBackupLocation()}");
-
+            
             if (string.IsNullOrWhiteSpace(RestoreFromConfiguration.LastFileNameToRestore))
                 return orderedFiles;
 
@@ -659,7 +672,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             await ImportSingleBackupFile(database, onProgress, result, lastFilePath, context, destination, options, isLastFile: true,
                 onIndexAction: indexAndType =>
                 {
-                    if (this.RestoreFromConfiguration.SkipIndexes)
+                    if (RestoreFromConfiguration.SkipIndexes)
                         return;
 
                     switch (indexAndType.Type)
@@ -713,6 +726,112 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     // need to enable revisions before import
                     database.DocumentsStorage.RevisionsStorage.InitializeFromDatabaseRecord(smugglerDatabaseRecord);
                 });
+        }
+
+        public async Task<long> OrchestrateShardedRestore()
+        {
+            RestoreFromConfiguration.DataDirectory = null;
+
+            var databaseName = RestoreFromConfiguration.DatabaseName;
+            var databaseRecord = new DatabaseRecord(databaseName)
+            {
+                // we only have a smuggler restore
+                // use the encryption key to encrypt the database
+                Encrypted = _hasEncryptionKey,
+            };
+
+            DatabaseHelper.Validate(databaseName, databaseRecord, _serverStore.Configuration);
+            ModifyDatabaseRecordSettings(databaseRecord);
+
+            databaseRecord.Shards = new DatabaseTopology[/*RestoreFromConfiguration.ShardRestoreSettings.Length*/1]; //todo
+
+            for (var i = 0; i < /*RestoreFromConfiguration.ShardRestoreSettings.Length*/ 1; i++)
+            {
+                var shardRestoreSetting = RestoreFromConfiguration.ShardRestoreSettings[i];
+                databaseRecord.Shards[i] = new DatabaseTopology
+                {
+                    Members = new List<string>
+                    {
+                        shardRestoreSetting.NodeTag
+                    }
+                };
+            }
+
+            // we are currently restoring, shouldn't try to access it
+            databaseRecord.DatabaseState = DatabaseStateStatus.RestoreInProgress;
+            await SaveDatabaseRecordAsync(databaseName, databaseRecord, null, null, null);
+
+            var databaseSearchResult = _serverStore.DatabasesLandlord.TryGetOrCreateDatabase(RestoreFromConfiguration.DatabaseName);
+            var shardedDatabaseContext = databaseSearchResult.DatabaseContext;
+
+            var opId = shardedDatabaseContext.Operations.GetNextOperationId();
+            Func<JsonOperationContext, int, RavenCommand<OperationIdResult>> commandFactory = default;
+
+            switch (RestoreFromConfiguration)
+            {
+                case RestoreBackupConfiguration restoreBackupConfiguration:
+                    commandFactory = (ctx, shardNumber) => GenerateCommandForShard(ctx, shardNumber, restoreBackupConfiguration, opId);
+                    break;
+                case RestoreFromAzureConfiguration restoreFromAzureConfiguration:
+                    break;
+                case RestoreFromGoogleCloudConfiguration restoreFromGoogleCloudConfiguration:
+                    break;
+                case RestoreFromS3Configuration restoreFromS3Configuration:
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(RestoreFromConfiguration));
+            }
+
+            var t = shardedDatabaseContext.Operations.AddRemoteOperation<OperationIdResult, ShardedSmugglerResult, ShardedSmugglerProgress>(
+                opId,
+                OperationType.DatabaseRestore,
+                $"Restore sharded database: {databaseName}",
+                detailedDescription: null,
+                commandFactory: commandFactory, 
+                token: _operationCancelToken);
+
+            /*
+            var tcs = new TaskCompletionSource(t.ContinueWith(async _ =>
+            {
+                using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext c))
+                using (c.OpenReadTransaction())
+                {
+                    var rec = _serverStore.Cluster.ReadDatabase(c, databaseName);
+                    rec.DatabaseState = DatabaseStateStatus.Normal;
+                    await _serverStore.WriteDatabaseRecordAsync(databaseName, rec, null, RaftIdGenerator.NewId(), null, isRestore: true);
+
+                }
+
+                _operationCancelToken.Cancel();
+            }));
+            */
+
+            return opId;
+
+
+            /* 
+            DisableOngoingTasksIfNeeded(databaseRecord);
+
+            SmugglerBase.EnsureProcessed(result, skipped: false);
+
+            onProgress.Invoke(result.Progress);*/
+        }
+
+        private static RavenCommand<OperationIdResult> GenerateCommandForShard(JsonOperationContext context, int shardNumber, RestoreBackupConfiguration configuration, long opId)
+        {
+            var shardSettings = configuration.ShardRestoreSettings;
+            var shardRestoreSetting = shardSettings.SingleOrDefault(s => s.ShardNumber == shardNumber);
+            if (shardRestoreSetting == null)
+                return default; //todo
+
+            string databaseName = configuration.DatabaseName;
+            configuration.BackupLocation = shardRestoreSetting.BackupPath;
+            configuration.DatabaseName = $"{databaseName}${shardNumber}";
+            configuration.ShardRestoreSettings = null;
+            //configuration.DataDirectory = null; // ?
+
+            return new RestoreBackupOperation(configuration, shardRestoreSetting.NodeTag, opId)
+                .GetCommand(DocumentConventions.DefaultForServer, context);
         }
 
         private bool IsDefaultDataDirectory(string dataDirectory, string databaseName)
