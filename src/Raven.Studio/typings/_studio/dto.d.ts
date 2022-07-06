@@ -646,6 +646,7 @@ interface textColumnOpts<T> {
     extraClass?: (item: T) => string;
     useRawValue?: (item: T) => boolean;
     title?: (item:T) => string;
+    headerTitle?: string;
     sortable?: "number" | "string" | valueProvider<T>;
     defaultSortOrder?: sortMode;
     customComparator?: (a: any, b: any) => number;
