@@ -17,7 +17,6 @@ namespace Corax;
 public unsafe ref partial struct IndexEntryWriter
 {
     private static int Invalid = unchecked(~0);
-    private static ushort MaxDynamicFields = byte.MaxValue;
 
     private static int LocationMask = 0x7FFF_FFFF;
 
