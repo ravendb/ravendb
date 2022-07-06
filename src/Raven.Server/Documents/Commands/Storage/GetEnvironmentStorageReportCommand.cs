@@ -23,7 +23,7 @@ internal class GetEnvironmentStorageReportCommand : RavenCommand
 
     public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
     {
-        url = $"/databases/{node.Database}/debug/storage/environment/report?name={Uri.EscapeDataString(_name)}&type={Uri.EscapeDataString(_type.ToString())}&details={_details}";
+        url = $"{node.Url}/databases/{node.Database}/debug/storage/environment/report?name={Uri.EscapeDataString(_name)}&type={Uri.EscapeDataString(_type.ToString())}&details={_details}";
 
         return new HttpRequestMessage
         {
