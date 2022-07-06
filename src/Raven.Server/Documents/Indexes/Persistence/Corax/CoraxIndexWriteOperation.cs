@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using Corax;
 using Raven.Client.Documents.Indexes;
@@ -98,7 +99,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             EnsureValidStats(stats);
             using (Stats.DeleteStats.Start())
             {
-                if (_indexWriter.TryDeleteEntry(Constants.Documents.Indexing.Fields.DocumentIdFieldName, key.ToString()))
+                if (_indexWriter.TryDeleteEntry(Constants.Documents.Indexing.Fields.DocumentIdFieldName, key.ToString(CultureInfo.InvariantCulture)))
                 {
                     _entriesCount--;
                 }
@@ -115,7 +116,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             EnsureValidStats(stats);
             using (Stats.DeleteStats.Start())
             {
-                if (_indexWriter.TryDeleteEntry(Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName, reduceKeyHash.ToString()))
+                if (_indexWriter.TryDeleteEntry(Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName, reduceKeyHash.ToString(CultureInfo.InvariantCulture)))
                 {
                     _entriesCount--;
                 }
