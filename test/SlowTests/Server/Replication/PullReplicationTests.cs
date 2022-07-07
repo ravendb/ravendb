@@ -8,6 +8,7 @@ using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
+using Raven.Client.Exceptions.Sharding;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Utils;
@@ -53,6 +54,22 @@ namespace SlowTests.Server.Replication
 
                 var timeout = 3000;
                 Assert.True(WaitForDocument(sink, "foo/bar", timeout), sink.Identifier);
+            }
+        }
+
+        [Fact]
+        public async Task PullReplicationShouldThrowForSharding()
+        {
+            var name = $"pull-replication {GetDatabaseName()}";
+            using (var hub = Sharding.GetDocumentStore())
+            {
+               
+                var exception = await Assert.ThrowsAnyAsync<NotSupportedInShardingException>(async () =>
+                {
+                    await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationAsHubOperation(name));
+                });
+
+                Assert.True(exception.Message.Contains("Update Pull Replication Definition Command is not supported in sharding"));
             }
         }
 

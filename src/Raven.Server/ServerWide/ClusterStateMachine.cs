@@ -3505,10 +3505,12 @@ namespace Raven.Server.ServerWide
         {
             using (var databaseRecord = ReadRawDatabaseRecord(context, name))
             {
+                DatabaseTopology topology;
                 if (databaseRecord.IsSharded)
-                    throw new InvalidOperationException($"The database record '{name}' is sharded and doesn't contain topology directly.");
+                    return databaseRecord.Sharding.Orchestrator.Topology;
+                else
+                    topology = databaseRecord.Topology;
 
-                var topology = databaseRecord.Topology;
                 if (topology == null)
                     throw new InvalidOperationException($"The database record '{name}' doesn't contain topology.");
 
