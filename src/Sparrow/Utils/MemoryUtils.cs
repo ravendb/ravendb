@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Text;
 using Sparrow.LowMemory;
@@ -10,18 +11,17 @@ public static class MemoryUtils
     private const string GenericOutMemoryException = "Failed to generate an out of memory exception";
     private static readonly InvertedComparer InvertedComparerInstance = new InvertedComparer();
     private const int MinAllocatedThresholdInBytes = 10 * 1024 * 1024;
-
     public static string GetExtendedMemoryInfo(MemoryInfoResult memoryInfo)
     {
         try
         {
-            var sb = new StringBuilder();
-            TryAppend(() => $"Commit charge: {memoryInfo.CurrentCommitCharge} / {memoryInfo.TotalCommittableMemory}, ");
-            TryAppend(() => $"Memory: {memoryInfo.TotalPhysicalMemory - memoryInfo.AvailableMemory} / {memoryInfo.TotalPhysicalMemory}, ");
-            TryAppend(() => $"Available memory for processing: {memoryInfo.AvailableMemoryForProcessing}, ");
-            TryAppend(() => $"Dirty memory: {memoryInfo.TotalScratchDirtyMemory}, ");
-            TryAppend(() => $"Managed memory: {new Size(AbstractLowMemoryMonitor.GetManagedMemoryInBytes(), SizeUnit.Bytes)}, ");
-            TryAppend(() => $"Unmanaged allocations: {new Size(AbstractLowMemoryMonitor.GetUnmanagedAllocationsInBytes(), SizeUnit.Bytes)}");
+            var sb = new StringBuilder(256);
+            TryAppend(() => sb.Append("Commit charge: ").Append(memoryInfo.CurrentCommitCharge).Append(" / ").Append(memoryInfo.TotalCommittableMemory).Append(", "));
+            TryAppend(() => sb.Append("Memory: ").Append(memoryInfo.TotalPhysicalMemory - memoryInfo.AvailableMemory).Append(" / ").Append(memoryInfo.TotalPhysicalMemory).Append(", "));
+            TryAppend(() => sb.Append("Available memory for processing: ").Append(memoryInfo.AvailableMemoryForProcessing).Append(", "));
+            TryAppend(() => sb.Append("Dirty memory: ").Append(memoryInfo.TotalScratchDirtyMemory).Append(", "));
+            TryAppend(() => sb.Append("Managed memory: ").Append(new Size(AbstractLowMemoryMonitor.GetManagedMemoryInBytes(), SizeUnit.Bytes)).Append(", "));
+            TryAppend(() => sb.Append("Unmanaged allocations: ").Append(new Size(AbstractLowMemoryMonitor.GetUnmanagedAllocationsInBytes(), SizeUnit.Bytes)));
 
             try
             {
@@ -63,9 +63,9 @@ public static class MemoryUtils
                         sb.Append(", ");
                     }
 
-                    TryAppend(() => $"name: {keyValue.Value}, allocations: {new Size(keyValue.Key, SizeUnit.Bytes)}");
+                    TryAppend(() => sb.Append("name: ").Append(keyValue.Value).Append(", allocations: ").Append(new Size(keyValue.Key, SizeUnit.Bytes)));
                     if (keyValue.Value == null)
-                        TryAppend(() => $" (threads count: {unknownThreadsCount})");
+                        TryAppend(() => sb.Append(" (threads count: ").Append(unknownThreadsCount).Append(")"));
                 }
             }
             catch
@@ -75,11 +75,11 @@ public static class MemoryUtils
 
             return sb.ToString();
 
-            void TryAppend(Func<string> getMessage)
+            void TryAppend(Action append)
             {
                 try
                 {
-                    sb.Append(getMessage());
+                    append();
                 }
                 catch
                 {
