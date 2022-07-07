@@ -499,7 +499,7 @@ namespace SlowTests.Sharding.Backup
                         DatabaseName = databaseName,
                         ShardRestoreSettings = settings
 
-                    }, timeout: TimeSpan.FromSeconds(600))) //todo change 600 to 60
+                    }, timeout: TimeSpan.FromSeconds(60)))
                     {
                         var dbRec = await store3.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
 
@@ -510,19 +510,7 @@ namespace SlowTests.Sharding.Backup
 
                         await Sharding.Backup.CheckData(store3, names, options.DatabaseMode, databaseName);
 
-                        using (var session = store3.OpenAsyncSession(databaseName))
-                        {
-                            var users = await session.LoadAsync<User>(new[] { "users/1", "users/2" });
-                            Assert.True(users.Any(x => x.Value.Name == "oren"));
-                            Assert.True(users.Any(x => x.Value.Name == "ayende"));
-
-                            var val = await session.CountersFor("users/1").GetAsync("likes");
-                            Assert.Equal(100, val);
-                            val = await session.CountersFor("users/2").GetAsync("downloads");
-                            Assert.Equal(200, val);
-                        }
-
-                        var originalDatabase = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store3.Database);
+                        /*var originalDatabase = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store3.Database);
                         var restoredDatabase = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
                         using (restoredDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                         using (ctx.OpenReadTransaction())
@@ -530,7 +518,7 @@ namespace SlowTests.Sharding.Backup
                             var databaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(ctx);
                             Assert.Contains($"A:7-{originalDatabase.DbBase64Id}", databaseChangeVector);
                             Assert.Contains($"A:8-{restoredDatabase.DbBase64Id}", databaseChangeVector);
-                        }
+                        }*/
                     }
                 }
             }

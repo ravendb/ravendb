@@ -135,6 +135,7 @@ namespace Raven.Server.Smuggler.Documents
                 return Task.FromResult(rawRecord.MaterializedRecord);
             }
         }
+
         public Task<DatabaseRecord> GetDatabaseRecordAsync()
         {
             var databaseRecord = _database.ReadDatabaseRecord();
