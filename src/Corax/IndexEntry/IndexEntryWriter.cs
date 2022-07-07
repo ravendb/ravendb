@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Buffers;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
@@ -27,6 +27,8 @@ public unsafe partial struct IndexEntryWriter : IDisposable
     private readonly ByteStringContext _context;
     private ByteStringContext<ByteStringMemoryCache>.InternalScope _bufferScope;
     private ByteString _rawBuffer;
+
+    private int FreeSpace => _rawBuffer.Length - KnownFieldMetadataSize - _dataIndex - _dynamicFieldIndex;
 
     // The usable part of the buffer, the metadata space will be removed from the usable space.
     private Span<byte> Buffer => new Span<byte>(_rawBuffer.Ptr, _rawBuffer.Length - KnownFieldMetadataSize);
@@ -65,7 +67,7 @@ public unsafe partial struct IndexEntryWriter : IDisposable
         _dataIndex = Unsafe.SizeOf<IndexEntryHeader>();
 
         // We prepare the table in order to avoid tracking the writes. 
-        new Span<int>(_rawBuffer.Ptr + _rawBuffer.Length - KnownFieldMetadataSize, _knownFields.Count).Fill(Invalid);
+        KnownFieldsLocations.Fill(Invalid);
     }
 
     public void Reset()
@@ -78,6 +80,9 @@ public unsafe partial struct IndexEntryWriter : IDisposable
 
     public void WriteNull(int field)
     {
+        if (FreeSpace < sizeof(IndexEntryFieldType))
+            UnlikelyGrowAuxiliaryBuffer();
+
         // Write known field.
         KnownFieldsLocations[field] = _dataIndex | Constants.IndexWriter.IntKnownFieldMask;
 
@@ -92,6 +97,9 @@ public unsafe partial struct IndexEntryWriter : IDisposable
     {
         Debug.Assert(field < _knownFields.Count);
         Debug.Assert(KnownFieldsLocations[field] == Invalid);
+
+        if (FreeSpace < value.Length + sizeof(long))
+            UnlikelyGrowAuxiliaryBuffer();
 
         // Write known field.
         ref int fieldLocation = ref KnownFieldsLocations[field];                
@@ -121,6 +129,9 @@ public unsafe partial struct IndexEntryWriter : IDisposable
         //<type><size_of_binary><binary>
         Debug.Assert(field < _knownFields.Count);
         Debug.Assert(KnownFieldsLocations[field] == Invalid);
+
+        if (FreeSpace < binaryValue.Length + sizeof(long))
+            UnlikelyGrowAuxiliaryBuffer();
 
         int dataLocation = _dataIndex;
 
@@ -160,6 +171,10 @@ public unsafe partial struct IndexEntryWriter : IDisposable
         if (entry.Geohash.Length == 0)
             return;
 
+        int requiredSpace = sizeof(IndexEntryFieldType) + entry.Geohash.Length + 4 * sizeof(long);
+        if (FreeSpace < requiredSpace)
+            UnlikelyGrowAuxiliaryBuffer(requiredSpace);
+
         int dataLocation = _dataIndex;
 
         // Write known field pointer.
@@ -198,6 +213,15 @@ public unsafe partial struct IndexEntryWriter : IDisposable
         if (entries.Length == 0)
             return;
 
+        // Since Geohashes are ASCII characters, the total required space is exactly the length
+        int requiredSpace = 0;
+        foreach (var entry in entries)
+            requiredSpace += entry.Geohash.Length;
+        requiredSpace += sizeof(IndexEntryFieldType) + 2 * entries.Length * sizeof(double) + 4 * sizeof(long);
+
+        if (FreeSpace < requiredSpace)
+            UnlikelyGrowAuxiliaryBuffer(requiredSpace);
+
         int dataLocation = _dataIndex;
 
         // Write known field pointer.
@@ -210,7 +234,7 @@ public unsafe partial struct IndexEntryWriter : IDisposable
         ref var indexEntryField = ref Unsafe.AsRef<IndexEntryFieldType>(Unsafe.AsPointer(ref buffer[dataLocation]));
         indexEntryField = IndexEntryFieldType.SpatialPointList;
         dataLocation += sizeof(IndexEntryFieldType);
-
+        
         dataLocation += VariableSizeEncoding.Write(buffer, entries.Length, dataLocation); // Size of list.
 
         dataLocation += VariableSizeEncoding.Write(buffer, geohashLevel, dataLocation); // geohash lvl
@@ -235,7 +259,8 @@ public unsafe partial struct IndexEntryWriter : IDisposable
         geohashPtrTableLocation = dataLocation;
         for (int i = 0; i < entries.Length; ++i)
         {
-            Encodings.Utf8.GetBytes(entries[i].Geohash).CopyTo(buffer[dataLocation..]);
+            var geohashBytes = Encodings.Utf8.GetBytes(entries[i].Geohash);
+            geohashBytes.CopyTo(buffer[dataLocation..]);
             dataLocation += geohashLevel;
         }
 
@@ -247,13 +272,15 @@ public unsafe partial struct IndexEntryWriter : IDisposable
         Debug.Assert(field < _knownFields.Count);
         Debug.Assert(KnownFieldsLocations[field] == Invalid);
 
+        if (FreeSpace < sizeof(IndexEntryFieldType) + value.Length + 4 * sizeof(long))
+            UnlikelyGrowAuxiliaryBuffer();
+
         int dataLocation = _dataIndex;
+        var buffer = Buffer;        
 
         // Write known field pointer.
         ref int fieldLocation = ref KnownFieldsLocations[field];
         fieldLocation = dataLocation | Constants.IndexWriter.IntKnownFieldMask;
-
-        var buffer = Buffer;
 
         // Write the tuple information. 
         ref var indexEntryField = ref Unsafe.AsRef<IndexEntryFieldType>(Unsafe.AsPointer(ref buffer[dataLocation]));
@@ -286,13 +313,21 @@ public unsafe partial struct IndexEntryWriter : IDisposable
         Debug.Assert(field < _knownFields.Count);
         Debug.Assert(KnownFieldsLocations[field] == Invalid);
 
+        // Calculate the required space. 
+        int requiredSpace = 0;
+        for (int i = 0; i < values.Length; i++)
+            requiredSpace += values[i].Length;
+        requiredSpace += sizeof(IndexEntryFieldType) + 2 * values.Length * sizeof(long) + 4 * sizeof(long);
+        
+        if (FreeSpace < requiredSpace)
+            UnlikelyGrowAuxiliaryBuffer(requiredSpace);
+
         int dataLocation = _dataIndex;
+        var buffer = Buffer;
 
         // Write known field pointer.
         ref int fieldLocation = ref KnownFieldsLocations[field];
         fieldLocation = dataLocation | Constants.IndexWriter.IntKnownFieldMask;
-
-        var buffer = Buffer;
 
         // Write the list metadata information. 
         ref var indexEntryField = ref Unsafe.AsRef<IndexEntryFieldType>(Unsafe.AsPointer(ref buffer[dataLocation]));
@@ -328,7 +363,7 @@ public unsafe partial struct IndexEntryWriter : IDisposable
             dataLocation += value.Length;
             stringLengths[i] = value.Length;
         }
-
+                
         // Write the pointer to the location
         stringPtrTableLocation = dataLocation;
         dataLocation = WriteNullsTableIfRequired(values, dataLocation, ref indexEntryField);
@@ -374,10 +409,19 @@ public unsafe partial struct IndexEntryWriter : IDisposable
     public unsafe void Write(int field, IReadOnlySpanIndexer values, ReadOnlySpan<long> longValues, ReadOnlySpan<double> doubleValues)
     {
         Debug.Assert(field < _knownFields.Count);
-        Debug.Assert(KnownFieldsLocations[field] == Invalid);        
-        
+        Debug.Assert(KnownFieldsLocations[field] == Invalid);                        
+
         if (values.Length != longValues.Length || values.Length != doubleValues.Length)
             throw new ArgumentException("The lengths of the values and longValues and doubleValues must be the same.");
+
+        // Calculate the required space. 
+        int requiredSpace = 0;
+        for (int i = 0; i < values.Length; i++)
+            requiredSpace += values[i].Length;
+        requiredSpace += sizeof(IndexEntryFieldType) + 2 * longValues.Length * sizeof(long) + 4 * sizeof(long);
+
+        if (FreeSpace < requiredSpace)
+            UnlikelyGrowAuxiliaryBuffer(requiredSpace);
 
         int dataLocation = _dataIndex;
 
@@ -423,10 +467,9 @@ public unsafe partial struct IndexEntryWriter : IDisposable
         int[] stringLengths = ArrayPool<int>.Shared.Rent(values.Length);
         for (int i = 0; i < values.Length; i++)
         {
-            var value = values[i];
+            var value = values[i];            
             value.CopyTo(buffer.Slice(dataLocation, value.Length));
             dataLocation += value.Length;
-
             stringLengths[i] = value.Length;
         }
 
@@ -447,6 +490,9 @@ public unsafe partial struct IndexEntryWriter : IDisposable
 
     public ByteStringContext<ByteStringMemoryCache>.InternalScope Finish(out ByteString output)
     {
+        if (FreeSpace < 2 * sizeof(long))
+            UnlikelyGrowAuxiliaryBuffer();
+        
         var knownFieldsLocations = KnownFieldsLocations;
 
         // We need to know how big the metadata table is going to be.
@@ -550,6 +596,26 @@ public unsafe partial struct IndexEntryWriter : IDisposable
         }
 
         return count * offset;
+    }
+
+    private void UnlikelyGrowAuxiliaryBuffer(long requiredSize = 0)
+    {
+        // Since we are duplicating we need to ensure that the extension will fit.
+        var newSize = _rawBuffer.Length * 2;
+        while (newSize - _rawBuffer.Length < requiredSize)
+            newSize *= 2;
+
+        var newBufferScope = _context.Allocate(newSize, out var newBuffer);
+
+        // We need to copy the data over to the new buffer.
+        Unsafe.CopyBlock(newBuffer.Ptr, _rawBuffer.Ptr, (uint)_rawBuffer.Length);
+        Unsafe.CopyBlock(newBuffer.Ptr + newBuffer.Length - KnownFieldMetadataSize - _dynamicFieldIndex,
+                         _rawBuffer.Ptr + _rawBuffer.Length - KnownFieldMetadataSize - _dynamicFieldIndex,
+                         (uint)(_dynamicFieldIndex + KnownFieldMetadataSize));
+
+        _bufferScope.Dispose();
+        _bufferScope = newBufferScope;
+        _rawBuffer = newBuffer;
     }
 
     public void Dispose()
