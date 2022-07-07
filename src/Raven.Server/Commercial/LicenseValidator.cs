@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -20,7 +20,8 @@ namespace Raven.Server.Commercial
             "pullReplicationAsHub", "pullReplicationAsSink", "encryptedBackup", "letsEncryptAutoRenewal", "cloud",
             "documentsCompression", "timeSeriesRollupsAndRetention", "additionalAssembliesNuget",
             "monitoringEndpoints", "olapEtl", "readOnlyCertificates",
-            "tcpDataCompression", "concurrentSubscriptions", "elasticSearchEtl", "powerBI", "postgreSqlIntegration"
+            "tcpDataCompression", "concurrentSubscriptions", "elasticSearchEtl", "powerBI", "postgreSqlIntegration",
+            "canBeActivatedUntil"
         };
 
         private enum ValueType : byte

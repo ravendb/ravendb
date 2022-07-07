@@ -15,12 +15,16 @@ Open bash terminal, and create file /etc/systemd/system/ravendb.service, using s
 
     [Service]
     LimitCORE=infinity
-    LimitNOFILE=65536
+    LimitNOFILE=65535
     LimitRSS=infinity
     LimitAS=infinity
-    User=<desired user>
+    LimitMEMLOCK=infinity
+    TasksMax=infinity
+    StartLimitBurst=0
     Restart=on-failure
     Type=simple
+    TimeoutStopSec=300
+    User=<desired user>
     ExecStart=/path/to/RavenDB/run.sh
 
     [Install]
