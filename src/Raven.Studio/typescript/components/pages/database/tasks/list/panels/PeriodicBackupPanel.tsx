@@ -9,28 +9,39 @@ import {
 import { OngoingTaskPeriodicBackupInfo } from "../../../../../models/tasks";
 import { useAccessManager } from "hooks/useAccessManager";
 import { useAppUrls } from "hooks/useAppUrls";
-import { RichPanel, RichPanelHeader } from "../../../../../common/RichPanel";
+import { RichPanel, RichPanelDetailItem, RichPanelDetails, RichPanelHeader } from "../../../../../common/RichPanel";
 
 type PeriodicBackupPanelProps = BaseOngoingTaskPanelProps<OngoingTaskPeriodicBackupInfo>;
 
 function Details(props: PeriodicBackupPanelProps) {
-    //TODO: task status!
-    return <h1>TODO</h1>;
+    const { data } = props;
+
+    const backupDestinationsHumanized = data.shared.backupDestinations.length
+        ? data.shared.backupDestinations.join(", ")
+        : "No destinations defined";
+
+    //TODO: backupDestinationsHumanized class: textClass
+    //TODO: lastExecutingNode - does it make sense in case of sharding?
+
+    return (
+        <RichPanelDetails>
+            <RichPanelDetailItem>
+                Destinations:
+                <div className="value">{backupDestinationsHumanized}</div>
+            </RichPanelDetailItem>
+            <RichPanelDetailItem>
+                Last executed on node:
+                <div className="value">{data.shared.lastExecutingNodeTag || "N/A"}</div>
+            </RichPanelDetailItem>
+        </RichPanelDetails>
+    );
+    /*
+
     return (
         <div className="collapse panel-addon" data-bind="collapse: showDetails">
             <div className="padding-sm flex-horizontal flex-wrap">
                 <div>
                     <div className="list-properties">
-                        <div className="property-item">
-                            <div className="property-name">Destinations:</div>
-                            <div className="property-value">
-                                <span data-bind="text: backupDestinationsHumanized, attr: { class: textClass() }"></span>
-                            </div>
-                        </div>
-                        <div className="property-item">
-                            <div className="property-name">Last executed on node:</div>
-                            <div className="property-value text-details" data-bind="text: lastExecutingNode"></div>
-                        </div>
                         <div className="property-item" data-bind="visible: lastFullBackupHumanized">
                             <div
                                 className="property-name"
@@ -85,7 +96,7 @@ function Details(props: PeriodicBackupPanelProps) {
                 </div>
             </div>
         </div>
-    );
+    );*/
 }
 
 export function PeriodicBackupPanel(props: PeriodicBackupPanelProps) {

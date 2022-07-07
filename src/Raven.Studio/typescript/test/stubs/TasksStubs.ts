@@ -2,10 +2,11 @@ import OngoingTasksResult = Raven.Server.Web.System.OngoingTasksResult;
 import OngoingTaskRavenEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtlListView;
 import EtlTaskProgress = Raven.Server.Documents.ETL.Stats.EtlTaskProgress;
 import EtlType = Raven.Client.Documents.Operations.ETL.EtlType;
-import { tasks } from "knockout";
+import moment = require("moment");
 import OngoingTaskSqlEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtlListView;
 import OngoingTaskOlapEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtlListView;
 import OngoingTaskElasticSearchEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtlListView;
+import OngoingTaskBackup = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup;
 
 export class TasksStubs {
     static getTasksList(): OngoingTasksResult {
@@ -15,6 +16,8 @@ export class TasksStubs {
                 TasksStubs.getSqlListItem(),
                 TasksStubs.getOlapListItem(),
                 TasksStubs.getElasticSearchListItem(),
+                TasksStubs.getPeriodicBackupListItem(),
+                //TODO: kafka, rabbit, replication hub/sink, subscriptions
             ],
             PullReplications: [],
             SubscriptionsCount: 0,
@@ -50,6 +53,39 @@ export class TasksStubs {
     static getElasticsearchProgress(): EtlTaskProgress {
         const taskName = TasksStubs.getElasticSearchListItem().TaskName;
         return TasksStubs.getEtlProgress(taskName, "ElasticSearch");
+    }
+    
+    static getPeriodicBackupListItem(): OngoingTaskBackup {
+        return {
+            TaskName: "Raven Backup",
+            TaskId: 192,
+            TaskType: "Backup",
+            TaskConnectionStatus: "Active",
+            TaskState: "Enabled",
+            Error: null,
+            MentorNode: null,
+            BackupType: "Backup",
+            ResponsibleNode: {
+                NodeTag: "C",
+                NodeUrl: "http://raven-c",
+                ResponsibleNode: "C",
+            },
+            BackupDestinations: ["Local"],
+            IsEncrypted: false,
+            LastFullBackup: moment.utc().add(-7, "days").toISOString(),
+            NextBackup: {
+                IsFull: true,
+                DateTime: moment.utc().add(2, "hours").toISOString(),
+                TimeSpan: "02:00:00"
+            },
+            LastIncrementalBackup: moment.utc().add(-3, "days").toISOString(),
+            LastExecutingNodeTag: "A",
+            OnGoingBackup: null,
+            RetentionPolicy: {
+                Disabled: true,
+                MinimumBackupAgeToKeep: "1.00:00:00"
+            }
+        }
     }
 
     static getRavenEtlListItem(): OngoingTaskRavenEtlListView {

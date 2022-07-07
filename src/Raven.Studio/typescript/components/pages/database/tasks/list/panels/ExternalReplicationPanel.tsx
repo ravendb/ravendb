@@ -18,8 +18,6 @@ function Details(props: ExternalReplicationPanelProps & { canEdit: boolean }) {
     const { appUrl } = useAppUrls();
     const connectionStringsUrl = appUrl.forConnectionStrings(db, "Raven", data.shared.connectionStringName);
 
-    //TODO: task status
-
     return (
         <RichPanelDetails>
             {showDelayReplication && (
