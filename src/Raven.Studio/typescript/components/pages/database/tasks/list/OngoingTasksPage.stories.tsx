@@ -17,7 +17,7 @@ import OngoingTaskElasticSearchEtlListView = Raven.Client.Documents.Operations.O
 
 function tasksHolder(storyFn: any) {
     return (
-        <div className="destinations flex-vertical absolute-fill content-margin manage-ongoing-tasks">{storyFn()}</div>
+        <div className="destinations flex-vertical absolute-fill content-margin manage-ongoing-tasks" style={{ height: "100vh", overflow: "auto" }}>{storyFn()}</div>
     );
 }
 

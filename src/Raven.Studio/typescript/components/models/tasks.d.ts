@@ -68,6 +68,8 @@ export interface OngoingTaskOlapEtlSharedInfo extends OngoingTaskSharedInfo {
 }
 
 export interface OngoingTaskPeriodicBackupSharedInfo extends OngoingTaskSharedInfo {
+    backupDestinations: string[];
+    lastExecutingNodeTag: string;
     //TODO:
 }
 

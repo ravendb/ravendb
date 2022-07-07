@@ -1,6 +1,5 @@
 ﻿import { Reducer } from "react";
 import {
-    AnyEtlOngoingTaskInfo,
     OngoingEtlTaskNodeInfo,
     OngoingTaskElasticSearchEtlSharedInfo,
     OngoingTaskExternalReplicationSharedInfo,
@@ -11,13 +10,13 @@ import {
     OngoingTaskNodeInfoDetails,
     OngoingTaskNodeProgressDetails,
     OngoingTaskOlapEtlSharedInfo,
+    OngoingTaskPeriodicBackupSharedInfo,
     OngoingTaskRabbitMqEtlSharedInfo,
     OngoingTaskRavenEtlSharedInfo,
     OngoingTaskReplicationHubSharedInfo,
     OngoingTaskReplicationSinkSharedInfo,
     OngoingTaskSharedInfo,
     OngoingTaskSqlEtlSharedInfo,
-    OngoingTaskSubscriptionInfo,
     OngoingTaskSubscriptionSharedInfo,
 } from "../../../../models/tasks";
 import OngoingTasksResult = Raven.Server.Web.System.OngoingTasksResult;
@@ -38,6 +37,7 @@ import TaskUtils from "../../../../utils/TaskUtils";
 import { WritableDraft } from "immer/dist/types/types-external";
 import OngoingTaskSubscription = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSubscription;
 import OngoingTaskQueueEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtlListView;
+import OngoingTaskBackup = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup;
 
 interface ActionTasksLoaded {
     location: databaseLocationSpecifier;
@@ -175,7 +175,19 @@ function mapSharedInfo(task: OngoingTask): OngoingTaskSharedInfo {
                     };
                     return result;
                 }
+                default:
+                    throw new Error("Invalid broker type: " + incoming.BrokerType);
             }
+        }
+        case "Backup": {
+            const incoming = task as OngoingTaskBackup;
+            // noinspection UnnecessaryLocalVariableJS
+            const result: OngoingTaskPeriodicBackupSharedInfo = {
+                ...commonProps,
+                backupDestinations: incoming.BackupDestinations,
+                lastExecutingNodeTag: incoming.LastExecutingNodeTag,
+            };
+            return result;
         }
         case "OlapEtl": {
             const incoming = task as OngoingTaskOlapEtlListView;
