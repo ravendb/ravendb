@@ -60,8 +60,10 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
     public List<CoraxSpatialPointEntry> CoraxSpatialPointEntryListForEnumerableScope;
     
     
-    public abstract Span<byte> SetDocumentFields(LazyStringValue key, LazyStringValue sourceDocumentId, object doc, JsonOperationContext indexContext,
-        out LazyStringValue id, Span<byte> writerBuffer);
+    public abstract ByteStringContext<ByteStringMemoryCache>.InternalScope SetDocumentFields(
+        LazyStringValue key, LazyStringValue sourceDocumentId,
+        object doc, JsonOperationContext indexContext, out LazyStringValue id,
+        out ByteString output);
 
     protected CoraxDocumentConverterBase(Index index, bool storeValue, bool indexImplicitNull, bool indexEmptyEntries, int numberOfBaseFields, string keyFieldName,
         string storeValueFieldName, ICollection<IndexField> fields = null) : base(index, storeValue, indexImplicitNull, indexEmptyEntries, numberOfBaseFields,

@@ -329,28 +329,25 @@ namespace FastTests.Corax
 
         private void IndexEntries(IndexFieldsMapping knownFields)
         {
-            const int bufferSize = 4096;
-            using var _ = _bsc.Allocate(bufferSize, out ByteString buffer);
+            using var indexWriter = new IndexWriter(Env, knownFields);
+            var entryWriter = new IndexEntryWriter(_bsc, knownFields);
 
+            foreach (var entry in _longList)
             {
-                using var indexWriter = new IndexWriter(Env, knownFields);
-                foreach (var entry in _longList)
-                {
-                    var entryWriter = new IndexEntryWriter(buffer.ToSpan(), _analyzers);
-                    var data = CreateIndexEntry(ref entryWriter, entry);
-                    indexWriter.Index(entry.Id, data);
-                }
-
-                indexWriter.Commit();
+                using var __ = CreateIndexEntry(ref entryWriter, entry, out var data);
+                indexWriter.Index(entry.Id, data.ToSpan());
+                entryWriter.Reset();
             }
+
+            indexWriter.Commit();
         }
 
-        private Span<byte> CreateIndexEntry(ref IndexEntryWriter entryWriter, IndexSingleNumericalEntry<long> entry)
+        private ByteStringContext<ByteStringMemoryCache>.InternalScope CreateIndexEntry(
+            ref IndexEntryWriter entryWriter, IndexSingleNumericalEntry<long> entry, out ByteString output)
         {
             entryWriter.Write(IndexId, Encoding.UTF8.GetBytes(entry.Id));
             entryWriter.Write(ContentId, Encoding.UTF8.GetBytes(entry.Content.ToString()), entry.Content, entry.Content);
-            entryWriter.Finish(out var output);
-            return output;
+            return entryWriter.Finish(out output);
         }
 
         private static IndexFieldsMapping CreateKnownFields(ByteStringContext ctx)

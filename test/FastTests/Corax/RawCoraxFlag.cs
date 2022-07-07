@@ -32,23 +32,27 @@ public class RawCoraxFlag : StorageTest
     public unsafe void CanStoreBlittableWithWriterScope()
     {
         using var ctx = JsonOperationContext.ShortTermSingleUse();
+        using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+
         _analyzers = CreateKnownFields(_bsc, true);
         using var blittable1 = ctx.ReadObject(json1, "foo");
         using var blittable2 = ctx.ReadObject(json2, "foo");
         {
-            Span<byte> buffer = new byte[10 * 1024];
+            
             using var writer = new IndexWriter(Env, _analyzers);
+            var entry = new IndexEntryWriter(bsc, _analyzers);
+
             foreach (var (id, item) in new[] {("1", blittable1), ("2", blittable2)})
-            {
-                var entry = new IndexEntryWriter(buffer, _analyzers);
+            {                
                 entry.Write(IndexId, Encodings.Utf8.GetBytes(id));
                 using (var scope = new BlittableWriterScope(item))
                 {
                     scope.Write(ContentId, ref entry);
                 }
 
-                entry.Finish(out var output);
-                writer.Index(id, output);
+                using var _ = entry.Finish(out var output);                
+                writer.Index(id, output.ToSpan());
+                entry.Reset();
             }
 
             writer.Commit();

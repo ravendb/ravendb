@@ -9,6 +9,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Raven.Server.Utils;
 using Constants = Raven.Client.Constants;
+using Sparrow.Server;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
@@ -23,8 +24,10 @@ public class AnonymousCoraxDocumentConverter : CoraxDocumentConverterBase
         _isMultiMap = index.IsMultiMap;
     }
 
-    public override Span<byte> SetDocumentFields(LazyStringValue key, LazyStringValue sourceDocumentId, object doc, JsonOperationContext indexContext,
-        out LazyStringValue id, Span<byte> writerBuffer)
+    public override ByteStringContext<ByteStringMemoryCache>.InternalScope SetDocumentFields(
+        LazyStringValue key, LazyStringValue sourceDocumentId,
+        object doc, JsonOperationContext indexContext, out LazyStringValue id,
+        out ByteString output)
     {
         var knownFields = GetKnownFieldsForWriter();
         var boostedValue = doc as BoostedValue;
@@ -41,7 +44,7 @@ public class AnonymousCoraxDocumentConverter : CoraxDocumentConverterBase
         // todo maciej
         // We need to discuss how we will handle this.  
         // https://github.com/ravendb/ravendb/pull/13730#discussion_r820661488
-        var entryWriter = new IndexEntryWriter(writerBuffer, knownFields);
+        var entryWriter = new IndexEntryWriter(_allocator, knownFields);
 
         var scope = new SingleEntryWriterScope(_allocator);
         var storedValue = _storeValue ? new DynamicJsonValue() : null;
@@ -74,12 +77,13 @@ public class AnonymousCoraxDocumentConverter : CoraxDocumentConverterBase
         }
 
         if (entryWriter.IsEmpty() == true)
-            return Span<byte>.Empty;
+        {
+            output = default;
+            return default;
+        }            
         
         id = key ?? (sourceDocumentId ?? throw new InvalidParameterException("Cannot find any identifier of the document."));
         scope.Write(0, id.AsSpan(), ref entryWriter);
-        entryWriter.Finish(out var output);
-
-        return output;
+        return entryWriter.Finish(out output);
     }
 }

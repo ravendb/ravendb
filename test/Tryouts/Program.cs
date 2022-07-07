@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using Tests.Infrastructure;
 using FastTests.Voron.Sets;
+using FastTests.Corax;
 
 namespace Tryouts;
 
@@ -14,7 +15,8 @@ public static class Program
 
     public static void Main(string[] args)
     {
-        Console.WriteLine(Process.GetCurrentProcess().Id);
+        Console.WriteLine(Process.GetCurrentProcess().Id);        
+
         for (int i = 0; i < 100; i++)
         {
             Console.WriteLine($"Starting to run {i}");
@@ -22,7 +24,9 @@ public static class Program
             {
                 using (var testOutputHelper = new ConsoleTestOutputHelper())
                 {
-                    new SetTests(testOutputHelper).CanDeleteAndInsertInRandomOrder(73014, 35);
+                    new IndexSearcherTest(testOutputHelper).SimpleAndOrForBiggerSet(201, 128);
+
+                    //new SetTests(testOutputHelper).CanDeleteAndInsertInRandomOrder(73014, 35);
                     //new SetAddRemoval(testOutputHelper).AdditionsAndRemovalWork();
 
                     int minFailure = int.MaxValue;
