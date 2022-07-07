@@ -237,9 +237,20 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                         onProgress.Invoke(result.Progress);
                     }
 
+                    if (_isShard)
+                    {
+                        // db-record was already created by the orchestrator
+                        using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                        using (ctx.OpenReadTransaction())
+                        {
+                            databaseRecord = _serverStore.Cluster.ReadDatabase(ctx, ShardHelper.ToDatabaseName(databaseName));
+                            databaseRecord.DatabaseState = DatabaseStateStatus.Normal;
+                        }
+                    }
+
                     restoreSettings ??= new RestoreSettings
                     {
-                        DatabaseRecord = new DatabaseRecord(databaseName)
+                        DatabaseRecord = databaseRecord ?? new DatabaseRecord(databaseName)
                         {
                             // we only have a smuggler restore
                             // use the encryption key to encrypt the database
@@ -248,7 +259,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     };
 
                     databaseRecord = restoreSettings.DatabaseRecord;
-                    DatabaseHelper.Validate(databaseName, databaseRecord, _serverStore.Configuration);
+                    //DatabaseHelper.Validate(databaseName, databaseRecord, _serverStore.Configuration);
                     ModifyDatabaseRecordSettings(databaseRecord);
 
                     if (_hasEncryptionKey)
@@ -289,6 +300,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                             databaseRecord.DatabaseState = DatabaseStateStatus.RestoreInProgress;
 
                             await SaveDatabaseRecordAsync(databaseName, databaseRecord, restoreSettings.DatabaseValues, result, onProgress);
+
                             database.SetIds(databaseRecord);
                         }
 
@@ -336,8 +348,14 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     {
                         // after the db for restore is done, we can safely set the db state to normal and write the DatabaseRecord
                         databaseRecord.DatabaseState = DatabaseStateStatus.Normal;
-                        await SaveDatabaseRecordAsync(databaseName, databaseRecord, null, result, onProgress);
                     }
+                    else
+                    {
+                        databaseName = ShardHelper.ToDatabaseName(databaseName);
+                        databaseRecord.DatabaseState = DatabaseStateStatus.RestoreInProgress;
+                    }
+
+                    await SaveDatabaseRecordAsync(databaseName, databaseRecord, null, result, onProgress);
 
                     return result;
                 }
@@ -629,8 +647,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 return;
 
             // we do have at least one smuggler backup, we'll take the indexes from the last file
-            databaseRecord.AutoIndexes = new Dictionary<string, AutoIndexDefinition>();
-            databaseRecord.Indexes = new Dictionary<string, IndexDefinition>();
+            databaseRecord.AutoIndexes ??= new Dictionary<string, AutoIndexDefinition>();
+            databaseRecord.Indexes ??= new Dictionary<string, IndexDefinition>();
 
             // restore the smuggler backup
             var options = new DatabaseSmugglerOptionsServerSide
@@ -780,7 +798,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             var shardedDatabaseContext = databaseSearchResult.DatabaseContext;
 
             var opId = shardedDatabaseContext.Operations.GetNextOperationId();
-            Func<JsonOperationContext, int, RavenCommand<OperationIdResult>> commandFactory = default;
 
             var t = shardedDatabaseContext.Operations.AddRemoteOperation<OperationIdResult, ShardedSmugglerResult, ShardedSmugglerProgress>(
                 opId,

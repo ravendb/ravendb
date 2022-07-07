@@ -165,11 +165,11 @@ public partial class RavenTestBase
                 }
 
                 //subscription
-                //await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>());
+                await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>());
 
                 //Identity
-                var result1 = store.Maintenance.Send(new SeedIdentityForOperation("users", 1990));
-                /*
+                store.Maintenance.Send(new SeedIdentityForOperation("users", 1990));
+
                 //CompareExchange
                 var user1 = new User
                 {
@@ -180,11 +180,11 @@ public partial class RavenTestBase
                     Name = "Mitzi"
                 };
 
-                var operationResult = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("cat/toli", user1, 0));
-                operationResult = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("cat/mitzi", user2, 0));
-                var result = await store.Operations.SendAsync(new DeleteCompareExchangeValueOperation<User>("cat/mitzi", operationResult.Index));
+                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("cat/toli", user1, 0));
+                var operationResult = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("cat/mitzi", user2, 0));
+                await store.Operations.SendAsync(new DeleteCompareExchangeValueOperation<User>("cat/mitzi", operationResult.Index));
 
-                
+                /*
                 //Cluster transaction
                 using (var session = store.OpenAsyncSession(new SessionOptions
                 {
