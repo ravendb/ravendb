@@ -20,13 +20,26 @@ namespace Raven.Client.Documents.Operations.Backups
 
         protected abstract RestoreType Type { get; }
 
-        public DatabaseTopology[] Shards { get; set; }
-
-        //public Dictionary<DatabaseTopology, string> ShardsTopology { get; set; }
-
         public ShardRestoreSetting[] ShardRestoreSettings { get; set; }
 
         public BackupEncryptionSettings BackupEncryptionSettings { get; set; }
+
+        protected RestoreBackupConfigurationBase(RestoreBackupConfigurationBase other)
+        {
+            DatabaseName = other.DatabaseName;
+            LastFileNameToRestore = other.LastFileNameToRestore;
+            DataDirectory = other.DataDirectory;
+            EncryptionKey = other.EncryptionKey;
+            DisableOngoingTasks = other.DisableOngoingTasks;
+            SkipIndexes = other.SkipIndexes;
+            ShardRestoreSettings = other.ShardRestoreSettings;
+            BackupEncryptionSettings = other.BackupEncryptionSettings;
+        }
+
+        protected RestoreBackupConfigurationBase()
+        {
+        }
+        public abstract RestoreBackupConfigurationBase Clone();
 
         public virtual DynamicJsonValue ToJson()
         {
@@ -40,9 +53,7 @@ namespace Raven.Client.Documents.Operations.Backups
                 [nameof(SkipIndexes)] = SkipIndexes,
                 [nameof(BackupEncryptionSettings)] = BackupEncryptionSettings,
                 [nameof(Type)] = Type,
-                [nameof(Shards)] = new DynamicJsonArray(Shards.Select(x => x.ToJson())),
                 [nameof(ShardRestoreSettings)] = new DynamicJsonArray(ShardRestoreSettings.Select(x => x.ToJson())),
-
             };
         }
     }
@@ -70,11 +81,25 @@ namespace Raven.Client.Documents.Operations.Backups
 
         protected override RestoreType Type => RestoreType.Local;
 
+        public RestoreBackupConfiguration()
+        {
+        }
+
+        protected RestoreBackupConfiguration(RestoreBackupConfiguration other) : base(other)
+        {
+            BackupLocation = other.BackupLocation;
+        }
+
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
             json[nameof(BackupLocation)] = BackupLocation;
             return json;
+        }
+
+        public override RestoreBackupConfigurationBase Clone()
+        {
+            return new RestoreBackupConfiguration(this);
         }
     }
 
@@ -84,12 +109,27 @@ namespace Raven.Client.Documents.Operations.Backups
 
         protected override RestoreType Type => RestoreType.S3;
 
+        public RestoreFromS3Configuration()
+        {
+        }
+
+        protected RestoreFromS3Configuration(RestoreFromS3Configuration other) : base(other)
+        {
+            Settings = other.Settings;
+        }
+
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
             json[nameof(Settings)] = Settings;
             return json;
         }
+
+        public override RestoreBackupConfigurationBase Clone()
+        {
+            return new RestoreFromS3Configuration(this);
+        }
+
     }
 
     public class RestoreFromAzureConfiguration : RestoreBackupConfigurationBase
@@ -98,11 +138,25 @@ namespace Raven.Client.Documents.Operations.Backups
 
         protected override RestoreType Type => RestoreType.Azure;
 
+        public RestoreFromAzureConfiguration()
+        {
+        }
+
+        protected RestoreFromAzureConfiguration(RestoreFromAzureConfiguration other) : base(other)
+        {
+            Settings = other.Settings;
+        }
+
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
             json[nameof(Settings)] = Settings;
             return json;
+        }
+
+        public override RestoreBackupConfigurationBase Clone()
+        {
+            return new RestoreFromAzureConfiguration(this);
         }
     }  
     
@@ -112,12 +166,27 @@ namespace Raven.Client.Documents.Operations.Backups
 
         protected override RestoreType Type => RestoreType.GoogleCloud;
 
+        public RestoreFromGoogleCloudConfiguration()
+        {
+        }
+
+        protected RestoreFromGoogleCloudConfiguration(RestoreFromGoogleCloudConfiguration other) : base(other)
+        {
+            Settings = other.Settings;
+        }
+
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
             json[nameof(Settings)] = Settings;
             return json;
         }
+
+        public override RestoreBackupConfigurationBase Clone()
+        {
+            return new RestoreFromGoogleCloudConfiguration(this);
+        }
+
     }
 
     public enum RestoreType

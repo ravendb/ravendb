@@ -14,6 +14,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.Sharding;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
@@ -743,18 +744,32 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             DatabaseHelper.Validate(databaseName, databaseRecord, _serverStore.Configuration);
             ModifyDatabaseRecordSettings(databaseRecord);
 
-            databaseRecord.Shards = new DatabaseTopology[/*RestoreFromConfiguration.ShardRestoreSettings.Length*/1]; //todo
+            databaseRecord.Sharding = new ShardingConfiguration 
+            { 
+                Shards = new DatabaseTopology[RestoreFromConfiguration.ShardRestoreSettings.Length], //todo
+                Orchestrator = new OrchestratorConfiguration
+                {
+                    Topology = new OrchestratorTopology
+                    {
+                        Members = new List<string>()
+                    }
+                }
+            };
 
-            for (var i = 0; i < /*RestoreFromConfiguration.ShardRestoreSettings.Length*/ 1; i++)
+            var nodes = new HashSet<string>();
+            for (var i = 0; i < RestoreFromConfiguration.ShardRestoreSettings.Length; i++)
             {
                 var shardRestoreSetting = RestoreFromConfiguration.ShardRestoreSettings[i];
-                databaseRecord.Shards[i] = new DatabaseTopology
+                databaseRecord.Sharding.Shards[i] = new DatabaseTopology
                 {
                     Members = new List<string>
                     {
                         shardRestoreSetting.NodeTag
                     }
                 };
+
+                if (nodes.Add(shardRestoreSetting.NodeTag))
+                    databaseRecord.Sharding.Orchestrator.Topology.Members.Add(shardRestoreSetting.NodeTag);
             }
 
             // we are currently restoring, shouldn't try to access it
@@ -767,27 +782,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             var opId = shardedDatabaseContext.Operations.GetNextOperationId();
             Func<JsonOperationContext, int, RavenCommand<OperationIdResult>> commandFactory = default;
 
-            switch (RestoreFromConfiguration)
-            {
-                case RestoreBackupConfiguration restoreBackupConfiguration:
-                    commandFactory = (ctx, shardNumber) => GenerateCommandForShard(ctx, shardNumber, restoreBackupConfiguration, opId);
-                    break;
-                case RestoreFromAzureConfiguration restoreFromAzureConfiguration:
-                    break;
-                case RestoreFromGoogleCloudConfiguration restoreFromGoogleCloudConfiguration:
-                    break;
-                case RestoreFromS3Configuration restoreFromS3Configuration:
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(RestoreFromConfiguration));
-            }
-
             var t = shardedDatabaseContext.Operations.AddRemoteOperation<OperationIdResult, ShardedSmugglerResult, ShardedSmugglerProgress>(
                 opId,
                 OperationType.DatabaseRestore,
                 $"Restore sharded database: {databaseName}",
                 detailedDescription: null,
-                commandFactory: commandFactory, 
+                commandFactory: (ctx, shardNumber) => GenerateCommandForShard(ctx, shardNumber, RestoreFromConfiguration.Clone(), opId), 
                 token: _operationCancelToken);
 
             /*
@@ -817,18 +817,29 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             onProgress.Invoke(result.Progress);*/
         }
 
-        private static RavenCommand<OperationIdResult> GenerateCommandForShard(JsonOperationContext context, int shardNumber, RestoreBackupConfiguration configuration, long opId)
+        private static RavenCommand<OperationIdResult> GenerateCommandForShard(JsonOperationContext context, int shardNumber, RestoreBackupConfigurationBase configuration, long opId)
         {
-            var shardSettings = configuration.ShardRestoreSettings;
-            var shardRestoreSetting = shardSettings.SingleOrDefault(s => s.ShardNumber == shardNumber);
+            var shardRestoreSetting = configuration.ShardRestoreSettings?.SingleOrDefault(s => s.ShardNumber == shardNumber);
             if (shardRestoreSetting == null)
                 return default; //todo
 
             string databaseName = configuration.DatabaseName;
-            configuration.BackupLocation = shardRestoreSetting.BackupPath;
             configuration.DatabaseName = $"{databaseName}${shardNumber}";
             configuration.ShardRestoreSettings = null;
-            //configuration.DataDirectory = null; // ?
+
+            switch (configuration)
+            {
+                case RestoreBackupConfiguration restoreBackupConfiguration:
+                    restoreBackupConfiguration.BackupLocation = shardRestoreSetting.BackupPath;
+                    break;
+                case RestoreFromAzureConfiguration restoreFromAzureConfiguration:
+                case RestoreFromGoogleCloudConfiguration restoreFromGoogleCloudConfiguration:
+                case RestoreFromS3Configuration restoreFromS3Configuration:
+                    // todo
+                    throw new NotImplementedException();
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(configuration));
+            }
 
             return new RestoreBackupOperation(configuration, shardRestoreSetting.NodeTag, opId)
                 .GetCommand(DocumentConventions.DefaultForServer, context);
