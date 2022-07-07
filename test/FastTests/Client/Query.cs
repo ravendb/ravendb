@@ -301,6 +301,26 @@ namespace FastTests.Client
         }
 
         [Fact]
+        public void Query_Dictionary_With_Where_Equality_Clause()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var newSession = store.OpenSession())
+                {
+                    newSession.Store(new Dictionary<string, object?> { { "Name", "Australia" } }, "continents/1");
+                    newSession.Store(new Dictionary<string, object?> { { "Name", "Europe" } }, "continents/2");
+                    newSession.Store(new Dictionary<string, object?> { { "Name", "America" } }, "continents/3");
+                    newSession.SaveChanges();
+
+                    var queryResult = newSession.Query<Dictionary<string, object?>>()
+                        .Where(x => ((string?)x["Name"]) == "Australia").ToList();
+
+                    Assert.Equal(queryResult.Count, 1);
+                }
+            }
+        }
+
+        [Fact]
         public async Task QueryWithWhere_WhenUsingStringEquals_ShouldWork()
         {
             const string constStrToQuery = "Tarzan";
