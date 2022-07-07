@@ -19,7 +19,7 @@ internal abstract class AbstractShardedHiLoHandlerProcessor : AbstractHiLoHandle
         var hiloDocId = HiLoHandler.RavenHiloIdPrefix + tag;
         var shardNumber = RequestHandler.DatabaseContext.GetShardNumber(context, hiloDocId);
 
-        var cmd = new ShardedCommand(RequestHandler, Headers.None);
+        var cmd = new ShardedCommand(RequestHandler, RequestHandler.Method, Headers.None);
         await RequestHandler.DatabaseContext.ShardExecutor.ExecuteSingleShardAsync(context, cmd, shardNumber);
 
         HttpContext.Response.StatusCode = (int)cmd.StatusCode;

@@ -1,4 +1,5 @@
-﻿using Raven.Client.Documents.Queries;
+﻿using System.Net.Http;
+using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Json.Serialization;
 using Raven.Server.Documents.Sharding.Handlers;
@@ -10,7 +11,7 @@ public class ShardedQueryCommand : ShardedBaseCommand<QueryResult>
 {
     private readonly string _indexName;
 
-    public ShardedQueryCommand(ShardedDatabaseRequestHandler handler, BlittableJsonReaderObject content, string indexName) : base(handler, Commands.Headers.Sharded, content)
+    public ShardedQueryCommand(ShardedDatabaseRequestHandler handler, HttpMethod method, BlittableJsonReaderObject content, string indexName) : base(handler, method, Commands.Headers.Sharded, content)
     {
         _indexName = indexName;
     }

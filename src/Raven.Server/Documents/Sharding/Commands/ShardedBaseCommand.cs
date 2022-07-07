@@ -21,10 +21,10 @@ namespace Raven.Server.Documents.Sharding.Commands
 
         public override bool IsReadRequest => false;
 
-        protected ShardedBaseCommand(ShardedDatabaseRequestHandler handler, Headers headers, BlittableJsonReaderObject content = null)
+        protected ShardedBaseCommand(ShardedDatabaseRequestHandler handler, HttpMethod method, Headers headers, BlittableJsonReaderObject content = null)
         {
             Handler = handler;
-            Method = handler.Method;
+            Method = method;
             Url = handler.RelativeShardUrl;
             Content = content;
 

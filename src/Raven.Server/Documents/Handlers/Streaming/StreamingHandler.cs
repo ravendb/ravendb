@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Net;
+using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
@@ -175,76 +176,11 @@ namespace Raven.Server.Documents.Handlers.Streaming
         [RavenAction("/databases/*/streams/queries", "POST", AuthorizationStatus.ValidUser, EndpointType.Read, DisableOnCpuCreditsExhaustion = true)]
         public async Task StreamQueryPost()
         {
-            // ReSharper disable once ArgumentsStyleLiteral
-            using (var tracker = new RequestTimeTracker(HttpContext, Logger, Database.NotificationCenter, Database.Configuration, "StreamQuery", doPerformanceHintIfTooLong: false))
-            using (var token = CreateTimeLimitedQueryToken())
-            using (var queryContext = QueryOperationContext.Allocate(Database))
-            {
-                var stream = TryGetRequestFromStream("ExportOptions") ?? RequestBodyStream();
-                var queryJson = await queryContext.Documents.ReadForMemoryAsync(stream, "index/query");
-                var query = IndexQueryServerSide.Create(HttpContext, queryJson, Database.QueryMetadataCache, tracker);
-                query.IsStream = true;
-
-                if (TrafficWatchManager.HasRegisteredClients)
-                {
-                    var sb = new StringBuilder();
-                    // append stringBuilder with the query
-                    sb.Append(query.Query);
-                    // if query got parameters append with parameters
-                    if (query.QueryParameters != null && query.QueryParameters.Count > 0)
-                        sb.AppendLine().Append(query.QueryParameters);
-                    AddStringToHttpContext(sb.ToString(), TrafficWatchChangeType.Streams);
-                }
-
-                var format = GetStringQueryString("format", false);
-                var debug = GetStringQueryString("debug", false);
-                var ignoreLimit = GetBoolValueQueryString("ignoreLimit", required: false) ?? false;
-                var properties = GetStringValuesQueryString("field", false);
-                var propertiesArray = properties.Count == 0 ? null : properties.ToArray();
-
-                // set the exported file name prefix
-                var fileNamePrefix = query.Metadata.IsCollectionQuery ? query.Metadata.CollectionName + "_collection" : "query_result";
-                fileNamePrefix = $"{Database.Name}_{fileNamePrefix}";
-                if (string.IsNullOrWhiteSpace(debug) == false)
-                {
-                    if (string.Equals(debug, "entries", StringComparison.OrdinalIgnoreCase))
-                    {
-                        await using (var writer = GetIndexEntriesQueryResultWriter(format, HttpContext.Response, ResponseBodyStream(), propertiesArray, fileNamePrefix))
-                        {
-                            try
-                            {
-                                await Database.QueryRunner.ExecuteStreamIndexEntriesQuery(query, queryContext, HttpContext.Response, writer, ignoreLimit, token).ConfigureAwait(false);
-                            }
-                            catch (IndexDoesNotExistException)
-                            {
-                                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                                await writer.WriteErrorAsync($"Index {query.Metadata.IndexName} does not exist");
-                            }
-                        }
-                    }
-                    else
-                    {
-                        ThrowUnsupportedException($"You have selected {debug} debug mode, which is not supported.");
-                    }
-                }
-                else
-                {
-                    await using (var writer = GetQueryResultWriter(format, HttpContext.Response, queryContext.Documents, ResponseBodyStream(), propertiesArray, fileNamePrefix))
-                    {
-                        try
-                        {
-                            await Database.QueryRunner.ExecuteStreamQuery(query, queryContext, HttpContext.Response, writer, token).ConfigureAwait(false);
-                        }
-                        catch (IndexDoesNotExistException)
-                        {
-                            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                            await writer.WriteErrorAsync($"Index {query.Metadata.IndexName} does not exist");
-                        }
-                    }
-                }
-            }
+            using (var processor = new StreamingHandlerProcessorForGetStreamQuery(this, HttpMethod.Post))
+                await processor.ExecuteAsync();
         }
 
+        //TODO stav: remove these after all EPs done
         private StreamCsvBlittableQueryResultWriter GetIndexEntriesQueryResultWriter(string format, HttpResponse response, Stream responseBodyStream,
             string[] propertiesArray, string fileNamePrefix = null)
         {

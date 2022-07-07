@@ -140,7 +140,7 @@ public class ShardedStudioCollectionsHandlerProcessorForPreviewCollection : Abst
         {
             public override bool IsReadRequest => true;
 
-            public ShardedCommandAsStream(ShardedDatabaseRequestHandler handler, Headers headers) : base(handler, headers, content: null)
+            public ShardedCommandAsStream(ShardedDatabaseRequestHandler handler, Headers headers) : base(handler, handler.Method, headers, content: null)
             {
             }
 
