@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,6 +11,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Sharding;
+using Raven.Client.Http;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
@@ -35,7 +37,7 @@ namespace Raven.Server.Documents.Sharding.Queries;
 public class ShardedQueryProcessor : IDisposable
 {
     private readonly TransactionOperationContext _context;
-    private readonly ShardedQueriesHandler _parent;
+    private readonly ShardedDatabaseRequestHandler _parent;
     private readonly IndexQueryServerSide _query;
     private readonly bool _isMapReduceIndex;
     private readonly bool _isAutoMapReduceQuery;
@@ -51,7 +53,7 @@ public class ShardedQueryProcessor : IDisposable
     // want to run a query and knows what shards it is on. Such as:
     // from Orders where State = $state and User = $user where all the orders are on the same share as the user
 
-    public ShardedQueryProcessor(TransactionOperationContext context, ShardedQueriesHandler parent, IndexQueryServerSide query)
+    public ShardedQueryProcessor(TransactionOperationContext context, ShardedDatabaseRequestHandler parent, IndexQueryServerSide query)
     {
         DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "RavenDB-19084 Etag handling");
 
@@ -111,7 +113,7 @@ public class ShardedQueryProcessor : IDisposable
         // * If we have a projection in a map-reduce index,
         //   the shards will send the query result and the orchestrator will re-reduce and apply the projection
         //   in that case we must send the query without the projection
-        RewriteQueryForProjection(ref queryTemplate);
+        RewriteQueryForProjection(ref queryTemplate); //TODO stav: if map reduce is not supported in streaming then this shouldn't happen as well?
 
         // * For collection queries that specify startsWith by id(), we need to send to all shards
         // * For collection queries without any where clause, we need to send to all shards
@@ -121,8 +123,8 @@ public class ShardedQueryProcessor : IDisposable
             //if (_filteredShardIndexes?.Contains(i) == false)
             //    continue;
 
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "RavenDB-19084 Use ShardedExecutor");
-            _commands[i] = new ShardedQueryCommand(_parent, queryTemplate, _query.Metadata.IndexName);
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Use ShardedExecutor");
+            _commands[i] = new ShardedQueryCommand(_parent, HttpMethod.Post, queryTemplate, _query.Metadata.IndexName); //TODO stav: clone queryTemplate?
         }
     }
 
@@ -228,7 +230,7 @@ public class ShardedQueryProcessor : IDisposable
                 },
                 [nameof(IndexQuery.Query)] = documentQuery.ToString()
             };
-            _commands[shardId] = new ShardedQueryCommand(_parent, _context.ReadObject(q, "query"), null);
+            _commands[shardId] = new ShardedQueryCommand(_parent, HttpMethod.Post, _context.ReadObject(q, "query"), null);
 
             IEnumerable<string> GetIds()
             {
@@ -252,7 +254,7 @@ public class ShardedQueryProcessor : IDisposable
             var task = _parent.DatabaseContext.ShardExecutor.GetRequestExecutorAt(shardNumber).ExecuteAsync(cmd, context);
             tasks.Add(task);
         }
-
+        
         await Task.WhenAll(tasks);
 
         long? index = null;
@@ -486,6 +488,11 @@ public class ShardedQueryProcessor : IDisposable
     public ShardedQueryResult GetResult()
     {
         return _result;
+    }
+
+    public bool IsMapReduce()
+    {
+        return _isAutoMapReduceQuery || _isMapReduceIndex;
     }
 
     public void Dispose()

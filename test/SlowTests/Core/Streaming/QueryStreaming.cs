@@ -29,8 +29,8 @@ namespace SlowTests.Core.Streaming
         {
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
         public void CanStreamQueryResults(Options options)
         {
             using (var store = GetDocumentStore(options))
