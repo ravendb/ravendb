@@ -26,13 +26,6 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
             responseJson[nameof(OngoingTask.TaskId)] = _pullReplication.TaskId == 0 ? index : _pullReplication.TaskId;
         }
 
-        protected override ValueTask AssertCanExecuteAsync()
-        {
-            RequestHandler.ServerStore.LicenseManager.AssertCanAddPullReplicationAsHub();
-
-            return base.AssertCanExecuteAsync();
-        }
-
         protected override Task<(long Index, object Result)> OnUpdateConfiguration(TransactionOperationContext context, BlittableJsonReaderObject configuration, string raftRequestId)
         {
             _pullReplication = JsonDeserializationClient.PullReplicationDefinition(configuration);

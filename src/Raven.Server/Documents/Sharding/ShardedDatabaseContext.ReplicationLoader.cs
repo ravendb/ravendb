@@ -8,6 +8,7 @@ using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Http;
 using Raven.Client.ServerWide.Commands;
+using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.Documents.Replication.ReplicationItems;
@@ -37,13 +38,33 @@ namespace Raven.Server.Documents.Sharding
             }
 
             public void AcceptIncomingConnection(TcpConnectionOptions tcpConnectionOptions,
+                TcpConnectionHeaderMessage header,
                 JsonOperationContext.MemoryBuffer buffer,
                 ReplicationQueue replicationQueue)
             {
                 var supportedVersions = GetSupportedVersions(tcpConnectionOptions);
                 GetReplicationInitialRequest(tcpConnectionOptions, supportedVersions, buffer);
 
+                AssertCanExecute(header);
+
                 CreateIncomingInstance(tcpConnectionOptions, buffer, replicationQueue);
+            }
+
+            private void AssertCanExecute(TcpConnectionHeaderMessage header)
+            {
+                switch (header.AuthorizeInfo?.AuthorizeAs)
+                {
+                    case TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PullReplication:
+                        throw new InvalidOperationException("Pull Replication is not supported for sharded database");
+                    case TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PushReplication:
+                        throw new InvalidOperationException("Push Replication is not supported for sharded database");
+
+                    case null:
+                        return;
+
+                    default:
+                        throw new InvalidOperationException("Unknown AuthroizeAs value" + header.AuthorizeInfo?.AuthorizeAs);
+                }
             }
 
             protected override CancellationToken GetCancellationToken() => _context.DatabaseShutdown;
