@@ -44,7 +44,7 @@ abstract class abstractDatabaseAndNodeAwareTableWidget<TRaw, TStats extends stat
 
         grid.headerVisible(true);
 
-        this.gridController().customRowClassProvider(item => item.even ? ["even"] : []);
+        grid.customRowClassProvider(item => item.even ? ["even"] : []);
         
         grid.init((s, t) => this.prepareGridData(), (containerWidth, results) => this.prepareColumns(containerWidth, results));
 
