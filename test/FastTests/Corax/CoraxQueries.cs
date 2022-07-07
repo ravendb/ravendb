@@ -218,32 +218,28 @@ namespace FastTests.Corax
 
         private void IndexEntries()
         {
-            using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            _knownFields = CreateKnownFields(bsc);
 
-            _knownFields = CreateKnownFields(ctx);
+            using var indexWriter = new IndexWriter(Env, _knownFields);
+            var entryWriter = new IndexEntryWriter(bsc, _knownFields);
 
-            const int bufferSize = 4096;
-            using var _ = ctx.Allocate(bufferSize, out ByteString buffer);
-
+            foreach (var entry in _entries)
             {
-                using var indexWriter = new IndexWriter(Env, _knownFields);
-                foreach (var entry in _entries)
-                {
-                    var entryWriter = new IndexEntryWriter(buffer.ToSpan(), _knownFields);
-                    var data = CreateIndexEntry(ref entryWriter, entry);
-                    indexWriter.Index(entry.Id, data);
-                }
-
-                indexWriter.Commit();
+                using var __ = CreateIndexEntry(ref entryWriter, entry, out var data);
+                indexWriter.Index(entry.Id, data.ToSpan());
+                entryWriter.Reset();
             }
+
+            indexWriter.Commit();
         }
 
-        private Span<byte> CreateIndexEntry(ref IndexEntryWriter entryWriter, Entry entry)
+        private ByteStringContext<ByteStringMemoryCache>.InternalScope CreateIndexEntry(
+            ref IndexEntryWriter entryWriter, Entry entry, out ByteString output)
         {
             entryWriter.Write(IndexId, Encoding.UTF8.GetBytes(entry.Id));
             entryWriter.Write(LongValue, Encoding.UTF8.GetBytes(entry.LongValue.ToString()), entry.LongValue, entry.LongValue);
-            entryWriter.Finish(out var output);
-            return output;
+            return entryWriter.Finish(out output);
         }
 
         private IndexFieldsMapping CreateKnownFields(ByteStringContext ctx)
