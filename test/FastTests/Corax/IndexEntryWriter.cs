@@ -8,6 +8,7 @@ using FastTests.Voron;
 using Sparrow;
 using Sparrow.Extensions;
 using Sparrow.Server;
+using Sparrow.Threading;
 using Tests.Infrastructure;
 using Voron;
 using Xunit;
@@ -46,7 +47,7 @@ namespace FastTests.Corax
         [Fact]
         public void SimpleWrites()
         {
-            Span<byte> buffer = new byte[32000];
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
 
             using var _ = StorageEnvironment.GetStaticContext(out var ctx);
             Slice.From(ctx, "A", ByteStringType.Immutable, out Slice aSlice);
@@ -61,14 +62,14 @@ namespace FastTests.Corax
                                     .AddBinding(2, cSlice)
                                     .AddBinding(3, dSlice);
 
-            var writer = new IndexEntryWriter(buffer, knownFields);
+            var writer = new IndexEntryWriter(bsc, knownFields);
             writer.Write(0, Encoding.UTF8.GetBytes("1.001"), 1, 1.001);
             writer.Write(1, new StringArrayIterator(new[] { "AAA", "BF", "CE" }));
             writer.Write(2, Encoding.UTF8.GetBytes("CCCC"));
             writer.Write(3, Encoding.UTF8.GetBytes("DDDDDDDDDD"));
-            var length = writer.Finish(out var element);
+            using var __ = writer.Finish(out var element);
 
-            var reader = new IndexEntryReader(element);
+            var reader = new IndexEntryReader(element.ToSpan());
             reader.Read(0, out long longValue);
             Assert.Equal(1, longValue);
             reader.Read(0, out int intValue);
@@ -107,7 +108,7 @@ namespace FastTests.Corax
         [Fact]
         public void IterationReads()
         {
-            Span<byte> buffer = new byte[64000];
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
 
             using var _ = StorageEnvironment.GetStaticContext(out var ctx);
             Slice.From(ctx, "A", ByteStringType.Immutable, out Slice aSlice);
@@ -135,13 +136,13 @@ namespace FastTests.Corax
             Span<long> longValues = new long[] { 1, 2, 3, 4, 5 };
             Span<double> doubleValues = new[] { 1.01, 2.01, 3.01, 4.01, 5.01 };
 
-            var writer = new IndexEntryWriter(buffer, knownFields);
+            var writer = new IndexEntryWriter(bsc, knownFields);
             writer.Write(0, new StringArrayIterator(values));
             writer.Write(1, new StringArrayIterator(values), longValues, doubleValues);
             writer.Write(2, Encoding.UTF8.GetBytes(values[3]));
-            var length = writer.Finish(out var element);
+            using var ___ = writer.Finish(out var element);
 
-            var reader = new IndexEntryReader(element);
+            var reader = new IndexEntryReader(element.ToSpan());
 
             // Get the first
            Assert.True(reader.TryReadMany(1, out var fieldIterator));
@@ -184,7 +185,7 @@ namespace FastTests.Corax
         [Fact]
         public void SimpleWriteNulls()
         {
-            Span<byte> buffer = new byte[64000];
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
 
             using var _ = StorageEnvironment.GetStaticContext(out var ctx);
             Slice.From(ctx, "A", ByteStringType.Immutable, out Slice aSlice);
@@ -210,14 +211,12 @@ namespace FastTests.Corax
             Span<long> longValues = new long[] { 1, 2, 3 };
             Span<double> doubleValues = new[] { 1.01, 2.01, 3.01 };
 
-            var writer = new IndexEntryWriter(buffer, knownFields);
+            var writer = new IndexEntryWriter(bsc, knownFields);
             writer.Write(0, new StringArrayIterator(values));
             writer.Write(1, new StringArrayIterator(values), longValues, doubleValues);
-            var length = writer.Finish(out var element);
+            using var ___ = writer.Finish(out var element);
 
-            var reader = new IndexEntryReader(element);
-            
-            
+            var reader = new IndexEntryReader(element.ToSpan());                        
             
             // Get the first
             Assert.True(reader.TryReadMany(1, out var fieldIterator));
@@ -297,7 +296,7 @@ namespace FastTests.Corax
         [Fact]
         public void SimpleWriteEmpty()
         {
-            Span<byte> buffer = new byte[64000];
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
 
             using var _ = StorageEnvironment.GetStaticContext(out var ctx);
             Slice.From(ctx, "A", ByteStringType.Immutable, out Slice aSlice);
@@ -317,12 +316,12 @@ namespace FastTests.Corax
             Span<long> longValues = new long[] { };
             Span<double> doubleValues = new double[] { };
 
-            var writer = new IndexEntryWriter(buffer, knownFields);
+            var writer = new IndexEntryWriter(bsc, knownFields);
             writer.Write(0, new StringArrayIterator(values));
             writer.Write(1, new StringArrayIterator(values), longValues, doubleValues);
-            var length = writer.Finish(out var element);
+            using var ___ = writer.Finish(out var element);
 
-            var reader = new IndexEntryReader(element);
+            var reader = new IndexEntryReader(element.ToSpan());
             Assert.True(reader.Read(1, out var type, out var longValue, out var doubleValue, out var sequenceValue));
             Assert.True(type.HasFlag(IndexEntryFieldType.Empty));
             Assert.True(type.HasFlag(IndexEntryFieldType.List));
@@ -333,7 +332,7 @@ namespace FastTests.Corax
             Assert.True(type.HasFlag(IndexEntryFieldType.List));
             Assert.Equal(0, sequenceValue.Length);
 
-            reader = new IndexEntryReader(element);
+            reader = new IndexEntryReader(element.ToSpan());
             Assert.True(reader.TryReadMany(1, out var iterator));
             type = reader.GetFieldType(1, out var offset);
             Assert.True(type.HasFlag(IndexEntryFieldType.Empty));
@@ -382,7 +381,7 @@ namespace FastTests.Corax
         [InlineData(1337)]
         public void WriteMultipleLongLists(int seed)
         {
-            Span<byte> buffer = new byte[1024 * 1024];
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
 
             using var _ = StorageEnvironment.GetStaticContext(out var ctx);
             Slice.From(ctx, "A", ByteStringType.Immutable, out Slice aSlice);
@@ -427,14 +426,14 @@ namespace FastTests.Corax
                 doubles[ii] = ii + (ii / 65.0);
             }
 
-            var writer = new IndexEntryWriter(buffer, knownFields);
+            var writer = new IndexEntryWriter(bsc, knownFields);
             writer.Write(2, new StringArrayIterator(values), longs, doubles);
             writer.Write(0, new StringArrayIterator(values));
             writer.Write(1, new StringArrayIterator(new string[0]));
             writer.Write(3, new StringArrayIterator(values), longs, doubles);
-            var length = writer.Finish(out var element);
+            using var ___ = writer.Finish(out var element);
 
-            var reader = new IndexEntryReader(element);
+            var reader = new IndexEntryReader(element.ToSpan());
 
             var iterator = reader.ReadMany(0);
             Assert.True(iterator.IsValid);

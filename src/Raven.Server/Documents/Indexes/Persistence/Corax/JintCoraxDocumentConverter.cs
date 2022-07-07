@@ -35,16 +35,19 @@ public class JintCoraxDocumentConverter : JintCoraxDocumentConverterBase
     }
 
     //todo maciej: refactor | stop duplicating code from LuceneJint[...] https://github.com/ravendb/ravendb/pull/13730#discussion_r825928762
-    public override Span<byte> SetDocumentFields(LazyStringValue key, LazyStringValue sourceDocumentId, object doc, JsonOperationContext indexContext,
-        out LazyStringValue id, Span<byte> writerBuffer)
+    public override ByteStringContext<ByteStringMemoryCache>.InternalScope SetDocumentFields(
+        LazyStringValue key, LazyStringValue sourceDocumentId,
+        object doc, JsonOperationContext indexContext, out LazyStringValue id,
+        out ByteString output)
     {
         if (doc is not ObjectInstance documentToProcess)
         {
             id = null;
-            return Span<byte>.Empty;
+            output = default;
+            return default;
         }
 
-        var entryWriter = new CoraxLib.IndexEntryWriter(writerBuffer, GetKnownFieldsForWriter());
+        var entryWriter = new CoraxLib.IndexEntryWriter(_allocator, GetKnownFieldsForWriter());
 
         id = key ?? (sourceDocumentId ?? throw new InvalidDataException("Cannot find any identifier of the document."));
         var scope = new SingleEntryWriterScope(_allocator);
@@ -175,8 +178,7 @@ public class JintCoraxDocumentConverter : JintCoraxDocumentConverterBase
             }
         }
 
-        entryWriter.Finish(out var output);
-        return output;
+        return entryWriter.Finish(out output);
 
         static bool IsObject(JsValue value)
         {
