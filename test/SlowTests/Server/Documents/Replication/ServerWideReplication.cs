@@ -17,6 +17,7 @@ using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -29,10 +30,11 @@ namespace SlowTests.Server.Documents.Replication
             DoNotReuseServer();
         }
 
-        [Fact]
-        public async Task CanStoreServerWideExternalReplication()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanStoreServerWideExternalReplication(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var putConfiguration = new ServerWideExternalReplication
                 {
@@ -80,10 +82,11 @@ namespace SlowTests.Server.Documents.Replication
             }
         }
 
-        [Fact]
-        public async Task UpdateServerWideReplicationThroughUpdateReplicationTaskFails()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task UpdateServerWideReplicationThroughUpdateReplicationTaskFails(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var putConfiguration = new ServerWideExternalReplication
                 {
@@ -119,10 +122,11 @@ namespace SlowTests.Server.Documents.Replication
             }
         }
 
-        [Fact]
-        public async Task ServerWideExternalReplication_WhenRename_ShouldNotCreateNewOne()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ServerWideExternalReplication_WhenRename_ShouldNotCreateNewOne(Options options)
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
             var putConfiguration = new ServerWideExternalReplication
             {
                 Disabled = true,
@@ -159,10 +163,11 @@ namespace SlowTests.Server.Documents.Replication
                 () => Assert.EndsWith(editSuffix, databaseRecord2After.ExternalReplications.First().Name));
         }
 
-        [Fact]
-        public async Task ServerWideExternalReplication_WhenToggleState_ShouldWork()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ServerWideExternalReplication_WhenToggleState_ShouldWork(Options options)
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
             var disabled = true;
             var putConfiguration = new ServerWideExternalReplication
             {
@@ -194,11 +199,12 @@ namespace SlowTests.Server.Documents.Replication
             }
         }
 
-        
-        [Fact]
-        public async Task ToggleDisableServerWideExternalReplicationFails()
+
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ToggleDisableServerWideExternalReplicationFails(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var putConfiguration = new ServerWideExternalReplication
                 {
@@ -221,10 +227,11 @@ namespace SlowTests.Server.Documents.Replication
             }
         }
 
-        [Fact]
-        public async Task CanCreateMoreThanOneServerWideExternalReplication()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanCreateMoreThanOneServerWideExternalReplication(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var putConfiguration = new ServerWideExternalReplication
                 {
@@ -259,10 +266,11 @@ namespace SlowTests.Server.Documents.Replication
             }
         }
 
-        [Fact]
-        public async Task CanDeleteServerWideExternalReplication()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanDeleteServerWideExternalReplication(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var putConfiguration = new ServerWideExternalReplication
                 {
@@ -521,10 +529,11 @@ namespace SlowTests.Server.Documents.Replication
             }
         }
 
-        [Fact]
-        public async Task CanExcludeDatabase()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanExcludeDatabase(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var serverWideExternalReplication = new ServerWideExternalReplication
                 {
@@ -573,10 +582,11 @@ namespace SlowTests.Server.Documents.Replication
             }
         }
 
-        [Fact]
-        public async Task CanExcludeForNewDatabase()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanExcludeForNewDatabase(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var newDbName = store.Database + "-testDatabase";
                 var serverWideExternalReplication = new ServerWideExternalReplication
@@ -663,10 +673,11 @@ namespace SlowTests.Server.Documents.Replication
             }
         }
 
-        [Fact]
-        public async Task FailToAddNullOrEmptyDatabaseNames()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task FailToAddNullOrEmptyDatabaseNames(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var serverWideExternalReplication = new ServerWideExternalReplication
                 {
