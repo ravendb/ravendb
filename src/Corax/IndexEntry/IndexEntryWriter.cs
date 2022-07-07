@@ -67,7 +67,15 @@ public unsafe partial struct IndexEntryWriter : IDisposable
         _dataIndex = Unsafe.SizeOf<IndexEntryHeader>();
 
         // We prepare the table in order to avoid tracking the writes. 
-        KnownFieldsLocations.Fill(Invalid);
+        new Span<int>(_rawBuffer.Ptr + _rawBuffer.Length - KnownFieldMetadataSize, _knownFields.Count).Fill(Invalid);
+    }
+
+    public void Reset()
+    {
+        _dynamicFieldIndex = 0;
+        _dataIndex = Unsafe.SizeOf<IndexEntryHeader>();
+
+        KnownFieldsLocations.Fill(Invalid); // We prepare the table in order to avoid tracking the writes. 
     }
 
     public void WriteNull(int field)
@@ -255,8 +263,7 @@ public unsafe partial struct IndexEntryWriter : IDisposable
         geohashPtrTableLocation = dataLocation;
         for (int i = 0; i < entries.Length; ++i)
         {
-            var geohashBytes = Encodings.Utf8.GetBytes(entries[i].Geohash);
-            geohashBytes.CopyTo(buffer[dataLocation..]);
+            Encodings.Utf8.GetBytes(entries[i].Geohash).CopyTo(buffer[dataLocation..]);
             dataLocation += geohashLevel;
         }
 
@@ -277,6 +284,8 @@ public unsafe partial struct IndexEntryWriter : IDisposable
         // Write known field pointer.
         ref int fieldLocation = ref KnownFieldsLocations[field];
         fieldLocation = dataLocation | Constants.IndexWriter.IntKnownFieldMask;
+
+        var buffer = Buffer;
 
         // Write the tuple information. 
         ref var indexEntryField = ref Unsafe.AsRef<IndexEntryFieldType>(Unsafe.AsPointer(ref buffer[dataLocation]));
@@ -324,6 +333,8 @@ public unsafe partial struct IndexEntryWriter : IDisposable
         // Write known field pointer.
         ref int fieldLocation = ref KnownFieldsLocations[field];
         fieldLocation = dataLocation | Constants.IndexWriter.IntKnownFieldMask;
+
+        var buffer = Buffer;
 
         // Write the list metadata information. 
         ref var indexEntryField = ref Unsafe.AsRef<IndexEntryFieldType>(Unsafe.AsPointer(ref buffer[dataLocation]));
