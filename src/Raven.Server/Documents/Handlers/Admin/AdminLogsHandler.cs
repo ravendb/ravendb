@@ -1,4 +1,7 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.IO;
+using System.IO.Compression;
+using System.Threading.Tasks;
 using Raven.Client.ServerWide.Operations.Logs;
 using Raven.Server.Json;
 using Raven.Server.Routing;
@@ -7,6 +10,7 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.Server.Platform.Posix;
 
 namespace Raven.Server.Documents.Handlers.Admin
 {
@@ -75,6 +79,48 @@ namespace Raven.Server.Documents.Handlers.Admin
                 }
 
                 await LoggingSource.Instance.Register(socket, context, ServerStore.ServerShutdown);
+            }
+        }
+
+        [RavenAction("/admin/logs/download", "GET", AuthorizationStatus.Operator)]
+        public async Task Download()
+        {
+            var contentDisposition = $"attachment; filename={DateTime.UtcNow:yyyy-MM-dd H:mm:ss} - Node {ServerStore.NodeTag} - Logs.zip";
+            HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {
+                await using (var ms = new MemoryStream())
+                {
+                    using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, true))
+                    {
+                        foreach (var filePath in Directory.GetFiles(ServerStore.Configuration.Logs.Path.FullPath))
+                        {
+                            try
+                            {
+                                using (var fs = File.Open(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                                {
+                                    var fileName = Path.GetFileName(filePath);
+                                    var entry = archive.CreateEntry(fileName);
+
+                                    entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
+
+                                    await using (var entryStream = entry.Open())
+                                    {
+                                        await fs.CopyToAsync(entryStream);
+                                    }
+                                }
+                            }
+                            catch
+                            {
+                                // something went wrong with copying the file, will continue to the next one
+                            }
+                        }
+                    }
+
+                    ms.Position = 0;
+                    await ms.CopyToAsync(ResponseBodyStream());
+                }
             }
         }
     }
