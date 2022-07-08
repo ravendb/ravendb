@@ -67,6 +67,40 @@ namespace FastTests.Corax
                 Assert.Equal(_longList.Count - 1, match1.Fill(ids));
             }
         }
+        
+        [Fact]
+        public void CanDeleteNumericalData()
+        {
+            PrepareData();
+            IndexEntries(CreateKnownFields(_bsc));
+
+            Span<long> ids = stackalloc long[1024];
+            {
+                using var indexSearcher = new IndexSearcher(Env, _analyzers);
+                using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
+                Slice.From(ctx, "Content", out var field);
+                Slice.From(ctx, "Content-L", out var fieldLong);
+                
+                var match = indexSearcher.GreaterThanOrEqualsQuery(field, fieldLong, 0);
+                Assert.Equal(_longList.Count, match.Fill(ids));
+            }
+
+            using (var indexWriter = new IndexWriter(Env, _analyzers))
+            {
+                indexWriter.TryDeleteEntry("Id", "list/0");
+                indexWriter.Commit();
+            }
+
+            {
+                using var indexSearcher = new IndexSearcher(Env, _analyzers);
+                using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
+                Slice.From(ctx, "Content", out var field);
+                Slice.From(ctx, "Content-L", out var fieldLong);
+                
+                var match = indexSearcher.GreaterThanOrEqualsQuery(field, fieldLong, 0);
+                Assert.Equal(_longList.Count -1, match.Fill(ids));
+            }
+        }
 
         [Theory]
         [InlineData(4)]
