@@ -86,7 +86,7 @@ public unsafe partial class IndexSearcher
             matches = TermMatch.YieldOnce(value);
         }
 #if DEBUG
-        matches.Term = term.ToString();
+        matches.Term = Encoding.UTF8.GetString(term);
 #endif
         return matches;
     }
