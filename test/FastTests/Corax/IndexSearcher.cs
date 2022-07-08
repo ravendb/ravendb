@@ -109,7 +109,6 @@ namespace FastTests.Corax
             {
                 using var __ = CreateIndexEntry(ref entryWriter, entry, out var data);
                 entry.IndexEntryId = indexWriter.Index(entry.Id, data.ToSpan());
-                entryWriter.Reset();
             }
 
             indexWriter.Commit();
@@ -822,7 +821,6 @@ namespace FastTests.Corax
             {
                 using var __ = CreateIndexEntry(ref entryWriter, entry, out var data);
                 indexWriter.Index(entry.Id, data.ToSpan());
-                entryWriter.Reset();
             }
 
             indexWriter.Commit();
@@ -958,7 +956,6 @@ namespace FastTests.Corax
                 {
                     using var __ = CreateIndexEntryDouble(ref entryWriter, entry, out var data);
                     indexWriter.Index(entry.Id, data.ToSpan());
-                    entryWriter.Reset();
                 }
 
                 indexWriter.Commit();

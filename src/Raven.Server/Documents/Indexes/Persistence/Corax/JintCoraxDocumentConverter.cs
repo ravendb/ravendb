@@ -57,7 +57,6 @@ public class JintCoraxDocumentConverter : JintCoraxDocumentConverterBase
 
         // We prepare for the next entry.
         ref var entryWriter = ref GetEntriesWriter();
-        entryWriter.Reset();
 
         scope.Write(0, id.AsSpan(), ref entryWriter);
         int idX = 1;

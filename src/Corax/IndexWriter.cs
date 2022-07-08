@@ -645,6 +645,9 @@ namespace Corax
 
             for (int fieldId = 0; fieldId < _fieldsMapping.Count; ++fieldId)
             {
+                if (_buffer[fieldId].Count == 0)
+                    continue; 
+
                 InsertTextualField(fieldsTree, fieldId, workingBuffer);
                 InsertNumericFieldLongs(fieldsTree, fieldId, workingBuffer);
                 InsertNumericFieldDoubles(fieldsTree, fieldId, workingBuffer);

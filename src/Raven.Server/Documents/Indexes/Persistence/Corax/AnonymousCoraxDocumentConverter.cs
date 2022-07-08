@@ -46,7 +46,6 @@ public class AnonymousCoraxDocumentConverter : CoraxDocumentConverterBase
 
         // We prepare for the next entry.
         ref var entryWriter = ref GetEntriesWriter();
-        entryWriter.Reset();
 
         foreach (var property in accessor.GetPropertiesInOrder(documentToProcess))
         {
