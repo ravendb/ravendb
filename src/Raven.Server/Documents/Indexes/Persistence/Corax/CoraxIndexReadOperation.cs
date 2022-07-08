@@ -73,7 +73,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             using (coraxScope?.Start())
             {
                 if ((queryMatch = CoraxQueryBuilder.BuildQuery(_indexSearcher, null, null, query, _index, query.QueryParameters, QueryBuilderFactories, out isBinary,
-                    _fieldMappings, fieldsToFetch, highlightingTerms: highlightingTerms, take: take)) is null)
+                        _fieldMappings, fieldsToFetch, highlightingTerms: highlightingTerms, take: take)) is null)
                     yield break;
             }
 
@@ -310,7 +310,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
                     // We found an exact match in the property value.
                     var index = fieldFragment.Slice(currentIndex)
-                                             .IndexOf(value, StringComparison.InvariantCultureIgnoreCase);
+                        .IndexOf(value, StringComparison.InvariantCultureIgnoreCase);
                     if (index < 0)
                         break;
 
@@ -318,13 +318,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
                     // We will look for a whitespace before the match to start the token. 
                     int tokenStart = fieldFragment.Slice(0, index)
-                                                  .LastIndexOf(' ');
+                        .LastIndexOf(' ');
                     if (tokenStart < 0)
                         tokenStart = 0;
 
                     // We will look for a whitespace after the match to end the token. 
                     int tokenEnd = fieldFragment.Slice(index)
-                                                .IndexOf(' ');
+                        .IndexOf(' ');
                     if (tokenEnd < 0)
                         tokenEnd = fieldFragment.Length - index;
 
@@ -340,7 +340,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     {
                         // We may have a fragment we can find a space near the end. 
                         int fragmentEnd = fieldFragment.Slice(tokenEnd)
-                                                       .LastIndexOf(' ');
+                            .LastIndexOf(' ');
 
                         // We need to discard the space used to separate the token itself.
                         if (fragmentEnd > 0)
