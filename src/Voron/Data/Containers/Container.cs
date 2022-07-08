@@ -328,7 +328,7 @@ namespace Voron.Data.Containers
                 offset = 0;
                 do
                 {
-                    count = GetEntriesInto(containerId, ref offset, page, items, 0, out itemsLeftOnCurrentPage);
+                    count = GetEntriesInto(containerId, ref offset, page, items, out itemsLeftOnCurrentPage);
                     
                     for(int i = 0; i < count; ++i)
                         list.Add(items[i]);
@@ -341,14 +341,13 @@ namespace Voron.Data.Containers
             return list;
         }
 
-        public static int GetEntriesInto(long containerId, ref int offset, Page page, Span<long> ids, int writingBufferOffset, out int itemsLeftOnCurrentPage)
+        public static int GetEntriesInto(long containerId, ref int offset, Page page, Span<long> ids, out int itemsLeftOnCurrentPage)
         {
-            var results = 0;
             if (page.IsOverflow)
             {
-                ids[results++] = page.PageNumber * Constants.Storage.PageSize;
+                ids[0] = page.PageNumber * Constants.Storage.PageSize;
                 itemsLeftOnCurrentPage = 0;
-                return results;
+                return 1;
             }
             
             int i = offset;
@@ -362,13 +361,13 @@ namespace Voron.Data.Containers
             var container = new Container(page);
             var entriesOffsets = container.Offsets;
             var baseOffset = page.PageNumber * Constants.Storage.PageSize;
-            for (; writingBufferOffset < ids.Length && i < entriesOffsets.Length; i++, offset++)
+            int results = 0;
+            for (; results < ids.Length && i < entriesOffsets.Length; i++, offset++)
             {
                 if (entriesOffsets[i].Size == 0) 
                     continue;
                 
-                ids[writingBufferOffset++] = baseOffset + IndexToOffset(i);
-                results++;
+                ids[results++] = baseOffset + IndexToOffset(i);
             }
 
             itemsLeftOnCurrentPage = entriesOffsets.Length - i;
@@ -554,6 +553,14 @@ namespace Voron.Data.Containers
                     Debug.Assert(page.IsOverflow);
                     return new Item(page, PageHeader.SizeOf, page.OverflowSize);
                 }
+            }
+
+            if (offset == 0) // overflow
+            {
+                if (page.IsOverflow == false)
+                    throw new InvalidOperationException("Expected to get an overflow page " + page.PageNumber);
+
+                return new Item(page, PageHeader.SizeOf, page.OverflowSize);
             }
 
             var container = new Container(page);

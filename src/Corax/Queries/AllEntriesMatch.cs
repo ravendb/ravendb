@@ -69,7 +69,7 @@ namespace Corax.Queries
 
                 while (results < matches.Length)
                 {
-                    var read = Container.GetEntriesInto(_entriesContainerId, ref _offset, _currentPage, matches, results, out _itemsLeftOnCurrentPage);
+                    var read = Container.GetEntriesInto(_entriesContainerId, ref _offset, _currentPage, matches[results..], out _itemsLeftOnCurrentPage);
                     if (read == 0)
                     {
                         _currentPage = new Page(null);
