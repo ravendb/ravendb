@@ -12,6 +12,7 @@ using System.Runtime.Intrinsics.X86;
 using Corax.Pipeline;
 using Corax.Queries;
 using Sparrow.Server;
+using Voron.Data.BTrees;
 
 namespace Corax;
 
@@ -29,7 +30,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
     public bool IsAccelerated => Avx2.IsSupported && !ForceNonAccelerated;
 
-    public long NumberOfEntries => _transaction.LowLevelTransaction.RootObjects.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0;
+    public long NumberOfEntries => _metadataTree?.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0;
 
     internal ByteStringContext Allocator => _transaction.Allocator;
 
@@ -38,6 +39,8 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
     private readonly bool _ownsTransaction;
 
+    private Tree _metadataTree; 
+    
     // The reason why we want to have the transaction open for us is so that we avoid having
     // to explicitly provide the index searcher with opening semantics and also every new
     // searcher becomes essentially a unit of work which makes reusing assets tracking more explicit.
@@ -46,6 +49,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         _ownsTransaction = true;
         _transaction = environment.ReadTransaction();
         _fieldMapping = fieldsMapping ?? new IndexFieldsMapping(_transaction.Allocator);
+        _metadataTree = _transaction.ReadTree(Constants.IndexMetadata);
     }
 
     public IndexSearcher(Transaction tx, IndexFieldsMapping fieldsMapping = null)
@@ -53,6 +57,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         _ownsTransaction = false;
         _transaction = tx;
         _fieldMapping = fieldsMapping ?? new IndexFieldsMapping(_transaction.Allocator);
+        _metadataTree = _transaction.ReadTree(Constants.IndexMetadata);
     }
 
     public UnmanagedSpan GetIndexEntryPointer(long id)
@@ -187,7 +192,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
     public AllEntriesMatch AllEntries()
     {
-        return new AllEntriesMatch(_transaction);
+        return new AllEntriesMatch(this, _transaction);
     }
 
     public long GetEntriesAmountInField(string name)

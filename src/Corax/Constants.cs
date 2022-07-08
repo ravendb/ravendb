@@ -9,7 +9,8 @@ namespace Corax
         public const string NullValue = "NULL_VALUE";
         public const string EmptyString = "EMPTY_STRING";
         public static readonly Slice NullValueSlice, EmptyStringSlice;
-
+        public const string IndexMetadata = "@index_metadata";
+        
         static Constants()
         {
             using (StorageEnvironment.GetStaticContext(out var ctx))

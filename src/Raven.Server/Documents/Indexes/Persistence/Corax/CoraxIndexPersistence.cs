@@ -98,7 +98,8 @@ public class CoraxIndexPersistence : IndexPersistenceBase
     {
         using (var tx = environment.WriteTransaction())
         {
-            var version = tx.LowLevelTransaction.RootObjects.ReadInt64(global::Corax.Constants.IndexWriter.IndexVersionSlice);
+            var metadataTree = tx.ReadTree(global::Corax.Constants.IndexMetadata);
+            var version = metadataTree?.ReadInt64(global::Corax.Constants.IndexWriter.IndexVersionSlice);
             if (version.HasValue)
             {
                 var currentCoraxVersion = global::Corax.Constants.IndexWriter.Version;
@@ -111,7 +112,7 @@ public class CoraxIndexPersistence : IndexPersistenceBase
             }
             else
             {
-                tx.LowLevelTransaction.RootObjects.Add(global::Corax.Constants.IndexWriter.IndexVersionSlice, global::Corax.Constants.IndexWriter.Version);
+                tx.CreateTree(global::Corax.Constants.IndexMetadata).Add(global::Corax.Constants.IndexWriter.IndexVersionSlice, global::Corax.Constants.IndexWriter.Version);
                 tx.Commit();
             }
         }
