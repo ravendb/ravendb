@@ -22,10 +22,10 @@ namespace Corax.Queries
         private Page _currentPage;
         private long _entriesContainerId;
 
-        public unsafe AllEntriesMatch(Transaction tx)
+        public unsafe AllEntriesMatch(IndexSearcher searcher, Transaction tx)
         {
             _tx = tx;
-            _count = tx.LowLevelTransaction.RootObjects.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0;
+            _count = searcher.NumberOfEntries;
             if (_count == 0)
             {
                 Unsafe.SkipInit(out _currentPage);

@@ -69,6 +69,7 @@ namespace FastTests.Corax
         }
 
         [Theory]
+        [InlineData(1)]
         [InlineData(4)]
         [InlineData(10000)]
         public void CanDeleteSingleItemInList(int batchSize)
@@ -84,7 +85,8 @@ namespace FastTests.Corax
             {
                 using var indexSearcher = new IndexSearcher(Env, _analyzers);
                 var match = indexSearcher.TermQuery("Content", "0");
-                Assert.Equal(batchSize/2, match.Fill(ids));
+                Assert.Equal((int)Math.Ceiling(batchSize/2.0), match.Fill(ids));
+                Assert.Equal(batchSize, indexSearcher.NumberOfEntries);
             }
             
             using (var indexWriter = new IndexWriter(Env, _analyzers))
@@ -96,7 +98,8 @@ namespace FastTests.Corax
             {
                 using var indexSearcher = new IndexSearcher(Env, _analyzers);
                 var match = indexSearcher.TermQuery("Content", "0");
-                Assert.Equal((batchSize/2)-1, match.Fill(ids));
+                Assert.Equal(((int)Math.Ceiling(batchSize/2.0))-1, match.Fill(ids));
+                Assert.Equal(batchSize-1, indexSearcher.NumberOfEntries);
             }
         }
         
