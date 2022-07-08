@@ -70,16 +70,10 @@ public unsafe partial struct IndexEntryWriter : IDisposable
         KnownFieldsLocations.Fill(Invalid);
     }
 
-    public void Reset()
-    {
-        _dynamicFieldIndex = 0;
-        _dataIndex = Unsafe.SizeOf<IndexEntryHeader>();
-
-        KnownFieldsLocations.Fill(Invalid); // We prepare the table in order to avoid tracking the writes. 
-    }
-
     public void WriteNull(int field)
     {
+        Debug.Assert(_dataIndex != int.MinValue);
+
         if (FreeSpace < sizeof(IndexEntryFieldType))
             UnlikelyGrowAuxiliaryBuffer();
 
@@ -560,6 +554,15 @@ public unsafe partial struct IndexEntryWriter : IDisposable
         // Create the actual output memory buffer that we are going to be using. 
         var scope = _context.Allocate(_dataIndex, out output);
         buffer.Slice(0, _dataIndex).CopyTo(output.ToSpan());
+
+        // We are done, we are preparing the stage for the next one. One could argue that why to 
+        // prepare for the next after finish instead of explicitely call something like `.Reset()`
+        // if we dont know if are going to be write another entry. The usage pattern is to write
+        // as many as possible with the same instance, so overall the performance impact is negligible. 
+        _dynamicFieldIndex = 0;
+        _dataIndex = Unsafe.SizeOf<IndexEntryHeader>();
+        KnownFieldsLocations.Fill(Invalid); 
+
         return scope;
     }
 

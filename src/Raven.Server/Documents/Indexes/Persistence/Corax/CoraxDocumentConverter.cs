@@ -36,7 +36,6 @@ public class CoraxDocumentConverter : CoraxDocumentConverterBase
 
         // We prepare for the next entry.
         ref var entryWriter = ref GetEntriesWriter();
-        entryWriter.Reset();
 
         object value;
         foreach (var indexField in _fields.Values)

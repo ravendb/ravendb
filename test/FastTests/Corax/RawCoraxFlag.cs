@@ -52,7 +52,6 @@ public class RawCoraxFlag : StorageTest
 
                 using var _ = entry.Finish(out var output);                
                 writer.Index(id, output.ToSpan());
-                entry.Reset();
             }
 
             writer.Commit();
