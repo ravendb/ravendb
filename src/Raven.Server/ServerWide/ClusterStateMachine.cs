@@ -3507,7 +3507,7 @@ namespace Raven.Server.ServerWide
             {
                 DatabaseTopology topology;
                 if (databaseRecord.IsSharded)
-                    return databaseRecord.Sharding.Orchestrator.Topology;
+                    topology = databaseRecord.Sharding?.Orchestrator.Topology;
                 else
                     topology = databaseRecord.Topology;
 

@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
         {
             while (_cts.IsCancellationRequested == false)
             {
-                while (_replicationQueue.Items[_shardNumber].TryTake(out var items))
+                while (_replicationQueue.Items[_shardNumber].TryTake(out var items, 0, _cts.Token))
                 {
                     using (_parent.Server.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     {

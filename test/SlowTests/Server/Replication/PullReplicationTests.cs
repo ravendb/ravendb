@@ -27,7 +27,7 @@ namespace SlowTests.Server.Replication
         }
 
         [RavenTheory(RavenTestCategory.Replication)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
         public async Task CanDefinePullReplication(Options options)
         {
             using (var store = GetDocumentStore(options))
