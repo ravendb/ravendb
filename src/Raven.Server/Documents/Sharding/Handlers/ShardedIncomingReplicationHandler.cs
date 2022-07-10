@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
         protected override Task HandleBatchAsync(TransactionOperationContext context, IncomingReplicationHandler.DataForReplicationCommand dataForReplicationCommand, long lastEtag)
         {
             PrepareReplicationDataForShards(context, dataForReplicationCommand);
-            return _replicationQueue.SendToShardCompletion.WaitAsync();
+            return _replicationQueue.SendToShardCompletion.WaitAsync(_cts.Token);
         }
 
         protected override void HandleMissingAttachmentsIfNeeded(ref Task task)
