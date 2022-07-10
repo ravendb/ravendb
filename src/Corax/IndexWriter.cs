@@ -564,7 +564,7 @@ namespace Corax
                         return;
 
                     var newContainerId = RemoveValue(containerId, fieldName, idToDelete, tmpBuffer);
-                    if (newContainerId != null && newContainerId.Value != containerId)
+                    if (newContainerId == null || newContainerId.Value != containerId)
                         fieldTree.TryRemove(termValue, out var __);
 
                     if (newContainerId != null)
