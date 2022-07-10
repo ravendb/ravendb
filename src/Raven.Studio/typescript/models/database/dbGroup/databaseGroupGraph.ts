@@ -2,7 +2,6 @@
 import d3 = require("d3");
 import graphHelper = require("common/helpers/graph/graphHelper");
 import { d3adaptor, ID3StyleLayoutAdaptor, Link, Node, Layout } from "webcola";
-import ongoingTaskBackupListModel = require("models/database/tasks/ongoingTaskBackupListModel");
 import ongoingTaskModel = require("models/database/tasks/ongoingTaskModel");
 import icomoonHelpers from "common/helpers/view/icomoonHelpers";
 import TaskUtils from "../../../components/utils/TaskUtils";
@@ -552,7 +551,7 @@ class databaseGroupGraph {
             .attr("class", x => "task-node " + x.type + " " + x.state);
 
         const taskIcon = (node: taskNode) => {
-            if (node.name.startsWith(ongoingTaskBackupListModel.serverWideNamePrefixFromServer)) {
+            if (node.name.startsWith("Server Wide Backup")) {
                 // special case: server-wide backup
                 return icomoonHelpers.getCodePointForCanvas("server-wide-backup");
             }
