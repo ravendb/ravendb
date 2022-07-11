@@ -12,7 +12,8 @@ import { ExternalReplicationPanel } from "./panels/ExternalReplicationPanel";
 import {
     OngoingTaskElasticSearchEtlInfo,
     OngoingTaskExternalReplicationInfo,
-    OngoingTaskInfo, OngoingTaskKafkaEtlInfo,
+    OngoingTaskInfo,
+    OngoingTaskKafkaEtlInfo,
     OngoingTaskOlapEtlInfo,
     OngoingTaskPeriodicBackupInfo,
     OngoingTaskRavenEtlInfo,
@@ -204,8 +205,8 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
     const ravenEtls = tasks.tasks.filter((x) => x.shared.taskType === "RavenEtl") as OngoingTaskRavenEtlInfo[];
     const sqlEtls = tasks.tasks.filter((x) => x.shared.taskType === "SqlEtl") as OngoingTaskSqlEtlInfo[];
     const olapEtls = tasks.tasks.filter((x) => x.shared.taskType === "OlapEtl") as OngoingTaskOlapEtlInfo[];
-    const kafkaEtls = tasks.tasks.filter(x => x.shared.taskType === "KafkaQueueEtl") as OngoingTaskKafkaEtlInfo[];
-    const rabbitMqEtls = tasks.tasks.filter(x => x.shared.taskType === "RabbitQueueEtl") as OngoingTaskKafkaEtlInfo[];
+    const kafkaEtls = tasks.tasks.filter((x) => x.shared.taskType === "KafkaQueueEtl") as OngoingTaskKafkaEtlInfo[];
+    const rabbitMqEtls = tasks.tasks.filter((x) => x.shared.taskType === "RabbitQueueEtl") as OngoingTaskKafkaEtlInfo[];
     const elasticSearchEtls = tasks.tasks.filter(
         (x) => x.shared.taskType === "ElasticSearchEtl"
     ) as OngoingTaskElasticSearchEtlInfo[];

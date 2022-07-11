@@ -1,6 +1,7 @@
 ﻿import { loadStatus } from "./common";
 import OngoingTaskState = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskState;
 import QueueBrokerType = Raven.Client.Documents.Operations.ETL.Queue.QueueBrokerType;
+import BackupType = Raven.Client.Documents.Operations.Backups.BackupType;
 
 export interface OngoingTaskHubDefinitionSharedInfo extends OngoingTaskSharedInfo {
     delayReplicationTime: number;
@@ -70,7 +71,13 @@ export interface OngoingTaskOlapEtlSharedInfo extends OngoingTaskSharedInfo {
 export interface OngoingTaskPeriodicBackupSharedInfo extends OngoingTaskSharedInfo {
     backupDestinations: string[];
     lastExecutingNodeTag: string;
-    //TODO:
+    lastFullBackup: string;
+    lastIncrementalBackup: string;
+    backupType: BackupType;
+    encrypted: boolean;
+    nextBackup: Raven.Client.Documents.Operations.OngoingTasks.NextBackup;
+    onGoingBackup: Raven.Client.Documents.Operations.OngoingTasks.RunningBackup;
+    retentionPolicy: Raven.Client.Documents.Operations.Backups.RetentionPolicy;
 }
 
 export interface OngoingTaskRavenEtlSharedInfo extends OngoingTaskSharedInfo {
@@ -100,6 +107,7 @@ export interface OngoingTaskRabbitMqEtlSharedInfo extends OngoingTaskQueueEtlSha
 
 export interface OngoingTaskQueueEtlSharedInfo extends OngoingTaskSharedInfo {
     connectionStringName: string;
+    url: string;
 }
 
 export interface OngoingTaskSqlEtlSharedInfo extends OngoingTaskSharedInfo {

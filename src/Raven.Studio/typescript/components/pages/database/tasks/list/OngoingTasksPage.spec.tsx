@@ -251,6 +251,154 @@ describe("OngoingTasksPage", function () {
         });
     });
 
+    describe("Kafka", function () {
+        it("can render disabled and not completed", async () => {
+            const View = boundCopy(stories.KafkaTemplate, {
+                disabled: true,
+                completed: false,
+            });
+
+            const Story = composeStory(View, stories.default);
+
+            const { screen, fireClick } = rtlRender(<Story />);
+            expect(await screen.findByText(/KAFKA ETL/)).toBeInTheDocument();
+            expect(await screen.findByText(/Disabled/)).toBeInTheDocument();
+            expect(screen.queryByText(/Enabled/)).not.toBeInTheDocument();
+
+            const detailsBtn = await screen.findByTitle(/Click for details/);
+
+            await fireClick(detailsBtn);
+
+            expect(await screen.findByText(/Connection String/)).toBeInTheDocument();
+
+            //wait for progress
+            await screen.findAllByText(/Disabled/i);
+        });
+
+        it("can render completed", async () => {
+            const View = boundCopy(stories.KafkaTemplate, {
+                completed: true,
+            });
+
+            const Story = composeStory(View, stories.default);
+
+            const { screen, fireClick } = rtlRender(<Story />);
+            const detailsBtn = await screen.findByTitle(/Click for details/);
+            await fireClick(detailsBtn);
+
+            //wait for progress
+            await screen.findAllByText(/Up to date/i);
+        });
+
+        it("can render enabled and not completed", async () => {
+            const View = boundCopy(stories.KafkaTemplate, {
+                completed: false,
+                disabled: false,
+            });
+
+            const Story = composeStory(View, stories.default);
+
+            const { screen, fireClick } = rtlRender(<Story />);
+            const detailsBtn = await screen.findByTitle(/Click for details/);
+            await fireClick(detailsBtn);
+
+            //wait for progress
+            await screen.findAllByText("Running");
+        });
+
+        it("can notify about empty script", async () => {
+            const View = boundCopy(stories.KafkaTemplate, {
+                completed: true,
+                emptyScript: true,
+            });
+
+            const Story = composeStory(View, stories.default);
+
+            const { screen, fireClick } = rtlRender(<Story />);
+            const detailsBtn = await screen.findByTitle(/Click for details/);
+            await fireClick(detailsBtn);
+
+            //wait for progress
+            await screen.findAllByText(/Up to date/i);
+
+            expect(await screen.findByText(selectors.emptyScriptText)).toBeInTheDocument();
+        });
+    });
+
+    describe("RabbitMQ", function () {
+        it("can render disabled and not completed", async () => {
+            const View = boundCopy(stories.RabbitTemplate, {
+                disabled: true,
+                completed: false,
+            });
+
+            const Story = composeStory(View, stories.default);
+
+            const { screen, fireClick } = rtlRender(<Story />);
+            expect(await screen.findByText(/RabbitMQ ETL/i)).toBeInTheDocument();
+            expect(await screen.findByText(/Disabled/)).toBeInTheDocument();
+            expect(screen.queryByText(/Enabled/)).not.toBeInTheDocument();
+
+            const detailsBtn = await screen.findByTitle(/Click for details/);
+
+            await fireClick(detailsBtn);
+
+            expect(await screen.findByText(/Connection String/)).toBeInTheDocument();
+
+            //wait for progress
+            await screen.findAllByText(/Disabled/i);
+        });
+
+        it("can render completed", async () => {
+            const View = boundCopy(stories.RabbitTemplate, {
+                completed: true,
+            });
+
+            const Story = composeStory(View, stories.default);
+
+            const { screen, fireClick } = rtlRender(<Story />);
+            const detailsBtn = await screen.findByTitle(/Click for details/);
+            await fireClick(detailsBtn);
+
+            //wait for progress
+            await screen.findAllByText(/Up to date/i);
+        });
+
+        it("can render enabled and not completed", async () => {
+            const View = boundCopy(stories.RabbitTemplate, {
+                completed: false,
+                disabled: false,
+            });
+
+            const Story = composeStory(View, stories.default);
+
+            const { screen, fireClick } = rtlRender(<Story />);
+            const detailsBtn = await screen.findByTitle(/Click for details/);
+            await fireClick(detailsBtn);
+
+            //wait for progress
+            await screen.findAllByText("Running");
+        });
+
+        it("can notify about empty script", async () => {
+            const View = boundCopy(stories.RabbitTemplate, {
+                completed: true,
+                emptyScript: true,
+            });
+
+            const Story = composeStory(View, stories.default);
+
+            const { screen, fireClick } = rtlRender(<Story />);
+            const detailsBtn = await screen.findByTitle(/Click for details/);
+            await fireClick(detailsBtn);
+
+            //wait for progress
+            await screen.findAllByText(/Up to date/i);
+
+            expect(await screen.findByText(selectors.emptyScriptText)).toBeInTheDocument();
+        });
+    });
+
     describe("ElasticSearch", function () {
         it("can render disabled and not completed", async () => {
             const View = boundCopy(stories.ElasticSearchTemplate, {

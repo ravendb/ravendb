@@ -2,25 +2,9 @@
 
 
 class ongoingTaskBackupListModel extends ongoingTaskListModel {
-    private static neverBackedUpText = "Never backed up";
-    
-    static serverWideNamePrefixFromServer = "Server Wide Backup";
-    
-    activeDatabase = activeDatabaseTracker.default.database;
     
     private watchProvider: (task: ongoingTaskBackupListModel) => void;
 
-    backupType = ko.observable<Raven.Client.Documents.Operations.Backups.BackupType>();
-    nextBackup = ko.observable<Raven.Client.Documents.Operations.OngoingTasks.NextBackup>();
-    lastFullBackup = ko.observable<string>();
-    lastIncrementalBackup = ko.observable<string>();
-    onGoingBackup = ko.observable<Raven.Client.Documents.Operations.OngoingTasks.RunningBackup>();
-    retentionPolicyPeriod = ko.observable<string>();
-    retentionPolicyDisabled = ko.observable<boolean>();
-
-    textClass = ko.observable<string>();
-
-    backupDestinations = ko.observableArray<string>([]);
     backupNowInProgress = ko.observable<boolean>(false);
     isRunningOnAnotherNode: KnockoutComputed<boolean>;
     disabledBackupNowReason = ko.observable<string>();
@@ -31,18 +15,8 @@ class ongoingTaskBackupListModel extends ongoingTaskListModel {
     isBackupEncrypted = ko.observable<boolean>();
     lastExecutingNode = ko.observable<string>();
 
-    backupDestinationsHumanized: KnockoutComputed<string>;
-    lastFullBackupHumanized: KnockoutComputed<string>;
-    lastIncrementalBackupHumanized: KnockoutComputed<string>;
-    nextBackupHumanized: KnockoutComputed<string>;
-    onGoingBackupHumanized: KnockoutComputed<string>;
-    retentionPolicyHumanized: KnockoutComputed<string>;
     throttledRefreshBackupInfo: () => void;
 
-    get studioTaskType(): StudioTaskType {
-        return "Backup";
-    }
-    
     constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup, watchProvider: (task: ongoingTaskBackupListModel) => void) {
         super();
         
@@ -83,69 +57,6 @@ class ongoingTaskBackupListModel extends ongoingTaskListModel {
             return  !this.isServerWide() || accessManager.default.isClusterAdminOrClusterNode();
         });
         
-        this.lastFullBackupHumanized = ko.pureComputed(() => {
-            const lastFullBackup = this.lastFullBackup();
-            if (!lastFullBackup) {
-                return ongoingTaskBackupListModel.neverBackedUpText;
-            }
-
-            return generalUtils.formatDurationByDate(moment.utc(lastFullBackup), true);
-        });
-
-        this.lastIncrementalBackupHumanized = ko.pureComputed(() => {
-            const lastIncrementalBackup = this.lastIncrementalBackup();
-            if (!lastIncrementalBackup) {
-                return ongoingTaskBackupListModel.neverBackedUpText;
-            }
-
-            return generalUtils.formatDurationByDate(moment.utc(lastIncrementalBackup), true);
-        });
-
-        this.nextBackupHumanized = ko.pureComputed(() => {
-            const nextBackup = this.nextBackup();
-            if (!nextBackup) {
-                this.textClass("text-warning");
-                return "N/A";
-            }
-
-            if (this.isRunningOnAnotherNode()) {
-                this.textClass("text-info");
-                // the backup is running on another node
-                return `Backup is already running or should start shortly on node ${this.responsibleNode().NodeTag}`;
-            }
-
-            this.textClass("text-details");
-            const now = timeHelpers.utcNowWithSecondPrecision();
-            const diff = moment.utc(nextBackup.DateTime).diff(now);
-            
-            if (diff <= 0 && this.showDetails()) {
-                this.throttledRefreshBackupInfo();
-            }
-
-            const backupType = this.getBackupType(this.backupType(), nextBackup.IsFull);
-            const backupTypeText = backupType !== "Snapshot" ? `${backupType} Backup` : backupType;
-            const formatDuration = generalUtils.formatDuration(moment.duration(diff), true, 2, true);
-            return `in ${formatDuration} (${backupTypeText})`;
-        });
-
-        this.onGoingBackupHumanized = ko.pureComputed(() => {
-            const onGoingBackup = this.onGoingBackup();
-            if (!onGoingBackup) {
-                return null;
-            }
-
-            const fromDuration = generalUtils.formatDurationByDate(moment.utc(onGoingBackup.StartTime), true);
-            return `${fromDuration} (${this.getBackupType(this.backupType(), onGoingBackup.IsFull)})`;
-        });
-
-        this.retentionPolicyHumanized = ko.pureComputed(() => {
-            return this.retentionPolicyDisabled() ? "No backups will be removed" : generalUtils.formatTimeSpan(this.retentionPolicyPeriod(), true);
-        });
-        
-        this.backupDestinationsHumanized =  ko.pureComputed(() => {
-            return this.backupDestinations().length ? this.backupDestinations().join(', ') : "No destinations defined";
-        });
-
         this.isRunningOnAnotherNode = ko.pureComputed(() => {
             const responsibleNode = this.responsibleNode();
             if (!responsibleNode || !responsibleNode.NodeTag) {
@@ -172,21 +83,6 @@ class ongoingTaskBackupListModel extends ongoingTaskListModel {
     update(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup) {
         super.update(dto);
 
-        this.backupType(dto.BackupType);
-        this.backupDestinations(dto.BackupDestinations);
-        
-        this.neverBackedUp(!dto.LastFullBackup);
-        this.lastFullBackup(dto.LastFullBackup);
-        this.lastIncrementalBackup(dto.LastIncrementalBackup);
-        this.nextBackup(dto.NextBackup);
-        this.onGoingBackup(dto.OnGoingBackup);
-        this.isBackupEncrypted(dto.IsEncrypted);
-        this.lastExecutingNode(dto.LastExecutingNodeTag || "N/A");
-
-        // Check backward compatibility
-        this.retentionPolicyDisabled(dto.RetentionPolicy ? dto.RetentionPolicy.Disabled : true);
-        this.retentionPolicyPeriod(dto.RetentionPolicy ? dto.RetentionPolicy.MinimumBackupAgeToKeep : "0.0:00:00");
-        
         if (this.onGoingBackup()) {
             this.watchProvider(this);
         }
@@ -196,25 +92,6 @@ class ongoingTaskBackupListModel extends ongoingTaskListModel {
         this.isServerWide(this.taskName().startsWith(ongoingTaskBackupListModel.serverWideNamePrefixFromServer));
     }
 
-    private getBackupType(backupType: Raven.Client.Documents.Operations.Backups.BackupType, isFull: boolean): string {
-        if (!isFull) {
-            return "Incremental";
-        }
-
-        if (backupType === "Snapshot") {
-            return "Snapshot";
-        }
-
-        return "Full";
-    }
-
-    toggleDetails() {
-        this.showDetails.toggle();
-
-        if (this.showDetails()) {
-            this.refreshBackupInfo(true);
-        } 
-    }
 
     refreshBackupInfo(reportFailure: boolean) {
         if (connectionStatus.showConnectionLost()) {
@@ -504,68 +381,5 @@ class ongoingTaskReplicationHubDefinitionListModel {
         });
     }
 export = ongoingTaskReplicationHubDefinitionListModel;
-
-class ongoingTaskRabbitMqEtlListModel extends abstractOngoingTaskEtlListModel {
-    connectionStringDefined = ko.observable<boolean>(true); // needed for template in the ongoing tasks list view
-    
-    get studioTaskType(): StudioTaskType {
-        return "RabbitQueueEtl";
-    }
-    
-    constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtlListView) {
-        super();
-
-        this.update(dto);
-        this.initializeObservables();
-
-        this.connectionStringsUrl = appUrl.forConnectionStrings(activeDatabaseTracker.default.database(), "RabbitMQ", this.connectionStringName());
-    }
-
-    initializeObservables() {
-        super.initializeObservables();
-
-        const urls = appUrl.forCurrentDatabase();
-        this.editUrl = urls.editRabbitMqEtl(this.taskId);
-    }
-
-    update(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtlListView) {
-        super.update(dto);
-
-        this.connectionStringName(dto.ConnectionStringName);
-    }
-}
-
-class ongoingTaskKafkaEtlListModel extends abstractOngoingTaskEtlListModel {
-    bootstrapServers = ko.observable<string>();
-    connectionStringDefined = ko.observable<boolean>(true); // needed for template in the ongoing tasks list view
-    
-    get studioTaskType(): StudioTaskType {
-        return "KafkaQueueEtl";
-    }
-    
-    constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtlListView) {
-        super();
-
-        this.update(dto);
-        this.initializeObservables();
-
-        this.connectionStringsUrl = appUrl.forConnectionStrings(activeDatabaseTracker.default.database(), "Kafka", this.connectionStringName());
-    }
-
-    initializeObservables() {
-        super.initializeObservables();
-
-        const urls = appUrl.forCurrentDatabase();
-        this.editUrl = urls.editKafkaEtl(this.taskId);
-    }
-
-    update(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtlListView) {
-        super.update(dto);
-
-        this.connectionStringName(dto.ConnectionStringName);
-        this.bootstrapServers(dto.Url);
-    }
-}
-
 
 */
