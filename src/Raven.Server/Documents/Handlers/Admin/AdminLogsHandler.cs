@@ -88,12 +88,15 @@ namespace Raven.Server.Documents.Handlers.Admin
         [RavenAction("/admin/logs/download", "GET", AuthorizationStatus.Operator)]
         public async Task Download()
         {
-            var contentDisposition = $"attachment; filename={DateTime.UtcNow:yyyy-MM-dd H:mm:ss} - Node {ServerStore.NodeTag} - Logs.zip";
+            var contentDisposition = $"attachment; filename={DateTime.UtcNow:yyyy-MM-dd H:mm:ss} - Node [{ServerStore.NodeTag}] - Logs.zip";
             HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
             HttpContext.Response.Headers["Content-Type"] = "application/zip";
 
             var adminLogsFileName = $"admin.logs.download.{Guid.NewGuid():N}";
             var adminLogsFilePath = ServerStore._env.Options.DataPager.Options.TempPath.Combine(adminLogsFileName);
+
+            var from = GetDateTimeQueryString("from", required: false);
+            var to = GetDateTimeQueryString("to", required: false);
 
             using (var stream = new TempFileStream(SafeFileStream.Create(adminLogsFilePath.FullPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.ReadWrite, 4096,
                        FileOptions.DeleteOnClose | FileOptions.SequentialScan)))
@@ -103,15 +106,25 @@ namespace Raven.Server.Documents.Handlers.Admin
                     foreach (var filePath in Directory.GetFiles(ServerStore.Configuration.Logs.Path.FullPath))
                     {
                         var fileName = Path.GetFileName(filePath);
-                        string extension = Path.GetExtension(fileName);
-
-                        if (string.Equals(extension, LoggingSource.LogInfo.LogExtension, StringComparison.OrdinalIgnoreCase) == false &&
-                            string.Equals(extension, LoggingSource.LogInfo.FullCompressExtension, StringComparison.OrdinalIgnoreCase) == false)
+                        if (fileName.EndsWith(LoggingSource.LogInfo.LogExtension, StringComparison.OrdinalIgnoreCase) == false &&
+                            fileName.EndsWith(LoggingSource.LogInfo.FullCompressExtension, StringComparison.OrdinalIgnoreCase) == false)
                             continue;
 
+                        var hasLogDateTime = LoggingSource.LogInfo.TryGetDate(filePath, out var logDateTime);
+                        if (hasLogDateTime)
+                        {
+                            if (from != null && logDateTime < from)
+                                continue;
+
+                            if (to != null && logDateTime > to)
+                                continue;
+                        }
+                        
                         try
                         {
                             var entry = archive.CreateEntry(fileName);
+                            if (hasLogDateTime)
+                                entry.LastWriteTime = logDateTime;
 
                             using (var fs = File.Open(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                             {
