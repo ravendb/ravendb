@@ -164,6 +164,7 @@ function mapSharedInfo(task: OngoingTask): OngoingTaskSharedInfo {
                     const result: OngoingTaskKafkaEtlSharedInfo = {
                         ...commonProps,
                         connectionStringName: incoming.ConnectionStringName,
+                        url: incoming.Url,
                     };
                     return result;
                 }
@@ -172,6 +173,7 @@ function mapSharedInfo(task: OngoingTask): OngoingTaskSharedInfo {
                     const result: OngoingTaskRabbitMqEtlSharedInfo = {
                         ...commonProps,
                         connectionStringName: incoming.ConnectionStringName,
+                        url: incoming.Url,
                     };
                     return result;
                 }
@@ -186,6 +188,13 @@ function mapSharedInfo(task: OngoingTask): OngoingTaskSharedInfo {
                 ...commonProps,
                 backupDestinations: incoming.BackupDestinations,
                 lastExecutingNodeTag: incoming.LastExecutingNodeTag,
+                lastFullBackup: incoming.LastFullBackup,
+                lastIncrementalBackup: incoming.LastIncrementalBackup,
+                backupType: incoming.BackupType,
+                encrypted: incoming.IsEncrypted,
+                onGoingBackup: incoming.OnGoingBackup,
+                nextBackup: incoming.NextBackup,
+                retentionPolicy: incoming.RetentionPolicy,
             };
             return result;
         }
@@ -327,7 +336,8 @@ export const ongoingTasksReducer: Reducer<OngoingTasksState, OngoingTaskReducerA
                     );
                     const progressToApply = incomingProgress.find(
                         (x) =>
-                            TaskUtils.etlTypeToTaskType(x.EtlType) === task.shared.taskType &&
+                            TaskUtils.etlTypeToTaskType(x.EtlType) ===
+                                TaskUtils.studioTaskTypeToTaskType(task.shared.taskType) &&
                             x.TaskName === task.shared.taskName
                     );
                     (perLocationDraft as WritableDraft<OngoingEtlTaskNodeInfo>).etlProgress = progressToApply

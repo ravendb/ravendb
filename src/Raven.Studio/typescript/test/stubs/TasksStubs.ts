@@ -7,6 +7,8 @@ import OngoingTaskSqlEtlListView = Raven.Client.Documents.Operations.OngoingTask
 import OngoingTaskOlapEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtlListView;
 import OngoingTaskElasticSearchEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtlListView;
 import OngoingTaskBackup = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup;
+import OngoingTaskQueueEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtlListView;
+import { tasks } from "knockout";
 
 export class TasksStubs {
     static getTasksList(): OngoingTasksResult {
@@ -17,7 +19,9 @@ export class TasksStubs {
                 TasksStubs.getOlapListItem(),
                 TasksStubs.getElasticSearchListItem(),
                 TasksStubs.getPeriodicBackupListItem(),
-                //TODO: kafka, rabbit, replication hub/sink, subscriptions
+                TasksStubs.getKafkaListItem(),
+                TasksStubs.getRabbitListItem(),
+                //TODO: replication hub/sink, subscriptions
             ],
             PullReplications: [],
             SubscriptionsCount: 0,
@@ -31,6 +35,8 @@ export class TasksStubs {
                 TasksStubs.getSqlProgress(),
                 TasksStubs.getOlapProgress(),
                 TasksStubs.getElasticsearchProgress(),
+                TasksStubs.getKafkaProgress(),
+                TasksStubs.getRabbitProgress(),
             ],
         };
     }
@@ -50,11 +56,21 @@ export class TasksStubs {
         return TasksStubs.getEtlProgress(taskName, "Olap");
     }
 
+    static getKafkaProgress(): EtlTaskProgress {
+        const taskName = TasksStubs.getKafkaListItem().TaskName;
+        return TasksStubs.getEtlProgress(taskName, "Queue");
+    }
+
+    static getRabbitProgress(): EtlTaskProgress {
+        const taskName = TasksStubs.getRabbitListItem().TaskName;
+        return TasksStubs.getEtlProgress(taskName, "Queue");
+    }
+
     static getElasticsearchProgress(): EtlTaskProgress {
         const taskName = TasksStubs.getElasticSearchListItem().TaskName;
         return TasksStubs.getEtlProgress(taskName, "ElasticSearch");
     }
-    
+
     static getPeriodicBackupListItem(): OngoingTaskBackup {
         return {
             TaskName: "Raven Backup",
@@ -76,16 +92,16 @@ export class TasksStubs {
             NextBackup: {
                 IsFull: true,
                 DateTime: moment.utc().add(2, "hours").toISOString(),
-                TimeSpan: "02:00:00"
+                TimeSpan: "02:00:00",
             },
             LastIncrementalBackup: moment.utc().add(-3, "days").toISOString(),
             LastExecutingNodeTag: "A",
             OnGoingBackup: null,
             RetentionPolicy: {
                 Disabled: true,
-                MinimumBackupAgeToKeep: "1.00:00:00"
-            }
-        }
+                MinimumBackupAgeToKeep: "1.00:00:00",
+            },
+        };
     }
 
     static getRavenEtlListItem(): OngoingTaskRavenEtlListView {
@@ -146,6 +162,46 @@ export class TasksStubs {
             Error: null,
             MentorNode: null,
             TaskConnectionStatus: "Active",
+        };
+    }
+
+    static getKafkaListItem(): OngoingTaskQueueEtlListView {
+        return {
+            TaskName: "KafkaTask",
+            TaskId: 302,
+            TaskType: "QueueEtl",
+            ConnectionStringName: "Kafka-CS",
+            ResponsibleNode: {
+                NodeTag: "C",
+                NodeUrl: "http://raven-c",
+                ResponsibleNode: "C",
+            },
+            TaskState: "Enabled",
+            Error: null,
+            TaskConnectionStatus: "Active",
+            MentorNode: null,
+            BrokerType: "Kafka",
+            Url: "localhost:9092",
+        };
+    }
+
+    static getRabbitListItem(): OngoingTaskQueueEtlListView {
+        return {
+            TaskName: "RabbitTask",
+            TaskId: 303,
+            TaskType: "QueueEtl",
+            ConnectionStringName: "Rabbit-CS",
+            ResponsibleNode: {
+                NodeTag: "C",
+                NodeUrl: "http://raven-c",
+                ResponsibleNode: "C",
+            },
+            TaskState: "Enabled",
+            Error: null,
+            TaskConnectionStatus: "Active",
+            MentorNode: null,
+            Url: "localhost:6006",
+            BrokerType: "RabbitMq",
         };
     }
 

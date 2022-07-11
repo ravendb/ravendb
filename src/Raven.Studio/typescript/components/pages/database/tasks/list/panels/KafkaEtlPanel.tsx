@@ -12,7 +12,7 @@ import {
 import { OngoingTaskKafkaEtlInfo } from "../../../../../models/tasks";
 import { useAccessManager } from "hooks/useAccessManager";
 import { useAppUrls } from "hooks/useAppUrls";
-import { RichPanel, RichPanelDetails, RichPanelHeader } from "../../../../../common/RichPanel";
+import { RichPanel, RichPanelDetailItem, RichPanelDetails, RichPanelHeader } from "../../../../../common/RichPanel";
 import { OngoingEtlTaskDistribution } from "./OngoingEtlTaskDistribution";
 
 type KafkaEtlPanelProps = BaseOngoingTaskPanelProps<OngoingTaskKafkaEtlInfo>;
@@ -23,6 +23,10 @@ function Details(props: KafkaEtlPanelProps & { canEdit: boolean }) {
     const connectionStringsUrl = appUrl.forConnectionStrings(db, "Kafka", data.shared.connectionStringName);
     return (
         <RichPanelDetails>
+            <RichPanelDetailItem>
+                Bootstrap Servers:
+                <div className="value">{data.shared.url}</div>
+            </RichPanelDetailItem>
             <ConnectionStringItem
                 connectionStringDefined
                 canEdit={canEdit}
