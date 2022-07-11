@@ -30,7 +30,7 @@ namespace SlowTests.Core.Streaming
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void CanStreamQueryResults(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -81,8 +81,8 @@ namespace SlowTests.Core.Streaming
             }
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void CanStreamQueryResultsWithQueryStatistics(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -135,8 +135,8 @@ namespace SlowTests.Core.Streaming
             }
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanStreamQueryResultsWithQueryStatisticsAsync(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -327,9 +327,9 @@ namespace SlowTests.Core.Streaming
                 Xunit.Assert.True(test.IsCompletedSuccessfully);
             }
         }
-        
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void Streaming_Results_Should_Sort_Properly(Options options)
         {
             using (var documentStore = GetDocumentStore(options))
@@ -372,6 +372,58 @@ namespace SlowTests.Core.Streaming
                         last = foo;
 
                     }
+                }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
+        public void OrderedStreamingQueryWithSkipTake(Options options)
+        {
+            using (var documentStore = GetDocumentStore(options))
+            {
+                documentStore.ExecuteIndex(new FooIndex());
+
+                using (var session = documentStore.OpenSession())
+                {
+                    for (int i = 0; i < 100; i++)
+                        session.Store(new Foo { Num = 100 - i });
+
+                    session.SaveChanges();
+                }
+
+                Indexes.WaitForIndexing(documentStore);
+
+                Foo last = null;
+                int count = 0;
+
+                using (var session = documentStore.OpenSession())
+                {
+                    var q = session.Query<Foo, FooIndex>().OrderBy(x => x.Num).Skip(10).Take(80);
+
+                    var enumerator = session.Advanced.Stream(q);
+
+                    while (enumerator.MoveNext())
+                    {
+                        Foo foo = (Foo)enumerator.Current.Document;
+                        Debug.WriteLine("{0} - {1}", foo.Id, foo.Num);
+
+                        if (last != null)
+                        {
+                            Assert.True(last.Num <= foo.Num);
+                        }
+
+                        last = foo;
+                        count++;
+
+                        if (count == 1)
+                        {
+                            Assert.Equal(11, last.Num);
+                        }
+                    }
+
+                    Assert.Equal(90, last.Num);
+                    Assert.Equal(80, count);
                 }
             }
         }

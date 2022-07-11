@@ -31,7 +31,7 @@ namespace Raven.Server.Documents.Handlers
             await GetCsvWriter().NextRecordAsync();
         }
 
-        public StreamCsvDocumentQueryResultWriter(HttpResponse response, Stream stream, DocumentsOperationContext context, string[] properties = null,
+        public StreamCsvDocumentQueryResultWriter(HttpResponse response, Stream stream, string[] properties = null,
             string csvFileName = "export") : base(response, stream, properties, csvFileName)
         {
         }

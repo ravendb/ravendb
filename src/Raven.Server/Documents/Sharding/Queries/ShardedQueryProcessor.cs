@@ -36,14 +36,14 @@ namespace Raven.Server.Documents.Sharding.Queries;
 /// </summary>
 public class ShardedQueryProcessor : IDisposable
 {
-    private readonly TransactionOperationContext _context;
-    private readonly ShardedDatabaseRequestHandler _parent;
+    protected readonly TransactionOperationContext _context;
+    protected readonly ShardedDatabaseRequestHandler _parent;
     private readonly IndexQueryServerSide _query;
     private readonly bool _isMapReduceIndex;
     private readonly bool _isAutoMapReduceQuery;
-    private readonly Dictionary<int, ShardedQueryCommand> _commands;
+    protected readonly Dictionary<int, ShardedQueryCommand> _commands;
     //private readonly HashSet<int> _filteredShardIndexes;
-    private readonly ShardedQueryResult _result;
+    protected readonly ShardedQueryResult _result;
     private readonly List<IDisposable> _disposables = new();
 
     private IncludeCompareExchangeValuesCommand _includeCompareExchangeValues;
@@ -82,13 +82,13 @@ public class ShardedQueryProcessor : IDisposable
 
     public long ResultsEtag => _result.ResultEtag;
 
-    public void Initialize()
+    public void Initialize(out BlittableJsonReaderObject queryTemplate)
     {
         AssertUsingCustomSorters();
 
         // now we have the index query, we need to process that and decide how to handle this.
         // There are a few different modes to handle:
-        var queryTemplate = _query.ToJson(_context);
+        queryTemplate = _query.ToJson(_context);
         if (_query.Metadata.IsCollectionQuery)
         {
             // * For collection queries that specify ids, we can turn that into a set of loads that 
@@ -113,11 +113,16 @@ public class ShardedQueryProcessor : IDisposable
         // * If we have a projection in a map-reduce index,
         //   the shards will send the query result and the orchestrator will re-reduce and apply the projection
         //   in that case we must send the query without the projection
-        RewriteQueryForProjection(ref queryTemplate); //TODO stav: if map reduce is not supported in streaming then this shouldn't happen as well?
+        RewriteQueryForProjection(ref queryTemplate);
 
         // * For collection queries that specify startsWith by id(), we need to send to all shards
         // * For collection queries without any where clause, we need to send to all shards
         // * For indexes, we sent to all shards
+        CreateQueryCommands(queryTemplate);
+    }
+
+    public virtual void CreateQueryCommands(BlittableJsonReaderObject queryTemplate)
+    {
         for (int i = 0; i < _parent.DatabaseContext.ShardCount; i++)
         {
             //if (_filteredShardIndexes?.Contains(i) == false)

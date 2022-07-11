@@ -65,7 +65,7 @@ internal class ShardedQueriesHandlerProcessorForGet : AbstractQueriesHandlerProc
 
         _queryProcessor = new ShardedQueryProcessor(queryContext, RequestHandler, query);
 
-        _queryProcessor.Initialize();
+        _queryProcessor.Initialize(out _);
 
         await _queryProcessor.ExecuteShardedOperations();
 

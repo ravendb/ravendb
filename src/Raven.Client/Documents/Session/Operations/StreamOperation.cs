@@ -319,11 +319,11 @@ namespace Raven.Client.Documents.Session.Operations
                 _isTimeSeriesStream = isTimeSeriesStream;
             }
 
-            public YieldStreamResults(JsonContextPool pool, StreamResult response, bool isQueryStream, bool isTimeSeriesStream, bool isAsync, StreamQueryStatistics streamQueryStatistics, CancellationToken token = default)
+            public YieldStreamResults(Func<(JsonOperationContext, IDisposable)> allocateJsonContext, StreamResult response, bool isQueryStream, bool isTimeSeriesStream, bool isAsync, StreamQueryStatistics streamQueryStatistics, CancellationToken token = default)
             {
                 _response = response ?? throw new InvalidOperationException("The index does not exists, failed to stream results");
-                _builderReturnContext = pool.AllocateOperationContext(out _builderContext);
-                _inputReturnContext = pool.AllocateOperationContext(out _inputContext);
+                (_builderContext, _builderReturnContext) = allocateJsonContext();
+                (_inputContext, _inputReturnContext) = allocateJsonContext();
 
                 _peepingTomStream = new PeepingTomStream(_response.Stream, _inputContext);
                 _isQueryStream = isQueryStream;
