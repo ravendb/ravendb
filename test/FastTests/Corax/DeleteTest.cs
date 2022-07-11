@@ -233,7 +233,41 @@ namespace FastTests.Corax
             }
         }
 
+        [Fact]
+        public void CanDeleteAndPushUnderSameId()
+        {
+            PrepareData(DataType.Modulo, 1);
+            IndexEntries(CreateKnownFields(_bsc));
+            Span<long> ids = stackalloc long[1024];
+            {
+                using var indexSearcher = new IndexSearcher(Env, _analyzers);
+                var match = indexSearcher.TermQuery("Content", "0");
+                Assert.Equal(1, match.Fill(ids));
+            }
+            using (var indexWriter = new IndexWriter(Env, _analyzers))
+            {
+                indexWriter.TryDeleteEntry("Id", "list/0");
+                indexWriter.Commit();
+            }
 
+            {
+                using var indexSearcher = new IndexSearcher(Env, _analyzers);
+                Assert.Equal(0, indexSearcher.NumberOfEntries);
+            }
+
+            IndexEntries(CreateKnownFields(_bsc));
+            {
+                using var indexSearcher = new IndexSearcher(Env, _analyzers);
+                var match = indexSearcher.TermQuery("Content", "0");
+                Assert.Equal(1, match.Fill(ids));
+                var entity = indexSearcher.GetReaderFor(ids[0]);
+                Assert.True(entity.Read(IndexId, out var idInIndex));
+                Assert.True(Encodings.Utf8.GetBytes("list/0").AsSpan().SequenceEqual(idInIndex));
+
+            }
+
+
+        }
 
         private void PrepareData(DataType type = DataType.Default, int batchSize = 1000, uint modulo = 33)
         {

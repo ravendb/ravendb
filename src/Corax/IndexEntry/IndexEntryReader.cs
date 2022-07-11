@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Sparrow;
@@ -525,10 +526,10 @@ public unsafe readonly ref struct IndexEntryReader
         return (offset, isTyped);
     }
 
-    public string DebugDump(Dictionary<Slice, int> knownFields)
+    public string DebugDump(IndexFieldsMapping knownFields)
     {
         string result = string.Empty;
-        foreach (var (name, field) in knownFields)
+        foreach (var (name, field) in knownFields.Select(x => (x.FieldName, x.FieldId)))
         {
             var type = GetFieldType(field, out _);
             if (type.HasFlag(IndexEntryFieldType.Simple))
