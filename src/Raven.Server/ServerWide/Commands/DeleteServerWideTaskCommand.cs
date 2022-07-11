@@ -42,11 +42,15 @@ namespace Raven.Server.ServerWide.Commands
         public override BlittableJsonReaderObject GetUpdatedValue(JsonOperationContext context, BlittableJsonReaderObject previousValue, long index)
         {
             if (previousValue == null)
-                throw new RachisInvalidOperationException($"There are no server wide tasks so nothing to delete: configuration {context.ReadObject(Value.ToJson(), "")}");
+                throw new RachisInvalidOperationException(
+                    "There are no server wide tasks so nothing to delete: " +
+                           $"raftIndex {index}, configuration {context.ReadObject(Value.ToJson(), "")}");
 
             var propertyIndex = previousValue.GetPropertyIndex(Value.TaskName);
             if (propertyIndex == -1)
-                throw new RachisInvalidOperationException($"The server wide task to delete doesn't exist: previousValue {previousValue}, configuration {context.ReadObject(Value.ToJson(), "")}");
+                throw new RachisInvalidOperationException(
+                    "The server wide task to delete doesn't exist: " +
+                           $"raftIndex {index}, previousValue {previousValue}, configuration {context.ReadObject(Value.ToJson(), "")}");
 
             if (previousValue.Modifications == null)
                 previousValue.Modifications = new DynamicJsonValue();
