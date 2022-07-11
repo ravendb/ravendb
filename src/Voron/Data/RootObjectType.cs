@@ -10,6 +10,7 @@
         Table = 5,
         CompactTree = 6,
         Set = 7,
-        Container = 8
+        Container = 8,
+        PersistentDictionary = 9
     }
 }

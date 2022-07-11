@@ -12,6 +12,16 @@ using static Sparrow.Hashing;
 namespace Voron.Data.CompactTrees
 {
     [StructLayout(LayoutKind.Explicit, Pack = 1)]
+    public unsafe struct PersistentDictionaryRootHeader
+    {
+        [FieldOffset(0)]
+        public RootObjectType RootObjectType;
+
+        [FieldOffset(1)]
+        public long PageNumber;
+    }
+    
+    [StructLayout(LayoutKind.Explicit, Pack = 1)]
     public unsafe struct PersistentDictionaryHeader
     {
         public const int SizeOf = 32;
@@ -49,7 +59,7 @@ namespace Voron.Data.CompactTrees
             var result = llt.RootObjects.DirectRead(defaultKey);
             if (result != null)
             {
-                pageNumber = *(long*)result;
+                pageNumber = ((PersistentDictionaryRootHeader*)result)->PageNumber;
             }
             else
             {
@@ -88,8 +98,12 @@ namespace Voron.Data.CompactTrees
 
                 pageNumber = p.PageNumber;
 
-                using var scope = llt.RootObjects.DirectAdd(defaultKey, sizeof(long), out var ptr);
-                *(long*)ptr = pageNumber;
+                using var scope = llt.RootObjects.DirectAdd(defaultKey, sizeof(PersistentDictionaryRootHeader), out var ptr);
+                *(PersistentDictionaryRootHeader*)ptr = new PersistentDictionaryRootHeader()
+                {
+                    RootObjectType = RootObjectType.PersistentDictionary,
+                    PageNumber = pageNumber
+                };
             }
 
             return pageNumber;

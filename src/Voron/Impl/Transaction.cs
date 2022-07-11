@@ -153,13 +153,21 @@ namespace Voron.Impl
 
         public long OpenContainer(Slice name)
         {
-            var exists = LowLevelTransaction.RootObjects.Read(name);
+            var exists = LowLevelTransaction.RootObjects.DirectRead(name);
             if (exists != null)
             {
-                return exists.Reader.ReadLittleEndianInt64();
+                return ((ContainerRootHeader*)exists)->ContainerId;
             }
             var id = Container.Create(LowLevelTransaction);
-            LowLevelTransaction.RootObjects.Add(name, id);
+
+            using (LowLevelTransaction.RootObjects.DirectAdd(name, sizeof(ContainerRootHeader), out var ptr))
+                *((ContainerRootHeader*)ptr) = new ContainerRootHeader
+                {
+                    RootObjectType = RootObjectType.Container,
+                    ContainerId = id
+                };
+            
+            
             return id;
         }
 
