@@ -13,18 +13,14 @@ namespace Raven.Server.Documents.Commands.Streaming
     public class PostQueryStreamCommand : RavenCommand<StreamResult>
     {
         private readonly BlittableJsonReaderObject _indexQueryServerSide;
-        private readonly string _format;
         private readonly string _debug;
         private readonly bool _ignoreLimit;
-        private readonly string _properties;
 
-        public PostQueryStreamCommand(BlittableJsonReaderObject indexQueryServerSide, string format, string debug, bool ignoreLimit, string properties)
+        public PostQueryStreamCommand(BlittableJsonReaderObject indexQueryServerSide, string debug, bool ignoreLimit)
         {
             _indexQueryServerSide = indexQueryServerSide;
-            _format = format;
             _debug = debug;
             _ignoreLimit = ignoreLimit;
-            _properties = properties;
             ResponseType = RavenCommandResponseType.Empty;
         }
 
@@ -38,12 +34,8 @@ namespace Raven.Server.Documents.Commands.Streaming
                 Content = new BlittableJsonContent(async (stream) => await _indexQueryServerSide.WriteJsonToAsync(stream))
             };
 
-            var sb = new StringBuilder($"{node.Url}/databases/{node.Database}/streams/queries?"); //TODO stav: trailing '?' allowed?
+            var sb = new StringBuilder($"{node.Url}/databases/{node.Database}/streams/queries?");
 
-            if (string.IsNullOrEmpty(_format) == false)
-            {
-                sb.Append("format=").Append(Uri.EscapeDataString(_format)).Append("&");
-            }
             if (string.IsNullOrEmpty(_debug) == false)
             {
                 sb.Append("debug=").Append(Uri.EscapeDataString(_debug)).Append("&");
@@ -51,10 +43,6 @@ namespace Raven.Server.Documents.Commands.Streaming
             if (_ignoreLimit)
             {
                 sb.Append("ignoreLimit=true");
-            }
-            if (string.IsNullOrEmpty(_properties) == false)
-            {
-                sb.Append("field=").Append(Uri.EscapeDataString(_properties)).Append("&");
             }
 
             url = sb.ToString();
@@ -71,7 +59,7 @@ namespace Raven.Server.Documents.Commands.Streaming
                 Stream = new StreamWithTimeout(responseStream) //TODO stav: leave as stream with timeout?
             };
 
-            return ResponseDisposeHandling.Manually; //TODO stav: ?
+            return ResponseDisposeHandling.Manually;
         }
     }
 }

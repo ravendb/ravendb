@@ -1,9 +1,10 @@
 ﻿using System;
+using System.IO;
 using System.Text;
 using System.Threading.Tasks;
-using Elasticsearch.Net;
 using JetBrains.Annotations;
-using Microsoft.Extensions.Primitives;
+using Microsoft.AspNetCore.Http;
+using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Exceptions.Documents;
 using Raven.Server.Documents.Queries;
@@ -15,7 +16,7 @@ using HttpMethod = System.Net.Http.HttpMethod;
 
 namespace Raven.Server.Documents.Handlers.Processors.Streaming
 {
-    internal abstract class AbstractStreamingHandlerProcessorForGetStreamQuery<TRequestHandler, TOperationContext> : AbstractStreamingHandlerProcessor<TRequestHandler, TOperationContext>
+    internal abstract class AbstractStreamingHandlerProcessorForGetStreamQuery<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
         where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
         where TOperationContext : JsonOperationContext
     {
@@ -26,8 +27,6 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
             _method = method;
         }
         
-        protected abstract ValueTask ExecuteQueryAndWriteAsync(TOperationContext context, IndexQueryServerSide indexQuery, string format, string debug, bool ignoreLimit, StringValues properties, RequestTimeTracker tracker, OperationCancelToken token);
-
         protected abstract RequestTimeTracker GetTimeTracker();
 
         protected abstract ValueTask<BlittableJsonReaderObject> GetDocumentData(TOperationContext context, string fromDocument);
@@ -36,6 +35,12 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
 
         protected abstract QueryMetadataCache GetQueryMetadataCache();
 
+        protected abstract ValueTask ExecuteAndWriteQueryStreamAsync(TOperationContext context, IndexQueryServerSide query, string format,
+            string[] propertiesArray, string fileNamePrefix, bool ignoreLimit, bool fromSharded, OperationCancelToken token);
+
+        protected abstract ValueTask ExecuteAndWriteIndexQueryStreamEntriesAsync(TOperationContext context, IndexQueryServerSide query, string format, string debug,
+            string[] propertiesArray, string fileNamePrefix, bool ignoreLimit, bool fromSharded, OperationCancelToken token);
+
         public override async ValueTask ExecuteAsync()
         {
             var format = RequestHandler.GetStringQueryString("format", false);
@@ -43,6 +48,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
             var ignoreLimit = RequestHandler.GetBoolValueQueryString("ignoreLimit", required: false) ?? false;
             var properties = RequestHandler.GetStringValuesQueryString("field", false);
 
+            // ReSharper disable once ArgumentsStyleLiteral
             using (var tracker = GetTimeTracker())
             using (var token = RequestHandler.CreateTimeLimitedOperationToken()) //TODO stav: original: CreateTimeLimitedQueryToken
             using(AllocateContext(out TOperationContext context))
@@ -91,9 +97,71 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
                         RequestHandler.AddStringToHttpContext(sb.ToString(), TrafficWatchChangeType.Streams);
                     }
                 }
-                
-                await ExecuteQueryAndWriteAsync(context, query, format, debug, ignoreLimit, properties, tracker, token);
+
+                var propertiesArray = properties.Count == 0 ? null : properties.ToArray();
+                // set the exported file name prefix
+                var fileNamePrefix = query.Metadata.IsCollectionQuery ? query.Metadata.CollectionName + "_collection" : "query_result";
+                fileNamePrefix = $"{RequestHandler.DatabaseName}_{fileNamePrefix}";
+
+                var fromSharded = RequestHandler.GetBoolFromHeaders(Constants.Headers.Sharded) ?? false;
+
+                if (string.IsNullOrWhiteSpace(debug) == false)
+                {
+                    if (string.Equals(debug, "entries", StringComparison.OrdinalIgnoreCase))
+                    {
+                        await ExecuteAndWriteIndexQueryStreamEntriesAsync(context, query, format, debug, propertiesArray, fileNamePrefix, ignoreLimit, fromSharded, token);
+                    }
+                    else
+                    {
+                        ThrowUnsupportedException($"You have selected {debug} debug mode, which is not supported.");
+                    }
+                }
+                else
+                {
+                    await ExecuteAndWriteQueryStreamAsync(context, query, format, propertiesArray, fileNamePrefix, ignoreLimit, fromSharded, token);
+                }
             }
+        }
+
+        protected IStreamQueryResultWriter<Document> GetDocumentQueryResultWriter(string format, HttpResponse response, JsonOperationContext context, Stream responseBodyStream,
+            string[] propertiesArray, string fileNamePrefix = null)
+        {
+            if (IsCsvFormat(format))
+            {
+                return new StreamCsvDocumentQueryResultWriter(response, responseBodyStream, propertiesArray, fileNamePrefix);
+            }
+
+            if (propertiesArray != null)
+            {
+                ThrowUnsupportedException("Using json output format with custom fields is not supported.");
+            }
+
+            return new StreamJsonDocumentQueryResultWriter(responseBodyStream, context);
+        }
+
+        protected IStreamQueryResultWriter<BlittableJsonReaderObject> GetBlittableQueryResultWriter(string format, JsonOperationContext context, HttpResponse response, Stream responseBodyStream, bool fromSharded,
+            string[] propertiesArray, string fileNamePrefix = null)
+        {
+            if (fromSharded)
+            {
+                return new StreamBlittableDocumentQueryResultWriter(responseBodyStream, context);
+            }
+
+            if (IsCsvFormat(format) == false)
+                ThrowUnsupportedException($"You have selected \"{format}\" file format, which is not supported.");
+
+            //does not write query stats to stream
+            return new StreamCsvBlittableQueryResultWriter(response, responseBodyStream, propertiesArray, fileNamePrefix);
+        }
+
+        private static bool IsCsvFormat(string format)
+        {
+            return string.IsNullOrEmpty(format) == false && string.Equals(format, "csv", StringComparison.OrdinalIgnoreCase);
+        }
+
+        protected void ThrowUnsupportedException(string message)
+        {
+            throw new NotSupportedException(message);
         }
     }
 }
