@@ -23,13 +23,6 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
         {
         }
 
-        protected override ValueTask AssertCanExecuteAsync()
-        {
-            RequestHandler.ServerStore.LicenseManager.AssertCanAddPullReplicationAsHub();
-
-            return base.AssertCanExecuteAsync();
-        }
-
         protected override async ValueTask<BlittableJsonReaderObject> GetConfigurationAsync(TransactionOperationContext context, AsyncBlittableJsonTextWriter writer)
         {
             _hubTaskName = RequestHandler.GetStringQueryString("name", true);
