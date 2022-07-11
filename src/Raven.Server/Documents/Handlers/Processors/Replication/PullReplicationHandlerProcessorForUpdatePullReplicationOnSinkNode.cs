@@ -1,4 +1,5 @@
-﻿using JetBrains.Annotations;
+﻿using System.Threading.Tasks;
+using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Server.ServerWide.Context;
@@ -10,6 +11,13 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
     {
         public PullReplicationHandlerProcessorForUpdatePullReplicationOnSinkNode([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {
+        }
+
+        protected override ValueTask AssertCanExecuteAsync()
+        {
+            RequestHandler.ServerStore.LicenseManager.AssertCanAddPullReplicationAsSink();
+
+            return base.AssertCanExecuteAsync();
         }
 
         protected override void FillResponsibleNode(TransactionOperationContext context, DynamicJsonValue responseJson, PullReplicationAsSink pullReplication)
