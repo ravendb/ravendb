@@ -3,14 +3,17 @@ using System.IO;
 using System.IO.Compression;
 using System.Threading.Tasks;
 using Raven.Client.ServerWide.Operations.Logs;
+using Raven.Server.Indexing;
 using Raven.Server.Json;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide;
 using Raven.Server.Web;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server.Platform.Posix;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Handlers.Admin
 {
@@ -87,40 +90,48 @@ namespace Raven.Server.Documents.Handlers.Admin
         {
             var contentDisposition = $"attachment; filename={DateTime.UtcNow:yyyy-MM-dd H:mm:ss} - Node {ServerStore.NodeTag} - Logs.zip";
             HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
+            HttpContext.Response.Headers["Content-Type"] = "application/zip";
 
-            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            var adminLogsFileName = $"admin.logs.download.{Guid.NewGuid():N}";
+            var adminLogsFilePath = ServerStore._env.Options.DataPager.Options.TempPath.Combine(adminLogsFileName);
+
+            using (var stream = new TempFileStream(SafeFileStream.Create(adminLogsFilePath.FullPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.ReadWrite, 4096,
+                       FileOptions.DeleteOnClose | FileOptions.SequentialScan)))
             {
-                await using (var ms = new MemoryStream())
+                using (var archive = new ZipArchive(stream, ZipArchiveMode.Create, true))
                 {
-                    using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, true))
+                    foreach (var filePath in Directory.GetFiles(ServerStore.Configuration.Logs.Path.FullPath))
                     {
-                        foreach (var filePath in Directory.GetFiles(ServerStore.Configuration.Logs.Path.FullPath))
+                        var fileName = Path.GetFileName(filePath);
+                        string extension = Path.GetExtension(fileName);
+
+                        if (string.Equals(extension, LoggingSource.LogInfo.LogExtension, StringComparison.OrdinalIgnoreCase) == false &&
+                            string.Equals(extension, LoggingSource.LogInfo.FullCompressExtension, StringComparison.OrdinalIgnoreCase) == false)
+                            continue;
+
+                        try
                         {
-                            try
+                            var entry = archive.CreateEntry(fileName);
+
+                            using (var fs = File.Open(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                             {
-                                using (var fs = File.Open(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                                entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
+
+                                await using (var entryStream = entry.Open())
                                 {
-                                    var fileName = Path.GetFileName(filePath);
-                                    var entry = archive.CreateEntry(fileName);
-
-                                    entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
-
-                                    await using (var entryStream = entry.Open())
-                                    {
-                                        await fs.CopyToAsync(entryStream);
-                                    }
+                                    await fs.CopyToAsync(entryStream);
                                 }
                             }
-                            catch
-                            {
-                                // something went wrong with copying the file, will continue to the next one
-                            }
+                        }
+                        catch (Exception e)
+                        {
+                            await DebugInfoPackageUtils.WriteExceptionAsZipEntryAsync(e, archive, fileName);
                         }
                     }
-
-                    ms.Position = 0;
-                    await ms.CopyToAsync(ResponseBodyStream());
                 }
+
+                stream.Position = 0;
+                await stream.CopyToAsync(ResponseBodyStream());
             }
         }
     }
