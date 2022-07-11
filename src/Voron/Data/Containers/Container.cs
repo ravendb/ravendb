@@ -15,6 +15,16 @@ using Voron.Impl.Paging;
 
 namespace Voron.Data.Containers
 {
+    [StructLayout(LayoutKind.Explicit, Pack = 1)]
+    public unsafe struct ContainerRootHeader
+    {
+        [FieldOffset(0)]
+        public RootObjectType RootObjectType;
+
+        [FieldOffset(1)]
+        public long ContainerId;
+    }
+    
     public readonly unsafe ref struct Container
     {
         private static readonly Slice AllPagesSetName;

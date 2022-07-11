@@ -1037,6 +1037,11 @@ namespace Voron
                             case RootObjectType.Table:
                                 countOfTables++;
                                 break;
+                            case RootObjectType.CompactTree:
+                            case RootObjectType.Set:
+                            case RootObjectType.Container:
+                            case RootObjectType.PersistentDictionary:
+                                throw new NotImplementedException($"Not implemented for Corax structures.");
                             default:
                                 throw new ArgumentOutOfRangeException();
                         }
