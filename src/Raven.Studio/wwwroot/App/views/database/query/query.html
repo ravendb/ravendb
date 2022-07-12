@@ -85,7 +85,7 @@
             </div>
             <div class="clearfix">
                 <div class="pull-left btn-group">
-                    <div data-bind="visible: queryStats() && hasEditableIndex() && !isGraphQuery(), if: queryStats() && hasEditableIndex() && !isGraphQuery()" class="dropdown btn-group" >
+                    <div data-bind="visible: queryStats() && hasEditableIndex(), if: queryStats() && hasEditableIndex()" class="dropdown btn-group" >
                         <button class="btn btn-info btn-sm dropdown-toggle" type="button" id="dropdownMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
                             <span>
                                 <i class="icon-index"></i> <span>Index '</span><span data-bind="text: queriedIndexLabel"></span>'
@@ -127,7 +127,7 @@
                         </ul>
                     </div>
                     <small class="on-base-background" data-bind="if: queryStats(), visible: queryStats()">
-                        <span data-bind="if: !isGraphQuery()">
+                        <span>
                             <strong data-bind="if: !hasEditableIndex(), visible: !hasEditableIndex()">
                                 <i class="icon-documents"></i><span data-bind="text: queriedIndexDescription"></span>
                             </strong>
@@ -139,13 +139,6 @@
                                 . Showing <strong>stored index fields</strong> only. 
                             </span>
                             <span data-bind="visible: queriedIndexEntries">. Showing <strong>raw index entries</strong>.</span>
-                        </span>
-                        <span data-bind="if: isGraphQuery">
-                            <strong>
-                                <i class="icon-indexing"></i><span>Graph</span>
-                            </strong>
-                            query took: 
-                            <strong data-bind="text: queryStats().DurationInMs.toLocaleString() + ' ms'"></strong>
                         </span>
                     </small>
                     <small data-bind="visible: queryStats()">
@@ -233,8 +226,6 @@
                         </div>
                     </div>
                 </div>
-                <div class="panel-body js-graph-container graph-container absolute-fill" data-bind="visible: currentTab() === 'graph'">
-                </div>
                 <div class="panel-body absolute-fill js-time-series-graph-container" data-bind="if: showTimeSeriesGraph(), visible: showTimeSeriesGraph()">
                     <div class="absolute-fill flex-vertical" data-bind="compose: { model: $root.currentTab }"></div>
                 </div>
@@ -273,9 +264,6 @@
             <!-- /ko -->
             <button type="button" class="btn btn-sm results-btn" data-bind="click: $root.goToTimingsTab, css: { active: currentTab() === 'timings' }, visible: timings()">
                 Timings
-            </button>
-            <button type="button" class="btn btn-sm results-btn" data-bind="click: $root.goToGraphTab, css: { active: currentTab() === 'graph' }, visible: isGraphQuery">
-                Graph
             </button>
             <!-- ko foreach: timeSeriesGraphs -->
             <button type="button" class="btn btn-sm tab-info" data-placement="top" data-toggle="tooltip" data-animation="true" data-html="true"
@@ -338,11 +326,11 @@
             <label for="disableAutoIndex">Don't create a new Auto-Index</label>
         </div>
         <div class="toggle margin-left">
-            <input id="storedFields" type="checkbox" data-bind="checked: criteria().showFields, disable: isCollectionQuery() || isGraphQuery()">
+            <input id="storedFields" type="checkbox" data-bind="checked: criteria().showFields, disable: isCollectionQuery()">
             <label for="storedFields">Show stored index fields only</label>
         </div>
         <div class="toggle margin-left">
-            <input id="rawEntries" type="checkbox" data-bind="checked: criteria().indexEntries, disable: isCollectionQuery() || isGraphQuery()">
+            <input id="rawEntries" type="checkbox" data-bind="checked: criteria().indexEntries, disable: isCollectionQuery()">
             <label for="rawEntries" data-bind="text: 'Show raw index entries instead of ' + (queryResultsContainMatchingDocuments() ? 'matching documents' : 'index results')"></label>
         </div>
         <div class="margin-left margin-left-lg" data-bind="collapse: criteria().indexEntries">

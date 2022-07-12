@@ -18,25 +18,6 @@ interface queryResultDto<T> {
     Includes: any[];
 }
 
-interface debugGraphOutputNode {
-    Id: string;
-    Value: documentDto;
-}
-
-interface debugGraphEdge {
-    Name: string;
-    Results: Array<{
-        From: string;
-        To: string;
-        Edge: any;
-    }>
-}
-
-interface debugGraphOutputResponse {
-    Edges: Array<debugGraphEdge>,
-    Nodes: Array<debugGraphOutputNode>;
-}
-
 interface changesApiEventDto {
     Time: string; // ISO date string
     Type: string;
