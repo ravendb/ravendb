@@ -1,10 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
-using Nito.AsyncEx;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Exceptions.Sharding;
+using Raven.Client.Http;
+using Raven.Client.ServerWide.Commands;
 using Raven.Server.Config;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.Incoming;
@@ -13,7 +13,9 @@ using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Exceptions;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Sparrow.Utils;
 using Voron;
@@ -23,15 +25,52 @@ namespace Raven.Server.Documents.Sharding.Handlers
     public class ShardedIncomingReplicationHandler : AbstractIncomingReplicationHandler<TransactionContextPool, TransactionOperationContext>
     {
         private readonly ShardedDatabaseContext.ShardedReplicationContext _parent;
-        private readonly ReplicationQueue _replicationQueue;
+        private readonly ShardedOutgoingReplicationHandler[] _handlers;
+
+        public long LastEtag { get; set; }
+        public string LastReplicateChangeVector { get; set; }
 
         public ShardedIncomingReplicationHandler(TcpConnectionOptions tcpConnectionOptions, ShardedDatabaseContext.ShardedReplicationContext parent,
-            JsonOperationContext.MemoryBuffer buffer, ReplicationLatestEtagRequest replicatedLastEtag, ReplicationQueue replicationQueue)
+            JsonOperationContext.MemoryBuffer buffer, ReplicationLatestEtagRequest replicatedLastEtag)
             : base(tcpConnectionOptions, buffer, parent.Server, parent.DatabaseName, replicatedLastEtag, parent.Context.DatabaseShutdown, parent.Server.ContextPool)
         {
             _parent = parent;
-            _replicationQueue = replicationQueue;
             _attachmentStreamsTempFile = new StreamsTempFile("ShardedReplication" + Guid.NewGuid(), false);
+            var connectionInfo = IncomingConnectionInfo.FromGetLatestEtag(replicatedLastEtag);
+
+            _handlers = new ShardedOutgoingReplicationHandler[_parent.Context.ShardCount];
+            for (int i = 0; i < _handlers.Length; i++)
+            {
+                var node = new ShardReplicationNode { Shard = i, Database = ShardHelper.ToShardName(_parent.DatabaseName, i) };
+                var info = GetConnectionInfo(node);
+                if (info == null)
+                    continue;
+
+                _handlers[i] = new ShardedOutgoingReplicationHandler(parent, node, info, connectionInfo.SourceDatabaseId);
+                _handlers[i].Start();
+            }
+        }
+
+        private TcpConnectionInfo GetConnectionInfo(ShardReplicationNode node)
+        {
+            var shardExecutor = _parent.Context.ShardExecutor;
+            using (_parent.Context.AllocateContext(out JsonOperationContext ctx))
+            {
+                var cmd = new GetTcpInfoCommand("sharded-replication", node.Database);
+                RequestExecutor requestExecutor = null;
+                try
+                {
+                    requestExecutor = shardExecutor.GetRequestExecutorAt(node.Shard);
+                    requestExecutor.Execute(cmd, ctx);
+                }
+                finally
+                {
+                    // we want to set node Url even if we fail to connect to destination, so they can be used in replication stats
+                    node.Url = requestExecutor?.Url;
+                }
+
+                return cmd.Result;
+            }
         }
 
         protected override void EnsureNotDeleted(string nodeTag) => _parent.EnsureNotDeleted(_parent.Server.NodeTag);
@@ -46,6 +85,29 @@ namespace Raven.Server.Documents.Sharding.Handlers
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "Find a way to implement change vector updates for tackling optimization issues");
         }
 
+        protected override DynamicJsonValue GetHeartbeatStatusMessage(TransactionOperationContext context, long lastDocumentEtag, string handledMessageType)
+        {
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "implement this");
+            string mergedChangeVector = "";
+            long lastEtag = int.MaxValue;
+            foreach (var handler in _handlers)
+            {
+                var lastChangeVector = handler.LastDatabaseChangeVector;
+                mergedChangeVector = ChangeVectorUtils.MergeVectors(mergedChangeVector, lastChangeVector);
+                var myEtag = handler.CurrentEtag;
+                lastEtag = Math.Min(lastEtag, myEtag);
+            }
+
+            LastReplicateChangeVector = mergedChangeVector;
+            LastEtag = lastEtag;
+
+            var heartbeat = base.GetHeartbeatStatusMessage(context, lastDocumentEtag, handledMessageType);
+            heartbeat[nameof(ReplicationMessageReply.CurrentEtag)] = LastEtag;
+            heartbeat[nameof(ReplicationMessageReply.DatabaseChangeVector)] = LastReplicateChangeVector;
+           
+            return heartbeat;
+        }
+
         protected override void InvokeOnDocumentsReceived()
         {
         }
@@ -54,46 +116,45 @@ namespace Raven.Server.Documents.Sharding.Handlers
         {
         }
 
-        protected override void HandleTaskCompleteIfNeeded()
-        {
-            _replicationQueue.SendToShardCompletion = new AsyncCountdownEvent(_parent.Context.ShardCount);
-        }
-
         protected override Task HandleBatchAsync(TransactionOperationContext context, IncomingReplicationHandler.DataForReplicationCommand dataForReplicationCommand, long lastEtag)
         {
-            PrepareReplicationDataForShards(context, dataForReplicationCommand);
-            return _replicationQueue.SendToShardCompletion.WaitAsync(_cts.Token);
+            var batches = PrepareReplicationDataForShards(context, dataForReplicationCommand);
+            var tasks = new Task[batches.Length];
+            for (int i = 0; i < batches.Length; i++)
+            {
+                tasks[i] = _handlers[i].SendBatch(batches[i]);
+            }
+            return Task.WhenAll(tasks);
         }
 
         protected override void HandleMissingAttachmentsIfNeeded()
         {
-            if (_replicationQueue.MissingAttachments.IsSet)
+            foreach (ShardedOutgoingReplicationHandler handler in _handlers)
             {
-                _replicationQueue.MissingAttachments.Reset();
-
-                throw new MissingAttachmentException(_replicationQueue.MissingAttachmentMessage);
+                if (handler.MissingAttachmentsInLastBatch)
+                    throw new MissingAttachmentException(handler.MissingAttachmentMessage);
             }
         }
 
-        private void PrepareReplicationDataForShards(TransactionOperationContext context, IncomingReplicationHandler.DataForReplicationCommand dataForReplicationCommand)
+        private ReplicationBatch[] PrepareReplicationDataForShards(TransactionOperationContext context, IncomingReplicationHandler.DataForReplicationCommand dataForReplicationCommand)
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "Optimization possibility: instead of iterating over materialized batch, we can do it while reading from the stream");
 
-            var dictionary = GetTempDictionaryForDividingToShards();
+            var batches = new ReplicationBatch[_parent.Context.ShardCount];
+            for (int i = 0; i <  _parent.Context.ShardCount; i++)
+            {
+                batches[i] = new();
+            }
 
             foreach (var item in dataForReplicationCommand.ReplicatedItems)
             {
                 int shard = GetShardNumberForReplicationItem(context, item);
-
-                if (item is AttachmentReplicationItem attachment)
+                batches[shard].Items.Add(item);
+                if (item is AttachmentReplicationItem attachmentReplicationItem)
                 {
-                    var shardAttachments = _replicationQueue.AttachmentsPerShard[shard] ??= new Dictionary<Slice, AttachmentReplicationItem>(SliceComparer.Instance);
-
-                    if (shardAttachments.ContainsKey(attachment.Base64Hash) == false)
-                        shardAttachments[attachment.Base64Hash] = attachment;
+                    batches[shard].Attachments ??= new(SliceComparer.Instance);
+                    batches[shard].Attachments.Add(attachmentReplicationItem.Base64Hash, null);
                 }
-
-                dictionary[shard].Add(item);
             }
 
             if (dataForReplicationCommand.ReplicatedAttachmentStreams != null)
@@ -102,11 +163,9 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 {
                     for (var shard = 0; shard < _parent.Context.ShardCount; shard++)
                     {
-                        var shardAttachments = _replicationQueue.AttachmentsPerShard[shard];
-
-                        if (shardAttachments == null || shardAttachments.ContainsKey(attachment.Key) == false)
+                        if(batches[shard].Attachments?.ContainsKey(attachment.Key) != true)
                             continue;
-
+                        
                         var buffer = GetBufferFromAttachmentStream(attachment.Value.Stream);
 
                         var attachmentStream = new AttachmentReplicationItem
@@ -116,36 +175,14 @@ namespace Raven.Server.Documents.Sharding.Handlers
                             Stream = new MemoryStream(buffer)
                         };
 
-                        shardAttachments[attachment.Key] = attachmentStream;
+                        batches[shard].Attachments[attachment.Key] = attachmentStream;
 
                         DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "Optimization required");
                     }
                 }
             }
 
-            foreach (var kvp in dictionary)
-            {
-                var shard = kvp.Key;
-                _replicationQueue.Items[shard].TryAdd(kvp.Value);
-            }
-        }
-
-        private Dictionary<int, List<ReplicationBatchItem>> GetTempDictionaryForDividingToShards()
-        {
-            if (_tempDictionaryForDividingToShards != null)
-            {
-                foreach (var (k,v) in _tempDictionaryForDividingToShards)
-                {
-                    v.Clear();
-                }
-
-                return _tempDictionaryForDividingToShards;
-            }
-
-            _tempDictionaryForDividingToShards = new Dictionary<int, List<ReplicationBatchItem>>();
-            for (var shard = 0; shard < _parent.Context.ShardCount; shard++)
-                _tempDictionaryForDividingToShards[shard] = new List<ReplicationBatchItem>();
-            return _tempDictionaryForDividingToShards;
+            return batches;
         }
 
         private byte[] GetBufferFromAttachmentStream(Stream stream)
@@ -173,7 +210,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
 
         private readonly DocumentInfoHelper _documentInfoHelper = new DocumentInfoHelper();
-        private Dictionary<int, List<ReplicationBatchItem>> _tempDictionaryForDividingToShards;
+        
 
         private int GetShardNumberForReplicationItem(TransactionOperationContext context, ReplicationBatchItem item)
         {
@@ -193,6 +230,16 @@ namespace Raven.Server.Documents.Sharding.Handlers
                     throw new ArgumentOutOfRangeException($"{nameof(item)} - {item}");
 
             }
+        }
+
+        protected override void DisposeInternal()
+        {
+            foreach (var handler in _handlers)
+            {
+                handler.Dispose();
+            }
+
+            base.DisposeInternal();
         }
     }
 }

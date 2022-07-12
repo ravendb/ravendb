@@ -68,45 +68,6 @@ namespace Raven.Server.Documents.Replication
             _logger = LoggingSource.Instance.GetLogger(GetType().FullName, databaseName);
         }
 
-        internal virtual void AddAndStartOutgoingReplication(ReplicationNode node)
-        {
-            var info = GetConnectionInfo(node);
-
-            if (info == null)
-            {
-                // this means that we were unable to retrieve the tcp connection info and will try it again later
-                return;
-            }
-
-            if (_locker.TryEnterReadLock(0) == false)
-            {
-                // the db being disposed
-                return;
-            }
-
-            try
-            {
-                IAbstractOutgoingReplicationHandler outgoingReplication = GetOutgoingReplicationHandlerInstance(info, node);
-
-                if (outgoingReplication == null)
-                    return;
-
-                if (_outgoing.TryAdd(outgoingReplication) == false)
-                {
-                    outgoingReplication.Dispose();
-                    return;
-                }
-
-                InvokeOnOutgoingReplicationAdded(outgoingReplication);
-
-                outgoingReplication.Start();
-            }
-            finally
-            {
-                _locker.ExitReadLock();
-            }
-        }
-
         public int GetNextReplicationStatsId() => Interlocked.Increment(ref _replicationStatsId);
 
         protected bool ValidateConnectionString(Dictionary<string, RavenConnectionString> ravenConnectionStrings, ExternalReplicationBase externalReplication, out RavenConnectionString connectionString)
@@ -331,13 +292,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        protected abstract TcpConnectionInfo GetConnectionInfo(ReplicationNode node);
-
         protected abstract CancellationToken GetCancellationToken();
-
-        protected abstract void InvokeOnOutgoingReplicationAdded(IAbstractOutgoingReplicationHandler outgoingReplication);
-
-        protected abstract IAbstractOutgoingReplicationHandler GetOutgoingReplicationHandlerInstance(TcpConnectionInfo info, ReplicationNode node);
 
         public virtual void Dispose()
         {

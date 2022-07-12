@@ -493,8 +493,6 @@ namespace Raven.Server.Documents.Replication.Incoming
                             }
 
                             HandleMissingAttachmentsIfNeeded();
-
-                            HandleTaskCompleteIfNeeded();
                         }
                     }
 
@@ -582,8 +580,6 @@ namespace Raven.Server.Documents.Replication.Incoming
         protected abstract void InvokeOnFailed(Exception exception);
 
         protected abstract Task HandleBatchAsync(TOperationContext context, IncomingReplicationHandler.DataForReplicationCommand batch, long lastEtag);
-
-        protected abstract void HandleTaskCompleteIfNeeded();
 
         protected abstract RavenConfiguration GetConfiguration();
 
