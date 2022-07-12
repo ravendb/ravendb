@@ -4,17 +4,19 @@ $CATEGORIES = @(
 
     @('RavenDB-[0-9]\.[0-9]\.[0-9]+(-[a-zA-Z]+-([0-9-]+))?-windows-x64.Tools', "RavenDB Tools for Windows x64"),
     @('RavenDB-[0-9]\.[0-9]\.[0-9]+(-[a-zA-Z]+-([0-9-]+))?-windows-x86.Tools', "RavenDB Tools for Windows x86"),
-    @('RavenDB-[0-9]\.[0-9]\.[0-9]+(-[a-zA-Z]+-([0-9-]+))?-macos-x64.Tools', "RavenDB Tools for macOS"),
+    @('RavenDB-[0-9]\.[0-9]\.[0-9]+(-[a-zA-Z]+-([0-9-]+))?-macos-x64.Tools', "RavenDB Tools for macOS x64"),
+    @('RavenDB-[0-9]\.[0-9]\.[0-9]+(-[a-zA-Z]+-([0-9-]+))?-macos-arm64.Tools', "RavenDB Tools for macOS arm64"),
     @('RavenDB-[0-9]\.[0-9]\.[0-9]+(-[a-zA-Z]+-([0-9-]+))?-raspberry-pi.Tools', "RavenDB Tools for Raspberry Pi"),
     @('RavenDB-[0-9]\.[0-9]\.[0-9]+(-[a-zA-Z]+-([0-9-]+))?-linux-x64.Tools', "RavenDB Tools for Linux x64"),
-    @('RavenDB-[0-9]\.[0-9]\.[0-9]+(-[a-zA-Z]+-([0-9-]+))?-linux-arm64.Tools', "RavenDB Tools for Linux ARM64"),
+    @('RavenDB-[0-9]\.[0-9]\.[0-9]+(-[a-zA-Z]+-([0-9-]+))?-linux-arm64.Tools', "RavenDB Tools for Linux arm64"),
 
     @('RavenDB-[0-9]\.[0-9]\.[0-9]+(-[a-zA-Z]+-([0-9-]+))?-windows-x64', "RavenDB for Windows x64"),
     @('RavenDB-[0-9]\.[0-9]\.[0-9]+(-[a-zA-Z]+-([0-9-]+))?-windows-x86', "RavenDB for Windows x86"),
-    @('RavenDB-[0-9]\.[0-9]\.[0-9]+(-[a-zA-Z]+-([0-9-]+))?-macos-x64', "RavenDB for macOS"),
+    @('RavenDB-[0-9]\.[0-9]\.[0-9]+(-[a-zA-Z]+-([0-9-]+))?-macos-x64', "RavenDB for macOS x64"),
+    @('RavenDB-[0-9]\.[0-9]\.[0-9]+(-[a-zA-Z]+-([0-9-]+))?-macos-arm64', "RavenDB for macOS arm64"),
     @('RavenDB-[0-9]\.[0-9]\.[0-9]+(-[a-zA-Z]+-([0-9-]+))?-raspberry-pi', "RavenDB for Raspberry Pi"),
     @('RavenDB-[0-9]\.[0-9]\.[0-9]+(-[a-zA-Z]+-([0-9-]+))?-linux-x64', "RavenDB for Linux x64"),
-    @('RavenDB-[0-9]\.[0-9]\.[0-9]+(-[a-zA-Z]+-([0-9-]+))?-linux-arm64', "RavenDB for Linux ARM64")
+    @('RavenDB-[0-9]\.[0-9]\.[0-9]+(-[a-zA-Z]+-([0-9-]+))?-linux-arm64', "RavenDB for Linux arm64")
 )
 
 function Get-UploadCategory ( $filename ) {

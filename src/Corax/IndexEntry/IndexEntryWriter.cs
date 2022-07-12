@@ -17,7 +17,6 @@ namespace Corax;
 public unsafe ref partial struct IndexEntryWriter
 {
     private static int Invalid = unchecked(~0);
-    private static ushort MaxDynamicFields = byte.MaxValue;
 
     private static int LocationMask = 0x7FFF_FFFF;
 
@@ -72,21 +71,16 @@ public unsafe ref partial struct IndexEntryWriter
         Debug.Assert(_knownFieldsLocations[field] == Invalid);
 
         // Write known field.
-        _knownFieldsLocations[field] = _dataIndex;
+        ref int fieldLocation = ref _knownFieldsLocations[field];                
+        fieldLocation = _dataIndex;
 
         int length = VariableSizeEncoding.Write(_buffer, value.Length, _dataIndex);
+        _dataIndex += length;        
         if (value.Length == 0)
-        {
-            _dataIndex += length;
-        }
-        else
-        {
-            ref var src = ref Unsafe.AsRef(value[0]);
-            ref var dest = ref _buffer[_dataIndex + length];
-            Unsafe.CopyBlock(ref dest, ref src, (uint)value.Length);
+            return;
 
-            _dataIndex += length + value.Length;
-        }
+        value.CopyTo(_buffer.Slice(_dataIndex, value.Length));        
+        _dataIndex += value.Length;
     }
 
     /// <summary>
@@ -100,17 +94,20 @@ public unsafe ref partial struct IndexEntryWriter
         Debug.Assert(_knownFieldsLocations[field] == Invalid);
 
         int dataLocation = _dataIndex;
-        // Write known field.
-        _knownFieldsLocations[field] = dataLocation | Constants.IndexWriter.IntKnownFieldMask;
 
-        int indexEntryFieldLocation = dataLocation;
-        Unsafe.WriteUnaligned(ref _buffer[indexEntryFieldLocation], IndexEntryFieldType.Raw);
+        // Write known field.
+        ref int fieldLocation = ref _knownFieldsLocations[field];
+        fieldLocation = dataLocation | Constants.IndexWriter.IntKnownFieldMask;
+
+        // Write the list metadata information. 
+        ref var indexEntryField = ref Unsafe.AsRef<IndexEntryFieldType>(Unsafe.AsPointer(ref _buffer[dataLocation]));
+        indexEntryField = IndexEntryFieldType.Raw;
         dataLocation += sizeof(IndexEntryFieldType);
 
         if (binaryValue.Length == 0)
         {
             // Signal that we will have to deal with the empties.
-            Unsafe.WriteUnaligned(ref _buffer[indexEntryFieldLocation], Unsafe.ReadUnaligned<IndexEntryFieldType>(ref _buffer[indexEntryFieldLocation]) | IndexEntryFieldType.Empty);
+            indexEntryField |= IndexEntryFieldType.Empty;
         }
         else
         {
@@ -135,10 +132,12 @@ public unsafe ref partial struct IndexEntryWriter
         int dataLocation = _dataIndex;
 
         // Write known field pointer.
-        _knownFieldsLocations[field] = dataLocation | Constants.IndexWriter.IntKnownFieldMask;
+        ref int fieldLocation = ref _knownFieldsLocations[field];
+        fieldLocation = dataLocation | Constants.IndexWriter.IntKnownFieldMask;
 
-        // Write the tuple information. 
-        Unsafe.WriteUnaligned(ref _buffer[dataLocation], IndexEntryFieldType.SpatialPoint);
+        // Write the spatial point information. 
+        ref var indexEntryField = ref Unsafe.AsRef<IndexEntryFieldType>(Unsafe.AsPointer(ref _buffer[dataLocation]));
+        indexEntryField = IndexEntryFieldType.SpatialPoint;
         dataLocation += sizeof(IndexEntryFieldType);
 
         Unsafe.WriteUnaligned(ref _buffer[dataLocation], entry.Latitude);
@@ -149,13 +148,11 @@ public unsafe ref partial struct IndexEntryWriter
         // Copy the actual string data.
         dataLocation += VariableSizeEncoding.Write(_buffer, (byte)entry.Geohash.Length, dataLocation);
 
-
+        int geohashLength = entry.Geohash.Length;
         Span<byte> encodedGeohash = Encodings.Utf8.GetBytes(entry.Geohash);
-        ref var src = ref Unsafe.AsRef(encodedGeohash[0]);
-        ref var dest = ref _buffer[dataLocation];
-        Unsafe.CopyBlock(ref dest, ref src, (uint)entry.Geohash.Length);
+        encodedGeohash.CopyTo(_buffer.Slice(dataLocation, geohashLength));
 
-        _dataIndex = dataLocation + encodedGeohash.Length;
+        _dataIndex = dataLocation + geohashLength;
     }
 
     public void WriteSpatial(int field, ReadOnlySpan<CoraxSpatialPointEntry> entries, int geohashLevel = SpatialUtils.DefaultGeohashLevel)
@@ -171,35 +168,36 @@ public unsafe ref partial struct IndexEntryWriter
         int dataLocation = _dataIndex;
 
         // Write known field pointer.
-        _knownFieldsLocations[field] = dataLocation | Constants.IndexWriter.IntKnownFieldMask;
+        ref int fieldLocation = ref _knownFieldsLocations[field];
+        fieldLocation = dataLocation | Constants.IndexWriter.IntKnownFieldMask;
 
-        Unsafe.WriteUnaligned(ref _buffer[dataLocation], IndexEntryFieldType.SpatialPointList);
+        // Write the spatial point list. 
+        ref var indexEntryField = ref Unsafe.AsRef<IndexEntryFieldType>(Unsafe.AsPointer(ref _buffer[dataLocation]));
+        indexEntryField = IndexEntryFieldType.SpatialPointList;
         dataLocation += sizeof(IndexEntryFieldType);
 
         dataLocation += VariableSizeEncoding.Write(_buffer, entries.Length, dataLocation); // Size of list.
 
         dataLocation += VariableSizeEncoding.Write(_buffer, geohashLevel, dataLocation); // geohash lvl
 
-        var geohashPtrTableLocation = _buffer.Slice(dataLocation, sizeof(int));
+        ref int geohashPtrTableLocation = ref Unsafe.AsRef<int>(Unsafe.AsPointer(ref _buffer[dataLocation]));
         dataLocation += sizeof(int);
 
-
-        var longitudesPtrLocation = _buffer.Slice(dataLocation, sizeof(int));
+        ref int longitudesPtrLocation = ref Unsafe.AsRef<int>(Unsafe.AsPointer(ref _buffer[dataLocation]));
         dataLocation += sizeof(int);
-
 
         var latitudesList = MemoryMarshal.Cast<byte, double>(_buffer.Slice(dataLocation, entries.Length * sizeof(double)));
         for (int i = 0; i < entries.Length; ++i)
             latitudesList[i] = entries[i].Latitude;
         dataLocation += entries.Length * sizeof(double);
 
-        MemoryMarshal.Write(longitudesPtrLocation, ref dataLocation);
+        longitudesPtrLocation = dataLocation;
         var longitudesList = MemoryMarshal.Cast<byte, double>(_buffer.Slice(dataLocation, entries.Length * sizeof(double)));
         for (int i = 0; i < entries.Length; ++i)
             longitudesList[i] = entries[i].Longitude;
         dataLocation += entries.Length * sizeof(double);
 
-        MemoryMarshal.Write(geohashPtrTableLocation, ref dataLocation);
+        geohashPtrTableLocation = dataLocation;
         for (int i = 0; i < entries.Length; ++i)
         {
             Encodings.Utf8.GetBytes(entries[i].Geohash).CopyTo(_buffer[dataLocation..]);
@@ -217,11 +215,12 @@ public unsafe ref partial struct IndexEntryWriter
         int dataLocation = _dataIndex;
 
         // Write known field pointer.
-        _knownFieldsLocations[field] = dataLocation | Constants.IndexWriter.IntKnownFieldMask;
+        ref int fieldLocation = ref _knownFieldsLocations[field];
+        fieldLocation = dataLocation | Constants.IndexWriter.IntKnownFieldMask;
 
         // Write the tuple information. 
-        int indexEntryFieldLocation = dataLocation;
-        Unsafe.WriteUnaligned(ref _buffer[indexEntryFieldLocation], IndexEntryFieldType.Tuple);
+        ref var indexEntryField = ref Unsafe.AsRef<IndexEntryFieldType>(Unsafe.AsPointer(ref _buffer[dataLocation]));
+        indexEntryField = IndexEntryFieldType.Tuple;
         dataLocation += sizeof(IndexEntryFieldType);
 
         dataLocation += VariableSizeEncoding.Write(_buffer, longValue, dataLocation);
@@ -232,20 +231,19 @@ public unsafe ref partial struct IndexEntryWriter
         // Copy the actual string data. 
         if (value.Length != 0)
         {
-            ref var src = ref Unsafe.AsRef(value[0]);
-            ref var dest = ref _buffer[dataLocation];
-            Unsafe.CopyBlock(ref dest, ref src, (uint)value.Length);
+            value.CopyTo(_buffer.Slice(dataLocation, value.Length));
+            dataLocation += value.Length;
         }
         else
         {
             // Signal that we will have to deal with the empties.
-            Unsafe.WriteUnaligned(ref _buffer[indexEntryFieldLocation], Unsafe.ReadUnaligned<IndexEntryFieldType>(ref _buffer[indexEntryFieldLocation]) | IndexEntryFieldType.Empty);
+            indexEntryField |= IndexEntryFieldType.Empty;
         }
 
-        _dataIndex = dataLocation + value.Length;
+        _dataIndex = dataLocation;
     }
 
-    public void Write<TEnumerator>(int field, TEnumerator values, IndexEntryFieldType type = IndexEntryFieldType.HasNulls) 
+    public void Write<TEnumerator>(int field, TEnumerator values, IndexEntryFieldType type = IndexEntryFieldType.Null) 
         where TEnumerator : IReadOnlySpanIndexer
     {
         Debug.Assert(field < _knownFields.Count);
@@ -254,29 +252,30 @@ public unsafe ref partial struct IndexEntryWriter
         int dataLocation = _dataIndex;
 
         // Write known field pointer.
-        _knownFieldsLocations[field] = dataLocation | Constants.IndexWriter.IntKnownFieldMask;
+        ref int fieldLocation = ref _knownFieldsLocations[field];
+        fieldLocation = dataLocation | Constants.IndexWriter.IntKnownFieldMask;
 
         // Write the list metadata information. 
-        int indexEntryFieldLocation = dataLocation;
-        Unsafe.WriteUnaligned(ref _buffer[indexEntryFieldLocation], IndexEntryFieldType.List);
+        ref var indexEntryField = ref Unsafe.AsRef<IndexEntryFieldType>(Unsafe.AsPointer(ref _buffer[dataLocation]));
+        indexEntryField = IndexEntryFieldType.List | type;
         dataLocation += sizeof(IndexEntryFieldType);
 
-        dataLocation += VariableSizeEncoding.Write(_buffer, values.Length, dataLocation); // Size of list.
+        // Size of list.
+        dataLocation += VariableSizeEncoding.Write(_buffer, values.Length, dataLocation);
 
         // Prepare the location to store the pointer where the table of the strings will be (after writing the strings).
-        var stringPtrTableLocation = _buffer.Slice(dataLocation, sizeof(int));
+        ref int stringPtrTableLocation = ref Unsafe.AsRef<int>(Unsafe.AsPointer(ref _buffer[dataLocation]));
         dataLocation += sizeof(int);
 
         // Copy the actual string data. 
         if (values.Length == 0)
         {
-            MemoryMarshal.Write(stringPtrTableLocation, ref dataLocation);
-            _dataIndex = dataLocation;
+            // Write the pointer to the location.
+            stringPtrTableLocation = Invalid;
 
             // Signal that we will have to deal with the empties.
-            Unsafe.WriteUnaligned(ref _buffer[indexEntryFieldLocation],
-                Unsafe.ReadUnaligned<IndexEntryFieldType>(ref _buffer[indexEntryFieldLocation]) | IndexEntryFieldType.Empty);
-            return;
+            indexEntryField |= IndexEntryFieldType.Empty;
+            goto Done;
         }
 
         int[] stringLengths = ArrayPool<int>.Shared.Rent(values.Length);
@@ -292,20 +291,21 @@ public unsafe ref partial struct IndexEntryWriter
         }
 
         // Write the pointer to the location
-        MemoryMarshal.Write(stringPtrTableLocation, ref dataLocation);
-        dataLocation = WriteNullsTableIfRequired(values, dataLocation, indexEntryFieldLocation);
-        dataLocation += VariableSizeEncoding.WriteMany<int>(_buffer, stringLengths[..values.Length], dataLocation);
+        stringPtrTableLocation = dataLocation;
+        dataLocation = WriteNullsTableIfRequired(values, dataLocation, ref indexEntryField);
+        dataLocation += VariableSizeEncoding.WriteMany<int>(_buffer, stringLengths[0..values.Length], dataLocation);
 
         ArrayPool<int>.Shared.Return(stringLengths);
 
+        Done:
         _dataIndex = dataLocation;
     }
 
-    private readonly int WriteNullsTableIfRequired<TEnumerator>(TEnumerator values, int dataLocation, int indexEntryFieldLocation)
+    private readonly int WriteNullsTableIfRequired<TEnumerator>(TEnumerator values, int dataLocation, ref IndexEntryFieldType indexEntryFieldLocation)
         where TEnumerator : IReadOnlySpanIndexer
     {
         // We will include null values if there are nulls to be stored.           
-        int nullBitStreamSize = values.Length / (sizeof(byte) * 8) + values.Length % (sizeof(byte) * 8) == 0 ? 0 : 1;
+        int nullBitStreamSize = values.Length / (sizeof(byte) * 8) + (values.Length % (sizeof(byte) * 8) == 0 ? 0 : 1);
         byte* nullStream = stackalloc byte[nullBitStreamSize];
         bool hasNull = false;
         for (int i = 0; i < values.Length; i++)
@@ -320,14 +320,13 @@ public unsafe ref partial struct IndexEntryWriter
         if (hasNull)
         {
             // Copy the null stream.
-            new ReadOnlySpan<byte>(nullStream, nullBitStreamSize * sizeof(long))
-                .CopyTo(_buffer.Slice(dataLocation));
+            new ReadOnlySpan<byte>(nullStream, nullBitStreamSize)
+                .CopyTo(_buffer.Slice(dataLocation, nullBitStreamSize));
 
             dataLocation += nullBitStreamSize;
 
             // Signal that we will have to deal with the nulls.
-            Unsafe.WriteUnaligned(ref _buffer[indexEntryFieldLocation],
-                Unsafe.ReadUnaligned<IndexEntryFieldType>(ref _buffer[indexEntryFieldLocation]) | IndexEntryFieldType.HasNulls);
+            indexEntryFieldLocation |= IndexEntryFieldType.HasNulls;
         }
 
         return dataLocation;
@@ -336,43 +335,47 @@ public unsafe ref partial struct IndexEntryWriter
     public unsafe void Write(int field, IReadOnlySpanIndexer values, ReadOnlySpan<long> longValues, ReadOnlySpan<double> doubleValues)
     {
         Debug.Assert(field < _knownFields.Count);
-        Debug.Assert(_knownFieldsLocations[field] == Invalid);
-        Debug.Assert(values.Length == longValues.Length && values.Length == doubleValues.Length);
+        Debug.Assert(_knownFieldsLocations[field] == Invalid);        
+        
+        if (values.Length != longValues.Length || values.Length != doubleValues.Length)
+            throw new ArgumentException("The lengths of the values and longValues and doubleValues must be the same.");
 
         int dataLocation = _dataIndex;
 
         // Write known field pointer.
-        _knownFieldsLocations[field] = dataLocation | Constants.IndexWriter.IntKnownFieldMask;
+        ref int fieldLocation = ref _knownFieldsLocations[field];
+        fieldLocation = dataLocation | Constants.IndexWriter.IntKnownFieldMask;
 
         // Write the list metadata information. 
-        int indexEntryFieldLocation = dataLocation;
-        Unsafe.WriteUnaligned(ref _buffer[indexEntryFieldLocation], IndexEntryFieldType.TupleList);
-        dataLocation += sizeof(IndexEntryFieldType);
+        ref var indexEntryField = ref Unsafe.AsRef<IndexEntryFieldType>(Unsafe.AsPointer(ref _buffer[dataLocation]));
+        indexEntryField = IndexEntryFieldType.TupleList;
+        dataLocation += sizeof(IndexEntryFieldType);       
 
         dataLocation += VariableSizeEncoding.Write(_buffer, values.Length, dataLocation); // Size of list.
 
         // Prepare the location to store the pointer where the table of the strings will be (after writing the strings).
-        var stringPtrTableLocation = _buffer.Slice(dataLocation, sizeof(int));
+        ref int stringPtrTableLocation = ref Unsafe.AsRef<int>(Unsafe.AsPointer(ref _buffer[dataLocation]));
         dataLocation += sizeof(int);
 
         // Prepare the location to store the pointer where the long values are going to be stored.
-        var longPtrLocation = _buffer.Slice(dataLocation, sizeof(int));
+        ref int longPtrLocation = ref Unsafe.AsRef<int>(Unsafe.AsPointer(ref _buffer[dataLocation]));
         dataLocation += sizeof(int);
-
-        var doubleValuesList = MemoryMarshal.Cast<byte, double>(_buffer.Slice(dataLocation, values.Length * sizeof(double)));
-        doubleValues.CopyTo(doubleValuesList);
-        dataLocation += values.Length * sizeof(double);
-
+        
         if (values.Length == 0)
         {
             // Write the pointer to the location.
-            MemoryMarshal.Write(stringPtrTableLocation, ref dataLocation);
-            _dataIndex = dataLocation;
+            stringPtrTableLocation = Invalid;
+            longPtrLocation = Invalid;
 
-            // Signal that we will have to deal with the nulls.
-            Unsafe.WriteUnaligned(ref _buffer[indexEntryFieldLocation], Unsafe.ReadUnaligned<IndexEntryFieldType>(ref _buffer[indexEntryFieldLocation]) | IndexEntryFieldType.Empty);
-            return;
+            // Signal that we will have to deal with the empties.
+            indexEntryField |= IndexEntryFieldType.Empty;
+
+            goto Done;
         }
+
+        var doubleValuesList = MemoryMarshal.Cast<byte, double>(_buffer.Slice(dataLocation, values.Length * sizeof(double)));
+        doubleValues.CopyTo(doubleValuesList);
+        dataLocation += doubleValuesList.Length * sizeof(double);
 
         // We start to write the strings in a place we know where it is from implicit positioning...
         // 4b + 4b + len(values) * 8b
@@ -380,55 +383,25 @@ public unsafe ref partial struct IndexEntryWriter
         for (int i = 0; i < values.Length; i++)
         {
             var value = values[i];
-            value.CopyTo(_buffer[dataLocation..]);
+            value.CopyTo(_buffer.Slice(dataLocation, value.Length));
             dataLocation += value.Length;
 
             stringLengths[i] = value.Length;
         }
 
         // Write the pointer to the location.
-        MemoryMarshal.Write(stringPtrTableLocation, ref dataLocation);
-        dataLocation = WriteNullsTableIfRequired(values, dataLocation, indexEntryFieldLocation);
+        stringPtrTableLocation = dataLocation;
+        dataLocation = WriteNullsTableIfRequired(values, dataLocation, ref indexEntryField);
         dataLocation += VariableSizeEncoding.WriteMany<int>(_buffer, stringLengths[..values.Length], dataLocation);
 
         // Write the long values
-        MemoryMarshal.Write(longPtrLocation, ref dataLocation);
+        longPtrLocation = dataLocation;
         dataLocation += VariableSizeEncoding.WriteMany(_buffer, longValues, pos: dataLocation);
 
+        ArrayPool<int>.Shared.Return(stringLengths);
+        
+        Done:
         _dataIndex = dataLocation;
-    }
-
-    public void Write(Slice name, ReadOnlySpan<byte> value)
-    {
-        if (_knownFields.TryGetByFieldName(name, out var binding))
-        {
-            Write(binding.FieldId, value);
-            return;
-        }
-
-        // TODO: Add debug capabilities to know we are not adding the same element multiple times. 
-
-        if (_dynamicFieldIndex >= MaxDynamicFields)
-            throw new NotSupportedException($"More than {MaxDynamicFields} is unsupported.");
-
-        _dynamicFieldIndex++;
-        throw new NotImplementedException();
-    }
-
-    public void Write(Slice name, ReadOnlySpan<byte> value, long longValue, double doubleValue)
-    {
-        if (_knownFields.TryGetByFieldName(name, out var binding))
-        {
-            Write(binding.FieldId, value, longValue, doubleValue);
-            return;
-        }
-
-        // TODO: Add debug capabilities to know we are not adding the same element multiple times. 
-        if (_dynamicFieldIndex >= MaxDynamicFields)
-            throw new NotSupportedException($"More than {MaxDynamicFields} is unsupported.");
-
-        _dynamicFieldIndex++;
-        throw new NotImplementedException();
     }
 
     public int Finish(out Span<byte> output)

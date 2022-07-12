@@ -1,4 +1,14 @@
 ﻿.certificates {
+    .certificates-dropdown {
+        :last-of-type {
+            margin-left: @gutter-xxs !important;
+        }
+
+        @media (max-width: @screen-md-max) {
+            margin-top: @gutter-xxs;
+        }
+    }
+
     .certificate-item {
         .flex-horizontal {
             flex-wrap: wrap;

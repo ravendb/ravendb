@@ -43,9 +43,11 @@ namespace Raven.Server.Documents.Indexes.Auto
             {
                 var map = $"{Collections.First()}:[{string.Join(";", mapFields.Select(x => $"<Name:{x}>"))}]";
                 indexDefinition.Maps.Add(map);
-
-                foreach (var field in indexFields)
+                
+                foreach (var field in indexFields.OrderBy(x => x.Name, StringComparer.Ordinal))
+                {
                     indexDefinition.Fields[field.Name] = field.Options;
+                }
             }
 
             if (MapFields.Count > 0)
@@ -135,7 +137,6 @@ namespace Raven.Server.Documents.Indexes.Auto
                 json.TryGet(nameof(AutoIndexField.Indexing), out string indexing);
                 json.TryGet(nameof(AutoIndexField.HasSuggestions), out bool hasSuggestions);
                 json.TryGet(nameof(AutoIndexField.HasQuotedName), out bool hasQuotedName);
-                json.TryGet(nameof(AutoIndexField.Id), out int id);
 
                 var field = new AutoIndexField
                 {
@@ -144,12 +145,17 @@ namespace Raven.Server.Documents.Indexes.Auto
                     Indexing = (AutoFieldIndexing)Enum.Parse(typeof(AutoFieldIndexing), indexing),
                     HasSuggestions = hasSuggestions,
                     HasQuotedName = hasQuotedName,
-                    Id = id
                 };
 
                 fields[i] = field;
             }
 
+            int idX = 1;
+            foreach (var field in fields.OrderBy(x => x.Name, StringComparer.Ordinal))
+            {
+                field.Id = idX++;
+            }
+            
             return new AutoMapIndexDefinition(collections[0], fields, deploymentMode: null, version)
             {
                 LockMode = lockMode,

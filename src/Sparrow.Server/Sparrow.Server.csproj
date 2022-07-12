@@ -34,6 +34,7 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="Mono.Posix.NETStandard" Version="1.0.0" />
     <PackageReference Include="Nito.AsyncEx.Coordination" Version="5.1.2" />
     <PackageReference Include="Raven.CodeAnalysis" Version="1.0.11">
       <PrivateAssets>All</PrivateAssets>

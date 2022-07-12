@@ -1,7 +1,8 @@
 ﻿<Project>
   <PropertyGroup>
     <Version></Version>
-    <LangVersion>latest</LangVersion>
+    <LangVersion>preview</LangVersion>
+    <EnablePreviewFeatures>True</EnablePreviewFeatures>
     <DebugType>embedded</DebugType>
     <PackageIconUrl>http://static.ravendb.net/logo-for-nuget.png</PackageIconUrl>
     <PackageIcon>icon.png</PackageIcon>

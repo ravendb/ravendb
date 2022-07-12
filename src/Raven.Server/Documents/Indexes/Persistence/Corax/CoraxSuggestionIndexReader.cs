@@ -10,6 +10,7 @@ using Corax;
 using Corax.Pipeline;
 using Corax.Queries;
 using Parquet.Thrift;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Suggestions;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Suggestions;
@@ -18,6 +19,7 @@ using Sparrow.Logging;
 using Voron.Impl;
 using Encoding = System.Text.Encoding;
 using Type = System.Type;
+using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
@@ -27,10 +29,9 @@ public class CoraxSuggestionReader : SuggestionIndexReaderBase
     private readonly IndexSearcher _indexSearcher;
     private readonly IndexFieldBinding _binding;
 
-    public CoraxSuggestionReader(Index index, Logger logger, IndexFieldBinding binding, Transaction readTransaction) : base(index, logger)
+    public CoraxSuggestionReader(Index index, Logger logger, IndexFieldBinding binding, Transaction readTransaction, IndexFieldsMapping fieldsMapping) : base(index, logger)
     {
-        _fieldMappings = CoraxDocumentConverter.GetKnownFields(readTransaction.Allocator, index);
-        _fieldMappings.UpdateAnalyzersInBindings(CoraxIndexingHelpers.CreateCoraxAnalyzers(readTransaction.Allocator, index, index.Definition, true));
+        _fieldMappings = fieldsMapping;
         _binding = binding;
         _indexSearcher = new IndexSearcher(readTransaction, _fieldMappings);
     }
@@ -113,9 +114,7 @@ public class CoraxSuggestionReader : SuggestionIndexReaderBase
 
         return result;
     }
-
-
-
+    
     public override void Dispose()
     {
         _indexSearcher?.Dispose();

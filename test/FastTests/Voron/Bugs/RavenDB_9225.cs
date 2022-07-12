@@ -61,8 +61,6 @@ namespace FastTests.Voron.Bugs
         [Fact]
         public unsafe void FixedSizeTree_DeletingFromMiddle()
         {
-            FixedSizeTreeHeader.Large* header;
-            FixedSizeTreePage page;
             ushort valSize = 1008;
             var buffer = new byte[valSize];
             using (var tx = Env.WriteTransaction())
@@ -71,6 +69,8 @@ namespace FastTests.Voron.Bugs
                 var fst = tx.FixedTreeFor(t, valSize);
 
                 long i = 0;
+                FixedSizeTreeHeader.Large* header;
+                FixedSizeTreePage<long> page;
                 while (true)
                 {
                     fst.Add(++i, buffer);
@@ -93,8 +93,8 @@ namespace FastTests.Voron.Bugs
                 page = fst.GetReadOnlyPage(page.GetEntry(page.NumberOfEntries - 1)->PageNumber);
                 page = fst.GetReadOnlyPage(page.GetEntry(0)->PageNumber);
 
-                var min = page.GetEntry(0)->Key;
-                var max = page.GetEntry(page.NumberOfEntries - 1)->Key;
+                var min = page.GetEntry(0)->GetKey<long>();
+                var max = page.GetEntry(page.NumberOfEntries - 1)->GetKey<long>();
 
                 for (i = min; i < max; i++)
                     fst.Delete(i);

@@ -1,15 +1,11 @@
 using System;
-using System.Collections.Generic;
-using System.Text;
 using Amazon.SimpleNotificationService.Model;
 using Corax;
-using NuGet.Protocol;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Server;
 using Raven.Server.Utils;
 using Constants = Raven.Client.Constants;
 
@@ -29,7 +25,7 @@ public class AnonymousCoraxDocumentConverter : CoraxDocumentConverterBase
     public override Span<byte> SetDocumentFields(LazyStringValue key, LazyStringValue sourceDocumentId, object doc, JsonOperationContext indexContext,
         out LazyStringValue id, Span<byte> writerBuffer)
     {
-        //todo maciej boosting inside index
+        var knownFields = GetKnownFieldsForWriter();
         var boostedValue = doc as BoostedValue;
         var documentToProcess = boostedValue == null ? doc : boostedValue.Value;
         id = default;
@@ -44,7 +40,7 @@ public class AnonymousCoraxDocumentConverter : CoraxDocumentConverterBase
         // todo maciej
         // We need to discuss how we will handle this.  
         // https://github.com/ravendb/ravendb/pull/13730#discussion_r820661488
-        var entryWriter = new IndexEntryWriter(writerBuffer, _knownFields);
+        var entryWriter = new IndexEntryWriter(writerBuffer, knownFields);
 
         var scope = new SingleEntryWriterScope(_allocator);
         var storedValue = _storeValue ? new DynamicJsonValue() : null;
@@ -55,7 +51,7 @@ public class AnonymousCoraxDocumentConverter : CoraxDocumentConverterBase
             var value = property.Value;
 
             IndexField field;
-            if (_knownFields.TryGetByFieldName(property.Key, out var binding))
+            if (knownFields.TryGetByFieldName(property.Key, out var binding))
             {
                 field = _fields[property.Key];
                 field.Id = binding.FieldId;
@@ -82,7 +78,7 @@ public class AnonymousCoraxDocumentConverter : CoraxDocumentConverterBase
         if (storedValue is not null)
         {
             var bjo = indexContext.ReadObject(storedValue, "corax field as json");
-            scope.Write(_knownFields.Count - 1, bjo, ref entryWriter);
+            scope.Write(knownFields.Count - 1, bjo, ref entryWriter);
         }
 
         if (entryWriter.IsEmpty() == true)

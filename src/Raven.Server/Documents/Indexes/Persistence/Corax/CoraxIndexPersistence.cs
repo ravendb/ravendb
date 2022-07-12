@@ -1,6 +1,5 @@
 ﻿using System;
 using Corax.Exceptions;
-using Corax.Utils;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
@@ -41,9 +40,9 @@ public class CoraxIndexPersistence : IndexPersistenceBase
                         _converter = new JintCoraxDocumentConverter((MapIndex)index);
                         break;
                     case IndexSourceType.TimeSeries:
-                        throw new NotSupportedException($"Currently, {nameof(TimeSeries)} are not supported by Corax");
+                        throw new NotSupportedException($"Currently, {nameof(TimeSeries)} is not supported by Corax");
                     case IndexSourceType.Counters:
-                        throw new NotSupportedException($"Currently, {nameof(IndexSourceType.Counters)} are not supported by Corax");
+                        throw new NotSupportedException($"Currently, {nameof(IndexSourceType.Counters)} is not supported by Corax");
                 }
                 break;
             case IndexType.JavaScriptMapReduce:
@@ -53,7 +52,7 @@ public class CoraxIndexPersistence : IndexPersistenceBase
         _converter ??= new CoraxDocumentConverter(index, storeValue: storeValue);
     }
     
-    public override IndexReadOperationBase OpenIndexReader(Transaction readTransaction) => new CoraxIndexReadOperation(_index, _logger, readTransaction, _index._queryBuilderFactories);
+    public override IndexReadOperationBase OpenIndexReader(Transaction readTransaction) => new CoraxIndexReadOperation(_index, _logger, readTransaction, _index._queryBuilderFactories, _converter.GetKnownFieldsForQuerying());
 
     public override bool ContainsField(string field)
     {
@@ -70,10 +69,10 @@ public class CoraxIndexPersistence : IndexPersistenceBase
 
     public override SuggestionIndexReaderBase OpenSuggestionIndexReader(Transaction readTransaction, string field)
     {
-        if (_converter.GetKnownFields().TryGetByFieldName(field, out var binding) == false)
+        if (_converter.GetKnownFieldsForQuerying().TryGetByFieldName(field, out var binding) == false)
             throw new InvalidOperationException($"No suggestions index found for field '{field}'.");
 
-        return new CoraxSuggestionReader(_index, _logger, binding, readTransaction);
+        return new CoraxSuggestionReader(_index, _logger, binding, readTransaction, _converter.GetKnownFieldsForQuerying());
     }
 
     public override void Dispose()
