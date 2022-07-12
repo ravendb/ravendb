@@ -488,8 +488,6 @@ namespace Raven.Client
             private Obsolete()
             {
             }
-
-            public const string GraphApi = "Graph API will be removed in next major version of the product.";
         }
     }
 }

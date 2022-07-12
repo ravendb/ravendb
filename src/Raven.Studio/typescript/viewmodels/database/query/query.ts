@@ -29,8 +29,6 @@ import actionColumn = require("widgets/virtualGrid/columns/actionColumn");
 import explainQueryDialog = require("viewmodels/database/query/explainQueryDialog");
 import explainQueryCommand = require("commands/database/index/explainQueryCommand");
 import timingsChart = require("common/timingsChart");
-import graphQueryResults = require("common/query/graphQueryResults");
-import debugGraphOutputCommand = require("commands/database/query/debugGraphOutputCommand");
 import generalUtils = require("common/generalUtils");
 import timeSeriesColumn = require("widgets/virtualGrid/columns/timeSeriesColumn");
 import timeSeriesPlotDetails = require("viewmodels/common/timeSeriesPlotDetails");
@@ -49,7 +47,7 @@ import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import killQueryCommand from "commands/database/query/killQueryCommand";
 import getEssentialDatabaseStatsCommand from "commands/resources/getEssentialDatabaseStatsCommand";
 
-type queryResultTab = "results" | "explanations" | "timings" | "graph" | "revisions";
+type queryResultTab = "results" | "explanations" | "timings" | "revisions";
 
 type stringSearchType = "Starts With" | "Ends With" | "Contains" | "Exact";
 
@@ -176,7 +174,6 @@ class query extends shardViewModelBase {
     previewItem = ko.observable<storedQueryDto>();
     
     timingsGraph = new timingsChart(".js-timings-container");
-    graphQueryResults = new graphQueryResults(".js-graph-container");
     
     resultsExpanded = ko.observable<boolean>(false);
 
@@ -226,7 +223,6 @@ class query extends shardViewModelBase {
     currentTab = ko.observable<queryResultTab | highlightSection | perCollectionIncludes | timeSeriesPlotDetails | timeSeriesTableDetails | spatialQueryMap>("results");
     totalResultsForUi = ko.observable<number>(0);
     hasMoreUnboundedResults = ko.observable<boolean>(false);
-    graphTabIsDirty = ko.observable<boolean>(true);
 
     includesCache = ko.observableArray<perCollectionIncludes>([]);
     includesRevisionsCache = ko.observable<includedRevisions>(new includedRevisions());
@@ -241,7 +237,6 @@ class query extends shardViewModelBase {
     
     isMapReduceIndex: KnockoutComputed<boolean>;
     isCollectionQuery: KnockoutComputed<boolean>;
-    isGraphQuery: KnockoutComputed<boolean>;
     isDynamicQuery: KnockoutComputed<boolean>;
     isAutoIndex: KnockoutComputed<boolean>;
     
@@ -331,7 +326,7 @@ class query extends shardViewModelBase {
         this.initValidation();
 
         this.bindToCurrentInstance("runRecentQuery", "previewQuery", "removeQuery", "useQuery", "useQueryItem", 
-            "goToHighlightsTab", "goToIncludesTab", "goToGraphTab", "toggleResults", "goToTimeSeriesTab", "plotTimeSeries",
+            "goToHighlightsTab", "goToIncludesTab", "toggleResults", "goToTimeSeriesTab", "plotTimeSeries",
             "closeTimeSeriesTab", "goToSpatialMapTab", "loadMoreSpatialResultsToMap", "goToIncludesRevisionsTab",
             "killQuery");
     }
@@ -423,11 +418,6 @@ class query extends shardViewModelBase {
             return !indexes.find(x => x.Name === indexName);
         });
         
-        this.isGraphQuery = ko.pureComputed(() => {
-            const indexName = this.queriedIndex();
-            return "@graph" === indexName;
-        });
-        
         this.isDynamicQuery = ko.pureComputed(() => {
             return queryUtil.isDynamicQuery(this.criteria().queryText());
         });
@@ -442,11 +432,10 @@ class query extends shardViewModelBase {
 
         this.canDeleteDocumentsMatchingQuery = ko.pureComputed(() => {
             const mapReduce = this.isMapReduceIndex();
-            const graphQuery = this.isGraphQuery();
             const hasAnyItemSelected = this.gridController() ? this.gridController().getSelectedItems().length > 0 : false;
             const queryResultsAreMatchingDocuments = this.queryResultsContainMatchingDocuments();
             
-            return !mapReduce && !graphQuery && !hasAnyItemSelected && queryResultsAreMatchingDocuments;
+            return !mapReduce && !hasAnyItemSelected && queryResultsAreMatchingDocuments;
         });
         
         this.canExportCsv = ko.pureComputed(() => {
@@ -532,13 +521,7 @@ class query extends shardViewModelBase {
             }
         });
         
-        this.previewItem.extend({ rateLimit: 100}); 
-        
-        this.currentTab.subscribe(newTab => {
-            if (newTab !== "graph") {
-                this.graphQueryResults.stopSimulation();
-            }
-        });
+        this.previewItem.extend({ rateLimit: 100});
 
         this.showMapView = ko.pureComputed(() => this.currentTab() instanceof spatialQueryMap);
         
@@ -546,7 +529,7 @@ class query extends shardViewModelBase {
         
         this.showVirtualTable = ko.pureComputed(() => {
             const currentTab = this.currentTab();
-            return currentTab !== 'timings' && currentTab !== 'graph' && !this.showTimeSeriesGraph() && !this.showMapView();
+            return currentTab !== 'timings' && !this.showTimeSeriesGraph() && !this.showMapView();
         });
 
         this.spatialResultsOnMapText = ko.pureComputed(() => 
@@ -969,7 +952,6 @@ class query extends shardViewModelBase {
         this.timeSeriesGraphs([]);
         this.timeSeriesTables([]);
         
-        this.graphTabIsDirty(true);
         this.columnsSelector.reset();
         
         this.effectiveFetcher = this.queryFetcher;
@@ -1628,20 +1610,6 @@ class query extends shardViewModelBase {
         this.timingsGraph.draw(this.timings());
     }
     
-    goToGraphTab(): void {
-        this.currentTab("graph");
-        if (this.graphTabIsDirty()) {
-            this.graphQueryResults.clear();
-            
-            new debugGraphOutputCommand(this.db, this.criteria().queryText())
-                .execute()
-                .done((result) => {
-                    this.graphTabIsDirty(false);
-                    this.graphQueryResults.draw(result);
-                });
-        }
-    }
-
     goToSpatialMapTab(): void {
         if (!this.showMapView()) {
             this.loadMoreSpatialResultsToMap();
@@ -1763,7 +1731,6 @@ class query extends shardViewModelBase {
     toggleResults(): void {
         this.resultsExpanded.toggle();
         this.gridController().reset(true);
-        this.graphQueryResults.onResize();
         if (this.currentTab() === this.spatialMap()) {
             this.spatialMap().onResize();
             this.allSpatialResultsItems([]);
