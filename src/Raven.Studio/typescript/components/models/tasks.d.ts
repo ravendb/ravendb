@@ -1,6 +1,5 @@
 ﻿import { loadStatus } from "./common";
 import OngoingTaskState = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskState;
-import QueueBrokerType = Raven.Client.Documents.Operations.ETL.Queue.QueueBrokerType;
 import BackupType = Raven.Client.Documents.Operations.Backups.BackupType;
 
 export interface OngoingTaskHubDefinitionSharedInfo extends OngoingTaskSharedInfo {
@@ -126,25 +125,17 @@ export interface OngoingTaskSubscriptionSharedInfo extends OngoingTaskSharedInfo
 
 export interface OngoingTaskElasticSearchEtlNodeInfoDetails extends OngoingTaskNodeInfoDetails {}
 
-export interface OngoingTaskExternalReplicationNodeInfoDetails extends OngoingTaskNodeInfoDetails {
-    //TODO:
-}
+export interface OngoingTaskExternalReplicationNodeInfoDetails extends OngoingTaskNodeInfoDetails {}
 
 export interface OngoingTaskOlapEtlNodeInfoDetails extends OngoingTaskNodeInfoDetails {}
 
-export interface OngoingTaskPeriodicBackupNodeInfoDetails extends OngoingTaskNodeInfoDetails {
-    //TODO: LastExecutingNodeTag - is local?
-}
+export interface OngoingTaskPeriodicBackupNodeInfoDetails extends OngoingTaskNodeInfoDetails {}
 
 export interface OngoingTaskRavenEtlNodeInfoDetails extends OngoingTaskNodeInfoDetails {}
 
-export interface OngoingTaskReplicationHubNodeInfoDetails extends OngoingTaskNodeInfoDetails {
-    //TODO:
-}
+export interface OngoingTaskReplicationHubNodeInfoDetails extends OngoingTaskNodeInfoDetails {}
 
-export interface OngoingTaskReplicationSinkNodeInfoDetails extends OngoingTaskNodeInfoDetails {
-    //TODO:
-}
+export interface OngoingTaskReplicationSinkNodeInfoDetails extends OngoingTaskNodeInfoDetails {}
 
 export interface OngoingTaskSqlEtlNodeInfoDetails extends OngoingTaskNodeInfoDetails {}
 

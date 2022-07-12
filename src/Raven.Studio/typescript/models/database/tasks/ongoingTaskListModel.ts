@@ -2,7 +2,6 @@
 import ongoingTaskModel = require("models/database/tasks/ongoingTaskModel");
 import router = require("plugins/router");
 
-//TODO: remove
 abstract class ongoingTaskListModel extends ongoingTaskModel {
     
     showDetails = ko.observable(false);
