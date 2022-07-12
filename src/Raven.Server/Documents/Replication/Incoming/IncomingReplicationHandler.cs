@@ -271,7 +271,7 @@ namespace Raven.Server.Documents.Replication.Incoming
         }
 
 
-        protected override void HandleMissingAttachmentsIfNeeded(ref Task task)
+        protected override void HandleMissingAttachmentsIfNeeded()
         {
         }
 

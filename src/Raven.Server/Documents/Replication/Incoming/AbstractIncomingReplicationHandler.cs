@@ -487,15 +487,14 @@ namespace Raven.Server.Documents.Replication.Incoming
                             while (task.Wait(Math.Min(3000, (int)(configuration.Replication.ActiveConnectionTimeout.AsTimeSpan.TotalMilliseconds * 2 / 3))) ==
                                    false)
                             {
-                                HandleMissingAttachmentsIfNeeded(ref task);
-
                                 // send heartbeats while batch is processed in TxMerger. We wait until merger finishes with this command without timeouts
                                 msgContext.Write(writer, msg);
                                 writer.Flush();
                             }
 
+                            HandleMissingAttachmentsIfNeeded();
+
                             HandleTaskCompleteIfNeeded();
-                            task = null;
                         }
                     }
 
@@ -596,7 +595,7 @@ namespace Raven.Server.Documents.Replication.Incoming
 
         public abstract LiveReplicationPerformanceCollector.ReplicationPerformanceType GetReplicationPerformanceType();
 
-        protected abstract void HandleMissingAttachmentsIfNeeded(ref Task task);
+        protected abstract void HandleMissingAttachmentsIfNeeded();
 
         public bool IsDisposed => _disposeOnce.Disposed;
 
