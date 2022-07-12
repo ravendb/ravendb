@@ -275,10 +275,6 @@ namespace Raven.Server.Documents.Replication.Incoming
         {
         }
 
-        protected override void HandleTaskCompleteIfNeeded()
-        {
-        }
-
         protected override Task HandleBatchAsync(DocumentsOperationContext context, DataForReplicationCommand batch, long lastEtag)
         {
             var replicationCommand = GetMergeDocumentsCommand(batch, lastEtag);

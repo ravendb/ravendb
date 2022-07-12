@@ -512,30 +512,66 @@ namespace Raven.Server.Documents.Replication
             var newIncoming = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer, pullReplicationParams);
             newIncoming.Failed += OnIncomingReceiveFailed;
 
-            if (ShardHelper.IsShardedName(Database.Name))
+            // need to safeguard against two concurrent connection attempts
+            var current = _incoming.AddOrUpdate(newIncoming.ConnectionInfo.SourceDatabaseId, newIncoming,
+                (_, val) => val.IsDisposed ? newIncoming : val);
+
+            if (current == newIncoming)
             {
                 newIncoming.Start();
+                IncomingReplicationAdded?.Invoke(newIncoming);
+                ForceTryReconnectAll();
             }
             else
             {
-                // need to safeguard against two concurrent connection attempts
-                var current = _incoming.AddOrUpdate(newIncoming.ConnectionInfo.SourceDatabaseId, newIncoming,
-                    (_, val) => val.IsDisposed ? newIncoming : val);
+                if (_logger.IsInfoEnabled)
+                {
+                    _logger.Info("you can't add two identical connections.", new InvalidOperationException("you can't add two identical connections."));
+                }
+                newIncoming.Dispose();
+            }
+        }
 
-                if (current == newIncoming)
+        internal void AddAndStartOutgoingReplication(ReplicationNode node)
+        {
+            var info = GetConnectionInfo(node);
+
+            if (info == null)
+            {
+                // this means that we were unable to retrieve the tcp connection info and will try it again later
+                return;
+            }
+
+            if (_locker.TryEnterReadLock(0) == false)
+            {
+                // the db being disposed
+                return;
+            }
+
+            try
+            {
+                OutgoingReplicationHandlerBase outgoingReplication = GetOutgoingReplicationHandlerInstance(info, node);
+
+                if (outgoingReplication == null)
+                    return;
+
+                if (_outgoing.TryAdd(outgoingReplication) == false)
                 {
-                    newIncoming.Start();
-                    IncomingReplicationAdded?.Invoke(newIncoming);
-                    ForceTryReconnectAll();
+                    outgoingReplication.Dispose();
+                    return;
                 }
-                else
-                {
-                    if (_logger.IsInfoEnabled)
-                    {
-                        _logger.Info("you can't add two identical connections.", new InvalidOperationException("you can't add two identical connections."));
-                    }
-                    newIncoming.Dispose();
-                }
+
+                outgoingReplication.Failed += OnOutgoingSendingFailed;
+                outgoingReplication.SuccessfulTwoWaysCommunication += OnOutgoingSendingSucceeded;
+                outgoingReplication.SuccessfulReplication += ResetReplicationFailuresInfo;
+
+                OutgoingReplicationAdded?.Invoke(outgoingReplication);
+
+                outgoingReplication.Start();
+            }
+            finally
+            {
+                _locker.ExitReadLock();
             }
         }
 
@@ -610,8 +646,7 @@ namespace Raven.Server.Documents.Replication
                 string changeVector = null;
                 long lastEtagFromSrc = 0;
 
-                if (getLatestEtagMessage.ReplicationsType != ReplicationLatestEtagRequest.ReplicationType.Migration &&
-                    ShardHelper.IsShardedName(Database.Name) == false)
+                if (getLatestEtagMessage.ReplicationsType != ReplicationLatestEtagRequest.ReplicationType.Migration)
                 {
                     changeVector = DocumentsStorage.GetFullDatabaseChangeVector(documentsContext);
 
@@ -660,7 +695,7 @@ namespace Raven.Server.Documents.Replication
 
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Disconnecting existing connection from {incoming.FromToString} because we got a new connection from the same source db " +
-                              $"(last heartbeat was at {lastHeartbeat}).");
+                                 $"(last heartbeat was at {lastHeartbeat}).");
 
                 IncomingReplicationRemoved?.Invoke(incoming);
 
@@ -1317,7 +1352,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        protected override TcpConnectionInfo GetConnectionInfo(ReplicationNode node)
+        private TcpConnectionInfo GetConnectionInfo(ReplicationNode node)
         {
             var shutdownInfo = _outgoingFailureInfo.GetOrAdd(node, new ConnectionShutdownInfo
             {
@@ -1427,7 +1462,7 @@ namespace Raven.Server.Documents.Replication
             return null;
         }
 
-        protected override IAbstractOutgoingReplicationHandler GetOutgoingReplicationHandlerInstance(TcpConnectionInfo info, ReplicationNode node)
+        private OutgoingReplicationHandlerBase GetOutgoingReplicationHandlerInstance(TcpConnectionInfo info, ReplicationNode node)
         {
             if (Database == null)
                 return null;
@@ -1453,18 +1488,6 @@ namespace Raven.Server.Documents.Replication
             }
 
             return outgoingReplication;
-        }
-
-        protected override void InvokeOnOutgoingReplicationAdded(IAbstractOutgoingReplicationHandler outgoing)
-        {
-            if (outgoing is OutgoingReplicationHandlerBase outgoingReplication == false)
-                throw new InvalidOperationException($"{outgoing} must be of type '{typeof(OutgoingReplicationHandlerBase)}'");
-
-            outgoingReplication.Failed += OnOutgoingSendingFailed;
-            outgoingReplication.SuccessfulTwoWaysCommunication += OnOutgoingSendingSucceeded;
-            outgoingReplication.SuccessfulReplication += ResetReplicationFailuresInfo;
-
-            OutgoingReplicationAdded?.Invoke(outgoingReplication);
         }
 
         public ConcurrentDictionary<ReplicationNode, OutgoingReplicationFailureToConnectReporter> OutgoingConnectionsLastFailureToConnect =

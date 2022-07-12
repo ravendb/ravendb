@@ -2426,21 +2426,8 @@ namespace Raven.Server
                     if (result.DatabaseStatus == DatabasesLandlord.DatabaseSearchResult.Status.Sharded)
                     {
                         var shardedReplicationLoader = tcp.DatabaseContext.Replication;
-                        var queue = new ReplicationQueue(result.DatabaseContext.ShardCount);
 
-                        shardedReplicationLoader.AcceptIncomingConnection(tcp, header, bufferToCopy, queue);
-
-                        for (int i = 0; i < tcp.DatabaseContext.ShardCount; i++)
-                        {
-                            var replicationNode = new ShardReplicationNode
-                            {
-                                Database = ShardHelper.ToShardName(tcp.DatabaseContext.DatabaseName, i),
-                                Shard = i,
-                                ReplicationQueue = queue
-                            };
-
-                            shardedReplicationLoader.AddAndStartOutgoingReplication(replicationNode);
-                        }
+                        shardedReplicationLoader.AcceptIncomingConnection(tcp, header, bufferToCopy);
                         break;
                     }
 

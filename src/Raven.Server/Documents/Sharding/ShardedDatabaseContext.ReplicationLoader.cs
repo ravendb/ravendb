@@ -1,16 +1,10 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 using JetBrains.Annotations;
-using Nito.AsyncEx;
 using Raven.Client.Documents.Operations.Replication;
-using Raven.Client.Documents.Replication;
-using Raven.Client.Http;
-using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Documents.Replication;
-using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.TcpHandlers;
@@ -26,11 +20,8 @@ namespace Raven.Server.Documents.Sharding
 
         public class ShardedReplicationContext : AbstractReplicationLoader
         {
-            private readonly ReaderWriterLockSlim _locker = new ReaderWriterLockSlim();
-
             private readonly ShardedDatabaseContext _context;
             public ShardedDatabaseContext Context => _context;
-            public string SourceDatabaseId { get; set; }
 
             public ShardedReplicationContext([NotNull] ShardedDatabaseContext context, ServerStore serverStore) : base(serverStore, context.DatabaseName)
             {
@@ -39,15 +30,14 @@ namespace Raven.Server.Documents.Sharding
 
             public void AcceptIncomingConnection(TcpConnectionOptions tcpConnectionOptions,
                 TcpConnectionHeaderMessage header,
-                JsonOperationContext.MemoryBuffer buffer,
-                ReplicationQueue replicationQueue)
+                JsonOperationContext.MemoryBuffer buffer)
             {
                 var supportedVersions = GetSupportedVersions(tcpConnectionOptions);
                 GetReplicationInitialRequest(tcpConnectionOptions, supportedVersions, buffer);
 
                 AssertCanExecute(header);
 
-                CreateIncomingInstance(tcpConnectionOptions, buffer, replicationQueue);
+                CreateIncomingInstance(tcpConnectionOptions, buffer);
             }
 
             private void AssertCanExecute(TcpConnectionHeaderMessage header)
@@ -69,16 +59,15 @@ namespace Raven.Server.Documents.Sharding
 
             protected override CancellationToken GetCancellationToken() => _context.DatabaseShutdown;
 
-            private void CreateIncomingInstance(TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.MemoryBuffer buffer, ReplicationQueue queue)
+            private void CreateIncomingInstance(TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.MemoryBuffer buffer)
             {
-                ShardedIncomingReplicationHandler newIncoming = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer, queue);
+                ShardedIncomingReplicationHandler newIncoming = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer);
 
                 var current = _incoming.AddOrUpdate(newIncoming.ConnectionInfo.SourceDatabaseId, newIncoming,
                     (_, val) => val.IsDisposed ? newIncoming : val);
 
                 if (current == newIncoming)
                 {
-                    SourceDatabaseId = newIncoming.ConnectionInfo.SourceDatabaseId;
                     newIncoming.Start();
                 }
                 else
@@ -92,88 +81,24 @@ namespace Raven.Server.Documents.Sharding
             }
 
             protected ShardedIncomingReplicationHandler CreateIncomingReplicationHandler(TcpConnectionOptions tcpConnectionOptions,
-                JsonOperationContext.MemoryBuffer buffer, ReplicationQueue replicationQueue)
+                JsonOperationContext.MemoryBuffer buffer)
             {
                 var getLatestEtagMessage = IncomingInitialHandshake(tcpConnectionOptions, buffer);
 
-                return new ShardedIncomingReplicationHandler(tcpConnectionOptions, this, buffer, getLatestEtagMessage, replicationQueue);
-            }
-
-            protected override TcpConnectionInfo GetConnectionInfo(ReplicationNode node)
-            {
-                if (node is ShardReplicationNode shardNode == false)
-                    throw new InvalidOperationException($"{node} must be of type '{typeof(ShardReplicationNode)}'");
-
-                var shardExecutor = _context.ShardExecutor;
-                using (_context.AllocateContext(out JsonOperationContext ctx))
-                {
-                    var cmd = new GetTcpInfoCommand("sharded-replication", shardNode.Database);
-                    RequestExecutor requestExecutor = null;
-                    try
-                    {
-                        requestExecutor = shardExecutor.GetRequestExecutorAt(shardNode.Shard);
-                        requestExecutor.Execute(cmd, ctx);
-                    }
-                    finally
-                    {
-                        // we want to set node Url even if we fail to connect to destination, so they can be used in replication stats
-                        node.Database = shardNode.Database;
-                        node.Url = requestExecutor?.Url;
-                    }
-
-                    return cmd.Result;
-                }
-            }
-
-            protected override IAbstractOutgoingReplicationHandler GetOutgoingReplicationHandlerInstance(TcpConnectionInfo info, ReplicationNode node)
-            {
-                switch (node)
-                {
-                    case ShardReplicationNode shardNode:
-                        return new ShardedOutgoingReplicationHandler(this, shardNode, shardNode.Shard, info, shardNode.ReplicationQueue);
-
-                    default:
-                        throw new InvalidOperationException($"{node} must be of type '{typeof(ShardReplicationNode)}'");
-                }
-            }
-
-            protected override void InvokeOnOutgoingReplicationAdded(IAbstractOutgoingReplicationHandler outgoing)
-            {
+                return new ShardedIncomingReplicationHandler(tcpConnectionOptions, this, buffer, getLatestEtagMessage);
             }
         }
     }
 
-    public class ReplicationQueue
+    public class ReplicationBatch
     {
-        public Dictionary<int, BlockingCollection<ReplicationBatch>> ShardBatches = new();
-
-        public class ReplicationBatch
-        {
-            public List<ReplicationBatchItem> Items = new();
-            public Dictionary<Slice, AttachmentReplicationItem> Attachments;
-        }
-
-        public AsyncCountdownEvent SendToShardCompletion;
-
-        public AsyncManualResetEvent MissingAttachments = new AsyncManualResetEvent(false);
-
-        public string MissingAttachmentMessage;
-
-        public ReplicationQueue(int numberOfShards)
-        {
-            SendToShardCompletion = new AsyncCountdownEvent(numberOfShards);
-            for (int i = 0; i < numberOfShards; i++)
-            {
-                ShardBatches[i] = new();
-            }
-        }
+        public List<ReplicationBatchItem> Items = new();
+        public Dictionary<Slice, AttachmentReplicationItem> Attachments;
     }
 
     public class ShardReplicationNode : ExternalReplication
     {
         public int Shard;
-
-        public ReplicationQueue ReplicationQueue;
 
         public ShardReplicationNode()
         {

@@ -177,6 +177,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
                     {
                         InitialHandshake();
                         _tcpConnectionOptions.DocumentDatabase?.RunningTcpConnections.Add(_tcpConnectionOptions);
+                        _tcpConnectionOptions.DatabaseContext?.RunningTcpConnections.Add(_tcpConnectionOptions);
                         Replicate();
                     }
                 }
@@ -353,7 +354,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
             }
         }
 
-        internal ReplicationMessageReply HandleServerResponse(BlittableJsonReaderObject replicationBatchReplyMessage, bool allowNotify)
+        internal virtual ReplicationMessageReply HandleServerResponse(BlittableJsonReaderObject replicationBatchReplyMessage, bool allowNotify)
         {
             replicationBatchReplyMessage.BlittableValidation();
             var replicationBatchReply = JsonDeserializationServer.ReplicationMessageReply(replicationBatchReplyMessage);
