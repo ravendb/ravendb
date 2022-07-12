@@ -106,6 +106,13 @@ class databaseIDs extends shardViewModelBase {
         const stats = await new getDatabaseStatsCommand(this.db, location)
             .execute();
         
+        if (!stats.DatabaseChangeVector) {
+            return {
+                databaseId: stats.DatabaseId,
+                databaseIdsFromChangeVector: []
+            }
+        }
+        
         const changeVector = stats.DatabaseChangeVector.split(",");
         const dbsFromCV = changeVector.map(cvEntry => changeVectorUtils.getDatabaseID(cvEntry));
 

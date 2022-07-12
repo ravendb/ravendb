@@ -1049,13 +1049,10 @@ namespace Raven.Server.Json
             writer.WriteInteger(statistics.CountOfDocuments);
             writer.WriteComma();
 
-            if (statistics.CountOfRevisionDocuments > 0)
-            {
-                writer.WritePropertyName(nameof(statistics.CountOfRevisionDocuments));
-                writer.WriteInteger(statistics.CountOfRevisionDocuments);
-                writer.WriteComma();
-            }
-
+            writer.WritePropertyName(nameof(statistics.CountOfRevisionDocuments));
+            writer.WriteInteger(statistics.CountOfRevisionDocuments);
+            writer.WriteComma();
+            
             writer.WritePropertyName(nameof(statistics.CountOfTombstones));
             writer.WriteInteger(statistics.CountOfTombstones);
             writer.WriteComma();
