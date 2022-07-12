@@ -2,7 +2,6 @@
 
 import genUtils from "common/generalUtils";
 
-//TODO: remove?
 abstract class ongoingTaskModel { 
 
     taskId: number;
