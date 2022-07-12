@@ -5,11 +5,14 @@ import { OngoingTasksPage } from "./OngoingTasksPage";
 import * as stories from "./OngoingTasksPage.stories";
 import { composeStories, composeStory } from "@storybook/testing-react";
 import { boundCopy } from "../../../../utils/common";
+import { ExternalReplicationServerWide } from "./OngoingTasksPage.stories";
 
 const { EmptyView, FullView } = composeStories(stories);
 
 const selectors = {
     emptyScriptText: /Following scripts don't match any documents/i,
+    deleteTaskTitle: /Delete task/,
+    editTaskTitle: /Edit task/,
 } as const;
 
 describe("OngoingTasksPage", function () {
@@ -23,7 +26,6 @@ describe("OngoingTasksPage", function () {
         const { screen } = rtlRender(<FullView />);
 
         expect(await screen.findByText(/RavenDB ETL/)).toBeInTheDocument();
-        //TODO: other assertions
     });
 
     describe("RavenETL", function () {
@@ -472,6 +474,164 @@ describe("OngoingTasksPage", function () {
             await screen.findAllByText(/Up to date/i);
 
             expect(await screen.findByText(selectors.emptyScriptText)).toBeInTheDocument();
+        });
+    });
+
+    describe("Replication Sink", function () {
+        it("can render enabled", async () => {
+            const View = boundCopy(stories.ReplicationSinkTemplate, {
+                disabled: false,
+            });
+
+            const Story = composeStory(View, stories.default);
+
+            const { screen, fireClick } = rtlRender(<Story />);
+            expect(await screen.findByText(/Replication Sink/)).toBeInTheDocument();
+            expect(await screen.findByText(/Enabled/)).toBeInTheDocument();
+            expect(screen.queryByText(/Disabled/)).not.toBeInTheDocument();
+
+            const detailsBtn = await screen.findByTitle(/Click for details/);
+
+            await fireClick(detailsBtn);
+
+            expect(await screen.findByText(/Hub Database/)).toBeInTheDocument();
+            expect(await screen.findByText(/Connection String/)).toBeInTheDocument();
+            expect(await screen.findByText(/Actual Hub URL/)).toBeInTheDocument();
+            expect(await screen.findByText(/Hub Name/)).toBeInTheDocument();
+        });
+    });
+
+    describe("Replication Hub", function () {
+        it("can render hub w/o connections", async () => {
+            const View = boundCopy(stories.ReplicationHubTemplate, {
+                disabled: false,
+                withOutConnections: true,
+            });
+
+            const Story = composeStory(View, stories.default);
+
+            const { screen, fireClick } = rtlRender(<Story />);
+            expect(await screen.findByText(/Replication Hub/)).toBeInTheDocument();
+            expect(await screen.findByText(/Enabled/)).toBeInTheDocument();
+            expect(screen.queryByText(/Disabled/)).not.toBeInTheDocument();
+
+            const detailsBtn = await screen.findByTitle(/Click for details/);
+
+            await fireClick(detailsBtn);
+
+            expect(await screen.findByText(/No sinks connected/)).toBeInTheDocument();
+        });
+
+        it("can render hub w/ connections", async () => {
+            const View = boundCopy(stories.ReplicationHubTemplate, {
+                disabled: false,
+            });
+
+            const Story = composeStory(View, stories.default);
+
+            const { screen, fireClick } = rtlRender(<Story />);
+            expect(await screen.findByText(/Replication Hub/)).toBeInTheDocument();
+            expect(await screen.findByText(/Enabled/)).toBeInTheDocument();
+            expect(screen.queryByText(/Disabled/)).not.toBeInTheDocument();
+
+            const detailsBtn = await screen.findByTitle(/Click for details/);
+
+            await fireClick(detailsBtn);
+
+            expect(await screen.findByText(/Task Name/)).toBeInTheDocument();
+            expect(await screen.findByText(/Sink Database/)).toBeInTheDocument();
+            expect(await screen.findByText(/target-hub-db/)).toBeInTheDocument();
+            expect(await screen.findByText(/Actual Sink URL/)).toBeInTheDocument();
+        });
+    });
+
+    describe("Periodic Backup", function () {
+        it("can render enabled", async () => {
+            const View = boundCopy(stories.PeriodicBackupTemplate, {
+                disabled: false,
+            });
+
+            const Story = composeStory(View, stories.default);
+
+            const { screen, fireClick } = rtlRender(<Story />);
+            expect(await screen.findByText(/Periodic Backup/)).toBeInTheDocument();
+            expect(await screen.findByText(/Enabled/)).toBeInTheDocument();
+            expect(screen.queryByText(/Disabled/)).not.toBeInTheDocument();
+
+            const detailsBtn = await screen.findByTitle(/Click for details/);
+
+            await fireClick(detailsBtn);
+
+            expect(await screen.findByText(/Destinations/)).toBeInTheDocument();
+            expect(await screen.findByText(/Last Full Backup/)).toBeInTheDocument();
+            expect(await screen.findByText(/Last Incremental Backup/)).toBeInTheDocument();
+            expect(await screen.findByText(/Next Estimated Backup/)).toBeInTheDocument();
+            expect(await screen.findByText(/Retention Policy/)).toBeInTheDocument();
+        });
+    });
+
+    describe("External Replication", function () {
+        it("can render enabled", async () => {
+            const View = boundCopy(stories.ExternalReplicationTemplate, {
+                disabled: false,
+            });
+
+            const Story = composeStory(View, stories.default);
+
+            const { screen, fireClick } = rtlRender(<Story />);
+            expect(await screen.findByText(/External Replication/)).toBeInTheDocument();
+            expect(await screen.findByText(/Enabled/)).toBeInTheDocument();
+            expect(screen.queryByText(/Disabled/)).not.toBeInTheDocument();
+
+            const detailsBtn = await screen.findByTitle(/Click for details/);
+
+            await fireClick(detailsBtn);
+
+            expect(await screen.findByText(/Connection String/)).toBeInTheDocument();
+            expect(await screen.findByText(/Destination Database/)).toBeInTheDocument();
+            expect(await screen.findByText(/Actual Destination URL/)).toBeInTheDocument();
+            expect(await screen.findByText(/Topology Discovery URLs/)).toBeInTheDocument();
+
+            // edit, delete button should be present for non-server wide
+            expect(screen.queryByTitle(selectors.deleteTaskTitle)).toBeInTheDocument();
+            expect(screen.queryByTitle(selectors.editTaskTitle)).toBeInTheDocument();
+        });
+
+        it("can render server wide", async () => {
+            const View = stories.ExternalReplicationServerWide;
+            const Story = composeStory(View, stories.default);
+
+            const { screen, fireClick } = rtlRender(<Story />);
+            const detailsBtn = await screen.findByTitle(/Click for details/);
+
+            await fireClick(detailsBtn);
+
+            // edit, delete button not present for server wide
+            expect(screen.queryByTitle(selectors.deleteTaskTitle)).not.toBeInTheDocument();
+            expect(screen.queryByTitle(selectors.editTaskTitle)).not.toBeInTheDocument();
+        });
+    });
+
+    describe("Subscription", function () {
+        it("can render enabled", async () => {
+            const View = boundCopy(stories.SubscriptionTemplate, {
+                disabled: false,
+            });
+
+            const Story = composeStory(View, stories.default);
+
+            const { screen, fireClick } = rtlRender(<Story />);
+            expect(await screen.findByText(/Subscription/)).toBeInTheDocument();
+            expect(await screen.findByText(/Enabled/)).toBeInTheDocument();
+            expect(screen.queryByText(/Disabled/)).not.toBeInTheDocument();
+
+            const detailsBtn = await screen.findByTitle(/Click for details/);
+
+            await fireClick(detailsBtn);
+
+            expect(await screen.findByText(/Last Batch Ack Time/)).toBeInTheDocument();
+            expect(await screen.findByText(/Last Client Connection Time/)).toBeInTheDocument();
+            expect(await screen.findByText(/Change vector for next batch/)).toBeInTheDocument();
         });
     });
 });

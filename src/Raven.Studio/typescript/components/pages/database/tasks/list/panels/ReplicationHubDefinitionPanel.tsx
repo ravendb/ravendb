@@ -42,7 +42,7 @@ function Details(props: ReplicationHubPanelProps & { canEdit: boolean }) {
 
     if (connectedHubs.length === 0) {
         return (
-            <h5 className="text-warning">
+            <h5 className="text-warning padding-sm">
                 <i className="icon-empty-set"></i>
                 <span>No sinks connected</span>
             </h5>
@@ -50,9 +50,9 @@ function Details(props: ReplicationHubPanelProps & { canEdit: boolean }) {
     }
 
     return (
-        <div>
+        <div className="margin">
             {connectedHubs.map((hub) => (
-                <ReplicationHubPanel db={db} data={hub} />
+                <ReplicationHubPanel key={hub.shared.taskId + hub.shared.taskName} db={db} data={hub} />
             ))}
         </div>
     );

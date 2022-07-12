@@ -1,5 +1,5 @@
 ﻿import database from "models/resources/database";
-import React, { useCallback, useEffect, useReducer, useRef, useState } from "react";
+import React, { useCallback, useEffect, useReducer, useState } from "react";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import { useServices } from "hooks/useServices";
 import { ongoingTasksReducer, ongoingTasksReducerInitializer } from "./OngoingTasksReducer";
@@ -250,7 +250,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                     )}
                 </div>
                 <div className="scroll flex-grow">
-                    {tasks.tasks.length === 0 && (
+                    {tasks.tasks.length === 0 && tasks.replicationHubs.length === 0 && (
                         <div className="row">
                             <div className="col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3">
                                 <i className="icon-xl icon-empty-set text-muted"></i>
@@ -466,7 +466,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                                         key={taskKey(def.shared)}
                                         data={def}
                                         connectedHubs={replicationHubs.filter(
-                                            (x) => x.shared.taskName === def.shared.taskName
+                                            (x) => x.shared.taskId === def.shared.taskId
                                         )}
                                     />
                                 ))}
