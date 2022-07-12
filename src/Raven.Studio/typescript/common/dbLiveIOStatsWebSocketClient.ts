@@ -18,7 +18,7 @@ class dbLiveIOStatsWebSocketClient extends liveIOStatsWebSocketClient {
     }
 
     protected webSocketUrlFactory(location: databaseLocationSpecifier) {
-        const args = appUrl.urlEncodeArgs(location);
+        const args = appUrl.urlEncodeArgs(location || {});
         return endpoints.databases.ioMetrics.debugIoMetricsLive + args;
     }
 }
