@@ -17,7 +17,7 @@ namespace Raven.Client.Documents.Session
 
             var optionsParameterName = options != null ? AddQueryParameter(options) : null;
             ExplanationToken = ExplanationToken.Create(optionsParameterName);
-            Explanations.Included = true;
+            Explanations.ShouldBeIncluded = true;
             explanations = Explanations;
         }
 
