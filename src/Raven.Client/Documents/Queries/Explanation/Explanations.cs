@@ -6,7 +6,7 @@ namespace Raven.Client.Documents.Queries.Explanation
     {
         private Dictionary<string, string[]> _explanations;
 
-        public bool Included { get; set; } = false;
+        public bool ShouldBeIncluded { get; set; } = false;
 
         public string[] GetExplanations(string key)
         {
