@@ -5,7 +5,6 @@ import getAllServerWideTasksCommand = require("commands/serverWide/tasks/getAllS
 import generalUtils = require("common/generalUtils");
 import connectionStatus from "models/resources/connectionStatus";
 
-//TODO: remove
 class serverWideExternalReplicationListModel extends serverWideTaskListModel {
     
     delayTimeText = ko.observable<string>();

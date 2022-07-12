@@ -15,6 +15,11 @@ import MockTasksService from "../../../../../test/mocks/MockTasksService";
 import OngoingTaskOlapEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtlListView;
 import OngoingTaskElasticSearchEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtlListView;
 import OngoingTaskQueueEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtlListView;
+import OngoingTaskPullReplicationAsSink = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsSink;
+import OngoingTaskPullReplicationAsHub = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsHub;
+import OngoingTaskBackup = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup;
+import OngoingTaskReplication = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskReplication;
+import OngoingTaskSubscription = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSubscription;
 
 function tasksHolder(storyFn: any) {
     return (
@@ -71,6 +76,81 @@ export const FullView: ComponentStory<typeof OngoingTasksPage> = () => {
     return <OngoingTasksPage database={db} />;
 };
 
+export const ExternalReplicationTemplate = (args: {
+    disabled?: boolean;
+    completed?: boolean;
+    emptyScript?: boolean;
+    customizeTask?: (x: OngoingTaskReplication) => void;
+}) => {
+    const db = DatabasesStubs.shardedDatabase();
+
+    commonInit();
+
+    const { tasksService } = mockServices;
+
+    tasksService.withGetTasks((x) => {
+        const ongoingTask = TasksStubs.getExternalReplicationListItem();
+        if (args.disabled) {
+            ongoingTask.TaskState = "Disabled";
+        }
+        args.customizeTask?.(ongoingTask);
+        x.OngoingTasksList = [ongoingTask];
+        x.PullReplications = [];
+        x.SubscriptionsCount = 0;
+    });
+
+    mockEtlProgress(tasksService, args.completed, args.disabled, args.emptyScript);
+
+    return <OngoingTasksPage {...forceStoryRerender()} database={db} />;
+};
+
+export const ExternalReplicationDisabled = boundCopy(ExternalReplicationTemplate, {
+    disabled: true,
+});
+
+export const ExternalReplicationEnabled = boundCopy(ExternalReplicationTemplate, {
+    disabled: false,
+});
+
+export const ExternalReplicationServerWide = boundCopy(ExternalReplicationTemplate, {
+    disabled: false,
+    customizeTask: (task) => {
+        task.TaskName = "Server Wide External Replication, ext1";
+    },
+});
+
+export const SubscriptionTemplate = (args: {
+    disabled?: boolean;
+    customizeTask?: (x: OngoingTaskSubscription) => void;
+}) => {
+    const db = DatabasesStubs.shardedDatabase();
+
+    commonInit();
+
+    const { tasksService } = mockServices;
+
+    tasksService.withGetTasks((x) => {
+        const ongoingTask = TasksStubs.getSubscriptionListItem();
+        if (args.disabled) {
+            ongoingTask.TaskState = "Disabled";
+        }
+        args.customizeTask?.(ongoingTask);
+        x.OngoingTasksList = [ongoingTask];
+        x.PullReplications = [];
+        x.SubscriptionsCount = 0;
+    });
+
+    return <OngoingTasksPage {...forceStoryRerender()} database={db} />;
+};
+
+export const SubscriptionDisabled = boundCopy(SubscriptionTemplate, {
+    disabled: true,
+});
+
+export const SubscriptionEnabled = boundCopy(SubscriptionTemplate, {
+    disabled: false,
+});
+
 export const RavenEtlTemplate = (args: {
     disabled?: boolean;
     completed?: boolean;
@@ -90,6 +170,7 @@ export const RavenEtlTemplate = (args: {
         }
         args.customizeTask?.(ravenEtl);
         x.OngoingTasksList = [ravenEtl];
+        x.PullReplications = [];
         x.SubscriptionsCount = 0;
     });
 
@@ -130,6 +211,7 @@ export const SqlTemplate = (args: {
         }
         args.customizeTask?.(sqlEtl);
         x.OngoingTasksList = [sqlEtl];
+        x.PullReplications = [];
         x.SubscriptionsCount = 0;
     });
 
@@ -170,6 +252,7 @@ export const OlapTemplate = (args: {
         }
         args.customizeTask?.(etl);
         x.OngoingTasksList = [etl];
+        x.PullReplications = [];
         x.SubscriptionsCount = 0;
     });
 
@@ -210,6 +293,7 @@ export const ElasticSearchTemplate = (args: {
         }
         args.customizeTask?.(etl);
         x.OngoingTasksList = [etl];
+        x.PullReplications = [];
         x.SubscriptionsCount = 0;
     });
 
@@ -250,6 +334,7 @@ export const KafkaTemplate = (args: {
         }
         args.customizeTask?.(etl);
         x.OngoingTasksList = [etl];
+        x.PullReplications = [];
         x.SubscriptionsCount = 0;
     });
 
@@ -290,6 +375,7 @@ export const RabbitTemplate = (args: {
         }
         args.customizeTask?.(etl);
         x.OngoingTasksList = [etl];
+        x.PullReplications = [];
         x.SubscriptionsCount = 0;
     });
 
@@ -309,6 +395,116 @@ export const RabbitCompleted = boundCopy(RabbitTemplate, {
 export const RabbitEmptyScript = boundCopy(RabbitTemplate, {
     completed: true,
     emptyScript: true,
+});
+
+export const ReplicationSinkTemplate = (args: {
+    disabled?: boolean;
+    customizeTask?: (x: OngoingTaskPullReplicationAsSink) => void;
+}) => {
+    const db = DatabasesStubs.shardedDatabase();
+
+    commonInit();
+
+    const { tasksService } = mockServices;
+
+    tasksService.withGetTasks((x) => {
+        const sinkListItem = TasksStubs.getReplicationSinkListItem();
+        if (args.disabled) {
+            sinkListItem.TaskState = "Disabled";
+        }
+        args.customizeTask?.(sinkListItem);
+        x.OngoingTasksList = [sinkListItem];
+        x.PullReplications = [];
+        x.SubscriptionsCount = 0;
+    });
+
+    return <OngoingTasksPage {...forceStoryRerender()} database={db} />;
+};
+
+export const ReplicationSinkDisabled = boundCopy(ReplicationSinkTemplate, {
+    disabled: true,
+});
+
+export const ReplicationSinkEnabled = boundCopy(ReplicationSinkTemplate, {
+    disabled: false,
+});
+
+export const ReplicationHubTemplate = (args: {
+    disabled?: boolean;
+    withOutConnections?: boolean;
+    customizeTask?: (x: OngoingTaskPullReplicationAsHub) => void;
+}) => {
+    const db = DatabasesStubs.shardedDatabase();
+
+    commonInit();
+
+    const { tasksService } = mockServices;
+
+    tasksService.withGetTasks((x) => {
+        const listItem = TasksStubs.getReplicationHubListItem();
+        if (args.disabled) {
+            listItem.TaskState = "Disabled";
+        }
+
+        x.PullReplications.forEach((definition) => {
+            definition.Disabled = args.disabled;
+        });
+
+        args.customizeTask?.(listItem);
+        x.OngoingTasksList = args.withOutConnections ? [] : [listItem];
+        x.PullReplications = x.PullReplications.filter((x) =>
+            args.withOutConnections ? x.Name === "EmptyHub" : x.Name !== "EmptyHub"
+        );
+        x.SubscriptionsCount = 0;
+    });
+
+    return <OngoingTasksPage {...forceStoryRerender()} database={db} />;
+};
+
+export const ReplicationHubDisabled = boundCopy(ReplicationHubTemplate, {
+    disabled: true,
+});
+
+export const ReplicationHubEnabled = boundCopy(ReplicationHubTemplate, {
+    disabled: false,
+});
+
+export const ReplicationHubNoConnections = boundCopy(ReplicationHubTemplate, {
+    disabled: false,
+    withOutConnections: true,
+});
+
+export const PeriodicBackupTemplate = (args: {
+    disabled?: boolean;
+    customizeTask?: (x: OngoingTaskBackup) => void;
+}) => {
+    const db = DatabasesStubs.shardedDatabase();
+
+    commonInit();
+
+    const { tasksService } = mockServices;
+
+    tasksService.withGetTasks((x) => {
+        const ongoingTask = TasksStubs.getPeriodicBackupListItem();
+        if (args.disabled) {
+            ongoingTask.TaskState = "Disabled";
+        }
+        args.customizeTask?.(ongoingTask);
+        x.OngoingTasksList = [ongoingTask];
+        x.PullReplications = [];
+        x.SubscriptionsCount = 0;
+    });
+
+    return <OngoingTasksPage {...forceStoryRerender()} database={db} />;
+};
+
+export const PeriodicBackupDisabled = boundCopy(PeriodicBackupTemplate, {
+    disabled: true,
+});
+
+export const PeriodicBackupEnabledEncrypted = boundCopy(PeriodicBackupTemplate, {
+    disabled: false,
+    customizeTask: (x) => (x.IsEncrypted = true),
 });
 
 function mockEtlProgress(tasksService: MockTasksService, completed: boolean, disabled: boolean, emptyScript: boolean) {

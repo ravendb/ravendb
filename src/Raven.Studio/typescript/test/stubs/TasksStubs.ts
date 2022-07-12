@@ -8,10 +8,18 @@ import OngoingTaskOlapEtlListView = Raven.Client.Documents.Operations.OngoingTas
 import OngoingTaskElasticSearchEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtlListView;
 import OngoingTaskBackup = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup;
 import OngoingTaskQueueEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtlListView;
-import { tasks } from "knockout";
+import OngoingTaskPullReplicationAsSink = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsSink;
+import OngoingTaskPullReplicationAsHub = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsHub;
+import PullReplicationDefinition = Raven.Client.Documents.Operations.Replication.PullReplicationDefinition;
+import OngoingTaskReplication = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskReplication;
+import OngoingTaskSubscription = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSubscription;
 
 export class TasksStubs {
     static getTasksList(): OngoingTasksResult {
+        const emptyPullReplicationDefinition = TasksStubs.getReplicationHubDefinition();
+        emptyPullReplicationDefinition.TaskId++;
+        emptyPullReplicationDefinition.Name = "EmptyHub";
+
         return {
             OngoingTasksList: [
                 TasksStubs.getRavenEtlListItem(),
@@ -21,9 +29,12 @@ export class TasksStubs {
                 TasksStubs.getPeriodicBackupListItem(),
                 TasksStubs.getKafkaListItem(),
                 TasksStubs.getRabbitListItem(),
-                //TODO: replication hub/sink, subscriptions
+                TasksStubs.getReplicationSinkListItem(),
+                TasksStubs.getReplicationHubListItem(),
+                TasksStubs.getExternalReplicationListItem(),
+                TasksStubs.getSubscriptionListItem(),
             ],
-            PullReplications: [],
+            PullReplications: [TasksStubs.getReplicationHubDefinition(), emptyPullReplicationDefinition],
             SubscriptionsCount: 0,
         };
     }
@@ -81,11 +92,7 @@ export class TasksStubs {
             Error: null,
             MentorNode: null,
             BackupType: "Backup",
-            ResponsibleNode: {
-                NodeTag: "C",
-                NodeUrl: "http://raven-c",
-                ResponsibleNode: "C",
-            },
+            ResponsibleNode: TasksStubs.getResponsibleNode(),
             BackupDestinations: ["Local"],
             IsEncrypted: false,
             LastFullBackup: moment.utc().add(-7, "days").toISOString(),
@@ -104,6 +111,24 @@ export class TasksStubs {
         };
     }
 
+    static getExternalReplicationListItem(): OngoingTaskReplication {
+        return {
+            TaskName: "ExternalReplicationTask",
+            TaskId: 438,
+            TaskType: "Replication",
+            MentorNode: null,
+            Error: null,
+            ResponsibleNode: TasksStubs.getResponsibleNode(),
+            TaskState: "Enabled",
+            TaskConnectionStatus: "Active",
+            ConnectionStringName: "ExtRep-CS",
+            DestinationUrl: "http://target-raven:8080",
+            DelayReplicationFor: null,
+            TopologyDiscoveryUrls: ["http://target-raven:8080"],
+            DestinationDatabase: "r-ext",
+        };
+    }
+
     static getRavenEtlListItem(): OngoingTaskRavenEtlListView {
         return {
             TaskName: "RavenETLTask",
@@ -111,11 +136,7 @@ export class TasksStubs {
             TaskType: "RavenEtl",
             ConnectionStringName: "RavenETL-CS",
             DestinationUrl: "http://target-etl:8080",
-            ResponsibleNode: {
-                NodeTag: "C",
-                NodeUrl: "http://raven-c",
-                ResponsibleNode: "C",
-            },
+            ResponsibleNode: TasksStubs.getResponsibleNode(),
             TaskState: "Enabled",
             Error: null,
             DestinationDatabase: "target-etl-db",
@@ -133,11 +154,7 @@ export class TasksStubs {
             ConnectionStringName: "SQL-CS",
             DestinationDatabase: "sql-db1",
             DestinationServer: "mssql:1521",
-            ResponsibleNode: {
-                NodeTag: "C",
-                NodeUrl: "http://raven-c",
-                ResponsibleNode: "C",
-            },
+            ResponsibleNode: TasksStubs.getResponsibleNode(),
             TaskState: "Enabled",
             Error: null,
             MentorNode: null,
@@ -153,11 +170,7 @@ export class TasksStubs {
             TaskType: "OlapEtl",
             ConnectionStringName: "OLAP-CS",
             Destination: "TargetOLAP",
-            ResponsibleNode: {
-                NodeTag: "C",
-                NodeUrl: "http://raven-c",
-                ResponsibleNode: "C",
-            },
+            ResponsibleNode: TasksStubs.getResponsibleNode(),
             TaskState: "Enabled",
             Error: null,
             MentorNode: null,
@@ -171,11 +184,7 @@ export class TasksStubs {
             TaskId: 302,
             TaskType: "QueueEtl",
             ConnectionStringName: "Kafka-CS",
-            ResponsibleNode: {
-                NodeTag: "C",
-                NodeUrl: "http://raven-c",
-                ResponsibleNode: "C",
-            },
+            ResponsibleNode: TasksStubs.getResponsibleNode(),
             TaskState: "Enabled",
             Error: null,
             TaskConnectionStatus: "Active",
@@ -191,11 +200,7 @@ export class TasksStubs {
             TaskId: 303,
             TaskType: "QueueEtl",
             ConnectionStringName: "Rabbit-CS",
-            ResponsibleNode: {
-                NodeTag: "C",
-                NodeUrl: "http://raven-c",
-                ResponsibleNode: "C",
-            },
+            ResponsibleNode: TasksStubs.getResponsibleNode(),
             TaskState: "Enabled",
             Error: null,
             TaskConnectionStatus: "Active",
@@ -205,22 +210,101 @@ export class TasksStubs {
         };
     }
 
+    static getReplicationSinkListItem(): OngoingTaskPullReplicationAsSink {
+        return {
+            TaskName: "ReplicationSinkTask",
+            TaskId: 243,
+            TaskType: "PullReplicationAsSink",
+            MentorNode: null,
+            ResponsibleNode: TasksStubs.getResponsibleNode(),
+            TaskState: "Enabled",
+            Error: null,
+            HubDefinitionName: "HubName",
+            TaskConnectionStatus: "Active",
+            ConnectionStringName: "Hub-cs",
+            Mode: "SinkToHub",
+            HubName: "HubName",
+            DestinationDatabase: "hub-db",
+            DestinationUrl: "http://hub-server:8080",
+            AllowedHubToSinkPaths: null,
+            AllowedSinkToHubPaths: null,
+            TopologyDiscoveryUrls: ["http://hub-server:8080"],
+            AccessName: null,
+            CertificatePublicKey: null,
+        };
+    }
+
+    static getReplicationHubListItem(): OngoingTaskPullReplicationAsHub {
+        return {
+            TaskName: "sink1",
+            TaskId: 287,
+            TaskConnectionStatus: "Active",
+            TaskState: "Enabled",
+            Error: null,
+            ResponsibleNode: TasksStubs.getResponsibleNode(),
+            TaskType: "PullReplicationAsHub",
+            MentorNode: null,
+            DestinationDatabase: "target-hub-db",
+            DestinationUrl: "http://target-hub-host:8080",
+            DelayReplicationFor: null,
+        };
+    }
+
+    static getReplicationHubDefinition(): PullReplicationDefinition {
+        return {
+            TaskId: 287,
+            MentorNode: null,
+            Disabled: false,
+            Mode: "SinkToHub",
+            DelayReplicationFor: null,
+            Certificates: null,
+            PreventDeletionsMode: "None",
+            Name: "hub1",
+            WithFiltering: false,
+        };
+    }
+
     static getElasticSearchListItem(): OngoingTaskElasticSearchEtlListView {
         return {
             TaskName: "ElasticSearchTask",
             TaskId: 185,
             TaskType: "ElasticSearchEtl",
             ConnectionStringName: "ES-CS",
-            ResponsibleNode: {
-                NodeTag: "C",
-                NodeUrl: "http://raven-c",
-                ResponsibleNode: "C",
-            },
+            ResponsibleNode: TasksStubs.getResponsibleNode(),
             TaskState: "Enabled",
             Error: null,
             MentorNode: null,
             TaskConnectionStatus: "Active",
             NodesUrls: ["http://elastic1:8081", "http://elastic2:8081"],
+        };
+    }
+
+    static getSubscriptionListItem(): OngoingTaskSubscription {
+        return {
+            TaskName: "NewOrdersSubTask",
+            TaskId: 524,
+            TaskState: "Enabled",
+            Error: null,
+            ResponsibleNode: TasksStubs.getResponsibleNode(),
+            TaskConnectionStatus: "Active",
+            MentorNode: null,
+            TaskType: "Subscription",
+            Disabled: false,
+            SubscriptionId: 101,
+            ChangeVectorForNextBatchStartingPoint: "A:5,B:3",
+            LastBatchAckTime: moment.utc().add(-1, "hours").toISOString(),
+            Query: "from Orders",
+            SubscriptionName: "NamedSubscription",
+            LastClientConnectionTime: moment.utc().add(-2, "hours").toISOString(),
+            ChangeVectorForNextBatchStartingPointPerShard: null,
+        };
+    }
+
+    private static getResponsibleNode(): Raven.Client.ServerWide.Operations.NodeId {
+        return {
+            NodeTag: "C",
+            NodeUrl: "http://raven-c",
+            ResponsibleNode: "C",
         };
     }
 

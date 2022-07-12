@@ -246,8 +246,6 @@ function mapSharedInfo(task: OngoingTask): OngoingTaskSharedInfo {
             };
             return result;
         }
-
-        //TODO: backup
     }
 
     return commonProps;
