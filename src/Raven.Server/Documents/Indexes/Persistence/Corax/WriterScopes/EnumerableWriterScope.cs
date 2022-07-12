@@ -25,8 +25,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
         private readonly List<CoraxSpatialPointEntry> _spatialValues;
         private const int MaxSizePerBlittable = (2 << 11);
         private readonly List<BlittableJsonReaderObject> _blittableJsonReaderObjects;
-        private (int Strings, int Longs, int Doubles, int Raws, int Spatials) _count;
-
+        private (int Strings, int Longs, int Doubles, int Raws, int Spatials) _count;        
 
         public EnumerableWriterScope(List<Memory<byte>> stringValues, List<long> longValues, List<double> doubleValues, List<CoraxSpatialPointEntry> spatialValues,
             List<BlittableJsonReaderObject> blittableJsonReaderObjects, ByteStringContext allocator)
@@ -52,12 +51,20 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
 
         public void Write(int field, ReadOnlySpan<byte> value, ref IndexEntryWriter entryWriter)
         {
+            if (_count.Longs != 0 || _count.Doubles != 0)
+                throw new InvalidOperationException("Cannot mix tuples writes with straightforward writes");
+
             _count.Strings++;
             _stringValues.Add(new Memory<byte>(value.ToArray()));
+            _longValues.Add(0);
+            _doubleValues.Add(float.NaN);
         }
 
         public void Write(int field, ReadOnlySpan<byte> value, long longValue, double doubleValue, ref IndexEntryWriter entryWriter)
         {
+            if (_count.Strings != _count.Longs || _count.Strings != _count.Doubles)
+                throw new InvalidOperationException("Cannot write a tuple with a different number of values than the previous tuple.");
+
             _stringValues.Add(new Memory<byte>(value.ToArray()));
             _longValues.Add(longValue);
             _doubleValues.Add(doubleValue);

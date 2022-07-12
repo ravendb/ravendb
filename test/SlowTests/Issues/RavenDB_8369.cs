@@ -1,4 +1,6 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents.Operations.Backups;
@@ -81,8 +83,12 @@ namespace SlowTests.Issues
                     session.Delete("foo/bar1");
                     session.SaveChanges();
                 }
-                var config1 = Backup.CreateBackupConfiguration(backupPath1, backupType: backupType, incrementalBackupFrequency: "* */6 * * *");
-                var config2 = Backup.CreateBackupConfiguration(backupPath2, backupType: backupType, incrementalBackupFrequency: "* */6 * * *");
+
+                int hour = (DateTime.Now.Hour + 1)%24;
+                var timeCronExpression = $"30 {hour} * * *"; // happen in the middle of the next hour - cause the periodic backups to happen in a 30 minutes at least 
+
+                var config1 = Backup.CreateBackupConfiguration(backupPath1, backupType: backupType, incrementalBackupFrequency: timeCronExpression);
+                var config2 = Backup.CreateBackupConfiguration(backupPath2, backupType: backupType, incrementalBackupFrequency: timeCronExpression);
                 var backupTaskId1 = await Backup.UpdateConfigAndRunBackupAsync(Server, config1, store, isFullBackup: false);
                 await Backup.UpdateConfigAndRunBackupAsync(Server, config2, store, isFullBackup: false);
 
@@ -105,6 +111,7 @@ namespace SlowTests.Issues
                 }
 
                 await Backup.RunBackupAsync(Server, backupTaskId1, store, isFullBackup: false);
+
                 await documentDatabase.TombstoneCleaner.ExecuteCleanup(1);
 
                 //since we ran only one of backup tasks, only tombstones with minimal last etag get cleaned
@@ -171,7 +178,9 @@ namespace SlowTests.Issues
             var backupPath = NewDataPath(suffix: "BackupFolder");
             using (var store = GetDocumentStore())
             {
-                var config = Backup.CreateBackupConfiguration(backupPath, backupType: backupType, incrementalBackupFrequency: "* */6 * * *");
+                int hour = (DateTime.Now.Hour + 1) % 24;
+                var timeCronExpression = $"30 {hour} * * *"; // happen in the middle of the next hour - cause the periodic backups to happen in a 30 minutes at least 
+                var config = Backup.CreateBackupConfiguration(backupPath, backupType: backupType, incrementalBackupFrequency: timeCronExpression);
                 var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
 
                 using (var session = store.OpenSession())

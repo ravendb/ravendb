@@ -563,6 +563,17 @@ namespace Sparrow
                 }
             }
 
+            public static ulong Calculate(ReadOnlySpan<byte> buf, int len = -1, ulong seed = 0)
+            {
+                if (len == -1)
+                    len = buf.Length;
+
+                fixed (byte* buffer = buf)
+                {
+                    return CalculateInline(buffer, (ulong)len, seed);
+                }
+            }
+
             public static ulong Calculate(byte[] buf, int len = -1, ulong seed = 0)
             {
                 if (len == -1)

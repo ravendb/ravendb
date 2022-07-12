@@ -82,6 +82,8 @@
     <EmbeddedResource Include="Data\RavenDB_14939\MyAnalyzer.cs" />
     <EmbeddedResource Include="Data\RavenDB_15159\12119.smaps.gz" />
     <EmbeddedResource Include="Data\RavenDB_15294\northwind-4.2.103.zip" />
+    <None Remove="Data\RavenDB_18864\53AutoIndexCoraxImportTest.ravendbdump" />
+    <EmbeddedResource Include="Data\RavenDB_18864\53AutoIndexCoraxImportTest.ravendbdump" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Data\non-leaf-page-seq-id-large-values-2.txt" />

@@ -57,6 +57,6 @@ namespace Corax.Queries
                             });
         }
 
-        string DebugView => Inspect().ToString();
+        public string DebugView => Inspect().ToString();
     }
 }

@@ -80,6 +80,7 @@ namespace Voron.Data.Sets
             Header->NumberOfRawValues = 0;
         }
 
+        [SkipLocalsInit]
         public struct Iterator 
         {
             private SetLeafPage _parent;

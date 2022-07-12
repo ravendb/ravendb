@@ -8,6 +8,7 @@ using Sparrow;
 using Sparrow.Server;
 using Voron.Data.Sets;
 using Voron.Debugging;
+using Voron.Exceptions;
 using Voron.Global;
 using Voron.Impl;
 using Voron.Impl.Paging;
@@ -154,39 +155,6 @@ namespace Voron.Data.Containers
             tmpSpan.CopyTo(_page.AsSpan());
         }
 
-        public static bool TryAdjustSize(LowLevelTransaction llt, long id, int newSize, out Span<byte> buffer)
-        {
-            var offset = (int)(id % Constants.Storage.PageSize);
-            var pageNum = id / Constants.Storage.PageSize;
-            var page = llt.GetPage(pageNum);
-            var container = new Container(page);
-            var existing = container.Get(offset);
-            var containerOffsets = container.Offsets;
-            if (container.SpaceUsed(containerOffsets) + (newSize - existing.Length) > Constants.Storage.PageSize)
-            {
-                buffer = default;
-                return false;
-            }
-
-            page = llt.ModifyPage(pageNum);
-            container = new Container(page);
-            using var _ = llt.Allocator.Allocate(existing.Length, out Span<byte> tmp);
-            existing.CopyTo(tmp);
-            existing.Clear();
-            ref var metadata = ref containerOffsets[OffsetToIndex(offset)];
-            if (container.HasEnoughSpaceFor(newSize) == false)
-            {
-                metadata.Size = 0;
-                container.Defrag(llt);
-            }
-
-            container.Header.FloorOfData -= (ushort)newSize;
-            buffer = container._page.AsSpan(container.Header.FloorOfData, newSize);
-            tmp.CopyTo(buffer);
-            metadata.Offset = container.Header.FloorOfData;
-            metadata.Size = (ushort)newSize;
-            return true;
-        }
 
         public static long Allocate(LowLevelTransaction llt, long containerId, int size, out Span<byte> allocatedSpace)
         {
@@ -195,7 +163,6 @@ namespace Voron.Data.Containers
             
             if(size <= 0)
                 throw new ArgumentOutOfRangeException(nameof(size));
-            
             Container rootContainer;
             if (size > MaxSizeInsideContainerPage)
             {
@@ -224,13 +191,19 @@ namespace Voron.Data.Containers
             if (container.HasEnoughSpaceFor(reqSize) == false)
             {
                 container.Defrag(llt);
-                if (container.HasEnoughSpaceFor(reqSize) == false) 
-                    MoveToNextPage(llt, containerId, ref container, size);
+                // IMPORTANT: We have to account for the *larger* size here, otherwise we may
+                // have a size based on existing item metadata, but after the defrag, need
+                // to allocate a metadata slot as well. Therefor, we *always* assume that this
+                // is requiring the additional metadata size
+                if (container.HasEnoughSpaceFor(sizeof(ItemMetadata) + size) == false)
+                    container = MoveToNextPage(llt, containerId, container, size);
                 
                 (reqSize, pos) = GetRequiredSizeAndPosition(size, container);
             }
+
+            if (container.HasEnoughSpaceFor(reqSize) == false)
+                throw new VoronErrorException($"After checking for space and defrag, we ended up with not enough free space ({reqSize}) on page {container.Header.PageNumber}");
             
-            Debug.Assert(container.HasEnoughSpaceFor(reqSize));
             return container.Allocate(size, pos, out allocatedSpace);
         }
 
@@ -256,13 +229,13 @@ namespace Voron.Data.Containers
             return PageHeader.SizeOf + pos * sizeof(ItemMetadata);
         }
 
-        private static void MoveToNextPage(LowLevelTransaction llt, long containerId, ref Container container, int size)
+        private static Container MoveToNextPage(LowLevelTransaction llt, long containerId, Container container, int size)
         {
             Debug.Assert(size <= MaxSizeInsideContainerPage);
 
-            container.Header.OnFreeList = false; // we take it out now..., we'll add to the free list when we delete from it
             var rootPage = llt.ModifyPage(containerId);
             var rootContainer = new Container(rootPage);
+            RemovePageFromContainerFreeList( rootContainer,  container);// we take it out now..., we'll add to the free list when we delete from it
 
             // We wont work as hard if we know that the entry is too big.
             bool isBigEntry = size >= (Constants.Storage.PageSize / 6);
@@ -291,8 +264,7 @@ namespace Voron.Data.Containers
                 // would be reasonably used by following requests. 
                 if (!isBigEntry)
                 {
-                    maybe.Header.OnFreeList = false;
-                    ModifyMetadataList(llt, rootContainer, FreePagesSetName, ContainerPageHeader.FreeListOffset, add: false, page.PageNumber);
+                    RemovePageFromContainerFreeList(rootContainer, maybe);
                 }
 
                 if (maybe.HasEnoughSpaceFor(size + MinimumAdditionalFreeSpaceToConsider) == false)
@@ -300,8 +272,7 @@ namespace Voron.Data.Containers
                 
                 // we register it as the next free page
                 rootContainer.Header.NextFreePage = page.PageNumber;
-                container = maybe;
-                return;
+                return  maybe;
             }
 
             // no existing pages remaining, allocate new one
@@ -310,9 +281,22 @@ namespace Voron.Data.Containers
             rootContainer.Header.NextFreePage = newPage.PageNumber;
             
             container = new Container(newPage);
-            container.Header.OnFreeList = true; // added as the next free page
+            
+            AddPageToContainerFreeList(rootContainer, container);
 
-            ModifyMetadataList(llt, rootContainer, AllPagesSetName, ContainerPageHeader.AllPagesOffset, add: true, newPage.PageNumber);
+            return container;
+
+            void RemovePageFromContainerFreeList(Container parent, Container page)
+            {
+                page.Header.OnFreeList = false;
+                ModifyMetadataList(llt, parent, FreePagesSetName, ContainerPageHeader.FreeListOffset, add: false, page.Header.PageNumber);
+            }
+
+            void AddPageToContainerFreeList(Container parent, Container page)
+            {
+                page.Header.OnFreeList = true;
+                ModifyMetadataList(llt, parent, AllPagesSetName, ContainerPageHeader.AllPagesOffset, add: true, page.Header.PageNumber);
+            }
         }
 
         public static List<long> GetAllIds(LowLevelTransaction llt, long containerId)
@@ -452,8 +436,10 @@ namespace Voron.Data.Containers
             Debug.Assert(entriesOffsets.Length > 0);            
             var index = (offset - PageHeader.SizeOf) / sizeof(ItemMetadata);
             var metadata = entriesOffsets[index];
-            Debug.Assert(metadata.Size != 0);
             
+            if (metadata.Size == 0)
+                throw new VoronErrorException("Attempt to delete a container item that was ALREADY DELETED! Item " + id + " on page " + page.PageNumber);
+
             int totalSize = 0, count = 0;
             for (var i = 0; i < entriesOffsets.Length; i++)
             {

@@ -1,7 +1,6 @@
 ﻿using System;
-using System.IO;
+using System.Diagnostics;
 using Corax;
-using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes;
 using Raven.Server.Documents.Indexes.Static;
@@ -28,7 +27,7 @@ public class CoraxDocumentConverter : CoraxDocumentConverterBase
         out LazyStringValue id, Span<byte> writerBuffer)
     {
         var document = (Document)doc;
-        var entryWriter = new IndexEntryWriter(writerBuffer, _knownFields);
+        var entryWriter = new IndexEntryWriter(writerBuffer, GetKnownFieldsForWriter());
         id = document.LowerId ?? key;
 
         var scope = new SingleEntryWriterScope(_allocator);
@@ -70,10 +69,13 @@ public class CoraxDocumentConverter : CoraxDocumentConverterBase
         }
 
 
+        if (key != null)
+        {
+            Debug.Assert(document.LowerId == null || (key == document.LowerId));
+            scope.Write(0, id.AsSpan(), ref entryWriter);
+        }
         
-        scope.Write(0, id.AsSpan(), ref entryWriter);
-        
-        if (_index.Type.IsMapReduce())
+        if (_storeValue)
         {
             unsafe
             {
@@ -82,7 +84,7 @@ public class CoraxDocumentConverter : CoraxDocumentConverterBase
                     fixed (byte* bPtr = blittableBuffer)
                         document.Data.CopyTo(bPtr);
 
-                    scope.Write(_knownFields.Count - 1, blittableBuffer, ref entryWriter);
+                    scope.Write(GetKnownFieldsForWriter().Count - 1, blittableBuffer, ref entryWriter);
                 }
             }
         }

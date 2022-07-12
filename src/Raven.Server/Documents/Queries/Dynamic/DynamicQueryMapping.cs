@@ -28,14 +28,16 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
         public AutoIndexDefinitionBaseServerSide CreateAutoIndexDefinition()
         {
-            int id = 1;
+            int idForFields = 1;
             if (IsGroupBy == false)
             {
-                return new AutoMapIndexDefinition(ForCollection, MapFields.Values.Select(field =>
+                return new AutoMapIndexDefinition(ForCollection, MapFields.Values
+                    .OrderBy(x => x.Name.Value, StringComparer.Ordinal)
+                    .Select(field =>
                     {
                         var indexField = new AutoIndexField
                         {
-                            Id = id++,
+                            Id = idForFields++,
                             Name = field.Name,
                             Storage = FieldStorage.No,
                             Indexing = AutoFieldIndexing.Default,
@@ -68,7 +70,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 {
                     var indexField = new AutoIndexField
                     {
-                        Id = id++,
+                        Id = idForFields++,
                         Name = field.Name,
                         Storage = FieldStorage.No,
                         Aggregation = field.AggregationOperation,
@@ -92,11 +94,13 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                     return indexField;
                 }).ToArray(),
-                GroupByFields.Values.Select(field =>
+                GroupByFields.Values
+                    .OrderBy(x => x.Name.Value, StringComparer.Ordinal)
+                    .Select(field =>
                 {
                     var indexField = new AutoIndexField
                     {
-                        Id = id++,
+                        Id = idForFields++,
                         Name = field.Name,
                         Storage = FieldStorage.No,
                         Indexing = AutoFieldIndexing.Default,

@@ -44,15 +44,15 @@ public class JintCoraxDocumentConverter : JintCoraxDocumentConverterBase
             return Span<byte>.Empty;
         }
 
-        var entryWriter = new CoraxLib.IndexEntryWriter(writerBuffer, _knownFields);
+        var entryWriter = new CoraxLib.IndexEntryWriter(writerBuffer, GetKnownFieldsForWriter());
 
-        id = key ?? (sourceDocumentId ?? throw new InvalidParameterException("Cannot find any identifier of the document."));
+        id = key ?? (sourceDocumentId ?? throw new InvalidDataException("Cannot find any identifier of the document."));
         var scope = new SingleEntryWriterScope(_allocator);
 
 
         if (TryGetBoostedValue(documentToProcess, out var boostedValue, out var documentBoost))
         {
-            throw new InvalidDataException("Corax indexes doesn't support boosting inside. If you want to use boosting you have to do this in query!");
+            throw new NotSupportedException("Document boosting is not available in Corax.");
         }
 
         scope.Write(0, id.AsSpan(), ref entryWriter);
@@ -75,7 +75,7 @@ public class JintCoraxDocumentConverter : JintCoraxDocumentConverterBase
             {
                 if (TryGetBoostedValue(actualValue.AsObject(), out boostedValue, out propertyBoost))
                 {
-                    throw new InvalidDataException("Corax indexes doesn't support boosting inside. If you want to use boosting you have to do this in query!");
+                    throw new NotSupportedException("Document field boosting is not available in Corax.");
                 }
 
                 if (isObject)
@@ -170,7 +170,7 @@ public class JintCoraxDocumentConverter : JintCoraxDocumentConverterBase
                     fixed (byte* bPtr = blittableBuffer)
                         storedValue.CopyTo(bPtr);
 
-                    scope.Write(_knownFields.Count - 1, blittableBuffer, ref entryWriter);
+                    scope.Write(GetKnownFieldsForWriter().Count - 1, blittableBuffer, ref entryWriter);
                 }
             }
         }
@@ -182,11 +182,6 @@ public class JintCoraxDocumentConverter : JintCoraxDocumentConverterBase
         {
             return value.IsObject() && value.IsArray() == false;
         }
-    }
-
-    public override void Dispose()
-    {
-        throw new NotImplementedException();
     }
 }
 

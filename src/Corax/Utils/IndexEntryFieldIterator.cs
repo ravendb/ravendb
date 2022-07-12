@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -71,7 +71,7 @@ namespace Corax
 
                 if (Type.HasFlag(IndexEntryFieldType.HasNulls))
                 {
-                    int nullBitStreamSize = Count / (sizeof(long) * 8) + Count % (sizeof(long) * 8) == 0 ? 0 : 1;
+                    int nullBitStreamSize = Count / (sizeof(byte) * 8) + (Count % (sizeof(byte) * 8) == 0 ? 0 : 1);
                     _spanTableOffset = _nullTableOffset + nullBitStreamSize; // Point after the null table.                             
                 }
                 else
@@ -88,7 +88,7 @@ namespace Corax
 
                 if (Type.HasFlag(IndexEntryFieldType.HasNulls))
                 {
-                    int nullBitStreamSize = Count / (sizeof(long) * 8) + Count % (sizeof(long) * 8) == 0 ? 0 : 1;
+                    int nullBitStreamSize = Count / (sizeof(byte) * 8) + (Count % (sizeof(byte) * 8) == 0 ? 0 : 1);
                     _spanTableOffset = _nullTableOffset + nullBitStreamSize; // Point after the null table.         
                 }
                 else
@@ -110,6 +110,9 @@ namespace Corax
                 if (!IsValid)
                     throw new InvalidOperationException($"Cannot call {nameof(IsNull)} on an invalid iterator.");
 
+                if (_currentIdx < 0)
+                    throw new InvalidOperationException($"Cannot call {nameof(IsNull)} before calling {nameof(ReadNext)}.");
+
                 if (!Type.HasFlag(IndexEntryFieldType.HasNulls))
                     return false;
 
@@ -121,7 +124,16 @@ namespace Corax
             }
         }
 
-        public bool IsEmpty => !IsNull && Count == 0;
+        public bool IsEmpty
+        {
+            get
+            {
+                if (!IsValid)
+                    throw new InvalidOperationException($"Cannot call {nameof(IsEmpty)} on an invalid iterator.");
+
+                return Type.HasFlag(IndexEntryFieldType.Empty);
+            }
+        }
 
         public ReadOnlySpan<byte> Sequence
         {
@@ -132,6 +144,9 @@ namespace Corax
 
                 if (Count == 0 || _currentIdx >= Count)
                     throw new IndexOutOfRangeException();
+
+                if (_currentIdx < 0)
+                    throw new InvalidOperationException($"Cannot call {nameof(IsNull)} before calling {nameof(ReadNext)}.");
 
                 int stringLength = VariableSizeEncoding.Read<int>(_buffer, out _, _spanTableOffset);
                 return _buffer.Slice(_spanOffset, stringLength);
@@ -150,6 +165,9 @@ namespace Corax
                 if (Count == 0 || _currentIdx >= Count)
                     throw new IndexOutOfRangeException();
 
+                if (_currentIdx < 0)
+                    throw new InvalidOperationException($"Cannot call {nameof(IsNull)} before calling {nameof(ReadNext)}.");
+
                 return VariableSizeEncoding.Read<long>(_buffer, out _, _longOffset);
             }
         }
@@ -166,6 +184,9 @@ namespace Corax
                 
                 if (Count == 0 || _currentIdx >= Count)
                     throw new IndexOutOfRangeException();
+
+                if (_currentIdx < 0)
+                    throw new InvalidOperationException($"Cannot call {nameof(IsNull)} before calling {nameof(ReadNext)}.");
 
                 return Unsafe.ReadUnaligned<double>(ref MemoryMarshal.GetReference(_buffer[_doubleOffset..]));
             }

@@ -19,7 +19,11 @@ namespace Corax
             }
         }
         
-        
+        public static class Terms
+        {
+            public const int MaxLength = 512;
+        }
+
         public static class Boosting
         {
             public static float ScoreEpsilon = 1e-8F;

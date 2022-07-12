@@ -320,7 +320,7 @@ public unsafe readonly ref struct IndexEntryReader
                 if (PtrBitVector.GetBitInPointer(nullTablePtr + spanTableOffset, elementIdx) == true)
                     goto HasNull;
 
-                int nullBitStreamSize = totalElements / (sizeof(long) * 8) + totalElements % (sizeof(long) * 8) == 0 ? 0 : 1;
+                int nullBitStreamSize = totalElements / (sizeof(byte) * 8) + (totalElements % (sizeof(byte) * 8) == 0 ? 0 : 1);
                 spanTableOffset += nullBitStreamSize; // Point after the null table.                             
             }
 

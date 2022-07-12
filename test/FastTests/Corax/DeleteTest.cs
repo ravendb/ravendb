@@ -68,6 +68,38 @@ namespace FastTests.Corax
             }
         }
 
+        [Theory]
+        [InlineData(4)]
+        [InlineData(10000)]
+        public void CanDeleteSingleItemInList(int batchSize)
+        {
+            PrepareData(DataType.Modulo, batchSize, 2);
+            IndexEntries(CreateKnownFields(_bsc));
+            
+            using var y = Slice.From(_bsc, "Content", out var contentSlice);
+            using var x = Slice.From(_bsc, "Content-L", out var fieldLong);
+
+            
+            Span<long> ids = new long[batchSize + 10];
+            {
+                using var indexSearcher = new IndexSearcher(Env, _analyzers);
+                var match = indexSearcher.TermQuery("Content", "0");
+                Assert.Equal(batchSize/2, match.Fill(ids));
+            }
+            
+            using (var indexWriter = new IndexWriter(Env, _analyzers))
+            {
+                indexWriter.TryDeleteEntry("Id", "list/0");
+                indexWriter.Commit();
+            }
+            
+            {
+                using var indexSearcher = new IndexSearcher(Env, _analyzers);
+                var match = indexSearcher.TermQuery("Content", "0");
+                Assert.Equal((batchSize/2)-1, match.Fill(ids));
+            }
+        }
+        
         [Fact]
         public void MultipleEntriesUnderSameId()
         {
@@ -198,13 +230,15 @@ namespace FastTests.Corax
             }
         }
 
-        private void PrepareData(DataType type = DataType.Default)
+
+
+        private void PrepareData(DataType type = DataType.Default, int batchSize = 1000, uint modulo = 33)
         {
-            for (int i = 0; i < 1000; ++i)
+            for (int i = 0; i < batchSize; ++i)
                 switch (type)
                 {
                     case DataType.Modulo:
-                        _longList.Add(new IndexSingleNumericalEntry<long>{Id = $"list/{i}", Content = i % 33});
+                        _longList.Add(new IndexSingleNumericalEntry<long>{Id = $"list/{i}", Content = i % modulo});
                         break;
                     case DataType.Linear:
                         _longList.Add(new IndexSingleNumericalEntry<long>{Id = $"list/{i}", Content = i });
@@ -243,7 +277,7 @@ namespace FastTests.Corax
         private Span<byte> CreateIndexEntry(ref IndexEntryWriter entryWriter, IndexSingleNumericalEntry<long> entry)
         {
             entryWriter.Write(IndexId, Encoding.UTF8.GetBytes(entry.Id));
-            entryWriter.Write(ContentId, Encoding.UTF8.GetBytes(entry.Content.ToString()));
+            entryWriter.Write(ContentId, Encoding.UTF8.GetBytes(entry.Content.ToString()), entry.Content, entry.Content);
             entryWriter.Finish(out var output);
             return output;
         }

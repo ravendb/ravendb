@@ -198,18 +198,18 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                 try
                 {
-                using (_nestedValuesReductionStats.NestedValuesAggregation.Start())
-                {
-                    result = AggregateOn(_aggregationBatch.Items, indexContext, _nestedValuesReductionStats.NestedValuesAggregation, token);
-                }
+                    using (_nestedValuesReductionStats.NestedValuesAggregation.Start())
+                    {
+                        result = AggregateOn(_aggregationBatch.Items, indexContext, _nestedValuesReductionStats.NestedValuesAggregation, token);
+                    }
 
-                if (section.IsNew == false)
-                    writer.Value.DeleteReduceResult(reduceKeyHash, stats);
+                    if (section.IsNew == false)
+                        writer.Value.DeleteReduceResult(reduceKeyHash, stats);
 
-                foreach (var output in result.GetOutputs())
-                {
-                    writer.Value.IndexDocument(reduceKeyHash, null, output, stats, indexContext);
-                }
+                    foreach (var output in result.GetOutputs())
+                    {
+                        writer.Value.IndexDocument(reduceKeyHash, null, output, stats, indexContext);
+                    }
                 }
                 finally
                 {

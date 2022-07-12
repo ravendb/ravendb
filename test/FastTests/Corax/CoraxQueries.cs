@@ -24,6 +24,25 @@ namespace FastTests.Corax
         }
 
         [Fact]
+        public void GreaterThanQuery()
+        {
+            PrepareData();
+            IndexEntries();
+            using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
+            using var searcher = new IndexSearcher(Env);
+            Slice.From(ctx, "Content", out var fieldName);
+            Slice.From(ctx, "3", out var three);
+            var match1 = searcher.GreaterThanQuery(fieldName, three);
+            var expectedList = GetExpectedResult("3");
+            expectedList.Sort();
+            var outputList = FetchFromCorax(ref match1);
+            outputList.Sort();
+            Assert.Equal(expectedList.Count, outputList.Count);
+            for (int i = 0; i < expectedList.Count; ++i)
+                Assert.Equal(expectedList[i], outputList[i]);
+        }
+
+        [Fact]
         public void UnaryMatchWithSequential()
         {
             PrepareData();
@@ -56,6 +75,86 @@ namespace FastTests.Corax
             int read = match1.Fill(ids);
             Assert.Equal(0, read);
         }
+        
+        [Fact]
+        public void LexicographicalLessThanQuery()
+        {
+            PrepareData(1);
+            IndexEntries();
+            using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
+            using var searcher = new IndexSearcher(Env);
+            Slice.From(ctx, "0", out var id);
+            Slice.From(ctx, "Content", out var field);
+            var match1 = searcher.LessThanQuery(field, id);
+            var ids = new long[16];
+            int read = match1.Fill(ids);
+            Assert.Equal(0, read);
+        }
+        
+        [Fact]
+        public void BetweenQuery()
+        {
+            PrepareData();
+            IndexEntries();
+            using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
+            using var searcher = new IndexSearcher(Env);
+            Slice.From(ctx, "991", out var low);
+            Slice.From(ctx, "995", out var high);
+            Slice.From(ctx, "Content", out var field);
+
+            var match1 = searcher.BetweenQuery(field, low, high);
+            var expectedList = _entries.Where(x => x.LongValue is >= 991 and <= 995).Select(x => x.Id).ToList();
+            expectedList.Sort();
+            var outputList = FetchFromCorax(ref match1);
+            outputList.Sort();
+            Assert.Equal(expectedList.Count, outputList.Count);
+            for (int i = 0; i < expectedList.Count; ++i) 
+                Assert.Equal(expectedList[i], outputList[i]);
+        }
+        
+        [Fact]
+        public void BetweenQueryNumeric()
+        {
+            PrepareData();
+            IndexEntries();
+            using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
+            using var searcher = new IndexSearcher(Env);
+            Slice.From(ctx, "Content", out var field);
+            Slice.From(ctx, "Content-L", out var fieldLong);
+
+
+            var match1 = searcher.BetweenQuery(field, fieldLong, 95, 212);
+            var expectedList = _entries.Where(x => x.LongValue is >= 95 and <= 212).Select(x => x.Id).ToList();
+            expectedList.Sort();
+            var outputList = FetchFromCorax(ref match1);
+            outputList.Sort();
+            Assert.Equal(expectedList.Count, outputList.Count);
+            for (int i = 0; i < expectedList.Count; ++i) 
+                Assert.Equal(expectedList[i], outputList[i]);
+        }
+        
+             
+        [Fact]
+        public void BetweenQueryNumericDouble()
+        {
+            PrepareData();
+            IndexEntries();
+            using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
+            using var searcher = new IndexSearcher(Env);
+            Slice.From(ctx, "Content", out var field);
+            Slice.From(ctx, "Content-D", out var fieldLong);
+
+
+            var match1 = searcher.BetweenQuery(field, fieldLong, 95.2, 213.2);
+            var expectedList = _entries.Where(x => (double)x.LongValue is >= 95.2 and <= 213.2).Select(x => x.Id).ToList();
+            expectedList.Sort();
+            var outputList = FetchFromCorax(ref match1);
+            outputList.Sort();
+            Assert.Equal(expectedList.Count, outputList.Count);
+            for (int i = 0; i < expectedList.Count; ++i) 
+                Assert.Equal(expectedList[i], outputList[i]);
+        }
+
         
         [Fact]
         public void UnaryMatchWithNumerical()
@@ -100,7 +199,8 @@ namespace FastTests.Corax
             Assert.True(first.SequenceEqual(second));
         }
 
-        private List<string> FetchFromCorax(ref BinaryMatch match)
+        private List<string> FetchFromCorax<TMatch>(ref TMatch match)
+            where TMatch : IQueryMatch
         {
             using var indexSearcher = new IndexSearcher(Env);
             List<string> list = new();
