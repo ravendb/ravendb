@@ -10,6 +10,7 @@ using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Exceptions;
+using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
@@ -179,8 +180,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
         private async Task AnalyzeLatestStats(
             Dictionary<string, ClusterNodeStatusReport> newStats,
-            Dictionary<string, ClusterNodeStatusReport> prevStats
-        )
+            Dictionary<string, ClusterNodeStatusReport> prevStats)
         {
             var currentLeader = _engine.CurrentLeader;
             if (currentLeader == null)
@@ -369,7 +369,7 @@ namespace Raven.Server.ServerWide.Maintenance
                     );
                     NotificationCenter.Add(alert);
                 }
-                catch (ConcurrencyException)
+                catch (Exception e) when (e.ExtractSingleInnerException() is ConcurrencyException)
                 {
                     // this is sort of expected, if the database was
                     // modified by someone else, we'll avoid changing
