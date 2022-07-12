@@ -65,11 +65,10 @@ namespace Raven.Server.Documents.Sharding.Handlers
             return _replicationQueue.SendToShardCompletion.WaitAsync(_cts.Token);
         }
 
-        protected override void HandleMissingAttachmentsIfNeeded(ref Task task)
+        protected override void HandleMissingAttachmentsIfNeeded()
         {
             if (_replicationQueue.MissingAttachments.IsSet)
             {
-                task = null;
                 _replicationQueue.MissingAttachments.Reset();
 
                 throw new MissingAttachmentException(_replicationQueue.MissingAttachmentMessage);
@@ -80,9 +79,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "Optimization possibility: instead of iterating over materialized batch, we can do it while reading from the stream");
 
-            var dictionary = new Dictionary<int, List<ReplicationBatchItem>>();
-            for (var shard = 0; shard < _parent.Context.ShardCount; shard++)
-                dictionary[shard] = new List<ReplicationBatchItem>();
+            var dictionary = GetTempDictionaryForDividingToShards();
 
             foreach (var item in dataForReplicationCommand.ReplicatedItems)
             {
@@ -133,6 +130,24 @@ namespace Raven.Server.Documents.Sharding.Handlers
             }
         }
 
+        private Dictionary<int, List<ReplicationBatchItem>> GetTempDictionaryForDividingToShards()
+        {
+            if (_tempDictionaryForDividingToShards != null)
+            {
+                foreach (var (k,v) in _tempDictionaryForDividingToShards)
+                {
+                    v.Clear();
+                }
+
+                return _tempDictionaryForDividingToShards;
+            }
+
+            _tempDictionaryForDividingToShards = new Dictionary<int, List<ReplicationBatchItem>>();
+            for (var shard = 0; shard < _parent.Context.ShardCount; shard++)
+                _tempDictionaryForDividingToShards[shard] = new List<ReplicationBatchItem>();
+            return _tempDictionaryForDividingToShards;
+        }
+
         private byte[] GetBufferFromAttachmentStream(Stream stream)
         {
             var length = (int)stream.Length;
@@ -158,6 +173,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
 
         private readonly DocumentInfoHelper _documentInfoHelper = new DocumentInfoHelper();
+        private Dictionary<int, List<ReplicationBatchItem>> _tempDictionaryForDividingToShards;
 
         private int GetShardNumberForReplicationItem(TransactionOperationContext context, ReplicationBatchItem item)
         {

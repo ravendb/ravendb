@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Security.Cryptography.X509Certificates;
@@ -28,6 +29,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
         private readonly byte[] _tempBuffer = new byte[32 * 1024];
         private long _lastEtag;
+        private BlockingCollection<ReplicationQueue.ReplicationBatch> _batchQueue;
 
         public ShardedOutgoingReplicationHandler(ShardedDatabaseContext.ShardedReplicationContext parent, ShardReplicationNode node, int shardNumber,
             TcpConnectionInfo connectionInfo, ReplicationQueue replicationQueue) :
@@ -43,71 +45,70 @@ namespace Raven.Server.Documents.Sharding.Handlers
             };
 
             _replicationQueue = replicationQueue;
+            _batchQueue = _replicationQueue.ShardBatches[_shardNumber];
         }
 
         protected override void Replicate()
         {
-            while (_cts.IsCancellationRequested == false)
+            while (true)
             {
-                while (_replicationQueue.Items[_shardNumber].TryTake(out var items, 0, _cts.Token))
+                var batch = _batchQueue.Take(_cts.Token);
+                using (_parent.Server.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 {
-                    using (_parent.Server.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    var stats = _lastStats = new OutgoingReplicationStatsAggregator(_parent.GetNextReplicationStatsId(), _lastStats);
+                    AddReplicationPerformance(stats);
+
+                    using (var scope = stats.CreateScope())
                     {
-                        var stats = _lastStats = new OutgoingReplicationStatsAggregator(_parent.GetNextReplicationStatsId(), _lastStats);
-                        AddReplicationPerformance(stats);
+                        EnsureValidStats(scope);
 
-                        using (var scope = stats.CreateScope())
+                        if (batch.Items.Count == 0)
                         {
-                            EnsureValidStats(scope);
+                            SendHeartbeat(null);
+                            _replicationQueue.SendToShardCompletion.Signal();
+                            continue;
+                        }
 
-                            if (items.Count == 0)
+                        MissingAttachmentsInLastBatch = false;
+
+                        using (_stats.Network.Start())
+                        {
+                            var didWork = SendDocumentsBatch(context, batch, _stats.Network);
+
+                            if (MissingAttachmentsInLastBatch)
                             {
-                                SendHeartbeat(null);
-                                _replicationQueue.SendToShardCompletion.Signal();
-                                continue;
+                                _replicationQueue.MissingAttachments.Set();
                             }
 
-                            MissingAttachmentsInLastBatch = false;
+                            _replicationQueue.SendToShardCompletion.Signal();
 
-                            using (_stats.Network.Start())
-                            {
-                                var didWork = SendDocumentsBatch(context, items, _stats.Network);
-
-                                if (MissingAttachmentsInLastBatch)
-                                {
-                                    _replicationQueue.MissingAttachments.Set();
-                                    continue;
-                                }
-
-                                _replicationQueue.SendToShardCompletion.Signal();
-
-                                if (didWork == false)
-                                    break;
-                            }
+                            if (didWork == false)
+                                break;
                         }
                     }
                 }
             }
         }
 
-        private bool SendDocumentsBatch(TransactionOperationContext context, List<ReplicationBatchItem> items, OutgoingReplicationStatsScope stats)
+        private bool SendDocumentsBatch(TransactionOperationContext context, ReplicationQueue.ReplicationBatch batch, OutgoingReplicationStatsScope stats)
         {
             try
             {
                 DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "Unify this with the ReplicationDocumentSenderBase.SendDocumentsBatch");
+
 
                 var sw = Stopwatch.StartNew();
                 var headerJson = new DynamicJsonValue
                 {
                     [nameof(ReplicationMessageHeader.Type)] = ReplicationMessageType.Documents,
                     [nameof(ReplicationMessageHeader.LastDocumentEtag)] = _lastEtag,
-                    [nameof(ReplicationMessageHeader.ItemsCount)] = items.Count,
-                    [nameof(ReplicationMessageHeader.AttachmentStreamsCount)] = _replicationQueue.AttachmentsPerShard[_shardNumber].Count
+                    [nameof(ReplicationMessageHeader.ItemsCount)] = batch.Items.Count,
+                    [nameof(ReplicationMessageHeader.AttachmentStreamsCount)] = batch.Attachments?.Count ?? 0, 
                 };
 
                 WriteToServer(headerJson);
 
-                foreach (var item in items)
+                foreach (var item in batch.Items)
                 {
                     using (Slice.From(context.Allocator, item.ChangeVector, out var cv))
                     {
@@ -117,23 +118,26 @@ namespace Raven.Server.Documents.Sharding.Handlers
                     _lastEtag = item.Etag;
                 }
 
-                foreach (var kvp in _replicationQueue.AttachmentsPerShard[_shardNumber])
+                if (batch.Attachments!= null)
                 {
-                    using (stats.For(ReplicationOperation.Outgoing.AttachmentRead))
+                    foreach (var kvp in batch.Attachments)
                     {
-                        using (var attachment = kvp.Value)
+                        using (stats.For(ReplicationOperation.Outgoing.AttachmentRead))
                         {
-                            try
+                            using (var attachment = kvp.Value)
                             {
-                                attachment.WriteStream(_stream, _tempBuffer);
-                                stats.RecordAttachmentOutput(attachment.Stream.Length);
-                            }
-                            catch
-                            {
-                                if (Logger.IsInfoEnabled)
-                                    Logger.Info($"Failed to write Attachment stream {FromToString}");
+                                try
+                                {
+                                    attachment.WriteStream(_stream, _tempBuffer);
+                                    stats.RecordAttachmentOutput(attachment.Stream.Length);
+                                }
+                                catch
+                                {
+                                    if (Logger.IsInfoEnabled)
+                                        Logger.Info($"Failed to write Attachment stream {FromToString}");
 
-                                throw;
+                                    throw;
+                                }
                             }
                         }
                     }
@@ -155,12 +159,10 @@ namespace Raven.Server.Documents.Sharding.Handlers
             }
             finally
             {
-                foreach (var item in items)
+                foreach (var item in batch.Items)
                 {
                     item.Dispose();
                 }
-
-                _replicationQueue.AttachmentsPerShard[_shardNumber].Clear();
             }
 
             return true;

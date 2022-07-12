@@ -143,13 +143,17 @@ namespace Raven.Server.Documents.Sharding
         }
     }
 
-    public class ReplicationQueue : IDisposable
+    public class ReplicationQueue
     {
-        public Dictionary<int, BlockingCollection<List<ReplicationBatchItem>>> Items = new Dictionary<int, BlockingCollection<List<ReplicationBatchItem>>>();
+        public Dictionary<int, BlockingCollection<ReplicationBatch>> ShardBatches = new();
+
+        public class ReplicationBatch
+        {
+            public List<ReplicationBatchItem> Items = new();
+            public Dictionary<Slice, AttachmentReplicationItem> Attachments;
+        }
 
         public AsyncCountdownEvent SendToShardCompletion;
-
-        public Dictionary<int, Dictionary<Slice, AttachmentReplicationItem>> AttachmentsPerShard = new Dictionary<int, Dictionary<Slice, AttachmentReplicationItem>>();
 
         public AsyncManualResetEvent MissingAttachments = new AsyncManualResetEvent(false);
 
@@ -160,29 +164,8 @@ namespace Raven.Server.Documents.Sharding
             SendToShardCompletion = new AsyncCountdownEvent(numberOfShards);
             for (int i = 0; i < numberOfShards; i++)
             {
-                Items[i] = new BlockingCollection<List<ReplicationBatchItem>>();
-                AttachmentsPerShard[i] = new Dictionary<Slice, AttachmentReplicationItem>(SliceComparer.Instance);
+                ShardBatches[i] = new();
             }
-        }
-
-        public void Dispose()
-        {
-            foreach (var item in Items)
-            {
-                item.Value?.Dispose();
-            }
-
-            foreach (var item in AttachmentsPerShard.Values)
-            {
-                foreach (var value in item.Values)
-                {
-                    value.Dispose();
-                }
-            }
-
-            Items = null;
-            AttachmentsPerShard = null;
-            SendToShardCompletion = null;
         }
     }
 
