@@ -483,7 +483,7 @@ namespace Raven.Server.Web
 
             dataAsString = Uri.UnescapeDataString(dataAsString);
 
-            if (DateTime.TryParseExact(dataAsString, DefaultFormat.DateTimeOffsetFormatsToWrite, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTime result))
+            if (DateTime.TryParseExact(dataAsString, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTime result))
                 return result;
 
             ThrowInvalidDateTime(name, dataAsString);

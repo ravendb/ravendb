@@ -44,6 +44,8 @@ class datePickerBindingHandler {
         const date : moment.Moment = ko.unwrap(valueAccessor());
         if (date) {
             $(element).data("DateTimePicker").date(date);
+        } else {
+            $(element).data("DateTimePicker").date(null);
         }
     }
 }
