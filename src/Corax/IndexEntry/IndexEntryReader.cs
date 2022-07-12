@@ -482,14 +482,21 @@ public unsafe readonly ref struct IndexEntryReader
         ref var header = ref MemoryMarshal.AsRef<IndexEntryHeader>(buffer);
 
         ushort knownFieldsCount = (ushort)(header.KnownFieldCount >> 2);
-        byte encodeSize = (byte)(header.KnownFieldCount & 0b11);
+        IndexEntryTableEncoding encoding = (IndexEntryTableEncoding)(header.KnownFieldCount & 0b11);
+        int encodeSize = encoding switch
+        {
+            IndexEntryTableEncoding.OneByte => 1,
+            IndexEntryTableEncoding.TwoBytes => 2,
+            IndexEntryTableEncoding.FourBytes => 4,
+            _ => throw new InvalidOperationException()
+        };
 
         int locationOffset = buffer.Length - (knownFieldsCount * encodeSize) + field * encodeSize;
 
         int offset;
         bool isTyped;
 
-        if (encodeSize == 1)
+        if (encoding == IndexEntryTableEncoding.OneByte)
         {
             offset = Unsafe.ReadUnaligned<byte>(ref buffer[locationOffset]);
             if (offset == 0xFF)
@@ -499,7 +506,7 @@ public unsafe readonly ref struct IndexEntryReader
             goto End;
         }
 
-        if (encodeSize == 2)
+        if (encoding == IndexEntryTableEncoding.TwoBytes)
         {
             offset = Unsafe.ReadUnaligned<ushort>(ref buffer[locationOffset]);
             if (offset == 0xFFFF)
@@ -509,7 +516,7 @@ public unsafe readonly ref struct IndexEntryReader
             goto End;
         }
 
-        if (encodeSize == 4)
+        if (encoding == IndexEntryTableEncoding.FourBytes)
         {
             offset = (int)Unsafe.ReadUnaligned<uint>(ref buffer[locationOffset]);
             if (offset == unchecked((int)0xFFFF_FFFF))
