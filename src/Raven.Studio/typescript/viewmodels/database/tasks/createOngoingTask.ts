@@ -2,7 +2,8 @@ import eventsCollector = require("common/eventsCollector");
 import appUrl = require("common/appUrl");
 import router = require("plugins/router");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
-import database from "models/resources/database"; 
+import database from "models/resources/database";
+import shardedDatabase from "models/resources/shardedDatabase"; 
 
 class createOngoingTask extends dialogViewModelBase {
 
@@ -14,6 +15,16 @@ class createOngoingTask extends dialogViewModelBase {
         super();
         
         this.db = db;
+    }
+    
+    compositionComplete(view?: any, parent?: any) {
+        super.compositionComplete(view, parent);
+        
+        this.setupDisableReasons(".destinationModal");
+    }
+    
+    private canCreateReplicationHubAndSink() {
+        return !(this.db instanceof shardedDatabase);
     }
 
     newReplicationTask() {
@@ -80,6 +91,9 @@ class createOngoingTask extends dialogViewModelBase {
     }
 
     newReplicationHubTask() {
+        if (!this.canCreateReplicationHubAndSink()) {
+            return;
+        }
         eventsCollector.default.reportEvent("ReplicationHub", "new");
         const url = appUrl.forEditReplicationHub(this.db);
         router.navigate(url);
@@ -87,6 +101,9 @@ class createOngoingTask extends dialogViewModelBase {
     }
 
     newReplicationSinkTask() {
+        if (!this.canCreateReplicationHubAndSink()) {
+            return;
+        }
         eventsCollector.default.reportEvent("ReplicationSink", "new");
         const url = appUrl.forEditReplicationSink(this.db);
         router.navigate(url);
