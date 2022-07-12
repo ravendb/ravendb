@@ -91,7 +91,10 @@ namespace Voron.Data.Containers
 
         public Container(Page page)
         {
-            _page = page;
+            Debug.Assert(page.IsOverflow == false);
+            Debug.Assert(((ContainerPageHeader*)page.Pointer)->ContainerFlags == ExtendedPageType.Container);
+
+            _page = page;            
         }
 
         public static long Create(LowLevelTransaction llt)
@@ -182,7 +185,9 @@ namespace Voron.Data.Containers
 
                 // We will figure out how many pages we will need to store it.
                 var overflowPage = llt.AllocateOverflowRawPage(size, out var numberOfPages);
-                overflowPage.Flags |= PageFlags.Other;
+                var overflowPageHeader = (ContainerPageHeader*)overflowPage.Pointer;
+                overflowPageHeader->Flags |= PageFlags.Other;
+                overflowPageHeader->ContainerFlags = ExtendedPageType.ContainerOverflow;
 
                 rootContainer.Header.NumberOfOverflowPages += numberOfPages;
                 ModifyMetadataList(llt, rootContainer, AllPagesSetName, ContainerPageHeader.AllPagesOffset, add: true, overflowPage.PageNumber);
@@ -343,35 +348,40 @@ namespace Voron.Data.Containers
 
         public static int GetEntriesInto(long containerId, ref int offset, Page page, Span<long> ids, out int itemsLeftOnCurrentPage)
         {
-            if (page.IsOverflow)
+            var containerHeader = (ContainerPageHeader*)page.Pointer;
+            if (containerHeader->ContainerFlags == ExtendedPageType.ContainerOverflow)
             {
                 ids[0] = page.PageNumber * Constants.Storage.PageSize;
                 itemsLeftOnCurrentPage = 0;
                 return 1;
             }
-            
-            int i = offset;
-            if (page.PageNumber == containerId && offset == 0)
+            else if (containerHeader->ContainerFlags == ExtendedPageType.Container)
             {
-                // skip the free list and all pages list entries
-                offset += 2;
-                i += 2; 
+                int i = offset;
+                if (page.PageNumber == containerId && offset == 0)
+                {
+                    // skip the free list and all pages list entries
+                    offset += 2;
+                    i += 2;
+                }
+
+                var container = new Container(page);
+                var entriesOffsets = container.Offsets;
+                var baseOffset = page.PageNumber * Constants.Storage.PageSize;
+                int results = 0;
+                for (; results < ids.Length && i < entriesOffsets.Length; i++, offset++)
+                {
+                    if (entriesOffsets[i].Size == 0)
+                        continue;
+
+                    ids[results++] = baseOffset + IndexToOffset(i);
+                }
+
+                itemsLeftOnCurrentPage = entriesOffsets.Length - i;
+                return results;
             }
 
-            var container = new Container(page);
-            var entriesOffsets = container.Offsets;
-            var baseOffset = page.PageNumber * Constants.Storage.PageSize;
-            int results = 0;
-            for (; results < ids.Length && i < entriesOffsets.Length; i++, offset++)
-            {
-                if (entriesOffsets[i].Size == 0) 
-                    continue;
-                
-                ids[results++] = baseOffset + IndexToOffset(i);
-            }
-
-            itemsLeftOnCurrentPage = entriesOffsets.Length - i;
-            return results;
+            throw new VoronErrorException("The page is not a container page");
         }
 
         public static Set GetAllPagesSet(LowLevelTransaction llt, long containerId)
