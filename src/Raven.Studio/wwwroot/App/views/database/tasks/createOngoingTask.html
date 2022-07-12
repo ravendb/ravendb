@@ -18,14 +18,18 @@
                             </a>
                         </div>
                         <div class="col-sm-4 margin-bottom" title="Create new Replication Hub task">
-                            <a href="#" class="pull-replication-hub" data-bind="click: newReplicationHubTask">
-                                <i class="icon-pull-replication-hub"></i><br />Replication Hub
-                            </a>
+                            <div data-bind="attr: { class: $root.canCreateReplicationHubAndSink() ? '' : 'has-disable-reason' }" data-original-title="Not supported in sharded databases"> 
+                                <a href="#" class="pull-replication-hub" data-bind="click: newReplicationHubTask">
+                                    <i class="icon-pull-replication-hub"></i><br />Replication Hub
+                                </a>
+                            </div>
                         </div>
                         <div class="col-sm-4 margin-bottom" title="Create new Replication Sink task">
-                            <a href="#" class="pull-replication-sink" data-bind="click: newReplicationSinkTask">
-                                <i class="icon-pull-replication-agent"></i><br />Replication Sink
-                            </a>
+                            <div data-bind="attr: { class: $root.canCreateReplicationHubAndSink() ? '' : 'has-disable-reason' }" data-original-title="Not supported in sharded databases">
+                                <a href="#" class="pull-replication-sink" data-bind="click: newReplicationSinkTask">
+                                    <i class="icon-pull-replication-agent"></i><br />Replication Sink
+                                </a>
+                            </div>
                         </div>
                     </div>
                     <div class="hr-title">
