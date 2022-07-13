@@ -19,7 +19,8 @@ class textColumn<T> implements virtualColumn {
     }
     
     get headerTitle() {
-        return generalUtils.unescapeHtml(this.header);
+        const titleToUse = this.opts && this.opts.headerTitle ? this.opts.headerTitle : this.header;
+        return generalUtils.unescapeHtml(titleToUse);
     }
 
     get headerAsText() {

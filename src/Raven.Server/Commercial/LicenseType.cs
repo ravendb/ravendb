@@ -8,12 +8,14 @@ namespace Raven.Server.Commercial
 
         Community = 1,
 
-        Trial = 2,
+        Reserved = 2,
 
         Professional = 3,
 
         Enterprise = 4,
 
-        Developer = 5
+        Developer = 5,
+
+        Essential = 6
     }
 }

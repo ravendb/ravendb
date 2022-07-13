@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -41,11 +42,15 @@ namespace Raven.Server.ServerWide.Commands
         public override BlittableJsonReaderObject GetUpdatedValue(JsonOperationContext context, BlittableJsonReaderObject previousValue, long index)
         {
             if (previousValue == null)
-                return null;
+                throw new RachisInvalidOperationException(
+                    "There are no server wide tasks so nothing to delete: " +
+                           $"raftIndex {index}, configuration {context.ReadObject(Value.ToJson(), "")}");
 
             var propertyIndex = previousValue.GetPropertyIndex(Value.TaskName);
             if (propertyIndex == -1)
-                return null;
+                throw new RachisInvalidOperationException(
+                    "The server wide task to delete doesn't exist: " +
+                           $"raftIndex {index}, previousValue {previousValue}, configuration {context.ReadObject(Value.ToJson(), "")}");
 
             if (previousValue.Modifications == null)
                 previousValue.Modifications = new DynamicJsonValue();
