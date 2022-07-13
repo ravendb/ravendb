@@ -13,6 +13,18 @@
         </div>
         <div class="modal-body" data-bind="with: reasons">
             
+            <form class="form-horizontal">
+                <div class="form-group">
+                    <label class="col-md-3 control-label">
+                        Location:
+                    </label>
+                    <div class="col-md-9">
+                        <div class="form-control-static" data-bind="text: $root.formatLocation()"></div>
+                    </div>
+                </div>
+
+            </form>
+            
             <div data-bind="visible: IsStale">
                 The following reasons are preventing the index from being up to date:
             </div>

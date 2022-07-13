@@ -37,6 +37,7 @@
             "EntriesCount": 141,
             "ErrorsCount": 0,
             "SourceType": "TimeSeries",
+            "SearchEngineType": "Lucene",
             "IsInvalidIndex": false,
             "Memory": {
                 "DiskSize": {
@@ -106,6 +107,7 @@
             "EntriesCount": 89,
             "ErrorsCount": 0,
             "SourceType": "Documents",
+            "SearchEngineType": "Lucene",
             "IsInvalidIndex": false,
             "Memory": {
                 "DiskSize": {
@@ -175,6 +177,7 @@
             "EntriesCount": 597,
             "ErrorsCount": 0,
             "SourceType": "Documents",
+            "SearchEngineType": "Lucene",
             "IsInvalidIndex": false,
             "Memory": {
                 "DiskSize": {
@@ -244,6 +247,7 @@
             "EntriesCount": 830,
             "ErrorsCount": 0,
             "SourceType": "Documents",
+            "SearchEngineType": "Lucene",
             "IsInvalidIndex": false,
             "Memory": {
                 "DiskSize": {
@@ -313,6 +317,7 @@
             "EntriesCount": 77,
             "ErrorsCount": 0,
             "SourceType": "Counters",
+            "SearchEngineType": "Lucene",
             "IsInvalidIndex": false,
             "Memory": {
                 "DiskSize": {
@@ -382,6 +387,7 @@
             "EntriesCount": 77,
             "ErrorsCount": 0,
             "SourceType": "Documents",
+            "SearchEngineType": "Lucene",
             "IsInvalidIndex": false,
             "Memory": {
                 "DiskSize": {
@@ -451,6 +457,7 @@
             "EntriesCount": 77,
             "ErrorsCount": 0,
             "SourceType": "Documents",
+            "SearchEngineType": "Lucene",
             "IsInvalidIndex": false,
             "Memory": {
                 "DiskSize": {

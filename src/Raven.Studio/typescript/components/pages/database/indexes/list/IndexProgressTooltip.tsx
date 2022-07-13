@@ -68,7 +68,7 @@ export function IndexProgressTooltip(props: IndexProgressTooltipProps) {
                 {nodeInfo.progress &&
                     nodeInfo.progress.collections.map((collection) => {
                         return (
-                            <NamedProgress name={collection.name}>
+                            <NamedProgress name={collection.name} key={collection.name}>
                                 <NamedProgressItem progress={collection.documents}>documents</NamedProgressItem>
                                 <NamedProgressItem progress={collection.tombstones}>tombstones</NamedProgressItem>
                             </NamedProgress>
@@ -84,7 +84,7 @@ function pillColor(
     details: IndexNodeInfoDetails,
     globalIndexingStatus: IndexRunningStatus
 ): StatePillColor {
-    if (IndexUtils.isFaulty(index)) {
+    if (details.faulty) {
         return "danger";
     }
 
@@ -112,7 +112,7 @@ function pillColor(
 }
 
 function pillText(index: IndexSharedInfo, details: IndexNodeInfoDetails, globalIndexingStatus: IndexRunningStatus) {
-    if (IndexUtils.isFaulty(index)) {
+    if (details.faulty) {
         return "Faulty";
     }
 

@@ -1,7 +1,6 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import endpoints = require("endpoints");
-import { shardingTodo } from "common/developmentHelper";
 
 class getEssentialDatabaseStatsCommand extends commandBase {
 

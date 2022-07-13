@@ -27,6 +27,54 @@ function commonInit() {
     clusterTopologyManager.default.localNodeTag = ko.pureComputed(() => "A");
 }
 
+function configureIndexService() {
+    const { indexesService } = mockServices;
+
+    indexesService.withGetSampleStats();
+    indexesService.withGetProgress();
+}
+
+function configureDifferentIndexStates() {
+    const { indexesService } = mockServices;
+
+    const [upToDateStats, upToDateProgress] = IndexesStubs.getUpToDateIndex();
+    const [upToDateStatsWithErrors, upToDateProgressWithErrors] = IndexesStubs.getUpToDateIndexWithErrors();
+    const [staleStats, staleProgress] = IndexesStubs.getStaleInProgressIndex();
+    const [disabledStats1, disabledProgress1] = IndexesStubs.getDisabledIndexWithProgress();
+    const [pausedStats1, pausedProgress1] = IndexesStubs.getPausedIndexWithProgress();
+    const [disabledStats2, disabledProgress2] = IndexesStubs.getDisabledIndexWithOutProgress();
+    const [pausedStats2, pausedProgress2] = IndexesStubs.getPausedIndexWithOutProgress();
+    const [faultyStats, faultyProgress] = IndexesStubs.getFaultyIndex();
+    const [erroredStats, erroredProgress] = IndexesStubs.getErroredIndex();
+
+    indexesService.withGetSampleStats(
+        [
+            upToDateStats,
+            upToDateStatsWithErrors,
+            staleStats,
+            disabledStats1,
+            pausedStats1,
+            disabledStats2,
+            pausedStats2,
+            faultyStats,
+            erroredStats,
+        ].filter((x) => x)
+    );
+    indexesService.withGetProgress(
+        [
+            upToDateProgress,
+            upToDateProgressWithErrors,
+            staleProgress,
+            disabledProgress1,
+            pausedProgress1,
+            disabledProgress2,
+            pausedProgress2,
+            faultyProgress,
+            erroredProgress,
+        ].filter((x) => x)
+    );
+}
+
 export const EmptyView: ComponentStory<typeof IndexesPage> = () => {
     const db = DatabasesStubs.nonShardedSingleNodeDatabase();
 
@@ -48,11 +96,7 @@ export const SampleDataSingleNode: ComponentStory<typeof IndexesPage> = () => {
     const db = DatabasesStubs.nonShardedSingleNodeDatabase();
 
     commonInit();
-
-    const { indexesService } = mockServices;
-
-    indexesService.withGetSampleStats();
-    indexesService.withGetProgress();
+    configureIndexService();
 
     return <IndexesPage database={db} />;
 };
@@ -61,11 +105,7 @@ export const SampleDataCluster: ComponentStory<typeof IndexesPage> = () => {
     const db = DatabasesStubs.nonShardedClusterDatabase();
 
     commonInit();
-
-    const { indexesService } = mockServices;
-
-    indexesService.withGetSampleStats();
-    indexesService.withGetProgress();
+    configureIndexService();
 
     return <IndexesPage database={db} />;
 };
@@ -74,11 +114,7 @@ export const SampleDataSharded: ComponentStory<typeof IndexesPage> = () => {
     const db = DatabasesStubs.shardedDatabase();
 
     commonInit();
-
-    const { indexesService } = mockServices;
-
-    indexesService.withGetSampleStats();
-    indexesService.withGetProgress();
+    configureIndexService();
 
     return <IndexesPage database={db} />;
 };
@@ -87,45 +123,7 @@ export const DifferentIndexNodeStatesSingleNode: ComponentStory<typeof IndexesPa
     const db = DatabasesStubs.nonShardedSingleNodeDatabase();
 
     commonInit();
-
-    const { indexesService } = mockServices;
-
-    const [upToDateStats, upToDateProgress] = IndexesStubs.getUpToDateIndex();
-    const [upToDateStatsWithErrors, upToDateProgressWithErrors] = IndexesStubs.getUpToDateIndexWithErrors();
-    const [staleStats, staleProgress] = IndexesStubs.getStaleInProgressIndex();
-    const [disabledStats1, disabledProgress1] = IndexesStubs.getDisabledIndexWithProgress();
-    const [pausedStats1, pausedProgress1] = IndexesStubs.getPausedIndexWithProgress();
-    const [disabledStats2, disabledProgress2] = IndexesStubs.getDisabledIndexWithOutProgress();
-    const [pausedStats2, pausedProgress2] = IndexesStubs.getPausedIndexWithOutProgress();
-    const [faultyStats, faultyProgress] = IndexesStubs.getFaultyIndex();
-    const [erroredStats, erroredProgress] = IndexesStubs.getErroredIndex();
-
-    indexesService.withGetSampleStats(
-        [
-            upToDateStats,
-            upToDateStatsWithErrors,
-            staleStats,
-            disabledStats1,
-            pausedStats1,
-            disabledStats2,
-            pausedStats2,
-            faultyStats,
-            erroredStats,
-        ].filter((x) => x)
-    );
-    indexesService.withGetProgress(
-        [
-            upToDateProgress,
-            upToDateProgressWithErrors,
-            staleProgress,
-            disabledProgress1,
-            pausedProgress1,
-            disabledProgress2,
-            pausedProgress2,
-            faultyProgress,
-            erroredProgress,
-        ].filter((x) => x)
-    );
+    configureDifferentIndexStates();
 
     return <IndexesPage database={db} />;
 };
@@ -134,45 +132,35 @@ export const DifferentIndexNodeStatesSharded: ComponentStory<typeof IndexesPage>
     const db = DatabasesStubs.shardedDatabase();
 
     commonInit();
+    configureDifferentIndexStates();
 
+    return <IndexesPage database={db} />;
+};
+
+export const FaultyIndexSingleNode: ComponentStory<typeof IndexesPage> = () => {
+    const db = DatabasesStubs.nonShardedSingleNodeDatabase();
+
+    commonInit();
     const { indexesService } = mockServices;
 
-    const [upToDateStats, upToDateProgress] = IndexesStubs.getUpToDateIndex();
-    const [upToDateStatsWithErrors, upToDateProgressWithErrors] = IndexesStubs.getUpToDateIndexWithErrors();
-    const [staleStats, staleProgress] = IndexesStubs.getStaleInProgressIndex();
-    const [disabledStats1, disabledProgress1] = IndexesStubs.getDisabledIndexWithProgress();
-    const [pausedStats1, pausedProgress1] = IndexesStubs.getPausedIndexWithProgress();
-    const [disabledStats2, disabledProgress2] = IndexesStubs.getDisabledIndexWithOutProgress();
-    const [pausedStats2, pausedProgress2] = IndexesStubs.getPausedIndexWithOutProgress();
-    const [faultyStats, faultyProgress] = IndexesStubs.getFaultyIndex();
-    const [erroredStats, erroredProgress] = IndexesStubs.getErroredIndex();
+    const [faultyStats] = IndexesStubs.getFaultyIndex();
 
-    indexesService.withGetSampleStats(
-        [
-            upToDateStats,
-            upToDateStatsWithErrors,
-            staleStats,
-            disabledStats1,
-            pausedStats1,
-            disabledStats2,
-            pausedStats2,
-            faultyStats,
-            erroredStats,
-        ].filter((x) => x)
-    );
-    indexesService.withGetProgress(
-        [
-            upToDateProgress,
-            upToDateProgressWithErrors,
-            staleProgress,
-            disabledProgress1,
-            pausedProgress1,
-            disabledProgress2,
-            pausedProgress2,
-            faultyProgress,
-            erroredProgress,
-        ].filter((x) => x)
-    );
+    indexesService.withGetSampleStats([faultyStats].filter((x) => x));
+    indexesService.withGetProgress([]);
+
+    return <IndexesPage database={db} />;
+};
+
+export const FaultyIndexSharded: ComponentStory<typeof IndexesPage> = () => {
+    const db = DatabasesStubs.shardedDatabase();
+
+    commonInit();
+    const { indexesService } = mockServices;
+
+    const [faultyStats] = IndexesStubs.getFaultyIndex();
+
+    indexesService.withGetSampleStats([faultyStats].filter((x) => x));
+    indexesService.withGetProgress([]);
 
     return <IndexesPage database={db} />;
 };

@@ -78,8 +78,8 @@ export default class IndexUtils {
         }
     }
 
-    static isFaulty(index: IndexSharedInfo) {
-        return index.type === "Faulty";
+    static hasAnyFaultyNode(index: IndexSharedInfo) {
+        return index.nodesInfo.some((x) => x.details?.faulty);
     }
 
     static isErrorState(index: IndexNodeInfoDetails) {
@@ -176,7 +176,7 @@ export default class IndexUtils {
     }
 
     static estimateEntriesCount(index: IndexSharedInfo): { entries: number; estimated: boolean } {
-        if (index.nodesInfo.some((x) => x.status !== "loaded")) {
+        if (index.nodesInfo.some((x) => x.status !== "loaded" || x.details?.faulty)) {
             return {
                 entries: null,
                 estimated: true,

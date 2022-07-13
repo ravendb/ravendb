@@ -1,6 +1,7 @@
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import database = require("models/resources/database");
 import getIndexStalenessReasonsCommand = require("commands/database/index/getIndexStalenessReasonsCommand");
+import genUtils from "common/generalUtils";
 
 class indexStalenessReasons extends dialogViewModelBase {
 
@@ -25,7 +26,10 @@ class indexStalenessReasons extends dialogViewModelBase {
                 this.reasons(reasons);
             });
     }
-
+    
+    formatLocation() {
+        return genUtils.formatLocation(this.location);
+    }
 }
 
 export = indexStalenessReasons;

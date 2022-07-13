@@ -307,11 +307,11 @@
                     <i class="icon-index"></i>
                     <span data-bind="text: countOfIndexes().toLocaleString()"></span>
                 </a>
-                <a title="Stale Indexes" class="stale-indexes-link" data-bind="attr: { href: $parent.urlForStaleIndexes() }, visible: countOfStaleIndexes() != null, if: countOfStaleIndexes() != null">
+                <a title="Stale Indexes" class="stale-indexes-link" data-bind="attr: { href: $parent.urlForStaleIndexes() }">
                     <span class="separator">|</span><span data-bind="text: countOfStaleIndexes().toLocaleString(), css: {'text-warning': countOfStaleIndexes}"></span>
                 </a>
             </div>
-            <div class="footer-item" data-bind="visible: countOfIndexingErrors, if: countOfIndexingErrors">
+            <div class="footer-item" data-bind="visible: countOfIndexingErrors">
                 <a title="Indexing errors" class="text-danger" data-bind="attr: { href: $parent.urlForIndexingErrors() }">
                     <i class="icon-index-errors"></i> <span data-bind="text: countOfIndexingErrors().toLocaleString()"></span>
                 </a>

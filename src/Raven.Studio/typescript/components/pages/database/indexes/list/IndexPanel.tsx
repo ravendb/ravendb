@@ -51,7 +51,8 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
     const { canReadWriteDatabase, canReadOnlyDatabase } = useAccessManager();
 
     const isReplacement = IndexUtils.isSideBySide(index);
-    const inlineDetails = index.nodesInfo.length === 1 && !IndexUtils.isFaulty(index);
+    const isFaulty = IndexUtils.hasAnyFaultyNode(index);
+    const inlineDetails = index.nodesInfo.length === 1;
 
     const eventsCollector = useEventsCollector();
 
@@ -167,7 +168,7 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                         </a>
                     </h3>
 
-                    {!IndexUtils.isFaulty(index) && (
+                    {!IndexUtils.hasAnyFaultyNode(index) && (
                         <div className="index-properties">
                             {!IndexUtils.isSideBySide(index) && (
                                 <div className="btn-group properties-value">
@@ -296,7 +297,7 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
 
                     <div className="actions">
                         <div className="btn-toolbar pull-right-sm" role="toolbar">
-                            {!IndexUtils.isFaulty(index) && (
+                            {!IndexUtils.hasAnyFaultyNode(index) && (
                                 <div className="btn-group properties-value">
                                     <button
                                         type="button"
@@ -348,7 +349,7 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                                 </div>
                             )}
 
-                            {!IndexUtils.isFaulty(index) && (
+                            {!IndexUtils.hasAnyFaultyNode(index) && (
                                 <div className="btn-group" role="group">
                                     <a className="btn btn-default" href={queryUrl}>
                                         <i className="icon-search" />
@@ -384,6 +385,16 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                                     </a>
                                 )}
                             </div>
+
+                            {inlineDetails && isFaulty && (
+                                <button
+                                    type="button"
+                                    className="btn btn-danger"
+                                    onClick={() => openFaulty(index.nodesInfo[0].location)}
+                                >
+                                    Open faulty index
+                                </button>
+                            )}
 
                             {canReadWriteDatabase(database) && (
                                 <div className="btn-group" role="group">
@@ -469,7 +480,11 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                         {IndexUtils.formatType(index.type)}
                     </RichPanelDetailItem>
                     <IndexSourceTypeComponent sourceType={index.sourceType} />
-                    {inlineDetails && (
+                    <RichPanelDetailItem>
+                        <i className="icon-search" />
+                        {index.searchEngine}
+                    </RichPanelDetailItem>
+                    {inlineDetails && !isFaulty && (
                         <InlineDetails
                             index={index}
                             globalIndexingStatus={globalIndexingStatus}
@@ -482,6 +497,7 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                         index={index}
                         globalIndexingStatus={globalIndexingStatus}
                         showStaleReason={(location) => showStaleReasons(index, location)}
+                        openFaulty={openFaulty}
                     />
                 )}
             </RichPanel>
@@ -559,15 +575,3 @@ function InlineDetails(props: InlineDetailsProps) {
 }
 
 const indexUniqueId = (index: IndexSharedInfo) => "index_" + index.name;
-
-/* TODO
-    {nodeInfo.details.faulty ? (
-        <button
-            type="button"
-            className="btn btn-default"
-            onClick={() => openFaulty(nodeInfo.location)}
-            title="Open index"
-        >
-            <i className="icon-arrow-filled-up" />
-        </button>
- */
