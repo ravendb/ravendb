@@ -10,13 +10,12 @@ public static class MemoryUtils
     private const string GenericOutMemoryException = "Failed to generate an out of memory exception";
     private static readonly InvertedComparer InvertedComparerInstance = new InvertedComparer();
     private const int MinAllocatedThresholdInBytes = 10 * 1024 * 1024;
-
     public static string GetExtendedMemoryInfo(MemoryInfoResult memoryInfo)
     {
         try
         {
             var sb = new StringBuilder();
-            TryAppend(() => sb.Append("Commit charge: ").Append(memoryInfo.CurrentCommitCharge).Append(" / ").Append(memoryInfo.TotalCommittableMemory));
+            TryAppend(() => sb.Append("Commit charge: ").Append(memoryInfo.CurrentCommitCharge).Append(" / ").Append(memoryInfo.TotalCommittableMemory).Append(", "));
             TryAppend(() => sb.Append("Memory: ").Append(memoryInfo.TotalPhysicalMemory - memoryInfo.AvailableMemory).Append(" / ").Append(memoryInfo.TotalPhysicalMemory).Append(", "));
             TryAppend(() => sb.Append("Available memory for processing: ").Append(memoryInfo.AvailableMemoryForProcessing).Append(", "));
             TryAppend(() => sb.Append("Dirty memory: ").Append(memoryInfo.TotalScratchDirtyMemory).Append(", "));
@@ -65,7 +64,7 @@ public static class MemoryUtils
 
                     TryAppend(() => sb.Append("name: ").Append(keyValue.Value).Append(", allocations: ").Append(new Size(keyValue.Key, SizeUnit.Bytes)));
                     if (keyValue.Value == null)
-                        TryAppend(() => sb.Append(" (threads count: ").Append(unknownThreadsCount));
+                        TryAppend(() => sb.Append(" (threads count: ").Append(unknownThreadsCount).Append(")"));
                 }
             }
             catch
