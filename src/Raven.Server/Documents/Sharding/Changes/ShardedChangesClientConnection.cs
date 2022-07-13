@@ -313,8 +313,12 @@ public class ShardedChangesClientConnection : AbstractChangesClientConnection<Tr
     public override void Dispose()
     {
         var exceptionAggregator = new ExceptionAggregator($"Could not dispose '{_context.DatabaseName}' changes.");
-        foreach (var changes in _changes)
-            exceptionAggregator.Execute(changes);
+
+        if (_changes != null)
+        {
+            foreach (var changes in _changes)
+                exceptionAggregator.Execute(changes);
+        }
 
         _changes = null;
 

@@ -64,8 +64,7 @@ namespace Raven.Server.Documents.Operations
         {
             var operationChanged = OperationChanged.Create(_databaseName, change.OperationId, operation.Description, change.State, operation.Killable);
 
-            var op = (Operation)operation;
-            op.NotifyCenter(operationChanged, x => _notificationCenter.Add(x));
+            operation.NotifyCenter(operationChanged, x => _notificationCenter.Add(x));
 
             base.RaiseNotifications(change, operation);
         }

@@ -9,11 +9,11 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Sharding.Operations;
+using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Platform;
-using Sparrow.Utils;
 using Operation = Raven.Client.Documents.Operations.Operation;
 
 namespace Raven.Server.Documents.Sharding;
@@ -45,7 +45,9 @@ public partial class ShardedDatabaseContext
 
         protected override void RaiseNotifications(OperationStatusChange change, AbstractOperation operation)
         {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Pawel, DevelopmentHelper.Severity.Normal, "handle notification center");
+            var operationChanged = OperationChanged.Create(_context.DatabaseName, change.OperationId, operation.Description, change.State, operation.Killable);
+
+            operation.NotifyCenter(operationChanged, x => _context.NotificationCenter.Add(x));
 
             base.RaiseNotifications(change, operation);
         }
@@ -62,14 +64,14 @@ public partial class ShardedDatabaseContext
 
             return AddOperationInternalAsync(operation, taskFactory);
         }
-        
+
         public Task AddRemoteOperation<TResult, TOrchestratorResult, TOperationProgress>(
             long id,
             OperationType operationType,
             string description,
             IOperationDetailedDescription detailedDescription,
             Func<JsonOperationContext, int, RavenCommand<TResult>> commandFactory,
-            OperationCancelToken token = null) 
+            OperationCancelToken token = null)
             where TResult : OperationIdResult
             where TOrchestratorResult : IOperationResult, new()
             where TOperationProgress : IOperationProgress, new()
@@ -83,7 +85,7 @@ public partial class ShardedDatabaseContext
             ShardedOperation operation,
             Func<JsonOperationContext, int, RavenCommand<TResult>> commandFactory,
             Action<IOperationProgress> onProgress,
-            OperationCancelToken token) 
+            OperationCancelToken token)
             where TResult : OperationIdResult
             where TOrchestratorResult : IOperationResult, new()
             where TOperationProgress : IOperationProgress, new()
