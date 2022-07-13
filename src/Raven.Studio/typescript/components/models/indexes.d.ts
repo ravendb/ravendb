@@ -1,6 +1,7 @@
 ﻿import IndexSourceType = Raven.Client.Documents.Indexes.IndexSourceType;
 import IndexProgress = Raven.Client.Documents.Indexes.IndexProgress;
 import { loadStatus } from "./common";
+import SearchEngineType = Raven.Client.Documents.Indexes.SearchEngineType;
 
 export type IndexStatus = "Normal" | "ErrorOrFaulty" | "Stale" | "Paused" | "Disabled" | "Idle" | "RollingDeployment";
 
@@ -16,6 +17,7 @@ export interface IndexSharedInfo {
     priority: Raven.Client.Documents.Indexes.IndexPriority;
     type: Raven.Client.Documents.Indexes.IndexType;
     lockMode: Raven.Client.Documents.Indexes.IndexLockMode;
+    searchEngine: SearchEngineType;
 
     reduceOutputCollectionName: string;
     patternForReferencesToReduceOutputCollection: string;

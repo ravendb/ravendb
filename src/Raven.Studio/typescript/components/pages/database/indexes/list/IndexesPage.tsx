@@ -120,7 +120,7 @@ function matchesAnyIndexStatus(
     return (
         (status.includes("Normal") && anyMatch(index, (x) => IndexUtils.isNormalState(x, globalIndexingStatus))) ||
         (status.includes("ErrorOrFaulty") &&
-            (anyMatch(index, IndexUtils.isErrorState) || IndexUtils.isFaulty(index))) ||
+            (anyMatch(index, IndexUtils.isErrorState) || IndexUtils.hasAnyFaultyNode(index))) ||
         (status.includes("Paused") && anyMatch(index, (x) => IndexUtils.isPausedState(x, globalIndexingStatus))) ||
         (status.includes("Disabled") && anyMatch(index, (x) => IndexUtils.isDisabledState(x, globalIndexingStatus))) ||
         (status.includes("Idle") && anyMatch(index, (x) => IndexUtils.isIdleState(x, globalIndexingStatus)))
@@ -517,13 +517,13 @@ export function IndexesPage(props: IndexesPageProps) {
     useTimeout(loadMissing, 3_000);
 
     const toggleSelection = (index: IndexSharedInfo) => {
-        setSelectedIndexes(s => {
+        setSelectedIndexes((s) => {
             if (s.includes(index.name)) {
                 return s.filter((x) => x !== index.name);
             } else {
                 return s.concat(index.name);
             }
-        })
+        });
     };
 
     const openFaulty = async (index: IndexSharedInfo, location: databaseLocationSpecifier) => {
@@ -675,7 +675,7 @@ export function IndexesPage(props: IndexesPageProps) {
                 <IndexFilterDescription filter={filter} indexes={getAllIndexes(groups, replacements)} />
             </div>
             <div className="indexes-list">
-                {groups.map(group => {
+                {groups.map((group) => {
                     return (
                         <div key={"group-" + group.name}>
                             <h2 className="on-base-background" title={"Collection: " + group.name}>

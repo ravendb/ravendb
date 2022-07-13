@@ -89,6 +89,7 @@ function mapToIndexSharedInfo(stats: IndexStats): IndexSharedInfo {
         reduceOutputCollectionName: stats.ReduceOutputCollection,
         patternForReferencesToReduceOutputCollection: stats.ReduceOutputReferencePattern,
         collectionNameForReferenceDocuments: stats.PatternReferencesCollectionName,
+        searchEngine: stats.SearchEngineType,
     };
 }
 

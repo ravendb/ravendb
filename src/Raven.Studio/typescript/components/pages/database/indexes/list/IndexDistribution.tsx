@@ -17,10 +17,11 @@ interface IndexDistributionProps {
     index: IndexSharedInfo;
     globalIndexingStatus: IndexRunningStatus;
     showStaleReason: (location: databaseLocationSpecifier) => void;
+    openFaulty: (location: databaseLocationSpecifier) => void;
 }
 
 export function IndexDistribution(props: IndexDistributionProps) {
-    const { index, globalIndexingStatus, showStaleReason } = props;
+    const { index, globalIndexingStatus, showStaleReason, openFaulty } = props;
 
     const [indexId] = useState(() => _.uniqueId("index-id"));
 
@@ -47,6 +48,7 @@ export function IndexDistribution(props: IndexDistributionProps) {
 
                 const key = indexNodeInfoKey(nodeInfo);
                 const id = indexId + key;
+                const entriesCount = nodeInfo.details?.faulty ? "n/a" : nodeInfo.details?.entriesCount ?? "";
 
                 return (
                     <DistributionItem
@@ -60,8 +62,18 @@ export function IndexDistribution(props: IndexDistributionProps) {
 
                             {nodeInfo.location.nodeTag}
                         </div>
-                        <div className="entries">{nodeInfo.details?.entriesCount ?? ""}</div>
+                        <div className="entries">{entriesCount}</div>
                         <div className="errors">{nodeInfo.details?.errorCount ?? ""}</div>
+                        {nodeInfo.details?.faulty && (
+                            <button
+                                type="button"
+                                className="btn btn-danger"
+                                onClick={() => openFaulty(nodeInfo.location)}
+                            >
+                                Open faulty index
+                            </button>
+                        )}
+
                         <IndexProgress nodeInfo={nodeInfo} />
 
                         <IndexProgressTooltip
@@ -136,6 +148,14 @@ export function IndexProgress(props: IndexProgressProps) {
     const { nodeInfo, inline } = props;
     if (!nodeInfo.details) {
         return null;
+    }
+
+    if (nodeInfo.details.faulty) {
+        return (
+            <ProgressCircle inline={inline} state="failed" icon="icon-cancel">
+                Faulty
+            </ProgressCircle>
+        );
     }
 
     if (nodeInfo.details.state === "Error") {

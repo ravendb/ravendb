@@ -24,6 +24,9 @@ export class IndexesStubs {
         // and set output reduce for collection
         ordersTotals.ReduceOutputCollection = "ByCompanyCollection";
 
+        // order totals is indexed using Corax
+        ordersTotals.SearchEngineType = "Corax";
+
         return stats;
     }
 
