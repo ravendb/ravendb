@@ -15,7 +15,9 @@ public class ShardedRevisionsDatabaseSubscriptionProcessor : RevisionsDatabaseSu
 
     public ShardedRevisionsDatabaseSubscriptionProcessor(ServerStore server, ShardedDocumentDatabase database, SubscriptionConnection connection) : base(server, database, connection)
     {
+        _database = database;
     }
+
     protected override SubscriptionFetcher<(Document Previous, Document Current)> CreateFetcher()
     {
         _sharding = _database.ReadShardingState();

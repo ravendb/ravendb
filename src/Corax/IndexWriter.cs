@@ -37,7 +37,7 @@ namespace Corax
     public class IndexWriter : IDisposable // single threaded, controlled by caller
     {
         private readonly IndexFieldsMapping _fieldsMapping;
-
+        private readonly Tree _indexMetadata;
         private readonly StorageEnvironment _environment;
 
         private readonly bool _ownsTransaction;
@@ -103,6 +103,8 @@ namespace Corax
             _postingListContainerId = Transaction.OpenContainer(Constants.IndexWriter.PostingListsSlice);
             _entriesContainerId = Transaction.OpenContainer(Constants.IndexWriter.EntriesContainerSlice);
             _jsonOperationContext = JsonOperationContext.ShortTermSingleUse();
+            _indexMetadata = Transaction.ReadTree(Constants.IndexMetadata) ?? Transaction.CreateTree(Constants.IndexMetadata);
+
         }
 
         public IndexWriter([NotNull] Transaction tx, IndexFieldsMapping fieldsMapping) : this(fieldsMapping)
@@ -112,6 +114,7 @@ namespace Corax
             _ownsTransaction = false;
             _postingListContainerId = Transaction.OpenContainer(Constants.IndexWriter.PostingListsSlice);
             _entriesContainerId = Transaction.OpenContainer(Constants.IndexWriter.EntriesContainerSlice);
+            _indexMetadata = Transaction.ReadTree(Constants.IndexMetadata) ?? Transaction.CreateTree(Constants.IndexMetadata);
         }
 
         public long Index(string id, Span<byte> data)
@@ -122,8 +125,8 @@ namespace Corax
 
         public long Index(Slice id, Span<byte> data)
         {
-            long entriesCount = Transaction.LowLevelTransaction.RootObjects.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0;
-            Transaction.LowLevelTransaction.RootObjects.Add(Constants.IndexWriter.NumberOfEntriesSlice, entriesCount + 1);
+            var metadataTree = Transaction.ReadTree(Constants.IndexMetadata);
+            metadataTree.Increment(Constants.IndexWriter.NumberOfEntriesSlice, 1);
 
             Span<byte> buf = stackalloc byte[10];
             var idLen = ZigZagEncoding.Encode(buf, id.Size);
@@ -150,7 +153,7 @@ namespace Corax
 
         public long GetNumberOfEntries()
         {
-            return Transaction.LowLevelTransaction.RootObjects.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0L;
+            return _indexMetadata?.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0L;
         }
 
         private unsafe void AddSuggestions(IndexFieldBinding binding, Slice slice)
@@ -423,7 +426,7 @@ namespace Corax
             }
         }
 
-        private unsafe void DeleteCommit(Span<byte> workingBuffer, Tree fieldsTree)
+        private void DeleteCommit(Span<byte> workingBuffer, Tree fieldsTree)
         {
             if (_entriesToDelete.Count == 0)
                 return;
@@ -446,7 +449,7 @@ namespace Corax
                         case IndexEntryFieldType.Empty:
                         case IndexEntryFieldType.Null:
                             var fieldName = fieldType == IndexEntryFieldType.Null ? Constants.NullValueSlice : Constants.EmptyStringSlice;
-                            DeleteIdFromExactTerm(entryToDelete, binding.FieldName, workingBuffer, fieldName.AsReadOnlySpan());
+                            DeleteIdFromExactTerm(entryToDelete, binding.FieldName, fieldName.AsReadOnlySpan(), workingBuffer);
                             break;
 
                         case IndexEntryFieldType.TupleList:
@@ -455,15 +458,19 @@ namespace Corax
 
                             while (iterator.ReadNext())
                             {
-                                DeleteIdFromExactTerm(entryToDelete, binding.FieldName, workingBuffer, iterator.Sequence);
+                                DeleteIdFromExactTerm(entryToDelete, binding.FieldName, iterator.Sequence, workingBuffer);
+                                DeleteIdFromNumericTerm(entryToDelete, binding.FieldNameDouble, iterator.Double, workingBuffer);
+                                DeleteIdFromNumericTerm(entryToDelete, binding.FieldNameLong, iterator.Long, workingBuffer);
                             }
 
                             break;
 
                         case IndexEntryFieldType.Tuple:
-                            if (entryReader.Read(binding.FieldId, out Span<byte> valueInEntry) == false)
+                            if (entryReader.Read(binding.FieldId, out _, out long l, out double d, out Span<byte> valueInEntry) == false)
                                 break;
-                            DeleteIdFromExactTerm(entryToDelete, binding.FieldName, workingBuffer, valueInEntry);
+                            DeleteIdFromExactTerm(entryToDelete, binding.FieldName, valueInEntry, workingBuffer);
+                            DeleteIdFromNumericTerm(entryToDelete, binding.FieldNameDouble, d, workingBuffer);
+                            DeleteIdFromNumericTerm(entryToDelete, binding.FieldNameLong, l, workingBuffer);
                             break;
 
                         case IndexEntryFieldType.SpatialPointList:
@@ -473,7 +480,7 @@ namespace Corax
                             while (spatialIterator.ReadNext())
                             {
                                 for (int i = 1; i <= spatialIterator.Geohash.Length; ++i)
-                                    DeleteIdFromExactTerm(entryToDelete, binding.FieldName, workingBuffer, spatialIterator.Geohash.Slice(0, i));
+                                    DeleteIdFromExactTerm(entryToDelete, binding.FieldName, spatialIterator.Geohash.Slice(0, i), workingBuffer);
                             }
 
                             break;
@@ -491,14 +498,14 @@ namespace Corax
                 }
 
                 Container.Delete(llt, _entriesContainerId, entryToDelete); // delete raw index entry
-                llt.RootObjects.Increment(Constants.IndexWriter.NumberOfEntriesSlice, -1); // update number of entries
+                _indexMetadata.Increment(Constants.IndexWriter.NumberOfEntriesSlice, -1); // update number of entries
                 temporaryStorageForIds?.Clear();
 
                 void DeleteIdFromTerm(ReadOnlySpan<byte> termValue, Span<byte> tmpBuffer, IndexFieldBinding binding)
                 {
                     if (binding.IsAnalyzed == false)
                     {
-                        DeleteIdFromExactTerm(entryToDelete, binding.FieldName, tmpBuffer, termValue);
+                        DeleteIdFromExactTerm(entryToDelete, binding.FieldName, termValue, tmpBuffer);
                         if (binding.HasSuggestions)
                             RemoveSuggestions(binding, termValue);
 
@@ -522,7 +529,7 @@ namespace Corax
                         ref var token = ref tokenSpace[i];
 
                         var term = wordSpace.Slice(token.Offset, (int)token.Length);
-                        DeleteIdFromExactTerm(entryToDelete, binding.FieldName, tmpBuffer, term);
+                        DeleteIdFromExactTerm(entryToDelete, binding.FieldName, term, tmpBuffer);
 
                         if (binding.HasSuggestions)
                             RemoveSuggestions(binding, termValue);
@@ -530,7 +537,23 @@ namespace Corax
                 }
 
 
-                void DeleteIdFromExactTerm(long idToDelete, Slice fieldName, Span<byte> tmpBuffer, ReadOnlySpan<byte> termValue)
+                unsafe void DeleteIdFromNumericTerm<TVal>(long idToDelete, Slice fieldName, TVal val, Span<byte> tmpBuffer) 
+                    where TVal : unmanaged, IBinaryNumber<TVal>, IMinMaxValue<TVal>
+                {
+                    var fieldTree = fieldsTree.FixedSizeTree<TVal>(fieldsTree, fieldName, (byte)sizeof(TVal));
+
+                    using var _ = fieldTree.Read(val, out var result);
+                    if (result.HasValue == false)
+                        return;
+                    
+                    var containerId = *((long*)result.Content.Ptr);
+                    var newContainerId = RemoveValue(containerId, fieldName, idToDelete, tmpBuffer);
+                    if (newContainerId == null || newContainerId.Value != containerId)
+                        fieldTree.Delete(val);
+                    if (newContainerId != null)
+                        fieldTree.Add(val, newContainerId.Value);
+                }
+                void DeleteIdFromExactTerm(long idToDelete, Slice fieldName, ReadOnlySpan<byte> termValue, Span<byte> tmpBuffer)
                 {
                     // We need to normalize the term in case we have a term bigger than MaxTermLength.
                     using var _ = CreateNormalizedTerm(Transaction.Allocator, termValue, out Slice termSlice);
@@ -540,57 +563,68 @@ namespace Corax
                     if (termValue.Length == 0 || fieldTree.TryGetValue(termSlice.AsReadOnlySpan(), out var containerId) == false)
                         return;
 
-                    if ((containerId & (long)TermIdMask.Set) != 0)
+                    var newContainerId = RemoveValue(containerId, fieldName, idToDelete, tmpBuffer);
+                    if (newContainerId == null || newContainerId.Value != containerId)
+                        fieldTree.TryRemove(termValue, out var __);
+
+                    if (newContainerId != null)
                     {
-                        var setId = containerId & ~0b11;
-                        var setStateSpan = Container.GetMutable(llt, setId);
-                        ref var setState = ref MemoryMarshal.AsRef<SetState>(setStateSpan);
-                        var set = new Set(llt, fieldName, in setState);
-                        set.Remove(idToDelete);
-                        setState = set.State;
-
-                        if (setState.NumberOfEntries == 0)
-                        {
-                            //If we get rid off all terms we have to remove container. Probably we can do this in a better way
-                            fieldTree.TryRemove(termValue, out var __);
-                            Container.Delete(llt, _postingListContainerId, setId);
-                        }
-                    }
-                    else if ((containerId & (long)TermIdMask.Small) != 0)
-                    {
-                        var smallSetId = containerId & ~0b11;
-                        var buffer = Container.GetMutable(llt, smallSetId);
-
-                        //Fetch all the ids from the set into temporaryStorageForIds
-                        var itemsCount = ZigZagEncoding.Decode<int>(buffer, out var len);
-                        temporaryStorageForIds ??= new List<long>(itemsCount);
-                        temporaryStorageForIds.Clear();
-
-                        long pos = len;
-                        var currentId = 0L;
-
-                        while (pos < buffer.Length)
-                        {
-                            var delta = ZigZagEncoding.Decode<long>(buffer, out len, (int)pos);
-                            pos += len;
-                            currentId += delta;
-                            if (currentId == idToDelete)
-                                continue;
-                            temporaryStorageForIds.Add(currentId);
-                        }
-
-                        // Due to encoding we have to encode new set again so we remove previous small set from container.
-                        Container.Delete(llt, _postingListContainerId, smallSetId);
-                        fieldTree.TryRemove(termValue, out var __); // term also disappears from the field tree
-
-                        if (AddNewTerm(temporaryStorageForIds, tmpBuffer, out var termId))
-                            fieldTree.Add(termValue, termId);
-                    }
-                    else
-                    {
-                        fieldTree.TryRemove(termValue, out var _);
+                        fieldTree.Add(termValue, newContainerId.Value);
                     }
                 }
+            }
+
+            long? RemoveValue(long containerId, Slice fieldName, long idToDelete, Span<byte> tmpBuffer)
+            {
+                if ((containerId & (long)TermIdMask.Set) != 0)
+                {
+                    var setId = containerId & ~0b11;
+                    var setStateSpan = Container.GetMutable(llt, setId);
+                    ref var setState = ref MemoryMarshal.AsRef<SetState>(setStateSpan);
+                    var set = new Set(llt, fieldName, in setState);
+                    set.Remove(idToDelete);
+                    setState = set.State;
+
+                    if (setState.NumberOfEntries == 0)
+                    {
+                        //If we get rid off all terms we have to remove container. Probably we can do this in a better way
+                        Container.Delete(llt, _postingListContainerId, setId);
+                        return null;
+                    }
+
+                    return containerId;
+                }
+
+                if ((containerId & (long)TermIdMask.Small) != 0)
+                {
+                    var smallSetId = containerId & ~0b11;
+                    var buffer = Container.GetMutable(llt, smallSetId);
+
+                    //Fetch all the ids from the set into temporaryStorageForIds
+                    var itemsCount = ZigZagEncoding.Decode<int>(buffer, out var len);
+                    temporaryStorageForIds ??= new List<long>(itemsCount);
+                    temporaryStorageForIds.Clear();
+
+                    long pos = len;
+                    var currentId = 0L;
+
+                    while (pos < buffer.Length)
+                    {
+                        var delta = ZigZagEncoding.Decode<long>(buffer, out len, (int)pos);
+                        pos += len;
+                        currentId += delta;
+                        if (currentId == idToDelete)
+                            continue;
+                        temporaryStorageForIds.Add(currentId);
+                    }
+
+                    // Due to encoding we have to encode new set again so we remove previous small set from container.
+                    Container.Delete(llt, _postingListContainerId, smallSetId);
+
+                    return AddNewTerm(temporaryStorageForIds, tmpBuffer, out var termId) ? termId : null;
+                }
+
+                return null;
             }
         }
 
@@ -601,7 +635,7 @@ namespace Corax
                 return false;
 
             var fieldTree = fieldsTree.CompactTreeFor(key);
-            var entriesCount = Transaction.LowLevelTransaction.RootObjects.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0;
+            var entriesCount = _indexMetadata.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0;
             Debug.Assert(entriesCount - _entriesToDelete.Count >= 0);
 
             // We need to normalize the term in case we have a term bigger than MaxTermLength.
@@ -787,11 +821,11 @@ namespace Corax
 
             foreach (var term in sortedTerms)
             {
-                using var _ = fieldTree.Read(term, out var result);
+                long termId;
                 var entries = _bufferLongs[fieldId][term];
 
-                long termId;
-                if (result.Size == 0) // no existing value
+                using var _ = fieldTree.Read(term, out var result);
+                if (result.HasValue == false)
                 {
                     if (AddNewTerm(entries, tmpBuf, out termId))
                         fieldTree.Add(term, termId);

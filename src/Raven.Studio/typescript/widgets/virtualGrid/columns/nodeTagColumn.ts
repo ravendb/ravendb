@@ -25,7 +25,7 @@ class nodeTagColumn<T extends { nodeTag: string, noData: boolean }> extends hype
         }
 
         const description = this.hrefProvider(item).targetDescription;
-        const titleText = description ? `Go to ${description}` : "";
+            const titleText = description ? `Go to ${description} on node ${nodeTag}` : "";
         
         const nodeDataClass = item.noData ? "no-data" : `node-${nodeTag}`
 

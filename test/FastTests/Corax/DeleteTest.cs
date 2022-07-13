@@ -67,8 +67,43 @@ namespace FastTests.Corax
                 Assert.Equal(_longList.Count - 1, match1.Fill(ids));
             }
         }
+        
+        [Fact]
+        public void CanDeleteNumericalData()
+        {
+            PrepareData();
+            IndexEntries(CreateKnownFields(_bsc));
+
+            Span<long> ids = stackalloc long[1024];
+            {
+                using var indexSearcher = new IndexSearcher(Env, _analyzers);
+                using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
+                Slice.From(ctx, "Content", out var field);
+                Slice.From(ctx, "Content-L", out var fieldLong);
+                
+                var match = indexSearcher.GreaterThanOrEqualsQuery(field, fieldLong, 0);
+                Assert.Equal(_longList.Count, match.Fill(ids));
+            }
+
+            using (var indexWriter = new IndexWriter(Env, _analyzers))
+            {
+                indexWriter.TryDeleteEntry("Id", "list/0");
+                indexWriter.Commit();
+            }
+
+            {
+                using var indexSearcher = new IndexSearcher(Env, _analyzers);
+                using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
+                Slice.From(ctx, "Content", out var field);
+                Slice.From(ctx, "Content-L", out var fieldLong);
+                
+                var match = indexSearcher.GreaterThanOrEqualsQuery(field, fieldLong, 0);
+                Assert.Equal(_longList.Count -1, match.Fill(ids));
+            }
+        }
 
         [Theory]
+        [InlineData(1)]
         [InlineData(4)]
         [InlineData(10000)]
         public void CanDeleteSingleItemInList(int batchSize)
@@ -84,7 +119,8 @@ namespace FastTests.Corax
             {
                 using var indexSearcher = new IndexSearcher(Env, _analyzers);
                 var match = indexSearcher.TermQuery("Content", "0");
-                Assert.Equal(batchSize/2, match.Fill(ids));
+                Assert.Equal((int)Math.Ceiling(batchSize/2.0), match.Fill(ids));
+                Assert.Equal(batchSize, indexSearcher.NumberOfEntries);
             }
             
             using (var indexWriter = new IndexWriter(Env, _analyzers))
@@ -96,7 +132,8 @@ namespace FastTests.Corax
             {
                 using var indexSearcher = new IndexSearcher(Env, _analyzers);
                 var match = indexSearcher.TermQuery("Content", "0");
-                Assert.Equal((batchSize/2)-1, match.Fill(ids));
+                Assert.Equal(((int)Math.Ceiling(batchSize/2.0))-1, match.Fill(ids));
+                Assert.Equal(batchSize-1, indexSearcher.NumberOfEntries);
             }
         }
         
@@ -230,7 +267,41 @@ namespace FastTests.Corax
             }
         }
 
+        [Fact]
+        public void CanDeleteAndPushUnderSameId()
+        {
+            PrepareData(DataType.Modulo, 1);
+            IndexEntries(CreateKnownFields(_bsc));
+            Span<long> ids = stackalloc long[1024];
+            {
+                using var indexSearcher = new IndexSearcher(Env, _analyzers);
+                var match = indexSearcher.TermQuery("Content", "0");
+                Assert.Equal(1, match.Fill(ids));
+            }
+            using (var indexWriter = new IndexWriter(Env, _analyzers))
+            {
+                indexWriter.TryDeleteEntry("Id", "list/0");
+                indexWriter.Commit();
+            }
 
+            {
+                using var indexSearcher = new IndexSearcher(Env, _analyzers);
+                Assert.Equal(0, indexSearcher.NumberOfEntries);
+            }
+
+            IndexEntries(CreateKnownFields(_bsc));
+            {
+                using var indexSearcher = new IndexSearcher(Env, _analyzers);
+                var match = indexSearcher.TermQuery("Content", "0");
+                Assert.Equal(1, match.Fill(ids));
+                var entity = indexSearcher.GetReaderFor(ids[0]);
+                Assert.True(entity.Read(IndexId, out var idInIndex));
+                Assert.True(Encodings.Utf8.GetBytes("list/0").AsSpan().SequenceEqual(idInIndex));
+
+            }
+
+
+        }
 
         private void PrepareData(DataType type = DataType.Default, int batchSize = 1000, uint modulo = 33)
         {

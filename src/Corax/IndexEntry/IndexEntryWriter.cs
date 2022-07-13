@@ -416,14 +416,14 @@ public unsafe ref partial struct IndexEntryWriter
         }
 
         // We can't use the 'invalid' which is all ones.
-        int encodeSize = 1;
+        IndexEntryTableEncoding encodeSize = IndexEntryTableEncoding.OneByte;
         if (maxOffset > short.MaxValue - 1)
-            encodeSize = 4;
+            encodeSize = IndexEntryTableEncoding.FourBytes;
         else if (maxOffset > sbyte.MaxValue - 1)
-            encodeSize = 2;
+            encodeSize = IndexEntryTableEncoding.TwoBytes;
 
         // The size of the known fields metadata section
-        int metadataSection = encodeSize * _knownFields.Count;
+        int metadataSection = (int)encodeSize * _knownFields.Count;
         // The size of the unknown/dynamic fields metadata section            
         int dynamicMetadataSection = _dynamicFieldIndex * sizeof(uint);
         int dynamicMetadataSectionOffset = _buffer.Length - dynamicMetadataSection - 1;
@@ -434,7 +434,7 @@ public unsafe ref partial struct IndexEntryWriter
         // The known field count is encoded as xxxxxxyy where:
         // x: the count
         // y: the encode size
-        header.KnownFieldCount = (ushort)(_knownFields.Count << 2 | encodeSize);
+        header.KnownFieldCount = (ushort)(_knownFields.Count << 2 | (int)encodeSize);
         header.DynamicTable = (uint)_dataIndex;
 
         // The dynamic metadata fields count. 
@@ -453,15 +453,17 @@ public unsafe ref partial struct IndexEntryWriter
 
         switch (encodeSize)
         {
-            case 1:
+            case IndexEntryTableEncoding.OneByte:
                 _dataIndex += WriteMetadataTable<byte>(_buffer, _dataIndex, _knownFieldsLocations);
                 break;
-            case 2:
+            case IndexEntryTableEncoding.TwoBytes:
                 _dataIndex += WriteMetadataTable<ushort>(_buffer, _dataIndex, _knownFieldsLocations);
                 break;
-            case 4:
+            case IndexEntryTableEncoding.FourBytes:
                 _dataIndex += WriteMetadataTable<uint>(_buffer, _dataIndex, _knownFieldsLocations);
                 break;
+            default:
+                throw new ArgumentException($"'{encodeSize}' is not a valid {nameof(IndexEntryTableEncoding)}.");
         }
 
         output = _buffer.Slice(0, _dataIndex);

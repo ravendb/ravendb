@@ -22,10 +22,10 @@ namespace Corax.Queries
         private Page _currentPage;
         private long _entriesContainerId;
 
-        public unsafe AllEntriesMatch(Transaction tx)
+        public unsafe AllEntriesMatch(IndexSearcher searcher, Transaction tx)
         {
             _tx = tx;
-            _count = tx.LowLevelTransaction.RootObjects.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0;
+            _count = searcher.NumberOfEntries;
             if (_count == 0)
             {
                 Unsafe.SkipInit(out _currentPage);
@@ -67,9 +67,10 @@ namespace Corax.Queries
                     _offset = 0;
                 }
 
-                while (results < matches.Length)
+                _itemsLeftOnCurrentPage = int.MaxValue;
+                while (results < matches.Length && _itemsLeftOnCurrentPage != 0)
                 {
-                    var read = Container.GetEntriesInto(_entriesContainerId, ref _offset, _currentPage, matches, results, out _itemsLeftOnCurrentPage);
+                    var read = Container.GetEntriesInto(_entriesContainerId, ref _offset, _currentPage, matches[results..], out _itemsLeftOnCurrentPage);
                     if (read == 0)
                     {
                         _currentPage = new Page(null);
