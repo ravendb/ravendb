@@ -77,6 +77,8 @@ namespace Raven.Client.Http
             {
                 if (serverNodes[i].ClusterTag == nodeTag)
                 {
+                    Debug.Assert(string.IsNullOrEmpty(serverNodes[i].Url) == false, $"Expected serverNodes Url not null or empty but got: \'{serverNodes[i].Url}\'");
+
                     if (stateFailures[i] == 0)
                         return (i, serverNodes[i]);
 
