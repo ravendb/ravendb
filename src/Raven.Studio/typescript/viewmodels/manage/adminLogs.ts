@@ -168,17 +168,15 @@ class adminLogs extends viewModelBase {
     }
 
     dateFormattedAsUtc(localDate: moment.Moment) {
-        return ko.pureComputed(() => {
-            if (localDate) {
-                const date = moment(localDate);
-                if (!date.isValid()) {
-                    return "";
-                }
-                return date.utc().format(adminLogs.utcTimeFormat) + "Z (UTC)";
-            } else {
+        if (localDate) {
+            const date = moment(localDate);
+            if (!date.isValid()) {
                 return "";
             }
-        });
+            return date.utc().format(adminLogs.utcTimeFormat) + "Z (UTC)";
+        } else {
+            return "";
+        }
     }
     
     private initValidation() {
@@ -563,11 +561,10 @@ class adminLogs extends viewModelBase {
             return;
         }
 
-        const url = endpoints.global.adminLogs.adminLogsDownload;
-        const argsPart = "?from=" + this.startDateToUse() + "&to=" + this.endDateToUse();
-
         const $form = $("#downloadLogsForm");
-        $form.attr("action", appUrl.forServer() + url + argsPart);
+        const url = endpoints.global.adminLogs.adminLogsDownload;
+        
+        $form.attr("action", appUrl.forServer() + url);
 
         $("[name=from]", $form).val(this.startDateToUse());
         $("[name=to]", $form).val(this.endDateToUse());
