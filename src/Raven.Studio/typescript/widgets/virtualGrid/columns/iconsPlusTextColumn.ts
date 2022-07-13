@@ -9,8 +9,12 @@ class iconsPlusTextColumn<T> implements virtualColumn {
     header: string;
 
     private readonly dataForHtml: (obj: T) => iconPlusText[] | string;
-    
-    constructor(protected gridController: virtualGridController<any>, dataForHtml: (obj: T) => iconPlusText[] | string, header: string, width: string) {
+
+    constructor(protected gridController: virtualGridController<any>,
+                dataForHtml: (obj: T) => iconPlusText[] | string,
+                header: string,
+                width: string,
+                public opts: textColumnOpts<any> = {}) {
         this.width = width;
         this.header = header;
         this.dataForHtml = dataForHtml;
@@ -26,6 +30,11 @@ class iconsPlusTextColumn<T> implements virtualColumn {
 
     get headerAsText() {
         return this.header;
+    }
+
+    get headerTitle() {
+        const titleToUse = this.opts && this.opts.headerTitle ? this.opts.headerTitle : this.header;
+        return genUtils.unescapeHtml(titleToUse);
     }
 
     renderCell(item: T, isSelected: boolean, isSorted: boolean): string {
