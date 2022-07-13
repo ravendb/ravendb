@@ -9,6 +9,7 @@ using FastTests;
 using FastTests.Graph;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server;
@@ -142,34 +143,34 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public async Task BulkInsertFailoverTest()
+        public async Task Bulk_Insert_Failover()
         {
             (var nodes, var leader) = await CreateRaftCluster(2, shouldRunInMemory: false);
 
-            using var store2 = GetDocumentStore(new Options
+            using var store = GetDocumentStore(new Options
             {
                 RunInMemory = false,
                 Server = leader, 
                 ReplicationFactor = 2,
             });
 
-            await using (var bulk = store2.BulkInsert())
+            await using (var bulk = store.BulkInsert())
             {
                 await bulk.StoreAsync(new TestObj(), $"testObjs/0");
             }
 
-            var storeNodes = store2.GetRequestExecutor(store2.Database).Topology.Nodes;
+            var storeNodes = store.GetRequestExecutor(store.Database).Topology.Nodes;
             var responsibleNodeUrl = storeNodes[0].Url;
             var responsibleNode = nodes.Single(n => n.ServerStore.GetNodeHttpServerUrl() == responsibleNodeUrl);
 
             await DisposeServerAndWaitForFinishOfDisposalAsync(responsibleNode);
 
             // Check topology didn't changed
-            var responsibleNodeUrlAfterDispose = store2.GetRequestExecutor(store2.Database).Topology.Nodes[0].Url;
+            var responsibleNodeUrlAfterDispose = store.GetRequestExecutor(store.Database).Topology.Nodes[0].Url;
             Assert.Equal(responsibleNodeUrl, responsibleNodeUrlAfterDispose);
 
             // If passes - failover succeeded
-            await using (var bulk = store2.BulkInsert())
+            await using (var bulk = store.BulkInsert())
             {
                 await bulk.StoreAsync(new TestObj(), $"testObjs/1");
             }
@@ -249,7 +250,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public async Task Should_Not_Throw_Node_Unavailable()
+        public async Task Should_Not_Throw_NodeUnavailable()
         {
             using var server = GetNewServer(new ServerCreationOptions { RunInMemory = false, });
             using var store = GetDocumentStore(new Options { RunInMemory = false, Server = server });
@@ -270,6 +271,62 @@ namespace SlowTests.Issues
 
                 await deleteOperation.WaitForCompletionAsync().ConfigureAwait(false);
             });
+
+            using var newServer = GetNewServer(new ServerCreationOptions
+            {
+                DeletePrevious = false,
+                RunInMemory = false,
+                DataDirectory = result.DataDirectory,
+                CustomSettings = new Dictionary<string, string> { [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = result.Url }
+            });
+
+            Operation deleteOperation = await store
+                .Operations
+                .SendAsync(new DeleteByQueryOperation("from Users"))
+                .ConfigureAwait(false);
+
+            await deleteOperation.WaitForCompletionAsync().ConfigureAwait(false);
+        }
+
+        [Fact]
+        public async Task Should_Throw_AllTopologyNodesDownException()
+        {
+            (var nodes, var leader) = await CreateRaftCluster(2, shouldRunInMemory: false);
+
+            using var store = GetDocumentStore(new Options
+            {
+                RunInMemory = false,
+                Server = leader,
+                ReplicationFactor = 2,
+            });
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(new User { Name = "Omer" });
+            }
+
+            var responsibleNodeUrl = store.GetRequestExecutor(store.Database).Topology.Nodes[0].Url;
+            var responsibleNode = nodes.Single(n => n.ServerStore.GetNodeHttpServerUrl() == responsibleNodeUrl);
+            var otherNode = nodes.Single(n => n.ServerStore.GetNodeHttpServerUrl() != responsibleNodeUrl);
+            var result = await DisposeServerAndWaitForFinishOfDisposalAsync(responsibleNode);
+            await DisposeServerAndWaitForFinishOfDisposalAsync(otherNode);
+
+            Exception exception = null;
+            try
+            {
+                Operation deleteOperation1 = await store
+                    .Operations
+                    .SendAsync(new DeleteByQueryOperation("from Users"))
+                    .ConfigureAwait(false);
+
+                await deleteOperation1.WaitForCompletionAsync().ConfigureAwait(false);
+            }
+            catch (Exception e)
+            {
+                exception = e;
+            }
+            Assert.NotNull(exception);
+            Assert.True(exception is AllTopologyNodesDownException);
 
             using var newServer = GetNewServer(new ServerCreationOptions
             {
