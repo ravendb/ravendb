@@ -142,11 +142,14 @@
                      data-bind="aceEditor: { code: documentText, fontSize:'16px', lang: 'ace/mode/raven_document', readOnly: inReadOnlyMode() || inDiffMode() || isReadOnlyAccess() },
                                 disable: isBusy, validationOptions: { errorsAsTitle: false }, validationElement: documentText, visible: !isDeleteRevision()"></pre>
                 <div class="absolute-fill" data-bind="visible: isDeleteRevision()">
-                    <div class="absolute-center padding bg-info text-center">
+                    <div class="absolute-center padding padding-lg bg-info text-center">
                         <i class="icon-trash icon-xl"></i>
-                        This document was removed on <span data-bind="text: metadata().lastModifiedFullDate"></span>.
-                        <br />
-                        Go to <a href="#" class="text-revisions" data-bind="click: _.partial(connectedDocuments.activateRevisions, true)">REVISIONS</a> to see entire document history.
+                        <div>This document was removed on <strong data-bind="text: metadata().lastModifiedFullDate"></strong>
+                        </div>
+                        <div>@metadata flags: <strong data-bind="text: metadata().flags"></strong>
+                        </div>
+                        <div class="margin-top-lg">Go to <a href="#" class="text-revisions" data-bind="click: _.partial(connectedDocuments.activateRevisions, true)">REVISIONS</a> to see entire document history
+                        </div>
                     </div>
                 </div>
             </div>

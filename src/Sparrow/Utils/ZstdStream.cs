@@ -161,6 +161,10 @@ namespace Sparrow.Utils
             {
                 var (outputBytes, inputBytes, _) = CompressStep(buffer, ZstdLib.ZSTD_EndDirective.ZSTD_e_continue);
                 buffer = buffer.Slice(inputBytes);
+                
+                if (outputBytes == 0)
+                    continue;
+                
                 _inner.Write(_tempBuffer, 0, outputBytes);
             }
         }
@@ -184,6 +188,10 @@ namespace Sparrow.Utils
             {
                 var (outputBytes, inputBytes, _) = CompressStep(buffer.Span, ZstdLib.ZSTD_EndDirective.ZSTD_e_continue);
                 buffer = buffer.Slice(inputBytes);
+                
+                if (outputBytes == 0)
+                    continue;
+
                 await _inner.WriteAsync(_tempBuffer, 0, outputBytes, cancellationToken).ConfigureAwait(false);
             }
         }
