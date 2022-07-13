@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
@@ -66,6 +67,8 @@ namespace Raven.Client.Http
             var state = _state;
             var stateFailures = state.Failures;
             var serverNodes = state.Nodes;
+
+            Debug.Assert(serverNodes.Count == stateFailures.Length, $"Expected equals {serverNodes.Count}, but got {stateFailures.Length}");
             
             if (serverNodes.Count == 1 && serverNodes[0].ClusterTag == nodeTag) // If this is a cluster with 1 node return it without checking it's failure.
                 return (0, serverNodes[0]);
@@ -74,8 +77,7 @@ namespace Raven.Client.Http
             {
                 if (serverNodes[i].ClusterTag == nodeTag)
                 {
-                    if (i>= stateFailures.Length || // if the node doesn't have an element in stateFailure array, it's considered to have 0 failures
-                                    stateFailures[i] == 0)
+                    if (stateFailures[i] == 0)
                         return (i, serverNodes[i]);
 
                     throw new RequestedNodeUnavailableException($"Requested node {nodeTag} currently unavailable, please try again later.");
