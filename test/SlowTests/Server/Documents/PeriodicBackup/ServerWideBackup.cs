@@ -385,6 +385,33 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         }
 
         [Fact, Trait("Category", "Smuggler")]
+        public async Task DeleteServerWideBackup_WhenDoesntExit_ShouldBeHandledProperly()
+        {
+            var server = GetNewServer();
+            using var store = GetDocumentStore(new Options{Server = server});
+
+            const string nonExistentTaskName = "NonExistentTask";
+            await Assert.ThrowsAnyAsync<RavenException>(async () =>
+                await store.Maintenance.Server.SendAsync(new DeleteServerWideTaskOperation(nonExistentTaskName, OngoingTaskType.Backup)));
+            
+            const string existentTaskName = "ExistentTaskName";
+            var putConfiguration = new ServerWideBackupConfiguration
+            {
+                Name = existentTaskName,
+                Disabled = true,
+                FullBackupFrequency = "0 2 * * 0",
+                IncrementalBackupFrequency = "0 2 * * 1",
+            };
+            await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(putConfiguration));
+            
+            await Assert.ThrowsAnyAsync<RavenException>(async () =>
+                await store.Maintenance.Server.SendAsync(new DeleteServerWideTaskOperation(nonExistentTaskName, OngoingTaskType.Backup)));
+            
+            //Just a raft command to check the cluster state machine is not stuck
+            await store.Maintenance.Server.SendAsync(new DeleteServerWideTaskOperation(existentTaskName, OngoingTaskType.Backup));
+        }
+        
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanDeleteServerWideBackup()
         {
             using (var store = GetDocumentStore())
