@@ -7,7 +7,7 @@ import generalUtils = require("common/generalUtils");
 
 class multiNodeTagsColumn implements virtualColumn {
 
-    constructor(gridController: virtualGridController<taskItem>,
+    constructor(gridController: virtualGridController<any>,
                 public width: string,
                 public opts: textColumnOpts<taskItem> = {}) {
     }
@@ -40,7 +40,7 @@ class multiNodeTagsColumn implements virtualColumn {
     private valueProvider(item: taskItem) {
         let result = "";
         
-        if (!!item.nodeTags()) {
+        if (item.nodeTags()) {
             for (let i = 0; i < item.nodeTags().length; i++) {
                 const nodeTag = item.nodeTags()[i];
                 
