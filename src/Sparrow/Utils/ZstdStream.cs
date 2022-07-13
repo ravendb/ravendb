@@ -139,7 +139,7 @@ namespace Sparrow.Utils
 
         public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
         {
-            WaitOnSemaphoreOrThrowIfDisposed();
+            await WaitOnSemaphoreOrThrowIfDisposedAsync().ConfigureAwait(false);
 
             try
             {
@@ -201,7 +201,7 @@ namespace Sparrow.Utils
 
         public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
         {
-            WaitOnSemaphoreOrThrowIfDisposed();
+            await WaitOnSemaphoreOrThrowIfDisposedAsync().ConfigureAwait(false);
 
             try
             {
@@ -247,7 +247,7 @@ namespace Sparrow.Utils
 
         public override async Task FlushAsync(CancellationToken cancellationToken)
         {
-            WaitOnSemaphoreOrThrowIfDisposed();
+            await WaitOnSemaphoreOrThrowIfDisposedAsync().ConfigureAwait(false);
 
             try
             {
@@ -269,14 +269,28 @@ namespace Sparrow.Utils
 
         private void WaitOnSemaphoreOrThrowIfDisposed()
         {
-            _semaphoreSlim.Wait();
-
             if (_disposeOnce.Disposed)
                 throw new ObjectDisposedException("Object was already disposed!");
+
+            _semaphoreSlim.Wait();
+        }
+
+        private async Task WaitOnSemaphoreOrThrowIfDisposedAsync()
+        {
+            if (_disposeOnce.Disposed)
+                throw new ObjectDisposedException("Object was already disposed!");
+
+            await _semaphoreSlim.WaitAsync().ConfigureAwait(false);
         }
 
         private void DisposeInternal()
         {
+            if (_semaphoreSlim.CurrentCount <= 0)
+            {
+                // ensure we are done reading/writing
+                _semaphoreSlim.Release();
+            }
+
             _semaphoreSlim.Wait();
 
             if (_compressContext != null)
@@ -311,7 +325,6 @@ namespace Sparrow.Utils
                 _compressContext?.Dispose();
                 _compressContext = null;
 
-                _semaphoreSlim.Release();
                 _semaphoreSlim.Dispose();
             }
         }
