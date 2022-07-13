@@ -315,13 +315,13 @@ namespace Raven.Server.Dashboard
             return new DatabaseOngoingTasksInfoItem()
             {
                 Database = database.Name,
-                ExternalReplicationCount = extRepCountOnNode,
-                ReplicationHubCount = replicationHubCountOnNode,
-                ReplicationSinkCount = replicationSinkCountOnNode,
+                ReplicationCount = extRepCountOnNode,
+                PullReplicationAsHub = replicationHubCountOnNode,
+                PullReplicationAsSink = replicationSinkCountOnNode,
                 RavenEtlCount = ravenEtlCountOnNode,
                 SqlEtlCount = sqlEtlCountOnNode,
                 OlapEtlCount = olapEtlCountOnNode,
-                PeriodicBackupCount = periodicBackupCountOnNode,
+                BackupCount = periodicBackupCountOnNode,
                 SubscriptionCount = subscriptionCountOnNode
             };
         }
