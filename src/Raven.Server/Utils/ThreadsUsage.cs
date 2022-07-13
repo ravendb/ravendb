@@ -33,13 +33,13 @@ namespace Raven.Server.Utils
             }
         }
 
-        public ThreadsInfo Calculate(HashSet<int> threadIds = null)
+        public ThreadsInfo Calculate(int? take = null, HashSet<int> threadIds = null)
         {
             var threadAllocations = NativeMemory.AllThreadStats
                         .GroupBy(x => x.UnmanagedThreadId)
                         .ToDictionary(g => g.Key, x => x.First());
 
-            var threadsInfo = new ThreadsInfo();
+            var threadsInfo = new ThreadsInfo(take);
 
             using (var process = Process.GetCurrentProcess())
             {
@@ -131,7 +131,6 @@ namespace Raven.Server.Utils
 
                 _threadTimesInfo = threadTimesInfo;
                 threadsInfo.CpuUsage = Math.Min(totalCpuUsage, 100);
-
                 return threadsInfo;
             }
         }

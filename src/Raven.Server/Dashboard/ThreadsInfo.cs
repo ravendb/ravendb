@@ -9,6 +9,8 @@ namespace Raven.Server.Dashboard
 {
     public class ThreadsInfo : IDynamicJson
     {
+        private readonly int? _take;
+
         public DateTime Date => SystemTime.UtcNow;
 
         public SortedSet<ThreadInfo> List { get; }
@@ -19,8 +21,9 @@ namespace Raven.Server.Dashboard
 
         public long ThreadsCount => List.Count;
 
-        public ThreadsInfo()
+        public ThreadsInfo(int? take)
         {
+            _take = take;
             List = new SortedSet<ThreadInfo>(new ThreadsInfoComparer());
         }
 
@@ -49,7 +52,7 @@ namespace Raven.Server.Dashboard
                 [nameof(CpuUsage)] = CpuUsage,
                 [nameof(ActiveCores)] = ActiveCores,
                 [nameof(ThreadsCount)] = ThreadsCount,
-                [nameof(List)] = new DynamicJsonArray(List.Select(x => x.ToJson()))
+                [nameof(List)] = new DynamicJsonArray(List.Take(_take ?? int.MaxValue).Select(x => x.ToJson()))
             };
         }
     }
