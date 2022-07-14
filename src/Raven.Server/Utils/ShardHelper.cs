@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Client.Util;
@@ -17,6 +18,10 @@ namespace Raven.Server.Utils
     public static class ShardHelper
     {
         public const int NumberOfBuckets = 1024 * 1024;
+
+        private static readonly Random Random = new Random();
+
+        public static int GetRandomBucket() => Random.Next() % NumberOfBuckets;
 
         /// <summary>
         /// The bucket is a hash of the document id, lower case, reduced to
@@ -96,6 +101,18 @@ namespace Raven.Server.Utils
         }
 
         private static unsafe void AdjustAfterSeparator(byte expected, ref byte* ptr, ref int len)
+        {
+            for (int i = len - 1; i > 0; i--)
+            {
+                if (ptr[i] != expected)
+                    continue;
+                ptr += i + 1;
+                len -= i + 1;
+                break;
+            }
+        }
+
+        private static unsafe void AdjustAfterSeparator(char expected, ref char* ptr, ref int len)
         {
             for (int i = len - 1; i > 0; i--)
             {
@@ -323,5 +340,19 @@ namespace Raven.Server.Utils
                 lastShard = current.ShardNumber;
             }
         }
+
+        public static string GenerateStickyId(string id, int bucket, char identityPartsSeparator)
+        {
+            Debug.Assert(id[^1] == identityPartsSeparator, "id[^1] == identityPartsSeparator");
+
+            return $"{id}${bucket}{SuffixIdTerminator}";
+        }
+
+        public static unsafe void ExtractStickyId(ref char* buffer, ref int size)
+        {
+            AdjustAfterSeparator('$', ref buffer, ref size);
+        }
+
+        public const char SuffixIdTerminator = '*';
     }
 }

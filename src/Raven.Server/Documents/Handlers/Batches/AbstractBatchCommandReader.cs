@@ -212,6 +212,11 @@ public abstract class AbstractBatchCommandsReader<TBatchCommand, TOperationConte
         return commandData.Type == CommandType.PUT && string.IsNullOrEmpty(commandData.Id) == false && commandData.Id[^1] == '|';
     }
 
+    public static bool IsServerSideIdentityCommand(ref BatchRequestParser.CommandData commandData, char identityPartsSeparator)
+    {
+        return commandData.Type == CommandType.PUT && string.IsNullOrEmpty(commandData.Id) == false && commandData.Id[^1] == identityPartsSeparator;
+    }
+
     public async Task ParseMultipart(JsonOperationContext context, Stream stream, string contentType, char separator)
     {
         var boundary = MultipartRequestHelper.GetBoundary(

@@ -108,6 +108,14 @@ namespace Raven.Server.Documents.Sharding
             return ShardHelper.GetShardNumber(_record.Sharding.BucketRanges, bucket);
         }
 
+        public int GetShardNumber(TransactionOperationContext context, ReadOnlySpan<char> id)
+        {
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Pawel, DevelopmentHelper.Severity.Normal, "Optimize this");
+            var bucket = ShardHelper.GetBucket(context, id.ToString());
+
+            return ShardHelper.GetShardNumber(_record.Sharding.BucketRanges, bucket);
+        }
+
         public bool HasTopologyChanged(long etag)
         {
             // TODO fix this

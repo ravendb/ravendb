@@ -16,7 +16,7 @@ namespace Sparrow.Server
         public static class Backwards
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public static void WriteNumber(char* ptr, ulong value)
+            public static int WriteNumber(char* ptr, ulong value)
             {
                 int i = 0;
 
@@ -30,6 +30,8 @@ namespace Sparrow.Server
                     ptr[i--] = (char)('0' + v);
                 }
                 while (value != 0);
+
+                return -i;
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]

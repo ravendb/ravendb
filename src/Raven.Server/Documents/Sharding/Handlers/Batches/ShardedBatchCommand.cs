@@ -3,10 +3,10 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using Raven.Client.Documents.Commands.Batches;
-using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Handlers.Batches;
 using Raven.Server.Documents.Handlers.Batches.Commands;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Batches;
@@ -79,18 +79,28 @@ public class ShardedBatchCommand : IBatchCommand, IEnumerable<SingleShardedComma
                 continue;
             }
 
-            var shard = _databaseContext.GetShardNumber(_context, cmd.Id);
-            var commandStream = bufferedCommand.CommandStream;
-            var stream = cmd.Type == CommandType.AttachmentPUT ? AttachmentStreams[streamPosition++] : null;
+            int shardNumber;
+            if (bufferedCommand.IsServerSideIdentity)
+            {
+                var bucket = ShardHelper.GetRandomBucket(); // we do not care about bucket here, just need a random number with max value
+                cmd.Id = ShardHelper.GenerateDocumentId(cmd.Id, bucket, _databaseContext.IdentityPartsSeparator);
+                shardNumber = _databaseContext.GetShardNumber(_context, cmd.Id.AsSpan(0, cmd.Id.Length - 1));
+            }
+            else
+            {
+                shardNumber = _databaseContext.GetShardNumber(_context, cmd.Id);
+            }
 
-            if (bufferedCommand.IsIdentity)
+            var stream = cmd.Type == CommandType.AttachmentPUT ? AttachmentStreams[streamPosition++] : null;
+            var commandStream = bufferedCommand.CommandStream;
+            if (bufferedCommand.IsIdentity || bufferedCommand.IsServerSideIdentity)
             {
                 commandStream = bufferedCommand.ModifyIdentityStream(cmd.Id);
             }
 
             yield return new SingleShardedCommand
             {
-                ShardNumber = shard,
+                ShardNumber = shardNumber,
                 AttachmentStream = stream,
                 CommandStream = commandStream,
                 PositionInResponse = positionInResponse++
