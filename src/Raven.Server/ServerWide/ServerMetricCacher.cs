@@ -13,6 +13,8 @@ namespace Raven.Server.ServerWide
         private readonly SmapsReader _smapsReader;
         private readonly RavenServer _server;
 
+        public const int DefaultCpuRefreshRateInMs = 1000;
+
         public ServerMetricCacher(RavenServer server)
         {
             _server = server;
@@ -23,7 +25,7 @@ namespace Raven.Server.ServerWide
 
         public void Initialize()
         {
-            Register(MetricCacher.Keys.Server.CpuUsage, TimeSpan.FromSeconds(1), _server.CpuUsageCalculator.Calculate);
+            Register(MetricCacher.Keys.Server.CpuUsage, TimeSpan.FromMilliseconds(DefaultCpuRefreshRateInMs), _server.CpuUsageCalculator.Calculate);
             Register(MetricCacher.Keys.Server.MemoryInfo, TimeSpan.FromSeconds(1), CalculateMemoryInfo);
             Register(MetricCacher.Keys.Server.MemoryInfoExtended.RefreshRate15Seconds, TimeSpan.FromSeconds(15), CalculateMemoryInfoExtended);
             Register(MetricCacher.Keys.Server.MemoryInfoExtended.RefreshRate5Seconds, TimeSpan.FromSeconds(5), CalculateMemoryInfoExtended);

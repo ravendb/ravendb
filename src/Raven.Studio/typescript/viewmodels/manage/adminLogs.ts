@@ -10,8 +10,11 @@ import copyToClipboard = require("common/copyToClipboard");
 import generalUtils = require("common/generalUtils");
 import getAdminLogsConfigurationCommand = require("commands/maintenance/getAdminLogsConfigurationCommand");
 import saveAdminLogsConfigurationCommand = require("commands/maintenance/saveAdminLogsConfigurationCommand");
+import datePickerBindingHandler = require("common/bindingHelpers/datePickerBindingHandler");
 import adminLogsOnDiskConfig = require("models/database/debug/adminLogsOnDiskConfig");
 import moment = require("moment");
+import endpoints = require("endpoints");
+import appUrl = require("common/appUrl");
 
 class heightCalculator {
     
@@ -95,12 +98,30 @@ class adminLogs extends viewModelBase {
     private duringManualScrollEvent = false;
 
     validationGroup: KnockoutValidationGroup;
+    downloadLogsValidationGroup: KnockoutValidationGroup;
+    
     enableApply: KnockoutComputed<boolean>;
 
     isPauseLogs = ko.observable<boolean>(false);
     connectionJustOpened = ko.observable<boolean>(false);
     
     private static readonly studioMsgPart = "-, Information, Studio,";
+    
+    datePickerOptions = {
+        format: "YYYY-MM-DD HH:mm:ss.SSS",
+        sideBySide: true
+    };
+
+    useMinStartDate = ko.observable<boolean>(false);
+    startDate = ko.observable<moment.Moment>();
+
+    useMaxEndDate = ko.observable<boolean>(false);
+    endDate = ko.observable<moment.Moment>();
+
+    startDateToUse: KnockoutComputed<string>;
+    endDateToUse: KnockoutComputed<string>;
+
+    static utcTimeFormat = "YYYY-MM-DD HH:mm:ss.SSS";
     
     constructor() {
         super();
@@ -110,6 +131,8 @@ class adminLogs extends viewModelBase {
         
         this.initObservables();
         this.initValidation();
+
+        datePickerBindingHandler.install();
     }
     
     private initObservables() {
@@ -137,6 +160,26 @@ class adminLogs extends viewModelBase {
                 }
             }
         });
+
+        this.startDateToUse = ko.pureComputed(() => {
+            return this.useMinStartDate() ? null : this.startDate().utc().format(generalUtils.utcFullDateFormat);
+        });
+
+        this.endDateToUse = ko.pureComputed(() => {
+            return this.useMaxEndDate() ? null : this.endDate().utc().format(generalUtils.utcFullDateFormat);
+        });
+    }
+    
+    dateFormattedAsUtc(localDate: moment.Moment) {
+        if (localDate) {
+            const date = moment(localDate);
+            if (!date.isValid()) {
+                return "";
+            }
+            return date.utc().format(adminLogs.utcTimeFormat) + "Z (UTC)";
+        } else {
+            return "";
+        }
     }
     
     private initValidation() {
@@ -145,8 +188,62 @@ class adminLogs extends viewModelBase {
             min: 0
         });
 
+        this.startDate.extend({
+            required: {
+                onlyIf: () => !this.useMinStartDate()
+            },
+            validation: [
+                {
+                    validator: () => {
+                        if (this.useMinStartDate()) {
+                            return true;
+                        }
+                        return this.startDate().isValid();
+                    },
+                    message: "Please enter a valid date"
+                }
+            ]
+        });
+
+        this.endDate.extend({
+            required: {
+                onlyIf: () => !this.useMaxEndDate()
+            },
+            validation: [
+                {
+                    validator: () => {
+                        if (this.useMaxEndDate()) {
+                            return true;
+                        }
+                        return this.endDate().isValid();
+                    },
+                    message: "Please enter a valid date"
+                },
+                {
+                    validator: () => {
+                        if (this.useMaxEndDate() || this.useMinStartDate()) {
+                            return true;
+                        }
+
+                        if (!this.startDate() || !this.startDate().isValid()) {
+                            return true;
+                        }
+
+                        // at this point both start/end are defined and valid, we can compare
+                        return this.endDate().diff(this.startDate()) >= 0;
+                    },
+                    message: "End Date must be greater than Start Date"
+                }
+            ]
+        });
+
         this.validationGroup = ko.validatedObservable({
             maxEntries: this.editedConfiguration().maxEntries
+        });
+        
+        this.downloadLogsValidationGroup = ko.validatedObservable({
+            startDate: this.startDate,
+            endDate: this.endDate
         });
     }
     
@@ -450,6 +547,32 @@ class adminLogs extends viewModelBase {
 
     onOpenSettings() {
         this.loadLogsConfig();
+    }
+    
+    onOpenDownload() {
+        this.startDate(null);
+        this.endDate(null);
+        
+        this.useMinStartDate(false);
+        this.useMaxEndDate(false);
+        
+        this.downloadLogsValidationGroup.errors.showAllMessages(false);
+    }
+
+    onDownloadLogs() {
+        if (!this.isValid(this.downloadLogsValidationGroup)) {
+            return;
+        }
+
+        const $form = $("#downloadLogsForm");
+        const url = endpoints.global.adminLogs.adminLogsDownload;
+        
+        $form.attr("action", appUrl.forServer() + url);
+
+        $("[name=from]", $form).val(this.startDateToUse());
+        $("[name=to]", $form).val(this.endDateToUse());
+
+        $form.submit();
     }
     
     updateMouseStatus(pressed: boolean) {

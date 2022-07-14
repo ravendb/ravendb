@@ -25,7 +25,17 @@ namespace Sparrow.Utils
 
         public static ThreadStats CurrentThreadStats => ThreadAllocations.Value;
 
-        public static IEnumerable<ThreadStats> AllThreadStats => ThreadAllocations.Values.Where(x => x != null);
+        public static IEnumerable<ThreadStats> AllThreadStats
+        {
+            get
+            {
+                foreach (var threadStats in ThreadAllocations.Values)
+                {
+                    if (threadStats != null)
+                        yield return threadStats;
+                }
+            }
+        }
 
         internal static long _totalAllocatedMemory;
 

@@ -1,5 +1,4 @@
 ﻿using System;
-
 using Raven.Client.Documents.Smuggler;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Patch;
@@ -49,13 +48,7 @@ namespace Raven.Server.Smuggler.Documents
                 if (!(translatedResult is BlittableJsonReaderObject bjro))
                     return null;
 
-                var cloned = document.Clone(ctx);
-                using (cloned.Data)
-                {
-                    cloned.Data = bjro;
-                }
-
-                return cloned;
+                return document.CloneWith(ctx, bjro);
             }
         }
 

@@ -434,7 +434,15 @@ namespace Raven.Server.Documents.Indexes.Debugging
                     return context.ReadObject(new DynamicJsonValue(), "debug-reduce-result");
 
                 if (result.Count > 1)
-                    throw new InvalidOperationException("Cannot have multiple reduce results for a single reduce key");
+                {
+                    var dvj = new DynamicJsonValue
+                    {
+                        ["MergedResults"] = true,
+                        ["TotalNumberOfResults"] = result.Count,
+                        ["Results"] = new DynamicJsonArray(result.Select(x=>x.Result.Data))
+                    };
+                    return context.ReadObject(dvj, "merged-map-reduce");
+                }
 
                 return result[0].Result.Data;
             }
