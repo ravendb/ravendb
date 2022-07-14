@@ -617,7 +617,7 @@ namespace Raven.Server.Documents.Handlers
                         {
                             count++;
                             var changeVector = $"{ChangeVectorParser.RaftTag}:{count}-{Database.DatabaseGroupId}";
-                            if (options.DisableAtomicDocumentWrites == false)
+                            if (options.DisableAtomicDocumentWrites == false && Database.ClusterTransactionId != null)
                             {
                                 changeVector += $",{ChangeVectorParser.TrxnTag}:{command.Index}-{Database.ClusterTransactionId}";
                             }
