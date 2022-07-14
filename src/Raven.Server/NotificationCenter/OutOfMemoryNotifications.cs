@@ -6,6 +6,7 @@ using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow;
 using Sparrow.LowMemory;
+using Sparrow.Utils;
 using Voron;
 
 namespace Raven.Server.NotificationCenter
@@ -75,14 +76,7 @@ namespace Raven.Server.NotificationCenter
 
             return new MessageDetails
             {
-                Message = $"Managed memory: {new Size(AbstractLowMemoryMonitor.GetManagedMemoryInBytes(), SizeUnit.Bytes)}, " +
-                          $"Unmanaged allocations: {new Size(AbstractLowMemoryMonitor.GetUnmanagedAllocationsInBytes(), SizeUnit.Bytes)}, " +
-                          $"Shared clean: {memoryInfo.SharedCleanMemory}, " +
-                          $"Working set: {memoryInfo.WorkingSet}, " +
-                          $"Available memory: {memoryInfo.AvailableMemory}, " +
-                          $"Calculated Available memory: {memoryInfo.AvailableMemoryForProcessing}, " +
-                          $"Total Scratch Dirty memory: {memoryInfo.TotalScratchDirtyMemory}, " +
-                          $"Total memory: {memoryInfo.TotalPhysicalMemory} {Environment.NewLine}" +
+                Message = $"{MemoryUtils.GetExtendedMemoryInfo(memoryInfo)} {Environment.NewLine}" +
                           $"Error: {exception}"
             };
         }

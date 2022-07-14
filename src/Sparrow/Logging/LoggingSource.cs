@@ -353,6 +353,7 @@ namespace Sparrow.Logging
         {
             public const string LogExtension = ".log"; 
             public const string AdditionalCompressExtension = ".gz"; 
+            public const string FullCompressExtension = LogExtension + AdditionalCompressExtension; 
             private const string DateFormat = "yyyy-MM-dd";
             private static readonly int DateFormatLength = DateFormat.Length;
 

@@ -43,6 +43,8 @@ namespace Sparrow.LowMemory
         private int _lowMemEventDetailsIndex;
         private int _clearInactiveHandlersCounter;
         private bool _wasLowMemory;
+        private DateTime _lastLoggedLowMemory = DateTime.MinValue;
+        private readonly TimeSpan _logLowMemoryInterval = TimeSpan.FromSeconds(5);
 
         private void RunLowMemoryHandlers(bool isLowMemory, MemoryInfoResult memoryInfo, LowMemorySeverity lowMemorySeverity = LowMemorySeverity.ExtremelyLow)
         {
@@ -50,14 +52,12 @@ namespace Sparrow.LowMemory
             {
                 try
                 {
-                    if (isLowMemory && _logger.IsOperationsEnabled)
+                    var now = DateTime.UtcNow;
+                    if (isLowMemory && _logger.IsOperationsEnabled && now - _lastLoggedLowMemory > _logLowMemoryInterval)
                     {
+                        _lastLoggedLowMemory = now;
                         _logger.Operations($"Running {_lowMemoryHandlers.Count} low memory handlers with severity: {lowMemorySeverity}. " +
-                                           $"Commit charge: {memoryInfo.CurrentCommitCharge} / {memoryInfo.TotalCommittableMemory}, " +
-                                           $"Memory: {memoryInfo.TotalPhysicalMemory - memoryInfo.AvailableMemory} / {memoryInfo.TotalPhysicalMemory}, " +
-                                           $"Managed memory: {new Size(AbstractLowMemoryMonitor.GetManagedMemoryInBytes(), SizeUnit.Bytes)}, " +
-                                           $"Unmanaged allocations: {new Size(AbstractLowMemoryMonitor.GetUnmanagedAllocationsInBytes(), SizeUnit.Bytes)}, " +
-                                           $"Dirty memory: {memoryInfo.TotalScratchDirtyMemory}");
+                                           $"{MemoryUtils.GetExtendedMemoryInfo(memoryInfo)}");
                     }
                 }
                 catch
