@@ -1,5 +1,4 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Server.Documents.Replication.ReplicationItems;
@@ -8,7 +7,6 @@ using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
-using Sparrow.Server;
 
 namespace Raven.Server.Documents.Replication.Incoming
 {

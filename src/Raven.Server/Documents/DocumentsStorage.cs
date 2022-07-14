@@ -466,7 +466,7 @@ namespace Raven.Server.Documents
             if (context.SkipChangeVectorValidation)
                 return;
 
-            if (globalChangeVector != changeVector &&
+            if (globalChangeVector.IsEqual(changeVector) == false &&
                 globalChangeVector.IsNullOrEmpty == false &&
                 // globalChangeVector.ToChangeVector().OrderByDescending(x => x).SequenceEqual(changeVector.ToChangeVector().OrderByDescending(x => x)) == false &&
                 ChangeVectorUtils.GetConflictStatus(changeVector, globalChangeVector) != ConflictStatus.Update)
