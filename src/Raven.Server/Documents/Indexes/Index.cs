@@ -18,6 +18,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Indexes;
+using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config.Categories;
@@ -2089,6 +2090,11 @@ namespace Raven.Server.Documents.Indexes
                     Task.Delay((int)timeLeft, _indexingProcessCancellationTokenSource.Token).Wait();
             }
             catch (OperationCanceledException)
+            {
+                // index was deleted or database was shutdown
+                return;
+            }
+            catch (AggregateException ae) when (ae.ExtractSingleInnerException() is OperationCanceledException)
             {
                 // index was deleted or database was shutdown
                 return;
