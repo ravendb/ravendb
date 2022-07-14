@@ -510,7 +510,7 @@ namespace Raven.Client.Documents.Linq
             }
             if (node.NodeType == ExpressionType.Parameter)
                 return true;
-            if (node.NodeType == ExpressionType.Call && ((MethodCallExpression)node).Method.Name == "get_Item" && ((MethodCallExpression)node).Object.NodeType == ExpressionType.Parameter)
+            if (node.NodeType == ExpressionType.Call && node is MethodCallExpression callExpressionNode && callExpressionNode.Method.Name == "get_Item" && callExpressionNode.Object?.NodeType == ExpressionType.Parameter)
                 return true;
             if (node.NodeType != ExpressionType.MemberAccess)
                 return false;
