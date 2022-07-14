@@ -8,7 +8,9 @@ using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Conventions;
+using Raven.Server.Dashboard;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Web;
@@ -46,7 +48,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     await Task.Delay((int)wait);
                 }
 
-                var threadStats = threadsUsage.Calculate(threadIdsAsString.Count == 0 ? null : threadIdsAsString.Select(int.Parse).ToHashSet());
+                var threadStats = threadsUsage.Calculate(threadIds: threadIdsAsString.Count == 0 ? null : threadIdsAsString.Select(int.Parse).ToHashSet());
                 result["Threads"] = JArray.FromObject(threadStats.List);
 
                 using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -62,23 +64,47 @@ namespace Raven.Server.Documents.Handlers.Debugging
         [RavenAction("/admin/debug/threads/runaway", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
         public async Task RunawayThreads()
         {
+            var samplesCount = GetIntValueQueryString("samplesCount", required: false) ?? 1;
+            var interval = GetIntValueQueryString("intervalInMs", required: false) ?? ServerMetricCacher.DefaultCpuRefreshRateInMs;
+            var maxTopThreads = GetIntValueQueryString("maxTopThreads", required: false);
+
+            if (samplesCount <= 0)
+                throw new ArgumentException("Must be positive", "samplesCount");
+
+            if (interval <= 0)
+                throw new ArgumentException("Must be positive", "interval");
+
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     try
                     {
-                        var threadsUsage = new ThreadsUsage();
+                        var threadsInfos = await GetThreadsInfos();
 
-                        // need to wait to get a correct measure of the cpu
-                        await Task.Delay(100);
+                        if (samplesCount == 1)
+                        {
+                            context.Write(writer,
+                                new DynamicJsonValue
+                                {
+                                    ["Runaway Threads"] = threadsInfos.First().ToJson()
+                                });
+                            return;
+                        }
 
-                        var result = threadsUsage.Calculate();
-                        context.Write(writer,
-                            new DynamicJsonValue
-                            {
-                                ["Runaway Threads"] = result.ToJson()
-                            });
+                        writer.WriteStartObject();
+                        writer.WritePropertyName("Results");
+
+                        var dja = new DynamicJsonArray();
+
+                        foreach (var threadInfo in threadsInfos)
+                        {
+                            dja.Add(threadInfo.ToJson());
+                        }
+
+                        context.Write(writer, dja);
+                        writer.WriteEndObject();
+                        
                     }
                     catch (Exception e)
                     {
@@ -89,6 +115,21 @@ namespace Raven.Server.Documents.Handlers.Debugging
                             });
                     }
                 }
+            }
+
+            async Task<List<ThreadsInfo>> GetThreadsInfos()
+            {
+                var results = new List<ThreadsInfo>();
+
+                var threadsUsage = new ThreadsUsage();
+
+                for (var i = 0; i < samplesCount; i++)
+                {
+                    await Task.Delay(interval, ServerStore.ServerShutdown);
+                    results.Add(threadsUsage.Calculate(maxTopThreads));
+                }
+
+                return results;
             }
         }
 

@@ -45,11 +45,8 @@ class datePickerBindingHandler {
     update(element: HTMLElement, valueAccessor: any, allBindings: KnockoutAllBindingsAccessor, viewModel: any, bindingContext: any) {
         
         const date: moment.Moment = ko.unwrap(valueAccessor());
-        
-        if (date) {
-            $(element).data("DateTimePicker").date(date);
+        $(element).data("DateTimePicker").date(date || null);
         }
     }
-}
 
 export = datePickerBindingHandler;

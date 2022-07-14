@@ -1010,7 +1010,8 @@ namespace FastTests.Server.Documents.Indexing.Auto
                             }
                         }
                     };
-                    await Server.ServerStore.Observer.CleanUpUnusedAutoIndexes(state);
+
+                    await CleanupUnusedAutoIndexes(state);
                 }
 
                 WaitForIndexDeletion(database, index0.Name);
@@ -1076,7 +1077,9 @@ namespace FastTests.Server.Documents.Indexing.Auto
                             }
                         }
                     };
-                    await Server.ServerStore.Observer.CleanUpUnusedAutoIndexes(state); // nothing should happen because difference between querying time between those two indexes is less than TimeToWaitBeforeMarkingAutoIndexAsIdle
+
+                    // nothing should happen because difference between querying time between those two indexes is less than TimeToWaitBeforeMarkingAutoIndexAsIdle
+                    await CleanupUnusedAutoIndexes(state);
                 }
 
                 WaitForIndex(database, index1.Name, index => index.State == IndexState.Normal);
@@ -1136,7 +1139,9 @@ namespace FastTests.Server.Documents.Indexing.Auto
                             }
                         }
                     };
-                    await Server.ServerStore.Observer.CleanUpUnusedAutoIndexes(state); // this will mark index2 as idle, because the difference between two indexes and index last querying time is more than TimeToWaitBeforeMarkingAutoIndexAsIdle
+
+                    // this will mark index2 as idle, because the difference between two indexes and index last querying time is more than TimeToWaitBeforeMarkingAutoIndexAsIdle
+                    await CleanupUnusedAutoIndexes(state);
                 }
 
                 WaitForIndex(database, index1.Name, index => index.State == IndexState.Normal);
@@ -1196,7 +1201,9 @@ namespace FastTests.Server.Documents.Indexing.Auto
                             }
                         }
                     };
-                    await Server.ServerStore.Observer.CleanUpUnusedAutoIndexes(state); // should not remove anything, age will be greater than 2x TimeToWaitBeforeMarkingAutoIndexAsIdle but less than TimeToWaitBeforeDeletingAutoIndexMarkedAsIdle
+
+                    // should not remove anything, age will be greater than 2x TimeToWaitBeforeMarkingAutoIndexAsIdle but less than TimeToWaitBeforeDeletingAutoIndexMarkedAsIdle
+                    await CleanupUnusedAutoIndexes(state);
                 }
 
                 WaitForIndex(database, index1.Name, index => index.State == IndexState.Idle);
@@ -1256,11 +1263,22 @@ namespace FastTests.Server.Documents.Indexing.Auto
                             }
                         }
                     };
-                    await Server.ServerStore.Observer.CleanUpUnusedAutoIndexes(state); // this will delete indexes
+
+                    // this will delete indexes
+                    await CleanupUnusedAutoIndexes(state);
                 }
 
                 WaitForIndexDeletion(database, index1.Name);
                 WaitForIndexDeletion(database, index2.Name);
+            }
+        }
+
+        private async Task CleanupUnusedAutoIndexes(ClusterObserver.DatabaseObservationState state)
+        {
+            var indexCleanupCommands = Server.ServerStore.Observer.GetUnusedAutoIndexes(state);
+            foreach (var (cmd, _) in indexCleanupCommands)
+            {
+                await Server.ServerStore.Engine.PutAsync(cmd);
             }
         }
 
