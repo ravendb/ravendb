@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Runtime.CompilerServices;
 using Sparrow.Server;
 using Voron.Data.Fixed;
@@ -172,8 +173,7 @@ namespace Voron.Data.BTrees
         [MethodImpl(MethodImplOptions.NoInlining)]
         public long DeleteFixedTreeFor(string key, byte valSize = 0)
         {
-            Slice keySlice;
-            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out keySlice))
+            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out Slice keySlice))
             {
                 return DeleteFixedTreeFor(keySlice, valSize);
             }
@@ -182,11 +182,27 @@ namespace Voron.Data.BTrees
         [MethodImpl(MethodImplOptions.NoInlining)]
         public FixedSizeTree FixedTreeFor(string key, byte valSize = 0)
         {
-            Slice keySlice;
-            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out keySlice))
+            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out Slice keySlice))
             {
                 return FixedTreeFor(keySlice, valSize);
             }
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public FixedSizeTree<TVal> FixedSizeTree<TVal>(Tree fieldsTree, Slice fieldName, byte valSize = 0)
+            where TVal : unmanaged, IBinaryNumber<TVal>, IMinMaxValue<TVal>
+        {
+            if (typeof(TVal) == typeof(long))
+            {
+                return (FixedSizeTree<TVal>)(object)fieldsTree.FixedTreeFor(fieldName, valSize);
+            }
+
+            if (typeof(TVal) == typeof(double))
+            {
+                return (FixedSizeTree<TVal>)(object)fieldsTree.FixedTreeForDouble(fieldName, valSize);
+            }
+
+            throw new NotSupportedException();
         }
     }
 }

@@ -3,7 +3,7 @@
     <Description>Raven.Server is the database server for RavenDB</Description>
     <Authors>Hibernating Rhinos</Authors>
     <TargetFramework>net6.0</TargetFramework>
-    <RuntimeFrameworkVersion>6.0.6</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>6.0.7</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>Raven.Server</AssemblyName>
     <OutputType>Exe</OutputType>
@@ -149,15 +149,15 @@
   </ItemGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
-    <PackageReference Include="AWSSDK.Glacier" Version="3.7.0.177" />
-    <PackageReference Include="AWSSDK.S3" Version="3.7.9.20" />
-    <PackageReference Include="Azure.Storage.Blobs" Version="12.12.0" />
+    <PackageReference Include="AWSSDK.Glacier" Version="3.7.0.180" />
+    <PackageReference Include="AWSSDK.S3" Version="3.7.9.23" />
+    <PackageReference Include="Azure.Storage.Blobs" Version="12.13.0" />
     <PackageReference Include="CloudNative.CloudEvents.NewtonsoftJson" Version="2.3.1" />
     <PackageReference Include="CloudNative.CloudEvents" Version="2.3.1" />    
     <PackageReference Include="CloudNative.CloudEvents.Amqp" Version="2.3.1" />
     <PackageReference Include="CloudNative.CloudEvents.Kafka" Version="2.3.1" />
     <PackageReference Include="Confluent.Kafka" Version="1.9.0" />
-    <PackageReference Include="CsvHelper" Version="27.2.1" />
+    <PackageReference Include="CsvHelper" Version="28.0.0" />
     <PackageReference Include="DasMulli.Win32.ServiceUtils.Signed" Version="1.1.0" />
     <PackageReference Include="JetBrains.Annotations" Version="2022.1.0">
       <PrivateAssets>All</PrivateAssets>
@@ -166,7 +166,7 @@
     <PackageReference Include="Google.Api.Gax.Rest" Version="4.0.0" />
     <PackageReference Include="Google.Cloud.Storage.V1" Version="4.0.0" />
     <PackageReference Include="Lextm.SharpSnmpLib.Engine" Version="11.3.102" />
-    <PackageReference Include="librdkafka.redist" Version="1.9.0.1" />
+    <PackageReference Include="librdkafka.redist" Version="1.9.1" />
     <PackageReference Include="Lucene.Net" Version="3.0.60002" />
     <PackageReference Include="Lucene.Net.Contrib.Spatial.NTS" Version="3.0.60002" />
     <PackageReference Include="McMaster.Extensions.CommandLineUtils" Version="4.0.1" />
@@ -180,7 +180,7 @@
     <PackageReference Include="MySql.Data" Version="8.0.29" />
     <PackageReference Include="NCrontab.Advanced" Version="1.3.28" />
     <PackageReference Include="NEST" Version="7.17.4" />
-    <PackageReference Include="Npgsql" Version="5.0.13" />
+    <PackageReference Include="Npgsql" Version="5.0.14" />
     <PackageReference Include="NuGet.Commands" Version="6.2.1" Alias="NGC" />
     <PackageReference Include="NuGet.ProjectModel" Version="6.2.1" />
     <PackageReference Include="NuGet.Resolver" Version="6.2.1" />

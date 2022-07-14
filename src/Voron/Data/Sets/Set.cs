@@ -413,6 +413,8 @@ namespace Voron.Data.Sets
             var newPage = new SetLeafPage(page);
 
             curPage.SplitHalfInto(ref newPage);
+            Debug.Assert(curPage.Header->SetFlags == ExtendedPageType.SetLeaf);
+            Debug.Assert(newPage.Header->SetFlags == ExtendedPageType.SetLeaf);
 
             var (start, _) = newPage.GetRange();
             return (start, page.PageNumber);

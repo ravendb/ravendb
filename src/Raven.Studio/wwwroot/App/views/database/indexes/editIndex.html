@@ -270,9 +270,9 @@
                                         <span data-bind="text: effectiveSearchEngineText"></span> <i class="caret"></i>
                                     </button>
                                     <ul class="dropdown-menu">
-                                        <li><a href="#" data-bind="click: searchEngine.bind(searchEngine, null)"><span data-bind="text: inheritSearchEngineText"></span></a></li>
-                                        <li><a href="#" data-bind="click: searchEngine.bind(searchEngine, 'Lucene')"><span data-bind="text: $root.constructor.formatEngine('Lucene')"></span></a></li>
-                                        <li><a href="#" data-bind="click: searchEngine.bind(searchEngine, 'Corax')"><span data-bind="text: $root.constructor.formatEngine('Corax')"></span></a></li>
+                                        <li><a href="#" data-bind="click: searchEngineConfiguration.bind(searchEngineConfiguration, null)"><span data-bind="text: inheritSearchEngineText"></span></a></li>
+                                        <li><a href="#" data-bind="click: searchEngineConfiguration.bind(searchEngineConfiguration, 'Lucene')"><span data-bind="text: $root.constructor.formatEngine('Lucene')"></span></a></li>
+                                        <li><a href="#" data-bind="click: searchEngineConfiguration.bind(searchEngineConfiguration, 'Corax')"><span data-bind="text: $root.constructor.formatEngine('Corax')"></span></a></li>
                                     </ul>
                                 </div>
                             </div>
@@ -574,13 +574,14 @@
                 <div class="properties-container">
                     <div class="properties-item">
                         <span class="properties-label">Store
-                            <a class="store-field-info pull-right" data-toggle="tooltip" data-bind="visible: showStoreInfo">
+                            <a class="store-field-info-lucene pull-right" data-toggle="tooltip" data-bind="visible: isStoreField() && isLucene()">
                                 <i class="icon-info text-warning"></i>
                             </a>
                         </span>
-                        <div class="btn-group properties-value" data-bind="validationElement: indexOrStore">
+                        <div class="btn-group properties-value has-disable-reason"
+                             data-bind="validationElement: indexOrStore, attr: { 'data-original-title': isCorax() ? 'Fields are always stored when search engine is Corax' : '' }">
                             <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false"
-                                    data-bind="css: { 'border-warning': showStoreInfo }">
+                                    data-bind="css: { 'border-warning': isStoreField() && isLucene() }, disable: isCorax()">
                                 <span data-bind="text: effectiveStorage"></span> <span class="caret"></span>
                             </button>
                             <ul class="dropdown-menu">
@@ -815,7 +816,7 @@
                 <div class="row">
                     <div class="margin-right margin-top pull-right">
                         <div class="btn-group margin-top margin-top-sm">
-                            <button class="btn btn-success close-panel" data-bind="click: loadIndexDefinitionFromHistory" title="Load the full definition of this index revision">
+                            <button class="btn btn-success close-panel" data-bind="click: loadFullIndexDefinitionFromHistory" title="Load the full definition of this index revision">
                                 <i class="icon-load-index"></i>
                                 <span>Load Index</span>
                             </button>
@@ -825,7 +826,7 @@
                             </button>
                             <ul class="dropdown-menu dropdown-menu-right">
                                 <li title="Load the Map & Reduce methods only" class="close-panel margin-top margin-top-xs margin-bottom margin-bottom-xs">
-                                    <a href="#" data-bind="click: $root.loadMapReduceFromHistory">
+                                    <a href="#" data-bind="click: $root.loadOnlyMapAndReduceFromHistory">
                                         <i class="icon-load-map-reduce"></i><span>Load Map & Reduce Only</span>
                                     </a>
                                 </li>

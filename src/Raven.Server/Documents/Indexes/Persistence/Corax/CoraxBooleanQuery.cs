@@ -105,7 +105,10 @@ public readonly struct CoraxBooleanItem : IQueryMatch
                 (long l, long l2) => _indexSearcher.Between(_indexSearcher.ExistsQuery(Name), FieldId, l, l2, BetweenLeft, BetweenRight),
                 (double d, double d2) => _indexSearcher.Between(_indexSearcher.ExistsQuery(Name), FieldId, d, d2, BetweenLeft, BetweenRight),
                 (string s, string s2) => _indexSearcher.Between(_indexSearcher.ExistsQuery(Name), FieldId, s, s2, BetweenLeft, BetweenRight),
-                _ => throw new InvalidOperationException($"UnaryMatchOperation {Operation} is not supported for type {Term.GetType()}")
+                (long l, double d) => _indexSearcher.Between(_indexSearcher.ExistsQuery(Name), FieldId, Convert.ToDouble(l), d, BetweenLeft, BetweenRight),
+                (double d, long l) => _indexSearcher.Between(_indexSearcher.ExistsQuery(Name), FieldId, d, Convert.ToDouble(l), BetweenLeft, BetweenRight),
+
+                    _ => throw new InvalidOperationException($"UnaryMatchOperation {Operation} is not supported for type {Term.GetType()}")
             };
         }
 
@@ -222,6 +225,8 @@ public class CoraxBooleanQuery : IQueryMatch
                         query.BetweenRight),
                     (string s, string s2) => _indexSearcher.Between(baseMatch ?? _indexSearcher.ExistsQuery(query.Name), query.FieldId, s, s2, query.BetweenLeft,
                         query.BetweenRight),
+                    (long l, double d) => _indexSearcher.Between(baseMatch ?? _indexSearcher.ExistsQuery(query.Name),  query.FieldId, Convert.ToDouble(l), d, query.BetweenLeft, query.BetweenRight),
+                    (double d, long l) => _indexSearcher.Between(baseMatch ?? _indexSearcher.ExistsQuery(query.Name),  query.FieldId, d, Convert.ToDouble(l), query.BetweenLeft, query.BetweenRight),
                     _ => throw new InvalidOperationException($"UnaryMatchOperation {query.Operation} is not supported for type {query.Term.GetType()}")
                 };
             }

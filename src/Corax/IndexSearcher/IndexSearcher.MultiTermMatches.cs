@@ -46,6 +46,54 @@ public partial class IndexSearcher
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public MultiTermMatch GreaterThanQuery(Slice field, Slice fieldLongs, long value, bool isNegated = false, int fieldId = Constants.IndexSearcher.NonAnalyzer)
+    {
+        return RangeBuilder<NullScoreFunction, Range.Exclusive, Range.Inclusive>(field, fieldLongs, value,long.MaxValue, default, isNegated);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public MultiTermMatch GreaterThanOrEqualsQuery(Slice field, Slice fieldLongs, long value, bool isNegated = false, int fieldId = Constants.IndexSearcher.NonAnalyzer)
+    {
+        return RangeBuilder<NullScoreFunction, Range.Inclusive, Range.Inclusive>(field, fieldLongs, value, long.MaxValue, default, isNegated);
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public MultiTermMatch GreaterThanOrEqualsQuery(Slice field, Slice fieldLongs, double value, bool isNegated = false, int fieldId = Constants.IndexSearcher.NonAnalyzer)
+    {
+        return RangeBuilder<NullScoreFunction, Range.Inclusive, Range.Inclusive>(field, fieldLongs, value, double.MaxValue, default, isNegated);
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public MultiTermMatch GreaterThanQuery(Slice field, Slice fieldDoubles, double value, bool isNegated = false, int fieldId = Constants.IndexSearcher.NonAnalyzer)
+    {
+        return RangeBuilder<NullScoreFunction, Range.Exclusive, Range.Inclusive>(field, fieldDoubles, value,double.MaxValue, default, isNegated);
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public MultiTermMatch LessThanQuery(Slice field, Slice fieldLongs, long value, bool isNegated = false, int fieldId = Constants.IndexSearcher.NonAnalyzer)
+    {
+        return RangeBuilder<NullScoreFunction, Range.Inclusive, Range.Exclusive>(field, fieldLongs, long.MinValue,value, default, isNegated);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public MultiTermMatch LessThanOrEqualsQuery(Slice field, Slice fieldLongs, long value, bool isNegated = false, int fieldId = Constants.IndexSearcher.NonAnalyzer)
+    {
+        return RangeBuilder<NullScoreFunction, Range.Inclusive, Range.Inclusive>(field, fieldLongs, long.MinValue, value, default, isNegated);
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public MultiTermMatch LessThanOrEqualsQuery(Slice field, Slice fieldLongs, double value, bool isNegated = false, int fieldId = Constants.IndexSearcher.NonAnalyzer)
+    {
+        return RangeBuilder<NullScoreFunction, Range.Inclusive, Range.Inclusive>(field, fieldLongs, double.MinValue, value, default, isNegated);
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public MultiTermMatch LessThanQuery(Slice field, Slice fieldDoubles, double value, bool isNegated = false, int fieldId = Constants.IndexSearcher.NonAnalyzer)
+    {
+        return RangeBuilder<NullScoreFunction, Range.Inclusive, Range.Exclusive>(field, fieldDoubles, double.MinValue, value, default, isNegated);
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public MultiTermMatch LessThanQuery(Slice field, Slice value, bool isNegated = false, int fieldId = Constants.IndexSearcher.NonAnalyzer)
     {
         return RangeBuilder<NullScoreFunction, Range.Inclusive, Range.Exclusive>(field, Slices.BeforeAllKeys, value, default, isNegated);

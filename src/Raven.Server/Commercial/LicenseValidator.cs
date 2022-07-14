@@ -21,7 +21,7 @@ namespace Raven.Server.Commercial
             "documentsCompression", "timeSeriesRollupsAndRetention", "additionalAssembliesNuget",
             "monitoringEndpoints", "olapEtl", "readOnlyCertificates",
             "tcpDataCompression", "concurrentSubscriptions", "elasticSearchEtl", "powerBI", "postgreSqlIntegration",
-            "canBeActivatedUntil"
+            "canBeActivatedUntil", "queueEtl"
         };
 
         private enum ValueType : byte

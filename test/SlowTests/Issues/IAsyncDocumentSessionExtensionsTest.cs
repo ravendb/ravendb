@@ -82,8 +82,6 @@ namespace SlowTests.Issues
                 }
 
                 int count = 0;
-                var id = "";
-                string tmp;
                 using (var session = store.OpenAsyncSession())
                 {
                     await using (var reader = await session.Advanced.StreamAsync<User>(startsWith: "users/", start: 6, pageSize: 10))

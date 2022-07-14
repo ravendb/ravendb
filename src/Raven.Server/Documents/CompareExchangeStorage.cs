@@ -22,11 +22,17 @@ public class CompareExchangeStorage
 
     public long GetLastCompareExchangeIndex(ClusterOperationContext context)
     {
+        if (_databaseName == null)
+            return 0;
+
         return _database.ServerStore.Cluster.GetLastCompareExchangeIndexForDatabase(context, _databaseName);
     }
 
     public long GetLastCompareExchangeTombstoneIndex(ClusterOperationContext context)
     {
+        if (_databaseName == null)
+            return 0;
+
         return _database.ServerStore.Cluster.GetLastCompareExchangeTombstoneIndexForDatabase(context, _databaseName);
     }
 }
