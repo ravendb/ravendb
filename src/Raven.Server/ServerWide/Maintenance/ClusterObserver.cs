@@ -1364,7 +1364,7 @@ namespace Raven.Server.ServerWide.Maintenance
                           $"Last sent Etag: {lastSentEtag:#,#;;0}" + Environment.NewLine +
                           $"Mentor's Etag: {mentorsEtag:#,#;;0}";
 
-                LogMessage($"Mentor {mentorNode} hasn't sent all of the documents yet to {promotable} (time diff: {timeDiff}, sent etag: {lastSentEtag}/{mentorsEtag})", database: dbName);
+                LogMessage($"Mentor {mentorNode} hasn't sent all of the documents yet to {promotable} (time diff: {timeDiff}, sent etag: {lastSentEtag:#,#;;0}/{mentorsEtag:#,#;;0})", database: dbName);
 
                 if (topology.DemotionReasons.TryGetValue(promotable, out var demotionReason) == false ||
                     msg.Equals(demotionReason) == false)
@@ -1659,7 +1659,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 var lastIndexEtag = currentIndexStats.LastIndexedEtag;
                 if (lastPrevEtag > lastIndexEtag)
                 {
-                    reason = $"Index '{mentorIndex.Key}' is in state '{currentIndexStats.State}' and not up-to-date (prev: {lastPrevEtag}, current: {lastIndexEtag}).";
+                    reason = $"Index '{mentorIndex.Key}' is in state '{currentIndexStats.State}' and not up-to-date (prev: {lastPrevEtag:#,#;;0}, current: {lastIndexEtag:#,#;;0}).";
                     return false;
                 }
             }
