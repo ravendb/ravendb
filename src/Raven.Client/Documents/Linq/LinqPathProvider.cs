@@ -82,7 +82,7 @@ namespace Raven.Client.Documents.Linq
                 {
                     var itemKey = GetValueFromExpression(callExpression.Arguments[0], callExpression.Method.GetParameters()[0].ParameterType).ToString();
 
-                    if (callExpression.Object.NodeType == ExpressionType.Parameter)
+                    if (callExpression.Object?.NodeType == ExpressionType.Parameter)
                     {
                         return new Result
                         {
@@ -91,16 +91,14 @@ namespace Raven.Client.Documents.Linq
                             Path = itemKey
                         };
                     }
-                    else
+
+                    var parent = GetPath(callExpression.Object);
+                    return new Result
                     {
-                        var parent = GetPath(callExpression.Object);
-                        return new Result
-                        {
-                            MemberType = callExpression.Method.ReturnType,
-                            IsNestedPath = true,
-                            Path = parent.Path + "." + itemKey
-                        };
-                    }
+                        MemberType = callExpression.Method.ReturnType,
+                        IsNestedPath = true,
+                        Path = parent.Path + "." + itemKey
+                    };
                 }
 
                 if (callExpression.Method.Name == "ToString" && callExpression.Method.ReturnType == typeof(string))

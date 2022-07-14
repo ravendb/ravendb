@@ -222,12 +222,12 @@ namespace FastTests.Client
             {
                 using (var newSession = store.OpenSession())
                 {
-                    newSession.Store(new Dictionary<string, object?> { { "Name", "John" } }, "users/1");
-                    newSession.Store(new Dictionary<string, object?> { { "Name", "Jane" } }, "users/2");
-                    newSession.Store(new Dictionary<string, object?> { { "Name", "Tarzan" } }, "users/3");
+                    newSession.Store(new Dictionary<string, object> { { "Name", "John" } }, "users/1");
+                    newSession.Store(new Dictionary<string, object> { { "Name", "Jane" } }, "users/2");
+                    newSession.Store(new Dictionary<string, object> { { "Name", "Tarzan" } }, "users/3");
                     newSession.SaveChanges();
 
-                    var queryResult = newSession.Query<Dictionary<string,object?>>()
+                    var queryResult = newSession.Query<Dictionary<string,object>>()
                         .ToList();
 
                     Assert.Equal(queryResult.Count, 3);
@@ -273,23 +273,20 @@ namespace FastTests.Client
             {
                 using (var newSession = store.OpenSession())
                 {
-                    newSession.Store(new Dictionary<string, object?> { { "Name", "John" } }, "users/1");
-                    newSession.Store(new Dictionary<string, object?> { { "Name", "Jane" } }, "users/2");
-                    newSession.Store(new Dictionary<string, object?> { { "Name", "Tarzan" } }, "users/3");
+                    newSession.Store(new Dictionary<string, object> { { "Name", "John" } }, "users/1");
+                    newSession.Store(new Dictionary<string, object> { { "Name", "Jane" } }, "users/2");
+                    newSession.Store(new Dictionary<string, object> { { "Name", "Tarzan" } }, "users/3");
                     newSession.SaveChanges();
-
-                    var query = newSession.Query<Dictionary<string, object?>>()
-                        .Where(x => ((string)x["Name"]).StartsWith("J")).ToString();
-
-                    var queryResult = newSession.Query<Dictionary<string, object?>>()
+                    
+                    var queryResult = newSession.Query<Dictionary<string, object>>()
                         .Where(x => ((string)x["Name"]).StartsWith("J"))
                         .ToList();
 
-                    var queryResult2 = newSession.Query<Dictionary<string, object?>>()
+                    var queryResult2 = newSession.Query<Dictionary<string, object>>()
                         .Where(x => ((string)x["Name"]).Equals("Tarzan"))
                         .ToList();
 
-                    var queryResult3 = newSession.Query<Dictionary<string, object?>>()
+                    var queryResult3 = newSession.Query<Dictionary<string, object>>()
                         .Where(x => ((string)x["Name"]).EndsWith("n"))
                         .ToList();
 
@@ -307,13 +304,13 @@ namespace FastTests.Client
             {
                 using (var newSession = store.OpenSession())
                 {
-                    newSession.Store(new Dictionary<string, object?> { { "Name", "Australia" } }, "continents/1");
-                    newSession.Store(new Dictionary<string, object?> { { "Name", "Europe" } }, "continents/2");
-                    newSession.Store(new Dictionary<string, object?> { { "Name", "America" } }, "continents/3");
+                    newSession.Store(new Dictionary<string, object> { { "Name", "Australia" } }, "continents/1");
+                    newSession.Store(new Dictionary<string, object> { { "Name", "Europe" } }, "continents/2");
+                    newSession.Store(new Dictionary<string, object> { { "Name", "America" } }, "continents/3");
                     newSession.SaveChanges();
 
-                    var queryResult = newSession.Query<Dictionary<string, object?>>()
-                        .Where(x => ((string?)x["Name"]) == "Australia").ToList();
+                    var queryResult = newSession.Query<Dictionary<string, object>>()
+                        .Where(x => ((string)x["Name"]) == "Australia").ToList();
 
                     Assert.Equal(queryResult.Count, 1);
                 }
