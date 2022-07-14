@@ -399,29 +399,31 @@ namespace Raven.Server.Documents
 
         private static bool UpdateLastDatabaseChangeVector(DocumentsOperationContext context, ChangeVector changeVector, DocumentFlags flags, NonPersistentDocumentFlags nonPersistentFlags)
         {
+            // if arrived from replication we keep the document with its original change vector
+            // in that case the updating of the global change vector should happened upper in the stack
+            if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication))
+                return false;
+
             var currentGlobalChangeVector = context.LastDatabaseChangeVector ?? GetDatabaseChangeVector(context);
-            changeVector.StripSinkTags(currentGlobalChangeVector);
+            
+            var clone = context.GetChangeVector(changeVector);
+            clone.StripSinkTags(currentGlobalChangeVector);
 
             // this is raft created document, so it must contain only the RAFT element 
             if (flags.Contain(DocumentFlags.FromClusterTransaction))
             {
-                context.LastDatabaseChangeVector = ChangeVector.Merge(currentGlobalChangeVector, changeVector.Order);
+                context.LastDatabaseChangeVector = ChangeVector.Merge(currentGlobalChangeVector, clone.Order);
                 return false;
             }
 
             // the resolved document must preserve the original change vector (without the global change vector) to avoid ping-pong replication.
             if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromResolver))
             {
-                context.LastDatabaseChangeVector = ChangeVector.Merge(currentGlobalChangeVector, changeVector.Order);
+                context.LastDatabaseChangeVector = ChangeVector.Merge(currentGlobalChangeVector, clone.Order);
                 return false;
             }
 
-            // if arrived from replication we keep the document with its original change vector
-            // in that case the updating of the global change vector should happened upper in the stack
-            if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication))
-                return false;
-
-            context.LastDatabaseChangeVector = changeVector.Order;
+            context.LastDatabaseChangeVector = clone.Order;
             return true;
         }
 

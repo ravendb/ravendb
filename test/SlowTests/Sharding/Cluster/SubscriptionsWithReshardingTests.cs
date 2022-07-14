@@ -103,7 +103,15 @@ namespace SlowTests.Sharding.Cluster
                     session.SaveChanges();
                 }
 
-                await Assert.ThrowsAsync<TimeoutException>(() => t.WaitAsync(TimeSpan.FromSeconds(5)));
+                try
+                {
+                    await t.WaitAsync(TimeSpan.FromSeconds(5));
+                    Assert.True(false, "Worker completed without exception");
+                }
+                catch (TimeoutException)
+                {
+                   
+                }
 
                 var expected = new HashSet<string>();
                 for (int i = 1; i < 61; i++)

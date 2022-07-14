@@ -161,8 +161,13 @@ public class ClusterTransactionMergedCommand : TransactionMergedCommand
                 }
             }
 
-            context.LastDatabaseChangeVector ??= global;
-            context.LastDatabaseChangeVector.UpdateOrder(ChangeVectorParser.RaftTag, Database.DatabaseGroupId, count);
+            if (context.LastDatabaseChangeVector == null)
+            {
+                context.LastDatabaseChangeVector = global;
+            }
+
+            global.UpdateOrder(ChangeVectorParser.RaftTag, Database.DatabaseGroupId, count);
+            context.LastDatabaseChangeVector = global;
         }
 
         return Reply.Count;
