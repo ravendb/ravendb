@@ -19,9 +19,7 @@ namespace Raven.Server.Utils
     {
         public const int NumberOfBuckets = 1024 * 1024;
 
-        private static readonly Random Random = new Random();
-
-        public static int GetRandomBucket() => Random.Next() % NumberOfBuckets;
+        public static int GetRandomBucket() => Random.Shared.Next() % NumberOfBuckets;
 
         /// <summary>
         /// The bucket is a hash of the document id, lower case, reduced to
