@@ -98,8 +98,8 @@ namespace Raven.Server.Documents.Handlers.Admin
             var from = GetDateTimeQueryString("from", required: false);
             var to = GetDateTimeQueryString("to", required: false);
 
-            using (var stream = new TempFileStream(SafeFileStream.Create(adminLogsFilePath.FullPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.ReadWrite, 4096,
-                       FileOptions.DeleteOnClose | FileOptions.SequentialScan)))
+            using (var stream = SafeFileStream.Create(adminLogsFilePath.FullPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.ReadWrite, 4096,
+                       FileOptions.DeleteOnClose | FileOptions.SequentialScan))
             {
                 using (var archive = new ZipArchive(stream, ZipArchiveMode.Create, true))
                 {
