@@ -13,9 +13,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
-using Raven.Client.Extensions;
 using Raven.Client.Http;
-using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
@@ -182,7 +180,19 @@ namespace InterversionTests
         {
             try
             {
-                var result = await stores[0].Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord(database), size));
+                var databaseRecord = new DatabaseRecord(database)
+                {
+                    Settings =
+                    {
+                        [RavenConfiguration.GetKey(x => x.Replication.ReplicationMinimalHeartbeat)] = "1",
+                        [RavenConfiguration.GetKey(x => x.Replication.RetryReplicateAfter)] = "1",
+                        [RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = true.ToString(),
+                        [RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexCannotBeOpened)] = true.ToString(),
+                        [RavenConfiguration.GetKey(x => x.Indexing.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory)] = int.MaxValue.ToString()
+                    }
+                };
+
+                var result = await stores[0].Maintenance.Server.SendAsync(new CreateDatabaseOperation(databaseRecord, size));
                 foreach (var store in stores)
                 {
                     using (var context = JsonOperationContext.ShortTermSingleUse())
