@@ -24,7 +24,6 @@ using Raven.Client;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
-using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Properties;
 using Raven.Client.Util;
@@ -795,11 +794,9 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 
         private void CheckClientVersion()
         {
-            if (RequestRouter.TryGetClientVersion(HttpContext, out var version) == false)
-                throw new VersionNotFoundException("Could not find client version");
-
-            if (Version.TryParse(RavenVersionAttribute.Instance.AssemblyVersion, out var existingVersion) && version.CompareTo(existingVersion) <= 0)
-                throw new ClientVersionMismatchException($"Client version: {version.ToString(3)}, current version: {RavenVersionAttribute.Instance.AssemblyVersion}");
+            if (RequestRouter.TryGetClientVersion(HttpContext, out var version) == false ||
+                (Version.TryParse(RavenVersionAttribute.Instance.AssemblyVersion, out var existingVersion) && version.CompareTo(existingVersion) <= 0))
+                throw new InvalidDataException("The value supplied in 'OperateOnTypes' and/or 'OperateOnDatabaseRecordTypes' is not parsable");
         }
 
         [RavenAction("/databases/*/smuggler/import/csv", "POST", AuthorizationStatus.ValidUser, DisableOnCpuCreditsExhaustion = true)]
