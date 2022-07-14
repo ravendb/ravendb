@@ -446,7 +446,7 @@ namespace Raven.Server.Documents
                     if (isIdentityPartsSeparator == false && lastChar == ShardHelper.SuffixIdTerminator)
                     {
                         idSuffixLength = id.Length;
-                        ShardHelper.GetSuffix(ref idSuffixPtr, ref idSuffixLength);
+                        ShardHelper.ExtractStickyId(ref idSuffixPtr, ref idSuffixLength);
 
                         idLength -= idSuffixLength + 1; // +1 for '$'
                         isIdentityPartsSeparator = true;
