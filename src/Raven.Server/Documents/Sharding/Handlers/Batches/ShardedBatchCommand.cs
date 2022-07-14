@@ -83,7 +83,7 @@ public class ShardedBatchCommand : IBatchCommand, IEnumerable<SingleShardedComma
             if (bufferedCommand.IsServerSideIdentity)
             {
                 var bucket = ShardHelper.GetRandomBucket(); // we do not care about bucket here, just need a random number with max value
-                cmd.Id = ShardHelper.GenerateDocumentId(cmd.Id, bucket, _databaseContext.IdentityPartsSeparator);
+                cmd.Id = ShardHelper.GenerateStickyId(cmd.Id, bucket, _databaseContext.IdentityPartsSeparator);
                 shardNumber = _databaseContext.GetShardNumber(_context, cmd.Id.AsSpan(0, cmd.Id.Length - 1));
             }
             else

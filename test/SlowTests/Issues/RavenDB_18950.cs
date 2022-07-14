@@ -20,6 +20,8 @@ public class RavenDB_18950 : RavenTestBase
     {
         using (var store = GetDocumentStore(options))
         {
+            string id;
+
             using (var session = store.OpenAsyncSession())
             {
                 var user = new User { Name = "User 1" };
@@ -31,13 +33,21 @@ public class RavenDB_18950 : RavenTestBase
                 {
                     case RavenDatabaseMode.Single:
                         Assert.Equal("users/0000000000000000001-A", user.Id);
+                        id = user.Id;
                         break;
                     case RavenDatabaseMode.Sharded:
                         Assert.StartsWith("users/0000000000000000001-A$", user.Id);
+                        id = user.Id;
                         break;
                     default:
                         throw new ArgumentOutOfRangeException();
                 }
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var user = await session.LoadAsync<User>(id);
+                Assert.NotNull(user);
             }
         }
     }
