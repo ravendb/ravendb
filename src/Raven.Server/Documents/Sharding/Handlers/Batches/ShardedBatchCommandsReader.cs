@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -46,7 +45,7 @@ public class ShardedBatchCommandsReader : AbstractBatchCommandsReader<ShardedBat
         try
         {
             var bufferedCommand = new BufferedCommand { CommandStream = ms };
-            
+
             BatchRequestParser.CommandData result;
 
             using (_bufferedCommandCopier.UseCommand(bufferedCommand))
@@ -55,6 +54,8 @@ public class ShardedBatchCommandsReader : AbstractBatchCommandsReader<ShardedBat
             }
 
             bufferedCommand.IsIdentity = IsIdentityCommand(ref result);
+            bufferedCommand.IsServerSideIdentity = bufferedCommand.IsIdentity == false && IsServerSideIdentityCommand(ref result, _databaseContext.IdentityPartsSeparator);
+
             BufferedCommands.Add(bufferedCommand);
 
             return result;

@@ -37,8 +37,8 @@ namespace Raven.Server.Documents
             _recreationTypes = new IRecreationType[]
             {
                 new RecreateAttachments(documentsStorage),
-                new RecreateCounters(documentsStorage), 
-                new RecreateTimeSeries(documentsStorage), 
+                new RecreateCounters(documentsStorage),
+                new RecreateTimeSeries(documentsStorage),
             };
         }
 
@@ -78,7 +78,7 @@ namespace Raven.Server.Documents
                 long indexFromChangeVector = ChangeVectorUtils.GetEtagById(changeVector, _parent._documentDatabase.ClusterTransactionId);
                 if (indexFromChangeVector == 0)
                     return;
-                
+
                 using (_serverStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext clusterContext))
                 using (clusterContext.OpenReadTransaction())
                 {
@@ -117,7 +117,7 @@ namespace Raven.Server.Documents
 
             var newEtag = _documentsStorage.GenerateNextEtag();
             var modifiedTicks = _documentsStorage.GetOrCreateLastModifiedTicks(lastModifiedTicks);
-            
+
             var compareClusterTransaction = new CompareClusterTransactionId(this);
             if (oldChangeVectorForClusterTransactionIndexCheck != null)
             {
@@ -129,7 +129,7 @@ namespace Raven.Server.Documents
             {
                 var collectionName = _documentsStorage.ExtractCollectionName(context, document);
                 var table = context.Transaction.InnerTransaction.OpenTable(GetDocsSchemaForCollection(collectionName), collectionName.GetTableName(CollectionTableType.Documents));
-            
+
                 var oldValue = default(TableValueReader);
                 if (knownNewId == false)
                 {
@@ -156,7 +156,7 @@ namespace Raven.Server.Documents
                     // anything else - must match exactly
 
                     oldChangeVector = TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref oldValue);
-                    if (expectedChangeVector != null) 
+                    if (expectedChangeVector != null)
                     {
                         if (string.Compare(expectedChangeVector, oldChangeVector, StringComparison.Ordinal) != 0)
                             ThrowConcurrentException(id, expectedChangeVector, oldChangeVector);
@@ -199,7 +199,7 @@ namespace Raven.Server.Documents
                             flags |= DocumentFlags.HasTimeSeries;
                         }
 
-                        if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByEnforceRevisionConfiguration) == false && 
+                        if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByEnforceRevisionConfiguration) == false &&
                             oldFlags.Contain(DocumentFlags.HasRevisions))
                         {
                             flags |= DocumentFlags.HasRevisions;
@@ -211,7 +211,7 @@ namespace Raven.Server.Documents
 
                 nonPersistentFlags |= result.NonPersistentFlags;
 
-                if (UpdateLastDatabaseChangeVector(context, result.ChangeVector, flags, nonPersistentFlags)) 
+                if (UpdateLastDatabaseChangeVector(context, result.ChangeVector, flags, nonPersistentFlags))
                     changeVector = result.ChangeVector;
 
                 if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.Resolved))
@@ -225,18 +225,18 @@ namespace Raven.Server.Documents
 
                     var shouldVersion = _documentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionDocument(
                         collectionName, nonPersistentFlags, oldDoc, document, context, id, lastModifiedTicks, ref flags, out var configuration);
-                    
+
                     if (shouldVersion)
                     {
                         if (_documentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionOldDocument(context, flags, oldDoc, oldChangeVector, collectionName))
                         {
                             var oldFlags = TableValueToFlags((int)DocumentsTable.Flags, ref oldValue);
                             var oldTicks = TableValueToDateTime((int)DocumentsTable.LastModified, ref oldValue);
-                            
+
                             _documentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, oldDoc, oldFlags | DocumentFlags.HasRevisions | DocumentFlags.FromOldDocumentRevision, NonPersistentDocumentFlags.None,
                                 oldChangeVector, oldTicks.Ticks, configuration, collectionName);
                         }
-                        
+
                         flags |= DocumentFlags.HasRevisions;
                         _documentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, document, flags, nonPersistentFlags, changeVector, modifiedTicks, configuration, collectionName);
                     }
@@ -429,43 +429,73 @@ namespace Raven.Server.Documents
             else
             {
                 // We use if instead of switch so the JIT will better inline this method
-                var lastChar = id[id.Length - 1];
+                var lastChar = id[^1];
                 if (lastChar == '|')
                 {
                     ThrowInvalidDocumentId(id);
                 }
 
-                if (lastChar == _documentDatabase.IdentityPartsSeparator)
-                {                    
-                    string nodeTag = _documentDatabase.ServerStore.NodeTag;
+                fixed (char* idPtr = id)
+                {
+                    var idSuffixPtr = idPtr;
+                    var idLength = id.Length;
+                    var idSuffixLength = 0;
 
-                    // PERF: we are creating an string and mutating it for performance reasons.
-                    //       while nasty this shouldn't have any side effects because value didn't
-                    //       escape yet the function, so while not pretty it works (and it's safe).      
-                    string value = new string('0', id.Length + 1 + 19 + nodeTag.Length);
-                    fixed (char* valuePtr = value)
+                    var isIdentityPartsSeparator = lastChar == _documentDatabase.IdentityPartsSeparator;
+
+                    if (isIdentityPartsSeparator == false && lastChar == ShardHelper.SuffixIdTerminator)
                     {
-                        char* valueTagPtr = valuePtr + value.Length - nodeTag.Length;
-                        for (int j = 0; j < nodeTag.Length; j++)
-                            valueTagPtr[j] = nodeTag[j];
+                        idSuffixLength = id.Length;
+                        ShardHelper.GetSuffix(ref idSuffixPtr, ref idSuffixLength);
 
-                        int i;
-                        for (i = 0; i < id.Length; i++)
-                            valuePtr[i] = id[i];
-
-                        i += 19;
-                        valuePtr[i] = '-';
-
-                        Format.Backwards.WriteNumber(valuePtr + i - 1, (ulong)newEtag);
+                        idLength -= idSuffixLength + 1; // +1 for '$'
+                        isIdentityPartsSeparator = true;
                     }
 
-                    id = value;
+                    if (isIdentityPartsSeparator)
+                    {
+                        string nodeTag = _documentDatabase.ServerStore.NodeTag;
 
-                    knownNewId = true;
-                }
-                else
-                {
-                    knownNewId = false;
+                        // PERF: we are creating an string and mutating it for performance reasons.
+                        //       while nasty this shouldn't have any side effects because value didn't
+                        //       escape yet the function, so while not pretty it works (and it's safe).
+                        //       
+                        int valueLength = idLength + 1 + 19 + nodeTag.Length + idSuffixLength;
+                        string value = new('0', valueLength);
+                        fixed (char* valuePtr = value)
+                        {
+                            char* valueWritePosition = valuePtr + value.Length;
+                            if (idSuffixLength > 0)
+                            {
+                                valueWritePosition -= idSuffixLength;
+
+                                valueWritePosition[0] = '$';
+                                for (var j = 0; j < idSuffixLength - 1; j++)
+                                    valueWritePosition[j + 1] = idSuffixPtr[j];
+                            }
+
+                            valueWritePosition -= nodeTag.Length;
+                            for (int j = 0; j < nodeTag.Length; j++)
+                                valueWritePosition[j] = nodeTag[j];
+
+                            int i;
+                            for (i = 0; i < idLength; i++)
+                                valuePtr[i] = id[i];
+
+                            i += 19;
+                            valuePtr[i] = '-';
+
+                            Format.Backwards.WriteNumber(valuePtr + i - 1, (ulong)newEtag);
+                        }
+
+                        id = value;
+
+                        knownNewId = true;
+                    }
+                    else
+                    {
+                        knownNewId = false;
+                    }
                 }
             }
 
@@ -514,12 +544,12 @@ namespace Raven.Server.Documents
 
             if (flags.Contain(type.HasFlag) == false ||
                 nonPersistentFlags.Contain(type.ByUpdateFlag) ||
-                nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication)) 
+                nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication))
                 return false;
 
-            if (oldDoc == null || 
+            if (oldDoc == null ||
                 oldDoc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject oldMetadata) == false ||
-                oldMetadata.TryGet(type.MetadataProperty, out old) == false) 
+                oldMetadata.TryGet(type.MetadataProperty, out old) == false)
                 return false;
 
             // Make sure the user did not changed the value of @attachments in the @metadata
@@ -536,7 +566,7 @@ namespace Raven.Server.Documents
 
             bool RecreatePreserveCasing(BlittableJsonReaderArray currentMetadata, ref DocumentFlags documentFlags)
             {
-                if ((type is RecreateTimeSeries || type is RecreateCounters) && 
+                if ((type is RecreateTimeSeries || type is RecreateCounters) &&
                     currentMetadata == null && old != null)
                 {
                     // use the '@counters'/'@timeseries' from old document's metadata
@@ -657,7 +687,7 @@ namespace Raven.Server.Documents
 
             public NonPersistentDocumentFlags ByUpdateFlag => NonPersistentDocumentFlags.ByAttachmentUpdate;
 
-            public Action<string, BlittableJsonReaderObject, DocumentFlags> Assert => (id, o, flags) => 
+            public Action<string, BlittableJsonReaderObject, DocumentFlags> Assert => (id, o, flags) =>
                 _storage.AssertMetadataKey(id, o, flags, DocumentFlags.HasAttachments, Constants.Documents.Metadata.Attachments);
         }
 
@@ -683,7 +713,7 @@ namespace Raven.Server.Documents
 
             public NonPersistentDocumentFlags ByUpdateFlag => NonPersistentDocumentFlags.ByCountersUpdate;
 
-            public Action<string, BlittableJsonReaderObject, DocumentFlags> Assert => (id, o, flags) => 
+            public Action<string, BlittableJsonReaderObject, DocumentFlags> Assert => (id, o, flags) =>
                 _storage.AssertMetadataKey(id, o, flags, DocumentFlags.HasCounters, Constants.Documents.Metadata.Counters);
         }
 
@@ -709,11 +739,11 @@ namespace Raven.Server.Documents
 
             public NonPersistentDocumentFlags ByUpdateFlag => NonPersistentDocumentFlags.ByTimeSeriesUpdate;
 
-            public Action<string, BlittableJsonReaderObject, DocumentFlags> Assert => (id, o, flags) => 
+            public Action<string, BlittableJsonReaderObject, DocumentFlags> Assert => (id, o, flags) =>
                 _storage.AssertMetadataKey(id, o, flags, DocumentFlags.HasTimeSeries, Constants.Documents.Metadata.TimeSeries);
         }
 
-        public static void ThrowRequiresTransaction([CallerMemberName]string caller = null)
+        public static void ThrowRequiresTransaction([CallerMemberName] string caller = null)
         {
             // ReSharper disable once NotResolvedInText
             throw new ArgumentException("Context must be set with a valid transaction before calling " + caller, "context");

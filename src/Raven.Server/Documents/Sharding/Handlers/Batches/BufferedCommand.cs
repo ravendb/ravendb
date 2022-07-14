@@ -11,6 +11,7 @@ public class BufferedCommand
 {
     public MemoryStream CommandStream;
     public bool IsIdentity;
+    public bool IsServerSideIdentity;
     public bool IsBatchPatch;
 
     // for identities we should replace the id and the change vector
@@ -24,7 +25,7 @@ public class BufferedCommand
 
     public MemoryStream ModifyIdentityStream(string newId)
     {
-        if (IsIdentity == false)
+        if (IsIdentity == false && IsServerSideIdentity == false)
             throw new InvalidOperationException("Must be an identity");
 
         using (CommandStream)
