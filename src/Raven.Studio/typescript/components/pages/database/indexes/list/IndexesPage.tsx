@@ -35,6 +35,8 @@ import useInterval from "hooks/useInterval";
 import messagePublisher from "common/messagePublisher";
 
 import "./IndexesPage.scss";
+import { useChanges } from "hooks/useChanges";
+import { delay } from "../../../../utils/common";
 
 interface IndexesPageProps {
     database: database;
@@ -207,6 +209,8 @@ export function IndexesPage(props: IndexesPageProps) {
 
     const { indexesService } = useServices();
     const eventsCollector = useEventsCollector();
+    const { databaseChangesApi } = useChanges();
+
     const { canReadWriteDatabase } = useAccessManager();
     const [stats, dispatch] = useReducer(indexesStatsReducer, locations, indexesStatsReducerInitializer);
 
@@ -263,6 +267,30 @@ export function IndexesPage(props: IndexesPageProps) {
         [database]
     );
 
+    const throttledRefresh = useRef(
+        _.throttle(() => {
+            database.getLocations().forEach(fetchStats);
+        }, 5_000)
+    );
+
+    const throttledProgressRefresh = useRef(
+        _.throttle(() => {
+            database.getLocations().forEach((location) => fetchProgress(location));
+        }, 10_000)
+    );
+
+    useInterval(() => {
+        if (stats.indexes.length === 0) {
+            return;
+        }
+
+        const anyStale = stats.indexes.some((x) => x.nodesInfo.some((n) => n.details && n.details.stale));
+
+        if (anyStale) {
+            throttledProgressRefresh.current();
+        }
+    }, 3_000);
+
     useEffect(() => {
         const nodeTag = clusterTopologyManager.default.localNodeTag();
         const initialLocation = database.getFirstLocation(nodeTag);
@@ -270,17 +298,37 @@ export function IndexesPage(props: IndexesPageProps) {
         fetchStats(initialLocation);
     }, []);
 
-    useInterval(() => {
-        if (filter.autoRefresh) {
-            database.getLocations().forEach((location) => fetchProgress(location));
+    const processIndexEvent = useCallback(
+        (e: Raven.Client.Documents.Changes.IndexChange) => {
+            if (!filter.autoRefresh || resettingIndex) {
+                return;
+            }
+
+            if (e.Type === "BatchCompleted") {
+                throttledProgressRefresh.current();
+            }
+
+            throttledRefresh.current();
+        },
+        [filter.autoRefresh]
+    );
+
+    useEffect(() => {
+        if (databaseChangesApi) {
+            const watch = databaseChangesApi.watchAllIndexes(processIndexEvent);
+
+            return () => {
+                console.log("stop watching all indexes!");
+                watch.off();
+            };
         }
-    }, 10_000);
+    }, [databaseChangesApi, processIndexEvent]);
 
     const highlightUsed = useRef<boolean>(false);
 
     const highlightCallback = useCallback((node: HTMLElement) => {
         if (node && !highlightUsed.current) {
-            node.scrollIntoView({ behavior: "smooth" });
+            node.scrollIntoView({ behavior: "smooth", block: "center" });
             highlightUsed.current = true;
 
             setTimeout(() => {
@@ -504,14 +552,17 @@ export function IndexesPage(props: IndexesPageProps) {
     );
 
     const loadMissing = async () => {
-        const tasks = stats.indexes[0].nodesInfo.map(async (nodeInfo) => {
-            if (nodeInfo.status === "notLoaded") {
-                await fetchStats(nodeInfo.location);
-            }
-            await fetchProgress(nodeInfo.location);
-        });
+        if (stats.indexes.length > 0) {
+            const tasks = stats.indexes[0].nodesInfo.map(async (nodeInfo) => {
+                if (nodeInfo.status === "notLoaded") {
+                    await fetchStats(nodeInfo.location);
+                }
+            });
 
-        await Promise.all(tasks);
+            await Promise.all(tasks);
+
+            throttledProgressRefresh.current();
+        }
     };
 
     useTimeout(loadMissing, 3_000);
@@ -544,32 +595,29 @@ export function IndexesPage(props: IndexesPageProps) {
             });
     };
 
+    const [resettingIndex, setResettingIndex] = useState(false);
+
     const resetIndex = async (index: IndexSharedInfo) => {
         const canReset = await confirmResetIndex(database, index);
         if (canReset) {
             eventsCollector.reportEvent("indexes", "reset");
 
-            const locations = database.getLocations();
-            while (locations.length) {
-                await indexesService.resetIndex(index, database, locations.pop());
+            setResettingIndex(true);
+
+            try {
+                const locations = database.getLocations();
+                while (locations.length) {
+                    await indexesService.resetIndex(index, database, locations.pop());
+                }
+
+                messagePublisher.reportSuccess("Index " + index.name + " successfully reset");
+            } finally {
+                // wait a bit and trigger refresh
+                await delay(3_000);
+
+                throttledRefresh.current();
+                setResettingIndex(false);
             }
-
-            messagePublisher.reportSuccess("Index " + index.name + " successfully reset");
-
-            /* TODO
-             // reset index is implemented as delete and insert, so we receive notification about deleted index via changes API
-                    // let's issue marker to ignore index delete information for next few seconds because it might be caused by reset.
-                    // Unfortunately we can't use resetIndexVm.resetTask.done, because we receive event via changes api before resetTask promise 
-                    // is resolved. 
-                    this.resetsInProgress.add(i.name);
-
-                    new resetIndexCommand(i.name, this.activeDatabase())
-                        .execute();
-
-                    setTimeout(() => {
-                        this.resetsInProgress.delete(i.name);
-                    }, 30000);
-             */
         }
     };
 
@@ -587,14 +635,6 @@ export function IndexesPage(props: IndexesPageProps) {
         const margin = `class="margin-bottom"`;
         let text = `<li ${margin}>Index: <strong>${genUtils.escapeHtml(index.name)}</strong></li>`;
         text += `<li ${margin}>Clicking <strong>Swap Now</strong> will immediately replace the current index definition with the replacement index.</li>`;
-
-        /* TODO:
-        const replacementIndex = irdx.replacement();
-        if (replacementIndex.progress() && replacementIndex.progress().rollingProgress().length) {
-            text += `<li ${margin}>Actual indexing will occur once the node reaches its turn in the rolling deployment process.</li>`;
-        }*/
-
-        //TODO: is it node wide?
 
         viewHelpers
             .confirmationMessage("Are you sure?", `<ul>${text}</ul>`, { buttons: ["Cancel", "Swap Now"], html: true })
@@ -750,6 +790,7 @@ export function IndexesPage(props: IndexesPageProps) {
                                                 selected={selectedIndexes.includes(replacement.name)}
                                                 toggleSelection={() => toggleSelection(replacement)}
                                                 key={replacement.name}
+                                                ref={undefined}
                                             />
                                         )}
                                     </React.Fragment>

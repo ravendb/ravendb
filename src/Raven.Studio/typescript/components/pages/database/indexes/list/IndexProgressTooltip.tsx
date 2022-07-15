@@ -54,7 +54,7 @@ export function IndexProgressTooltip(props: IndexProgressTooltipProps) {
                     {nodeInfo.details.stale ? (
                         <LocationSpecificDetailsItem className="status updating">
                             <i className="icon-waiting" />{" "}
-                            <a href="#" onClick={(e) => withPreventDefault(() => showStaleReason(nodeInfo.location))}>
+                            <a href="#" onClick={withPreventDefault(() => showStaleReason(nodeInfo.location))}>
                                 {formatTimeLeftToProcess(nodeInfo.progress?.global, nodeInfo.details)}
                             </a>
                         </LocationSpecificDetailsItem>

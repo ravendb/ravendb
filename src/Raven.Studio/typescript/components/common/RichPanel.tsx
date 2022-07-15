@@ -5,15 +5,13 @@ import classNames from "classnames";
 interface RichPanelProps {
     className?: string;
     children: ReactNode | ReactNode[];
-    ref?: any;
+    innerRef?: any;
 }
 
-//TODO: forward ref
-
 export function RichPanel(props: RichPanelProps) {
-    const { children, className, ref } = props;
+    const { children, className, innerRef } = props;
     return (
-        <div className={classNames("rich-panel-item", className)} ref={ref}>
+        <div className={classNames("rich-panel-item", className)} ref={innerRef}>
             {children}
         </div>
     );

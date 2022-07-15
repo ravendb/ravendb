@@ -202,6 +202,10 @@ export const indexesStatsReducer: Reducer<IndexesStatsState, IndexesStatsReducer
             const incomingStats = action.stats;
 
             return produce(state, (draft) => {
+                const localIndexes: string[] = draft.indexes.map((x) => x.name);
+                const incomingIndexes = incomingStats.map((x) => x.Name);
+                const toDelete = localIndexes.filter((x) => !incomingIndexes.includes(x));
+
                 incomingStats.forEach((stat) => {
                     const existingShardedInfo = draft.indexes.find((x) => x.name === stat.Name);
                     if (existingShardedInfo) {
@@ -227,6 +231,10 @@ export const indexesStatsReducer: Reducer<IndexesStatsState, IndexesStatsReducer
                         draft.indexes.push(sharedInfo);
                     }
                 });
+
+                if (toDelete.length > 0) {
+                    draft.indexes = draft.indexes.filter((x) => !toDelete.includes(x.name));
+                }
             });
         case "DeleteIndexes":
             return produce(state, (draft) => {
