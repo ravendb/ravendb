@@ -15,6 +15,7 @@ using Raven.Server.Json;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents.Indexes.Persistence
 {
