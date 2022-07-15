@@ -16,7 +16,6 @@ using Sparrow.Server;
 using Sparrow.Server.Compression;
 using Voron;
 using Voron.Data.BTrees;
-using Voron.Data.CompactTrees;
 using Voron.Data.Containers;
 using Voron.Data.Fixed;
 using Voron.Data.Sets;
@@ -48,6 +47,7 @@ namespace Corax
 
         private Token[] _tokensBufferHandler;
         private byte[] _encodingBufferHandler;
+        private byte[] _utf8ConverterBufferHandler;
 
         // CPU bound - embarassingly parallel
         // 
@@ -80,7 +80,7 @@ namespace Corax
             fieldsMapping.UpdateMaximumOutputAndTokenSize();
             _encodingBufferHandler = Analyzer.BufferPool.Rent(fieldsMapping.MaximumOutputSize);
             _tokensBufferHandler = Analyzer.TokensPool.Rent(fieldsMapping.MaximumTokenSize);
-
+            _utf8ConverterBufferHandler = Analyzer.BufferPool.Rent(fieldsMapping.MaximumOutputSize * 10);
 
             var bufferSize = fieldsMapping!.Count;
             _buffer = new Dictionary<Slice, List<long>>[bufferSize];
@@ -338,7 +338,7 @@ namespace Corax
 
                 Span<byte> wordsBuffer = _encodingBufferHandler;
                 Span<Token> tokens = _tokensBufferHandler;
-                analyzer.Execute(value, ref wordsBuffer, ref tokens);
+                analyzer.Execute(value, ref wordsBuffer, ref tokens, ref _utf8ConverterBufferHandler);
                 
                 for (int i = 0; i < tokens.Length; i++)
                 {
@@ -525,7 +525,7 @@ namespace Corax
 
                     var tokenSpace = _tokensBufferHandler.AsSpan();
                     var wordSpace = _encodingBufferHandler.AsSpan();
-                    analyzer.Execute(termValue, ref wordSpace, ref tokenSpace);
+                    analyzer.Execute(termValue, ref wordSpace, ref tokenSpace, ref _utf8ConverterBufferHandler);
 
                     for (int i = 0; i < tokenSpace.Length; i++)
                     {
@@ -940,6 +940,12 @@ namespace Corax
             {
                 Analyzer.TokensPool.Return(_tokensBufferHandler);
                 _tokensBufferHandler = null;
+            }
+
+            if (_utf8ConverterBufferHandler != null)
+            {
+                Analyzer.BufferPool.Return(_utf8ConverterBufferHandler);
+                _utf8ConverterBufferHandler = null;
             }
         }
     }
