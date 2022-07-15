@@ -1,18 +1,14 @@
 ﻿using System;
-using System.Buffers;
 using System.Buffers.Text;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
 using Sparrow.Server;
 using Voron;
 using Voron.Data.CompactTrees;
 using Voron.Data.Fixed;
 
-namespace Corax.Queries
+namespace Corax.Queries.MultiTermMatch.TermProviders
 {
     public static class Range
     {

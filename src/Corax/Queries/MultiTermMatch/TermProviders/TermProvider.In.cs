@@ -1,8 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Diagnostics;
 
-namespace Corax.Queries
+namespace Corax.Queries.MultiTermMatch.TermProviders
 {
     [DebuggerDisplay("{DebugView,nq}")]
     public struct InTermProvider : ITermProvider

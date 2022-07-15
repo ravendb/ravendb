@@ -4,29 +4,30 @@ using Sparrow.Server;
 using Voron;
 using Voron.Data.CompactTrees;
 
-namespace Corax.Queries
+namespace Corax.Queries.MultiTermMatch.TermProviders
 {
     [DebuggerDisplay("{DebugView,nq}")]
-    public struct NotStartWithTermProvider : ITermProvider
+    public struct NotEndsWithTermProvider : ITermProvider
     {
         private readonly IndexSearcher _searcher;
         private readonly CompactTree.Iterator _iterator;
         private readonly Slice _fieldName;
-        private readonly Slice _startWith;
+        private readonly Slice _endsWith;
         private readonly CompactTree _tree;
 
-        public NotStartWithTermProvider(IndexSearcher searcher, ByteStringContext context, CompactTree tree, Slice fieldName, int fieldId, Slice startWith)
+        public NotEndsWithTermProvider(IndexSearcher searcher, ByteStringContext context, CompactTree tree, Slice fieldName, int fieldId, Slice endsWith)
         {
             _searcher = searcher;
             _fieldName = fieldName;
             _iterator = tree.Iterate();
             _iterator.Reset();
-            _startWith = startWith;
+            _endsWith = endsWith;
             _tree = tree;
         }
 
         public void Reset()
         {
+
             _iterator.Reset();
         }
 
@@ -35,25 +36,25 @@ namespace Corax.Queries
 
             while (_iterator.MoveNext(out Slice termSlice, out var _))
             {
-                if (termSlice.StartWith(_startWith))
+                if (termSlice.EndsWith(_endsWith))
                     continue;
 
                 term = _searcher.TermQuery(_tree, termSlice);
                 return true;
             }
-            
+
             term = TermMatch.CreateEmpty();
             return false;
         }
 
         public QueryInspectionNode Inspect()
         {
-            return new QueryInspectionNode($"{nameof(NotStartWithTermProvider)}",
-                            parameters: new Dictionary<string, string>()
-                            {
-                                { "Field", _fieldName.ToString() },
-                                { "Terms", _startWith.ToString()}
-                            });
+            return new QueryInspectionNode($"{nameof(NotEndsWithTermProvider)}",
+                parameters: new Dictionary<string, string>()
+                {
+                    { "Field", _fieldName.ToString() },
+                    { "Terms", _endsWith.ToString()}
+                });
         }
 
         string DebugView => Inspect().ToString();

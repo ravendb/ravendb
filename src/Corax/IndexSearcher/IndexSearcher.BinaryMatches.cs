@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using Corax.Queries;
+using Corax.Queries.MultiTermMatch;
 
 namespace Corax;
 

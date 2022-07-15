@@ -1,59 +1,61 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using System.Diagnostics;
 using Sparrow.Server;
 using Voron;
 using Voron.Data.CompactTrees;
 
-namespace Corax.Queries
+namespace Corax.Queries.MultiTermMatch.TermProviders
 {
-    public unsafe struct ContainsTermProvider : ITermProvider
+    [DebuggerDisplay("{DebugView,nq}")]
+    public struct NotStartWithTermProvider : ITermProvider
     {
-        private readonly CompactTree _tree;
         private readonly IndexSearcher _searcher;
+        private readonly CompactTree.Iterator _iterator;
         private readonly Slice _fieldName;
-        private readonly Slice _term;
+        private readonly Slice _startWith;
+        private readonly CompactTree _tree;
 
-        private CompactTree.Iterator _iterator;
-        public ContainsTermProvider(IndexSearcher searcher, ByteStringContext context, CompactTree tree, Slice fieldName, int fieldId, Slice term)
+        public NotStartWithTermProvider(IndexSearcher searcher, ByteStringContext context, CompactTree tree, Slice fieldName, int fieldId, Slice startWith)
         {
-            _tree = tree;
             _searcher = searcher;
             _fieldName = fieldName;
             _iterator = tree.Iterate();
             _iterator.Reset();
-            _term = term;
+            _startWith = startWith;
+            _tree = tree;
         }
 
         public void Reset()
-        {            
-            _iterator = _tree.Iterate();
+        {
             _iterator.Reset();
         }
 
         public bool Next(out TermMatch term)
         {
-            var contains = _term;
+
             while (_iterator.MoveNext(out Slice termSlice, out var _))
             {
-                if (!termSlice.Contains(contains))
+                if (termSlice.StartWith(_startWith))
                     continue;
 
                 term = _searcher.TermQuery(_tree, termSlice);
                 return true;
             }
-
+            
             term = TermMatch.CreateEmpty();
             return false;
         }
 
         public QueryInspectionNode Inspect()
         {
-            return new QueryInspectionNode($"{nameof(ContainsTermProvider)}",
+            return new QueryInspectionNode($"{nameof(NotStartWithTermProvider)}",
                             parameters: new Dictionary<string, string>()
                             {
                                 { "Field", _fieldName.ToString() },
-                                { "Term", _term.ToString()}
+                                { "Terms", _startWith.ToString()}
                             });
         }
+
+        string DebugView => Inspect().ToString();
     }
 }

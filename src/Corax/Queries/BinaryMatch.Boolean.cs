@@ -2,8 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using Corax.Utils;
+
 
 namespace Corax.Queries
 {
@@ -44,7 +44,7 @@ namespace Corax.Queries
 
                     // The problem is that multiple Fill calls do not ensure that we will get a sequence of ordered
                     // values, therefore we must ensure that we get a 'sorted' sequence ensuring those happen.
-                    if (iterations >= 1 || inner.GetType() == typeof(SpatialMatch))
+                    if (iterations >= 1 || inner.GetType() == typeof(SpatialMatch.SpatialMatch))
                     {
                         if (totalResults > 0)
                             totalResults = Sorting.SortAndRemoveDuplicates(matches[0..totalResults]);

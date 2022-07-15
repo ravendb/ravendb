@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using Corax.IndexEntry;
+using Corax.Queries.MultiTermMatch.TermProviders;
 using Corax.Utils.Spatial;
 using Sparrow.Server;
 using Spatial4n.Context;
@@ -11,7 +12,7 @@ using Voron.Data.CompactTrees;
 using Voron.Debugging;
 using SpatialRelation = Spatial4n.Shapes.SpatialRelation;
 
-namespace Corax.Queries;
+namespace Corax.Queries.SpatialMatch;
 
 public class SpatialMatch : IQueryMatch
 {

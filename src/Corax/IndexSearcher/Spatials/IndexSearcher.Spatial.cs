@@ -1,5 +1,6 @@
 ﻿using System;
 using Corax.Queries;
+using Corax.Queries.SpatialMatch;
 using Corax.Utils;
 using Spatial4n.Shapes;
 using SpatialContext = Spatial4n.Context.SpatialContext;

@@ -1,12 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using Sparrow;
 using Sparrow.Server;
 using Voron;
 using Voron.Data.CompactTrees;
 
-namespace Corax.Queries
+namespace Corax.Queries.MultiTermMatch.TermProviders
 {
     public unsafe struct ExistsTermProvider : ITermProvider
     {

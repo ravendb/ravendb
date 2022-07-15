@@ -4,10 +4,9 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Corax.Utils;
-using Sparrow;
 using Sparrow.Server;
 
-namespace Corax.Queries
+namespace Corax.Queries.MultiTermMatch
 {
     [DebuggerDisplay("{DebugView,nq}")]
     public unsafe struct MultiTermMatch<TTermProvider> : IQueryMatch

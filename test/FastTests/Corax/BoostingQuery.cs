@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Corax;
 using Corax.IndexEntry;
 using Corax.Queries;
+using Corax.Queries.MultiTermMatch.TermProviders;
 using FastTests.Voron;
 using Sparrow.Server;
 using Sparrow.Threading;

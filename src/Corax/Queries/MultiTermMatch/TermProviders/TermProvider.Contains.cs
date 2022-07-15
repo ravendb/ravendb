@@ -3,24 +3,24 @@ using Sparrow.Server;
 using Voron;
 using Voron.Data.CompactTrees;
 
-namespace Corax.Queries
+namespace Corax.Queries.MultiTermMatch.TermProviders
 {
-    public struct EndsWithTermProvider : ITermProvider
+    public unsafe struct ContainsTermProvider : ITermProvider
     {
         private readonly CompactTree _tree;
         private readonly IndexSearcher _searcher;
         private readonly Slice _fieldName;
-        private readonly Slice _endsWith;
-        
+        private readonly Slice _term;
+
         private CompactTree.Iterator _iterator;
-        public EndsWithTermProvider(IndexSearcher searcher, ByteStringContext context, CompactTree tree, Slice fieldName, int fieldId, Slice endsWith)
+        public ContainsTermProvider(IndexSearcher searcher, ByteStringContext context, CompactTree tree, Slice fieldName, int fieldId, Slice term)
         {
             _tree = tree;
             _searcher = searcher;
             _fieldName = fieldName;
             _iterator = tree.Iterate();
             _iterator.Reset();
-            _endsWith = endsWith;
+            _term = term;
         }
 
         public void Reset()
@@ -31,10 +31,10 @@ namespace Corax.Queries
 
         public bool Next(out TermMatch term)
         {
-            var suffix = _endsWith;
+            var contains = _term;
             while (_iterator.MoveNext(out Slice termSlice, out var _))
             {
-                if (termSlice.EndsWith(suffix) == false)
+                if (!termSlice.Contains(contains))
                     continue;
 
                 term = _searcher.TermQuery(_tree, termSlice);
@@ -47,12 +47,12 @@ namespace Corax.Queries
 
         public QueryInspectionNode Inspect()
         {
-            return new QueryInspectionNode($"{nameof(EndsWithTermProvider)}",
-                parameters: new Dictionary<string, string>()
-                {
-                    { "Field", _fieldName.ToString() },
-                    { "Suffix", _endsWith.ToString()}
-                });
+            return new QueryInspectionNode($"{nameof(ContainsTermProvider)}",
+                            parameters: new Dictionary<string, string>()
+                            {
+                                { "Field", _fieldName.ToString() },
+                                { "Term", _term.ToString()}
+                            });
         }
     }
 }

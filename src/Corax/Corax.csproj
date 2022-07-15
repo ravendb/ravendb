@@ -34,6 +34,10 @@
     <ProjectReference Include="..\Voron\Voron.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Queries\UnaryMatch" />
+  </ItemGroup>
+
   <PropertyGroup Condition=" '$(Configuration)' == 'Validate' ">
     <DefineConstants>$(DefineConstants);VALIDATE;VALIDATE_PAGES</DefineConstants>
     <Optimize>true</Optimize>

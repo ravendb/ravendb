@@ -7,7 +7,7 @@ using Sparrow;
 using Sparrow.Server;
 using Size = Voron.Global.Constants.Size;
 
-namespace Corax.Queries
+namespace Corax.Queries.MultiTermMatch
 {
     [DebuggerDisplay("{DebugView,nq}")]
     public unsafe struct MultiTermBoostingMatch<TTermProvider> : IQueryMatch

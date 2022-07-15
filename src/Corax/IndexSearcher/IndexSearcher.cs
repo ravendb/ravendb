@@ -13,6 +13,7 @@ using Corax.Analyzers;
 using Corax.IndexEntry;
 using Corax.Pipeline;
 using Corax.Queries;
+using Corax.Queries.MultiTermMatch.TermProviders;
 using Sparrow.Server;
 using Voron.Data.BTrees;
 

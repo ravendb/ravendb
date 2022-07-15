@@ -4,12 +4,14 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Corax.Queries;
+using Corax.Queries.MultiTermMatch;
+using Corax.Queries.MultiTermMatch.TermProviders;
 using Corax.Utils;
 using Sparrow;
 using Voron;
 using Sparrow.Server;
 using Voron.Data.CompactTrees;
-using Range = Corax.Queries.Range;
+using Range = Corax.Queries.MultiTermMatch.TermProviders.Range;
 
 namespace Corax;
 

@@ -1,13 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
 using Sparrow.Server;
 
-namespace Corax.Queries
+namespace Corax.Queries.MultiTermMatch
 {
     [DebuggerDisplay("{DebugView,nq}")]
     public unsafe struct MultiTermMatch : IQueryMatch
