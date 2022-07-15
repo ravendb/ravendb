@@ -36,6 +36,7 @@ namespace Corax
 
     public class IndexWriter : IDisposable // single threaded, controlled by caller
     {
+        private long _numberOfEntries;
         private readonly IndexFieldsMapping _fieldsMapping;
         private readonly Tree _indexMetadata;
         private readonly StorageEnvironment _environment;
@@ -104,7 +105,7 @@ namespace Corax
             _entriesContainerId = Transaction.OpenContainer(Constants.IndexWriter.EntriesContainerSlice);
             _jsonOperationContext = JsonOperationContext.ShortTermSingleUse();
             _indexMetadata = Transaction.ReadTree(Constants.IndexMetadata) ?? Transaction.CreateTree(Constants.IndexMetadata);
-
+            _numberOfEntries = _indexMetadata.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0L;
         }
 
         public IndexWriter([NotNull] Transaction tx, IndexFieldsMapping fieldsMapping) : this(fieldsMapping)
@@ -115,6 +116,7 @@ namespace Corax
             _postingListContainerId = Transaction.OpenContainer(Constants.IndexWriter.PostingListsSlice);
             _entriesContainerId = Transaction.OpenContainer(Constants.IndexWriter.EntriesContainerSlice);
             _indexMetadata = Transaction.ReadTree(Constants.IndexMetadata) ?? Transaction.CreateTree(Constants.IndexMetadata);
+            _numberOfEntries = _indexMetadata.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0L;
         }
 
         public long Index(string id, Span<byte> data)
@@ -123,10 +125,14 @@ namespace Corax
             return Index(idSlice, data);
         }
 
+        private void IncrementNumberOfEntries(long delta)
+        {
+            _numberOfEntries += delta;
+        }
+        
         public long Index(Slice id, Span<byte> data)
         {
-            var metadataTree = Transaction.ReadTree(Constants.IndexMetadata);
-            metadataTree.Increment(Constants.IndexWriter.NumberOfEntriesSlice, 1);
+            IncrementNumberOfEntries(1);
 
             Span<byte> buf = stackalloc byte[10];
             var idLen = ZigZagEncoding.Encode(buf, id.Size);
@@ -151,10 +157,7 @@ namespace Corax
             return entryId;
         }
 
-        public long GetNumberOfEntries()
-        {
-            return _indexMetadata?.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0L;
-        }
+        public long GetNumberOfEntries() => _numberOfEntries;
 
         private unsafe void AddSuggestions(IndexFieldBinding binding, Slice slice)
         {
@@ -498,7 +501,7 @@ namespace Corax
                 }
 
                 Container.Delete(llt, _entriesContainerId, entryToDelete); // delete raw index entry
-                _indexMetadata.Increment(Constants.IndexWriter.NumberOfEntriesSlice, -1); // update number of entries
+                IncrementNumberOfEntries(-1); // update number of entries
                 temporaryStorageForIds?.Clear();
 
                 void DeleteIdFromTerm(ReadOnlySpan<byte> termValue, Span<byte> tmpBuffer, IndexFieldBinding binding)
@@ -635,7 +638,7 @@ namespace Corax
                 return false;
 
             var fieldTree = fieldsTree.CompactTreeFor(key);
-            var entriesCount = _indexMetadata.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0;
+            var entriesCount = _numberOfEntries;
             Debug.Assert(entriesCount - _entriesToDelete.Count >= 0);
 
             // We need to normalize the term in case we have a term bigger than MaxTermLength.
@@ -734,6 +737,10 @@ namespace Corax
                 }
             }
 
+            var persistedNumberOfEntries = _indexMetadata.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0L;
+            var addedEntriesInThisBatch = _numberOfEntries - persistedNumberOfEntries;
+            _indexMetadata.Increment(Constants.IndexWriter.NumberOfEntriesSlice, addedEntriesInThisBatch);
+            
             if (_ownsTransaction)
             {
                 Transaction.Commit();
