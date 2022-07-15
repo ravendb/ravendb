@@ -45,6 +45,14 @@ export function DetailedDatabaseStats(props: DetailedDatabaseStatsProps) {
                 {database.getLocations().map((location) => {
                     const stat = perNodeStats.find((x) => databaseLocationComparator(x.location, location));
 
+                    if (stat.status === "error") {
+                        return (
+                            <td key={genUtils.formatLocation(location)} className="text-danger">
+                                <i className="icon-cancel" title={"Load error: " + stat.error.responseJSON.Message} />
+                            </td>
+                        );
+                    }
+
                     return (
                         <td key={genUtils.formatLocation(location)}>
                             {stat.status === "loaded" ? children(stat.data, location) : "loading..."}

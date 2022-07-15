@@ -5,6 +5,7 @@ import EssentialDatabaseStatistics = Raven.Client.Documents.Operations.Essential
 import { EssentialDatabaseStatsComponent } from "./EssentialDatabaseStatsComponent";
 import { useAppUrls } from "../../../../hooks/useAppUrls";
 import { DetailedDatabaseStats } from "./DetailedDatabaseStats";
+import { IndexesDatabaseStats } from "./IndexesDatabaseStats";
 
 interface StatisticsPageProps {
     database: database;
@@ -30,7 +31,12 @@ export function StatisticsPage(props: StatisticsPageProps): JSX.Element {
     }, []);
 
     if (!essentialStats) {
-        return <div>"Loading..."</div>;
+        return (
+            <div>
+                <i className="btn-spinner margin-right" />
+                <span>Loading...</span>
+            </div>
+        );
     }
 
     const refreshStats = () => {
@@ -67,6 +73,7 @@ export function StatisticsPage(props: StatisticsPageProps): JSX.Element {
             <EssentialDatabaseStatsComponent stats={essentialStats} />
 
             {dbDetailsVisible && <DetailedDatabaseStats key="db-stats" database={database} />}
+            {dbDetailsVisible && <IndexesDatabaseStats key="index-stats" database={database} />}
         </div>
     );
 }

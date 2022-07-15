@@ -15,8 +15,7 @@ class getDatabaseDetailedStatsCommand extends commandBase {
             ...this.location
         };
         
-        return this.query<Raven.Client.Documents.Operations.DetailedDatabaseStatistics>(url, args, this.db, null, null, this.getTimeToAlert(this.longWait))
-            .fail((response: JQueryXHR) => this.reportError("Failed to get the database stats details", response.responseText, response.statusText));
+        return this.query<Raven.Client.Documents.Operations.DetailedDatabaseStatistics>(url, args, this.db, null, null, this.getTimeToAlert(this.longWait));
     }
 }
 
