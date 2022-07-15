@@ -52,20 +52,24 @@ namespace Raven.Server.Documents.Indexes
         public override int HandleMap(IndexItem indexItem, IEnumerable mapResults, Lazy<IndexWriteOperationBase> writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             EnsureValidStats(stats);
+            var writerOp = writer.Value;
 
-            bool mustDelete;
-            using (_stats.BloomStats.Start())
+            bool mustDelete = true;
+            if (SearchEngineType == SearchEngineType.Lucene)
             {
-                mustDelete = _filters.Add(indexItem.LowerId) == false;
+                using (_stats.BloomStats.Start())
+                {
+                    mustDelete = _filters.Add(indexItem.LowerId) == false;
+                }
             }
 
             if (indexItem.SkipLuceneDelete == false && mustDelete)
-                writer.Value.Delete(indexItem.LowerId, stats);
+                writerOp.Delete(indexItem.LowerId, stats);
 
             var numberOfOutputs = 0;
             foreach (var mapResult in mapResults)
             {
-                writer.Value.IndexDocument(indexItem.LowerId, indexItem.LowerSourceDocumentId, mapResult, stats, indexContext);
+                writerOp.IndexDocument(indexItem.LowerId, indexItem.LowerSourceDocumentId, mapResult, stats, indexContext);
 
                 numberOfOutputs++;
             }

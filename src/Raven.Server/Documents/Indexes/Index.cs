@@ -558,7 +558,7 @@ namespace Raven.Server.Documents.Indexes
 
         public IndexType Type { get; }
         
-        public SearchEngineType SearchEngineType { get; private set; }
+        public SearchEngineType SearchEngineType;
 
         public IndexSourceType SourceType { get; }
 
