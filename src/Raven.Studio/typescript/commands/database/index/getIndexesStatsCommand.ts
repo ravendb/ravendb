@@ -12,8 +12,7 @@ class getIndexesStatsCommand extends commandBase {
         const url = endpoints.databases.index.indexesStats;
         const args = this.location;
         const extractor = (response: resultsDto<Raven.Client.Documents.Indexes.IndexStats>) => response.Results;
-        return this.query(url, args, this.db, extractor)
-            .fail((response: JQueryXHR) => this.reportError("Failed to load index statistics", response.responseText, response.statusText));
+        return this.query(url, args, this.db, extractor);
     }
 }
 

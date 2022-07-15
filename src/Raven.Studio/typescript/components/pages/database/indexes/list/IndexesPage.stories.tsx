@@ -47,7 +47,7 @@ function configureDifferentIndexStates() {
     const [faultyStats, faultyProgress] = IndexesStubs.getFaultyIndex();
     const [erroredStats, erroredProgress] = IndexesStubs.getErroredIndex();
 
-    indexesService.withGetSampleStats(
+    indexesService.withGetStats(
         [
             upToDateStats,
             upToDateStatsWithErrors,
@@ -82,7 +82,7 @@ export const EmptyView: ComponentStory<typeof IndexesPage> = () => {
 
     const { indexesService } = mockServices;
 
-    indexesService.withGetSampleStats((dto) => {
+    indexesService.withGetStats((dto) => {
         dto.length = 0;
     });
     indexesService.withGetProgress((dto) => {
@@ -145,7 +145,7 @@ export const FaultyIndexSingleNode: ComponentStory<typeof IndexesPage> = () => {
 
     const [faultyStats] = IndexesStubs.getFaultyIndex();
 
-    indexesService.withGetSampleStats([faultyStats].filter((x) => x));
+    indexesService.withGetStats([faultyStats].filter((x) => x));
     indexesService.withGetProgress([]);
 
     return <IndexesPage database={db} />;
@@ -159,7 +159,7 @@ export const FaultyIndexSharded: ComponentStory<typeof IndexesPage> = () => {
 
     const [faultyStats] = IndexesStubs.getFaultyIndex();
 
-    indexesService.withGetSampleStats([faultyStats].filter((x) => x));
+    indexesService.withGetStats([faultyStats].filter((x) => x));
     indexesService.withGetProgress([]);
 
     return <IndexesPage database={db} />;

@@ -9,8 +9,12 @@ export default class MockIndexesService extends AutoMockService<IndexesService> 
         super(new IndexesService());
     }
 
-    withGetSampleStats(dto?: MockedValue<IndexStats[]>) {
+    withGetStats(dto?: MockedValue<IndexStats[]>) {
         return this.mockResolvedValue(this.mocks.getStats, dto, IndexesStubs.getSampleStats());
+    }
+
+    withGetSampleStats() {
+        return this.withGetStats();
     }
 
     withGetProgress(dto?: MockedValue<IndexProgress[]>) {
