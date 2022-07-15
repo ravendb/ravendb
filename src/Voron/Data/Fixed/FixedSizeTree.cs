@@ -1677,41 +1677,83 @@ namespace Voron.Data.Fixed
             if (page.LastMatch >= 0)
                 page.LastSearchPosition++;
 
-            var count = GetRemainingNumberOfEntriesFor(page);
+            int totalBranchesScanned = 0;
 
+            var maxDepth = _cursor.Count + 1;
+            var count = GetRemainingNumberOfEntriesFor(page, maxDepth, maxDepth, ref totalBranchesScanned);
             while (_cursor.TryPop(out page))
             {
                 System.Diagnostics.Debug.Assert(page.IsBranch);
-
                 page.LastSearchPosition++;
-                count += GetRemainingNumberOfEntriesFor(page);
+                var depth = _cursor.Count + 1;
+                count += GetRemainingNumberOfEntriesFor(page, depth, maxDepth, ref totalBranchesScanned);
             }
 
             return count;
         }
 
-        private long GetRemainingNumberOfEntriesFor(FixedSizeTreePage<TVal> page)
+        private long GetRemainingNumberOfEntriesFor(FixedSizeTreePage<TVal> page, int depth, int maxDepth, ref int totalBranchesScanned)
         {
             if (page.IsLeaf)
                 return page.NumberOfEntries - page.LastSearchPosition;
 
-            if (page.IsBranch)
+            if (page.IsBranch == false) 
+                throw new InvalidOperationException("Should not happen!");
+            
+
+            totalBranchesScanned++;
+            long count = 0;
+            const int maxNumberOfBranchPagesToScan = 4;
+            while (page.LastSearchPosition < page.NumberOfEntries && totalBranchesScanned <= maxNumberOfBranchPagesToScan)
             {
-                long count = 0;
-                while (page.LastSearchPosition < page.NumberOfEntries)
-                {
-                    var entry = page.GetEntry(page.LastSearchPosition);
-                    var childPage = GetReadOnlyPage(entry->PageNumber);
-
-                    count += GetRemainingNumberOfEntriesFor(childPage);
-
-                    page.LastSearchPosition++;
-                }
-
-                return count;
+                var entry = page.GetEntry(page.LastSearchPosition);
+                var childPage = GetReadOnlyPage(entry->PageNumber);
+                count += GetRemainingNumberOfEntriesFor(childPage, depth + 1, maxDepth, ref totalBranchesScanned);
+                page.LastSearchPosition++;
             }
 
-            throw new InvalidOperationException("Should not happen!");
+            if (totalBranchesScanned > maxNumberOfBranchPagesToScan) // 4 x ~508 entries per full branch page == ~16MB scanned, ~1 million entries
+            {
+                count+= EstimateRemainingEntriesFor(page, depth, maxDepth); // we can estimate now...
+            }
+            
+            return count;
+
+        }
+        
+        private long EstimateRemainingEntriesFor(FixedSizeTreePage<TVal> page, int depth, int maxDepth)
+        {
+            if (page.IsBranch == false)
+                throw new InvalidOperationException("This is only valid for branches!");
+
+            // here we can assume that we are working on a dense tree. We are only called if we already scanned > 1 million
+            // entries, and we care about the overall speed more than exact results. Dense tree assumption means that we can
+            // compute the total number of entries based on the projected size of the tree and its depth
+            
+            var entriesPerLeafPage = (page.PageMaxSpace / _entrySize);
+
+            var sum = 1;
+            for (int i = depth; i < maxDepth; i++)
+            {
+                sum *= entriesPerLeafPage;
+            }
+
+            // our estimate for remaining descendants. 
+            long count = (page.NumberOfEntries - 1 - page.LastSearchPosition) * sum;
+            
+            // we'll still check the right most entry anyway...
+            var entry = page.GetEntry(page.NumberOfEntries - 1);
+            var childPage = GetReadOnlyPage(entry->PageNumber);
+            if (childPage.IsLeaf)
+            {
+                count += childPage.NumberOfEntries - childPage.LastSearchPosition;
+            }
+            else
+            {
+                count += EstimateRemainingEntriesFor(childPage, depth + 1, maxDepth);
+            }
+
+            return count;
         }
 
         internal void SetNewPageAllocator(NewPageAllocator newPageAllocator)
