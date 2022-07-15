@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Corax;
 using Corax.Analyzers;
+using Corax.Fields;
 using Corax.IndexEntry;
 using Corax.Pipeline;
 using Corax.Queries;

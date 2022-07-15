@@ -2,6 +2,8 @@ using System;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Corax.Fields;
+using Corax.Utils;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Server.Compression;

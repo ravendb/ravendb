@@ -3,14 +3,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using Corax.Utils;
 using Corax.Utils.Spatial;
 using Sparrow;
-using Spatial4n.Distance;
-using Spatial4n.Shapes;
 using static Corax.Queries.SortingMatch;
 using Constants = Corax.Constants.IndexSearcher;
-using DistanceUtils = Spatial4n.Distance.DistanceUtils;
 
 namespace Corax.Queries
 {

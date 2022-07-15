@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Corax;
+using Corax.Fields;
 using Corax.IndexEntry;
 using Corax.Utils;
 using Assert = Xunit.Assert;

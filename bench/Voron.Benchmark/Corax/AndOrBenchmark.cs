@@ -15,6 +15,7 @@ using BenchmarkDotNet.Exporters;
 using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Validators;
 using Corax;
+using Corax.Fields;
 using Corax.IndexEntry;
 using Corax.Queries;
 using Raven.Server.Documents.Queries.Parser;

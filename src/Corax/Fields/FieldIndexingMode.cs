@@ -1,4 +1,4 @@
-﻿namespace Corax;
+﻿namespace Corax.Fields;
 
 public enum FieldIndexingMode
 {

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using Corax;
+using Corax.Fields;
 using Corax.IndexEntry;
 using Corax.Queries;
 using FastTests.Voron;

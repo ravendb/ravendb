@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Corax;
+using Corax.Fields;
 using Corax.Pipeline;
 using Corax.Queries;
 using Parquet.Thrift;

@@ -3,6 +3,7 @@ using System.Buffers;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Corax.Fields;
 using Corax.Utils;
 using Corax.Utils.Spatial;
 using Sparrow;

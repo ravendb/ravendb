@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using Corax;
 using Corax.Analyzers;
+using Corax.Fields;
 using Corax.IndexEntry;
 using Corax.Pipeline;
 using Corax.Queries;

@@ -2,6 +2,7 @@
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using Corax;
+using Corax.Fields;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Exceptions;
 using Raven.Server.Utils;

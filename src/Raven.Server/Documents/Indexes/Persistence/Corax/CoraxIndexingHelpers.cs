@@ -14,6 +14,7 @@ using System.Linq;
 using System.Reflection;
 using Raven.Client.Documents.Indexes;
 using Corax;
+using Corax.Fields;
 using Constants = Raven.Client.Constants;
 using Sparrow.Server;
 using Voron;

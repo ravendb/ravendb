@@ -6,7 +6,7 @@ using Corax.IndexEntry;
 using Sparrow.Binary;
 using Sparrow.Server.Compression;
 
-namespace Corax
+namespace Corax.Utils
 {
     public ref struct IndexEntryFieldIterator
     {

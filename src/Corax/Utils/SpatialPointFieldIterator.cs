@@ -2,11 +2,10 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Corax.IndexEntry;
-using Corax.Utils;
 using Sparrow;
 using Sparrow.Server.Compression;
 
-namespace Corax;
+namespace Corax.Utils;
 
 public ref struct SpatialPointFieldIterator
 {

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Corax;
+using Corax.Fields;
 using Corax.Queries;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Queries;

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Corax;
+using Corax.Fields;
 using Corax.Queries;
 using Corax.Utils;
 using Raven.Client.Exceptions;
