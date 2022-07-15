@@ -354,8 +354,6 @@ namespace SlowTests.SparrowTests
                 return Math.Abs(size - retentionSize) <= threshold;
             }, true, 10_000, 1_000);
 
-            loggingSource.EndLogging();
-
             string errorMessage = isRetentionPolicyApplied 
                 ? string.Empty
                 : $"{TempInfoToInvestigate(loggingSource, path)}. " +
@@ -363,6 +361,8 @@ namespace SlowTests.SparrowTests
                   Environment.NewLine + 
                   FileNamesWithSize(afterEndFiles);
 
+            loggingSource.EndLogging();
+            
             Assert.True(isRetentionPolicyApplied, errorMessage);
         }
 
