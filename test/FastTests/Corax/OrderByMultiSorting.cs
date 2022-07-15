@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Corax;
+using Corax.IndexEntry;
 using Corax.Queries;
 using FastTests.Voron;
 using Sparrow.Server;

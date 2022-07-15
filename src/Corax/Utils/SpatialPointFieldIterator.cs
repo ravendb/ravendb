@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Corax.IndexEntry;
 using Corax.Utils;
 using Sparrow;
 using Sparrow.Server.Compression;

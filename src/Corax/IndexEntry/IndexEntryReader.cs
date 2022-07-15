@@ -1,14 +1,12 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Server.Compression;
-using Voron;
 
-namespace Corax;
+namespace Corax.IndexEntry;
 
 /*
  *  format: <total_length:short> <dynamic_field_metadata_table_prt:short> <known_field_count:short> <data_section> <dynamic_field_metadata_table> <known_field_pointers:short>[count]

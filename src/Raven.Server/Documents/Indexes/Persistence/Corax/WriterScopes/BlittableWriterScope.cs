@@ -2,6 +2,7 @@
 using System.Buffers;
 using System.IO;
 using Corax;
+using Corax.IndexEntry;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes;

@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Corax.IndexEntry;
 using Sparrow.Binary;
 using Sparrow.Server.Compression;
 

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using Corax;
+using Corax.IndexEntry;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes;
 using Raven.Server.Documents.Indexes.Static;

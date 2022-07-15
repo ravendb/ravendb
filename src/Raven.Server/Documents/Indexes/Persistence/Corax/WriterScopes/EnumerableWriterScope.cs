@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using Corax;
+using Corax.IndexEntry;
 using Corax.Utils;
 using K4os.Compression.LZ4.Internal;
 using Sparrow;

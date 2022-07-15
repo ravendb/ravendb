@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Corax;
+namespace Corax.IndexEntry;
 
 [Flags]
 public enum IndexEntryFieldType : ushort

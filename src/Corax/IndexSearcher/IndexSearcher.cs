@@ -10,6 +10,7 @@ using Voron.Data.Containers;
 using Sparrow;
 using System.Runtime.Intrinsics.X86;
 using Corax.Analyzers;
+using Corax.IndexEntry;
 using Corax.Pipeline;
 using Corax.Queries;
 using Sparrow.Server;

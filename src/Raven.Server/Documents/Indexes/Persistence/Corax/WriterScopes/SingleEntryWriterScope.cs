@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using Corax;
+using Corax.IndexEntry;
 using Corax.Utils;
 using Lextm.SharpSnmpLib;
 using Raven.Server.Documents.Indexes.Spatial;

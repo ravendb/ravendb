@@ -24,6 +24,7 @@ using RavenConstants = Raven.Client.Constants;
 using CoraxConstants = Corax.Constants;
 using Encoding = System.Text.Encoding;
 using System.Diagnostics;
+using Corax.IndexEntry;
 using Raven.Server.NotificationCenter.Notifications;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;

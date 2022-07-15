@@ -2,6 +2,7 @@
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Corax;
+using Corax.IndexEntry;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
 

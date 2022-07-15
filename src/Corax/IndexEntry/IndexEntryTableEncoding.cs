@@ -1,4 +1,4 @@
-﻿namespace Corax;
+﻿namespace Corax.IndexEntry;
 
 public enum IndexEntryTableEncoding : byte
 {

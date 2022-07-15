@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+using Corax.IndexEntry;
 using Corax.Utils.Spatial;
 using Sparrow.Server;
 using Spatial4n.Context;

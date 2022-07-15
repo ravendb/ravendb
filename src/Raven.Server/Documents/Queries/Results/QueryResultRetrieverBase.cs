@@ -5,6 +5,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Corax;
+using Corax.IndexEntry;
 using Jint.Native;
 using Jint.Native.Object;
 using Jint.Runtime;

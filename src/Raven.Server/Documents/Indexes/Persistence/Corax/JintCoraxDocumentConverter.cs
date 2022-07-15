@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Amazon.SimpleNotificationService.Model;
+using Corax.IndexEntry;
 using Jint;
 using Jint.Native;
 using Jint.Native.Object;
@@ -44,7 +45,7 @@ public class JintCoraxDocumentConverter : JintCoraxDocumentConverterBase
             return Span<byte>.Empty;
         }
 
-        var entryWriter = new CoraxLib.IndexEntryWriter(writerBuffer, GetKnownFieldsForWriter());
+        var entryWriter = new IndexEntryWriter(writerBuffer, GetKnownFieldsForWriter());
 
         id = key ?? (sourceDocumentId ?? throw new InvalidDataException("Cannot find any identifier of the document."));
         var scope = new SingleEntryWriterScope(_allocator);

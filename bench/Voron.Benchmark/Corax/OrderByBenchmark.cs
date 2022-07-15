@@ -15,6 +15,7 @@ using BenchmarkDotNet.Exporters;
 using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Validators;
 using Corax;
+using Corax.IndexEntry;
 using Sparrow.Server;
 using Sparrow.Threading;
 

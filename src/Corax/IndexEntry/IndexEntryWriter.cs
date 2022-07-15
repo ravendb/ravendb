@@ -8,9 +8,8 @@ using Corax.Utils.Spatial;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Server.Compression;
-using Voron;
 
-namespace Corax;
+namespace Corax.IndexEntry;
 
 // The rationale to use ref structs is not allowing to copy those around so easily. They should be cheap to construct
 // and cheaper to use. 

@@ -1,6 +1,6 @@
 ﻿using System.Runtime.InteropServices;
 
-namespace Corax;
+namespace Corax.IndexEntry;
 
 [StructLayout(LayoutKind.Explicit, Size = HeaderSize)]
 internal struct IndexEntryHeader

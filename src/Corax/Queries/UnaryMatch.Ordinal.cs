@@ -5,6 +5,7 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
+using Corax.IndexEntry;
 using Corax.Utils;
 using Sparrow;
 using Sparrow.Binary;

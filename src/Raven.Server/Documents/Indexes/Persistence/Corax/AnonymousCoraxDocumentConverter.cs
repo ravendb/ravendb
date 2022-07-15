@@ -1,6 +1,7 @@
 using System;
 using Amazon.SimpleNotificationService.Model;
 using Corax;
+using Corax.IndexEntry;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;

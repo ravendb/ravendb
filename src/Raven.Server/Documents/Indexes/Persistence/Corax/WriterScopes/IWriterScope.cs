@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Corax;
+using Corax.IndexEntry;
 using Corax.Utils;
 using Raven.Server.Documents.Indexes.Spatial;
 using Sparrow.Json;
