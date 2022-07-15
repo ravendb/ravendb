@@ -16,6 +16,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Exceptions.Corax;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Extensions;
@@ -4596,6 +4597,9 @@ namespace Raven.Server.Documents.Indexes
 
         public void Compact(Action<IOperationProgress> onProgress, CompactionResult result, CancellationToken token)
         {
+            if (IndexPersistence is CoraxIndexPersistence)
+                throw new NotImplementedInCoraxException($"{nameof(Compact)} is not implemented yet.");
+            
             if (_isCompactionInProgress)
                 throw new InvalidOperationException($"Index '{Name}' cannot be compacted because compaction is already in progress.");
 
