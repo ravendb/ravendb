@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 using Corax.Utils.Spatial;
 using Sparrow;
 using static Corax.Queries.SortingMatch;
-using Constants = Corax.Constants.IndexSearcher;
+using Constants = Corax.Utils.Constants.IndexSearcher;
 
 namespace Corax.Queries
 {

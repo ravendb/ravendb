@@ -3,6 +3,7 @@ using Corax;
 using Corax.Analyzers;
 using Corax.Fields;
 using Corax.IndexEntry;
+using Corax.Utils;
 using FastTests.Voron;
 using Raven.Server.Documents.Indexes.Persistence.Corax;
 using Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes;

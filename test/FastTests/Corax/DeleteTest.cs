@@ -7,6 +7,7 @@ using Corax;
 using Corax.Fields;
 using Corax.IndexEntry;
 using Corax.Queries;
+using Corax.Utils;
 using FastTests.Voron;
 using Sparrow;
 using Sparrow.Server;

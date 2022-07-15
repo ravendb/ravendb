@@ -1,7 +1,8 @@
 ﻿using System.IO;
 using Corax.Queries;
+using Corax.Utils;
 using Sparrow.Server.Strings;
-using static Corax.Constants;
+using static Corax.Utils.Constants;
 
 namespace Corax;
 

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using Corax.Utils;
 using Voron;
 using Voron.Data.Containers;
 using Voron.Data.Sets;

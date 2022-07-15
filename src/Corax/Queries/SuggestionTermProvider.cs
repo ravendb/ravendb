@@ -5,11 +5,12 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Corax.Fields;
 using Corax.Pipeline;
+using Corax.Utils;
 using Sparrow;
 using Sparrow.Collections;
 using Sparrow.Server.Strings;
 using Voron;
-using static Corax.Constants;
+using static Corax.Utils.Constants;
 
 namespace Corax.Queries
 {

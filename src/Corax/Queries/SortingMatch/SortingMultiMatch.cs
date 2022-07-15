@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Corax.IndexEntry;
+using Corax.Utils;
 using Corax.Utils.Spatial;
 using Sparrow;
 using static Corax.Queries.SortingMatch;

@@ -17,7 +17,7 @@ using Spatial4n.Shapes;
 using RavenConstants = Raven.Client.Constants;
 using IndexSearcher = Corax.IndexSearcher;
 using Query = Raven.Server.Documents.Queries.AST.Query;
-using CoraxConstants = Corax.Constants;
+using CoraxConstants = Corax.Utils.Constants;
 using SpatialUnits = Raven.Client.Documents.Indexes.Spatial.SpatialUnits;
 
 

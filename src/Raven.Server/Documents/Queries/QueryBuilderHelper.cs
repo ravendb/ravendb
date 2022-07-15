@@ -466,7 +466,7 @@ public static class QueryBuilderHelper
     internal static int GetFieldId(string fieldName, Index index, IndexFieldsMapping indexMapping = null, FieldsToFetch queryMapping = null, bool isForQuery = true, bool exact = false)
     {
         if (exact)
-            return Corax.Constants.IndexSearcher.NonAnalyzer;
+            return Corax.Utils.Constants.IndexSearcher.NonAnalyzer;
         
         RuntimeHelpers.EnsureSufficientExecutionStack();
         if (fieldName.Equals(Client.Constants.Documents.Indexing.Fields.DocumentIdMethodName, StringComparison.OrdinalIgnoreCase) ||
@@ -553,7 +553,7 @@ public static class QueryBuilderHelper
         string s => s,
         long l => l.ToString(CultureInfo.InvariantCulture),
         double d => d.ToString(CultureInfo.InvariantCulture),
-        null => Corax.Constants.NullValue,
+        null => Corax.Utils.Constants.NullValue,
         _ => value?.ToString()
     };
     

@@ -23,7 +23,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server;
 using Voron.Impl;
-using CoraxConstants = Corax.Constants;
+using CoraxConstants = Corax.Utils.Constants;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax
 {

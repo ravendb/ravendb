@@ -21,7 +21,7 @@ using Sparrow.Server;
 using Sparrow.Threading;
 using Voron;
 using RavenConstants = Raven.Client.Constants;
-using CoraxConstants = Corax.Constants;
+using CoraxConstants = Corax.Utils.Constants;
 using Encoding = System.Text.Encoding;
 using System.Diagnostics;
 using Corax.Fields;

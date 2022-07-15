@@ -7,6 +7,7 @@ using System.Text;
 using Corax.Analyzers;
 using Corax.Pipeline;
 using Corax.Queries;
+using Corax.Utils;
 using Sparrow.Server;
 using Voron;
 
