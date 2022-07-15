@@ -17,7 +17,7 @@ namespace Corax
         public readonly int DefaultOutputSize;
         public readonly int DefaultTokenSize;
         
-        private readonly delegate*<Analyzer, ReadOnlySpan<byte>, ref Span<byte>, ref Span<Token>, void> _funcUtf8;
+        private readonly delegate*<Analyzer, ReadOnlySpan<byte>, ref Span<byte>, ref Span<Token>, ref byte[], void> _funcUtf8;
         private readonly delegate*<Analyzer, ReadOnlySpan<char>, ref Span<char>, ref Span<Token>, void> _funcUtf16;
         private readonly Analyzer _inner;
         private readonly ITokenizer _tokenizer;
@@ -27,14 +27,14 @@ namespace Corax
         private bool _disposedValue;
 
         protected Analyzer(
-            delegate*<Analyzer, ReadOnlySpan<byte>, ref Span<byte>, ref Span<Token>, void> functionUtf8,
+            delegate*<Analyzer, ReadOnlySpan<byte>, ref Span<byte>, ref Span<Token>, ref byte[], void> functionUtf8,
             delegate*<Analyzer, ReadOnlySpan<char>, ref Span<char>, ref Span<Token>, void> functionUtf16,
             in ITokenizer tokenizer, ITransformer[] transformers) : this(null, functionUtf8, functionUtf16, tokenizer, transformers)
         {
         }
 
         protected Analyzer(Analyzer inner,
-            delegate*<Analyzer, ReadOnlySpan<byte>, ref Span<byte>, ref Span<Token>, void> functionUtf8,
+            delegate*<Analyzer, ReadOnlySpan<byte>, ref Span<byte>, ref Span<Token>, ref byte[], void> functionUtf8,
             delegate*<Analyzer, ReadOnlySpan<char>, ref Span<char>, ref Span<Token>, void> functionUtf16,
             in ITokenizer tokenizer, ITransformer[] transformers)
         {
@@ -196,7 +196,7 @@ namespace Corax
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void RunUtf8<TTokenizer, TTransform1, TTransform2, TTransform3>(Analyzer analyzer,
-                        ReadOnlySpan<byte> source, ref Span<byte> output, ref Span<Token> tokens)
+                        ReadOnlySpan<byte> source, ref Span<byte> output, ref Span<Token> tokens, ref byte[] buffer)
             where TTokenizer : ITokenizer
             where TTransform1 : ITransformer
             where TTransform2 : ITransformer
@@ -309,12 +309,18 @@ namespace Corax
             where TTransform2 : ITransformer
             where TTransform3 : ITransformer
         {
-            delegate*<Analyzer, ReadOnlySpan<byte>, ref Span<byte>, ref Span<Token>, void> funcUtf8 = &RunUtf8<TTokenizer, TTransform1, TTransform2, TTransform3>;
+            delegate*<Analyzer, ReadOnlySpan<byte>, ref Span<byte>, ref Span<Token>, ref byte[], void> funcUtf8 = &RunUtf8<TTokenizer, TTransform1, TTransform2, TTransform3>;
             delegate*<Analyzer, ReadOnlySpan<char>, ref Span<char>, ref Span<Token>, void> funcUtf16 = &RunUtf16<TTokenizer, TTransform1, TTransform2, TTransform3>;
 
-            static void RunUtf8WithConversion(Analyzer analyzer, ReadOnlySpan<byte> source, ref Span<byte> output, ref Span<Token> tokens)
+            static void RunUtf8WithConversion(Analyzer analyzer, ReadOnlySpan<byte> source, ref Span<byte> output, ref Span<Token> tokens, ref byte[] buffer)
             {
-                var buffer = BufferPool.Rent(source.Length * 10);
+                if (buffer.Length < source.Length * 10)
+                {
+                    if (buffer.Length > 0)
+                        BufferPool.Return(buffer);
+                    buffer = null;
+                    buffer = BufferPool.Rent(source.Length * 10);
+                }
                 
                 Span<char> charBuffer = MemoryMarshal.Cast<byte, char>(buffer.AsSpan());
                 int characters = Encoding.UTF8.GetChars(source, charBuffer);
@@ -399,8 +405,6 @@ namespace Corax
                     // We need to move our base ptr
                     outputPtr++;
                 }
-
-                BufferPool.Return(buffer);
             }
 
             bool canRunUtf8 = transform1.SupportUtf8 & transform2.SupportUtf8 & transform3.SupportUtf8 & tokenizer.SupportUtf8;
@@ -434,7 +438,7 @@ namespace Corax
         public Analyzer With<TTransform1>(in TTransform1 transform1 = default(TTransform1))
             where TTransform1 : ITransformer
         {
-            delegate*<Analyzer, ReadOnlySpan<byte>, ref Span<byte>, ref Span<Token>, void> funcUtf8 = &RunUtf8<NullTokenizer, TTransform1, NullTransformer, NullTransformer>;
+            delegate*<Analyzer, ReadOnlySpan<byte>, ref Span<byte>, ref Span<Token>, ref byte[], void> funcUtf8 = &RunUtf8<NullTokenizer, TTransform1, NullTransformer, NullTransformer>;
             delegate*<Analyzer, ReadOnlySpan<char>, ref Span<char>, ref Span<Token>, void> funcUtf16 = &RunUtf16<NullTokenizer, TTransform1, NullTransformer, NullTransformer>;
 
             return new Analyzer(this, funcUtf8, funcUtf16, default(NullTokenizer), new ITransformer[] { transform1 });
@@ -447,7 +451,7 @@ namespace Corax
             where TTransform1 : ITransformer
             where TTransform2 : ITransformer
         {
-            delegate*<Analyzer, ReadOnlySpan<byte>, ref Span<byte>, ref Span<Token>, void> funcUtf8 = &RunUtf8<NullTokenizer, TTransform1, TTransform2, NullTransformer>;
+            delegate*<Analyzer, ReadOnlySpan<byte>, ref Span<byte>, ref Span<Token>, ref byte[], void> funcUtf8 = &RunUtf8<NullTokenizer, TTransform1, TTransform2, NullTransformer>;
             delegate*<Analyzer, ReadOnlySpan<char>, ref Span<char>, ref Span<Token>, void> funcUtf16 = &RunUtf16<NullTokenizer, TTransform1, TTransform2, NullTransformer>;
 
             return new Analyzer(this, funcUtf8, funcUtf16, default(NullTokenizer), new ITransformer[] { transform1, transform2 });
@@ -461,14 +465,14 @@ namespace Corax
             where TTransform2 : ITransformer
             where TTransform3 : ITransformer
         {
-            delegate*<Analyzer, ReadOnlySpan<byte>, ref Span<byte>, ref Span<Token>, void> funcUtf8 = &RunUtf8<NullTokenizer, TTransform1, TTransform2, TTransform3>;
+            delegate*<Analyzer, ReadOnlySpan<byte>, ref Span<byte>, ref Span<Token>, ref byte[], void> funcUtf8 = &RunUtf8<NullTokenizer, TTransform1, TTransform2, TTransform3>;
             delegate*<Analyzer, ReadOnlySpan<char>, ref Span<char>, ref Span<Token>, void> funcUtf16 = &RunUtf16<NullTokenizer, TTransform1, TTransform2, TTransform3>;
 
             return new Analyzer(this, funcUtf8, funcUtf16, default(NullTokenizer), new ITransformer[] { transform1, transform2, transform3 });
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Execute(ReadOnlySpan<byte> source, ref Span<byte> output, ref Span<Token> tokens)
+        public void Execute(ReadOnlySpan<byte> source, ref Span<byte> output, ref Span<Token> tokens, ref byte[] utf8ConversionBuffer)
         {
             if (output.Length < (int)(_sourceBufferMultiplier * source.Length))
                 throw new ArgumentException("Buffer is too small");
@@ -476,7 +480,22 @@ namespace Corax
                 throw new ArgumentException("Buffer is too small");
 
                     
-            _funcUtf8(this, source, ref output, ref tokens);
+            _funcUtf8(this, source, ref output, ref tokens, ref utf8ConversionBuffer);
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Execute(ReadOnlySpan<byte> source, ref Span<byte> output, ref Span<Token> tokens)
+        {
+            if (output.Length < (int)(_sourceBufferMultiplier * source.Length))
+                throw new ArgumentException("Buffer is too small");
+            if (tokens.Length < (int)(_tokenBufferMultiplier * source.Length))
+                throw new ArgumentException("Buffer is too small");
+            
+            var emptyHandler = Array.Empty<byte>();
+            _funcUtf8(this, source, ref output, ref tokens, ref emptyHandler);
+            
+            if (emptyHandler.Length > 0)
+                BufferPool.Return(emptyHandler);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
