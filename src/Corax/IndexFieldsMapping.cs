@@ -180,6 +180,7 @@ public class IndexFieldBinding
         HasSuggestions = hasSuggestions;
         _fieldIndexingMode = fieldIndexingMode;
         HasSpatial = hasSpatial;
+        IsAnalyzed = Analyzer is not null && FieldIndexingMode is not FieldIndexingMode.Exact && HasSpatial is false;
     }
 
     public string FieldNameAsString
@@ -189,14 +190,8 @@ public class IndexFieldBinding
             return _fieldName ??= FieldName.ToString();
         }
     }
-    
-    public bool IsAnalyzed
-    {
-        get
-        {
-            return Analyzer is not null && FieldIndexingMode is not FieldIndexingMode.Exact && HasSpatial is false;
-        }
-    }
+
+    public bool IsAnalyzed;
 
     public bool IsIndexed
     {
