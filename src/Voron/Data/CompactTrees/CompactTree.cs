@@ -351,11 +351,8 @@ namespace Voron.Data.CompactTrees
                 // Because the size of the tree is really big, we are better of sampling less amount of data because unless we
                 // grow the table size there is probably not much improvement we can do adding more samples. Only way to improve
                 // under those conditions is in finding a better sample for training. 
-                long sampleSize = (_state.NumberOfEntries > 32 * 1_000_000) ? 
-                    _state.NumberOfEntries / 100 :  
-                    _state.NumberOfEntries / 10;
-
-                TryImproveDictionaryByRandomlyScanning(sampleSize);
+                // We also need to limit the amount of time that we are allowed to scan trying to find a better dictionary
+                TryImproveDictionaryByRandomlyScanning(Math.Min(_state.NumberOfEntries / 10, 1_000));
             }
 
             using var _ = _parent.DirectAdd(Name, sizeof(CompactTreeState), out var ptr);
