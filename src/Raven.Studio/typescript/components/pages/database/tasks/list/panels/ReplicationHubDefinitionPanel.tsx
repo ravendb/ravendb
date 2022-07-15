@@ -1,24 +1,16 @@
 ﻿import React from "react";
+import { OngoingTaskActions, OngoingTaskName, OngoingTaskStatus, useTasksOperations } from "../shared";
 import {
-    BaseOngoingTaskPanelProps,
-    OngoingTaskActions,
-    OngoingTaskName,
-    OngoingTaskStatus,
-    useTasksOperations,
-} from "../shared";
-import {
-    OngoingTaskExternalReplicationInfo,
     OngoingTaskHubDefinitionInfo,
-    OngoingTaskHubDefinitionSharedInfo,
     OngoingTaskReplicationHubInfo,
-    OngoingTaskReplicationHubSharedInfo,
     OngoingTaskSharedInfo,
 } from "../../../../../models/tasks";
 import database from "models/resources/database";
-import { RichPanel, RichPanelHeader } from "../../../../../common/RichPanel";
+import { RichPanel, RichPanelDetailItem, RichPanelDetails, RichPanelHeader } from "../../../../../common/RichPanel";
 import { useAppUrls } from "hooks/useAppUrls";
 import { useAccessManager } from "hooks/useAccessManager";
 import { ReplicationHubPanel } from "./ReplicationHubPanel";
+import genUtils from "common/generalUtils";
 
 interface ReplicationHubPanelProps {
     db: database;
@@ -29,16 +21,11 @@ interface ReplicationHubPanelProps {
 }
 
 function Details(props: ReplicationHubPanelProps & { canEdit: boolean }) {
-    const { connectedHubs, db } = props;
+    const { connectedHubs, db, data } = props;
 
-    /* TODO
-    return (
-        <div className="property-item" data-bind="visible: showDelayReplication">
-            <div className="property-name">Replication Delay Time:</div>
-            <div className="property-value" data-bind="text: delayHumane" title="Replication Delay Time"></div>
-        </div>
-    );
-     */
+    const delayHumane = data.shared.delayReplicationTime
+        ? genUtils.formatTimeSpan(data.shared.delayReplicationTime * 1000, true)
+        : null;
 
     if (connectedHubs.length === 0) {
         return (
@@ -50,10 +37,21 @@ function Details(props: ReplicationHubPanelProps & { canEdit: boolean }) {
     }
 
     return (
-        <div className="margin">
-            {connectedHubs.map((hub) => (
-                <ReplicationHubPanel key={hub.shared.taskId + hub.shared.taskName} db={db} data={hub} />
-            ))}
+        <div>
+            {delayHumane && (
+                <RichPanelDetails>
+                    <RichPanelDetailItem>
+                        Replication Delay Time:
+                        <div className="value">{delayHumane}</div>
+                    </RichPanelDetailItem>
+                </RichPanelDetails>
+            )}
+
+            <div className="margin">
+                {connectedHubs.map((hub) => (
+                    <ReplicationHubPanel key={hub.shared.taskId + hub.shared.taskName} db={db} data={hub} />
+                ))}
+            </div>
         </div>
     );
 }

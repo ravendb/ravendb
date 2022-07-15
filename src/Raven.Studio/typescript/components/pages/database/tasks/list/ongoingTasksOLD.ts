@@ -341,11 +341,6 @@ class ongoingTaskReplicationHubDefinitionListModel {
     
     private initObservables() {
         this.stateText = ko.pureComputed(() => this.taskState());
-
-        const urls = appUrl.forCurrentDatabase();
-        this.editUrl = urls.editReplicationHub(this.taskId);
-
-        this.delayHumane = ko.pureComputed(() => generalUtils.formatTimeSpan(this.delayReplicationTime() * 1000, true));
     }
     
     update(dto: Raven.Client.Documents.Operations.Replication.PullReplicationDefinition) {
