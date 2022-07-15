@@ -7,7 +7,7 @@ import { DatabasesFilter } from "./DatabasesFilter";
 import { DatabasesCounter } from "./DatabasesCounter";
 import { NoDatabases } from "./NoDatabases";
 import { DatabaseFilterCriteria, DatabaseSharedInfo } from "../../../models/databases";
-import { useChangesContext } from "hooks/useChangesContext";
+import { useChanges } from "hooks/useChanges";
 
 interface DatabasesPageProps {}
 
@@ -26,7 +26,7 @@ export function DatabasesPage(props: DatabasesPageProps) {
         searchText: "",
     }));
 
-    const { serverNotifications } = useChangesContext();
+    const { serverNotifications } = useChanges();
 
     const [selectedDatabases, setSelectedDatabases] = useState<string[]>([]);
 
@@ -84,10 +84,12 @@ export function DatabasesPage(props: DatabasesPageProps) {
     }, []);
 
     useEffect(() => {
-        const sub = serverNotifications().watchAllDatabaseChanges(() => fetchDatabases());
+        if (serverNotifications) {
+            const sub = serverNotifications.watchAllDatabaseChanges(() => fetchDatabases());
 
-        return () => sub.off();
-    }, [serverNotifications()]);
+            return () => sub.off();
+        }
+    }, [serverNotifications]);
 
     return (
         <div>

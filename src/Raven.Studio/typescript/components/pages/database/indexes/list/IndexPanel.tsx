@@ -58,7 +58,7 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
 
     const [updatingLocalPriority, setUpdatingLocalPriority] = useState(false);
     const [updatingLockMode, setUpdatingLockMode] = useState(false);
-    const [updatingState, setUpdatingState] = useState(false); //TODO: bind me!
+    const [updatingState, setUpdatingState] = useState(false);
 
     const setPriority = async (e: MouseEvent, priority: IndexPriority) => {
         e.preventDefault();
@@ -154,7 +154,7 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
 
     return (
         <>
-            <RichPanel className={classNames({ "index-sidebyside": hasReplacement || isReplacement })} ref={ref}>
+            <RichPanel className={classNames({ "index-sidebyside": hasReplacement || isReplacement })} innerRef={ref}>
                 <RichPanelHeader id={indexUniqueId(index)}>
                     <RichPanelSelect>
                         {canReadWriteDatabase(database) && (
@@ -307,7 +307,8 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                                            enable: $root.globalIndexingStatus() === 'Running'  && !_.includes($root.spinners.localState(), name),
                                            requiredAccess: 'DatabaseReadWrite', requiredAccessOptions: { strategy: 'disable' }"
                                     >
-                                        Set State
+                                        {updatingState && <i className="btn-spinner" />}
+                                        <span>Set State</span>
                                         <span className="caret" />
                                     </button>
                                     <ul className="dropdown-menu">
