@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using Corax;
+using Corax.Analyzers;
 using Corax.Pipeline;
 using Corax.Queries;
 using Raven.Client.Documents.Queries.Explanation;

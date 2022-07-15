@@ -1,13 +1,12 @@
 ﻿using System;
 using System.Buffers;
 using System.Diagnostics;
-using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using Corax.Pipeline;
 
-namespace Corax
+namespace Corax.Analyzers
 {
     public unsafe class Analyzer : IDisposable
     {

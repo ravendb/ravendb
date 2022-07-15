@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Corax;
+using Corax.Analyzers;
 using Corax.Pipeline;
 using FastTests.Voron;
 using Xunit;

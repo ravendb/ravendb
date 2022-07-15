@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using Corax;
+using Corax.Analyzers;
 using Corax.Pipeline;
 using Corax.Queries;
 using Corax.Utils;

@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using Corax.Analyzers;
 using Sparrow.Server;
 using Voron;
 
@@ -159,7 +160,7 @@ public class IndexFieldBinding
     public readonly Slice FieldName;
     public readonly Slice FieldNameLong;
     public readonly Slice FieldNameDouble;
-    public Corax.Analyzer Analyzer;
+    public Analyzer Analyzer;
     public readonly bool HasSuggestions;
     public readonly bool HasSpatial;
     public FieldIndexingMode FieldIndexingMode => _silentlyChangedIndexingMode ?? _fieldIndexingMode;

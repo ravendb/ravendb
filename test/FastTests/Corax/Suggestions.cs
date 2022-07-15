@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using Corax;
+using Corax.Analyzers;
 using Corax.Pipeline;
 using Corax.Queries;
 using FastTests.Voron;

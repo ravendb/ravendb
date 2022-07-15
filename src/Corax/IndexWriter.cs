@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Corax.Analyzers;
 using Corax.Pipeline;
 using Corax.Utils;
 using Sparrow;

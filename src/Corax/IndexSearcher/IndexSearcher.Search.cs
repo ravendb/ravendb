@@ -4,6 +4,7 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
+using Corax.Analyzers;
 using Corax.Pipeline;
 using Corax.Queries;
 using Sparrow.Server;

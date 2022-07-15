@@ -13,7 +13,7 @@ using Sparrow.Json;
 using Sparrow.Logging;
 using Query = Lucene.Net.Search.Query;
 using LuceneAnalyzer = Lucene.Net.Analysis.Analyzer;
-using CoraxAnalyzer = Corax.Analyzer;
+using CoraxAnalyzer = Corax.Analyzers.Analyzer;
 
 namespace Raven.Server.Documents.Indexes.Persistence;
 

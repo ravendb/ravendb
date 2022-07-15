@@ -7,6 +7,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using Corax;
+using Corax.Analyzers;
 using Corax.Pipeline;
 using Lucene.Net.Analysis.Tokenattributes;
 using LuceneAnalyzer = Lucene.Net.Analysis.Analyzer;
