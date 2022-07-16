@@ -68,6 +68,9 @@ namespace Corax
         
 #pragma warning disable CS0169
         private Queue<long> _lastEntries; // keep last 256 items
+        private GrowablePooledBuffer<Slice> _sliceBuffer;
+        private GrowablePooledBuffer<long> _longBuffer;
+        private GrowablePooledBuffer<double> _doubleBuffer;
 #pragma warning restore CS0169
 
         // The reason why we want to have the transaction open for us is so that we avoid having
@@ -92,6 +95,10 @@ namespace Corax
                 _bufferDoubles[i] = new Dictionary<double, List<long>>();
                 _bufferLongs[i] = new Dictionary<long, List<long>>();
             }
+
+            _sliceBuffer = new GrowablePooledBuffer<Slice>();
+            _longBuffer = new GrowablePooledBuffer<long>();
+            _doubleBuffer = new GrowablePooledBuffer<double>();
         }
 
         public IndexWriter([NotNull] StorageEnvironment environment, IndexFieldsMapping fieldsMapping) : this(fieldsMapping)
@@ -751,14 +758,16 @@ namespace Corax
         {
             var fieldTree = fieldsTree.CompactTreeFor(_fieldsMapping.GetByFieldId(fieldId).FieldName);
             var llt = Transaction.LowLevelTransaction;
-            var sortedTerms = _buffer[fieldId].Keys.ToArray(); // TODO: let's avoid this allocation
-            Array.Sort(sortedTerms, SliceComparer.Instance);
+            Dictionary<Slice,List<long>> fieldsValues = _buffer[fieldId];
+            _sliceBuffer.Copy(fieldsValues.Keys);
+            Span<Slice> sortedTerms = _sliceBuffer.Buffer;
+            sortedTerms.Sort(SliceComparer.Instance);
 
             foreach (var term in sortedTerms)
             {
                 long termId;
                 ReadOnlySpan<byte> termsSpan = term.AsSpan();
-                var entries = _buffer[fieldId][term];
+                var entries = fieldsValues[term];
                 if (fieldTree.TryGetValue(termsSpan, out var existing, out var encodedKey) == false)
                 {
                     if (AddNewTerm(entries, tmpBuf, out termId))
@@ -823,13 +832,15 @@ namespace Corax
         {
             FixedSizeTree fieldTree = fieldsTree.FixedTreeFor(_fieldsMapping.GetByFieldId(fieldId).FieldNameLong, sizeof(long));
             var llt = Transaction.LowLevelTransaction;
-            var sortedTerms = _bufferLongs[fieldId].Keys.ToArray();// TODO: let's avoid this allocation
-            Array.Sort(sortedTerms);
+            Dictionary<long,List<long>> fieldsValues = _bufferLongs[fieldId];
+            _longBuffer.Copy(fieldsValues.Keys);
+            Span<long> sortedTerms = _longBuffer.Buffer;
+            sortedTerms.Sort();
 
             foreach (var term in sortedTerms)
             {
                 long termId;
-                var entries = _bufferLongs[fieldId][term];
+                var entries = fieldsValues[term];
 
                 using var _ = fieldTree.Read(term, out var result);
                 if (result.HasValue == false)
@@ -849,13 +860,15 @@ namespace Corax
         {
             var fieldTree = fieldsTree.FixedTreeForDouble(_fieldsMapping.GetByFieldId(fieldId).FieldNameDouble, sizeof(long));
             var llt = Transaction.LowLevelTransaction;
-            var sortedTerms = _bufferDoubles[fieldId].Keys.ToArray();// TODO: let's avoid this allocation
-            Array.Sort(sortedTerms);
+            Dictionary<double,List<long>> fieldsValues = _bufferDoubles[fieldId];
+            _doubleBuffer.Copy(fieldsValues.Keys);
+            var sortedTerms = _doubleBuffer.Buffer;
+            sortedTerms.Sort();
 
             foreach (var term in sortedTerms)
             {
                 using var _ = fieldTree.Read(term, out var result);
-                var entries = _bufferDoubles[fieldId][term];
+                var entries = fieldsValues[term];
 
                 long termId;
                 if (result.Size == 0) // no existing value
@@ -929,6 +942,10 @@ namespace Corax
             _jsonOperationContext?.Dispose();
             if (_ownsTransaction)
                 Transaction?.Dispose();
+            
+            _sliceBuffer.Dispose();
+            _longBuffer.Dispose();
+            _doubleBuffer.Dispose();
 
             if (_encodingBufferHandler != null)
             {
