@@ -474,15 +474,21 @@
                                 </div>
                             </div>
                             <div class="collapse panel-addon" data-bind="collapse: showDetails">
-                                <div class="padding flex-horizontal" data-bind="visible: showDelayReplication">
-                                    <div class="flex-grow">
+                                <div class="padding flex-horizontal flex-wrap">
                                         <div class="list-properties">
                                             <div class="property-item" data-bind="visible: showDelayReplication">
                                                 <div class="property-name">Replication Delay Time:</div>
                                                 <div class="property-value" data-bind="text: delayHumane" title="Replication Delay Time"></div>
                                             </div>
+                                            <div class="property-item">
+                                                <div class="property-name">Replication Mode:</div>
+                                                <div class="property-value" data-bind="text: taskMode" title="Replication mode"></div>
+                                            </div>
+                                            <div class="property-item">
+                                                <div class="property-name">Has Filtering:</div>
+                                                <div class="property-value" data-bind="text: hasFiltering" title="Has filtering to/from sink task"></div>
+                                            </div>
                                         </div>
-                                    </div>
                                 </div>
                                 <div class="padding padding-sm"  data-bind="visible: ongoingHubs().length">
                                     <div data-bind="foreach: ongoingHubs">
@@ -517,7 +523,7 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div class="panel-addon padding" data-bind="visible: !ongoingHubs().length">
+                                <div class="panel-addon padding no-padding-top" data-bind="visible: !ongoingHubs().length">
                                     <h5 class="text-warning">
                                         <i class="icon-empty-set"></i> 
                                         <span>No sinks connected</span>
