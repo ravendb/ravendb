@@ -165,7 +165,8 @@ module.exports = (env, args) => {
                                     "waiting": 0xf124,
                                     "cluster-member": 0xf125,
                                     "cluster-promotable": 0xf126,
-                                    "cluster-watcher": 0xf127
+                                    "cluster-watcher": 0xf127,
+                                    "arrow-up": 0xf128
                                 },
                                 cssTemplate: path.resolve(__dirname, "wwwroot/Content/css/fonts/icomoon.template.css.hbs")
                             }
