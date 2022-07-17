@@ -88,7 +88,8 @@ public class IndexFieldsMapping : IEnumerable<IndexFieldBinding>
             if (ifb.FieldIndexingMode == FieldIndexingMode.Exact || ifb.HasSpatial == true)
                 continue;
 
-            ifb.SetAnalyzer(analyzers.DefaultAnalyzer);
+            if(ifb.Analyzer == null)
+                ifb.SetAnalyzer(analyzers.DefaultAnalyzer);
         }
         
         //We want also find maximum buffer for analyzers.
