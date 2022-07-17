@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
+using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Threading;
 
@@ -13,6 +14,8 @@ namespace Sparrow.Utils
 {
     public static unsafe class NativeMemory
     {
+        private static Logger _logger = LoggingSource.Instance.GetLogger<LowMemoryNotification>("Server");
+
         public static Func<ulong> GetCurrentUnmanagedThreadId = () => 0xDEAD;
 
         internal static readonly LightWeightThreadLocal<ThreadStats> ThreadAllocations = new LightWeightThreadLocal<ThreadStats>(
@@ -52,6 +55,7 @@ namespace Sparrow.Utils
             private WeakReference<Thread> _threadInstance = new WeakReference<Thread>(null);
             public readonly int ManagedThreadId;
             private string _lastName = "Unknown";
+            public bool LogAllocations;
 
             public string Name
             {
@@ -131,6 +135,12 @@ namespace Sparrow.Utils
         public static byte* AllocateMemory(long size, out ThreadStats thread)
         {
             thread = ThreadAllocations.Value;
+
+            if (thread.LogAllocations)
+            {
+                if (_logger.IsOperationsEnabled)
+                    _logger.Operations($"Log allocations was turned on, allocated so far: {new Size(thread.TotalAllocated, SizeUnit.Bytes)}, stack trace: {Environment.StackTrace}");
+            }
 
             // Allocating when there isn't enough commit charge available is dangerous, on Linux, the OOM
             // will try to kill us. On Windows, we might get into memory allocation failures that are not
