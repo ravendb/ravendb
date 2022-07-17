@@ -79,7 +79,7 @@ public class IndexFieldsMapping : IEnumerable<IndexFieldBinding>
         {
             if (TryGetByFieldId(mapping.FieldId, out var binding) == true)
             {
-                binding.Analyzer = mapping.Analyzer;
+                binding.SetAnalyzer(mapping.Analyzer);
             }
         }
 
@@ -88,7 +88,7 @@ public class IndexFieldsMapping : IEnumerable<IndexFieldBinding>
             if (ifb.FieldIndexingMode == FieldIndexingMode.Exact || ifb.HasSpatial == true)
                 continue;
 
-            ifb.Analyzer ??= analyzers.DefaultAnalyzer;
+            ifb.SetAnalyzer(analyzers.DefaultAnalyzer);
         }
         
         //We want also find maximum buffer for analyzers.
@@ -159,7 +159,8 @@ public class IndexFieldBinding
     public readonly Slice FieldName;
     public readonly Slice FieldNameLong;
     public readonly Slice FieldNameDouble;
-    public Corax.Analyzer Analyzer;
+    public Analyzer Analyzer => _analyzer;
+    private Analyzer _analyzer;
     public readonly bool HasSuggestions;
     public readonly bool HasSpatial;
     public FieldIndexingMode FieldIndexingMode => _silentlyChangedIndexingMode ?? _fieldIndexingMode;
@@ -176,11 +177,10 @@ public class IndexFieldBinding
         FieldName = fieldName;
         FieldNameDouble = fieldNameDouble;
         FieldNameLong = fieldNameLong;
-        Analyzer = analyzer;
         HasSuggestions = hasSuggestions;
         _fieldIndexingMode = fieldIndexingMode;
         HasSpatial = hasSpatial;
-        IsAnalyzed = Analyzer is not null && FieldIndexingMode is not FieldIndexingMode.Exact && HasSpatial is false;
+        SetAnalyzer(analyzer);
     }
 
     public string FieldNameAsString
@@ -204,5 +204,12 @@ public class IndexFieldBinding
     public void OverrideFieldIndexingMode(FieldIndexingMode mode)
     {
         _silentlyChangedIndexingMode = mode;
+        SetAnalyzer(_analyzer);// re-compute IsAnalyzed
+    }
+
+    public void SetAnalyzer(Analyzer analyzer)
+    {
+        _analyzer = analyzer;
+        IsAnalyzed = _analyzer is not null && FieldIndexingMode is not FieldIndexingMode.Exact && HasSpatial is false;
     }
 }
