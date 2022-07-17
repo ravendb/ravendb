@@ -190,7 +190,7 @@ class ongoingTasksWidget extends websocketBasedWidget<Raven.Server.Dashboard.Clu
                 title: x => x.databaseName()
             }),
 
-            new multiNodeTagsColumn(grid, "20%", {
+            new multiNodeTagsColumn(grid, taskItem.createNodeTagsProvider(), "20%", {
                 headerTitle: "Nodes running the tasks"
             })
         ];
@@ -213,20 +213,23 @@ class ongoingTasksWidget extends websocketBasedWidget<Raven.Server.Dashboard.Clu
     }
     
     private getTaskType(input: string): Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType {
-        const taskType = input.replace("Count", "") as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType;
-        
-        switch (taskType) {
-            case "Replication":
-            case "PullReplicationAsHub":
-            case "PullReplicationAsSink":
-            case "RavenEtl":
-            case "SqlEtl":
-            case "OlapEtl":
-            case "Backup":
-            case "Subscription":
-                return taskType;
-            default:
-                genUtils.assertUnreachable(taskType, "Unknown ongoing task type: " + taskType);
+        switch (input) {
+            case "ExternalReplicationCount":
+                return "Replication";
+            case "ReplicationHubCount":
+                return "PullReplicationAsHub";
+            case "ReplicationSinkCount":
+                return "PullReplicationAsSink";
+            case "RavenEtlCount":
+                return "RavenEtl";
+            case "SqlEtlCount":
+                return "SqlEtl";
+            case "OlapEtlCount":
+                return "OlapEtl";
+            case "PeriodicBackupCount":
+                return "Backup";
+            case "SubscriptionCount":
+                return "Subscription";
         }
     }
     
