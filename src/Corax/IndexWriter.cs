@@ -758,16 +758,11 @@ namespace Corax
         {
             var fieldTree = fieldsTree.CompactTreeFor(_fieldsMapping.GetByFieldId(fieldId).FieldName);
             var llt = Transaction.LowLevelTransaction;
-            Dictionary<Slice,List<long>> fieldsValues = _buffer[fieldId];
-            _sliceBuffer.Copy(fieldsValues.Keys);
-            Span<Slice> sortedTerms = _sliceBuffer.Buffer;
-            sortedTerms.Sort(SliceComparer.Instance);
 
-            foreach (var term in sortedTerms)
+            foreach (var (term, entries) in _buffer[fieldId])
             {
                 long termId;
                 ReadOnlySpan<byte> termsSpan = term.AsSpan();
-                var entries = fieldsValues[term];
                 if (fieldTree.TryGetValue(termsSpan, out var existing, out var encodedKey) == false)
                 {
                     if (AddNewTerm(entries, tmpBuf, out termId))
@@ -832,15 +827,10 @@ namespace Corax
         {
             FixedSizeTree fieldTree = fieldsTree.FixedTreeFor(_fieldsMapping.GetByFieldId(fieldId).FieldNameLong, sizeof(long));
             var llt = Transaction.LowLevelTransaction;
-            Dictionary<long,List<long>> fieldsValues = _bufferLongs[fieldId];
-            _longBuffer.Copy(fieldsValues.Keys);
-            Span<long> sortedTerms = _longBuffer.Buffer;
-            sortedTerms.Sort();
-
-            foreach (var term in sortedTerms)
+          
+            foreach (var (term, entries) in _bufferLongs[fieldId])
             {
                 long termId;
-                var entries = fieldsValues[term];
 
                 using var _ = fieldTree.Read(term, out var result);
                 if (result.HasValue == false)
@@ -860,15 +850,10 @@ namespace Corax
         {
             var fieldTree = fieldsTree.FixedTreeForDouble(_fieldsMapping.GetByFieldId(fieldId).FieldNameDouble, sizeof(long));
             var llt = Transaction.LowLevelTransaction;
-            Dictionary<double,List<long>> fieldsValues = _bufferDoubles[fieldId];
-            _doubleBuffer.Copy(fieldsValues.Keys);
-            var sortedTerms = _doubleBuffer.Buffer;
-            sortedTerms.Sort();
 
-            foreach (var term in sortedTerms)
+            foreach (var (term, entries) in _bufferDoubles[fieldId])
             {
                 using var _ = fieldTree.Read(term, out var result);
-                var entries = fieldsValues[term];
 
                 long termId;
                 if (result.Size == 0) // no existing value
