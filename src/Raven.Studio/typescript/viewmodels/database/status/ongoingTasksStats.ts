@@ -1555,7 +1555,7 @@ class ongoingTasksStats extends viewModelBase {
             case "OutgoingPull":
                 return "Outgoing Pull Replication";
             case "Raven":
-                return "Raven ETL";
+                return "RavenDB ETL";
             case "Sql":
                 return "SQL ETL";
             case "Olap":
