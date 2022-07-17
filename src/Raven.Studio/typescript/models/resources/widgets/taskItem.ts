@@ -32,6 +32,10 @@ class taskItem {
     static itemFromRaw(rawItem: rawTaskItem): taskItem {
         return new taskItem(rawItem.type, rawItem.count, rawItem.dbName, [rawItem.node]);
     }
+
+    static createNodeTagsProvider() {
+        return (item: taskItem) => item.nodeTags();
+    }
 }
 
 export = taskItem;

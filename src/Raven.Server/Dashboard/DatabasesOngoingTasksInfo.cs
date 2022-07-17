@@ -46,11 +46,11 @@ namespace Raven.Server.Dashboard
     {
         public string Database { get; set; }
 
-        public long ReplicationCount { get; set; }
+        public long ExternalReplicationCount  { get; set; }
 
-        public long PullReplicationAsHub { get; set; }
+        public long ReplicationHubCount  { get; set; }
 
-        public long PullReplicationAsSink { get; set; }
+        public long ReplicationSinkCount { get; set; }
 
         public long RavenEtlCount { get; set; }
 
@@ -58,7 +58,7 @@ namespace Raven.Server.Dashboard
         
         public long OlapEtlCount { get; set; }
 
-        public long BackupCount { get; set; }
+        public long PeriodicBackupCount  { get; set; }
 
         public long SubscriptionCount { get; set; }
 
@@ -67,13 +67,13 @@ namespace Raven.Server.Dashboard
             return new DynamicJsonValue
             {
                 [nameof(Database)] = Database,
-                [nameof(ReplicationCount)] = ReplicationCount,
-                [nameof(PullReplicationAsHub)] = PullReplicationAsHub,
-                [nameof(PullReplicationAsSink)] = PullReplicationAsSink,
+                [nameof(ExternalReplicationCount)] = ExternalReplicationCount,
+                [nameof(ReplicationHubCount)] = ReplicationHubCount,
+                [nameof(ReplicationSinkCount)] = ReplicationSinkCount,
                 [nameof(RavenEtlCount)] = RavenEtlCount,
                 [nameof(SqlEtlCount)] = SqlEtlCount,
                 [nameof(OlapEtlCount)] = OlapEtlCount,
-                [nameof(BackupCount)] = BackupCount,
+                [nameof(PeriodicBackupCount)] = PeriodicBackupCount,
                 [nameof(SubscriptionCount)] = SubscriptionCount
             };
         }

@@ -2,14 +2,14 @@
 
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
-import taskItem = require("models/resources/widgets/taskItem");
 import generalUtils = require("common/generalUtils");
 
-class multiNodeTagsColumn implements virtualColumn {
+class multiNodeTagsColumn<T> implements virtualColumn {
 
-    constructor(gridController: virtualGridController<any>,
+    constructor(gridController: virtualGridController<T>,
+                public valueAccessor: ((item: T) => string[]),
                 public width: string,
-                public opts: textColumnOpts<taskItem> = {}) {
+                public opts: textColumnOpts<T> = {}) {
     }
 
     canHandle(actionId: string): boolean {
@@ -31,21 +31,23 @@ class multiNodeTagsColumn implements virtualColumn {
         return generalUtils.unescapeHtml(titleToUse);
     }
 
-    renderCell(item: taskItem): string {
+    renderCell(item: T): string {
         let extraCssClasses = this.opts.extraClass ? this.opts.extraClass(item) : '';
         
-        return `<div class="cell text-cell ${extraCssClasses}" style="width: ${this.width}">${this.valueProvider(item)}</div>`;
+        return `<div class="cell text-cell ${extraCssClasses}" style="width: ${this.width}">${this.getValueHtml(this.getValue(item))}</div>`;
     }
     
-    private valueProvider(item: taskItem) {
+    private getValue(item: T): string[] {
+        return this.valueAccessor.bind(item)(item);
+    }
+
+    private getValueHtml(nodeTags: string[]): string {
         let result = "";
         
-        if (item.nodeTags()) {
-            for (let i = 0; i < item.nodeTags().length; i++) {
-                const nodeTag = item.nodeTags()[i];
-                
-                const extraClass = `node-${nodeTag}`;
-                result += `<span class="node-label ${extraClass}">${nodeTag}</span>`;
+        if (nodeTags) {
+            for (const tag of nodeTags) {
+                const extraClass = `node-${tag}`;
+                result += `<span class="node-label ${extraClass}">${tag}</span>`;
             }
         }
 
@@ -55,7 +57,7 @@ class multiNodeTagsColumn implements virtualColumn {
     toDto(): virtualColumnDto {
         return {
             type: "multiNodeTags",
-            serializedValue: null,
+            serializedValue: this.valueAccessor.toString(),
             width: this.width,
             header: null
         }
