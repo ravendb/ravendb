@@ -230,6 +230,8 @@ class ongoingTasksWidget extends websocketBasedWidget<Raven.Server.Dashboard.Clu
                 return "Backup";
             case "SubscriptionCount":
                 return "Subscription";
+            default:
+                throw new Error("Unknown task type count received:" + input);
         }
     }
     
@@ -265,7 +267,7 @@ class ongoingTasksWidget extends websocketBasedWidget<Raven.Server.Dashboard.Clu
         // 2. create the data to show
         const tempDataToShow: Array<taskItem> = [];
 
-        for (let taskType in ongoingTasksWidget.taskInfoRecord) {
+        for (const taskType in ongoingTasksWidget.taskInfoRecord) {
             const filteredItemsByType = this.rawData().filter(x => x.type === taskType);
             
             const reducedItems = this.reducePerDatabase(filteredItemsByType);

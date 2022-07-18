@@ -46,9 +46,9 @@ namespace Raven.Server.Dashboard
     {
         public string Database { get; set; }
 
-        public long ExternalReplicationCount  { get; set; }
+        public long ExternalReplicationCount { get; set; }
 
-        public long ReplicationHubCount  { get; set; }
+        public long ReplicationHubCount { get; set; }
 
         public long ReplicationSinkCount { get; set; }
 
@@ -58,7 +58,7 @@ namespace Raven.Server.Dashboard
         
         public long OlapEtlCount { get; set; }
 
-        public long PeriodicBackupCount  { get; set; }
+        public long PeriodicBackupCount { get; set; }
 
         public long SubscriptionCount { get; set; }
 
