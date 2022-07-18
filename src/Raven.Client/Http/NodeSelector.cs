@@ -17,6 +17,7 @@ namespace Raven.Client.Http
             public readonly int[] FastestRecords;
             public int Fastest;
             public int SpeedTestMode;
+            public int CurrentNodeIndex;
 
             public NodeSelectorState(Topology topology)
             {
@@ -24,6 +25,7 @@ namespace Raven.Client.Http
                 Nodes = topology.Nodes;
                 Failures = new int[topology.Nodes.Count];
                 FastestRecords = new int[topology.Nodes.Count];
+                CurrentNodeIndex = 0;
             }
         }        
 
@@ -129,7 +131,9 @@ namespace Raven.Client.Http
             if (state.Nodes.Count == 0)
                 throw new DatabaseDoesNotExistException("There are no nodes in the topology at all");
 
-            return (0, state.Nodes[0]);
+            int index = state.CurrentNodeIndex;
+            state.CurrentNodeIndex = (state.CurrentNodeIndex+1)%state.Nodes.Count;
+            return (index, state.Nodes[index]);
         }
 
         public (int Index, ServerNode Node) GetNodeBySessionId(int sessionId)
