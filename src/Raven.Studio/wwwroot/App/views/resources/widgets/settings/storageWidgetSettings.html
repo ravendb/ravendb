@@ -1,0 +1,37 @@
+<div class="modal-dialog storage-widget-settings" role="document">
+    <div class="modal-content" tabindex="-1">
+        <div class="modal-header">
+            <div class="flex-horizontal">
+                <div class="flex-grow">
+                    <h3>Storage Widget Settings</h3>
+                </div>
+                <div>
+                    <button type="button" class="close" data-bind="click: close" aria-hidden="true">
+                        <i class="icon-cancel"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="modal-body">
+            <div class="flex-form">
+                <div class="form-group">
+                    <label class="control-label">&nbsp;</label>
+                    <div class="toggle">
+                        <div data-placement="right" data-toggle="tooltip" title="Toggle on to show scaled size" data-animation="true">
+                            <input id="scaleToggle" type="checkbox" data-bind="checked: scaleDriveSize">
+                            <label for="scaleToggle">Scale drive size</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <div class="text-right">
+                <button type="button" class=" btn btn-default" data-bind="click: close"><i class="icon-cancel"></i><span>Cancel</span></button>
+                <button data-bind="click: saveSettings" type="button" class="btn btn-primary">
+                    <i class="icon-save"></i><span>Save</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

@@ -3,7 +3,8 @@ import websocketBasedWidget = require("viewmodels/resources/widgets/websocketBas
 import clusterDashboard = require("viewmodels/resources/clusterDashboard");
 import clusterDashboardWebSocketClient = require("common/clusterDashboardWebSocketClient");
 import mountPointUsage = require("models/resources/widgets/mountPointUsage");
-
+import storageWidgetSettings = require("viewmodels/resources/widgets/settings/storageWidgetSettings");
+import app = require("durandal/app");
 
 class perNodeStorageStats {
     readonly tag: string;
@@ -108,6 +109,39 @@ class storageWidget extends websocketBasedWidget<Raven.Server.Dashboard.Cluster.
         const stats = this.nodeStats().find(x => x.tag === nodeTag);
         if (stats) {
             action(stats);
+        }
+
+        this.scaleDriveSize();
+    }
+
+    openWidgetSettings(): void {
+        super.openWidgetSettings();
+
+        const openSettingsDialog = new storageWidgetSettings();
+        app.showBootstrapDialog(openSettingsDialog).done(() => this.scaleDriveSize());
+    }
+    
+    private scaleDriveSize(): void {
+        
+        console.log('in scale');
+        
+        const scaleToSize: boolean = localStorage.getObject(storageWidgetSettings.localStorageName);
+        
+        let biggestSize = 0;
+        for (const nodeStat of this.nodeStats()) {
+            for (const mountPoint of nodeStat.mountPoints()) {
+                const size = mountPoint.totalCapacity();
+                if (size > biggestSize) {
+                    biggestSize = size;
+                }
+            }
+        }
+
+        for (const nodeStat of this.nodeStats()) {
+            for (const mountPoint of nodeStat.mountPoints()) {
+                const scaleFactor = scaleToSize ? mountPoint.totalCapacity() / biggestSize * 100 : 100;
+                mountPoint.scaleFactor(scaleFactor);
+            }
         }
     }
 }
