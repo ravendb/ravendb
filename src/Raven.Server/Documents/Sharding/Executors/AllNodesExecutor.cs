@@ -20,7 +20,7 @@ public class AllNodesExecutor : AbstractExecutor
 
     private ClusterTopology _clusterTopology;
         
-    private ConcurrentDictionary<string, RequestExecutor> _current = new ConcurrentDictionary<string, RequestExecutor>();
+    private readonly ConcurrentDictionary<string, RequestExecutor> _current = new ConcurrentDictionary<string, RequestExecutor>();
     private AllNodesExecutorState _state;
 
     // this executor will contact every single node in the cluster
@@ -36,6 +36,14 @@ public class AllNodesExecutor : AbstractExecutor
 
         _clusterTopology = _store.GetClusterTopology();
         UpdateExecutors(_clusterTopology, _database.DatabaseRecord.Sharding.Orchestrator.Topology);
+    }
+
+
+    public RequestExecutor GetRequestExecutorForNode(string tag)
+    {
+        return _current.TryGetValue(tag, out var requestExecutor)
+            ? requestExecutor
+            : null;
     }
 
     public async Task<TResult> ExecuteForNodeAsync<TResult>(RavenCommand<TResult> command, string tag, CancellationToken token = default)

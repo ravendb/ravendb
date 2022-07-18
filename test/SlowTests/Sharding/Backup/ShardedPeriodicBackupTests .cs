@@ -436,7 +436,7 @@ namespace SlowTests.Sharding.Backup
 
         [RavenTheory(RavenTestCategory.BackupExportImport | RavenTestCategory.Sharding)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
-        public async Task CanBackupAndRestoreSharded(Options options)
+        public async Task CanBackupAndRestoreSharded_2(Options options)
         {
             var file = GetTempFileName();
             var names = new[]
@@ -464,13 +464,12 @@ namespace SlowTests.Sharding.Backup
                     operation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions
                     {
                         OperateOnTypes = OperateOnTypes
-                                          
                     }, file);
                     await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(30));
 
                     var waitHandles = await Sharding.Backup.WaitForBackupToComplete(store2);
 
-                    var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* * * * *");
+                    var config = Backup.CreateBackupConfiguration(backupPath/*, fullBackupFrequency: "* * * * *"*/);
                     await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(Server, store2, config);
 
                     Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
@@ -478,9 +477,9 @@ namespace SlowTests.Sharding.Backup
                     var dirs = Directory.GetDirectories(backupPath);
                     Assert.Equal(3, dirs.Length);
                     
-                    var settings = new ShardRestoreSetting[dirs.Length];
+                    var settings = new ShardRestoreSetting[/*dirs.Length*/1];
 
-                    for (var i = 0; i < dirs.Length; i++)
+                    for (var i = 0; i < /*dirs.Length*/1; i++)
                     {
                         var dir = dirs[i];
                         settings[i] = new ShardRestoreSetting
@@ -525,6 +524,50 @@ namespace SlowTests.Sharding.Backup
             finally
             {
                 File.Delete(file);
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.BackupExportImport | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
+        public async Task CanBackupAndRestoreSharded(Options options)
+        {
+            const string backupPath = "C:\\work\\stuff\\backups";
+            using (var store3 = GetDocumentStore())
+            {
+                var dirs = Directory.GetDirectories(backupPath);
+                Assert.Equal(3, dirs.Length);
+
+                var settings = new ShardRestoreSetting[dirs.Length];
+
+                for (var i = 0; i < dirs.Length; i++)
+                {
+                    var dir = dirs[i];
+                    settings[i] = new ShardRestoreSetting
+                    {
+                        ShardNumber = i,
+                        BackupPath = dir,
+                        NodeTag = "A"
+                    };
+                }
+
+                // restore the database with a different name
+                var databaseName = $"restored_database-{Guid.NewGuid()}";
+                using (ReadOnly(backupPath))
+                using (Backup.RestoreDatabase(store3, new RestoreBackupConfiguration
+                {
+                    DatabaseName = databaseName,
+                    ShardRestoreSettings = settings
+
+                }, timeout: TimeSpan.FromSeconds(60)))
+                {
+                    var dbRec = await store3.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
+                    Assert.Equal(DatabaseStateStatus.Normal, dbRec.DatabaseState);
+
+                    WaitForUserToContinueTheTest(store3, database: databaseName);
+
+                    await Sharding.Backup.CheckData(store3, null, options.DatabaseMode, databaseName);
+                    
+                }
             }
         }
 

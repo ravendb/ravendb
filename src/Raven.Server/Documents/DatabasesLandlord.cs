@@ -1082,7 +1082,7 @@ namespace Raven.Server.Documents
                 databaseIsBeenDeleted == false)
                 throw new DatabaseNotRelevantException(databaseName + " is not relevant for " + _serverStore.NodeTag);
 
-            return CreateDatabaseConfiguration(_serverStore, databaseName.ToString(), databaseRecord.Settings);
+            return CreateDatabaseConfiguration(_serverStore, databaseRecord.DatabaseName, databaseRecord.Settings);
         }
 
         public static RavenConfiguration CreateDatabaseConfiguration(ServerStore serverStore, string databaseName, Dictionary<string, string> settings)

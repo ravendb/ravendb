@@ -1,5 +1,4 @@
 using System.Linq;
-using Raven.Client.ServerWide;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.Backups

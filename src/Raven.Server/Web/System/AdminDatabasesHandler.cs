@@ -687,15 +687,13 @@ namespace Raven.Server.Web.System
                         throw new InvalidOperationException($"No matching backup type was found for {restoreType}");
                 }
 
-                long operationId;
+                var operationId = ServerStore.Operations.GetNextOperationId();
                 if (restoreBackupTask.RestoreFromConfiguration.ShardRestoreSettings.Length > 0)
                 {
-                    operationId = await restoreBackupTask.OrchestrateShardedRestore();
+                    _ = restoreBackupTask.OrchestrateShardedRestore(operationId);
                 }
                 else
                 {
-                    operationId = GetLongQueryString("operationId", required: false) ?? ServerStore.Operations.GetNextOperationId();
-
                     _ = ServerStore.Operations.AddLocalOperation(
                         operationId,
                         OperationType.DatabaseRestore,
