@@ -17,7 +17,7 @@ namespace Raven.Client.Http
             public readonly int[] FastestRecords;
             public int Fastest;
             public int SpeedTestMode;
-            public int CurrentNodeIndex;
+            public int UnlikelyEveryoneFaultedChoiceIndex;
 
             public NodeSelectorState(Topology topology)
             {
@@ -25,7 +25,14 @@ namespace Raven.Client.Http
                 Nodes = topology.Nodes;
                 Failures = new int[topology.Nodes.Count];
                 FastestRecords = new int[topology.Nodes.Count];
-                CurrentNodeIndex = 0;
+                UnlikelyEveryoneFaultedChoiceIndex = 0;
+            }
+
+            public ValueTuple<int, ServerNode> GetNodeWhenEveryoneMarkedAsFaulted()
+            {
+                int index = UnlikelyEveryoneFaultedChoiceIndex;
+                UnlikelyEveryoneFaultedChoiceIndex = (UnlikelyEveryoneFaultedChoiceIndex + 1) % Nodes.Count;
+                return (index, Nodes[index]);
             }
         }        
 
@@ -71,9 +78,6 @@ namespace Raven.Client.Http
             var serverNodes = state.Nodes;
 
             Debug.Assert(serverNodes.Count == stateFailures.Length, $"Expected equals {serverNodes.Count}, but got {stateFailures.Length}");
-            
-            if (serverNodes.Count == 1 && serverNodes[0].ClusterTag == nodeTag) // If this is a cluster with 1 node return it without checking it's failure.
-                return (0, serverNodes[0]);
 
             for (var i = 0; i < serverNodes.Count; i++)
             {
@@ -81,10 +85,7 @@ namespace Raven.Client.Http
                 {
                     Debug.Assert(string.IsNullOrEmpty(serverNodes[i].Url) == false, $"Expected serverNodes Url not null or empty but got: \'{serverNodes[i].Url}\'");
 
-                    if (stateFailures[i] == 0)
-                        return (i, serverNodes[i]);
-
-                    throw new RequestedNodeUnavailableException($"Requested node {nodeTag} currently unavailable, please try again later.");
+                    return (i, serverNodes[i]);
                 }
             }
 
@@ -107,7 +108,8 @@ namespace Raven.Client.Http
             var len = Math.Min(serverNodes.Count, stateFailures.Length);
             for (int i = 0; i < len; i++)
             {
-                if (stateFailures[i] == 0 && string.IsNullOrEmpty(serverNodes[i].Url) == false)
+                Debug.Assert(string.IsNullOrEmpty(serverNodes[i].Url) == false, $"Expected serverNodes Url not null or empty but got: \'{serverNodes[i].Url}\'");
+                if (stateFailures[i] == 0)
                 {
                     return (i, serverNodes[i]);
                 }
@@ -126,14 +128,12 @@ namespace Raven.Client.Http
 
         private static ValueTuple<int, ServerNode> UnlikelyEveryoneFaultedChoice(NodeSelectorState state)
         {
-            // if there are all marked as failed, we'll chose the first
+            // if there are all marked as failed, we'll chose the next (the one in CurrentNodeIndex)
             // one so the user will get an error (or recover :-) );
             if (state.Nodes.Count == 0)
                 throw new DatabaseDoesNotExistException("There are no nodes in the topology at all");
 
-            int index = state.CurrentNodeIndex;
-            state.CurrentNodeIndex = (state.CurrentNodeIndex+1)%state.Nodes.Count;
-            return (index, state.Nodes[index]);
+            return state.GetNodeWhenEveryoneMarkedAsFaulted();
         }
 
         public (int Index, ServerNode Node) GetNodeBySessionId(int sessionId)
