@@ -41,40 +41,38 @@ using Voron.Data.Tables;
 using Voron.Impl.Backup;
 using Voron.Util.Settings;
 using Index = Raven.Server.Documents.Indexes.Index;
-using Operation = Raven.Client.Documents.Operations.Operation;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
-    public abstract class RestoreBackupTaskBase
+    public class RestoreBackupTask
     {
-        public RestoreBackupConfigurationBase RestoreFromConfiguration { get; }
+        public RestoreBackupConfigurationBase RestoreFromConfiguration { get; set; }
 
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RestoreBackupTaskBase>("Server");
-
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RestoreBackupTask>("Server");
         private readonly ServerStore _serverStore;
         private readonly string _nodeTag;
         private readonly OperationCancelToken _operationCancelToken;
         private bool _hasEncryptionKey;
         private readonly bool _restoringToDefaultDataDirectory;
-        private readonly bool _isShard;
+        private IRestoreSource _restoreSource;
 
-        protected RestoreBackupTaskBase(ServerStore serverStore,
-            RestoreBackupConfigurationBase restoreFromConfiguration,
-            string nodeTag,
+        public RestoreBackupTask(ServerStore serverStore,
+            BlittableJsonReaderObject restoreConfiguration,
             OperationCancelToken operationCancelToken)
         {
             _serverStore = serverStore;
-            RestoreFromConfiguration = restoreFromConfiguration;
-            _nodeTag = nodeTag;
+            _nodeTag = serverStore.NodeTag;
             _operationCancelToken = operationCancelToken;
+
+            InitializeRestoreSourceAndConfiguration(restoreConfiguration);
 
             var dataDirectoryThatWillBeUsed = string.IsNullOrWhiteSpace(RestoreFromConfiguration.DataDirectory) ?
                                        _serverStore.Configuration.Core.DataDirectory.FullPath :
                                        new PathSetting(RestoreFromConfiguration.DataDirectory, _serverStore.Configuration.Core.DataDirectory.FullPath).FullPath;
 
-            _isShard = ShardHelper.IsShardedName(restoreFromConfiguration.DatabaseName);
+            bool isShard = ShardHelper.IsShardedName(RestoreFromConfiguration.DatabaseName);
 
-            if (_isShard == false && ResourceNameValidator.IsValidResourceName(RestoreFromConfiguration.DatabaseName, dataDirectoryThatWillBeUsed, out string errorMessage) == false)
+            if (isShard == false && ResourceNameValidator.IsValidResourceName(RestoreFromConfiguration.DatabaseName, dataDirectoryThatWillBeUsed, out string errorMessage) == false)
                 throw new InvalidOperationException(errorMessage);
 
             _serverStore.EnsureNotPassiveAsync().Wait(_operationCancelToken.Token);
@@ -83,7 +81,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                if (_isShard == false && _serverStore.Cluster.DatabaseExists(context, RestoreFromConfiguration.DatabaseName))
+                if (isShard == false && _serverStore.Cluster.DatabaseExists(context, RestoreFromConfiguration.DatabaseName))
                     throw new ArgumentException($"Cannot restore data to an existing database named {RestoreFromConfiguration.DatabaseName}");
 
                 clusterTopology = _serverStore.GetClusterTopology(context);
@@ -128,7 +126,47 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             _restoringToDefaultDataDirectory = IsDefaultDataDirectory(RestoreFromConfiguration.DataDirectory, RestoreFromConfiguration.DatabaseName);
         }
 
-        protected async Task<Stream> CopyRemoteStreamLocally(Stream stream)
+        private void InitializeRestoreSourceAndConfiguration(BlittableJsonReaderObject restoreConfiguration)
+        {
+            RestoreType restoreType = default;
+            if (restoreConfiguration.TryGet("Type", out string typeAsString))
+            {
+                if (Enum.TryParse(typeAsString, out restoreType) == false)
+                    throw new ArgumentException($"{typeAsString} is unknown backup type.");
+            }
+
+            switch (restoreType)
+            {
+                case RestoreType.Local:
+                    var localConfiguration = JsonDeserializationCluster.RestoreBackupConfiguration(restoreConfiguration);
+                    RestoreFromConfiguration = localConfiguration; // ?
+                    _restoreSource = new RestoreFromLocal(localConfiguration);
+                    break;
+
+                case RestoreType.S3:
+                    var s3Configuration = JsonDeserializationCluster.RestoreS3BackupConfiguration(restoreConfiguration);
+                    RestoreFromConfiguration = s3Configuration; // ?
+                    _restoreSource = new RestoreFromS3(_serverStore, s3Configuration);
+                    break;
+
+                case RestoreType.Azure:
+                    var azureConfiguration = JsonDeserializationCluster.RestoreAzureBackupConfiguration(restoreConfiguration);
+                    RestoreFromConfiguration = azureConfiguration; // ?
+                    _restoreSource = new RestoreFromAzure(_serverStore, azureConfiguration);
+                    break;
+
+                case RestoreType.GoogleCloud:
+                    var googleCloudConfiguration = JsonDeserializationCluster.RestoreGoogleCloudBackupConfiguration(restoreConfiguration);
+                    RestoreFromConfiguration = googleCloudConfiguration; // ?
+                    _restoreSource = new RestoreFromGoogleCloud(_serverStore, googleCloudConfiguration);
+                    break;
+
+                default:
+                    throw new InvalidOperationException($"No matching backup type was found for {restoreType}");
+            }
+        }
+
+        public async Task<Stream> CopyRemoteStreamLocally(Stream stream)
         {
             return await CopyRemoteStreamLocally(stream, _serverStore.Configuration.Storage.TempPath);
         }
@@ -172,18 +210,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             }
 
         }
-
-        protected abstract Task<Stream> GetStream(string path);
-
-        protected abstract Task<ZipArchive> GetZipArchiveForSnapshot(string path);
-
-        protected abstract Task<List<string>> GetFilesForRestore();
-
-        protected abstract string GetBackupPath(string smugglerFile);
-
-        protected abstract string GetSmugglerBackupPath(string smugglerFile);
-
-        protected abstract string GetBackupLocation();
 
         public async Task<IOperationResult> Execute(Action<IOperationProgress> onProgress)
         {
@@ -631,7 +657,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
         private async Task<List<string>> GetOrderedFilesToRestore()
         {
-            var files = await GetFilesForRestore();
+            var files = await _restoreSource.GetFilesForRestore();
 
             var orderedFiles = files
                 .Where(RestorePointsBase.IsBackupOrSnapshot)
@@ -639,7 +665,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 .ToList();
 
             if (orderedFiles.Any() == false)
-                throw new ArgumentException($"No files to restore from the backup location, path: {GetBackupLocation()}");
+                throw new ArgumentException($"No files to restore from the backup location, path: {_restoreSource.GetBackupLocation()}");
             
             if (string.IsNullOrWhiteSpace(RestoreFromConfiguration.LastFileNameToRestore))
                 return orderedFiles;
@@ -663,8 +689,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
             RestoreSettings restoreSettings = null;
 
-            var fullBackupPath = GetBackupPath(backupPath);
-            using (var zip = await GetZipArchiveForSnapshot(fullBackupPath))
+            var fullBackupPath = _restoreSource.GetBackupPath(backupPath);
+            using (var zip = await _restoreSource.GetZipArchiveForSnapshot(fullBackupPath))
             {
                 var restorePath = new VoronPathSetting(RestoreFromConfiguration.DataDirectory);
                 if (Directory.Exists(restorePath.FullPath) == false)
@@ -793,7 +819,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 result.AddInfo($"Restoring file {(i + 1):#,#;;0}/{filesToRestore.Count:#,#;;0}");
                 onProgress.Invoke(result.Progress);
 
-                var filePath = GetBackupPath(filesToRestore[i]);
+                var filePath = _restoreSource.GetBackupPath(filesToRestore[i]);
                 await ImportSingleBackupFile(database, onProgress, result, filePath, context, destination, options, isLastFile: false,
                     onDatabaseRecordAction: smugglerDatabaseRecord =>
                     {
@@ -803,7 +829,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             }
 
             options.OperateOnTypes = oldOperateOnTypes;
-            var lastFilePath = GetBackupPath(filesToRestore.Last());
+            var lastFilePath = _restoreSource.GetBackupPath(filesToRestore.Last());
 
             result.AddInfo($"Restoring file {filesToRestore.Count:#,#;;0}/{filesToRestore.Count:#,#;;0}");
 
@@ -1094,7 +1120,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             Action<IndexDefinitionAndType> onIndexAction = null,
             Action<DatabaseRecord> onDatabaseRecordAction = null)
         {
-            await using (var fileStream = await GetStream(filePath))
+            await using (var fileStream = await _restoreSource.GetStream(filePath))
             await using (var inputStream = GetInputStream(fileStream, database.MasterKey))
             await using (var gzipStream = new GZipStream(inputStream, CompressionMode.Decompress))
             using (var source = new StreamSource(gzipStream, context, database.Name))
@@ -1127,9 +1153,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 SkipRevisionCreation = true
             };
 
-            var lastPath = GetSmugglerBackupPath(smugglerFile);
+            var lastPath = _restoreSource.GetSmugglerBackupPath(smugglerFile);
 
-            using (var zip = await GetZipArchiveForSnapshot(lastPath))
+            using (var zip = await _restoreSource.GetZipArchiveForSnapshot(lastPath))
             {
                 foreach (var entry in zip.Entries)
                 {
