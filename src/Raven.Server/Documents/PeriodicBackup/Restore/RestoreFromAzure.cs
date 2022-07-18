@@ -4,62 +4,66 @@ using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Server.Config.Settings;
 using Raven.Server.Documents.PeriodicBackup.Azure;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
-    public class RestoreFromAzure : RestoreBackupTaskBase
+    public class RestoreFromAzure : IRestoreSource
     {
         private readonly IRavenAzureClient _client;
         private readonly string _remoteFolderName;
+        private readonly PathSetting _tempPath;
 
-        public RestoreFromAzure(ServerStore serverStore, RestoreFromAzureConfiguration restoreFromConfiguration, string nodeTag, OperationCancelToken operationCancelToken) : base(serverStore, restoreFromConfiguration, nodeTag, operationCancelToken)
+
+        public RestoreFromAzure(ServerStore serverStore, RestoreFromAzureConfiguration restoreFromConfiguration)
         {
             _client = RavenAzureClient.Create(restoreFromConfiguration.Settings, serverStore.Configuration.Backup);
             _remoteFolderName = restoreFromConfiguration.Settings.RemoteFolderName;
+            _tempPath = serverStore.Configuration.Storage.TempPath;
         }
 
-        protected override async Task<Stream> GetStream(string path)
+        public async Task<Stream> GetStream(string path)
         {
             var blob = await _client.GetBlobAsync(path);
             return blob.Data;
         }
 
-        protected override async Task<ZipArchive> GetZipArchiveForSnapshot(string path)
+        public async Task<ZipArchive> GetZipArchiveForSnapshot(string path)
         {
             var blob = await _client.GetBlobAsync(path);
-            var file = await CopyRemoteStreamLocally(blob.Data);
+            var file = await RestoreBackupTask.CopyRemoteStreamLocally(blob.Data, _tempPath);
             return new DeleteOnCloseZipArchive(file, ZipArchiveMode.Read);
         }
 
-        protected override async Task<List<string>> GetFilesForRestore()
+        public async Task<List<string>> GetFilesForRestore()
         {
             var prefix = string.IsNullOrEmpty(_remoteFolderName) ? "" : _remoteFolderName;
             var allObjects = await _client.ListBlobsAsync(prefix, string.Empty, false);
             return allObjects.List.Select(x => x.Name).ToList();
         }
 
-        protected override string GetBackupPath(string fileName)
+        public string GetBackupPath(string fileName)
         {
             return fileName;
         }
 
-        protected override string GetSmugglerBackupPath(string smugglerFile)
+        public string GetSmugglerBackupPath(string smugglerFile)
         {
             return smugglerFile;
         }
 
-        protected override string GetBackupLocation()
+        public string GetBackupLocation()
         {
             return _remoteFolderName;
         }
-        protected override void Dispose()
+        public void Dispose()
         {
             using (_client)
             {
-                base.Dispose();
+                //base.Dispose();
             }
         }
     }

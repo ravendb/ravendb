@@ -1,40 +1,41 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Server.Config.Settings;
 using Raven.Server.Documents.PeriodicBackup.GoogleCloud;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
-using Sparrow.Server.Utils;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
-    public class RestoreFromGoogleCloud : RestoreBackupTaskBase
+    public class RestoreFromGoogleCloud : IRestoreSource
     {
         private readonly RavenGoogleCloudClient _client;
         private readonly string _remoteFolderName;
+        private readonly PathSetting _tempPath;
 
-        public RestoreFromGoogleCloud(ServerStore serverStore, RestoreFromGoogleCloudConfiguration restoreFromConfiguration, string nodeTag, OperationCancelToken operationCancelToken) : base(serverStore, restoreFromConfiguration, nodeTag, operationCancelToken)
+        public RestoreFromGoogleCloud(ServerStore serverStore, RestoreFromGoogleCloudConfiguration restoreFromConfiguration)
         {
             _client = new RavenGoogleCloudClient(restoreFromConfiguration.Settings, serverStore.Configuration.Backup);
             _remoteFolderName = restoreFromConfiguration.Settings.RemoteFolderName;
+            _tempPath = serverStore.Configuration.Storage.TempPath;
         }
 
-        protected override Task<Stream> GetStream(string path)
+        public Task<Stream> GetStream(string path)
         {
             return Task.FromResult(_client.DownloadObject(path));
         }
 
-        protected override async Task<ZipArchive> GetZipArchiveForSnapshot(string path)
+        public async Task<ZipArchive> GetZipArchiveForSnapshot(string path)
         {
             Stream stream = _client.DownloadObject(path);
-            var file = await CopyRemoteStreamLocally(stream);
+            var file = await RestoreBackupTask.CopyRemoteStreamLocally(stream, _tempPath);
             return new DeleteOnCloseZipArchive(file, ZipArchiveMode.Read);
         }
 
-        protected override async Task<List<string>> GetFilesForRestore()
+        public async Task<List<string>> GetFilesForRestore()
         {
             var prefix = string.IsNullOrEmpty(_remoteFolderName) ? "" : _remoteFolderName.TrimEnd('/');
             var allObjects = await _client.ListObjectsAsync(prefix, delimiter: null);
@@ -47,26 +48,26 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             return result;
         }
 
-        protected override string GetBackupPath(string fileName)
+        public string GetBackupPath(string fileName)
         {
             return fileName;
         }
 
-        protected override string GetSmugglerBackupPath(string smugglerFile)
+        public string GetSmugglerBackupPath(string smugglerFile)
         {
             return smugglerFile;
         }
 
-        protected override string GetBackupLocation()
+        public string GetBackupLocation()
         {
             return _remoteFolderName;
         }
 
-        protected override void Dispose()
+        public void Dispose()
         {
             using (_client)
             {
-                base.Dispose();
+                //base.Dispose();
             }
         }
     }

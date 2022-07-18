@@ -9,11 +9,11 @@ using Raven.Server.ServerWide;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
-    public class RestoreFromLocal : RestoreBackupTaskBase
+    public class RestoreFromLocal : IRestoreSource
     {
         private readonly string _backupLocation;
 
-        public RestoreFromLocal(ServerStore serverStore, RestoreBackupConfiguration restoreConfiguration, string nodeTag, OperationCancelToken operationCancelToken) : base(serverStore, restoreConfiguration, nodeTag, operationCancelToken)
+        public RestoreFromLocal(RestoreBackupConfiguration restoreConfiguration) /*: base(serverStore, restoreConfiguration, nodeTag, operationCancelToken)*/
         {
             if (restoreConfiguration.ShardRestoreSettings.Length > 0)
                 return;
@@ -27,33 +27,33 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             _backupLocation = restoreConfiguration.BackupLocation;
         }
 
-        protected override Task<Stream> GetStream(string path)
+        public Task<Stream> GetStream(string path)
         {
             var stream = File.OpenRead(path);
             return Task.FromResult<Stream>(stream);
         }
 
-        protected override Task<ZipArchive> GetZipArchiveForSnapshot(string path)
+        public Task<ZipArchive> GetZipArchiveForSnapshot(string path)
         {
             return Task.FromResult(ZipFile.Open(path, ZipArchiveMode.Read, System.Text.Encoding.UTF8));
         }
 
-        protected override Task<List<string>> GetFilesForRestore()
+        public Task<List<string>> GetFilesForRestore()
         {
             return Task.FromResult(Directory.GetFiles(_backupLocation).ToList());
         }
 
-        protected override string GetBackupPath(string fileName)
+        public string GetBackupPath(string fileName)
         {
             return fileName;
         }
 
-        protected override string GetSmugglerBackupPath(string smugglerFile)
+        public string GetSmugglerBackupPath(string smugglerFile)
         {
             return Path.Combine(_backupLocation, smugglerFile);
         }
 
-        protected override string GetBackupLocation()
+        public string GetBackupLocation()
         {
             return _backupLocation;
         }

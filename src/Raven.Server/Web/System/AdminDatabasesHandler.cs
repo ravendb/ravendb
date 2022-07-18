@@ -632,62 +632,11 @@ namespace Raven.Server.Web.System
                 var restoreConfiguration = await context.ReadForMemoryAsync(RequestBodyStream(), "database-restore");
                 await ServerStore.EnsureNotPassiveAsync();
 
-                RestoreType restoreType;
-                if (restoreConfiguration.TryGet("Type", out string typeAsString))
-                {
-                    if (Enum.TryParse(typeAsString, out restoreType) == false)
-                        throw new ArgumentException($"{typeAsString} is unknown backup type.");
-                }
-                else
-                {
-                    restoreType = RestoreType.Local;
-                }
 
                 var cancelToken = CreateOperationToken();
-                RestoreBackupTaskBase restoreBackupTask;
-                switch (restoreType)
-                {
-                    case RestoreType.Local:
-                        var localConfiguration = JsonDeserializationCluster.RestoreBackupConfiguration(restoreConfiguration);
-                        restoreBackupTask = new RestoreFromLocal(
-                            ServerStore,
-                            localConfiguration,
-                            ServerStore.NodeTag,
-                            cancelToken);
-                        break;
-
-                    case RestoreType.S3:
-                        var s3Configuration = JsonDeserializationCluster.RestoreS3BackupConfiguration(restoreConfiguration);
-                        restoreBackupTask = new RestoreFromS3(
-                            ServerStore,
-                            s3Configuration,
-                            ServerStore.NodeTag,
-                            cancelToken);
-                        break;
-
-                    case RestoreType.Azure:
-                        var azureConfiguration = JsonDeserializationCluster.RestoreAzureBackupConfiguration(restoreConfiguration);
-                        restoreBackupTask = new RestoreFromAzure(
-                            ServerStore,
-                            azureConfiguration,
-                            ServerStore.NodeTag,
-                            cancelToken);
-                        break;
-
-                    case RestoreType.GoogleCloud:
-                        var googleCloudConfiguration = JsonDeserializationCluster.RestoreGoogleCloudBackupConfiguration(restoreConfiguration);
-                        restoreBackupTask = new RestoreFromGoogleCloud(
-                            ServerStore,
-                            googleCloudConfiguration,
-                            ServerStore.NodeTag,
-                            cancelToken);
-                        break;
-
-                    default:
-                        throw new InvalidOperationException($"No matching backup type was found for {restoreType}");
-                }
-
+                var restoreBackupTask = new RestoreBackupTask(ServerStore, restoreConfiguration, cancelToken);
                 var operationId = ServerStore.Operations.GetNextOperationId();
+                
                 if (restoreBackupTask.RestoreFromConfiguration.ShardRestoreSettings.Length > 0)
                 {
                     _ = restoreBackupTask.OrchestrateShardedRestore(operationId);
