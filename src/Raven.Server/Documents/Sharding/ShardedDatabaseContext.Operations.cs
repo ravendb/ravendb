@@ -81,6 +81,7 @@ public partial class ShardedDatabaseContext
             return AddOperationInternalAsync(operation, onProgress => CreateTaskAsync<TResult, TOrchestratorResult, TOperationProgress>(operation, commandFactory, onProgress, token));
         }
 
+
         private async Task<IOperationResult> CreateTaskAsync<TResult, TOrchestratorResult, TOperationProgress>(
             ShardedOperation operation,
             Func<JsonOperationContext, int, RavenCommand<TResult>> commandFactory,

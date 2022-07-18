@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
@@ -215,13 +216,27 @@ namespace Raven.Client.Documents.Operations
                     await Task.Delay(500).ConfigureAwait(false);
                 }
             }
+            catch (Exception e)
+            {
+                var command = GetOperationStateCommand(_conventions, _id, NodeTag);
+                var node = _requestExecutor.TopologyNodes.SingleOrDefault(n => n.ClusterTag == NodeTag);
+                var request = command.CreateRequest(_context, node, out var url);
+                throw;
+            }
             finally
             {
                 _lock.Release();
             }
 
             if (state == null)
+            {
+                var command = GetOperationStateCommand(_conventions, _id, NodeTag);
+                await _requestExecutor.ExecuteAsync(command, _context, sessionInfo: null, token: CancellationToken.None).ConfigureAwait(false);
+
+                state = command.Result;
+
                 throw new InvalidOperationException($"Could not fetch state of operation '{_id}' from node '{NodeTag}'.");
+            }
 
             OnNext(new OperationStatusChange
             {

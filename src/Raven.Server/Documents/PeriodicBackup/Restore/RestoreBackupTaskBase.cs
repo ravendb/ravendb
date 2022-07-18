@@ -5,6 +5,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
+using Nito.AsyncEx;
 using Raven.Client;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
@@ -20,6 +21,7 @@ using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Operations;
+using Raven.Server.Documents.Sharding;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -39,11 +41,14 @@ using Voron.Data.Tables;
 using Voron.Impl.Backup;
 using Voron.Util.Settings;
 using Index = Raven.Server.Documents.Indexes.Index;
+using Operation = Raven.Client.Documents.Operations.Operation;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
     public abstract class RestoreBackupTaskBase
     {
+        public RestoreBackupConfigurationBase RestoreFromConfiguration { get; }
+
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RestoreBackupTaskBase>("Server");
 
         private readonly ServerStore _serverStore;
@@ -52,7 +57,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         private bool _hasEncryptionKey;
         private readonly bool _restoringToDefaultDataDirectory;
         private readonly bool _isShard;
-        public RestoreBackupConfigurationBase RestoreFromConfiguration { get; }
 
         protected RestoreBackupTaskBase(ServerStore serverStore,
             RestoreBackupConfigurationBase restoreFromConfiguration,
@@ -70,7 +74,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
             _isShard = ShardHelper.IsShardedName(restoreFromConfiguration.DatabaseName);
 
-            if (ResourceNameValidator.IsValidResourceName(RestoreFromConfiguration.DatabaseName, dataDirectoryThatWillBeUsed, out string errorMessage) == false && _isShard == false)
+            if (_isShard == false && ResourceNameValidator.IsValidResourceName(RestoreFromConfiguration.DatabaseName, dataDirectoryThatWillBeUsed, out string errorMessage) == false)
                 throw new InvalidOperationException(errorMessage);
 
             _serverStore.EnsureNotPassiveAsync().Wait(_operationCancelToken.Token);
@@ -79,15 +83,15 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                if (_serverStore.Cluster.DatabaseExists(context, RestoreFromConfiguration.DatabaseName) && _isShard == false)
+                if (_isShard == false && _serverStore.Cluster.DatabaseExists(context, RestoreFromConfiguration.DatabaseName))
                     throw new ArgumentException($"Cannot restore data to an existing database named {RestoreFromConfiguration.DatabaseName}");
 
                 clusterTopology = _serverStore.GetClusterTopology(context);
             }
 
-            _hasEncryptionKey = string.IsNullOrWhiteSpace(RestoreFromConfiguration.EncryptionKey) == false;
-            if (_hasEncryptionKey)
+            if (string.IsNullOrWhiteSpace(RestoreFromConfiguration.EncryptionKey) == false)
             {
+                _hasEncryptionKey = true;
                 var key = Convert.FromBase64String(RestoreFromConfiguration.EncryptionKey);
                 if (key.Length != 256 / 8)
                     throw new InvalidOperationException($"The size of the key must be 256 bits, but was {key.Length * 8} bits.");
@@ -184,6 +188,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         public async Task<IOperationResult> Execute(Action<IOperationProgress> onProgress)
         {
             var databaseName = RestoreFromConfiguration.DatabaseName;
+            if (ShardHelper.IsShardedName(databaseName))
+                return await ExecuteShardRestore(onProgress);
+
             var result = new RestoreResult
             {
                 DataDirectory = RestoreFromConfiguration.DataDirectory
@@ -192,14 +199,14 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             try
             {
                 var filesToRestore = await GetOrderedFilesToRestore();
+
                 using (_serverStore.ContextPool.AllocateOperationContext(out JsonOperationContext serverContext))
                 {
-                    onProgress ??= _ => { };
+                    if (onProgress == null)
+                        onProgress = _ => { };
 
                     Stopwatch sw = null;
                     RestoreSettings restoreSettings = null;
-                    DatabaseRecord databaseRecord = default;
-
                     var firstFile = filesToRestore[0];
 
                     var extension = Path.GetExtension(firstFile);
@@ -237,30 +244,33 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                         onProgress.Invoke(result.Progress);
                     }
 
-                    if (_isShard)
+                    if (restoreSettings == null)
                     {
-                        // db-record was already created by the orchestrator
-                        using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-                        using (ctx.OpenReadTransaction())
+                        restoreSettings = new RestoreSettings
                         {
-                            databaseRecord = _serverStore.Cluster.ReadDatabase(ctx, ShardHelper.ToDatabaseName(databaseName));
-                            databaseRecord.DatabaseState = DatabaseStateStatus.Normal;
-                        }
+                            DatabaseRecord = new DatabaseRecord(databaseName)
+                            {
+                                // we only have a smuggler restore
+                                // use the encryption key to encrypt the database
+                                Encrypted = _hasEncryptionKey
+                            }
+                        };
+
+                        DatabaseHelper.Validate(databaseName, restoreSettings.DatabaseRecord, _serverStore.Configuration);
                     }
 
-                    restoreSettings ??= new RestoreSettings
-                    {
-                        DatabaseRecord = databaseRecord ?? new DatabaseRecord(databaseName)
-                        {
-                            // we only have a smuggler restore
-                            // use the encryption key to encrypt the database
-                            Encrypted = _hasEncryptionKey,
-                        }
-                    };
+                    var databaseRecord = restoreSettings.DatabaseRecord;
+                    databaseRecord.Settings ??= new Dictionary<string, string>();
 
-                    databaseRecord = restoreSettings.DatabaseRecord;
-                    //DatabaseHelper.Validate(databaseName, databaseRecord, _serverStore.Configuration);
-                    ModifyDatabaseRecordSettings(databaseRecord);
+                    var runInMemoryConfigurationKey = RavenConfiguration.GetKey(x => x.Core.RunInMemory);
+                    databaseRecord.Settings.Remove(runInMemoryConfigurationKey);
+                    if (_serverStore.Configuration.Core.RunInMemory)
+                        databaseRecord.Settings[runInMemoryConfigurationKey] = "false";
+
+                    var dataDirectoryConfigurationKey = RavenConfiguration.GetKey(x => x.Core.DataDirectory);
+                    databaseRecord.Settings.Remove(dataDirectoryConfigurationKey); // removing because we want to restore to given location, not to serialized in backup one
+                    if (_restoringToDefaultDataDirectory == false)
+                        databaseRecord.Settings[dataDirectoryConfigurationKey] = RestoreFromConfiguration.DataDirectory;
 
                     if (_hasEncryptionKey)
                     {
@@ -288,21 +298,16 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                             options |= InitializeOptions.GenerateNewDatabaseId;
 
                         database.Initialize(options);
+                        databaseRecord.Topology = new DatabaseTopology();
 
-                        if (_isShard == false)
-                        {
-                            databaseRecord.Topology = new DatabaseTopology();
+                        // restoring to the current node only
+                        databaseRecord.Topology.Members.Add(_nodeTag);
+                        // we are currently restoring, shouldn't try to access it
+                        databaseRecord.DatabaseState = DatabaseStateStatus.RestoreInProgress;
 
-                            // restoring to the current node only
-                            databaseRecord.Topology.Members.Add(_nodeTag);
+                        await SaveDatabaseRecordAsync(databaseName, databaseRecord, restoreSettings.DatabaseValues, result, onProgress);
 
-                            // we are currently restoring, shouldn't try to access it
-                            databaseRecord.DatabaseState = DatabaseStateStatus.RestoreInProgress;
-
-                            await SaveDatabaseRecordAsync(databaseName, databaseRecord, restoreSettings.DatabaseValues, result, onProgress);
-
-                            database.SetIds(databaseRecord);
-                        }
+                        database.SetIds(databaseRecord);
 
                         using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                         {
@@ -344,17 +349,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                             RegenerateDatabaseIdInIndexes(configuration, database);
                     }
 
-                    if (_isShard == false)
-                    {
-                        // after the db for restore is done, we can safely set the db state to normal and write the DatabaseRecord
-                        databaseRecord.DatabaseState = DatabaseStateStatus.Normal;
-                    }
-                    else
-                    {
-                        databaseName = ShardHelper.ToDatabaseName(databaseName);
-                        databaseRecord.DatabaseState = DatabaseStateStatus.RestoreInProgress;
-                    }
-
+                    // after the db for restore is done, we can safely set the db state to normal and write the DatabaseRecord
+                    databaseRecord.DatabaseState = DatabaseStateStatus.Normal;
                     await SaveDatabaseRecordAsync(databaseName, databaseRecord, null, result, onProgress);
 
                     return result;
@@ -441,6 +437,131 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             }
         }
 
+        public async Task<IOperationResult> ExecuteShardRestore(Action<IOperationProgress> onProgress)
+        {
+            var databaseName = RestoreFromConfiguration.DatabaseName;
+            onProgress ??= _ => { };
+
+            var result = new RestoreResult
+            {
+                DataDirectory = RestoreFromConfiguration.DataDirectory
+            };
+
+            try
+            {
+                var filesToRestore = await GetOrderedFilesToRestore();
+                var firstFile = filesToRestore[0];
+                var extension = Path.GetExtension(firstFile);
+
+                if (extension is Constants.Documents.PeriodicBackup.SnapshotExtension or Constants.Documents.PeriodicBackup.EncryptedSnapshotExtension)
+                    throw new InvalidOperationException($"Cannot perform a snapshot restore on sharded database '{databaseName}'");
+                
+                result.SnapshotRestore.Skipped = true;
+                result.SnapshotRestore.Processed = true;
+
+                DatabaseRecord databaseRecord;
+                using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
+                using (serverContext.OpenReadTransaction())
+                {
+                    databaseRecord = _serverStore.Cluster.ReadDatabase(serverContext, ShardHelper.ToDatabaseName(databaseName));
+                    Debug.Assert(databaseRecord != null);
+                }
+
+                ModifyDatabaseRecordSettings(databaseRecord);
+
+                /*if (_hasEncryptionKey)
+                {
+                    // save the encryption key so we'll be able to access the database
+                    _serverStore.PutSecretKey(RestoreFromConfiguration.EncryptionKey,
+                        databaseName, overwrite: false);
+                }*/
+
+                var addToInitLog = new Action<string>(txt => // init log is not save in mem during RestoreBackup
+                {
+                    var msg = $"[RestoreBackup] {DateTime.UtcNow} :: Database '{databaseName}' : {txt}";
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info(msg);
+                });
+
+                var configuration = DatabasesLandlord.CreateDatabaseConfiguration(_serverStore, databaseName, databaseRecord.Settings);
+                using (var database = DatabasesLandlord.CreateDocumentDatabase(databaseName, configuration, _serverStore, addToInitLog))
+                {
+                    onProgress.Invoke(result.Progress);
+
+                    // smuggler needs an existing document database to operate
+                    var options = InitializeOptions.SkipLoadingDatabaseRecord;
+                    database.Initialize(options);
+
+                    //database.SetIds(databaseRecord) // ?
+
+                    using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    {
+                        await SmugglerRestore(database, filesToRestore, context, databaseRecord, onProgress, result);
+
+                        DisableOngoingTasksIfNeeded(databaseRecord);
+
+                        SmugglerBase.EnsureProcessed(result, skipped: false);
+
+                        onProgress.Invoke(result.Progress);
+                    }
+
+                    return result;
+                }
+            }
+            catch (Exception e)
+            {
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations("Failed to restore database", e);
+
+                var alert = AlertRaised.Create(
+                    RestoreFromConfiguration.DatabaseName,
+                    "Failed to restore database",
+                    $"Could not restore database named {RestoreFromConfiguration.DatabaseName}",
+                    AlertType.RestoreError,
+                    NotificationSeverity.Error,
+                    details: new ExceptionDetails(e));
+                _serverStore.NotificationCenter.Add(alert);
+
+                using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                {
+                    bool databaseExists;
+                    using (context.OpenReadTransaction())
+                    {
+                        databaseExists = _serverStore.Cluster.DatabaseExists(context, RestoreFromConfiguration.DatabaseName);
+                    }
+
+                    if (databaseExists == false)
+                    {
+                        // delete any files that we already created during the restore
+                        IOExtensions.DeleteDirectory(RestoreFromConfiguration.DataDirectory);
+                    }
+                    else
+                    {
+                        try
+                        {
+                            var deleteResult = await _serverStore.DeleteDatabaseAsync(RestoreFromConfiguration.DatabaseName, true, new[] { _serverStore.NodeTag },
+                                RaftIdGenerator.DontCareId);
+                            await _serverStore.Cluster.WaitForIndexNotification(deleteResult.Index, TimeSpan.FromSeconds(60));
+                        }
+                        catch (TimeoutException te)
+                        {
+                            result.AddError($"Failed to delete the database {databaseName} after a failed restore. " +
+                                            $"In order to restart the restore process this database needs to be deleted manually. Exception: {te}.");
+                            onProgress.Invoke(result.Progress);
+                        }
+                    }
+                }
+
+                result.AddError($"Error occurred during restore of database {databaseName}. Exception: {e}");
+                onProgress.Invoke(result.Progress);
+                throw;
+            }
+            finally
+            {
+                Dispose();
+            }
+        }
+
         private void ModifyDatabaseRecordSettings(DatabaseRecord databaseRecord)
         {
             databaseRecord.Settings ??= new Dictionary<string, string>();
@@ -456,26 +577,26 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 databaseRecord.Settings[dataDirectoryConfigurationKey] = RestoreFromConfiguration.DataDirectory;
         }
 
-        private async Task SaveDatabaseRecordAsync(string databaseName, DatabaseRecord databaseRecord, Dictionary<string,
-            BlittableJsonReaderObject> databaseValues, RestoreResult restoreResult, Action<IOperationProgress> onProgress)
+        private async Task<long> SaveDatabaseRecordAsync(string databaseName, DatabaseRecord databaseRecord, Dictionary<string,
+                    BlittableJsonReaderObject> databaseValues, RestoreResult restoreResult, Action<IOperationProgress> onProgress)
         {
             // at this point we restored a large portion of the database or all of it	
             // we'll retry saving the database record since a failure here will cause us to abort the entire restore operation	
 
             var index = await RunWithRetries(async () =>
-                {
-                    var result = await _serverStore.WriteDatabaseRecordAsync(
-                        databaseName, databaseRecord, null, RaftIdGenerator.NewId(), databaseValues, isRestore: true);
-                    return result.Index;
-                },
+            {
+                var result = await _serverStore.WriteDatabaseRecordAsync(
+                    databaseName, databaseRecord, null, RaftIdGenerator.NewId(), databaseValues, isRestore: true);
+                return result.Index;
+            },
                 "Saving the database record",
                 "Failed to save the database record, the restore is aborted");
 
-            await RunWithRetries(async () =>
-                {
-                    await _serverStore.Cluster.WaitForIndexNotification(index, TimeSpan.FromSeconds(30));
-                    return index;
-                },
+            return await RunWithRetries(async () =>
+            {
+                await _serverStore.Cluster.WaitForIndexNotification(index, TimeSpan.FromSeconds(30));
+                return index;
+            },
                 $"Verifying that the change to the database record propagated to node {_serverStore.NodeTag}",
                 $"Failed to verify that the change to the database record was propagated to node {_serverStore.NodeTag}, the restore is aborted");
 
@@ -747,10 +868,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 });
         }
 
-        public async Task<long> OrchestrateShardedRestore()
+        public async Task OrchestrateShardedRestore(long operationId)
         {
-            RestoreFromConfiguration.DataDirectory = null;
-
             var databaseName = RestoreFromConfiguration.DatabaseName;
             var databaseRecord = new DatabaseRecord(databaseName)
             {
@@ -773,6 +892,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     }
                 }
             };
+            
+            databaseRecord.DatabaseState = DatabaseStateStatus.RestoreInProgress;
 
             var nodes = new HashSet<string>();
             for (var i = 0; i < RestoreFromConfiguration.ShardRestoreSettings.Length; i++)
@@ -790,51 +911,66 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     databaseRecord.Sharding.Orchestrator.Topology.Members.Add(shardRestoreSetting.NodeTag);
             }
 
-            // we are currently restoring, shouldn't try to access it
-            databaseRecord.DatabaseState = DatabaseStateStatus.RestoreInProgress;
+            // create on all shards
             await SaveDatabaseRecordAsync(databaseName, databaseRecord, null, null, null);
-
             var databaseSearchResult = _serverStore.DatabasesLandlord.TryGetOrCreateDatabase(RestoreFromConfiguration.DatabaseName);
             var shardedDatabaseContext = databaseSearchResult.DatabaseContext;
+             
+            // todo wait on all relevant nodes
+            //await shardedDatabaseContext.Cluster.WaitForExecutionOnAllNodesAsync(index);
 
-            var opId = shardedDatabaseContext.Operations.GetNextOperationId();
-
-            var t = shardedDatabaseContext.Operations.AddRemoteOperation<OperationIdResult, ShardedSmugglerResult, ShardedSmugglerProgress>(
-                opId,
+            _ = _serverStore.Operations.AddLocalOperation(
+                operationId,
                 OperationType.DatabaseRestore,
                 $"Restore sharded database: {databaseName}",
                 detailedDescription: null,
-                commandFactory: (ctx, shardNumber) => GenerateCommandForShard(ctx, shardNumber, RestoreFromConfiguration.Clone(), opId), 
+                taskFactory: onProgress => Task.Run(async () => await RestoreOnAllShards(onProgress, shardedDatabaseContext, RestoreFromConfiguration), _operationCancelToken.Token),
                 token: _operationCancelToken);
-
-            /*
-            var tcs = new TaskCompletionSource(t.ContinueWith(async _ =>
+        }
+        
+        private async Task<IOperationResult> RestoreOnAllShards(Action<IOperationProgress> onProgress,
+            ShardedDatabaseContext databaseContext, RestoreBackupConfigurationBase configuration)
+        {
+            var result = new ShardedSmugglerResult();
+            var tasks = new Task<IOperationResult>[databaseContext.NumberOfShardNodes];
+            
+            for (int i = 0; i < tasks.Length; i++)
             {
-                using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext c))
-                using (c.OpenReadTransaction())
+                using (databaseContext.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
                 {
-                    var rec = _serverStore.Cluster.ReadDatabase(c, databaseName);
-                    rec.DatabaseState = DatabaseStateStatus.Normal;
-                    await _serverStore.WriteDatabaseRecordAsync(databaseName, rec, null, RaftIdGenerator.NewId(), null, isRestore: true);
+                    var cmd = GenerateCommandForShard(ctx, shardNumber: i, configuration.Clone());
+                    var nodeTag = configuration.ShardRestoreSettings[i].NodeTag;
+                    var operationIdResult = await databaseContext.AllNodesExecutor.ExecuteForNodeAsync(cmd, nodeTag);
 
+                    var rq = databaseContext.AllNodesExecutor.GetRequestExecutorForNode(nodeTag);
+                    var serverOp = new ServerWideOperation(rq, DocumentConventions.DefaultForServer, operationIdResult.OperationId, nodeTag);
+                    tasks[i] = serverOp.WaitForCompletionAsync();
                 }
+            }
 
-                _operationCancelToken.Cancel();
-            }));
-            */
+            await tasks.WhenAll();
 
-            return opId;
+            for (var i = 0; i < tasks.Length; i++)
+            {
+                var nodeTag = configuration.ShardRestoreSettings[i].NodeTag;
+                var r = tasks[i].Result;
+                result.CombineWith(r, i, nodeTag);
+            }
 
+            // after we finished restoring on all nodes, change database state back to normal
+            var databaseName = databaseContext.DatabaseName;
+            using (databaseContext.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
+            using (serverContext.OpenReadTransaction())
+            {
+                var databaseRecord = databaseContext.ServerStore.Cluster.ReadDatabase(serverContext, databaseName);
+                databaseRecord.DatabaseState = DatabaseStateStatus.Normal;
+                await SaveDatabaseRecordAsync(databaseName, databaseRecord, null, null, null);
+            }
 
-            /* 
-            DisableOngoingTasksIfNeeded(databaseRecord);
-
-            SmugglerBase.EnsureProcessed(result, skipped: false);
-
-            onProgress.Invoke(result.Progress);*/
+            return result;
         }
 
-        private static RavenCommand<OperationIdResult> GenerateCommandForShard(JsonOperationContext context, int shardNumber, RestoreBackupConfigurationBase configuration, long opId)
+        private static RavenCommand<OperationIdResult> GenerateCommandForShard(JsonOperationContext context, int shardNumber, RestoreBackupConfigurationBase configuration)
         {
             var shardRestoreSetting = configuration.ShardRestoreSettings?.SingleOrDefault(s => s.ShardNumber == shardNumber);
             if (shardRestoreSetting == null)
@@ -852,13 +988,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 case RestoreFromAzureConfiguration restoreFromAzureConfiguration:
                 case RestoreFromGoogleCloudConfiguration restoreFromGoogleCloudConfiguration:
                 case RestoreFromS3Configuration restoreFromS3Configuration:
-                    // todo
+                    Sparrow.Utils.DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Major, "implement sharded cloud restore");
                     throw new NotImplementedException();
                 default:
                     throw new ArgumentOutOfRangeException(nameof(configuration));
             }
 
-            return new RestoreBackupOperation(configuration, shardRestoreSetting.NodeTag, opId)
+            return new RestoreBackupOperation(configuration, shardRestoreSetting.NodeTag)
                 .GetCommand(DocumentConventions.DefaultForServer, context);
         }
 

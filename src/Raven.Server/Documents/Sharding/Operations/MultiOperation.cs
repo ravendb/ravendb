@@ -120,7 +120,7 @@ public class MultiOperation
         {
             var r = task.Value.Result;
             
-            if(r.CanMerge == false)
+            if (r.CanMerge == false)
                 throw new NotSupportedException();
             else
                 result.MergeWith(r);
