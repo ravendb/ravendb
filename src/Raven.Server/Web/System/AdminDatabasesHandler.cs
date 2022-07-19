@@ -629,26 +629,37 @@ namespace Raven.Server.Web.System
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var restoreConfiguration = await context.ReadForMemoryAsync(RequestBodyStream(), "database-restore");
+                var configurationBlittable = await context.ReadForMemoryAsync(RequestBodyStream(), "database-restore");
+                var configuration = GetRestoreConfigurationAndSource(ServerStore, configurationBlittable, out var restoreSource);
+
                 await ServerStore.EnsureNotPassiveAsync();
-
-
                 var cancelToken = CreateOperationToken();
-                var restoreBackupTask = new RestoreBackupTask(ServerStore, restoreConfiguration, cancelToken);
                 var operationId = ServerStore.Operations.GetNextOperationId();
-                
-                if (restoreBackupTask.RestoreFromConfiguration.ShardRestoreSettings.Length > 0)
+
+                if (configuration.ShardRestoreSettings.Length > 0)
                 {
-                    _ = restoreBackupTask.OrchestrateShardedRestore(operationId);
+                    var shardedRestoreOrchestrator = new ShardedRestoreOrchestrator(ServerStore, configuration, cancelToken);
+
+                    _ = ServerStore.Operations.AddLocalOperation(
+                        operationId,
+                        OperationType.DatabaseRestore,
+                        $"Restore sharded database: {configuration.DatabaseName}",
+                        detailedDescription: null,
+                        taskFactory: onProgress => Task.Run(async () => await shardedRestoreOrchestrator.Execute(onProgress), cancelToken.Token),
+                        token: cancelToken);
                 }
-                else
+                else 
                 {
                     _ = ServerStore.Operations.AddLocalOperation(
                         operationId,
                         OperationType.DatabaseRestore,
-                        $"Database restore: {restoreBackupTask.RestoreFromConfiguration.DatabaseName}",
+                        $"Database restore: {configuration.DatabaseName}",
                         detailedDescription: null,
-                        taskFactory: onProgress => Task.Run(async () => await restoreBackupTask.Execute(onProgress), cancelToken.Token),
+                        taskFactory: onProgress => Task.Run(async () =>
+                        {
+                            var restoreBackupTask = await CreateBackupTask(ServerStore, configuration, restoreSource, cancelToken);
+                            return await restoreBackupTask.Execute(onProgress);
+                        }, cancelToken.Token),
                         token: cancelToken);
                 }
 
@@ -657,6 +668,99 @@ namespace Raven.Server.Web.System
                     writer.WriteOperationIdAndNodeTag(context, operationId, ServerStore.NodeTag);
                 }
             }
+        }
+
+        private static RestoreBackupConfigurationBase GetRestoreConfigurationAndSource(ServerStore serverStore, BlittableJsonReaderObject restoreConfiguration, out IRestoreSource restoreSource)
+        {
+            RestoreBackupConfigurationBase configuration;
+            RestoreType restoreType = default;
+            if (restoreConfiguration.TryGet("Type", out string typeAsString))
+            {
+                if (Enum.TryParse(typeAsString, out restoreType) == false)
+                    throw new ArgumentException($"{typeAsString} is unknown backup type.");
+            }
+
+            switch (restoreType)
+            {
+                case RestoreType.Local:
+                    var localConfiguration = JsonDeserializationCluster.RestoreBackupConfiguration(restoreConfiguration);
+                    configuration = localConfiguration; // ?
+                    restoreSource = new RestoreFromLocal(localConfiguration);
+                    break;
+
+                case RestoreType.S3:
+                    var s3Configuration = JsonDeserializationCluster.RestoreS3BackupConfiguration(restoreConfiguration);
+                    configuration = s3Configuration; // ?
+                    restoreSource = new RestoreFromS3(serverStore, s3Configuration);
+                    break;
+
+                case RestoreType.Azure:
+                    var azureConfiguration = JsonDeserializationCluster.RestoreAzureBackupConfiguration(restoreConfiguration);
+                    configuration = azureConfiguration; // ?
+                    restoreSource = new RestoreFromAzure(serverStore, azureConfiguration);
+                    break;
+
+                case RestoreType.GoogleCloud:
+                    var googleCloudConfiguration = JsonDeserializationCluster.RestoreGoogleCloudBackupConfiguration(restoreConfiguration);
+                    configuration = googleCloudConfiguration; // ?
+                    restoreSource = new RestoreFromGoogleCloud(serverStore, googleCloudConfiguration);
+                    break;
+
+                default:
+                    throw new InvalidOperationException($"No matching backup type was found for {restoreType}");
+            }
+
+            return configuration;
+        }
+
+        private static async Task<AbstractRestoreBackupTask> CreateBackupTask(ServerStore serverStore, RestoreBackupConfigurationBase configuration, IRestoreSource restoreSource, OperationCancelToken token)
+        {
+            var singleShardRestore = ShardHelper.IsShardedName(configuration.DatabaseName);
+
+            var filesToRestore = await GetOrderedFilesToRestore(restoreSource, configuration);
+            var firstFile = filesToRestore[0];
+            var extension = Path.GetExtension(firstFile);
+
+            if (extension is Constants.Documents.PeriodicBackup.SnapshotExtension or 
+                Constants.Documents.PeriodicBackup.EncryptedSnapshotExtension)
+            {
+                if (singleShardRestore)
+                    throw new InvalidOperationException($"Cannot perform a snapshot restore on sharded database '{configuration.DatabaseName}'");
+
+                return new RestoreSnapshotTask(serverStore, configuration, restoreSource, firstFile, extension, filesToRestore, token);
+            }
+
+            if (singleShardRestore)
+                return new SingleShardRestoreBackupTask(serverStore, configuration, filesToRestore, restoreSource, token);
+
+            return new RestoreBackupTask(serverStore, configuration, restoreSource, filesToRestore, token);
+        }
+
+        private static async Task<List<string>> GetOrderedFilesToRestore(IRestoreSource restoreSource, RestoreBackupConfigurationBase configuration)
+        {
+            var files = await restoreSource.GetFilesForRestore();
+
+            var orderedFiles = files
+                .Where(RestorePointsBase.IsBackupOrSnapshot)
+                .OrderBackups()
+                .ToList();
+
+            if (orderedFiles.Any() == false)
+                throw new ArgumentException($"No files to restore from the backup location, path: {restoreSource.GetBackupLocation()}");
+
+            if (string.IsNullOrWhiteSpace(configuration.LastFileNameToRestore))
+                return orderedFiles;
+
+            var filesToRestore = new List<string>();
+
+            foreach (var file in orderedFiles)
+            {
+                filesToRestore.Add(file);
+                if (file.Equals(configuration.LastFileNameToRestore, StringComparison.OrdinalIgnoreCase))
+                    break;
+            }
+
+            return filesToRestore;
         }
 
         [RavenAction("/admin/databases", "DELETE", AuthorizationStatus.Operator)]

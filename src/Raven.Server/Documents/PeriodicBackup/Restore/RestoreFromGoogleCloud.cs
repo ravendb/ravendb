@@ -31,7 +31,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         public async Task<ZipArchive> GetZipArchiveForSnapshot(string path)
         {
             Stream stream = _client.DownloadObject(path);
-            var file = await RestoreBackupTask.CopyRemoteStreamLocally(stream, _tempPath);
+            var file = await AbstractRestoreBackupTask.CopyRemoteStreamLocally(stream, _tempPath);
             return new DeleteOnCloseZipArchive(file, ZipArchiveMode.Read);
         }
 
@@ -65,10 +65,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
         public void Dispose()
         {
-            using (_client)
-            {
-                //base.Dispose();
-            }
+            _client?.Dispose();
         }
     }
 }
