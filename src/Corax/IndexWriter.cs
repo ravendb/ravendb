@@ -1,10 +1,8 @@
 using System;
-using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Corax.Pipeline;
@@ -58,13 +56,11 @@ namespace Corax
         private readonly Dictionary<long, List<long>>[] _bufferLongs;
         private readonly Dictionary<double, List<long>>[] _bufferDoubles;
 
-        private readonly HashSet<long> _entriesToDelete = new();
-
-
         private readonly long _postingListContainerId, _entriesContainerId;
 
         private const string SuggestionsTreePrefix = "__Suggestion_";
         private Dictionary<int, Dictionary<Slice, int>> _suggestionsAccumulator;
+        private Set _deletedEntries;
 
         // The reason why we want to have the transaction open for us is so that we avoid having
         // to explicitly provide the index writer with opening semantics and also every new
@@ -100,8 +96,9 @@ namespace Corax
             _postingListContainerId = Transaction.OpenContainer(Constants.IndexWriter.PostingListsSlice);
             _entriesContainerId = Transaction.OpenContainer(Constants.IndexWriter.EntriesContainerSlice);
             _jsonOperationContext = JsonOperationContext.ShortTermSingleUse();
-            _indexMetadata = Transaction.ReadTree(Constants.IndexMetadata) ?? Transaction.CreateTree(Constants.IndexMetadata);
+            _indexMetadata = Transaction.CreateTree(Constants.IndexMetadata);
             _numberOfEntries = _indexMetadata.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0L;
+            _deletedEntries = Transaction.OpenSet(Constants.DeletedEntries);
         }
 
         public IndexWriter([NotNull] Transaction tx, IndexFieldsMapping fieldsMapping) : this(fieldsMapping)
@@ -425,205 +422,228 @@ namespace Corax
             }
         }
 
-        private void DeleteCommit(Span<byte> workingBuffer, Tree fieldsTree)
+        private void DeleteEntry(long entryToDelete, Tree fieldsTree, Span<byte> workingBuffer, LowLevelTransaction llt, ref Page lastVisitedPage, ref List<long> temporaryStorageForIds)
         {
-            if (_entriesToDelete.Count == 0)
-                return;
-
-            Page lastVisitedPage = default;
-            var llt = Transaction.LowLevelTransaction;
-            List<long> temporaryStorageForIds = null;
-
-            foreach (var entryToDelete in _entriesToDelete)
+            var entryReader = IndexSearcher.GetReaderFor(Transaction, ref lastVisitedPage, entryToDelete);
+            foreach (var binding in _fieldsMapping) // todo maciej: this part needs to be rebuilt after implementing DynamicFields
             {
-                var entryReader = IndexSearcher.GetReaderFor(Transaction, ref lastVisitedPage, entryToDelete);
-                foreach (var binding in _fieldsMapping) // todo maciej: this part needs to be rebuilt after implementing DynamicFields
-                {
-                    if (binding.IsIndexed == false)
-                        continue;
+                if (binding.IsIndexed == false)
+                    continue;
 
-                    var fieldType = entryReader.GetFieldType(binding.FieldId, out var intOffset);
-                    switch (fieldType)
-                    {
-                        case IndexEntryFieldType.Empty:
-                        case IndexEntryFieldType.Null:
-                            var fieldName = fieldType == IndexEntryFieldType.Null ? Constants.NullValueSlice : Constants.EmptyStringSlice;
-                            DeleteIdFromExactTerm(entryToDelete, binding.FieldName, fieldName.AsReadOnlySpan(), workingBuffer);
+                var fieldType = entryReader.GetFieldType(binding.FieldId, out _);
+                switch (fieldType)
+                {
+                    case IndexEntryFieldType.Empty:
+                    case IndexEntryFieldType.Null:
+                        var fieldName = fieldType == IndexEntryFieldType.Null ? Constants.NullValueSlice : Constants.EmptyStringSlice;
+                        DeleteIdFromExactTerm(entryToDelete, binding.FieldName, fieldName.AsReadOnlySpan(), workingBuffer, fieldsTree, llt, ref temporaryStorageForIds);
+                        break;
+
+                    case IndexEntryFieldType.TupleList:
+                        if (entryReader.TryReadMany(binding.FieldId, out var iterator) == false)
                             break;
 
-                        case IndexEntryFieldType.TupleList:
-                            if (entryReader.TryReadMany(binding.FieldId, out var iterator) == false)
-                                break;
+                        while (iterator.ReadNext())
+                        {
+                            DeleteIdFromExactTerm(entryToDelete, binding.FieldName, iterator.Sequence, workingBuffer, fieldsTree, llt,ref temporaryStorageForIds);
+                            DeleteIdFromNumericTerm(entryToDelete, binding.FieldNameDouble, iterator.Double, workingBuffer, fieldsTree,llt, ref temporaryStorageForIds);
+                            DeleteIdFromNumericTerm(entryToDelete, binding.FieldNameLong, iterator.Long, workingBuffer, fieldsTree, llt,ref temporaryStorageForIds);
+                        }
 
-                            while (iterator.ReadNext())
+                        break;
+
+                    case IndexEntryFieldType.Tuple:
+                        if (entryReader.Read(binding.FieldId, out _, out long l, out double d, out Span<byte> valueInEntry) == false)
+                            break;
+                        DeleteIdFromExactTerm(entryToDelete, binding.FieldName, valueInEntry, workingBuffer, fieldsTree, llt,ref temporaryStorageForIds);
+                        DeleteIdFromNumericTerm(entryToDelete, binding.FieldNameDouble, d, workingBuffer, fieldsTree, llt, ref temporaryStorageForIds);
+                        DeleteIdFromNumericTerm(entryToDelete, binding.FieldNameLong, l, workingBuffer, fieldsTree, llt, ref temporaryStorageForIds);
+                        break;
+
+                    case IndexEntryFieldType.SpatialPointList:
+                        if (entryReader.TryReadManySpatialPoint(binding.FieldId, out var spatialIterator) == false)
+                            break;
+
+                        while (spatialIterator.ReadNext())
+                        {
+                            for (int i = 1; i <= spatialIterator.Geohash.Length; ++i)
                             {
-                                DeleteIdFromExactTerm(entryToDelete, binding.FieldName, iterator.Sequence, workingBuffer);
-                                DeleteIdFromNumericTerm(entryToDelete, binding.FieldNameDouble, iterator.Double, workingBuffer);
-                                DeleteIdFromNumericTerm(entryToDelete, binding.FieldNameLong, iterator.Long, workingBuffer);
+                                var readOnlySpan = spatialIterator.Geohash.Slice(0, i);
+                                DeleteIdFromExactTerm(entryToDelete, binding.FieldName, readOnlySpan, workingBuffer,fieldsTree, llt, ref temporaryStorageForIds);
                             }
+                        }
 
+                        break;
+                    case IndexEntryFieldType.Raw:
+                    case IndexEntryFieldType.RawList:
+                    case IndexEntryFieldType.Invalid:
+                        break;
+                    default:
+                        if (entryReader.Read(binding.FieldId, out var value) == false)
                             break;
 
-                        case IndexEntryFieldType.Tuple:
-                            if (entryReader.Read(binding.FieldId, out _, out long l, out double d, out Span<byte> valueInEntry) == false)
-                                break;
-                            DeleteIdFromExactTerm(entryToDelete, binding.FieldName, valueInEntry, workingBuffer);
-                            DeleteIdFromNumericTerm(entryToDelete, binding.FieldNameDouble, d, workingBuffer);
-                            DeleteIdFromNumericTerm(entryToDelete, binding.FieldNameLong, l, workingBuffer);
-                            break;
-
-                        case IndexEntryFieldType.SpatialPointList:
-                            if (entryReader.TryReadManySpatialPoint(binding.FieldId, out var spatialIterator) == false)
-                                break;
-
-                            while (spatialIterator.ReadNext())
-                            {
-                                for (int i = 1; i <= spatialIterator.Geohash.Length; ++i)
-                                    DeleteIdFromExactTerm(entryToDelete, binding.FieldName, spatialIterator.Geohash.Slice(0, i), workingBuffer);
-                            }
-
-                            break;
-                        case IndexEntryFieldType.Raw:
-                        case IndexEntryFieldType.RawList:
-                        case IndexEntryFieldType.Invalid:
-                            break;
-                        default:
-                            if (entryReader.Read(binding.FieldId, out var value) == false)
-                                break;
-
-                            DeleteIdFromTerm(value, workingBuffer, binding);
-                            break;
-                    }
-                }
-
-                Container.Delete(llt, _entriesContainerId, entryToDelete); // delete raw index entry
-                IncrementNumberOfEntries(-1); // update number of entries
-                temporaryStorageForIds?.Clear();
-
-                void DeleteIdFromTerm(ReadOnlySpan<byte> termValue, Span<byte> tmpBuffer, IndexFieldBinding binding)
-                {
-                    if (binding.IsAnalyzed == false)
-                    {
-                        DeleteIdFromExactTerm(entryToDelete, binding.FieldName, termValue, tmpBuffer);
-                        if (binding.HasSuggestions)
-                            RemoveSuggestions(binding, termValue);
-
-                        return;
-                    }
-
-                    var analyzer = binding.Analyzer;
-                    if (termValue.Length > _encodingBufferHandler.Length)
-                    {
-                        analyzer.GetOutputBuffersSize(termValue.Length, out int outputSize, out int tokenSize);
-                        if (outputSize > _encodingBufferHandler.Length || tokenSize > _tokensBufferHandler.Length)
-                            UnlikelyGrowBuffer(outputSize, tokenSize);
-                    }
-
-                    var tokenSpace = _tokensBufferHandler.AsSpan();
-                    var wordSpace = _encodingBufferHandler.AsSpan();
-                    analyzer.Execute(termValue, ref wordSpace, ref tokenSpace, ref _utf8ConverterBufferHandler);
-
-                    for (int i = 0; i < tokenSpace.Length; i++)
-                    {
-                        ref var token = ref tokenSpace[i];
-
-                        var term = wordSpace.Slice(token.Offset, (int)token.Length);
-                        DeleteIdFromExactTerm(entryToDelete, binding.FieldName, term, tmpBuffer);
-
-                        if (binding.HasSuggestions)
-                            RemoveSuggestions(binding, termValue);
-                    }
-                }
-
-
-                unsafe void DeleteIdFromNumericTerm<TVal>(long idToDelete, Slice fieldName, TVal val, Span<byte> tmpBuffer) 
-                    where TVal : unmanaged, IBinaryNumber<TVal>, IMinMaxValue<TVal>
-                {
-                    var fieldTree = fieldsTree.FixedSizeTree<TVal>(fieldsTree, fieldName, (byte)sizeof(TVal));
-
-                    using var _ = fieldTree.Read(val, out var result);
-                    if (result.HasValue == false)
-                        return;
-                    
-                    var containerId = *((long*)result.Content.Ptr);
-                    var newContainerId = RemoveValue(containerId, fieldName, idToDelete, tmpBuffer);
-                    if (newContainerId == null || newContainerId.Value != containerId)
-                        fieldTree.Delete(val);
-                    if (newContainerId != null)
-                        fieldTree.Add(val, newContainerId.Value);
-                }
-                void DeleteIdFromExactTerm(long idToDelete, Slice fieldName, ReadOnlySpan<byte> termValue, Span<byte> tmpBuffer)
-                {
-                    // We need to normalize the term in case we have a term bigger than MaxTermLength.
-                    using var _ = CreateNormalizedTerm(Transaction.Allocator, termValue, out Slice termSlice);
-                    termValue = termSlice.AsReadOnlySpan();
-
-                    var fieldTree = fieldsTree.CompactTreeFor(fieldName);
-                    if (termValue.Length == 0 || fieldTree.TryGetValue(termSlice.AsReadOnlySpan(), out var containerId) == false)
-                        return;
-
-                    var newContainerId = RemoveValue(containerId, fieldName, idToDelete, tmpBuffer);
-                    if (newContainerId == null || newContainerId.Value != containerId)
-                        fieldTree.TryRemove(termValue, out var __);
-
-                    if (newContainerId != null)
-                    {
-                        fieldTree.Add(termValue, newContainerId.Value);
-                    }
+                        DeleteIdFromTerm(value, workingBuffer, entryToDelete, binding, fieldsTree, llt, ref temporaryStorageForIds);
+                        break;
                 }
             }
 
-            long? RemoveValue(long containerId, Slice fieldName, long idToDelete, Span<byte> tmpBuffer)
+            Container.Delete(llt, _entriesContainerId, entryToDelete); // delete raw index entry
+            IncrementNumberOfEntries(-1); // update number of entries
+            temporaryStorageForIds?.Clear();
+        }
+    
+        void DeleteIdFromTerm(ReadOnlySpan<byte> termValue, Span<byte> tmpBuffer, long entryToDelete,  IndexFieldBinding binding,
+            Tree fieldsTree, LowLevelTransaction llt, ref List<long> temporaryStorageForIds)
+        {
+            if (binding.IsAnalyzed == false)
             {
-                if ((containerId & (long)TermIdMask.Set) != 0)
+                DeleteIdFromExactTerm(entryToDelete, binding.FieldName, termValue, tmpBuffer, fieldsTree, llt, ref temporaryStorageForIds);
+                if (binding.HasSuggestions)
+                    RemoveSuggestions(binding, termValue);
+
+                return;
+            }
+
+            var analyzer = binding.Analyzer;
+            if (termValue.Length > _encodingBufferHandler.Length)
+            {
+                analyzer.GetOutputBuffersSize(termValue.Length, out int outputSize, out int tokenSize);
+                if (outputSize > _encodingBufferHandler.Length || tokenSize > _tokensBufferHandler.Length)
+                    UnlikelyGrowBuffer(outputSize, tokenSize);
+            }
+
+            var tokenSpace = _tokensBufferHandler.AsSpan();
+            var wordSpace = _encodingBufferHandler.AsSpan();
+            analyzer.Execute(termValue, ref wordSpace, ref tokenSpace, ref _utf8ConverterBufferHandler);
+
+            for (int i = 0; i < tokenSpace.Length; i++)
+            {
+                ref var token = ref tokenSpace[i];
+
+                var term = wordSpace.Slice(token.Offset, (int)token.Length);
+                DeleteIdFromExactTerm(entryToDelete, binding.FieldName, term, tmpBuffer, fieldsTree, llt, ref temporaryStorageForIds);
+
+                if (binding.HasSuggestions)
+                    RemoveSuggestions(binding, termValue);
+            }
+        }
+
+
+        unsafe void DeleteIdFromNumericTerm<TVal>(long idToDelete, Slice fieldName, TVal val, Span<byte> tmpBuffer,
+            Tree fieldsTree, LowLevelTransaction llt, ref List<long> temporaryStorageForIds)
+            where TVal : unmanaged, IBinaryNumber<TVal>, IMinMaxValue<TVal>
+        {
+            var fieldTree = fieldsTree.FixedSizeTree<TVal>(fieldsTree, fieldName, (byte)sizeof(TVal));
+
+            using var _ = fieldTree.Read(val, out var result);
+            if (result.HasValue == false)
+                return;
+
+            var containerId = *((long*)result.Content.Ptr);
+            var newContainerId = RemoveValue(containerId, fieldName, idToDelete, tmpBuffer, llt, ref temporaryStorageForIds);
+            if (newContainerId == null || newContainerId.Value != containerId)
+                fieldTree.Delete(val);
+            if (newContainerId != null)
+                fieldTree.Add(val, newContainerId.Value);
+        }
+
+        void DeleteIdFromExactTerm(long idToDelete, Slice fieldName, ReadOnlySpan<byte> termValue, 
+            Span<byte> tmpBuffer, Tree fieldsTree, LowLevelTransaction llt, ref List<long> temporaryStorageForIds)
+        {
+            // We need to normalize the term in case we have a term bigger than MaxTermLength.
+            using var _ = CreateNormalizedTerm(Transaction.Allocator, termValue, out Slice termSlice);
+            termValue = termSlice.AsReadOnlySpan();
+
+            var fieldTree = fieldsTree.CompactTreeFor(fieldName);
+            if (termValue.Length == 0 || fieldTree.TryGetValue(termSlice.AsReadOnlySpan(), out var containerId) == false)
+                return;
+
+            var newContainerId = RemoveValue(containerId, fieldName, idToDelete, tmpBuffer, llt, ref temporaryStorageForIds);
+            if (newContainerId == null || newContainerId.Value != containerId)
+                fieldTree.TryRemove(termValue, out var __);
+
+            if (newContainerId != null)
+            {
+                fieldTree.Add(termValue, newContainerId.Value);
+            }
+        }
+    
+        long? RemoveValue(long containerId, Slice fieldName, long idToDelete, Span<byte> tmpBuffer,
+            LowLevelTransaction llt, ref List<long> temporaryStorageForIds)
+        {
+            if ((containerId & (long)TermIdMask.Set) != 0)
+            {
+                var setId = containerId & ~0b11;
+                var setStateSpan = Container.GetMutable(llt, setId);
+                ref var setState = ref MemoryMarshal.AsRef<SetState>(setStateSpan);
+                var set = new Set(llt, fieldName, in setState);
+                set.Remove(idToDelete);
+                setState = set.State;
+
+                if (setState.NumberOfEntries == 0)
                 {
-                    var setId = containerId & ~0b11;
-                    var setStateSpan = Container.GetMutable(llt, setId);
-                    ref var setState = ref MemoryMarshal.AsRef<SetState>(setStateSpan);
-                    var set = new Set(llt, fieldName, in setState);
-                    set.Remove(idToDelete);
-                    setState = set.State;
-
-                    if (setState.NumberOfEntries == 0)
-                    {
-                        //If we get rid off all terms we have to remove container. Probably we can do this in a better way
-                        Container.Delete(llt, _postingListContainerId, setId);
-                        return null;
-                    }
-
-                    return containerId;
+                    //If we get rid off all terms we have to remove container. Probably we can do this in a better way
+                    Container.Delete(llt, _postingListContainerId, setId);
+                    return null;
                 }
 
-                if ((containerId & (long)TermIdMask.Small) != 0)
+                return containerId;
+            }
+
+            if ((containerId & (long)TermIdMask.Small) != 0)
+            {
+                var smallSetId = containerId & ~0b11;
+                var buffer = Container.GetMutable(llt, smallSetId);
+
+                //Fetch all the ids from the set into temporaryStorageForIds
+                var itemsCount = ZigZagEncoding.Decode<int>(buffer, out var len);
+                temporaryStorageForIds ??= new List<long>(itemsCount);
+                temporaryStorageForIds.Clear();
+
+                long pos = len;
+                var currentId = 0L;
+
+                while (pos < buffer.Length)
                 {
-                    var smallSetId = containerId & ~0b11;
-                    var buffer = Container.GetMutable(llt, smallSetId);
-
-                    //Fetch all the ids from the set into temporaryStorageForIds
-                    var itemsCount = ZigZagEncoding.Decode<int>(buffer, out var len);
-                    temporaryStorageForIds ??= new List<long>(itemsCount);
-                    temporaryStorageForIds.Clear();
-
-                    long pos = len;
-                    var currentId = 0L;
-
-                    while (pos < buffer.Length)
-                    {
-                        var delta = ZigZagEncoding.Decode<long>(buffer, out len, (int)pos);
-                        pos += len;
-                        currentId += delta;
-                        if (currentId == idToDelete)
-                            continue;
-                        temporaryStorageForIds.Add(currentId);
-                    }
-
-                    // Due to encoding we have to encode new set again so we remove previous small set from container.
-                    Container.Delete(llt, _postingListContainerId, smallSetId);
-
-                    return AddNewTerm(temporaryStorageForIds, tmpBuffer, out var termId) ? termId : null;
+                    var delta = ZigZagEncoding.Decode<long>(buffer, out len, (int)pos);
+                    pos += len;
+                    currentId += delta;
+                    if (currentId == idToDelete)
+                        continue;
+                    temporaryStorageForIds.Add(currentId);
                 }
 
-                return null;
+                // Due to encoding we have to encode new set again so we remove previous small set from container.
+                Container.Delete(llt, _postingListContainerId, smallSetId);
+
+                return AddNewTerm(temporaryStorageForIds, tmpBuffer, out var termId) ? termId : null;
+            }
+
+            return null;
+        }
+
+        private void DeleteCommit(Span<byte> workingBuffer, Tree fieldsTree)
+        {
+            if (_deletedEntries.State.NumberOfEntries == 0)
+                return;
+
+            var llt = Transaction.LowLevelTransaction;
+            List<long> temporaryStorageForIds = null;
+            Page lastVisitedPage = default;
+            Span<long> buffer = stackalloc long[128];
+            while (true)
+            {
+                var it = _deletedEntries.Iterate();
+                if (it.Fill(buffer, out var total) == false)
+                    break;
+                var read = buffer[..total];
+                for (int i = 0; i < read.Length; i++)
+                {
+                    var entryToDelete = read[i];
+                    DeleteEntry(entryToDelete, fieldsTree, workingBuffer, llt,
+                        ref lastVisitedPage, ref temporaryStorageForIds);
+                    _deletedEntries.Remove(entryToDelete);
+                }
             }
         }
 
@@ -635,7 +655,6 @@ namespace Corax
 
             var fieldTree = fieldsTree.CompactTreeFor(key);
             var entriesCount = _numberOfEntries;
-            Debug.Assert(entriesCount - _entriesToDelete.Count >= 0);
 
             // We need to normalize the term in case we have a term bigger than MaxTermLength.
             using var _ = Slice.From(Transaction.Allocator, term, out var termSlice);
@@ -654,7 +673,7 @@ namespace Corax
                 var iterator = set.Iterate();
                 while (iterator.MoveNext())
                 {
-                    _entriesToDelete.Add(iterator.Current);
+                    _deletedEntries.Add(iterator.Current);
                 }
             }
             else if ((idInTree & (long)TermIdMask.Small) != 0)
@@ -669,12 +688,12 @@ namespace Corax
                     var value = ZigZagEncoding.Decode<long>(smallSet, out var len, pos);
                     pos += len;
                     cur += value;
-                    _entriesToDelete.Add(cur);
+                    _deletedEntries.Add(cur);
                 }
             }
             else
             {
-                _entriesToDelete.Add(idInTree);
+                _deletedEntries.Add(idInTree);
             }
 
             return true;
