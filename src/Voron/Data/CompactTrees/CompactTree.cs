@@ -485,11 +485,12 @@ namespace Voron.Data.CompactTrees
 
             if (allowRecurse &&
                 _internalCursor._pos > 0 && // nothing to do for a single leaf node
-                state.Header->FreeSpace > Constants.Storage.PageSize / 3)
+                state.Header->FreeSpace > Constants.Storage.PageSize / 2)
             {
-                // If there is less than half of the size available, it is in our best interest to defrag the receiving page to avoid having to
-                // try again and again without achieving any gain.
-                if (state.Header->Upper - state.Header->Lower < state.Header->FreeSpace / 2)
+                // We check if we need to run defrag by seeing if there is a significant difference between the free space in the page
+                // and the actual available space (should have at least 1KB to recover before we run)
+                // It is in our best interest to defrag the receiving page to avoid having to  try again and again without achieving any gains.
+                if (state.Header->Upper - state.Header->Lower < state.Header->FreeSpace - Constants.Storage.PageSize / 8)
                     DefragPage(_llt, ref state);
 
                 MaybeMergeEntries(ref state);
@@ -546,54 +547,25 @@ namespace Voron.Data.CompactTrees
 
             var srcDictionary = GetEncodingDictionary(sourceHeader->DictionaryId);
             var destDictionary = GetEncodingDictionary(destinationHeader->DictionaryId);
-            bool reencode = sourceHeader->DictionaryId != destinationHeader->DictionaryId;
+            bool reEncode = sourceHeader->DictionaryId != destinationHeader->DictionaryId;
 
-            int sourceEncodedKeysLenght = 0;
+            int sourceEncodedKeysLength = 0;
             int sourceKeysCopied = 0;
-            for (; sourceKeysCopied < sourceHeader->NumberOfEntries; sourceKeysCopied++)
+            if (reEncode) // avoid branch inside loop by duplicating the loop
             {
-                // We get the encoded key and value from the sibling page
-                GetEncodedEntry(sourcePage, sourceState.EntriesOffsets[sourceKeysCopied], out var encodedKey, out var val);
-
-                sourceEncodedKeysLenght += encodedKey.Length;
-                
-                // If they have a different dictionary, we need to re-encode the entry with the new dictionary.
-                if (reencode && encodedKey.Length != 0)
+                for (; sourceKeysCopied < sourceHeader->NumberOfEntries; sourceKeysCopied++)
                 {
-                    var decodedKey = decodeBuffer;
-                    srcDictionary.Decode(encodedKey, ref decodedKey);
-
-                    encodedKey = encodeBuffer;
-                    destDictionary.Encode(decodedKey, ref encodedKey);
+                    if (MoveEntryWithReEncoding(decodeBuffer, encodeBuffer, ref destinationState, entries) == false)
+                        break;
                 }
-
-                // We encode the length of the key and the value with variable length in order to store them later. 
-                var valueEncoder = new Encoder();
-                valueEncoder.ZigZagEncode(val);
-
-                var keySizeEncoder = new Encoder();
-                keySizeEncoder.Encode7Bits((ulong)encodedKey.Length);
-
-                // If we dont have enough free space in the receiving page, we move on. 
-                var requiredSize = encodedKey.Length + keySizeEncoder.Length + valueEncoder.Length;
-                if (requiredSize + sizeof(ushort) > destinationState.Header->Upper - destinationState.Header->Lower)
-                    break; // done moving entries
-
-                // We will update the entries offsets in the receiving page.
-                destinationHeader->FreeSpace -= (ushort)(requiredSize + sizeof(ushort));
-                destinationHeader->Upper -= (ushort)requiredSize;
-                destinationHeader->Lower += sizeof(ushort);
-                entries[sourceKeysCopied] = destinationHeader->Upper;
-                
-                // We copy the actual entry <key_size, key, value> to the receiving page.
-                var entryPos = destinationPage.Pointer + destinationHeader->Upper;                
-                Memory.Copy(entryPos, keySizeEncoder.Buffer, keySizeEncoder.Length);
-                entryPos += keySizeEncoder.Length;
-                encodedKey.CopyTo(new Span<byte>(entryPos, (int)(destinationPage.Pointer + Constants.Storage.PageSize - entryPos)));
-                entryPos += encodedKey.Length;
-                Memory.Copy(entryPos, valueEncoder.Buffer, valueEncoder.Length);                                                                
-
-                Debug.Assert(destinationHeader->Upper >= destinationHeader->Lower);
+            }
+            else
+            {
+                for (; sourceKeysCopied < sourceHeader->NumberOfEntries; sourceKeysCopied++)
+                {
+                    if (MoveEntryAsIs(decodeBuffer, encodeBuffer, ref destinationState, entries) == false)
+                        break;
+                }
             }
 
             if (sourceKeysCopied == 0)
@@ -613,7 +585,7 @@ namespace Voron.Data.CompactTrees
                 return;
             }
 
-            sourceHeader->FreeSpace += (ushort)(sourceEncodedKeysLenght + (sourceKeysCopied * sizeof(ushort)));
+            sourceHeader->FreeSpace += (ushort)(sourceEncodedKeysLength + (sourceKeysCopied * sizeof(ushort)));
             Memory.Set(sourcePage.Pointer + sourceHeader->Lower, 0, (oldLower - sourceHeader->Lower));
 
             // now re-wire the new splitted page key
@@ -629,7 +601,81 @@ namespace Voron.Data.CompactTrees
             newKey = EncodedKey.Get(newKey, this, _internalCursor._stk[_internalCursor._pos].Header->DictionaryId);
             SearchInCurrentPage(newKey, ref _internalCursor._stk[_internalCursor._pos]); // positions changed, re-search
             AddToPage(newKey, siblingPage);
-        }
+            
+            bool MoveEntryWithReEncoding(Span<byte> decodeBuffer, Span<byte> encodeBuffer, ref CursorState destinationState, Span<ushort> entries)
+            {
+                // We get the encoded key and value from the sibling page
+                GetEncodedEntry(sourcePage, sourceState.EntriesOffsets[sourceKeysCopied], out var encodedKey, out var val);
+
+                sourceEncodedKeysLength += encodedKey.Length;
+                
+                // If they have a different dictionary, we need to re-encode the entry with the new dictionary.
+                if (encodedKey.Length != 0)
+                {
+                    var decodedKey = decodeBuffer;
+                    srcDictionary.Decode(encodedKey, ref decodedKey);
+
+                    encodedKey = encodeBuffer;
+                    destDictionary.Encode(decodedKey, ref encodedKey);
+                }
+
+                // We encode the length of the key and the value with variable length in order to store them later. 
+                var valueEncoder = new Encoder();
+                valueEncoder.ZigZagEncode(val);
+
+                var keySizeEncoder = new Encoder();
+                keySizeEncoder.Encode7Bits((ulong)encodedKey.Length);
+
+                // If we dont have enough free space in the receiving page, we move on. 
+                var requiredSize = encodedKey.Length + keySizeEncoder.Length + valueEncoder.Length;
+                if (requiredSize + sizeof(ushort) > destinationState.Header->Upper - destinationState.Header->Lower)
+                    return false; // done moving entries
+
+                // We will update the entries offsets in the receiving page.
+                destinationHeader->FreeSpace -= (ushort)(requiredSize + sizeof(ushort));
+                destinationHeader->Upper -= (ushort)requiredSize;
+                destinationHeader->Lower += sizeof(ushort);
+                entries[sourceKeysCopied] = destinationHeader->Upper;
+                
+                // We copy the actual entry <key_size, key, value> to the receiving page.
+                var entryPos = destinationPage.Pointer + destinationHeader->Upper;                
+                Memory.Copy(entryPos, keySizeEncoder.Buffer, keySizeEncoder.Length);
+                entryPos += keySizeEncoder.Length;
+                encodedKey.CopyTo(new Span<byte>(entryPos, (int)(destinationPage.Pointer + Constants.Storage.PageSize - entryPos)));
+                entryPos += encodedKey.Length;
+                Memory.Copy(entryPos, valueEncoder.Buffer, valueEncoder.Length);                                                                
+
+                Debug.Assert(destinationHeader->Upper >= destinationHeader->Lower);
+
+                return true;
+            }
+      
+            bool MoveEntryAsIs(Span<byte> decodeBuffer, Span<byte> encodeBuffer, ref CursorState destinationState, Span<ushort> entries)
+            {
+                // We get the encoded key and value from the sibling page
+                var entry = GetEncodedEntryBuffer(sourcePage, sourceState.EntriesOffsets[sourceKeysCopied], ref sourceEncodedKeysLength);
+                
+                // If we dont have enough free space in the receiving page, we move on. 
+                var requiredSize = entry.Length;
+                if (requiredSize + sizeof(ushort) > destinationState.Header->Upper - destinationState.Header->Lower)
+                    return false; // done moving entries
+
+                // We will update the entries offsets in the receiving page.
+                destinationHeader->FreeSpace -= (ushort)(requiredSize + sizeof(ushort));
+                destinationHeader->Upper -= (ushort)requiredSize;
+                destinationHeader->Lower += sizeof(ushort);
+                entries[sourceKeysCopied] = destinationHeader->Upper;
+                
+                // We copy the actual entry <key_size, key, value> to the receiving page.
+                entry.CopyTo(destinationPage.AsSpan().Slice(destinationHeader->Upper));
+
+                GetEncodedEntry(destinationPage, entries[sourceKeysCopied], out var k, out var v);
+                
+                Debug.Assert(destinationHeader->Upper >= destinationHeader->Lower);
+                return true;
+            }
+      
+         }
 
         private void FreePageFor(ref CursorState stateToKeep, ref CursorState stateToDelete)
         {
@@ -781,10 +827,13 @@ namespace Voron.Data.CompactTrees
                 {
                     // If we are not recompressing, but we still have enough free space available we will go for reclaiming space
                     // by rearranging unused space.
-                    if (state.Header->FreeSpace >= requiredSize + sizeof(short))
+                    if (state.Header->FreeSpace >= requiredSize + sizeof(short) &&
+                        // at the same time, we need to avoid spending too much time doing de-frags
+                        // so we'll only do that when we have at least 1KB of free space to recover
+                        state.Header->FreeSpace > Constants.Storage.PageSize / 8)
                     {
                         DefragPage(_llt, ref state);
-                        splitAnyways = false;
+                        splitAnyways = state.Header->Upper - state.Header->Lower < requiredSize + sizeof(short);
                     }
                 }
 
@@ -1049,8 +1098,6 @@ namespace Voron.Data.CompactTrees
                 var tmpHeader = (CompactPageHeader*)tmp.TempPagePointer;
                 *tmpHeader = *(CompactPageHeader*)state.Page.Pointer;
                                 
-                int currentSpace = tmpHeader->Upper - tmpHeader->Lower;
-
                 Debug.Assert(tmpHeader->Upper - tmpHeader->Lower >= 0);
                 Debug.Assert(tmpHeader->FreeSpace < Constants.Storage.PageSize - PageHeader.SizeOf);
                 
@@ -1195,6 +1242,21 @@ namespace Voron.Data.CompactTrees
             value = Encoder.ZigZagDecode(entryPos, out var valLen);
             entryPos += valLen;
             return (int)(entryPos - page.Pointer - entryOffset);
+        }
+
+        private static Span<byte> GetEncodedEntryBuffer(Page page, ushort entryOffset, ref int sourceEncodedKeysLength)
+        {
+            if(entryOffset < PageHeader.SizeOf)
+                throw new ArgumentOutOfRangeException();
+            byte* entry = page.Pointer + entryOffset;
+            byte* pos = entry;
+            var keyLen = Encoder.Decode7Bits(pos, out var lenOfKeyLen);
+            sourceEncodedKeysLength += (int)keyLen;
+            pos += keyLen;
+            pos += lenOfKeyLen;
+            _ = Encoder.Decode7Bits(pos, out var lenOfValue);
+            pos += lenOfValue;
+            return new Span<byte>(entry, (int)(pos - entry));
         }
 
         internal static bool GetEntry(CompactTree tree, Page page, ushort entriesOffset, out Span<byte> key, out long value)
