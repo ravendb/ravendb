@@ -6,6 +6,10 @@ import mountPointUsage = require("models/resources/widgets/mountPointUsage");
 import storageWidgetSettings = require("viewmodels/resources/widgets/settings/storageWidgetSettings");
 import app = require("durandal/app");
 
+interface storageConfig {
+    scaleToSize: boolean;
+}
+
 class perNodeStorageStats {
     readonly tag: string;
     disconnected = ko.observable<boolean>(true);
@@ -41,8 +45,9 @@ class perNodeStorageStats {
     }
 }
 
-class storageWidget extends websocketBasedWidget<Raven.Server.Dashboard.Cluster.Notifications.StorageUsagePayload> {
+class storageWidget extends websocketBasedWidget<Raven.Server.Dashboard.Cluster.Notifications.StorageUsagePayload, storageConfig> {
     nodeStats = ko.observableArray<perNodeStorageStats>([]);
+    scaleToSize = ko.observable<boolean>();
 
     sizeFormatter = generalUtils.formatBytesToSize;
     
@@ -55,6 +60,8 @@ class storageWidget extends websocketBasedWidget<Raven.Server.Dashboard.Cluster.
             const stats = new perNodeStorageStats(node.tag());
             this.nodeStats.push(stats);
         }
+        
+        this.scaleToSize.subscribe(() => this.scaleDriveSize());
     }
 
     getType(): Raven.Server.Dashboard.Cluster.ClusterDashboardNotificationType {
@@ -115,17 +122,17 @@ class storageWidget extends websocketBasedWidget<Raven.Server.Dashboard.Cluster.
     }
 
     openWidgetSettings(): void {
-        super.openWidgetSettings();
+        const openSettingsDialog = new storageWidgetSettings(this.scaleToSize());
 
-        const openSettingsDialog = new storageWidgetSettings();
-        app.showBootstrapDialog(openSettingsDialog).done(() => this.scaleDriveSize());
+        app.showBootstrapDialog(openSettingsDialog)
+            .done((scaleResult: boolean) => {
+                this.scaleToSize(scaleResult);
+                this.controller.layout(); // this will trigger saving to local storage
+            });
     }
     
     private scaleDriveSize(): void {
-        
-        console.log('in scale');
-        
-        const scaleToSize: boolean = localStorage.getObject(storageWidgetSettings.localStorageName);
+        const scaleToSize = this.scaleToSize();
         
         let biggestSize = 0;
         for (const nodeStat of this.nodeStats()) {
@@ -143,6 +150,16 @@ class storageWidget extends websocketBasedWidget<Raven.Server.Dashboard.Cluster.
                 mountPoint.scaleFactor(scaleFactor);
             }
         }
+    }
+
+    getConfiguration(): storageConfig {
+        return {
+            scaleToSize: this.scaleToSize()
+        };
+    }
+
+    restoreConfiguration(config: storageConfig) {
+        this.scaleToSize(config.scaleToSize);
     }
 }
 
