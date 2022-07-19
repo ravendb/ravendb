@@ -1,0 +1,59 @@
+name: tests/fastARM
+
+on:
+  workflow_dispatch:
+  
+  schedule:
+    - cron: '30 6 * * *'
+
+env:
+  DOTNET_VERSION: 6.0.302
+
+jobs:
+  release:
+    runs-on: ${{ matrix.os }}
+    strategy:
+        matrix:
+          os: [ [self-hosted, Linux], [self-hosted, macOS]]
+        fail-fast: false
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Install dependencies
+      run: dotnet restore
+
+    - name: Test - Release
+      run: dotnet test --configuration Release --no-restore
+      env: # Or as an environment variable
+        RAVEN_LICENSE: ${{ secrets.RAVEN_LICENSE }}
+        RAVEN_MAX_RUNNING_TESTS: 1
+      working-directory: ./test/FastTests
+
+  debug:
+    runs-on: ${{ matrix.os }}
+    strategy:
+        matrix:
+          os: [ [self-hosted, Linux], [self-hosted, macOS]]
+        fail-fast: false
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Install dependencies
+      run: dotnet restore
+
+    - name: Test - Debug
+      run: dotnet test --configuration Debug --no-restore
+      env: # Or as an environment variable
+        RAVEN_LICENSE: ${{ secrets.RAVEN_LICENSE }}
+        RAVEN_MAX_RUNNING_TESTS: 1
+      working-directory: ./test/FastTests
