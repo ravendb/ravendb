@@ -551,19 +551,13 @@ namespace Voron.Data.CompactTrees
 
             int sourceEncodedKeysLength = 0;
             int sourceKeysCopied = 0;
-            if (reEncode) // avoid branch inside loop by duplicating the loop
             {
                 for (; sourceKeysCopied < sourceHeader->NumberOfEntries; sourceKeysCopied++)
                 {
-                    if (MoveEntryWithReEncoding(decodeBuffer, encodeBuffer, ref destinationState, entries) == false)
-                        break;
-                }
-            }
-            else
-            {
-                for (; sourceKeysCopied < sourceHeader->NumberOfEntries; sourceKeysCopied++)
-                {
-                    if (MoveEntryAsIs(decodeBuffer, encodeBuffer, ref destinationState, entries) == false)
+                    var copied = reEncode
+                        ? MoveEntryWithReEncoding(decodeBuffer, encodeBuffer, ref destinationState, entries)
+                        : MoveEntryAsIs(decodeBuffer, encodeBuffer, ref destinationState, entries);
+                    if (copied == false)
                         break;
                 }
             }
