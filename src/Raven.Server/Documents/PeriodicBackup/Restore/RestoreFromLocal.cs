@@ -5,7 +5,6 @@ using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
-using Raven.Server.ServerWide;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
@@ -13,7 +12,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
     {
         private readonly string _backupLocation;
 
-        public RestoreFromLocal(RestoreBackupConfiguration restoreConfiguration) /*: base(serverStore, restoreConfiguration, nodeTag, operationCancelToken)*/
+        public RestoreFromLocal(RestoreBackupConfiguration restoreConfiguration)
         {
             if (restoreConfiguration.ShardRestoreSettings.Length > 0)
                 return;
@@ -22,7 +21,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 throw new ArgumentException("Backup location can't be null or empty");
 
             if (Directory.Exists(restoreConfiguration.BackupLocation) == false)
-                throw new ArgumentException($"Backup location doesn't exist, path: {_backupLocation}");
+                throw new ArgumentException($"Backup location doesn't exist, path: {restoreConfiguration.BackupLocation}");
 
             _backupLocation = restoreConfiguration.BackupLocation;
         }
@@ -56,6 +55,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         public string GetBackupLocation()
         {
             return _backupLocation;
+        }
+
+        public void Dispose()
+        {
         }
     }
 }

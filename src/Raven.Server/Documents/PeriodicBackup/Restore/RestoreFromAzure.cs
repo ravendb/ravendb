@@ -17,7 +17,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         private readonly string _remoteFolderName;
         private readonly PathSetting _tempPath;
 
-
         public RestoreFromAzure(ServerStore serverStore, RestoreFromAzureConfiguration restoreFromConfiguration)
         {
             _client = RavenAzureClient.Create(restoreFromConfiguration.Settings, serverStore.Configuration.Backup);
@@ -34,7 +33,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         public async Task<ZipArchive> GetZipArchiveForSnapshot(string path)
         {
             var blob = await _client.GetBlobAsync(path);
-            var file = await RestoreBackupTask.CopyRemoteStreamLocally(blob.Data, _tempPath);
+            var file = await AbstractRestoreBackupTask.CopyRemoteStreamLocally(blob.Data, _tempPath);
             return new DeleteOnCloseZipArchive(file, ZipArchiveMode.Read);
         }
 
@@ -61,10 +60,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         }
         public void Dispose()
         {
-            using (_client)
-            {
-                //base.Dispose();
-            }
+            _client?.Dispose();
         }
     }
 }
