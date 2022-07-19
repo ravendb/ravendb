@@ -92,7 +92,7 @@ namespace Raven.Client.Http
             throw new RequestedNodeUnavailableException($"Could not find requested node {nodeTag}.");
         }
 
-        public bool NodeIsAvailable(int index)
+        internal bool NodeIsAvailable(int index)
         {
             return _state.Failures[index] == 0;
         }
