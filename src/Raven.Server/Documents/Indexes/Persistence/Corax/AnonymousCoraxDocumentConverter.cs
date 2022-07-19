@@ -50,15 +50,8 @@ public class AnonymousCoraxDocumentConverter : CoraxDocumentConverterBase
         {
             var value = property.Value;
 
-            IndexField field;
-            try
-            {
-                field = _fields[property.Key];
-            }
-            catch (KeyNotFoundException e)
-            {
-                throw new InvalidOperationException($"Field '{property.Key}' is not defined. Available fields: {string.Join(", ", _fields.Keys)}.", e);
-            }
+            if(_fields.TryGetValue(property.Key, out var field)== false)
+                throw new InvalidOperationException($"Field '{property.Key}' is not defined. Available fields: {string.Join(", ", _fields.Keys)}.");
 
             if (storedValue is not null)
             {
