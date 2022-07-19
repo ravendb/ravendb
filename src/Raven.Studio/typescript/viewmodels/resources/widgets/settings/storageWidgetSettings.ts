@@ -1,14 +1,14 @@
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
-import storageKeyProvider = require("common/storage/storageKeyProvider");
+import dialog = require("plugins/dialog");
 
 class storageWidgetSettings extends dialogViewModelBase {
 
-    static localStorageName = storageKeyProvider.storageKeyFor("storageWidgetScaleSettings");
     scaleDriveSize = ko.observable<boolean>();
 
-    activate() {
-        const savedSettings: boolean = localStorage.getObject(storageWidgetSettings.localStorageName);
-        this.scaleDriveSize(savedSettings);
+    constructor(scaleToSize: boolean) {
+        super();
+        
+        this.scaleDriveSize(scaleToSize);
     }
 
     compositionComplete() {
@@ -18,8 +18,7 @@ class storageWidgetSettings extends dialogViewModelBase {
     }
 
     saveSettings() {
-        localStorage.setObject(storageWidgetSettings.localStorageName, this.scaleDriveSize());
-        this.close();
+        dialog.close(this, this.scaleDriveSize());
     }
 }
 
