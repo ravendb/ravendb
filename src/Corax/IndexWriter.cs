@@ -65,13 +65,6 @@ namespace Corax
 
         private const string SuggestionsTreePrefix = "__Suggestion_";
         private Dictionary<int, Dictionary<Slice, int>> _suggestionsAccumulator;
-        
-#pragma warning disable CS0169
-        private Queue<long> _lastEntries; // keep last 256 items
-        private GrowablePooledBuffer<Slice> _sliceBuffer;
-        private GrowablePooledBuffer<long> _longBuffer;
-        private GrowablePooledBuffer<double> _doubleBuffer;
-#pragma warning restore CS0169
 
         // The reason why we want to have the transaction open for us is so that we avoid having
         // to explicitly provide the index writer with opening semantics and also every new
@@ -95,10 +88,6 @@ namespace Corax
                 _bufferDoubles[i] = new Dictionary<double, List<long>>();
                 _bufferLongs[i] = new Dictionary<long, List<long>>();
             }
-
-            _sliceBuffer = new GrowablePooledBuffer<Slice>();
-            _longBuffer = new GrowablePooledBuffer<long>();
-            _doubleBuffer = new GrowablePooledBuffer<double>();
         }
 
         public IndexWriter([NotNull] StorageEnvironment environment, IndexFieldsMapping fieldsMapping) : this(fieldsMapping)
@@ -928,10 +917,6 @@ namespace Corax
             if (_ownsTransaction)
                 Transaction?.Dispose();
             
-            _sliceBuffer.Dispose();
-            _longBuffer.Dispose();
-            _doubleBuffer.Dispose();
-
             if (_encodingBufferHandler != null)
             {
                 Analyzer.BufferPool.Return(_encodingBufferHandler);
