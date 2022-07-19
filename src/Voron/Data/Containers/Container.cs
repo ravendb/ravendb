@@ -205,12 +205,18 @@ namespace Voron.Data.Containers
             (var reqSize, var pos) = GetRequiredSizeAndPosition(size, container);
             if (container.HasEnoughSpaceFor(reqSize) == false)
             {
-                container.Defrag(llt);
-                // IMPORTANT: We have to account for the *larger* size here, otherwise we may
-                // have a size based on existing item metadata, but after the defrag, need
-                // to allocate a metadata slot as well. Therefor, we *always* assume that this
-                // is requiring the additional metadata size
-                if (container.HasEnoughSpaceFor(sizeof(ItemMetadata) + size) == false)
+                var freedSpace = false;
+                if (container.SpaceUsed(container.Offsets) < (Constants.Storage.PageSize / 2))
+                {
+                    container.Defrag(llt);
+                    // IMPORTANT: We have to account for the *larger* size here, otherwise we may
+                    // have a size based on existing item metadata, but after the defrag, need
+                    // to allocate a metadata slot as well. Therefor, we *always* assume that this
+                    // is requiring the additional metadata size
+                    freedSpace = container.HasEnoughSpaceFor(sizeof(ItemMetadata) + size);
+                }
+
+                if (freedSpace == false)
                     container = MoveToNextPage(llt, containerId, container, size);
                 
                 (reqSize, pos) = GetRequiredSizeAndPosition(size, container);

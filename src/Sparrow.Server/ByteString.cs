@@ -446,7 +446,7 @@ namespace Sparrow.Server
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Span<byte> ToSpan()
+        public readonly Span<byte> ToSpan()
         {
             return new Span<byte>(Ptr, Length);
         }
