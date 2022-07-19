@@ -74,10 +74,7 @@ namespace Raven.Client.Http
         internal (int Index, ServerNode Node) GetRequestedNode(string nodeTag)
         {
             var state = _state;
-            var stateFailures = state.Failures;
             var serverNodes = state.Nodes;
-
-            Debug.Assert(serverNodes.Count == stateFailures.Length, $"Expected equals {serverNodes.Count}, but got {stateFailures.Length}");
 
             for (var i = 0; i < serverNodes.Count; i++)
             {
@@ -93,6 +90,11 @@ namespace Raven.Client.Http
                 throw new DatabaseDoesNotExistException("There are no nodes in the topology.");
 
             throw new RequestedNodeUnavailableException($"Could not find requested node {nodeTag}.");
+        }
+
+        public bool NodeIsAvailable(int index)
+        {
+            return _state.Failures[index] == 0;
         }
 
         public (int Index, ServerNode Node) GetPreferredNode()
