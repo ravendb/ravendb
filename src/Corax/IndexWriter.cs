@@ -530,9 +530,9 @@ namespace Corax
 
             var containerId = *((long*)result.Content.Ptr);
             var newContainerId = RemoveValue(containerId, fieldName, idToDelete, llt);
-            if (newContainerId == null || newContainerId.Value != containerId)
+            if (newContainerId == null)
                 fieldTree.Delete(val);
-            if (newContainerId != null)
+            else if (newContainerId.Value != containerId)
                 fieldTree.Add(val, newContainerId.Value);
         }
 
@@ -548,10 +548,11 @@ namespace Corax
                 return;
 
             var newContainerId = RemoveValue(containerId, fieldName, idToDelete, llt);
-            if (newContainerId == null || newContainerId.Value != containerId)
+            if (newContainerId == null)
+            {
                 fieldTree.TryRemove(termValue, out var __);
-
-            if (newContainerId != null)
+            }
+            else if (newContainerId.Value != containerId)
             {
                 fieldTree.Add(termValue, newContainerId.Value);
             }
@@ -580,38 +581,43 @@ namespace Corax
 
             if ((containerId & (long)TermIdMask.Small) != 0)
             {
-                var smallSetId = containerId & ~0b11;
-                var buffer = Container.GetMutable(llt, smallSetId);
-
-                //Fetch all the ids from the set into temporaryStorageForIds
-                var itemsCount = ZigZagEncoding.Decode<int>(buffer, out var len);
-                //we assume that the entry contains the value
-                var writePos = ZigZagEncoding.Encode(buffer, itemsCount - 1);
-                if (itemsCount == 1)
-                { // last one
-                    Container.Delete(llt, _postingListContainerId, smallSetId);
-                    return null;
-                }
-                long readPos = len;
-                var idx = 0;
-                var currentId = 0L;
-                var lastWrite = 0L;
-
-                while (idx++ < itemsCount)
-                {
-                    var delta = ZigZagEncoding.Decode<long>(buffer, out len, (int)readPos);
-                    readPos += len;
-                    currentId += delta;
-                    if (currentId == idToDelete)
-                        continue;
-                    writePos += ZigZagEncoding.Encode(buffer, currentId - lastWrite, writePos);
-                    lastWrite = currentId;
-                }
-
-                return containerId;
+                return RemoveValueFromSmallSet(containerId, fieldName, idToDelete, llt);
             }
 
             return null;
+        }
+
+        private long? RemoveValueFromSmallSet(long containerId, Slice fieldName, long idToDelete, LowLevelTransaction llt)
+        {
+            var smallSetId = containerId & ~0b11;
+            var buffer = Container.GetMutable(llt, smallSetId);
+
+            //Fetch all the ids from the set into temporaryStorageForIds
+            var itemsCount = ZigZagEncoding.Decode<int>(buffer, out var len);
+            //we assume that the entry contains the value
+            var writePos = ZigZagEncoding.Encode(buffer, itemsCount - 1);
+            if (itemsCount == 1)
+            { // last one
+                Container.Delete(llt, _postingListContainerId, smallSetId);
+                return null;
+            }
+            long readPos = len;
+            var idx = 0;
+            var currentId = 0L;
+            var lastWrite = 0L;
+
+            while (idx++ < itemsCount)
+            {
+                var delta = ZigZagEncoding.Decode<long>(buffer, out len, (int)readPos);
+                readPos += len;
+                currentId += delta;
+                if (currentId == idToDelete)
+                    continue;
+                writePos += ZigZagEncoding.Encode(buffer, currentId - lastWrite, writePos);
+                lastWrite = currentId;
+            }
+
+            return containerId;
         }
 
         private void DeleteCommit(Tree fieldsTree)
