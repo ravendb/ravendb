@@ -10,6 +10,7 @@ namespace Corax
         public const string EmptyString = "EMPTY_STRING";
         public static readonly Slice NullValueSlice, EmptyStringSlice;
         public const string IndexMetadata = "@index_metadata";
+        public const string DeletedEntries = "@deleted_entries";
         
         static Constants()
         {
