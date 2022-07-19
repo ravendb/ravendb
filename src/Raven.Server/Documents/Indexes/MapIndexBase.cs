@@ -52,7 +52,6 @@ namespace Raven.Server.Documents.Indexes
         public override int HandleMap(IndexItem indexItem, IEnumerable mapResults, Lazy<IndexWriteOperationBase> writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             EnsureValidStats(stats);
-            var writerOp = writer.Value;
 
             bool mustDelete = true;
             if (SearchEngineType == SearchEngineType.Lucene)
@@ -64,12 +63,12 @@ namespace Raven.Server.Documents.Indexes
             }
 
             if (indexItem.SkipLuceneDelete == false && mustDelete)
-                writerOp.Delete(indexItem.LowerId, stats);
+                writer.Value.Delete(indexItem.LowerId, stats);
 
             var numberOfOutputs = 0;
             foreach (var mapResult in mapResults)
             {
-                writerOp.IndexDocument(indexItem.LowerId, indexItem.LowerSourceDocumentId, mapResult, stats, indexContext);
+                writer.Value.IndexDocument(indexItem.LowerId, indexItem.LowerSourceDocumentId, mapResult, stats, indexContext);
 
                 numberOfOutputs++;
             }
