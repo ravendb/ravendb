@@ -110,10 +110,6 @@ abstract class widget<TConfig = unknown, TState = unknown> {
     restoreConfiguration(config: TConfig) {
         // empty by default
     }
-
-    openWidgetSettings(): void {
-        // empty by default
-    }
     
     dispose() {
         if (this.syncUpdateTaskId > 0) {
