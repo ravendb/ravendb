@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿using System;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -814,6 +815,82 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                     Assert.Equal(longEscapedCharsAndNonAsciiString, reader["StringEscapedCharsAndNonAscii"].ToString());
                     Assert.Equal(lsvString, reader["LSVString"].ToString());
                     Assert.Equal(1000, int.Parse((reader["Embedded"] as BlittableJsonReaderObject)["Value"].ToString(), CultureInfo.InvariantCulture));
+                }
+            }
+        }
+
+        [Fact]
+        public void LargeDocumentsMemoryReuse()
+        {
+            using (var context = new JsonOperationContext(1024 * 64, 1024 * 4, 32 * 1024, SharedMultipleUseFlag.None))
+            {
+                BlittableJsonReaderObject blittable;
+                using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
+                {
+                    builder.Reset(BlittableJsonDocumentBuilder.UsageMode.None);
+
+                    builder.StartWriteObjectDocument();
+                    builder.StartWriteObject();
+
+                    for (int i = 0; i < 140; i++)
+                    {
+                        builder.WritePropertyName("Data" + i);
+                        builder.StartWriteObject();
+                        builder.WritePropertyName("Age" + i);
+                        builder.WriteValue(36);
+                    }
+
+                    for (int i = 0; i < 140; i++)
+                    {
+                        builder.WriteObjectEnd();
+                    }
+
+                    builder.WriteObjectEnd();
+                    builder.FinalizeDocument();
+                    blittable = builder.CreateReader();
+                }
+
+                const int fragmentationSize = 16;
+
+                for (var i = 0; i < 2; i++)
+                {
+                    BuildDocument(() =>
+                    {
+                        // create fragmentation
+                        context.GetMemory(fragmentationSize);
+                    });
+                }
+
+                for (var i = 0; i < 10; i++)
+                {
+                    var memoryUsedBefore = context.AllocatedMemory;
+
+                    BuildDocument(() =>
+                    {
+                        // create fragmentation
+                        context.GetMemory(fragmentationSize);
+                    });
+
+                    Assert.Equal(memoryUsedBefore + fragmentationSize, context.AllocatedMemory);
+                }
+
+                void BuildDocument(Action beforeBuilderDispose = null)
+                {
+                    using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
+                    {
+                        builder.Reset(BlittableJsonDocumentBuilder.UsageMode.None);
+
+                        builder.StartWriteObjectDocument();
+                        builder.StartWriteObject();
+
+                        builder.WritePropertyName("Embedded");
+                        builder.WriteEmbeddedBlittableDocument(blittable);
+
+                        builder.WriteObjectEnd();
+                        builder.FinalizeDocument();
+
+                        beforeBuilderDispose?.Invoke();
+                    }
                 }
             }
         }
