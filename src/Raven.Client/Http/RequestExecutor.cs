@@ -2133,11 +2133,16 @@ namespace Raven.Client.Http
             }
         }
 
-        public async Task<(int Index, ServerNode Node)> GetRequestedNode(string nodeTag)
+        public async Task<(int Index, ServerNode Node)> GetRequestedNode(string nodeTag, bool checkIfAvailable = false)
         {
             await EnsureNodeSelector().ConfigureAwait(false);
+            (var index, var node) = _nodeSelector.GetRequestedNode(nodeTag);
+            if (checkIfAvailable && !_nodeSelector.NodeIsAvailable(index))
+            {
+                throw new RequestedNodeUnavailableException($"Requested node {nodeTag} currently unavailable, please try again later.");
+            }
 
-            return _nodeSelector.GetRequestedNode(nodeTag);
+            return (index, node);
         }
 
         public async Task<(int Index, ServerNode Node)> GetPreferredNode()
