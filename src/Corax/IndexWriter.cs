@@ -33,7 +33,7 @@ namespace Corax
 
     public class IndexWriter : IDisposable // single threaded, controlled by caller
     {
-        private long _numberOfEntries;
+        private long _numberOfModifications;
         private readonly IndexFieldsMapping _fieldsMapping;
         private readonly Tree _indexMetadata;
         private readonly StorageEnvironment _environment;
@@ -55,12 +55,12 @@ namespace Corax
         private readonly Dictionary<Slice, List<long>>[] _buffer;
         private readonly Dictionary<long, List<long>>[] _bufferLongs;
         private readonly Dictionary<double, List<long>>[] _bufferDoubles;
+        private HashSet<long> _deletedEntries = new();
 
         private readonly long _postingListContainerId, _entriesContainerId;
 
         private const string SuggestionsTreePrefix = "__Suggestion_";
         private Dictionary<int, Dictionary<Slice, int>> _suggestionsAccumulator;
-        private Set _deletedEntries;
 
         // The reason why we want to have the transaction open for us is so that we avoid having
         // to explicitly provide the index writer with opening semantics and also every new
@@ -97,8 +97,6 @@ namespace Corax
             _entriesContainerId = Transaction.OpenContainer(Constants.IndexWriter.EntriesContainerSlice);
             _jsonOperationContext = JsonOperationContext.ShortTermSingleUse();
             _indexMetadata = Transaction.CreateTree(Constants.IndexMetadata);
-            _numberOfEntries = _indexMetadata.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0L;
-            _deletedEntries = Transaction.OpenSet(Constants.DeletedEntries);
         }
 
         public IndexWriter([NotNull] Transaction tx, IndexFieldsMapping fieldsMapping) : this(fieldsMapping)
@@ -108,8 +106,7 @@ namespace Corax
             _ownsTransaction = false;
             _postingListContainerId = Transaction.OpenContainer(Constants.IndexWriter.PostingListsSlice);
             _entriesContainerId = Transaction.OpenContainer(Constants.IndexWriter.EntriesContainerSlice);
-            _indexMetadata = Transaction.ReadTree(Constants.IndexMetadata) ?? Transaction.CreateTree(Constants.IndexMetadata);
-            _numberOfEntries = _indexMetadata.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0L;
+            _indexMetadata = Transaction.CreateTree(Constants.IndexMetadata);
         }
 
         public long Index(string id, Span<byte> data)
@@ -117,16 +114,10 @@ namespace Corax
             using var _ = Slice.From(Transaction.Allocator, id, out var idSlice);
             return Index(idSlice, data);
         }
-
-        private void IncrementNumberOfEntries(long delta)
-        {
-            _numberOfEntries += delta;
-        }
         
         public long Index(Slice id, Span<byte> data)
         {
-            IncrementNumberOfEntries(1);
-
+            _numberOfModifications++;
             Span<byte> buf = stackalloc byte[10];
             var idLen = ZigZagEncoding.Encode(buf, id.Size);
             var entryId = Container.Allocate(Transaction.LowLevelTransaction, _entriesContainerId, idLen + id.Size + data.Length, out var space);
@@ -150,7 +141,7 @@ namespace Corax
             return entryId;
         }
 
-        public long GetNumberOfEntries() => _numberOfEntries;
+        public long GetNumberOfEntries() => (_indexMetadata.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0) + _numberOfModifications;
 
         private unsafe void AddSuggestions(IndexFieldBinding binding, Slice slice)
         {
@@ -422,7 +413,7 @@ namespace Corax
             }
         }
 
-        private void DeleteEntry(long entryToDelete, Tree fieldsTree, Span<byte> workingBuffer, LowLevelTransaction llt, ref Page lastVisitedPage, ref List<long> temporaryStorageForIds)
+        private void DeleteEntry(long entryToDelete, Tree fieldsTree,  LowLevelTransaction llt, ref Page lastVisitedPage)
         {
             var entryReader = IndexSearcher.GetReaderFor(Transaction, ref lastVisitedPage, entryToDelete);
             foreach (var binding in _fieldsMapping) // todo maciej: this part needs to be rebuilt after implementing DynamicFields
@@ -436,7 +427,7 @@ namespace Corax
                     case IndexEntryFieldType.Empty:
                     case IndexEntryFieldType.Null:
                         var fieldName = fieldType == IndexEntryFieldType.Null ? Constants.NullValueSlice : Constants.EmptyStringSlice;
-                        DeleteIdFromExactTerm(entryToDelete, binding.FieldName, fieldName.AsReadOnlySpan(), workingBuffer, fieldsTree, llt, ref temporaryStorageForIds);
+                        DeleteIdFromExactTerm(entryToDelete, binding.FieldName, fieldName.AsReadOnlySpan(),fieldsTree, llt);
                         break;
 
                     case IndexEntryFieldType.TupleList:
@@ -445,9 +436,9 @@ namespace Corax
 
                         while (iterator.ReadNext())
                         {
-                            DeleteIdFromExactTerm(entryToDelete, binding.FieldName, iterator.Sequence, workingBuffer, fieldsTree, llt,ref temporaryStorageForIds);
-                            DeleteIdFromNumericTerm(entryToDelete, binding.FieldNameDouble, iterator.Double, workingBuffer, fieldsTree,llt, ref temporaryStorageForIds);
-                            DeleteIdFromNumericTerm(entryToDelete, binding.FieldNameLong, iterator.Long, workingBuffer, fieldsTree, llt,ref temporaryStorageForIds);
+                            DeleteIdFromExactTerm(entryToDelete, binding.FieldName, iterator.Sequence,  fieldsTree, llt);
+                            DeleteIdFromNumericTerm(entryToDelete, binding.FieldNameDouble, iterator.Double, fieldsTree,llt);
+                            DeleteIdFromNumericTerm(entryToDelete, binding.FieldNameLong, iterator.Long, fieldsTree, llt);
                         }
 
                         break;
@@ -455,9 +446,9 @@ namespace Corax
                     case IndexEntryFieldType.Tuple:
                         if (entryReader.Read(binding.FieldId, out _, out long l, out double d, out Span<byte> valueInEntry) == false)
                             break;
-                        DeleteIdFromExactTerm(entryToDelete, binding.FieldName, valueInEntry, workingBuffer, fieldsTree, llt,ref temporaryStorageForIds);
-                        DeleteIdFromNumericTerm(entryToDelete, binding.FieldNameDouble, d, workingBuffer, fieldsTree, llt, ref temporaryStorageForIds);
-                        DeleteIdFromNumericTerm(entryToDelete, binding.FieldNameLong, l, workingBuffer, fieldsTree, llt, ref temporaryStorageForIds);
+                        DeleteIdFromExactTerm(entryToDelete, binding.FieldName, valueInEntry, fieldsTree, llt);
+                        DeleteIdFromNumericTerm(entryToDelete, binding.FieldNameDouble, d, fieldsTree, llt);
+                        DeleteIdFromNumericTerm(entryToDelete, binding.FieldNameLong, l, fieldsTree, llt);
                         break;
 
                     case IndexEntryFieldType.SpatialPointList:
@@ -469,7 +460,7 @@ namespace Corax
                             for (int i = 1; i <= spatialIterator.Geohash.Length; ++i)
                             {
                                 var readOnlySpan = spatialIterator.Geohash.Slice(0, i);
-                                DeleteIdFromExactTerm(entryToDelete, binding.FieldName, readOnlySpan, workingBuffer,fieldsTree, llt, ref temporaryStorageForIds);
+                                DeleteIdFromExactTerm(entryToDelete, binding.FieldName, readOnlySpan,fieldsTree, llt);
                             }
                         }
 
@@ -482,22 +473,20 @@ namespace Corax
                         if (entryReader.Read(binding.FieldId, out var value) == false)
                             break;
 
-                        DeleteIdFromTerm(value, workingBuffer, entryToDelete, binding, fieldsTree, llt, ref temporaryStorageForIds);
+                        DeleteIdFromTerm(value, entryToDelete, binding, fieldsTree, llt);
                         break;
                 }
             }
 
             Container.Delete(llt, _entriesContainerId, entryToDelete); // delete raw index entry
-            IncrementNumberOfEntries(-1); // update number of entries
-            temporaryStorageForIds?.Clear();
         }
     
-        void DeleteIdFromTerm(ReadOnlySpan<byte> termValue, Span<byte> tmpBuffer, long entryToDelete,  IndexFieldBinding binding,
-            Tree fieldsTree, LowLevelTransaction llt, ref List<long> temporaryStorageForIds)
+        void DeleteIdFromTerm(ReadOnlySpan<byte> termValue, long entryToDelete,  IndexFieldBinding binding,
+            Tree fieldsTree, LowLevelTransaction llt)
         {
             if (binding.IsAnalyzed == false)
             {
-                DeleteIdFromExactTerm(entryToDelete, binding.FieldName, termValue, tmpBuffer, fieldsTree, llt, ref temporaryStorageForIds);
+                DeleteIdFromExactTerm(entryToDelete, binding.FieldName, termValue, fieldsTree, llt);
                 if (binding.HasSuggestions)
                     RemoveSuggestions(binding, termValue);
 
@@ -521,7 +510,7 @@ namespace Corax
                 ref var token = ref tokenSpace[i];
 
                 var term = wordSpace.Slice(token.Offset, (int)token.Length);
-                DeleteIdFromExactTerm(entryToDelete, binding.FieldName, term, tmpBuffer, fieldsTree, llt, ref temporaryStorageForIds);
+                DeleteIdFromExactTerm(entryToDelete, binding.FieldName, term,  fieldsTree, llt);
 
                 if (binding.HasSuggestions)
                     RemoveSuggestions(binding, termValue);
@@ -529,8 +518,8 @@ namespace Corax
         }
 
 
-        unsafe void DeleteIdFromNumericTerm<TVal>(long idToDelete, Slice fieldName, TVal val, Span<byte> tmpBuffer,
-            Tree fieldsTree, LowLevelTransaction llt, ref List<long> temporaryStorageForIds)
+        unsafe void DeleteIdFromNumericTerm<TVal>(long idToDelete, Slice fieldName, TVal val,
+            Tree fieldsTree, LowLevelTransaction llt)
             where TVal : unmanaged, IBinaryNumber<TVal>, IMinMaxValue<TVal>
         {
             var fieldTree = fieldsTree.FixedSizeTree<TVal>(fieldsTree, fieldName, (byte)sizeof(TVal));
@@ -540,7 +529,7 @@ namespace Corax
                 return;
 
             var containerId = *((long*)result.Content.Ptr);
-            var newContainerId = RemoveValue(containerId, fieldName, idToDelete, tmpBuffer, llt, ref temporaryStorageForIds);
+            var newContainerId = RemoveValue(containerId, fieldName, idToDelete, llt);
             if (newContainerId == null || newContainerId.Value != containerId)
                 fieldTree.Delete(val);
             if (newContainerId != null)
@@ -548,7 +537,7 @@ namespace Corax
         }
 
         void DeleteIdFromExactTerm(long idToDelete, Slice fieldName, ReadOnlySpan<byte> termValue, 
-            Span<byte> tmpBuffer, Tree fieldsTree, LowLevelTransaction llt, ref List<long> temporaryStorageForIds)
+            Tree fieldsTree, LowLevelTransaction llt)
         {
             // We need to normalize the term in case we have a term bigger than MaxTermLength.
             using var _ = CreateNormalizedTerm(Transaction.Allocator, termValue, out Slice termSlice);
@@ -558,7 +547,7 @@ namespace Corax
             if (termValue.Length == 0 || fieldTree.TryGetValue(termSlice.AsReadOnlySpan(), out var containerId) == false)
                 return;
 
-            var newContainerId = RemoveValue(containerId, fieldName, idToDelete, tmpBuffer, llt, ref temporaryStorageForIds);
+            var newContainerId = RemoveValue(containerId, fieldName, idToDelete, llt);
             if (newContainerId == null || newContainerId.Value != containerId)
                 fieldTree.TryRemove(termValue, out var __);
 
@@ -568,8 +557,7 @@ namespace Corax
             }
         }
     
-        long? RemoveValue(long containerId, Slice fieldName, long idToDelete, Span<byte> tmpBuffer,
-            LowLevelTransaction llt, ref List<long> temporaryStorageForIds)
+        long? RemoveValue(long containerId, Slice fieldName, long idToDelete, LowLevelTransaction llt)
         {
             if ((containerId & (long)TermIdMask.Set) != 0)
             {
@@ -597,53 +585,44 @@ namespace Corax
 
                 //Fetch all the ids from the set into temporaryStorageForIds
                 var itemsCount = ZigZagEncoding.Decode<int>(buffer, out var len);
-                temporaryStorageForIds ??= new List<long>(itemsCount);
-                temporaryStorageForIds.Clear();
-
-                long pos = len;
+                //we assume that the entry contains the value
+                var writePos = ZigZagEncoding.Encode(buffer, itemsCount - 1);
+                if (itemsCount == 1)
+                { // last one
+                    Container.Delete(llt, _postingListContainerId, smallSetId);
+                    return null;
+                }
+                long readPos = len;
+                var idx = 0;
                 var currentId = 0L;
+                var lastWrite = 0L;
 
-                while (pos < buffer.Length)
+                while (idx++ < itemsCount)
                 {
-                    var delta = ZigZagEncoding.Decode<long>(buffer, out len, (int)pos);
-                    pos += len;
+                    var delta = ZigZagEncoding.Decode<long>(buffer, out len, (int)readPos);
+                    readPos += len;
                     currentId += delta;
                     if (currentId == idToDelete)
                         continue;
-                    temporaryStorageForIds.Add(currentId);
+                    writePos += ZigZagEncoding.Encode(buffer, currentId - lastWrite, writePos);
+                    lastWrite = currentId;
                 }
 
-                // Due to encoding we have to encode new set again so we remove previous small set from container.
-                Container.Delete(llt, _postingListContainerId, smallSetId);
-
-                return AddNewTerm(temporaryStorageForIds, tmpBuffer, out var termId) ? termId : null;
+                return containerId;
             }
 
             return null;
         }
 
-        private void DeleteCommit(Span<byte> workingBuffer, Tree fieldsTree)
+        private void DeleteCommit(Tree fieldsTree)
         {
-            if (_deletedEntries.State.NumberOfEntries == 0)
+            if (_deletedEntries.Count == 0)
                 return;
-
             var llt = Transaction.LowLevelTransaction;
-            List<long> temporaryStorageForIds = null;
             Page lastVisitedPage = default;
-            Span<long> buffer = stackalloc long[128];
-            while (true)
+            foreach (long entryToDelete in _deletedEntries)
             {
-                var it = _deletedEntries.Iterate();
-                if (it.Fill(buffer, out var total) == false)
-                    break;
-                var read = buffer[..total];
-                for (int i = 0; i < read.Length; i++)
-                {
-                    var entryToDelete = read[i];
-                    DeleteEntry(entryToDelete, fieldsTree, workingBuffer, llt,
-                        ref lastVisitedPage, ref temporaryStorageForIds);
-                    _deletedEntries.Remove(entryToDelete);
-                }
+                DeleteEntry(entryToDelete, fieldsTree, llt, ref lastVisitedPage);
             }
         }
 
@@ -654,7 +633,6 @@ namespace Corax
                 return false;
 
             var fieldTree = fieldsTree.CompactTreeFor(key);
-            var entriesCount = _numberOfEntries;
 
             // We need to normalize the term in case we have a term bigger than MaxTermLength.
             using var _ = Slice.From(Transaction.Allocator, term, out var termSlice);
@@ -674,6 +652,7 @@ namespace Corax
                 while (iterator.MoveNext())
                 {
                     _deletedEntries.Add(iterator.Current);
+                    _numberOfModifications--;
                 }
             }
             else if ((idInTree & (long)TermIdMask.Small) != 0)
@@ -682,18 +661,21 @@ namespace Corax
                 var smallSet = Container.Get(Transaction.LowLevelTransaction, id).ToSpan();
                 // combine with existing value
                 var cur = 0L;
-                ZigZagEncoding.Decode<int>(smallSet, out var pos); // discard the first entry, the count
-                while (pos < smallSet.Length)
+                var count = ZigZagEncoding.Decode<int>(smallSet, out var pos);
+                var idx = 0;
+                while (idx++ < count)
                 {
                     var value = ZigZagEncoding.Decode<long>(smallSet, out var len, pos);
                     pos += len;
                     cur += value;
                     _deletedEntries.Add(cur);
+                    _numberOfModifications--;
                 }
             }
             else
             {
                 _deletedEntries.Add(idInTree);
+                _numberOfModifications--;
             }
 
             return true;
@@ -720,9 +702,11 @@ namespace Corax
         {
             using var _ = Transaction.Allocator.Allocate(Container.MaxSizeInsideContainerPage, out Span<byte> workingBuffer);
             Tree fieldsTree = Transaction.CreateTree(Constants.IndexWriter.FieldsSlice);
+            
+            _indexMetadata.Increment(Constants.IndexWriter.NumberOfEntriesSlice, _numberOfModifications);
 
             if (_fieldsMapping.Count != 0)
-                DeleteCommit(workingBuffer, fieldsTree);
+                DeleteCommit(fieldsTree);
 
             for (int fieldId = 0; fieldId < _fieldsMapping.Count; ++fieldId)
             {
@@ -752,10 +736,6 @@ namespace Corax
                 }
             }
 
-            var persistedNumberOfEntries = _indexMetadata.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0L;
-            var addedEntriesInThisBatch = _numberOfEntries - persistedNumberOfEntries;
-            _indexMetadata.Increment(Constants.IndexWriter.NumberOfEntriesSlice, addedEntriesInThisBatch);
-            
             if (_ownsTransaction)
             {
                 Transaction.Commit();
@@ -805,8 +785,9 @@ namespace Corax
                     var smallSet = Container.Get(llt, id).ToSpan();
                     // combine with existing value
                     var cur = 0L;
-                    ZigZagEncoding.Decode<int>(smallSet, out var pos); // discard the first entry, the count
-                    while (pos < smallSet.Length)
+                    var count = ZigZagEncoding.Decode<int>(smallSet, out var pos);
+                    var idx = 0;
+                    while (idx++ < count)
                     {
                         var value = ZigZagEncoding.Decode<long>(smallSet, out var len, pos);
                         pos += len;
@@ -877,7 +858,7 @@ namespace Corax
             }
         }
 
-        private unsafe bool AddNewTerm(List<long> entries, Span<byte> tmpBuf, out long termId)
+        private unsafe bool AddNewTerm(List<long> entries, Span<byte> tmpBuf, out long termId, bool sortingNeeded = true)
         {
             if (entries.Count == 0)
             {
@@ -892,7 +873,8 @@ namespace Corax
                 return true;
             }
 
-            entries.Sort();
+            if(sortingNeeded)
+                entries.Sort();
 
             // try to insert to container value
             //TODO: using simplest delta encoding, need to do better here

@@ -21,6 +21,7 @@ namespace Corax.Queries
 
         private readonly long _totalResults;
         private long _currentIdx;
+        private long _numOfReturnedItems;
         private long _baselineIdx;
         private long _current;
 
@@ -52,6 +53,7 @@ namespace Corax.Queries
             _scoreFunc = scoreFunc;
             _inspectFunc = inspectFunc;
 
+            _numOfReturnedItems = 0;
             _container = default;
             _set = default;
 #if DEBUG
@@ -151,24 +153,19 @@ namespace Corax.Queries
                 // Fill needs to store resume capability.
 
                 var stream = term._container.ToSpan();
-                if (term._currentIdx == QueryMatch.Invalid || term._currentIdx >= stream.Length)
+                if (term._currentIdx == QueryMatch.Invalid)
                 {
                     term._currentIdx = QueryMatch.Invalid;
                     return 0;
                 }
 
                 int i = 0;
-                for (; i < matches.Length; i++)
+                for (; i < matches.Length && term._numOfReturnedItems < term._totalResults; i++)
                 {
                     term._current += ZigZagEncoding.Decode<long>(stream, out var len, (int)term._currentIdx);
                     term._currentIdx += len;
                     matches[i] = term._current;
-
-                    if (term._currentIdx >= stream.Length)
-                    {
-                        i++;
-                        break;
-                    }                        
+                    term._numOfReturnedItems++;
                 }
 
                 return i;
@@ -185,13 +182,15 @@ namespace Corax.Queries
                 // need to seek from start
                 long current = 0;
                 int currentIdx = (int)term._baselineIdx;
+                var itemsScanned = 0L;
 
                 int i = 0;
                 int matchedIdx = 0;
-                while (currentIdx < stream.Length && i < matches)
+                while (itemsScanned < term._totalResults && i < matches)
                 {
                     current += ZigZagEncoding.Decode<long>(stream, out var len, currentIdx);
                     currentIdx += len;
+                    itemsScanned++;
 
                     while (buffer[i] < current)
                     {                        

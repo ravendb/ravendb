@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
         public abstract void IndexDocument(LazyStringValue key, LazyStringValue sourceDocumentId, object document, IndexingStatsScope stats,
             JsonOperationContext indexContext);
 
-        public abstract int EntriesCount();
+        public abstract long EntriesCount();
 
         public abstract (long RamSizeInBytes, long FilesAllocationsInBytes) GetAllocations();
 

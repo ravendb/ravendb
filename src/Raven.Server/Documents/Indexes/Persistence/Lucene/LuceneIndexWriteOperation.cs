@@ -169,7 +169,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        public override int EntriesCount()
+        public override long EntriesCount()
         {
             return _writer.EntriesCount(_state);
         }

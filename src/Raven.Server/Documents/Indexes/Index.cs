@@ -2273,7 +2273,7 @@ namespace Raven.Server.Documents.Indexes
 
                     try
                     {
-                        int? entriesCount = null;
+                        long? entriesCount = null;
 
                         using (InitializeIndexingWork(indexContext))
                         {
