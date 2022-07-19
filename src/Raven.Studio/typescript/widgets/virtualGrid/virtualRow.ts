@@ -88,15 +88,11 @@ class virtualRow {
             
             if (!this._disableStripes) {
                 // Update the "even" status. Used for striping the virtual rows.
-                const newEvenState = rowIndex % 2 === 0;
-                const hasChangedEven = this._even !== newEvenState;
-                if (hasChangedEven) {
-                    this._even = newEvenState;
-                    if (this._even) {
-                        this.element.addClass("even");
-                    } else {
-                        this.element.removeClass("even");
-                    }
+                this._even = rowIndex % 2 === 0;
+                if (this._even) {
+                    this.element.addClass("even");
+                } else {
+                    this.element.removeClass("even");
                 }
             }
 
