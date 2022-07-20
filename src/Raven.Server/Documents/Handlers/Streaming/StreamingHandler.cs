@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Text;
@@ -18,6 +19,7 @@ using Raven.Server.TrafficWatch;
 using Raven.Server.Utils;
 using Raven.Server.Utils.Enumerators;
 using Sparrow.Json;
+using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Handlers.Streaming
 {
@@ -277,6 +279,7 @@ namespace Raven.Server.Documents.Handlers.Streaming
                 }
                 else
                 {
+                    var sp = Stopwatch.StartNew();
                     await using (var writer = GetQueryResultWriter(format, HttpContext.Response, queryContext.Documents, ResponseBodyStream(), propertiesArray, fileNamePrefix))
                     {
                         try
@@ -288,6 +291,12 @@ namespace Raven.Server.Documents.Handlers.Streaming
                             HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                             await writer.WriteErrorAsync($"Index {query.Metadata.IndexName} does not exist");
                         }
+                    }
+
+                    var logger = LoggingSource.Instance.GetLogger<StreamingHandler>(Database.Name);
+                    if (logger.IsOperationsEnabled)
+                    {
+                        logger.Info($"Issued STREAMING query on index {query.Metadata.IndexName} for: {query.Metadata.Query}, took: {sp.ElapsedMilliseconds}ms");
                     }
                 }
             }

@@ -425,6 +425,8 @@ namespace Sparrow.LowMemory
                         result = GetMemoryInfoLinux(smapsReader, extended);
                 }
 
+                result.TotalScratchDirtyMemory = new Size(GetTotalScratchAllocatedMemory(), SizeUnit.Bytes);
+
                 return result;
 
             }
