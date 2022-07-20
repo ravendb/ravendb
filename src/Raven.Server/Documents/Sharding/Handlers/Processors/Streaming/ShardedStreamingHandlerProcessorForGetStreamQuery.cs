@@ -66,14 +66,12 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
             if (queryProcessor.IsMapReduce())
                 throw new NotSupportedInShardingException("MapReduce is not supported in sharded streaming queries");
 
-            //TODO stav: includes not supported in streaming. test that it throws
             queryProcessor.Initialize(out BlittableJsonReaderObject queryTemplate);
 
             var cmds = new PostQueryStreamCommand[RequestHandler.DatabaseContext.ShardCount];
             for (int i = 0; i < cmds.Length; i++)
             {
                 cmds[i] = new PostQueryStreamCommand(queryTemplate, debug, ignoreLimit);
-                cmds[i].ModifyRequest = r => r.Headers.TryAddWithoutValidation(Constants.Headers.Sharded, "true");
             }
 
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Stav, DevelopmentHelper.Severity.Normal, "Handle continuation token in streaming");
