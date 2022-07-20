@@ -97,15 +97,23 @@ namespace SlowTests.SparrowTests
                 Assert.All(toCheckLogFiles, toCheck =>
                 {
                     (string fileName, bool shouldExist) = toCheck;
-                    fileName = $"{fileName}{(compressing ? ".gz" : string.Empty)}";
-                    var fileInfo = new FileInfo(fileName);
+                    var found = Directory.GetFiles(path, Path.GetFileName(fileName) + '*');
                     if (shouldExist)
                     {
-                        Assert.True(fileInfo.Exists, $"The log file \"{fileInfo.Name}\" should be exist");
+                        Assert.True(found.Any(), $"The log file \"{fileName}\" should be exist");
                     }
                     else
                     {
-                        Assert.False(fileInfo.Exists, $"The log file \"{fileInfo.Name}\" last modified {fileInfo.LastWriteTime} should not be exist. retentionTime({retentionTime})");
+                        Assert.False(found.Any(), CreateErrorMessage());
+                        string CreateErrorMessage()
+                        {
+                            var messages = found.Select(f =>
+                            {
+                                var fileInfo = new FileInfo(found.First());
+                                return fileInfo.Exists ? $"\"{fileInfo.Name}\" last modified {fileInfo.LastWriteTime}" : string.Empty;
+                            });
+                            return $"The log files {string.Join(", ", messages)} should not be exist. retentionTime({retentionTime})";
+                        }
                     }
                 });
             }
@@ -346,8 +354,6 @@ namespace SlowTests.SparrowTests
                 return Math.Abs(size - retentionSize) <= threshold;
             }, true, 10_000, 1_000);
 
-            loggingSource.EndLogging();
-
             string errorMessage = isRetentionPolicyApplied 
                 ? string.Empty
                 : $"{TempInfoToInvestigate(loggingSource, path)}. " +
@@ -355,6 +361,8 @@ namespace SlowTests.SparrowTests
                   Environment.NewLine + 
                   FileNamesWithSize(afterEndFiles);
 
+            loggingSource.EndLogging();
+            
             Assert.True(isRetentionPolicyApplied, errorMessage);
         }
 

@@ -218,7 +218,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public async Task QueriesShouldFailoverIfIndexIsCompactingClaster()
+        public async Task QueriesShouldFailoverIfIndexIsCompactingCluster()
         {
             var (nodes, leader) = await CreateRaftCluster(2);
             Assert.Equal(nodes.Count, 2);
@@ -243,23 +243,17 @@ namespace SlowTests.Issues
                     categoryId = c.Id;
                 }
 
-                // Wait for indexing in first node
+                // Wait for indexing in first node and second node
                 var index = new Categoroies_Details();
                 index.Execute(store);
-                Indexes.WaitForIndexing(store);
-
-                // Wait for indexing in second node (if it's cluster test)
-                using (var storeReversedTopology = new DocumentStore()
-                       {
-                           Urls = (from node in nodes select node.WebUrl).Reverse().ToArray<string>(),
-                           Database = store.Database,
-                           Conventions = new DocumentConventions() {DisableTopologyUpdates = true}
-                       }.Initialize())
+                foreach (var n in nodes)
                 {
-                    var index2 = new Categoroies_Details();
-                    index2.Execute(storeReversedTopology);
-                    Indexes.WaitForIndexing(storeReversedTopology);
+                    Indexes.WaitForIndexing(store,
+                        dbName: store.Database, 
+                        timeout: TimeSpan.FromMinutes(5), 
+                        nodeTag: n.ServerStore.NodeTag);
                 }
+
 
                 // Test
                 CompactSettings settings = new CompactSettings { DatabaseName = store.Database, Documents = true, Indexes = new[] { index.IndexName } };

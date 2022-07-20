@@ -593,6 +593,40 @@
         }
     }
 
+    .tasks-list {
+        .external-replication {
+                color: @external-replication-color;
+        }
+        .replication-hub {
+            color: @pull-replication-hub-color;
+        }
+        .replication-sink {
+            color: @pull-replication-sink-color;
+        }
+        .ravendb-etl {
+            color: @ravendb-etl-color;
+        }
+        .olap-etl {
+            color: @olap-etl-color;
+        }
+        .sql-etl {
+            color: @sql-etl-color;
+        }
+        .elastic-etl {
+            color: @elastic-etl-color;
+        }
+        .periodic-backup {
+            color: @backup-color;
+        }
+        .subscription {
+            color: @subscription-color;
+        }
+        
+        .text-bold {
+            color: lighten(@gray-light, 40%) !important;
+        }
+    }
+    
     .tasks-container {
         background-color: @well-bg;
         margin: 0 @gutter-xxs @gutter-xxs;
