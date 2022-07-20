@@ -523,9 +523,10 @@ namespace Raven.Client.Documents.Linq
                         if (cur.Expression is MethodCallExpression mce && mce.Method.Name == "get_Item")
                         {
                             break;
-                            //nested dictionary support eg. Where(i => W["x"]["y"].Name == "test")
+                            //nested dictionary support eg. Where(i => i["x"]["y"].Name == "test")
                         }
-                        goto ExceptionMsg;
+                        ThrowArgumentException();
+                        break;
                     case ExpressionType.Invoke:
                     case ExpressionType.Add:
                     case ExpressionType.And:
@@ -546,11 +547,16 @@ namespace Raven.Client.Documents.Linq
                     case ExpressionType.Conditional:
                     case ExpressionType.ArrayIndex:
                     case null:
-                        ExceptionMsg:
-                        throw new ArgumentException("Not supported computation: " + memberExpression +
-                                                    ". You cannot use computation in RavenDB queries (only simple member expressions are allowed).");
+                        ThrowArgumentException();
+                        break;
                 }
                 cur = cur.Expression as MemberExpression;
+            }
+
+            void ThrowArgumentException()
+            {
+                throw new ArgumentException("Not supported computation: " + memberExpression +
+                                            ". You cannot use computation in RavenDB queries (only simple member expressions are allowed).");
             }
         }
 
