@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using Jint;
 using Jint.Native;
 using Jint.Native.Object;
+using Jint.Runtime;
 using Jint.Runtime.Descriptors;
 using Lucene.Net.Documents;
 using Raven.Client;
@@ -13,8 +14,8 @@ using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Patch;
-using Raven.Server.Utils;
 using Sparrow.Json;
+using TypeConverter = Raven.Server.Utils.TypeConverter;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 {
@@ -250,7 +251,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     return false;
 
                 iterator = propertyDescriptorValue.AsArray().GetEnumerator();
-                if (iterator.MoveNext() == false || iterator.Current == null)
+                if (iterator.MoveNext() == false || iterator.Current is null || iterator.Current.IsObject() == false || iterator.Current.IsArray() == true)
                     return false;
 
                 return TryDetectDynamicFieldCreation(propertyAsString, iterator.Current.AsObject(), field) is not null;
