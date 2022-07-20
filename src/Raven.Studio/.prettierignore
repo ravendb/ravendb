@@ -1,0 +1,8 @@
+# In RavenDB studio version below 6.0 we don't want to use prettier for formatting
+# So we have fake configuration here to ignore all files
+# This allows us to jump between branches and use same IDE configuration (which is per folder)
+# In < 6.0 it does nothing 
+# In 6.0+ it formats code
+
+
+*.*

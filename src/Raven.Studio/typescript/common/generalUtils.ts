@@ -711,6 +711,10 @@ class genUtils {
             $(containerSelector).scrollTop(elementTop);
         }
     }
+
+    static assertUnreachable(x: never, msg?: string): never {
+        throw new Error("Didn't expect to get here. " + msg);
+    }
 } 
 
 export = genUtils;
