@@ -18,7 +18,7 @@ namespace Sparrow.Utils
         private readonly DisposeOnce<SingleAttempt> _disposeOnce;
         private long _compressedBytesCount;
         private long _uncompressedBytesCount;
-        private SemaphoreSlim _semaphoreSlim = new(1, 1);
+        private readonly DisposeLock _disposerLock = new DisposeLock(nameof(ZstdStream));
 
         private ZstdStream(Stream inner, bool compression)
         {
@@ -107,9 +107,7 @@ namespace Sparrow.Utils
 
         public override int Read(Span<byte> buffer)
         {
-            WaitOnSemaphoreOrThrowIfDisposed();
-
-            try
+            using (_disposerLock.EnsureNotDisposed())
             {
                 while (true)
                 {
@@ -126,10 +124,6 @@ namespace Sparrow.Utils
                     _decompressionInput = new Memory<byte>(_tempBuffer, 0, _decompressionInput.Length + read);
                 }
             }
-            finally
-            {
-                _semaphoreSlim.Release();
-            }
         }
 
         public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
@@ -139,9 +133,7 @@ namespace Sparrow.Utils
 
         public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
         {
-            await WaitOnSemaphoreOrThrowIfDisposedAsync().ConfigureAwait(false);
-
-            try
+            using (_disposerLock.EnsureNotDisposed())
             {
                 while (true)
                 {
@@ -160,17 +152,11 @@ namespace Sparrow.Utils
                     _decompressionInput = new Memory<byte>(_tempBuffer, 0, _decompressionInput.Length + read);
                 }
             }
-            finally
-            {
-                _semaphoreSlim.Release();
-            }
         }
 
         public override void Write(ReadOnlySpan<byte> buffer)
         {
-            WaitOnSemaphoreOrThrowIfDisposed();
-
-            try
+            using (_disposerLock.EnsureNotDisposed())
             {
                 while (buffer.Length > 0)
                 {
@@ -182,10 +168,6 @@ namespace Sparrow.Utils
 
                     _inner.Write(_tempBuffer, 0, outputBytes);
                 }
-            }
-            finally
-            {
-                _semaphoreSlim.Release();
             }
         }
 
@@ -201,9 +183,7 @@ namespace Sparrow.Utils
 
         public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
         {
-            await WaitOnSemaphoreOrThrowIfDisposedAsync().ConfigureAwait(false);
-
-            try
+            using (_disposerLock.EnsureNotDisposed())
             {
                 while (buffer.Length > 0)
                 {
@@ -214,21 +194,13 @@ namespace Sparrow.Utils
                         continue;
 
                     await _inner.WriteAsync(_tempBuffer, 0, outputBytes, cancellationToken).ConfigureAwait(false);
-
                 }
             }
-            finally
-            {
-                _semaphoreSlim.Release();
-            }
-
         }
 
         public override void Flush()
         {
-            WaitOnSemaphoreOrThrowIfDisposed();
-
-            try
+            using (_disposerLock.EnsureNotDisposed())
             {
                 while (true)
                 {
@@ -239,17 +211,11 @@ namespace Sparrow.Utils
                 }
                 _inner?.Flush();
             }
-            finally
-            {
-                _semaphoreSlim.Release();
-            }
         }
 
         public override async Task FlushAsync(CancellationToken cancellationToken)
         {
-            await WaitOnSemaphoreOrThrowIfDisposedAsync().ConfigureAwait(false);
-
-            try
+            using (_disposerLock.EnsureNotDisposed())
             {
                 while (true)
                 {
@@ -261,51 +227,26 @@ namespace Sparrow.Utils
                 }
                 await _inner.FlushAsync(cancellationToken).ConfigureAwait(false);
             }
-            finally
-            {
-                _semaphoreSlim.Release();
-            }
-        }
-
-        private void WaitOnSemaphoreOrThrowIfDisposed()
-        {
-            if (_disposeOnce.Disposed)
-                throw new ObjectDisposedException("Object was already disposed!");
-
-            _semaphoreSlim.Wait();
-        }
-
-        private async Task WaitOnSemaphoreOrThrowIfDisposedAsync()
-        {
-            if (_disposeOnce.Disposed)
-                throw new ObjectDisposedException("Object was already disposed!");
-
-            await _semaphoreSlim.WaitAsync().ConfigureAwait(false);
         }
 
         private void DisposeInternal()
         {
-            if (_semaphoreSlim.CurrentCount <= 0)
+            using (_disposerLock.StartDisposing())
             {
-                // ensure we are done reading/writing
-                _semaphoreSlim.Release();
-            }
-
-            _semaphoreSlim.Wait();
-
-            if (_compressContext != null)
-            {
-                while (_compression)
+                if (_compressContext != null)
                 {
-                    var (outputBytes, _, done) = CompressStep(ReadOnlySpan<byte>.Empty, ZstdLib.ZSTD_EndDirective.ZSTD_e_end);
+                    while (_compression)
+                    {
+                        var (outputBytes, _, done) = CompressStep(ReadOnlySpan<byte>.Empty, ZstdLib.ZSTD_EndDirective.ZSTD_e_end);
 
-                    if (done)
-                        break;
+                        if (done)
+                            break;
 
-                    _inner.Write(_tempBuffer, 0, outputBytes);
+                        _inner.Write(_tempBuffer, 0, outputBytes);
+                    }
                 }
+                ReleaseResources();
             }
-            ReleaseResources();
         }
 
         protected override void Dispose(bool disposing)
@@ -324,8 +265,6 @@ namespace Sparrow.Utils
                 }
                 _compressContext?.Dispose();
                 _compressContext = null;
-
-                _semaphoreSlim.Dispose();
             }
         }
     }

@@ -2,7 +2,7 @@
 using System.Threading;
 using Nito.AsyncEx;
 
-namespace Sparrow.Server.Utils
+namespace Sparrow.Utils
 {
     /// <summary>
     /// This class allow us to perform disposal operations without running

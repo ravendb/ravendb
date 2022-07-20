@@ -6,7 +6,6 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
@@ -21,6 +20,7 @@ using Sparrow.Json;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
 using Sparrow.Threading;
+using Sparrow.Utils;
 using Voron.Exceptions;
 using Voron.Impl.Extensions;
 
