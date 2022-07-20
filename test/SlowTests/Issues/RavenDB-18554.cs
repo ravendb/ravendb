@@ -246,7 +246,7 @@ namespace SlowTests.Issues
 
                 // Wait for indexing in first node and second node
                 var index = new Categoroies_Details();
-                var result = await Indexes.CreateIndex(store, index);
+                var result = await CreateIndex(store, index);
                 Assert.NotNull(result);
                 // wait for index creation on cluster
                 await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(result.RaftCommandIndex);

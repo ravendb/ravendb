@@ -30,13 +30,6 @@ public partial class RavenTestBase
         {
             _parent = parent ?? throw new ArgumentNullException(nameof(parent));
         }
-		
-		public async Task<PutIndexResult> CreateIndex(IDocumentStore store, AbstractIndexCreationTask index)
-        {
-            var results = await store.Maintenance.ForDatabase(store.Database).SendAsync(new PutIndexesOperation(index.CreateIndexDefinition()));
-            var filterredResults = results.Where(r => r.Index == index.IndexName).ToArray();
-            return filterredResults.Length == 1 ? filterredResults[0] : null;
-        }
 
 
         public void WaitForIndexing(IDocumentStore store, string dbName = null, TimeSpan? timeout = null, bool allowErrors = false, string nodeTag = null)
