@@ -12,6 +12,8 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
@@ -63,6 +65,13 @@ namespace Tests.Infrastructure
             options.RunInMemory = false; 
 
             return base.GetDocumentStore(options, caller);
+        }
+
+        public async Task<PutIndexResult> CreateIndex(IDocumentStore store, AbstractIndexCreationTask index)
+        {
+            var results = await store.Maintenance.ForDatabase(store.Database).SendAsync(new PutIndexesOperation(index.CreateIndexDefinition()));
+            var filterredResults = results.Where(r => r.Index == index.IndexName).ToArray();
+            return filterredResults.Length == 1 ? filterredResults[0] : null;
         }
 
         protected void NoTimeouts()
