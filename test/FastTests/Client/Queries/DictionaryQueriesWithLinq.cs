@@ -1,4 +1,5 @@
-﻿using System;
+﻿#nullable enable
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Linq;
@@ -51,7 +52,7 @@ public class DictionaryQueriesWithLinq : RavenTestBase
                 newSession.SaveChanges();
 
                 var queryResult = newSession.Query<Group>()
-                    .OrderBy(x => x.Data.Name["pl"].Name);
+                    .OrderBy(x => x.Data!.Name!["pl"].Name);
                 Assert.Equal("from 'Groups' order by Data.Name.pl.Name", queryResult.ToString());
                 Assert.Equal(1, queryResult.ToList().Count);
             }
@@ -74,16 +75,14 @@ public class DictionaryQueriesWithLinq : RavenTestBase
 
                 newSession.Store(new Group {Data = groupData}, "group/1");
                 newSession.SaveChanges();
-                WaitForUserToContinueTheTest(store);
                 var query = newSession.Query<Group>()
-                    .Where(x => x.Data.Name["pl"].Name == "Grupa");
+                    .Where(x => x.Data!.Name!["pl"].Name == "Grupa");
                 Assert.Equal(1, query.Count());
                 Assert.Equal("from 'Groups' where Data.Name.pl.Name = $p0", query.ToString());
             }
         }
     }
-
-
+    
     private class LocalizableCollection<T> : IDictionary<string, T>, IReadOnlyDictionary<string, T>
     {
         private readonly IDictionary<string, T> _data;
@@ -149,7 +148,7 @@ public class DictionaryQueriesWithLinq : RavenTestBase
 
         public bool TryGetValue(string locale, out T value)
         {
-            return _data.TryGetValue(locale, out value);
+            return _data.TryGetValue(locale, out value!);
         }
 
         public bool Remove(string locale)
@@ -175,17 +174,17 @@ public class DictionaryQueriesWithLinq : RavenTestBase
 
     private class Group
     {
-        public GroupData Data { get; set; }
+        public GroupData? Data { get; set; }
     }
 
     private class GroupData
     {
-        public LocalizableCollection<GroupName> Name { get; set; }
+        public LocalizableCollection<GroupName>? Name { get; set; }
     }
 
     private class GroupName
     {
-        public string Name { get; set; }
-        public string ShortName { get; set; }
+        public string? Name { get; set; }
+        public string? ShortName { get; set; }
     }
 }
