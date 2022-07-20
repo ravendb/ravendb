@@ -11,6 +11,8 @@ import taskItem = require("models/resources/widgets/taskItem");
 
 class ongoingTasksWidget extends websocketBasedWidget<Raven.Server.Dashboard.Cluster.Notifications.OngoingTasksPayload> {
 
+    view = require("views/resources/widgets/ongoingTasksWidget.html");
+    
     static readonly taskInfoRecord: Record<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType, taskInfo> = {
         "Replication": {
             nameForUI: "External Replication",
@@ -41,6 +43,11 @@ class ongoingTasksWidget extends websocketBasedWidget<Raven.Server.Dashboard.Clu
             nameForUI: "SQL ETL",
             icon: "icon-sql-etl",
             colorClass: "sql-etl"
+        },
+        "ElasticSearchEtl": {
+            nameForUI: "Elasticsearch ETL",
+            icon: "icon-elastic-search-etl",
+            colorClass: "elastic-etl"
         },
         "Backup": {
             nameForUI: "Backup",
@@ -226,6 +233,8 @@ class ongoingTasksWidget extends websocketBasedWidget<Raven.Server.Dashboard.Clu
                 return "SqlEtl";
             case "OlapEtlCount":
                 return "OlapEtl";
+            case "ElasticSearchEtlCount":
+                return "ElasticSearchEtl";
             case "PeriodicBackupCount":
                 return "Backup";
             case "SubscriptionCount":
