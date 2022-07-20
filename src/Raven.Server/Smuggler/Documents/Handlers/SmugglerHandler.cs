@@ -740,7 +740,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 operateOnTypes != null && 
                 Enum.TryParse(typeof(DatabaseItemType), operateOnTypes, out _) == false)
             {
-                CheckClientVersion(operateOnTypes);
+                CheckClientVersion(operateOnTypes, nameof(DatabaseSmugglerOptions.OperateOnTypes));
 
                 var itemsTypes = DatabaseItemType.None;
                 var types = operateOnTypes.Split(", ");
@@ -763,7 +763,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 operateOnDatabaseRecordTypes != null && 
                 Enum.TryParse(typeof(DatabaseRecordItemType), operateOnDatabaseRecordTypes, out _) == false)
             {
-                CheckClientVersion(operateOnDatabaseRecordTypes);
+                CheckClientVersion(operateOnDatabaseRecordTypes, nameof(DatabaseSmugglerOptions.OperateOnDatabaseRecordTypes));
 
                 var databaseRecordItemsTypes = DatabaseRecordItemType.None;
                 var types = operateOnDatabaseRecordTypes.Split(", ");
@@ -792,11 +792,11 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             }
         }
 
-        private void CheckClientVersion(string types)
+        private void CheckClientVersion(string value, string propertyName)
         {
             if (RequestRouter.TryGetClientVersion(HttpContext, out var version) == false ||
                 (Version.TryParse(RavenVersionAttribute.Instance.AssemblyVersion, out var existingVersion) && version.CompareTo(existingVersion) <= 0))
-                throw new InvalidDataException($"The value '{types}' supplied in 'OperateOnTypes' and/or 'OperateOnDatabaseRecordTypes' is not parsable");
+                throw new InvalidDataException($"The value '{value}' supplied in '{propertyName}' is not parsable");
         }
 
         [RavenAction("/databases/*/smuggler/import/csv", "POST", AuthorizationStatus.ValidUser, DisableOnCpuCreditsExhaustion = true)]
