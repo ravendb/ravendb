@@ -14,7 +14,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
         public RestoreFromLocal(RestoreBackupConfiguration restoreConfiguration)
         {
-            if (restoreConfiguration.ShardRestoreSettings.Length > 0)
+            if (restoreConfiguration.ShardRestoreSettings?.Length > 0)
                 return;
 
             if (string.IsNullOrWhiteSpace(restoreConfiguration.BackupLocation))

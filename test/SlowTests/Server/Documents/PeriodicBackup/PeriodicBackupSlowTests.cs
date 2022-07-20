@@ -1037,7 +1037,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [Fact(Skip = "RavenDB-18206/Sharding-Restore-Import"), Trait("Category", "Smuggler")]
         public async Task restore_settings_tests()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");

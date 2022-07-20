@@ -12,7 +12,6 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents;
-using Raven.Server.Documents.Sharding;
 using Raven.Server.Integrations.PostgreSQL.Commands;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -510,9 +509,6 @@ namespace Raven.Server.Smuggler.Documents
         public SubscriptionActions(DocumentDatabase database)
         {
             _serverStore = database.ServerStore;
-            /*_name = database is ShardedDocumentDatabase shardedDocumentDatabase
-                ? shardedDocumentDatabase.ShardedDatabaseName
-                : database.Name;*/
             _name = database.Name;
         }
 

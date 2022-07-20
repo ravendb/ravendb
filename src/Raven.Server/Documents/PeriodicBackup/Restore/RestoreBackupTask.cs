@@ -34,7 +34,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 DatabaseRecord = GetDatabaseRecord()
             };
 
-            DatabaseHelper.Validate(DatabaseName, RestoreSettings.DatabaseRecord, ServerStore.Configuration);
+            if (ValidateResourceName)
+            {
+                DatabaseHelper.Validate(DatabaseName, RestoreSettings.DatabaseRecord, ServerStore.Configuration);
+            }
         }
 
         protected virtual DatabaseRecord GetDatabaseRecord()
