@@ -8,8 +8,12 @@ class ongoingTaskReplicationHubDefinitionListModel {
     
     taskId: number;
     taskName = ko.observable<string>();
+    
     taskState = ko.observable<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskState>();
+    taskMode = ko.observable<Raven.Client.Documents.Operations.Replication.PullReplicationMode>();
 
+    hasFiltering = ko.observable<boolean>();
+    
     showDelayReplication = ko.observable<boolean>(false);
     delayReplicationTime = ko.observable<number>();
     delayHumane: KnockoutComputed<string>;
@@ -49,8 +53,11 @@ class ongoingTaskReplicationHubDefinitionListModel {
         const delayTime = generalUtils.timeSpanToSeconds(dto.DelayReplicationFor);
         
         this.taskName(dto.Name);
-        this.taskState(dto.Disabled ? "Disabled" : "Enabled");
         this.taskId = dto.TaskId;
+        this.taskMode(dto.Mode);
+        
+        this.taskState(dto.Disabled ? "Disabled" : "Enabled");
+        this.hasFiltering(dto.WithFiltering);
 
         this.showDelayReplication(dto.DelayReplicationFor != null && delayTime !== 0);
         this.delayReplicationTime(dto.DelayReplicationFor ? delayTime : null);

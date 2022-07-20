@@ -2136,8 +2136,18 @@ namespace Raven.Client.Http
         public async Task<(int Index, ServerNode Node)> GetRequestedNode(string nodeTag)
         {
             await EnsureNodeSelector().ConfigureAwait(false);
-
             return _nodeSelector.GetRequestedNode(nodeTag);
+        }
+
+        internal async Task<(int Index, ServerNode Node)> GetRequestedNode(string nodeTag, bool throwIfContainsFailures)
+        {
+            (var index, var node) = await GetRequestedNode(nodeTag).ConfigureAwait(false);
+            if (throwIfContainsFailures && _nodeSelector.NodeIsAvailable(index) == false)
+            {
+                throw new RequestedNodeUnavailableException($"Requested node {nodeTag} currently unavailable, please try again later.");
+            }
+
+            return (index, node);
         }
 
         public async Task<(int Index, ServerNode Node)> GetPreferredNode()

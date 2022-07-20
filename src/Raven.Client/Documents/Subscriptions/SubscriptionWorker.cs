@@ -771,7 +771,7 @@ namespace Raven.Client.Documents.Subscriptions
                                 var nextNodeIndex = (_forcedTopologyUpdateAttempts++) % curTopology.Count;
                                 try
                                 {
-                                    (_, _redirectNode) = await reqEx.GetRequestedNode(curTopology[nextNodeIndex].ClusterTag).ConfigureAwait(false);
+                                    (_, _redirectNode) = await reqEx.GetRequestedNode(curTopology[nextNodeIndex].ClusterTag, throwIfContainsFailures: true).ConfigureAwait(false);
                                     if (_logger.IsInfoEnabled)
                                         _logger.Info($"Subscription '{_options.SubscriptionName}'. Will modify redirect node from null to {_redirectNode.ClusterTag}", ex);
                                 }
