@@ -64,6 +64,9 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                     await writer.WriteErrorAsync($"Index {query.Metadata.IndexName} does not exist");
+
+                    if (fromSharded)
+                        throw;
                 }
             }
         }
@@ -88,18 +91,21 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
                 }
                 catch (Exception e)
                 {
-                    try
+                    if (_method == HttpMethod.Get)
                     {
-                        await writer.WriteErrorAsync($"Failed to execute stream query. Error: {e}");
-                    }
-                    catch (Exception ie)
-                    {
-                        if (Logger.IsOperationsEnabled)
+                        try
                         {
-                            Logger.Operations($"Failed to write error. Error: {e}", ie);
+                            await writer.WriteErrorAsync($"Failed to execute stream query. Error: {e}");
+                        }
+                        catch (Exception ie)
+                        {
+                            if (Logger.IsOperationsEnabled)
+                            {
+                                Logger.Operations($"Failed to write error. Error: {e}", ie);
+                            }
                         }
                     }
-
+                    
                     throw;
                 }
             }

@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net.Http;
+using System.Reflection.Metadata;
 using Microsoft.AspNetCore.Http;
+using Raven.Client;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Http;
 using Raven.Server.Documents.Sharding.Handlers;
@@ -58,6 +60,8 @@ namespace Raven.Server.Documents.Sharding.Operations
                     request.Headers.TryAddWithoutValidation(header, (IEnumerable<string>)value);
                 }
             }
+
+            request.Headers.TryAddWithoutValidation(Constants.Headers.Sharded, "true");
         }
 
         string ModifyUrl(string url) => url;
