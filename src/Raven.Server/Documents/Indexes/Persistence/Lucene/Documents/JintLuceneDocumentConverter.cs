@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Runtime.InteropServices;
 using Jint;
 using Jint.Native;
 using Jint.Native.Object;
@@ -33,7 +35,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
     {
         private readonly IndexFieldOptions _allFields;
 
-        protected JintLuceneDocumentConverterBase(Index index, IndexDefinition indexDefinition, int numberOfBaseFields = 1, string keyFieldName = null, bool storeValue = false, string storeValueFieldName = Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName)
+        protected JintLuceneDocumentConverterBase(Index index, IndexDefinition indexDefinition, int numberOfBaseFields = 1, string keyFieldName = null,
+            bool storeValue = false, string storeValueFieldName = Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName)
             : base(index, index.Configuration.IndexEmptyEntries, numberOfBaseFields, keyFieldName, storeValue, storeValueFieldName)
         {
             indexDefinition.Fields.TryGetValue(Constants.Documents.Indexing.Fields.AllFields, out _allFields);
@@ -45,7 +48,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         private const string SpatialPropertyName = "$spatial";
         private const string BoostPropertyName = "$boost";
 
-        protected override int GetFields<T>(T instance, LazyStringValue key, LazyStringValue sourceDocumentId, object document, JsonOperationContext indexContext, IWriteOperationBuffer writeBuffer)
+        protected override int GetFields<T>(T instance, LazyStringValue key, LazyStringValue sourceDocumentId, object document, JsonOperationContext indexContext,
+            IWriteOperationBuffer writeBuffer)
         {
             if (!(document is ObjectInstance documentToProcess))
                 return 0;
@@ -93,11 +97,57 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
                 if (_fields.TryGetValue(propertyAsString, out var field) == false)
                     field = _fields[propertyAsString] = IndexField.Create(propertyAsString, new IndexFieldOptions(), _allFields);
-
+                var isDynamicFieldMap = IsDynamicFieldMap(propertyDescriptor.Value, propertyAsString, field, out var iterator);
+                bool shouldSaveAsBlittable;
                 object value;
-                float? propertyBoost = null;
-                int numberOfCreatedFields;
-                var actualValue = propertyDescriptor.Value;
+                float? propertyBoost;
+                int numberOfCreatedFields = 0;
+                JsValue actualValue;
+                
+                if (isDynamicFieldMap)
+                {
+                    do
+                    {
+                        ProcessObject(iterator.Current, propertyAsString, field, out shouldSaveAsBlittable, out value, out propertyBoost, out var innerNumberOfCreatedFields,
+                            out actualValue);
+                        numberOfCreatedFields += innerNumberOfCreatedFields;
+
+                        if (shouldSaveAsBlittable)
+                            numberOfCreatedFields += ProcessAsJson(actualValue, field, propertyBoost);
+                        
+                        if (value is IDisposable toDispose)
+                        {
+                            // the value was converted to a lucene field and isn't needed anymore
+                            toDispose.Dispose();
+                        }
+                    } while (iterator.MoveNext());
+                }
+                else
+                {
+                    ProcessObject(propertyDescriptor.Value, propertyAsString, field, out shouldSaveAsBlittable, out value, out propertyBoost, out numberOfCreatedFields, out actualValue);
+                    if (shouldSaveAsBlittable)
+                        numberOfCreatedFields += ProcessAsJson(actualValue, field, propertyBoost);
+                    if (value is IDisposable toDispose)
+                    {
+                        // the value was converted to a lucene field and isn't needed anymore
+                        toDispose.Dispose();
+                    }
+                }
+                newFields += numberOfCreatedFields;
+                
+                BoostDocument(instance, numberOfCreatedFields, documentBoost);
+
+               
+            }
+
+            return newFields;
+
+            void ProcessObject(JsValue valueToInsert, in string propertyAsString, IndexField field, out bool shouldProcessAsBlittable, out object value, out float? propertyBoost, out int numberOfCreatedFields, out JsValue actualValue)
+            {
+                value = null;
+                propertyBoost = null;
+                numberOfCreatedFields = 0;
+                actualValue = valueToInsert;
                 var isObject = IsObject(actualValue);
                 if (isObject)
                 {
@@ -120,7 +170,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                             }
                             else
                             {
-                                value = TypeConverter.ToBlittableSupportedType(val, flattenArrays: false, forIndexing: true, engine: documentToProcess.Engine, context: indexContext);
+                                value = TypeConverter.ToBlittableSupportedType(val, flattenArrays: false, forIndexing: true, engine: documentToProcess.Engine,
+                                    context: indexContext);
                                 numberOfCreatedFields = GetRegularFields(instance, field, CreateValueForIndexing(value, propertyBoost), indexContext, out _);
 
                                 newFields += numberOfCreatedFields;
@@ -133,7 +184,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                                     toDispose1.Dispose();
                                 }
 
-                                continue;
+                                shouldProcessAsBlittable = false;
+                                return;
                             }
                         }
 
@@ -158,12 +210,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                                 }
                                 else
                                 {
-                                    continue; //Ignoring bad spatial field
+                                    shouldProcessAsBlittable = false;
+                                    return; //Ignoring bad spatial field
                                 }
                             }
                             else
                             {
-                                continue; //Ignoring bad spatial field
+                                shouldProcessAsBlittable = false;
+                                return; //Ignoring bad spatial field
                             }
 
                             numberOfCreatedFields = GetRegularFields(instance, field, CreateValueForIndexing(spatial, propertyBoost), indexContext, out _);
@@ -172,27 +226,36 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
                             BoostDocument(instance, numberOfCreatedFields, documentBoost);
 
-                            continue;
+                            shouldProcessAsBlittable = false;
+                            return;
                         }
                     }
                 }
 
-                value = TypeConverter.ToBlittableSupportedType(actualValue, flattenArrays: false, forIndexing: true, engine: documentToProcess.Engine, context: indexContext);
-                numberOfCreatedFields = GetRegularFields(instance, field, CreateValueForIndexing(value, propertyBoost), indexContext, out _);
-
-                newFields += numberOfCreatedFields;
-
-                BoostDocument(instance, numberOfCreatedFields, documentBoost);
-
-                if (value is IDisposable toDispose)
-                {
-                    // the value was converted to a lucene field and isn't needed anymore
-                    toDispose.Dispose();
-                }
+                shouldProcessAsBlittable = true;
             }
 
-            return newFields;
+            int ProcessAsJson(JsValue actualValue, IndexField field, float? propertyBoost)
+            {
+                var value = TypeConverter.ToBlittableSupportedType(actualValue, flattenArrays: false, forIndexing: true, engine: documentToProcess.Engine,
+                    context: indexContext);
+                return GetRegularFields(instance, field, CreateValueForIndexing(value, propertyBoost), indexContext, out _);
+            }
+            
+            bool IsDynamicFieldMap(JsValue propertyDescriptorValue, string propertyAsString, IndexField field, out IEnumerator<JsValue> iterator)
+            {
+                iterator = Enumerable.Empty<JsValue>().GetEnumerator();
 
+                if (propertyDescriptorValue.IsArray() == false)
+                    return false;
+
+                iterator = propertyDescriptorValue.AsArray().GetEnumerator();
+                if (iterator.MoveNext() == false || iterator.Current == null)
+                    return false;
+
+                return TryDetectDynamicFieldCreation(propertyAsString, iterator.Current.AsObject(), field) is not null;
+            }
+            
             static bool IsObject(JsValue value)
             {
                 return value.IsObject() && value.IsArray() == false;
@@ -203,11 +266,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 if (boost.HasValue == false)
                     return value;
 
-                return new BoostedValue
-                {
-                    Boost = boost.Value,
-                    Value = value
-                };
+                return new BoostedValue {Boost = boost.Value, Value = value};
             }
 
             static void BoostDocument(T instance, int numberOfCreatedFields, float? boost)
@@ -223,7 +282,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 }
             }
         }
-
+        
         private static bool TryGetBoostedValue(ObjectInstance valueToCheck, out JsValue value, out float? boost)
         {
             value = JsValue.Undefined;
@@ -320,7 +379,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
                 var optionValueAsString = optionValue.AsString();
                 if (Enum.TryParse(typeof(TEnum), optionValueAsString, true, out var enumValue) == false)
-                    throw new ArgumentException($"Could not parse dynamic field option property '{propertyName}' value ('{optionValueAsString}') into '{typeof(TEnum).Name}' enum.");
+                    throw new ArgumentException(
+                        $"Could not parse dynamic field option property '{propertyName}' value ('{optionValueAsString}') into '{typeof(TEnum).Name}' enum.");
 
                 return (TEnum)enumValue;
             }
