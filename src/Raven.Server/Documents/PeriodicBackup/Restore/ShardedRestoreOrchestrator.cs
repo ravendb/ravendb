@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Nito.AsyncEx;
 using Raven.Client.Documents.Conventions;
@@ -13,7 +13,6 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Client.Util;
 using Raven.Server.Config.Settings;
-using Raven.Server.Documents.Sharding;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
@@ -30,6 +29,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         private readonly ServerStore _serverStore;
         private readonly OperationCancelToken _operationCancelToken;
         private readonly bool _hasEncryptionKey;
+        private readonly Dictionary<string, RequestExecutor> _singleNodeRequestExecutors = new();
+        private ClusterTopology _clusterTopology;
 
         public ShardedRestoreOrchestrator(ServerStore serverStore,
             RestoreBackupConfigurationBase configuration,
@@ -55,17 +56,17 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 if (key.Length != 256 / 8)
                     throw new InvalidOperationException($"The size of the key must be 256 bits, but was {key.Length * 8} bits.");
 
-                ClusterTopology clusterTopology;
+                
                 using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (context.OpenReadTransaction())
                 {
                     if (_serverStore.Cluster.DatabaseExists(context, _restoreConfiguration.DatabaseName))
                         throw new ArgumentException($"Cannot restore data to an existing database named {_restoreConfiguration.DatabaseName}");
 
-                    clusterTopology = _serverStore.GetClusterTopology(context);
+                    _clusterTopology = _serverStore.GetClusterTopology(context);
                 }
 
-                if (AdminDatabasesHandler.NotUsingHttps(clusterTopology.GetUrlFromTag(_serverStore.NodeTag)))
+                if (AdminDatabasesHandler.NotUsingHttps(_clusterTopology.GetUrlFromTag(_serverStore.NodeTag)))
                     throw new InvalidOperationException("Cannot restore an encrypted database to a node which doesn't support SSL!");
             }
         }
@@ -96,7 +97,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
                 await SaveDatabaseRecord(databaseName, databaseRecord);
 
-                return await RestoreOnAllShards(onProgress, databaseRecord, _restoreConfiguration);
+                var result = await RestoreOnAllShards(onProgress, _restoreConfiguration);
+
+                await SetDatabaseStateBackToNormal();
+
+                return result;
             }
             catch (Exception e)
             {
@@ -113,7 +118,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             }
             finally
             {
-                _operationCancelToken?.Dispose();
+                Dispose();
             }
         }
 
@@ -142,22 +147,47 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             await _serverStore.Cluster.WaitForIndexNotification(result.Index, TimeSpan.FromSeconds(30));
         }
 
-        private async Task<IOperationResult> RestoreOnAllShards(Action<IOperationProgress> onProgress,
-            DatabaseRecord databaseRecord, RestoreBackupConfigurationBase configuration)
+        private RequestExecutor GetRequestExecutorForNode(string tag)
         {
-            var databaseContext = new ShardedDatabaseContext(_serverStore, databaseRecord);
-            var tasks = new Task<IOperationResult>[databaseContext.NumberOfShardNodes];
-            
+            if (_clusterTopology == null)
+            {
+                using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    _clusterTopology = _serverStore.GetClusterTopology(context);
+                }
+            }
+
+            if (_clusterTopology.AllNodes.TryGetValue(tag, out var url) == false)
+                throw new InvalidOperationException($"Node tag {tag} is not in cluster topology");
+
+            if (_singleNodeRequestExecutors.TryGetValue(tag, out var requestExecutor) == false)
+            {
+                _singleNodeRequestExecutors[tag] = requestExecutor = 
+                    RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(url, databaseName: null, _serverStore.Server.Certificate.Certificate, DocumentConventions.DefaultForServer);
+            }
+
+            return requestExecutor;
+        }
+
+        private async Task<IOperationResult> RestoreOnAllShards(Action<IOperationProgress> onProgress, RestoreBackupConfigurationBase configuration)
+        {
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Normal, "handle operation progress");
+
+            var shardSettings = configuration.ShardRestoreSettings;
+            var tasks = new Task<IOperationResult>[shardSettings.Length];
+
             for (int i = 0; i < tasks.Length; i++)
             {
-                using (databaseContext.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
+                using (_serverStore.ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
                 {
                     var cmd = GenerateCommandForShard(ctx, shardNumber: i, configuration.Clone());
-                    var nodeTag = configuration.ShardRestoreSettings[i].NodeTag;
-                    var operationIdResult = await databaseContext.AllNodesExecutor.ExecuteForNodeAsync(cmd, nodeTag);
+                    var nodeTag = shardSettings[i].NodeTag;
+                    var executor = GetRequestExecutorForNode(nodeTag);
+                    await executor.ExecuteAsync(cmd, ctx, token: _operationCancelToken.Token);
+                    var operationIdResult = cmd.Result;
 
-                    var requestExecutor = databaseContext.AllNodesExecutor.GetRequestExecutorForNode(nodeTag);
-                    var serverOp = new ServerWideOperation(requestExecutor, DocumentConventions.DefaultForServer, operationIdResult.OperationId, nodeTag);
+                    var serverOp = new ServerWideOperation(executor, DocumentConventions.DefaultForServer, operationIdResult.OperationId, nodeTag);
                     tasks[i] = serverOp.WaitForCompletionAsync();
                 }
             }
@@ -167,12 +197,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             var result = new ShardedSmugglerResult();
             for (var i = 0; i < tasks.Length; i++)
             {
-                var nodeTag = configuration.ShardRestoreSettings[i].NodeTag;
+                var nodeTag = shardSettings[i].NodeTag;
                 var r = tasks[i].Result;
                 result.CombineWith(r, i, nodeTag);
             }
-
-            await SetDatabaseStateBackToNormal();
 
             return result;
         }
@@ -192,9 +220,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
         private static RavenCommand<OperationIdResult> GenerateCommandForShard(JsonOperationContext context, int shardNumber, RestoreBackupConfigurationBase configuration)
         {
-            var shardRestoreSetting = configuration.ShardRestoreSettings?.SingleOrDefault(s => s.ShardNumber == shardNumber);
-            if (shardRestoreSetting == null)
-                return default; //todo
+            Debug.Assert(shardNumber < configuration.ShardRestoreSettings?.Length);
+
+            var shardRestoreSetting = configuration.ShardRestoreSettings[shardNumber];
 
             string databaseName = configuration.DatabaseName;
             configuration.DatabaseName = $"{databaseName}${shardNumber}";
@@ -214,8 +242,20 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     throw new ArgumentOutOfRangeException(nameof(configuration));
             }
 
-            return new RestoreBackupOperation(configuration, shardRestoreSetting.NodeTag)
-                .GetCommand(DocumentConventions.DefaultForServer, context);
+            return new RestoreBackupOperation(configuration).GetCommand(DocumentConventions.DefaultForServer, context);
+        }
+
+        private void Dispose()
+        {
+            _operationCancelToken?.Dispose();
+
+            if (_singleNodeRequestExecutors == null)
+                return;
+
+            foreach (var kvp in _singleNodeRequestExecutors)
+            {
+                kvp.Value?.Dispose();
+            }
         }
 
     }

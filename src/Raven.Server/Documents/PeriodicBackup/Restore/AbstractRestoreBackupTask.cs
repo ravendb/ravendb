@@ -35,8 +35,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
     public abstract class AbstractRestoreBackupTask
     {
-        public string DatabaseName => RestoreFromConfiguration.DatabaseName;
-
         protected RestoreBackupConfigurationBase RestoreFromConfiguration { get; set; }
         protected ServerStore ServerStore;
         protected RestoreResult Result;
@@ -47,6 +45,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         protected bool HasEncryptionKey;
         protected readonly IRestoreSource RestoreSource;
 
+        protected string DatabaseName => RestoreFromConfiguration.DatabaseName;
         protected static readonly Logger Logger = LoggingSource.Instance.GetLogger<AbstractRestoreBackupTask>("Server");
         protected bool ValidateResourceName = true;
         protected bool ChangeDatabaseStateAfterRestore = true;
@@ -595,46 +594,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
             return Directory.GetFiles(location).Length > 0 ||
                    Directory.GetDirectories(location).Length > 0;
-        }
-
-        public static async Task<Stream> CopyRemoteStreamLocally(Stream stream, PathSetting tempPath)
-        {
-            if (stream.CanSeek)
-                return stream;
-
-            // This is meant to be used by ZipArchive, which will copy the data locally because is *must* be seekable.
-            // To avoid reading everything to memory, we copy to a local file instead. Note that this also ensure that we
-            // can process files > 2GB in size. https://github.com/dotnet/runtime/issues/59027
-            var basePath = tempPath?.FullPath ?? Path.GetTempPath();
-            var filePath = Path.Combine(basePath, $"{Guid.NewGuid()}.restore-local-file");
-            var file = SafeFileStream.Create(filePath, FileMode.Create, FileAccess.ReadWrite, FileShare.Read,
-                32 * 1024, FileOptions.DeleteOnClose);
-
-            try
-            {
-                await stream.CopyToAsync(file);
-                file.Seek(0, SeekOrigin.Begin);
-
-                return file;
-            }
-            catch
-            {
-                try
-                {
-                    await file.DisposeAsync();
-                }
-                catch
-                {
-                    // nothing we can do
-                }
-                finally
-                {
-                    PosixFile.DeleteOnClose(filePath);
-                }
-
-                throw;
-            }
-
         }
 
         protected void Dispose()

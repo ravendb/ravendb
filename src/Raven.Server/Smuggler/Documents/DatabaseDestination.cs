@@ -36,6 +36,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Server.Utils;
+using Sparrow.Utils;
 using Voron;
 using Voron.Global;
 using Size = Sparrow.Size;
@@ -801,7 +802,7 @@ namespace Raven.Server.Smuggler.Documents
             private async ValueTask SendIdentitiesAsync()
             {
                 //fire and forget, do not hold-up smuggler operations waiting for Raft command
-                
+                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Normal, "try to find a better way to handle restoring identities on sharded database");
                 var databaseName = _database.Name;
                 if (_database is ShardedDocumentDatabase shardedDocumentDatabase)
                 {

@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         public async Task<ZipArchive> GetZipArchiveForSnapshot(string path)
         {
             var blob = await _client.GetObjectAsync(path);
-            var file = await AbstractRestoreBackupTask.CopyRemoteStreamLocally(blob.Data, _tempPath);
+            var file = await RestoreUtils.CopyRemoteStreamLocally(blob.Data, _tempPath);
             return new DeleteOnCloseZipArchive(file, ZipArchiveMode.Read);
         }
 

@@ -38,14 +38,6 @@ public class AllNodesExecutor : AbstractExecutor
         UpdateExecutors(_clusterTopology, _database.DatabaseRecord.Sharding.Orchestrator.Topology);
     }
 
-
-    public RequestExecutor GetRequestExecutorForNode(string tag)
-    {
-        return _current.TryGetValue(tag, out var requestExecutor)
-            ? requestExecutor
-            : null;
-    }
-
     public async Task<TResult> ExecuteForNodeAsync<TResult>(RavenCommand<TResult> command, string tag, CancellationToken token = default)
     {
         var executor = _current[tag];

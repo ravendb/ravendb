@@ -184,7 +184,6 @@ public partial class RavenTestBase
                 var operationResult = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("cat/mitzi", user2, 0));
                 await store.Operations.SendAsync(new DeleteCompareExchangeValueOperation<User>("cat/mitzi", operationResult.Index));
 
-                /*
                 //Cluster transaction
                 using (var session = store.OpenAsyncSession(new SessionOptions
                 {
@@ -196,7 +195,7 @@ public partial class RavenTestBase
                     await session.StoreAsync(new { ReservedFor = user5.Id }, "usernames/" + user5.Name);
 
                     await session.SaveChangesAsync();
-                }*/
+                }
 
                 //Index
                 await new Index().ExecuteAsync(store);
@@ -362,19 +361,48 @@ public partial class RavenTestBase
                 return waitHandles.ToArray();
             }
 
-            public async Task UpdateConfigurationAndRunBackupAsync(RavenServer server, IDocumentStore store, PeriodicBackupConfiguration config, bool isFullBackup = false)
+            public async Task<WaitHandle[]> WaitForBackupsToComplete(IEnumerable<RavenServer> nodes, string database)
+            {
+                var waitHandles = new List<WaitHandle>();
+
+                foreach (var node in nodes)
+                {
+                    var dbs = node.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(database).ToList();
+                    foreach (var task in dbs)
+                    {
+                        var mre = new ManualResetEventSlim();
+                        waitHandles.Add(mre.WaitHandle);
+
+                        var db = await task;
+                        db.PeriodicBackupRunner._forTestingPurposes ??= new PeriodicBackupRunner.TestingStuff();
+                        db.PeriodicBackupRunner._forTestingPurposes.AfterBackupBatchCompleted = () => mre.Set();
+                    }
+                }
+
+                return waitHandles.ToArray();
+            }
+
+            public Task UpdateConfigurationAndRunBackupAsync(RavenServer server, IDocumentStore store, PeriodicBackupConfiguration config, bool isFullBackup = false)
+            {
+                return UpdateConfigurationAndRunBackupAsync(new List<RavenServer>{server}, store, config, isFullBackup);
+            }
+
+
+            public async Task UpdateConfigurationAndRunBackupAsync(List<RavenServer> servers, IDocumentStore store, PeriodicBackupConfiguration config, bool isFullBackup = false)
             {
                 var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
 
-                var shards = server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store.Database);
-                foreach (var shard in shards)
+                foreach (var server in servers)
                 {
-                    var documentDatabase = await shard;
-                    var periodicBackupRunner = documentDatabase.PeriodicBackupRunner;
-                    periodicBackupRunner.StartBackupTask(result.TaskId, isFullBackup);
+                    var shards = server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store.Database);
+                    foreach (var shard in shards)
+                    {
+                        var documentDatabase = await shard;
+                        var periodicBackupRunner = documentDatabase.PeriodicBackupRunner;
+                        periodicBackupRunner.StartBackupTask(result.TaskId, isFullBackup);
+                    }
                 }
             }
-
             private static async Task<long> SetupRevisionsAsync(
                 IDocumentStore store,
                 RevisionsConfiguration configuration)

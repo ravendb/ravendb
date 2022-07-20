@@ -19,6 +19,5 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         string GetSmugglerBackupPath(string smugglerFile);
 
         string GetBackupLocation();
-
     }
 }
