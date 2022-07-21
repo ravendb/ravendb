@@ -48,6 +48,20 @@ namespace Voron.Data.Sets
         private int FreeSpace => Header->Upper - PageHeader.SizeOf - (Header->NumberOfEntries * sizeof(ushort));
         
         private readonly Span<byte> Span => new Span<byte>(_page.Pointer, Constants.Storage.PageSize);
+        public int SpaceUsed
+        {
+            get
+            {
+                var size = sizeof(ushort) + Positions.Length + PageHeader.SizeOf;
+                foreach (ushort position in Positions)
+                {
+                    ZigZagEncoding.Decode2<long>(Span, out var len, position);
+                    size += len;
+                }
+                return size;
+            }
+        }
+
 
         private void Defrag(LowLevelTransaction tx)
         {
@@ -229,6 +243,17 @@ namespace Voron.Data.Sets
             if (lastMatch == 1)
                 mid++;
             return (~mid, lastMatch);
+        }
+
+        public List<long> GetAllChildPages()
+        {
+            var results = new List<long>();
+            foreach (ushort position in Positions)
+            {
+                (_, long page) = ZigZagEncoding.Decode2<long>(Span, out var _, position);
+                results.Add(page);
+            }
+            return results;
         }
     }
 }
