@@ -6,11 +6,11 @@ using FastTests;
 using Orders;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.MapReduce;
-using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.OutputToCollection;
 using Raven.Server.Documents.Indexes.Static;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -55,10 +55,11 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             }
         }
 
-        [Fact]
-        public void CanDefinePatternForReferenceDocumentsOfReduceOutputs()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding | RavenTestCategory.Indexes)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CanDefinePatternForReferenceDocumentsOfReduceOutputs(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -140,10 +141,11 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
         }
 
 
-        [Fact]
-        public void MultipleReduceOutputsIntoSingleReferenceDocument()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding | RavenTestCategory.Indexes)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void MultipleReduceOutputsIntoSingleReferenceDocument(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var numberOfOutputs = 100;
 
@@ -237,10 +239,11 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             }
         }
 
-        [Fact]
-        public async Task CanUpdateIndexWithPatternForOutputReduceToCollectionReferences()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding | RavenTestCategory.Indexes)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanUpdateIndexWithPatternForOutputReduceToCollectionReferences(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -357,10 +360,11 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             }
         }
 
-        [Fact]
-        public async Task CanUpdatePatternForOutputReduceToCollection()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding | RavenTestCategory.Indexes)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanUpdatePatternForOutputReduceToCollection(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -397,10 +401,11 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             }
         }
 
-        [Fact]
-        public async Task CanUpdatePatternFieldInIndexDefinitionSoItWillAffectReferenceDocuments()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding | RavenTestCategory.Indexes)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanUpdatePatternFieldInIndexDefinitionSoItWillAffectReferenceDocuments(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

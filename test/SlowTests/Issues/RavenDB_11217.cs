@@ -4,6 +4,7 @@ using FastTests;
 using Orders;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,10 +16,12 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void SessionWideNoTrackingShouldWork()
+        //TODO
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void SessionWideNoTrackingShouldWork(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession(new SessionOptions()))
                 {

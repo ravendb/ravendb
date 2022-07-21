@@ -9,6 +9,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -20,10 +21,11 @@ namespace SlowTests.MailingList
         {
         }
 
-        [Fact]
-        public void CanGetLazyWithIncludes()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CanGetLazyWithIncludes(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new UserByFirstName().Execute(store);
                 using (var session = store.OpenSession())

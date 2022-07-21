@@ -5,10 +5,8 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
-using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Exceptions.Sharding;
-using Raven.Server.Documents.Sharding;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
@@ -679,38 +677,43 @@ select project(o)")
             }
         }
 
-        [Fact(Skip = "https://issues.hibernatingrhinos.com/issue/RavenDB-18162")]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
         public void BasicInclude()
         {
             using (var store = Sharding.GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Dog { Owner = "users/3" }, "dogs/1");
-                    session.Store(new Dog { Owner = "users/4" }, "dogs/2");
-                    session.Store(new Dog { Owner = "users/5" }, "dogs/3");
+                    session.Store(new Dog {Owner = "users/1"}, "dogs/1");
+                    session.Store(new Dog {Owner = "users/2"}, "dogs/2");
+                    session.Store(new Dog {Owner = "users/3"}, "dogs/3");
 
-                    session.Store(new User { Count = 7 }, "users/3");
-                    session.Store(new User { Count = 19 }, "users/4");
-                    session.Store(new User { Count = 13 }, "users/5");
+                    session.Store(new User {Count = 7}, "users/1");
+                    session.Store(new User {Count = 19}, "users/2");
+                    session.Store(new User {Count = 13}, "users/3");
 
                     session.SaveChanges();
+                }
 
+                using (var session = store.OpenSession())
+                {
                     var queryResult = session.Query<Dog>()
                         .Include<Dog, User>(x => x.Owner)
+                        .Take(3)
+                        .Distinct()
                         .ToList();
 
                     Assert.Equal(3, queryResult.Count);
 
-                    var numberOfResults = session.Advanced.NumberOfRequests;
-                    Assert.Equal(1, numberOfResults);
+                    var numberOfRequests = session.Advanced.NumberOfRequests;
+                    Assert.Equal(1, numberOfRequests);
 
                     for (var i = 0; i < 3; i++)
                     {
                         Assert.NotNull(session.Load<User>($"users/{i + 1}"));
                     }
 
-                    Assert.Equal(numberOfResults, session.Advanced.NumberOfRequests);
+                    Assert.Equal(numberOfRequests, session.Advanced.NumberOfRequests);
                 }
             }
         }

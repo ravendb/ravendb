@@ -13,6 +13,7 @@ using Raven.Server.Config;
 using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -64,13 +65,12 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task ShouldStoreTotalDocumentSizeInPerformanceHint_ForQueries()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ShouldStoreTotalDocumentSizeInPerformanceHint_ForQueries(Options options)
         {
-            using (var store = GetDocumentStore(new Options
-            {
-                ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.PerformanceHints.MaxNumberOfResults)] = "1"
-            }))
+            options.ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.PerformanceHints.MaxNumberOfResults)] = "1";
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

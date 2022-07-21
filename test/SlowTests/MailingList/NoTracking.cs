@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -52,10 +53,11 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
-        public void Can_load_entities_with_NoTracking()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void Can_load_entities_with_NoTracking(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 CreateData(store);
 
@@ -81,8 +83,9 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
-        public void Can_load_entities_without_NoTrackin()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void Can_load_entities_without_NoTrackin(Options options)
         {
             using (var store = GetDocumentStore())
             {

@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -50,10 +51,11 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact]
-        public async Task CanHandleHandleLongUrl()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public async Task CanHandleHandleLongUrl(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new PersonsIndex().Execute(store);
 
