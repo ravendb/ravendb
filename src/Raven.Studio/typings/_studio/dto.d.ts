@@ -681,7 +681,7 @@ interface timeSeriesColumnOpts<T> extends textColumnOpts<T> {
 }
 
 interface virtualColumnDto {
-    type: "flags" | "checkbox" | "text" | "hyperlink" | "custom" | "timeSeries" | "nodeTag" | "iconsPlusText";
+    type: "flags" | "checkbox" | "text" | "hyperlink" | "custom" | "timeSeries" | "nodeTag" | "multiNodeTags" | "iconsPlusText";
     width: string;
     header: string;
     serializedValue: string;
@@ -887,4 +887,17 @@ interface iconPlusText {
 interface columnPreviewFeature {
     install($tooltip: JQuery, valueProvider: () => any, elementProvider: () => any, containerSelector: string): void;
     syntax(column: virtualColumn, escapedValue: any, element: any): void;
+}
+
+interface rawTaskItem {
+    type: StudioTaskType;
+    dbName: string;
+    count: number;
+    node: string;
+}
+
+interface taskInfo {
+    nameForUI: string;
+    icon: string;
+    colorClass: string;
 }
