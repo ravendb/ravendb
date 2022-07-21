@@ -1046,7 +1046,9 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
                 {
                     if (existingValue.Changed)
                     {
-                        return existingValue.ValueHandle;
+                        //TODO: egor the args get disposed in v8dotnet code, we have to clone this!
+                        var cloned = existingValue.ValueHandle.Clone();
+                        return cloned;
                     }
                 }
 
