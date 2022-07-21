@@ -92,6 +92,9 @@ namespace Voron.Data.Sets
             if (siblingHeader->SetFlags != ExtendedPageType.SetLeaf)
                 return;
 
+            if (siblingHeader->Baseline != leaf.Header->Baseline)
+                return; // we cannot merge pages from different leafs
+
             var sibling = new SetLeafPage(siblingPage);
             if (sibling.SpaceUsed + leaf.SpaceUsed > Constants.Storage.PageSize / 2 + Constants.Storage.PageSize / 4)
                 return; // if the two pages together will be bigger than 75%, can skip merging
@@ -675,6 +678,28 @@ namespace Voron.Data.Sets
             public void Reset()
             {
                 throw new NotSupportedException();
+            }
+        }
+
+        public List<long> AllPages()
+        {
+            var result = new List<long>();
+            Add(_llt.GetPage(_state.RootPage));
+            return result;
+
+            void Add(Page p)
+            {
+                result.Add(p.PageNumber);
+                var state = new SetCursorState { Page = p, };
+                if (state.BranchHeader->SetFlags != ExtendedPageType.SetBranch)
+                    return;
+                
+                var branch = new SetBranchPage(state.Page);
+                foreach (var child in branch.GetAllChildPages())
+                {
+                    var childPage = _llt.GetPage(child);
+                    Add(childPage);
+                }
             }
         }
     }
