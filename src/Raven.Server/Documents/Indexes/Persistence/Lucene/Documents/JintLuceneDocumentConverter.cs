@@ -98,14 +98,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
                 if (_fields.TryGetValue(propertyAsString, out var field) == false)
                     field = _fields[propertyAsString] = IndexField.Create(propertyAsString, new IndexFieldOptions(), _allFields);
-                var isDynamicFieldMap = IsDynamicFieldMap(propertyDescriptor.Value, propertyAsString, field, out var iterator);
+                var isDynamicFieldEnumerable = IsDynamicFieldEnumerable(propertyDescriptor.Value, propertyAsString, field, out var iterator);
                 bool shouldSaveAsBlittable;
                 object value;
                 float? propertyBoost;
                 int numberOfCreatedFields = 0;
                 JsValue actualValue;
                 
-                if (isDynamicFieldMap)
+                if (isDynamicFieldEnumerable)
                 {
                     do
                     {
@@ -137,8 +137,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 newFields += numberOfCreatedFields;
                 
                 BoostDocument(instance, numberOfCreatedFields, documentBoost);
-
-               
             }
 
             return newFields;
@@ -243,7 +241,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 return GetRegularFields(instance, field, CreateValueForIndexing(value, propertyBoost), indexContext, out _);
             }
             
-            bool IsDynamicFieldMap(JsValue propertyDescriptorValue, string propertyAsString, IndexField field, out IEnumerator<JsValue> iterator)
+            bool IsDynamicFieldEnumerable(JsValue propertyDescriptorValue, string propertyAsString, IndexField field, out IEnumerator<JsValue> iterator)
             {
                 iterator = Enumerable.Empty<JsValue>().GetEnumerator();
 
@@ -254,7 +252,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 if (iterator.MoveNext() == false || iterator.Current is null || iterator.Current.IsObject() == false || iterator.Current.IsArray() == true)
                     return false;
 
-                return TryDetectDynamicFieldCreation(propertyAsString, iterator.Current.AsObject(), field) is not null;
+                var valueAsObject = iterator.Current.AsObject();
+
+                return TryDetectDynamicFieldCreation(propertyAsString, valueAsObject, field) is not null
+                       || valueAsObject.HasOwnProperty(SpatialPropertyName);
             }
             
             static bool IsObject(JsValue value)
