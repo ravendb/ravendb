@@ -1125,6 +1125,29 @@ namespace Voron.Data.CompactTrees
             }
         }
 
+        public List<long> AllPages()
+        {
+            var results = new List<long>();
+            Add(_state.RootPage);
+            return results;
+
+            void Add(long p)
+            {
+                Page page = _llt.GetPage(p);
+                var state = new CursorState { Page = page, };
+
+                results.Add(p);
+                if (state.Header->PageFlags.HasFlag(CompactPageFlags.Branch))
+                {
+                    for (int i = 0; i < state.Header->NumberOfEntries; i++)
+                    {
+                        var next = GetValue(ref state, i);
+                        Add(next);
+                    }
+                }
+            }
+        }
+
         private EncodedKey FindPageFor(ReadOnlySpan<byte> key, ref IteratorCursorState cstate)
         {
             cstate._pos = -1;

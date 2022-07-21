@@ -179,7 +179,7 @@ namespace Voron.Impl
             }
         }
 
-        private Set OpenSet(Slice name)
+        public Set OpenSet(Slice name)
         {
             _sets ??= new Dictionary<Slice, Set>(SliceStructComparer.Instance);
             if (_sets.TryGetValue(name, out var set))

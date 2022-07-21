@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -11,7 +12,10 @@ using System.Linq;
 using Sparrow;
 using Voron.Data;
 using Voron.Data.BTrees;
+using Voron.Data.CompactTrees;
+using Voron.Data.Containers;
 using Voron.Data.Fixed;
+using Voron.Data.Sets;
 using Voron.Data.Tables;
 using Voron.Exceptions;
 using Voron.Global;
@@ -33,6 +37,12 @@ namespace Voron.Debugging
         public long NextPageNumber { get; set; }
         public int CountOfTrees { get; set; }
         public int CountOfTables { get; set; }
+        
+        public int CountOfSets { get; set; }
+        
+        public int CountOfContainers { get; set; }
+        
+        public int CountOfPersistentDictionaries { get; set; }
         public VoronPathSetting TempPath { get; set; }
         public VoronPathSetting JournalPath { get; set; }
     }
@@ -47,6 +57,10 @@ namespace Voron.Debugging
         public List<JournalFile> Journals;
         public JournalFile[] FlushedJournals { get; set; }
         public List<Table> Tables;
+        public Dictionary<Slice, long> Containers;
+        public List<Set> Sets;
+        public List<PersistentDictionaryRootHeader> PersistentDictionaries;
+        public List<CompactTree> CompactTrees;
         public ScratchBufferPoolInfo ScratchBufferPoolInfo { get; set; }
         public bool IncludeDetails { get; set; }
         public VoronPathSetting TempPath { get; set; }
@@ -88,7 +102,7 @@ namespace Voron.Debugging
             };
         }
 
-        public DetailedStorageReport Generate(DetailedReportInput input)
+        public unsafe DetailedStorageReport Generate(DetailedReportInput input)
         {
             var dataFile = GenerateDataFileReport(input.NumberOfAllocatedPages, input.NumberOfFreePages, input.NextPageNumber);
 
@@ -99,6 +113,40 @@ namespace Voron.Debugging
             {
                 var treeReport = GetReport(tree, input.IncludeDetails);
                 trees.Add(treeReport);
+                if (tree.State.Flags.HasFlag(TreeFlags.CompactTrees))
+                {
+                    using var it = tree.Iterate(false);
+                    if (it.Seek(Slices.BeforeAllKeys))
+                    {
+                        do
+                        {
+                            ReadResult readResult = tree.Read(it.CurrentKey);
+                            RootObjectType rootObjectType = (RootObjectType)readResult.Reader.ReadByte();
+                            switch (rootObjectType)
+                            {
+                                case RootObjectType.CompactTree:
+                                    var compactTree = tree.CompactTreeFor(it.CurrentKey);
+                                    var nestedReport= GetReport(compactTree, input.IncludeDetails);
+                                    nestedReport.Name = treeReport.Name + "/" + nestedReport.Name;
+                                    trees.Add(nestedReport);
+                                    break;
+                                case RootObjectType.EmbeddedFixedSizeTree:
+                                    continue; // already accounted for
+                                case RootObjectType.FixedSizeTree:
+                                    var header = (FixedSizeTreeHeader.Large*)readResult.Reader.Base;
+                                    var set = tree.FixedTreeFor(it.CurrentKey, (byte)header->ValueSize);
+                                    var nesteSetReport = GetReport(set, input.IncludeDetails);
+                                    nesteSetReport.Name = treeReport.Name + "/" + nesteSetReport.Name;
+                                    trees.Add(nesteSetReport);
+                                    break; 
+                                default:
+                                    throw new ArgumentOutOfRangeException(rootObjectType.ToString());
+
+                            }
+                            
+                        } while (it.MoveNext());
+                    }
+                }
 
                 if(input.IncludeDetails)
                     continue;
@@ -107,6 +155,38 @@ namespace Voron.Debugging
                     _treesAllocatedSpaceInBytes += treeReport.AllocatedSpaceInBytes;
                 else
                     _streamsAllocatedSpaceInBytes += treeReport.Streams.AllocatedSpaceInBytes;
+            }
+
+            foreach (Set set in input.Sets)
+            {
+                trees.Add(GetReport(set, input.IncludeDetails));
+            }
+
+            foreach (var (name, page) in input.Containers)
+            {
+                trees.Add(GetContainerReport(name, page, input.IncludeDetails));
+            }
+
+            foreach (PersistentDictionaryRootHeader dic in input.PersistentDictionaries)
+            {
+                Page page = _tx.GetPage(dic.PageNumber);
+                var header = (PersistentDictionaryHeader*)page.DataPointer;
+
+                int usedPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(page.OverflowSize);
+                trees.Add(new TreeReport
+                {
+                    Name = "Dictionary #" + dic.PageNumber,
+                    AllocatedSpaceInBytes = PagesToBytes(usedPages),
+                    UsedSpaceInBytes = header->TableSize,
+                    OverflowPages = usedPages,
+                    PageCount = usedPages,
+                    NumberOfEntries = 1,
+                });
+            }
+
+            foreach (CompactTree compactTree in input.CompactTrees)
+            {
+                trees.Add(GetReport(compactTree, input.IncludeDetails));
             }
 
             foreach (var fst in input.FixedSizeTrees)
@@ -313,6 +393,100 @@ namespace Voron.Debugging
             return treeReport;
         }
 
+        public TreeReport GetReport(Set set, bool includeDetails)
+        {
+            List<double> pageDensities = null;
+            if (includeDetails)
+            {
+                pageDensities = GetPageDensities(set);
+            }
+            int pageCount = set.State.BranchPages + set.State.LeafPages;
+            double density = pageDensities?.Average() ?? -1;
+            var treeReport = new TreeReport
+            {
+                Type = RootObjectType.Set,
+                Name = set.Name.ToString(),
+                BranchPages = set.State.BranchPages,
+                Depth = set.State.Depth,
+                NumberOfEntries = set.State.NumberOfEntries,
+                LeafPages = set.State.LeafPages,
+                PageCount = pageCount,
+                Density = density,
+                AllocatedSpaceInBytes = PagesToBytes(pageCount),
+                UsedSpaceInBytes = includeDetails ? (long)(PagesToBytes(pageCount) * density) : -1,
+            };
+
+            return treeReport;
+        }
+        
+        public TreeReport GetReport(CompactTree ct, bool includeDetails)
+        {
+            List<double> pageDensities = null;
+            if (includeDetails)
+            {
+                pageDensities = GetPageDensities(ct);
+            }
+            long pageCount = ct.State.BranchPages + ct.State.LeafPages;
+            double density = pageDensities?.Average() ?? -1;
+            var treeReport = new TreeReport
+            {
+                Type = RootObjectType.Set,
+                Name = ct.Name.ToString(),
+                BranchPages = ct.State.BranchPages,
+                NumberOfEntries = ct.State.NumberOfEntries,
+                LeafPages = ct.State.LeafPages,
+                PageCount = pageCount,
+                Density = density,
+                AllocatedSpaceInBytes = PagesToBytes(pageCount),
+                UsedSpaceInBytes = includeDetails ? (long)(PagesToBytes(pageCount) * density) : -1,
+            };
+
+            return treeReport;
+        }
+        
+        public TreeReport GetContainerReport(Slice name, long page, bool includeDetails)
+        {
+            List<double> pageDensities = null;
+
+            if (includeDetails)
+            {
+                var allPages = Container.GetAllPagesSet(_tx, page).Iterate();
+                pageDensities = new();
+                while (allPages.MoveNext())
+                {
+                    Page cur = _tx.GetPage(allPages.Current);
+                    if (cur.IsOverflow)
+                    {
+                        int numberOfOverflowPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(cur.OverflowSize);
+                        pageDensities.Add((double)cur.OverflowSize / (numberOfOverflowPages * Constants.Storage.PageSize));
+                    }
+                    else
+                    {
+                        var container = new Container(cur);
+                        pageDensities.Add((double)container.SpaceUsed() / Constants.Storage.PageSize);
+                    }
+                }
+            }
+            
+            var root = new Container(_tx.GetPage(page));
+            double density = pageDensities?.Average() ?? -1;
+            int totalPages = root.Header.NumberOfPages + root.Header.NumberOfOverflowPages;
+            var treeReport = new TreeReport
+            {
+                Type = RootObjectType.Set,
+                Name = name.ToString(),
+                NumberOfEntries = root.GetNumberOfEntries(),
+                LeafPages = root.Header.NumberOfPages,
+                OverflowPages = root.Header.NumberOfOverflowPages,
+                PageCount = totalPages,
+                Density = density,
+                AllocatedSpaceInBytes = PagesToBytes(totalPages),
+                UsedSpaceInBytes = includeDetails ?(long)(PagesToBytes(totalPages) * density): -1,
+            };
+
+            return treeReport;
+        }
+        
         public TreeReport GetReport(Tree tree, bool includeDetails)
         {
             List<double> pageDensities = null;
@@ -571,6 +745,46 @@ namespace Voron.Debugging
                         densities.Add(((double)new TreePage(page.Pointer, Constants.Storage.PageSize).SizeUsed) / Constants.Storage.PageSize);
                     }
                 }
+            }
+            return densities;
+        }
+        
+        public static List<double> GetPageDensities(Set set)
+        {
+            var allPages = set.AllPages();
+            if (allPages.Count == 0)
+                return null;
+
+            var densities = new List<double>();
+
+            foreach (var p in allPages)
+            {
+                var page = set.Llt.GetPage(p);
+                var state = new SetCursorState { Page = page };
+                if (state.IsLeaf)
+                {
+                    densities.Add((double)new SetLeafPage(page).SpaceUsed / Constants.Storage.PageSize);
+                }
+                else
+                {
+                    densities.Add((double)new SetBranchPage(page).SpaceUsed / Constants.Storage.PageSize);
+                }
+            }
+            return densities;
+        }
+        
+        public static List<double> GetPageDensities(CompactTree ct)
+        {
+            var allPages = ct.AllPages();
+            if (allPages.Count == 0)
+                return null;
+
+            var densities = new List<double>();
+            foreach (var p in allPages)
+            {
+                var page = ct.Llt.GetPage(p);
+                var state = new CompactTree.CursorState { Page = page };
+                densities.Add((double)state.Header->FreeSpace / Constants.Storage.PageSize);
             }
             return densities;
         }

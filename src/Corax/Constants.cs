@@ -39,7 +39,7 @@ namespace Corax
 
         public static class IndexWriter
         {
-            public const long Version = 54_000;
+            public const long Version = 54_001;
             
             public static readonly Slice PostingListsSlice, EntriesContainerSlice, FieldsSlice, NumberOfEntriesSlice, SuggestionsFieldsSlice, IndexVersionSlice;
             public const int IntKnownFieldMask = unchecked((int)0x80000000);

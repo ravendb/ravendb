@@ -35,6 +35,7 @@ namespace Voron.Data.Containers
 
         public const int FreeListOffset = 0;
         public const int AllPagesOffset = 1;
+        public const int NumberOfEntriesOffset = 2;
 
         public int CeilingOfOffsets => NumberOfOffsets * sizeof(Container.ItemMetadata) + PageHeader.SizeOf;
     }

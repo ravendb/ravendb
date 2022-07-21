@@ -20,8 +20,10 @@ using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron.Data;
 using Voron.Data.BTrees;
+using Voron.Data.CompactTrees;
 using Voron.Data.Compression;
 using Voron.Data.Fixed;
+using Voron.Data.Sets;
 using Voron.Data.Tables;
 using Voron.Debugging;
 using Voron.Exceptions;
@@ -35,6 +37,7 @@ using Voron.Schema;
 using Voron.Util;
 using Voron.Util.Conversion;
 using Constants = Voron.Global.Constants;
+using Container = Voron.Data.Containers.Container;
 using NativeMemory = Sparrow.Utils.NativeMemory;
 
 namespace Voron
@@ -1016,6 +1019,9 @@ namespace Voron
 
             var countOfTrees = 0;
             var countOfTables = 0;
+            var countOfSets = 0;
+            var countOfContainers = 0;
+            var countOfPersistentDictionaries = 0;
             using (var rootIterator = tx.LowLevelTransaction.RootObjects.Iterate(false))
             {
                 if (rootIterator.Seek(Slices.BeforeAllKeys))
@@ -1026,24 +1032,27 @@ namespace Voron
                         var type = tx.GetRootObjectType(currentKey);
                         switch (type)
                         {
+                            case RootObjectType.FixedSizeTree:
                             case RootObjectType.VariableSizeTree:
+                            case RootObjectType.CompactTree:
                                 countOfTrees++;
                                 break;
                             case RootObjectType.EmbeddedFixedSizeTree:
                                 break;
-                            case RootObjectType.FixedSizeTree:
-                                countOfTrees++;
-                                break;
                             case RootObjectType.Table:
                                 countOfTables++;
                                 break;
-                            case RootObjectType.CompactTree:
                             case RootObjectType.Set:
+                                countOfSets++;
+                                break;
                             case RootObjectType.Container:
+                                countOfContainers++;
+                                break;
                             case RootObjectType.PersistentDictionary:
-                                throw new NotImplementedException($"Not implemented for Corax structures.");
+                                countOfPersistentDictionaries++;
+                                break;
                             default:
-                                throw new ArgumentOutOfRangeException();
+                                throw new ArgumentOutOfRangeException(nameof(type), type.ToString());
                         }
                     }
                     while (rootIterator.MoveNext());
@@ -1059,6 +1068,9 @@ namespace Voron
                 NextPageNumber = NextPageNumber,
                 CountOfTrees = countOfTrees,
                 CountOfTables = countOfTables,
+                CountOfContainers = countOfContainers,
+                CountOfSets = countOfSets,
+                CountOfPersistentDictionaries = countOfPersistentDictionaries,
                 Journals = Journal.Files.ToList(),
                 FlushedJournals = Journal.Applicator.JournalsToDelete,
                 TempPath = Options.TempPath,
@@ -1073,9 +1085,31 @@ namespace Voron
 
             var totalCryptoBufferSize = GetTotalCryptoBufferSize();
 
-            var trees = new List<Tree>();
-            var fixedSizeTrees = new List<FixedSizeTree>();
-            var tables = new List<Table>();
+            var detailedReportInput = new DetailedReportInput
+            {
+                NumberOfAllocatedPages = numberOfAllocatedPages,
+                NumberOfFreePages = numberOfFreePages,
+                NextPageNumber = NextPageNumber,
+                Journals = Journal.Files.ToList(),
+                FlushedJournals = Journal.Applicator.JournalsToDelete,
+                LastFlushedTransactionId = Journal.Applicator.LastFlushedTransactionId,
+                LastFlushedJournalId = Journal.Applicator.LastFlushedJournalId,
+                TotalWrittenButUnsyncedBytes = Journal.Applicator.TotalWrittenButUnsyncedBytes,
+                Trees = new(),
+                FixedSizeTrees = new(),
+                Tables = new(),
+                Containers =  new(),
+                Sets = new(),
+                PersistentDictionaries = new(),
+                CompactTrees = new(),
+                IncludeDetails = includeDetails,
+                ScratchBufferPoolInfo = _scratchBufferPool.InfoForDebug(PossibleOldestReadTransaction(tx.LowLevelTransaction)),
+                TempPath = Options.TempPath,
+                JournalPath = (Options as StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)?.JournalPath,
+                TotalEncryptionBufferSize = totalCryptoBufferSize,
+                InMemoryStorageState = GetInMemoryStorageState(tx.LowLevelTransaction)
+            };
+            
             using (var rootIterator = tx.LowLevelTransaction.RootObjects.Iterate(false))
             {
                 if (rootIterator.Seek(Slices.BeforeAllKeys))
@@ -1088,16 +1122,15 @@ namespace Voron
                         {
                             case RootObjectType.VariableSizeTree:
                                 var tree = tx.ReadTree(currentKey);
-                                trees.Add(tree);
+                                detailedReportInput.Trees.Add(tree);
                                 break;
                             case RootObjectType.EmbeddedFixedSizeTree:
                                 break;
                             case RootObjectType.FixedSizeTree:
-
                                 if (SliceComparer.AreEqual(currentKey, NewPageAllocator.AllocationStorage)) // will be counted inside pre allocated buffers report
                                     continue;
 
-                                fixedSizeTrees.Add(tx.FixedTreeFor(currentKey));
+                                detailedReportInput.FixedSizeTrees.Add(tx.FixedTreeFor(currentKey));
                                 break;
                             case RootObjectType.Table:
                                 var tableTree = tx.ReadTree(currentKey, RootObjectType.Table);
@@ -1106,10 +1139,26 @@ namespace Voron
                                 var tableSchema = TableSchema.ReadFrom(tx.Allocator, writtenSchemaData, writtenSchemaDataSize);
 
                                 var table = tx.OpenTable(tableSchema, currentKey);
-                                tables.Add(table);
+                                detailedReportInput.Tables.Add(table);
+                                break;
+                            case RootObjectType.Container:
+                                long container = tx.OpenContainer(currentKey);
+                                detailedReportInput.Containers[currentKey] = container;
+                                break;
+                            case RootObjectType.Set:
+                                var set = tx.OpenSet(currentKey);
+                                detailedReportInput.Sets.Add(set);
+                                break;
+                            case RootObjectType.CompactTree:
+                                var ct = tx.CompactTreeFor(currentKey);
+                                detailedReportInput.CompactTrees.Add(ct);
+                                break;
+                            case RootObjectType.PersistentDictionary:
+                                var header = *(PersistentDictionaryRootHeader*)rootIterator.CreateReaderForCurrent().Base;
+                                detailedReportInput.PersistentDictionaries.Add(header);
                                 break;
                             default:
-                                throw new ArgumentOutOfRangeException();
+                                throw new ArgumentOutOfRangeException(nameof(type), type.ToString());
                         }
                     }
                     while (rootIterator.MoveNext());
@@ -1117,27 +1166,7 @@ namespace Voron
             }
 
             var generator = new StorageReportGenerator(tx.LowLevelTransaction);
-
-            return generator.Generate(new DetailedReportInput
-            {
-                NumberOfAllocatedPages = numberOfAllocatedPages,
-                NumberOfFreePages = numberOfFreePages,
-                NextPageNumber = NextPageNumber,
-                Journals = Journal.Files.ToList(),
-                FlushedJournals = Journal.Applicator.JournalsToDelete,
-                LastFlushedTransactionId = Journal.Applicator.LastFlushedTransactionId,
-                LastFlushedJournalId = Journal.Applicator.LastFlushedJournalId,
-                TotalWrittenButUnsyncedBytes = Journal.Applicator.TotalWrittenButUnsyncedBytes,
-                Trees = trees,
-                FixedSizeTrees = fixedSizeTrees,
-                Tables = tables,
-                IncludeDetails = includeDetails,
-                ScratchBufferPoolInfo = _scratchBufferPool.InfoForDebug(PossibleOldestReadTransaction(tx.LowLevelTransaction)),
-                TempPath = Options.TempPath,
-                JournalPath = (Options as StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)?.JournalPath,
-                TotalEncryptionBufferSize = totalCryptoBufferSize,
-                InMemoryStorageState = GetInMemoryStorageState(tx.LowLevelTransaction)
-            });
+            return generator.Generate(detailedReportInput);
         }
 
         public InMemoryStorageState GetInMemoryStorageState(LowLevelTransaction tx)
