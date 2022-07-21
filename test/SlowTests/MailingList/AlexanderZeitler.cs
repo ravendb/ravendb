@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -29,8 +30,9 @@ namespace SlowTests.MailingList
             public string HashedPassword { get; set; }
         }
 
-        [Fact]
-        public void It_should_be_found()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void It_should_be_found(Options options)
         {
             var customer = new Customer()
             {
@@ -40,7 +42,7 @@ namespace SlowTests.MailingList
             Order order = null;
 
             // red
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 // green
                 //var documentStore = new DocumentStore()

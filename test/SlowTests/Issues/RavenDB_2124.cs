@@ -8,6 +8,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,10 +20,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void IncludeWithBadClrTypeShouldWorkForBothLoadsAndQueries()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void IncludeWithBadClrTypeShouldWorkForBothLoadsAndQueries(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var commands = store.Commands())
                 {

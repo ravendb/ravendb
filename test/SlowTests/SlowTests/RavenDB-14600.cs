@@ -59,7 +59,7 @@ namespace SlowTests.SlowTests
             }
         }
 
-        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenTheory(RavenTestCategory.Facets | RavenTestCategory.Querying | RavenTestCategory.Sharding)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void CanIncludeComplexFacetResult(Options options)
         {

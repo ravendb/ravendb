@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Linq;
 using Raven.Client.Documents;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -101,10 +102,11 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public void Can_Use_Includes_Within_Multi_Load()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void Can_Use_Includes_Within_Multi_Load(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -190,10 +192,11 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public void Can_Query_With_Include_By_Primary_String_Property()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void Can_Query_With_Include_By_Primary_String_Property(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -263,10 +266,11 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public void Can_Include_By_Primary_List_Of_Strings_Using_IIncludeBuilder()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void Can_Include_By_Primary_List_Of_Strings_Using_IIncludeBuilder(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -395,8 +399,9 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public void Can_Include_By_List_Of_Secondary_String_Property_Using_IIncludeBuilder()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void Can_Include_By_List_Of_Secondary_String_Property_Using_IIncludeBuilder(Options options)
         {
             using (var store = GetDocumentStore())
             {

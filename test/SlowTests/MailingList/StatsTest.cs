@@ -3,6 +3,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -98,10 +99,11 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
-        public void WeeklyStatsIndex_ReturnsCorrectStats()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void WeeklyStatsIndex_ReturnsCorrectStats(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new WeeklyStatsIndex().Execute(store);
                 using (var session = store.OpenSession())

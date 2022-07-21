@@ -43,8 +43,8 @@ namespace SlowTests.Client.Queries
             public List<RoleData> Roles;
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public async Task Can_Include_Secondary_Level_With_Alias(Options options)
         {
             using (var store = GetDocumentStore(options))

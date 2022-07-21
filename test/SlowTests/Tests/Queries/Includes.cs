@@ -4,6 +4,7 @@ using Xunit.Abstractions;
 
 using FastTests;
 using Raven.Client.Documents;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Tests.Queries
@@ -14,10 +15,11 @@ namespace SlowTests.Tests.Queries
         {
         }
 
-        [Fact]
-        public void Can_use_includes_within_multi_load()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void Can_use_includes_within_multi_load(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -128,8 +130,9 @@ namespace SlowTests.Tests.Queries
             }
         }
 
-        [Fact]
-        public void can_query_with_include_by_primary_string_property()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void can_query_with_include_by_primary_string_property(Options options)
         {
             using (var store = GetDocumentStore())
             {
@@ -167,8 +170,9 @@ namespace SlowTests.Tests.Queries
             }
         }
 
-        [Fact]
-        public void can_query_with_include_by_primary_valuetype_property()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void can_query_with_include_by_primary_valuetype_property(Options options)
         {
             using (var store = GetDocumentStore())
             {
