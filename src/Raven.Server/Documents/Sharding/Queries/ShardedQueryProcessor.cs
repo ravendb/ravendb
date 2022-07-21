@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Sharding;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries;
@@ -306,23 +306,39 @@ public class ShardedQueryProcessor : IDisposable
             return ValueTask.CompletedTask;
         }
 
-        return HandleIncludesAsync(missing);
+        return HandleMissingIncludesAsync(missing);
     }
 
-    private async ValueTask HandleIncludesAsync(HashSet<string> missing)
+    private async ValueTask HandleMissingIncludesAsync(HashSet<string> missing)
     {
         var includeCommands = new Dictionary<int, ShardedQueryCommand>();
 
-        IDisposable toDispose = null;
-        var missingAsSlice = missing.Select(key =>
-        {
-            toDispose?.Dispose();
-            toDispose = DocumentIdWorker.GetLowerIdSliceAndStorageKey(_context, key, out var lowerId, out _);
-            return lowerId;
-        });
+        const string listParameterName = "p0";
 
-        GenerateLoadByIdQueries(missingAsSlice, includeCommands, _context);
-        toDispose?.Dispose();
+        var shards = ShardLocator.GetDocumentIdsByShards(_context, _parent.DatabaseContext, missing);
+
+        var documentQuery = new DocumentQuery<dynamic>(null, null, "@all_docs", false);
+        documentQuery.WhereIn("id()", new List<object>());
+        var query = documentQuery.ToString();
+
+        foreach ((int shardId, ShardLocator.IdsByShard<string> documentIds) in shards)
+        {
+            //if (_filteredShardIndexes?.Contains(shardId) == false)
+            //    continue;
+
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "have a way to turn the _query into a json file and then we'll modify that, instead of building it manually");
+
+            var queryTemplate = new DynamicJsonValue
+            {
+                [nameof(IndexQuery.QueryParameters)] = new DynamicJsonValue
+                {
+                    [listParameterName] = documentIds.Ids
+                },
+                [nameof(IndexQuery.Query)] = query
+            };
+
+            includeCommands[shardId] = new ShardedQueryCommand(_parent, _context.ReadObject(queryTemplate, "query"), null);
+        }
 
         var tasks = new List<Task>();
         foreach (var (shardNumber, cmd) in includeCommands)

@@ -144,8 +144,18 @@ namespace Raven.Server.Documents.Includes
                 try
                 {
                     includedDoc = _storage.Get(_context, includedDocId);
-                    if (includedDoc == null && includeMissingAsNull == false)
+                    if (includedDoc == null)
+                    {
+                        if (includeMissingAsNull)
+                        {
+                            result.Add(new Document
+                            {
+                                Id = _context.GetLazyString(includedDocId)
+                            });
+                        }
+
                         continue;
+                    }
                 }
                 catch (DocumentConflictException e)
                 {

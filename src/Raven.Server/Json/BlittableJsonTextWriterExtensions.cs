@@ -750,12 +750,8 @@ namespace Raven.Server.Json
             }
             else if (includes is List<BlittableJsonReaderObject> includeObjects)
             {
-                if (includeObjects.Count != 0)
-                    throw new NotSupportedException("Cannot write query includes of List<BlittableJsonReaderObject>, but got non zero response");
-
                 writer.WritePropertyName(nameof(result.Includes));
-                writer.WriteStartObject();
-                writer.WriteEndObject();
+                await writer.WriteIncludesAsync(includeObjects, token);
                 writer.WriteComma();
             }
             else
@@ -1642,7 +1638,7 @@ namespace Raven.Server.Json
 
         public static void WriteDocument(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, Document document, bool metadataOnly, Func<LazyStringValue, bool> filterMetadataProperty = null)
         {
-            if (document == null)
+            if (document?.Data == null)
             {
                 writer.WriteNull();
                 return;
