@@ -16,7 +16,6 @@ namespace SlowTests.Issues
         {
         }
 
-        //TODO
         [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void SessionWideNoTrackingShouldWork(Options options)
