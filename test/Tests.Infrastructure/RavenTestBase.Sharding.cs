@@ -21,10 +21,13 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Sharding;
+using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Documents;
 using Raven.Server.Documents.PeriodicBackup;
+using Raven.Server.Documents.Subscriptions;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
@@ -41,6 +44,7 @@ public partial class RavenTestBase
     public class ShardingTestBase
     {
         public ShardedBackupTestsBase Backup;
+        public ShardedSubscriptionTestBase Subscriptions;
 
         private readonly RavenTestBase _parent;
         public readonly ReshardingTestBase Resharding;
@@ -50,6 +54,7 @@ public partial class RavenTestBase
             _parent = parent ?? throw new ArgumentNullException(nameof(parent));
             Backup = new ShardedBackupTestsBase(_parent);
             Resharding = new ReshardingTestBase(_parent);
+            Subscriptions = new ShardedSubscriptionTestBase(_parent);
         }
 
         public IDocumentStore GetDocumentStore(Options options = null, [CallerMemberName] string caller = null, DatabaseTopology[] shards = null)
@@ -76,6 +81,38 @@ public partial class RavenTestBase
             return _parent.GetDocumentStore(shardedOptions, caller);
         }
 
+        public Options GetOptionsForCluster(List<RavenServer> nodes, int shards, int shardReplicationFactor, int orchestratorReplicationFactor)
+        {
+            var options = new Options
+            {
+                ModifyDatabaseRecord = r =>
+                {
+                    r.Sharding = new ShardingConfiguration
+                    {
+                        Shards = new DatabaseTopology[shards],
+                        Orchestrator = new OrchestratorConfiguration
+                        {
+                            Topology = new OrchestratorTopology
+                            {
+                                ReplicationFactor = orchestratorReplicationFactor
+                            }
+                        }
+                    };
+
+                    for (int i = 0; i < r.Sharding.Shards.Length; i++)
+                    {
+                        r.Sharding.Shards[i] = new DatabaseTopology
+                        {
+                            ReplicationFactor = shardReplicationFactor
+                        };
+                    }
+                }
+            };
+
+
+            return options;
+        }
+
         public async Task<int> GetShardNumber(IDocumentStore store, string id)
         {
             var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
@@ -83,15 +120,22 @@ public partial class RavenTestBase
             return ShardHelper.GetShardNumber(record.Sharding.BucketRanges, bucket);
         }
 
-        public async Task<IEnumerable<DocumentDatabase>> GetShardsDocumentDatabaseInstancesFor(IDocumentStore store, string database = null)
+        public async Task<ShardingConfiguration> GetShardingConfigurationAsync(IDocumentStore store)
         {
-            var dbs = new List<DocumentDatabase>();
-            foreach (var task in _parent.Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(database ?? store.Database))
-            {
-                dbs.Add(await task);
-            }
+            var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+            return record.Sharding;
+        }
 
-            return dbs;
+        public async IAsyncEnumerable<DocumentDatabase> GetShardsDocumentDatabaseInstancesFor(IDocumentStore store, string database = null)
+        {
+            var servers = _parent.GetServers();
+            foreach (var server in servers)
+            {
+                foreach (var task in server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(database ?? store.Database))
+                {
+                    yield return await task;
+                }
+            }
         }
 
         public bool AllShardHaveDocs(IDictionary<string, List<DocumentDatabase>> servers, long count = 1L)
@@ -111,6 +155,33 @@ public partial class RavenTestBase
             }
 
             return true;
+        }
+
+        public class ShardedSubscriptionTestBase
+        {
+            private readonly RavenTestBase _parent;
+
+            public ShardedSubscriptionTestBase(RavenTestBase parent)
+            {
+                _parent = parent ?? throw new ArgumentNullException(nameof(parent));
+            }
+
+            public async Task AssertNoItemsInTheResendQueueAsync(IDocumentStore store, string subscriptionId)
+            {
+                var id = long.Parse(subscriptionId);
+                var shards = _parent.Sharding.GetShardsDocumentDatabaseInstancesFor(store);
+                await foreach (var shard in shards)
+                {
+                    await AssertWaitForValueAsync(() =>
+                    {
+                        using (shard.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                        using (ctx.OpenReadTransaction())
+                        {
+                            return Task.FromResult(SubscriptionConnectionsStateBase.GetNumberOfResendDocuments(shard.ServerStore, store.Database, SubscriptionType.Document, id));
+                        }
+                    }, 0);
+                }
+            }
         }
 
         public class ShardedBackupTestsBase
@@ -422,14 +493,7 @@ public partial class RavenTestBase
 
             public async Task MoveShardForId(IDocumentStore store, string id, List<RavenServer> servers = null)
             {
-                if (_parent.Servers.Count > 0)
-                {
-                    servers ??= _parent.Servers;
-                }
-                else
-                {
-                    servers ??= new List<RavenServer> { _parent.Server };
-                }
+                servers ??= _parent.GetServers();
 
                 var server = servers[0].ServerStore;
 
@@ -447,7 +511,7 @@ public partial class RavenTestBase
                     Assert.NotNull(user);
                 }
 
-                var result = await server.Sharding.StartBucketMigration(store.Database, bucket, location, newLocation);
+                var result = await server.Sharding.StartBucketMigration(store.Database, bucket, location, newLocation, RaftIdGenerator.NewId());
                 var migrationIndex = result.Index;
 
                 var exists = _parent.WaitForDocument<dynamic>(store, id, predicate: null, database: ShardHelper.ToShardName(store.Database, newLocation));
@@ -458,7 +522,7 @@ public partial class RavenTestBase
                     var user = await session.LoadAsync<dynamic>(id);
                     var changeVector = session.Advanced.GetChangeVectorFor(user);
 
-                    result = await server.Sharding.SourceMigrationCompleted(store.Database, bucket, migrationIndex, changeVector);
+                    result = await server.Sharding.SourceMigrationCompleted(store.Database, bucket, migrationIndex, changeVector, RaftIdGenerator.NewId());
                     await _parent.Cluster.WaitForRaftIndexToBeAppliedOnClusterNodesAsync(result.Index, servers);
                 }
 
@@ -467,7 +531,7 @@ public partial class RavenTestBase
                     if (destination.AllNodes.Contains(s.ServerStore.NodeTag) == false)
                         continue;
 
-                    result = await s.ServerStore.Sharding.DestinationMigrationConfirm(store.Database, bucket, migrationIndex);
+                    result = await s.ServerStore.Sharding.DestinationMigrationConfirm(store.Database, bucket, migrationIndex, RaftIdGenerator.NewId());
                 }
                 await _parent.Cluster.WaitForRaftIndexToBeAppliedOnClusterNodesAsync(result.Index, servers);
 
@@ -476,7 +540,7 @@ public partial class RavenTestBase
                     if (source.AllNodes.Contains(s.ServerStore.NodeTag) == false)
                         continue;
 
-                    result = await s.ServerStore.Sharding.SourceMigrationCleanup(store.Database, bucket, migrationIndex);
+                    result = await s.ServerStore.Sharding.SourceMigrationCleanup(store.Database, bucket, migrationIndex, RaftIdGenerator.NewId());
                 }
                 await _parent.Cluster.WaitForRaftIndexToBeAppliedOnClusterNodesAsync(result.Index, servers);
             }

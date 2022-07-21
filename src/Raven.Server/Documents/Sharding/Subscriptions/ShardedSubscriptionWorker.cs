@@ -59,6 +59,7 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
                 _state.Batches.Add(batch);
 
                 _state.NotifyHasMoreDocs();
+
                 await using (_processingCts.Token.Register(batch.SetCancel))
                 {
                     // wait for ShardedSubscriptionConnection to redirect the batch to client worker

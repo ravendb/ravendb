@@ -226,7 +226,15 @@ namespace Sparrow.Json
                                 .MakeGenericMethod(keyType);
                             return Expression.Call(methodToCall, json, Expression.Constant(propertyName));
                         }
-                        throw new NotSupportedException(propertyType.FullName + " is not supported by the deserializer, please add support to it");
+
+                        if (keyType.IsPrimitive)
+                        {
+                            var methodToCall = typeof(JsonDeserializationBase).GetMethod(nameof(ToDictionaryOfPrimitiveKeys), BindingFlags.NonPublic | BindingFlags.Static)
+                                .MakeGenericMethod(keyType);
+                            return Expression.Call(methodToCall, json, Expression.Constant(propertyName));
+                        }
+
+                        throw new NotSupportedException($"{propertyName} of type {propertyType.FullName} is not supported by the deserializer, please add support to it");
                     }
                     if (valueType == typeof(Dictionary<string, string[]>))
                     {
@@ -505,6 +513,29 @@ namespace Sparrow.Json
                 if (obj.TryGet(propertyName, out val))
                 {
                     dic[propertyName] = (TEnum)Enum.Parse(typeof(TEnum), val, true);
+                }
+            }
+            return dic;
+        }
+
+        private static Dictionary<TKey, string> ToDictionaryOfPrimitiveKeys<TKey>(BlittableJsonReaderObject json, string name)
+        {
+            var dic = new Dictionary<TKey, string>();
+
+            BlittableJsonReaderObject obj;
+            //should a "null" exist in json? -> not sure that "null" can exist there
+            if (json.TryGet(name, out obj) == false || obj == null)
+                return dic;
+
+            var type = typeof(TKey);
+
+            foreach (var propertyName in obj.GetPropertyNames())
+            {
+                object val;
+                if (obj.TryGet(propertyName, out val))
+                {
+                    var key = (TKey)Convert.ChangeType(propertyName, type);
+                    dic[key] = val?.ToString();
                 }
             }
             return dic;

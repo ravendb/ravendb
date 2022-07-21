@@ -16,16 +16,21 @@ namespace Raven.Client.Documents.Subscriptions
     public class SubscriptionState : IDatabaseTask, IDatabaseTaskStatus
     {
         public string Query { get; set; }
-        public string ChangeVectorForNextBatchStartingPoint { get; set; }
-        public Dictionary<string, string> ChangeVectorForNextBatchStartingPointPerShard { get; set; }
         public long SubscriptionId { get; set; }
         public string SubscriptionName { get; set; }
         public string MentorNode { get; set; }
-        public string NodeTag { get; set; }
         public DateTime? LastBatchAckTime { get; set; }  // Last time server made some progress with the subscriptions docs  
         public DateTime? LastClientConnectionTime { get; set; } // Last time any client has connected to server (connection dead or alive)
-        
         public bool Disabled { get; set; }
+
+        // for non-sharded
+        public string NodeTag { get; set; }
+        public string ChangeVectorForNextBatchStartingPoint { get; set; }
+
+        // for sharded
+        public Dictionary<string, string> ChangeVectorForNextBatchStartingPointPerShard { get; set; }
+        public Dictionary<string, string> NodeTagPerShard { get; set; }
+        public Dictionary<long, string> IgnoreBucketLesserChangeVector { get; set; }
 
         public ulong GetTaskKey()
         {
@@ -65,7 +70,9 @@ namespace Raven.Client.Documents.Subscriptions
                 [nameof(LastBatchAckTime)] = LastBatchAckTime,
                 [nameof(LastClientConnectionTime)] = LastClientConnectionTime,
                 [nameof(Disabled)] = Disabled,
-                [nameof(ChangeVectorForNextBatchStartingPointPerShard)] = ChangeVectorForNextBatchStartingPointPerShard?.ToJson()
+                [nameof(ChangeVectorForNextBatchStartingPointPerShard)] = ChangeVectorForNextBatchStartingPointPerShard?.ToJson(),
+                [nameof(IgnoreBucketLesserChangeVector)] = IgnoreBucketLesserChangeVector?.ToJsonWithPrimitiveKey(),
+                [nameof(NodeTagPerShard)] = NodeTagPerShard?.ToJson(),
             };
 
             return djv;

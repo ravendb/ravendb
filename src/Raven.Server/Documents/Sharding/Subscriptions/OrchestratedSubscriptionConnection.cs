@@ -6,6 +6,8 @@
 
 using System;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Subscriptions;
+using Raven.Client.ServerWide;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.Subscriptions.Stats;
 using Raven.Server.Documents.Subscriptions.SubscriptionProcessor;
@@ -57,20 +59,38 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
             };
         }
 
-        protected override async Task OnClientAckAsync()
+        protected override async Task OnClientAckAsync(string clientReplyChangeVector)
+        {
+            await NotifyShardAboutBatchCompletion();
+
+            await SendConfirmAsync(_databaseContext.Time.GetUtcNow());
+        }
+
+        protected override async Task<bool> WaitForChangedDocsAsync(SubscriptionConnectionsStateBase state, Task pendingReply)
+        {
+            // nothing was sent to the client, but we need to let the shard know he can continue
+            await NotifyShardAboutBatchCompletion();
+            
+            return await base.WaitForChangedDocsAsync(state, pendingReply);
+        }
+
+        protected override string WhosTaskIsIt(DatabaseTopology topology, SubscriptionState subscriptionState) => _serverStore.WhoseTaskIsIt(topology, subscriptionState, subscriptionState);
+
+        private async Task NotifyShardAboutBatchCompletion()
         {
             var batch = _processor.CurrentBatch;
 
-            // let sharded subscription worker know that we sent the batch to the client and received an ack request from it
-            batch.SendBatchToClientTcs.TrySetResult();
+            if (batch != null)
+            {
+                // let sharded subscription worker know that we sent the batch to the client and received an ack request from it
+                batch.SendBatchToClientTcs.TrySetResult();
 
-            // wait for sharded subscription worker to send ack to the shard subscription connection
-            // and receive the confirm from the shard subscription connection
-            await batch.ConfirmFromShardSubscriptionConnectionTcs.Task;
-
-            await SendConfirmAsync(_databaseContext.Time.GetUtcNow());
-
-            _processor.CurrentBatch = null;
+                // wait for sharded subscription worker to send ack to the shard subscription connection
+                // and receive the confirm from the shard subscription connection
+                await batch.ConfirmFromShardSubscriptionConnectionTcs.Task;
+            
+                _processor.CurrentBatch = null;
+            }
         }
 
         public override Task SendNoopAckAsync() => Task.CompletedTask;
@@ -99,7 +119,7 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
             return sentDocument.ChangeVector;
         }
 
-        protected override Task UpdateStateAfterBatchSentAsync(string lastChangeVectorSentInThisBatch)
+        protected override Task UpdateStateAfterBatchSentAsync(IChangeVectorOperationContext context, string lastChangeVectorSentInThisBatch)
         {
             _processor.CurrentBatch.LastSentChangeVectorInBatch = lastChangeVectorSentInThisBatch;
             return Task.CompletedTask;

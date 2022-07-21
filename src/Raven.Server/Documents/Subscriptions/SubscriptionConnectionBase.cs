@@ -301,7 +301,7 @@ namespace Raven.Server.Documents.Subscriptions
 
                             if (lastChangeVectorSentInThisBatch != null)
                             {
-                                await UpdateStateAfterBatchSentAsync(lastChangeVectorSentInThisBatch);
+                                await UpdateStateAfterBatchSentAsync(clusterOperationContext, lastChangeVectorSentInThisBatch);
                             }
                         }
                     }
@@ -333,7 +333,7 @@ namespace Raven.Server.Documents.Subscriptions
             }
         }
 
-        protected async Task<bool> WaitForChangedDocsAsync(SubscriptionConnectionsStateBase state, Task pendingReply)
+        protected virtual async Task<bool> WaitForChangedDocsAsync(SubscriptionConnectionsStateBase state, Task pendingReply)
         {
             AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info, "Start waiting for changed documents"));
             do
@@ -420,6 +420,8 @@ namespace Raven.Server.Documents.Subscriptions
 
         protected virtual RawDatabaseRecord GetRecord(TransactionOperationContext context) => _serverStore.Cluster.ReadRawDatabaseRecord(context, DatabaseName);
 
+        protected abstract string WhosTaskIsIt(DatabaseTopology topology, SubscriptionState subscriptionState);
+
         private async Task<SubscriptionState> AssertSubscriptionConnectionDetails(long id, string name, long? registerConnectionDurationInTicks, CancellationToken token)
         {
             await _serverStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, id, token);
@@ -432,11 +434,8 @@ namespace Raven.Server.Documents.Subscriptions
                 var topology = record.TopologyForSubscriptions();
 
                 DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "create subscription WhosTaskIsIt");
-                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "Need to handle NodeTag, currently is isn't used for sharded because it is shared");
 
-                var whoseTaskIsIt = record.IsSharded
-                    ? topology.WhoseTaskIsIt(_serverStore.Engine.CurrentState, subscription)
-                    : _serverStore.WhoseTaskIsIt(topology, subscription, subscription);
+                var whoseTaskIsIt = WhosTaskIsIt(topology, subscription);
 
                 if (whoseTaskIsIt == null && record.DeletionInProgress.ContainsKey(_serverStore.NodeTag))
                     throw new DatabaseDoesNotExistException(
@@ -902,7 +901,7 @@ namespace Raven.Server.Documents.Subscriptions
             {
                 case SubscriptionConnectionClientMessage.MessageType.Acknowledge:
                 {
-                    await OnClientAckAsync();
+                    await OnClientAckAsync(clientReply.ChangeVector);
                     break;
                 }
                 //precaution, should not reach this case...
@@ -930,7 +929,7 @@ namespace Raven.Server.Documents.Subscriptions
 
         protected abstract StatusMessageDetails GetStatusMessageDetails();
 
-        protected abstract Task OnClientAckAsync();
+        protected abstract Task OnClientAckAsync(string clientReplyChangeVector);
         public abstract Task SendNoopAckAsync();
         protected abstract bool FoundAboutMoreDocs();
         public abstract IDisposable MarkInUse();
@@ -938,7 +937,7 @@ namespace Raven.Server.Documents.Subscriptions
         protected abstract void AfterProcessorCreation();
         protected abstract void RaiseNotificationForBatchEnd(string name, SubscriptionBatchStatsAggregator last);
         protected abstract string SetLastChangeVectorInThisBatch(IChangeVectorOperationContext context, string currentLast, Document sentDocument);
-        protected abstract Task UpdateStateAfterBatchSentAsync(string lastChangeVectorSentInThisBatch);
+        protected abstract Task UpdateStateAfterBatchSentAsync(IChangeVectorOperationContext context, string lastChangeVectorSentInThisBatch);
 
         private async Task WriteIncludedTimeSeriesAsync(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, SubscriptionBatchStatsScope batchScope,
             IncludeTimeSeriesCommand includeTimeSeriesCommand)

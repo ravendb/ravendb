@@ -9,6 +9,7 @@ using Raven.Server.Utils;
 using SlowTests.Cluster;
 using SlowTests.Issues;
 using SlowTests.Sharding.Cluster;
+using SlowTests.Sharding.Subscriptions;
 
 namespace Tryouts;
 
@@ -28,10 +29,10 @@ public static class Program
             try
             {
                 using (var testOutputHelper = new ConsoleTestOutputHelper())
-                using (var test = new SubscriptionsWithReshardingTests(testOutputHelper))
+                using (var test = new ShardedSubscriptionClusterTests(testOutputHelper))
                 {
                     DebuggerAttachedTimeout.DisableLongTimespan = true;
-                    await test.ContinueSubscriptionAfterResharding();
+                    await test.SubscriptionShouldTryConnectWithTimeoutIfShardUnavailable();
                 }
             }
             catch (Exception e)

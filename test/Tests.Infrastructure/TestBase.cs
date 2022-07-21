@@ -275,6 +275,16 @@ namespace FastTests
                 return _globalServer;
             }
         }
+            
+        public List<RavenServer> GetServers()
+        {
+            if (Servers.Count > 0)
+            {
+                return Servers;
+            }
+
+            return new List<RavenServer> { Server };
+        }
 
         private static void CheckServerLeak()
         {

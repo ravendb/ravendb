@@ -122,7 +122,14 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
             {
                 var conflictStatus = ChangeVectorUtils.GetConflictStatus(
                     remoteAsString: item.ChangeVector,
+                    localAsString: SubscriptionConnectionsState.PreviouslyRecordedChangeVector);
+
+                /*
+                var conflictStatus = ChangeVectorUtils.GetConflictStatus(
+                    remoteAsString: item.ChangeVector,
                     localAsString: SubscriptionState.ChangeVectorForNextBatchStartingPoint);
+                    */
+
 
                 if (conflictStatus == ConflictStatus.AlreadyMerged)
                 {

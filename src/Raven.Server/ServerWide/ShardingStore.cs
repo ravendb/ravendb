@@ -15,30 +15,30 @@ namespace Raven.Server.ServerWide
         }
 
         
-        public Task<(long Index, object Result)> StartBucketMigration(string database, int bucket, int fromShard, int toShard)
+        public Task<(long Index, object Result)> StartBucketMigration(string database, int bucket, int fromShard, int toShard, string raftId)
         {
-            var cmd = new StartBucketMigrationCommand(bucket, fromShard, toShard, database, RaftIdGenerator.NewId());
+            var cmd = new StartBucketMigrationCommand(bucket, fromShard, toShard, database, raftId);
 
             return _server.SendToLeaderAsync(cmd);
         }
 
-        public Task<(long Index, object Result)> SourceMigrationCompleted(string database, int bucket, long migrationIndex, string lastChangeVector)
+        public Task<(long Index, object Result)> SourceMigrationCompleted(string database, int bucket, long migrationIndex, string lastChangeVector, string raftId)
         {
-            var cmd = new SourceMigrationSendCompletedCommand(bucket, migrationIndex, lastChangeVector, database, RaftIdGenerator.NewId());
+            var cmd = new SourceMigrationSendCompletedCommand(bucket, migrationIndex, lastChangeVector, database, raftId);
 
             return _server.SendToLeaderAsync(cmd);
         }
 
-        public Task<(long Index, object Result)> DestinationMigrationConfirm(string database, int bucket, long migrationIndex)
+        public Task<(long Index, object Result)> DestinationMigrationConfirm(string database, int bucket, long migrationIndex, string raftId)
         {
-            var cmd = new DestinationMigrationConfirmCommand(bucket, migrationIndex, _server.NodeTag, database, RaftIdGenerator.NewId());
+            var cmd = new DestinationMigrationConfirmCommand(bucket, migrationIndex, _server.NodeTag, database, raftId);
 
             return _server.SendToLeaderAsync(cmd);
         }
 
-        public Task<(long Index, object Result)> SourceMigrationCleanup(string database, int bucket, long migrationIndex)
+        public Task<(long Index, object Result)> SourceMigrationCleanup(string database, int bucket, long migrationIndex, string raftId)
         {
-            var cmd = new SourceMigrationCleanupCommand(bucket, migrationIndex, _server.NodeTag, database, RaftIdGenerator.NewId());
+            var cmd = new SourceMigrationCleanupCommand(bucket, migrationIndex, _server.NodeTag, database, raftId);
 
             return _server.SendToLeaderAsync(cmd);
         }

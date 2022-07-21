@@ -1,7 +1,14 @@
 ﻿using System;
+using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Sharding;
+using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
+using Sparrow.Logging;
+using Voron;
+using Voron.Data.Tables;
 
 namespace Raven.Server.ServerWide.Commands.Sharding
 {
@@ -10,6 +17,8 @@ namespace Raven.Server.ServerWide.Commands.Sharding
         public int SourceShard;
         public int DestinationShard;
         public int Bucket;
+
+        private ShardBucketMigration _migration; // in-mem;
 
         public StartBucketMigrationCommand()
         {
@@ -37,7 +46,7 @@ namespace Raven.Server.ServerWide.Commands.Sharding
                 }
             }
 
-            var bucketMigration = new ShardBucketMigration
+            _migration = new ShardBucketMigration
             {
                 Bucket = Bucket,
                 DestinationShard = DestinationShard,
@@ -46,7 +55,33 @@ namespace Raven.Server.ServerWide.Commands.Sharding
                 Status = MigrationStatus.Moving
             };
 
-            record.Sharding.BucketMigrations.Add(Bucket, bucketMigration);
+            record.Sharding.BucketMigrations.Add(Bucket, _migration);
+        }
+
+        public override void AfterDatabaseRecordUpdate(ClusterOperationContext ctx, Table items, Logger clusterAuditLog)
+        {
+            ProcessSubscriptionsForMigration(ctx, _migration);
+        }
+
+        private void ProcessSubscriptionsForMigration(ClusterOperationContext context, ShardBucketMigration migration)
+        {
+            var index = migration.MigrationIndex;
+            var database = ShardHelper.ToShardName(DatabaseName, migration.SourceShard);
+            foreach (var (key, state) in ClusterStateMachine.ReadValuesStartingWith(context, SubscriptionState.SubscriptionPrefix(DatabaseName)))
+            {
+                var subscriptionState = JsonDeserializationClient.SubscriptionState(state);
+                if (subscriptionState.ChangeVectorForNextBatchStartingPointPerShard.TryGetValue(database, out var changeVector) == false)
+                    return;
+
+                subscriptionState.IgnoreBucketLesserChangeVector[index] = changeVector;
+
+                using (state)
+                using (Slice.From(context.Allocator, subscriptionState.SubscriptionName, out Slice valueName))
+                using (var updated = context.ReadObject(subscriptionState.ToJson(), "migration"))
+                {
+                    ClusterStateMachine.UpdateValueForItemsTable(context, index, key, valueName, updated);
+                }
+            }
         }
 
         public override void FillJson(DynamicJsonValue json)

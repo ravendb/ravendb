@@ -62,9 +62,9 @@ public class ChangeVector
 
     public void Renew(ChangeVector version, ChangeVector order)
     {
-        _order = null;
+        _order = order;
         _version = version;
-        _changeVector = order;
+        _changeVector = null;
     }
 
     public bool IsNullOrEmpty =>
@@ -75,6 +75,7 @@ public class ChangeVector
     public bool IsSingle => string.IsNullOrEmpty(_order?._changeVector) &&
                             string.IsNullOrEmpty(_version?._changeVector);
 
+    public int NumberOfEntries => _changeVector.ToChangeVector().Length;
 
     public bool IsEqual(ChangeVector changeVector)
     {
@@ -89,9 +90,23 @@ public class ChangeVector
 
     public ChangeVector MergeWith(string changeVector, IChangeVectorOperationContext context) => Merge(this, context.GetChangeVector(changeVector), context);
 
-    public ChangeVector UpdateOrder(string nodeTag, string dbId, long etag, IChangeVectorOperationContext context) => UpdateInternal(nodeTag, dbId, etag, Order, context);
+    public ChangeVector UpdateOrder(string nodeTag, string dbId, long etag, IChangeVectorOperationContext context)
+    {
+        var order = UpdateInternal(nodeTag, dbId, etag, Order, context);
+        if (IsSingle || order == Order) // nothing changed
+            return order;
 
-    public ChangeVector UpdateVersion(string nodeTag, string dbId, long etag, IChangeVectorOperationContext context) => UpdateInternal(nodeTag, dbId, etag, Version, context);
+        return context.GetChangeVector(Version, order);
+    }
+
+    public ChangeVector UpdateVersion(string nodeTag, string dbId, long etag, IChangeVectorOperationContext context)
+    {
+        var version = UpdateInternal(nodeTag, dbId, etag, Version, context);
+        if (IsSingle || version == Version)
+            return version; // nothing changed
+
+        return context.GetChangeVector(version, Order);
+    }
 
     public static ConflictStatus GetConflictStatusForDocument(ChangeVector documentVector1, ChangeVector documentVector2) => GetConflictStatusInternal(documentVector1.Version, documentVector2.Version);
 
@@ -207,6 +222,14 @@ public class ChangeVector
     public ChangeVector StripTrxnTags(IChangeVectorOperationContext context) => StripTags(ChangeVectorParser.TrxnTag, exclude: null, context);
 
     public ChangeVector StripSinkTags(string exclude, IChangeVectorOperationContext context) => StripTags(ChangeVectorParser.SinkTag, exclude, context);
+
+    public bool Contains(string dbId)
+    {
+        if (IsSingle == false)
+            throw new InvalidOperationException("Can't be performed on non-single change vector");
+
+        return _changeVector.Contains(dbId);
+    }
 
     private static string StripTags(string from, string tag, string exclude)
     {

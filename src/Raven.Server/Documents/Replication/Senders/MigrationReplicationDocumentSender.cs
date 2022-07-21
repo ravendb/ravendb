@@ -61,12 +61,6 @@ namespace Raven.Server.Documents.Replication.Senders
                 while (mergedInEnumerator.MoveNext())
                 {
                     yield return mergedInEnumerator.Current;
-                    /*var item = mergedInEnumerator.Current;
-                    var result = ChangeVectorUtils.TryUpdateChangeVector(MigrationTag, migrationId, Destination.MigrationIndex, item.ChangeVector);
-                    Debug.Assert(result.IsValid,$"Failed to update the change vector {item.ChangeVector} with '{MigrationTag}:{Destination.MigrationIndex}-{migrationId}'");
-
-                    item.ChangeVector = result.ChangeVector;
-                    yield return item;*/
                 }
             }
         }

@@ -26,8 +26,8 @@ public abstract class SubscriptionProcessor : IDisposable
 
     public static SubscriptionProcessor Create(SubscriptionConnectionBase connection)
     {
-        if (connection is OrchestratedSubscriptionConnection)
-            return new OrchestratedSubscriptionProcessor(connection.TcpConnection.DatabaseContext.ServerStore, connection.TcpConnection.DatabaseContext, connection);
+        if (connection is OrchestratedSubscriptionConnection orchestratedSubscription)
+            return new OrchestratedSubscriptionProcessor(connection.TcpConnection.DatabaseContext.ServerStore, connection.TcpConnection.DatabaseContext, orchestratedSubscription);
 
         if (connection is SubscriptionConnectionForShard sharded)
             return CreateForSharded(sharded);

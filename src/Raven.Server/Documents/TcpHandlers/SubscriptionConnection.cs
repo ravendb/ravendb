@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using Esprima;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions;
+using Raven.Client.ServerWide;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.TimeSeries;
@@ -373,7 +374,7 @@ namespace Raven.Server.Documents.TcpHandlers
             };
         }
 
-        protected override async Task OnClientAckAsync()
+        protected override async Task OnClientAckAsync(string clientReplyChangeVector)
         {
             await Processor.AcknowledgeBatch(CurrentBatchId);
             await SendConfirmAsync(TcpConnection.DocumentDatabase.Time.GetUtcNow());
@@ -418,7 +419,7 @@ namespace Raven.Server.Documents.TcpHandlers
             //merge with this node's local etag
         }
 
-        protected override async Task UpdateStateAfterBatchSentAsync(string lastChangeVectorSentInThisBatch)
+        protected override async Task UpdateStateAfterBatchSentAsync(IChangeVectorOperationContext context, string lastChangeVectorSentInThisBatch)
         {
             //Entire unsent batch could contain docs that have to be skipped, but we still want to update the etag in the cv
             LastSentChangeVectorInThisConnection = lastChangeVectorSentInThisBatch;
@@ -441,6 +442,8 @@ namespace Raven.Server.Documents.TcpHandlers
                 SubscriptionType = "subscription"
             };
         }
+
+        protected override string WhosTaskIsIt(DatabaseTopology topology, SubscriptionState subscriptionState) => _serverStore.WhoseTaskIsIt(topology, subscriptionState, subscriptionState);
 
         protected override StatusMessageDetails GetStatusMessageDetails()
         {

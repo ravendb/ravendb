@@ -31,8 +31,10 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
         public long? BatchId;
         public List<DocumentRecord> DocumentsToResend; // documents that were updated while this batch was processing 
-        public string ShardName;
         
+        public string ShardName;
+        public Dictionary<string, string> NodeTagPerShard { get; set; }
+
         // for serialization
         private AcknowledgeSubscriptionBatchCommand() { }
 
@@ -57,10 +59,11 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "create subscription WhosTaskIsIt");
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "Need to handle NodeTag, currently is isn't used for sharded because it is shared");
-            var topology = string.IsNullOrEmpty(ShardName) ? record.TopologyForSubscriptions() : record.Sharding.Shards[ShardHelper.GetShardNumber(ShardName)];
-            var lastResponsibleNode = string.IsNullOrEmpty(ShardName) ? GetLastResponsibleNode(HasHighlyAvailableTasks, topology, NodeTag) : null;
 
+            var topology = string.IsNullOrEmpty(ShardName) ? record.Topology : record.Sharding.Shards[ShardHelper.GetShardNumber(ShardName)];
+            var lastResponsibleNode = GetLastResponsibleNode(HasHighlyAvailableTasks, topology, NodeTag);
             var appropriateNode = topology.WhoseTaskIsIt(RachisState.Follower, subscription, lastResponsibleNode);
+            
             if (appropriateNode == null && record.DeletionInProgress.ContainsKey(NodeTag))
                 throw new DatabaseDoesNotExistException($"Stopping subscription '{subscriptionName}' on node {NodeTag}, because database '{DatabaseName}' is being deleted.");
 
@@ -85,7 +88,15 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                 subscription.ChangeVectorForNextBatchStartingPoint = ChangeVector;
             }
 
-            subscription.NodeTag = NodeTag;
+            if (string.IsNullOrEmpty(ShardName))
+            {
+                subscription.NodeTag = NodeTag;
+            }
+            else
+            {
+                subscription.NodeTagPerShard[ShardName] = NodeTag;
+            }
+
             subscription.LastBatchAckTime = LastTimeServerMadeProgressWithDocuments;
             
             return context.ReadObject(subscription.ToJson(), subscriptionName);
@@ -136,7 +147,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
             foreach (var r in DocumentsToResend)
             {
-                using (SubscriptionConnectionsState.GetDatabaseAndSubscriptionAndDocumentKey(context, DatabaseName, SubscriptionId, r.DocumentId, out var key))
+                using (SubscriptionConnectionsStateBase.GetDatabaseAndSubscriptionAndDocumentKey(context, DatabaseName, SubscriptionId, r.DocumentId, out var key))
                 using (subscriptionStateTable.Allocate(out var tvb))
                 {
                     using var __ = Slice.External(context.Allocator, key, out var keySlice);

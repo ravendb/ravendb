@@ -87,7 +87,8 @@ public partial class ShardedDatabaseContext
                     DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "create subscription WhosTaskIsIt");
                     DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "Need to handle NodeTag, currently is isn't used for sharded because it is shared");
 
-                    var whoseTaskIsIt = databaseRecord.TopologyForSubscriptions().WhoseTaskIsIt(_serverStore.Engine.CurrentState, subscriptionState);
+                    var topology = databaseRecord.Sharding.Orchestrator.Topology;
+                    var whoseTaskIsIt = _serverStore.WhoseTaskIsIt(topology, subscriptionState, subscriptionState);
                     if (whoseTaskIsIt != _serverStore.NodeTag)
                     {
                         subscriptionConnectionsState.DropSubscription(

@@ -85,13 +85,14 @@ public class SubscriptionConnectionsStateOrchestrator : SubscriptionConnectionsS
         options.Strategy = SubscriptionOpeningStrategy.TakeOver;
         options.WorkerId += $"/{ShardHelper.GetShardNumber(shard)}";
         options.TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(250); // failover faster
-
+        
         // we want to limit the batch of each shard, to not hold too much memory if there are other batches while batch is proceed
         options.MaxDocsPerBatch = Math.Max(Math.Min(_options.MaxDocsPerBatch / _databaseContext.ShardCount, _options.MaxDocsPerBatch), 1);
 
         DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "need to ensure the sharded workers has the same sub definition. by sending my raft index?");
         var shardWorker = new ShardedSubscriptionWorker(options, shard, re, this);
         shardWorker.Run(shardWorker.TryPublishBatchAsync, CancellationTokenSource.Token);
+        
         return shardWorker;
     }
 

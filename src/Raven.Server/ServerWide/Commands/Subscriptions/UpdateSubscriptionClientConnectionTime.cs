@@ -16,6 +16,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         public string NodeTag;
         public bool HasHighlyAvailableTasks;
         public DateTime LastClientConnectionTime;
+
         private UpdateSubscriptionClientConnectionTime()
         {
         }
@@ -35,10 +36,10 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             var subscription = JsonDeserializationCluster.SubscriptionState(existingValue);
 
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "create subscription WhosTaskIsIt");
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "Need to handle NodeTag, currently is isn't used for sharded because it is shared");
 
+            // for sharded the topology is the orchestrator and the node-tag here is the orchestrator's responsible node
             var topology = record.TopologyForSubscriptions();
-            var lastResponsibleNode = record.IsSharded ? null : AcknowledgeSubscriptionBatchCommand.GetLastResponsibleNode(HasHighlyAvailableTasks, topology, NodeTag);
+            var lastResponsibleNode = AcknowledgeSubscriptionBatchCommand.GetLastResponsibleNode(HasHighlyAvailableTasks, topology, NodeTag);
 
             var appropriateNode = topology.WhoseTaskIsIt(RachisState.Follower, subscription, lastResponsibleNode);
 

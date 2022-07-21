@@ -30,7 +30,7 @@ public class SubscriptionConnectionsStateForShard : SubscriptionConnectionsState
 
     public override Task UpdateClientConnectionTime()
     {
-        // the orchastartor will update the client connection time
+        // the orchestrator will update the client connection time
         return Task.CompletedTask;
     }
 

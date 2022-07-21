@@ -42,6 +42,103 @@ public abstract class SubscriptionConnectionsStateBase
         _waitForMoreDocuments.Reset();
         return t;
     }
+    
+    public static long GetNumberOfResendDocuments(ServerStore store, string database, SubscriptionType type, long id)
+    {
+        using (store.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+        using (context.OpenReadTransaction())
+        {
+            var subscriptionState = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.SubscriptionStateSchema, ClusterStateMachine.SubscriptionState);
+            using (GetDatabaseAndSubscriptionKeyPrefix(context, database, id, type, out var prefix))
+            using (Slice.External(context.Allocator, prefix, out var prefixSlice))
+            {
+                return subscriptionState.SeekByPrimaryKeyPrefix(prefixSlice, Slices.Empty, 0).Count();
+            }
+        }
+    }
+    
+    public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetDatabaseAndSubscriptionKeyPrefix(ClusterOperationContext context, string database, long subscriptionId, SubscriptionType type, out ByteString prefix)
+    {
+        using var _ = Slice.From(context.Allocator, database.ToLowerInvariant(), out var dbName);
+        var rc = context.Allocator.Allocate(dbName.Size + sizeof(byte) + sizeof(long) + sizeof(byte) + sizeof(byte) + sizeof(byte), out prefix);
+
+        PopulatePrefix(subscriptionId, type, ref prefix, ref dbName, out var __);
+
+        return rc;
+    }
+
+    public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetDatabaseAndSubscriptionAndDocumentKey(ClusterOperationContext context, string database, long subscriptionId, string documentId, out ByteString key)
+    {
+        return GetSubscriptionStateKey(context, database, subscriptionId, documentId, SubscriptionType.Document, out key);
+    }
+
+    public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetDatabaseAndSubscriptionAndRevisionKey(ClusterOperationContext context, string database, long subscriptionId, string currentChangeVector, out ByteString key)
+    {
+        return GetSubscriptionStateKey(context, database, subscriptionId, currentChangeVector, SubscriptionType.Revision, out key);
+    }
+
+    public static unsafe ByteStringContext<ByteStringMemoryCache>.InternalScope GetDatabaseAndSubscriptionPrefix(ClusterOperationContext context, string database, long subscriptionId, out ByteString prefix)
+    {
+        using var _ = Slice.From(context.Allocator, database.ToLowerInvariant(), out var dbName);
+        var rc = context.Allocator.Allocate(dbName.Size + sizeof(byte) + sizeof(long) + sizeof(byte), out prefix);
+
+        dbName.CopyTo(prefix.Ptr);
+        var position = dbName.Size;
+
+        *(prefix.Ptr + position) = SpecialChars.RecordSeparator;
+        position++;
+
+        *(long*)(prefix.Ptr + position) = subscriptionId;
+        position += sizeof(long);
+
+        *(prefix.Ptr + position) = SpecialChars.RecordSeparator;
+
+        return rc;
+    }
+
+    public static unsafe ByteStringContext<ByteStringMemoryCache>.InternalScope GetSubscriptionStateKey(ClusterOperationContext context, string database, long subscriptionId, string pk, SubscriptionType type, out ByteString key)
+    {
+        switch (type)
+        {
+            case SubscriptionType.Document:
+                pk = pk.ToLowerInvariant();
+                break;
+            case SubscriptionType.Revision:
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(type), type, null);
+        }
+
+        using var _ = Slice.From(context.Allocator, database.ToLowerInvariant(), out var dbName);
+        using var __ = Slice.From(context.Allocator, pk, out var pkSlice);
+        var rc = context.Allocator.Allocate(dbName.Size + sizeof(byte) + sizeof(long) + sizeof(byte) + sizeof(byte) + sizeof(byte) + pkSlice.Size, out key);
+
+        PopulatePrefix(subscriptionId, type, ref key, ref dbName, out int position);
+
+        pkSlice.CopyTo(key.Ptr + position);
+        return rc;
+    }
+        
+    private static unsafe void PopulatePrefix(long subscriptionId, SubscriptionType type, ref ByteString prefix, ref Slice dbName, out int position)
+    {
+        dbName.CopyTo(prefix.Ptr);
+        position = dbName.Size;
+
+        *(prefix.Ptr + position) = SpecialChars.RecordSeparator;
+        position++;
+
+        *(long*)(prefix.Ptr + position) = subscriptionId;
+        position += sizeof(long);
+
+        *(prefix.Ptr + position) = SpecialChars.RecordSeparator;
+        position++;
+
+        *(prefix.Ptr + position) = (byte)type;
+        position++;
+
+        *(prefix.Ptr + position) = SpecialChars.RecordSeparator;
+        position++;
+    }
 }
 
 public abstract class SubscriptionConnectionsStateBase<TSubscriptionConnection> : SubscriptionConnectionsStateBase, IDisposable
@@ -188,19 +285,7 @@ public abstract class SubscriptionConnectionsStateBase<TSubscriptionConnection> 
         }
     }
 
-    public long GetNumberOfResendDocuments(SubscriptionType type)
-    {
-        using (_server.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-        using (context.OpenReadTransaction())
-        {
-            var subscriptionState = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.SubscriptionStateSchema, ClusterStateMachine.SubscriptionState);
-            using (GetDatabaseAndSubscriptionKeyPrefix(context, _databaseName, SubscriptionId, type, out var prefix))
-            using (Slice.External(context.Allocator, prefix, out var prefixSlice))
-            {
-                return subscriptionState.SeekByPrimaryKeyPrefix(prefixSlice, Slices.Empty, 0).Count();
-            }
-        }
-    }
+    public long GetNumberOfResendDocuments(SubscriptionType type) => GetNumberOfResendDocuments(_server, _databaseName, type, _subscriptionId);
 
     protected virtual UpdateSubscriptionClientConnectionTime GetUpdateSubscriptionClientConnectionTime()
     {
@@ -471,88 +556,5 @@ public abstract class SubscriptionConnectionsStateBase<TSubscriptionConnection> 
         {
             // ignored: If we've failed to raise the cancellation token, it means that it's already raised
         }
-    }
-
-    public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetDatabaseAndSubscriptionKeyPrefix(ClusterOperationContext context, string database, long subscriptionId, SubscriptionType type, out ByteString prefix)
-    {
-        using var _ = Slice.From(context.Allocator, database.ToLowerInvariant(), out var dbName);
-        var rc = context.Allocator.Allocate(dbName.Size + sizeof(byte) + sizeof(long) + sizeof(byte) + sizeof(byte) + sizeof(byte), out prefix);
-
-        PopulatePrefix(subscriptionId, type, ref prefix, ref dbName, out var __);
-
-        return rc;
-    }
-
-    public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetDatabaseAndSubscriptionAndDocumentKey(ClusterOperationContext context, string database, long subscriptionId, string documentId, out ByteString key)
-    {
-        return GetSubscriptionStateKey(context, database, subscriptionId, documentId, SubscriptionType.Document, out key);
-    }
-
-    public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetDatabaseAndSubscriptionAndRevisionKey(ClusterOperationContext context, string database, long subscriptionId, string currentChangeVector, out ByteString key)
-    {
-        return GetSubscriptionStateKey(context, database, subscriptionId, currentChangeVector, SubscriptionType.Revision, out key);
-    }
-
-    public static unsafe ByteStringContext<ByteStringMemoryCache>.InternalScope GetDatabaseAndSubscriptionPrefix(ClusterOperationContext context, string database, long subscriptionId, out ByteString prefix)
-    {
-        using var _ = Slice.From(context.Allocator, database.ToLowerInvariant(), out var dbName);
-        var rc = context.Allocator.Allocate(dbName.Size + sizeof(byte) + sizeof(long) + sizeof(byte), out prefix);
-
-        dbName.CopyTo(prefix.Ptr);
-        var position = dbName.Size;
-
-        *(prefix.Ptr + position) = SpecialChars.RecordSeparator;
-        position++;
-
-        *(long*)(prefix.Ptr + position) = subscriptionId;
-        position += sizeof(long);
-
-        *(prefix.Ptr + position) = SpecialChars.RecordSeparator;
-
-        return rc;
-    }
-
-    public static unsafe ByteStringContext<ByteStringMemoryCache>.InternalScope GetSubscriptionStateKey(ClusterOperationContext context, string database, long subscriptionId, string pk, SubscriptionType type, out ByteString key)
-    {
-        switch (type)
-        {
-            case SubscriptionType.Document:
-                pk = pk.ToLowerInvariant();
-                break;
-            case SubscriptionType.Revision:
-                break;
-            default:
-                throw new ArgumentOutOfRangeException(nameof(type), type, null);
-        }
-
-        using var _ = Slice.From(context.Allocator, database.ToLowerInvariant(), out var dbName);
-        using var __ = Slice.From(context.Allocator, pk, out var pkSlice);
-        var rc = context.Allocator.Allocate(dbName.Size + sizeof(byte) + sizeof(long) + sizeof(byte) + sizeof(byte) + sizeof(byte) + pkSlice.Size, out key);
-
-        PopulatePrefix(subscriptionId, type, ref key, ref dbName, out int position);
-
-        pkSlice.CopyTo(key.Ptr + position);
-        return rc;
-    }
-        
-    private static unsafe void PopulatePrefix(long subscriptionId, SubscriptionType type, ref ByteString prefix, ref Slice dbName, out int position)
-    {
-        dbName.CopyTo(prefix.Ptr);
-        position = dbName.Size;
-
-        *(prefix.Ptr + position) = SpecialChars.RecordSeparator;
-        position++;
-
-        *(long*)(prefix.Ptr + position) = subscriptionId;
-        position += sizeof(long);
-
-        *(prefix.Ptr + position) = SpecialChars.RecordSeparator;
-        position++;
-
-        *(prefix.Ptr + position) = (byte)type;
-        position++;
-
-        *(prefix.Ptr + position) = SpecialChars.RecordSeparator;
-        position++;
     }
 }

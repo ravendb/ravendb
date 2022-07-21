@@ -4,6 +4,7 @@ using FastTests.Sharding;
 using Orders;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.Util;
 using Raven.Server.Utils;
 using SlowTests.Core.Utils.Entities;
 using Tests.Infrastructure;
@@ -46,7 +47,7 @@ namespace SlowTests.Sharding.Cluster
                     Assert.NotNull(user);
                 }
 
-                var result = await Server.ServerStore.Sharding.StartBucketMigration(store.Database, bucket, location, newLocation);
+                var result = await Server.ServerStore.Sharding.StartBucketMigration(store.Database, bucket, location, newLocation, RaftIdGenerator.NewId());
 
                 var exists = WaitForDocument<User>(store, id, predicate: null, database: ShardHelper.ToShardName(store.Database, newLocation));
                 Assert.True(exists);
@@ -55,10 +56,10 @@ namespace SlowTests.Sharding.Cluster
                 {
                     var user = await session.LoadAsync<User>(id);
                     var changeVector = session.Advanced.GetChangeVectorFor(user);
-                    await Server.ServerStore.Sharding.SourceMigrationCompleted(store.Database, bucket, result.Index, changeVector);
+                    await Server.ServerStore.Sharding.SourceMigrationCompleted(store.Database, bucket, result.Index, changeVector, RaftIdGenerator.NewId());
                 }
 
-                result = await Server.ServerStore.Sharding.DestinationMigrationConfirm(store.Database, bucket, result.Index);
+                result = await Server.ServerStore.Sharding.DestinationMigrationConfirm(store.Database, bucket, result.Index, RaftIdGenerator.NewId());
                 await Server.ServerStore.Cluster.WaitForIndexNotification(result.Index);
 
                 // the document will be written to the new location
@@ -96,7 +97,7 @@ namespace SlowTests.Sharding.Cluster
                     Assert.NotNull(order);
                 }
 
-                var result = await Server.ServerStore.Sharding.StartBucketMigration(store.Database, bucket, location, newLocation);
+                var result = await Server.ServerStore.Sharding.StartBucketMigration(store.Database, bucket, location, newLocation, RaftIdGenerator.NewId());
 
                 var exists = WaitForDocument<Order>(store, id, predicate: null, database: ShardHelper.ToShardName(store.Database, newLocation));
                 Assert.True(exists);
@@ -105,10 +106,10 @@ namespace SlowTests.Sharding.Cluster
                 {
                     var order = await session.LoadAsync<Order>(id);
                     var changeVector = session.Advanced.GetChangeVectorFor(order);
-                    await Server.ServerStore.Sharding.SourceMigrationCompleted(store.Database, bucket, result.Index, changeVector);
+                    await Server.ServerStore.Sharding.SourceMigrationCompleted(store.Database, bucket, result.Index, changeVector, RaftIdGenerator.NewId());
                 }
 
-                result = await Server.ServerStore.Sharding.DestinationMigrationConfirm(store.Database, bucket, result.Index);
+                result = await Server.ServerStore.Sharding.DestinationMigrationConfirm(store.Database, bucket, result.Index, RaftIdGenerator.NewId());
                 await Server.ServerStore.Cluster.WaitForIndexNotification(result.Index);
 
                 // the document will be written to the new location

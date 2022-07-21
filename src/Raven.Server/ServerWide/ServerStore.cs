@@ -857,7 +857,7 @@ namespace Raven.Server.ServerWide
                         {
                             addDatabase.Record.Sharding.BucketRanges = new List<ShardBucketRange>();
                             var start = 0;
-                            var step = (1024 * 1024) / addDatabase.Record.Sharding.Shards.Length;
+                            var step = ShardHelper.NumberOfBuckets / addDatabase.Record.Sharding.Shards.Length;
                             for (int i = 0; i < addDatabase.Record.Sharding.Shards.Length; i++)
                             {
                                 addDatabase.Record.Sharding.BucketRanges.Add(new ShardBucketRange
@@ -875,20 +875,65 @@ namespace Raven.Server.ServerWide
 
                         Debug.Assert(orchestratorTopology.Count != 0, "Empty orchestrator topology after AssignNodesToDatabase");
 
+                        var pool = GetNodesDistribution(clusterTopology, addDatabase.Record.Sharding.Shards);
+
+                        var index = 0;
+                        var keys = pool.Keys.ToList();
                         foreach (var shardTopology in addDatabase.Record.Sharding.Shards)
                         {
-                            if (shardTopology.Count == 0)
+                            while (shardTopology.ReplicationFactor > shardTopology.Count)
                             {
-                                AssignNodesToDatabase(clusterTopology,
-                                    addDatabase.Record.DatabaseName,
-                                    addDatabase.Encrypted,
-                                    shardTopology);
+                                var tag = keys[index++ % keys.Count];
+                            
+                                if (pool[tag] > 0 && shardTopology.AllNodes.Contains(tag) == false)
+                                {
+                                    pool[tag]--;
+                                    shardTopology.Members.Add(tag);
+                                }
+
+                                if (pool[tag] == 0)
+                                    keys.Remove(tag);
                             }
+                           
                             Debug.Assert(shardTopology.Count != 0, "Empty shard topology after AssignNodesToDatabase");
                         }
                     }
                     break;
             }
+        }
+
+        private static Dictionary<string, int> GetNodesDistribution(ClusterTopology clusterTopology, DatabaseTopology[] shards)
+        {
+            var total = 0;
+            var pool = new Dictionary<string, int>(); // tag, number of occurrences
+
+            foreach (var node in clusterTopology.AllNodes)
+            {
+                pool[node.Key] = 0;
+            }
+
+            foreach (var shardTopology in shards)
+            {
+                total += shardTopology.ReplicationFactor;
+            }
+
+            var perNode = total / pool.Count;
+            foreach (var node in pool.Keys)
+            {
+                pool[node] = perNode;
+                total -= perNode;
+            }
+
+            foreach (var node in pool.Keys)
+            {
+                if (total == 0)
+                    break;
+
+                pool[node]++;
+                total--;
+            }
+
+            return pool;
         }
 
         private void ConfigureAuditLog()

@@ -561,7 +561,7 @@ namespace Raven.Client.Documents.Subscriptions
 
                 _processingCts.Token.ThrowIfCancellationRequested();
 
-                var lastReceivedChangeVector = batch.Initialize(incomingBatch);
+                batch.Initialize(incomingBatch);
 
                 notifiedSubscriber = Task.Run(async () => // the 2'nd thread
                 {
@@ -592,7 +592,7 @@ namespace Raven.Client.Documents.Subscriptions
                     {
                         if (tcpStreamCopy != null) //possibly prevent ObjectDisposedException
                         {
-                            await SendAckAsync(lastReceivedChangeVector, tcpStreamCopy, context, _processingCts.Token).ConfigureAwait(false);
+                            await SendAckAsync(batch.LastSentChangeVectorInBatch, tcpStreamCopy, context, _processingCts.Token).ConfigureAwait(false);
                         }
                     }
                     catch (ObjectDisposedException)

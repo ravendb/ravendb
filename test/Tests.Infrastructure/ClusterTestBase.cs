@@ -599,6 +599,27 @@ namespace Tests.Infrastructure
             return (dataDirectory, url, nodeTag);
         }
 
+        protected async Task<RavenServer> ReviveNodeAsync((string DataDirectory, string Url, string NodeTag) info, ServerCreationOptions options = default)
+        {
+            options ??= new ServerCreationOptions
+            {
+                RunInMemory = false,
+                DeletePrevious = false,
+                RegisterForDisposal = true,
+                CustomSettings = DefaultClusterSettings
+            };
+
+            options.CustomSettings ??= new Dictionary<string, string>();
+
+            options.DataDirectory = info.DataDirectory;
+            options.NodeTag = info.NodeTag;
+            options.CustomSettings[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = info.Url;
+
+            var server = GetNewServer(options);
+            await server.ServerStore.InitializationCompleted.WaitAsync();
+            return server;
+        }
+
         protected static async Task<(string DataDirectory, string Url, string NodeTag)> DisposeServerAndWaitForFinishOfDisposalAsync(RavenServer serverToDispose)
         {
             var dataDirectory = serverToDispose.Configuration.Core.DataDirectory.FullPath;

@@ -47,6 +47,7 @@ public abstract class SubscriptionBatchBase<T>
         public IMetadataDictionary Metadata => _metadata ?? (_metadata = new MetadataAsDictionary(RawMetadata));
     }
 
+    public string LastSentChangeVectorInBatch;
     public int NumberOfItemsInBatch => Items?.Count ?? 0;
     internal int NumberOfIncludes => _includes?.Count ?? 0;
 
@@ -68,7 +69,7 @@ public abstract class SubscriptionBatchBase<T>
 
     protected abstract void EnsureDocumentId(T item, string id);
 
-    internal virtual string Initialize(BatchFromServer batch)
+    internal virtual void Initialize(BatchFromServer batch)
     {
         _includes = batch.Includes;
         _counterIncludes = batch.CounterIncludes;
@@ -78,18 +79,17 @@ public abstract class SubscriptionBatchBase<T>
         Items.Clear();
 
         var revision = typeof(T).IsConstructedGenericType && typeof(T).GetGenericTypeDefinition() == typeof(Revision<>);
-        string lastReceivedChangeVector = null;
 
         foreach (var item in batch.Messages)
         {
             var curDoc = item.Data;
             (BlittableJsonReaderObject metadata, string id, string changeVector) = BatchFromServer.GetMetadataFromBlittable(curDoc);
-            lastReceivedChangeVector = changeVector;
+            LastSentChangeVectorInBatch = changeVector;
             metadata.TryGet(Constants.Documents.Metadata.Projection, out bool projection);
 
             if (_logger.IsInfoEnabled)
             {
-                _logger.Info($"Got {id} (change vector: [{lastReceivedChangeVector}], size {curDoc.Size}");
+                _logger.Info($"Got {id} (change vector: [{changeVector}], size {curDoc.Size}");
             }
 
             var instance = default(T);
@@ -128,6 +128,5 @@ public abstract class SubscriptionBatchBase<T>
                 Revision = revision
             });
         }
-        return lastReceivedChangeVector;
     }
 }
