@@ -4,8 +4,14 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Esprima.Ast;
+using Lucene.Net.Documents;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.ServerWide;
 using Raven.Server;
+using Raven.Server.Monitoring.Snmp;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
@@ -37,6 +43,13 @@ public partial class RavenTestBase
         {
             var updateIndex = LastRaftIndexForCommand(_parent.Server, commandType);
             await _parent.Server.ServerStore.Cluster.WaitForIndexNotification(updateIndex, TimeSpan.FromSeconds(10));
+        }
+
+        public async Task<PutIndexResult> CreateIndexInClusterAsync(IDocumentStore store, AbstractIndexCreationTask index)
+        {
+            var results = await store.Maintenance.ForDatabase(store.Database).SendAsync(new PutIndexesOperation(index.CreateIndexDefinition()));
+            var filterredResults = results.Where(r => r.Index == index.IndexName).ToArray();
+            return filterredResults.Length == 1 ? filterredResults[0] : null;
         }
 
         public long LastRaftIndexForCommand(RavenServer server, string commandType)
