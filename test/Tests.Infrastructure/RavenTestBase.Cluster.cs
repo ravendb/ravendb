@@ -45,11 +45,14 @@ public partial class RavenTestBase
             await _parent.Server.ServerStore.Cluster.WaitForIndexNotification(updateIndex, TimeSpan.FromSeconds(10));
         }
 
-        public async Task<PutIndexResult> CreateIndexInClusterAsync(IDocumentStore store, AbstractIndexCreationTask index)
+        public async Task CreateIndexInClusterAsync(IDocumentStore store, AbstractIndexCreationTask index)
         {
-            var results = await store.Maintenance.ForDatabase(store.Database).SendAsync(new PutIndexesOperation(index.CreateIndexDefinition()));
-            var filterredResults = results.Where(r => r.Index == index.IndexName).ToArray();
-            return filterredResults.Length == 1 ? filterredResults[0] : null;
+            var results = (await store.Maintenance.ForDatabase(store.Database)
+                                        .SendAsync(new PutIndexesOperation(index.CreateIndexDefinition())))
+                                        .Single(r => r.Index == index.IndexName);
+
+            // wait for index creation on cluster
+            await WaitForRaftIndexToBeAppliedInClusterAsync(results.RaftCommandIndex);
         }
 
         public long LastRaftIndexForCommand(RavenServer server, string commandType)
