@@ -41,7 +41,7 @@ internal abstract class AbstractQueriesHandlerProcessor<TRequestHandler, TOperat
         return new RequestTimeTracker(HttpContext, Logger, NotificationCenter, Configuration, "Query");
     }
 
-    public async ValueTask<IndexQueryServerSide> GetIndexQueryAsync(JsonOperationContext context, HttpMethod method, RequestTimeTracker tracker, bool addSpatialProperties = false)
+    public async ValueTask<IndexQueryServerSide> GetIndexQueryAsync(JsonOperationContext context, HttpMethod method, RequestTimeTracker tracker, bool addSpatialProperties = false, bool returnMissingIncludeAsNull = false)
     {
         if (method == HttpMethod.Get)
             return await ReadIndexQueryAsync(context, tracker, addSpatialProperties);
@@ -63,7 +63,7 @@ internal abstract class AbstractQueriesHandlerProcessor<TRequestHandler, TOperat
             json = q;
         }
 
-        return IndexQueryServerSide.Create(_httpContext, json, QueryMetadataCache, tracker, addSpatialProperties, queryType: queryType);
+        return IndexQueryServerSide.Create(_httpContext, json, QueryMetadataCache, tracker, addSpatialProperties, returnMissingIncludeAsNull, queryType: queryType);
     }
 
     private async ValueTask<IndexQueryServerSide> ReadIndexQueryAsync(JsonOperationContext context, RequestTimeTracker tracker, bool addSpatialProperties)

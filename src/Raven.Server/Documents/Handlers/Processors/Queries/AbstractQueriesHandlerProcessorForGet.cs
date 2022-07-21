@@ -52,10 +52,11 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
                 using (AllocateContextForQueryOperation(out var queryContext, out var context))
                 {
                     var addSpatialProperties = RequestHandler.GetBoolValueQueryString("addSpatialProperties", required: false) ?? false;
+                    var returnMissingIncludeAsNull = RequestHandler.GetBoolFromHeaders(Constants.Headers.Sharded) ?? false;
                     var metadataOnly = RequestHandler.GetBoolValueQueryString("metadataOnly", required: false) ?? false;
                     var shouldReturnServerSideQuery = RequestHandler.GetBoolValueQueryString("includeServerSideQuery", required: false) ?? false;
 
-                    var indexQuery = await GetIndexQueryAsync(context, QueryMethod, tracker, addSpatialProperties);
+                    var indexQuery = await GetIndexQueryAsync(context, QueryMethod, tracker, addSpatialProperties, returnMissingIncludeAsNull);
 
                     indexQuery.Diagnostics = RequestHandler.GetBoolValueQueryString("diagnostics", required: false) ?? false ? new List<string>() : null;
                     indexQuery.AddTimeSeriesNames = RequestHandler.GetBoolValueQueryString("addTimeSeriesNames", false) ?? false;
