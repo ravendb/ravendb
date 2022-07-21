@@ -13,7 +13,7 @@ class ongoingTasksWidget extends websocketBasedWidget<Raven.Server.Dashboard.Clu
 
     view = require("views/resources/widgets/ongoingTasksWidget.html");
     
-    static readonly taskInfoRecord: Record<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType, taskInfo> = {
+    static readonly taskInfoRecord: Record<StudioTaskType, taskInfo> = {
         "Replication": {
             nameForUI: "External Replication",
             icon: "icon-external-replication",
@@ -48,6 +48,16 @@ class ongoingTasksWidget extends websocketBasedWidget<Raven.Server.Dashboard.Clu
             nameForUI: "Elasticsearch ETL",
             icon: "icon-elastic-search-etl",
             colorClass: "elastic-etl"
+        },
+        "KafkaQueueEtl": {
+            nameForUI: "Kafka ETL",
+            icon: "icon-kafka-etl",
+            colorClass: "kafka-etl"
+        },
+        "RabbitQueueEtl": {
+            nameForUI: "RabbitMQ ETL",
+            icon: "icon-rabbitmq-etl",
+            colorClass: "rabbitmq-etl"
         },
         "Backup": {
             nameForUI: "Backup",
@@ -219,7 +229,7 @@ class ongoingTasksWidget extends websocketBasedWidget<Raven.Server.Dashboard.Clu
         return output;
     }
         
-    private getTaskType(input: string): Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType {
+    private getTaskType(input: string): StudioTaskType {
         switch (input) {
             case "ExternalReplicationCount":
                 return "Replication";
@@ -235,6 +245,10 @@ class ongoingTasksWidget extends websocketBasedWidget<Raven.Server.Dashboard.Clu
                 return "OlapEtl";
             case "ElasticSearchEtlCount":
                 return "ElasticSearchEtl";
+            case "KafkaEtlCount":
+                return "KafkaQueueEtl";
+            case "RabbitMqEtlCount":
+                return "RabbitQueueEtl";
             case "PeriodicBackupCount":
                 return "Backup";
             case "SubscriptionCount":
@@ -287,7 +301,7 @@ class ongoingTasksWidget extends websocketBasedWidget<Raven.Server.Dashboard.Clu
     }
     
             const totalTasksPerType = reducedItems.reduce((sum, item) => sum + item.taskCount(), 0);
-            const titleItem = new taskItem(taskType as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType, totalTasksPerType);
+            const titleItem = new taskItem(taskType as StudioTaskType, totalTasksPerType);
         
             tempDataToShow.push(titleItem);
         

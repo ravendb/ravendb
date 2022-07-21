@@ -1,6 +1,6 @@
 
 class taskItem {
-    taskType = ko.observable<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType>();
+    taskType = ko.observable<StudioTaskType>();
     taskCount = ko.observable<number>();
     
     databaseName = ko.observable<string>();
@@ -9,7 +9,7 @@ class taskItem {
     isTitleItem = ko.observable<boolean>(false);
     even: boolean = false;
 
-    constructor(type: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType, count: number, dbName?: string, nodes?: string[]) {
+    constructor(type: StudioTaskType, count: number, dbName?: string, nodes?: string[]) {
         this.taskType(type);
         this.databaseName(dbName);
         this.taskCount(count);

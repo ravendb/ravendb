@@ -890,7 +890,7 @@ interface columnPreviewFeature {
 }
 
 interface rawTaskItem {
-    type: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType;
+    type: StudioTaskType;
     dbName: string;
     count: number;
     node: string;
