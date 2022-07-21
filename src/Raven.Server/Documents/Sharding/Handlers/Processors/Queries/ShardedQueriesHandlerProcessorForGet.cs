@@ -80,7 +80,7 @@ internal class ShardedQueriesHandlerProcessorForGet : AbstractQueriesHandlerProc
         //   That means also recording the include() call from JS on missing values that we'll need to rerun on
         //   other shards
         var includeTask = _queryProcessor.HandleIncludes();
-        if (includeTask.IsCompleted == false)
+        if (includeTask.IsCompleted == false || includeTask.IsCompletedSuccessfully == false)
         {
             await includeTask.AsTask();
         }
