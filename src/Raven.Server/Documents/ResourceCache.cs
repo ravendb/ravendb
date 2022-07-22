@@ -84,28 +84,28 @@ namespace Raven.Server.Documents
                 
         }
 
-        public bool TryRemove(StringSegment resourceName, out Task<TResource> resourceTask)
+        public bool TryRemove(StringSegment resourceName, Task<TResource> resourceTask)
         {
-            if (_caseInsensitive.TryRemove(resourceName, out resourceTask) == false)
+            if (_caseInsensitive.TryRemove(new KeyValuePair<StringSegment, Task<TResource>>(resourceName, resourceTask)) == false)
                 return false;
-            
+
             _resourceDetails.TryRemove(resourceTask, out _);
 
             lock (this)
             {
-                RemoveCaseSensitive(resourceName);
+                RemoveCaseSensitive(resourceName, resourceTask);
             }
 
             return true;
         }
 
-        private void RemoveCaseSensitive(StringSegment resourceName)
+        private void RemoveCaseSensitive(StringSegment resourceName, Task<TResource> resourceTask)
         {
             if (_mappings.TryGetValue(resourceName, out ConcurrentSet<StringSegment> mappings))
             {
                 foreach (var mapping in mappings)
                 {
-                    _caseSensitive.TryRemove(mapping, out Task<TResource> _);
+                    _caseSensitive.TryRemove(new KeyValuePair<StringSegment, Task<TResource>>(mapping, resourceTask));
                 }
             }
         }
@@ -152,9 +152,11 @@ namespace Raven.Server.Documents
         public IDisposable RemoveLockAndReturn(string databaseName, Action<TResource> onSuccess, out TResource resource, [CallerMemberName] string caller = null)
         {
             Task<TResource> current = null;
+            Task<TResource> resourceLocked;
+
             lock (this)
             {
-                var task = Task.FromException<TResource>(new DatabaseDisabledException($"The database '{databaseName}' has been unloaded and locked by {caller}")
+                resourceLocked = Task.FromException<TResource>(new DatabaseDisabledException($"The database '{databaseName}' has been unloaded and locked by {caller}")
                 {
                     Data =
                     {
@@ -163,7 +165,7 @@ namespace Raven.Server.Documents
                     }
                 });
 
-                task.IgnoreUnobservedExceptions();
+                resourceLocked.IgnoreUnobservedExceptions();
 
                 bool found = false;
                 while (found == false)
@@ -172,12 +174,14 @@ namespace Raven.Server.Documents
                     if (found == false)
                     {
                         resource = default(TResource);
-                        if (_caseInsensitive.TryAdd(databaseName, task) == false) 
+                        if (_caseInsensitive.TryAdd(databaseName, resourceLocked) == false) 
                             continue;
 
                         return new DisposableAction(() =>
                         {
-                            TryRemove(databaseName, out _);
+                            _forTestingPurposes?.OnRemoveLockAndReturnDispose?.Invoke(this);
+
+                            TryRemove(databaseName, resourceLocked);
                         });
                     }
                 }
@@ -195,9 +199,9 @@ namespace Raven.Server.Documents
 
                 if (current.IsCompletedSuccessfully)
                 {
-                    _caseInsensitive.TryUpdate(databaseName, task, current);
+                    _caseInsensitive.TryUpdate(databaseName, resourceLocked, current);
                     _resourceDetails.TryRemove(current, out _);
-                    RemoveCaseSensitive(databaseName);
+                    RemoveCaseSensitive(databaseName, current);
                 }
             }
             if (current.IsCompletedSuccessfully)
@@ -206,7 +210,9 @@ namespace Raven.Server.Documents
                 onSuccess?.Invoke(current.Result);
                 return new DisposableAction(() =>
                 {
-                    TryRemove(databaseName, out _);
+                    _forTestingPurposes?.OnRemoveLockAndReturnDispose?.Invoke(this);
+
+                    TryRemove(databaseName, resourceLocked);
                 });
             }
 
@@ -216,7 +222,9 @@ namespace Raven.Server.Documents
                 resource = default; 
                 return new DisposableAction(() =>
                 {
-                    TryRemove(databaseName, out _);
+                    _forTestingPurposes?.OnRemoveLockAndReturnDispose?.Invoke(this);
+
+                    TryRemove(databaseName, resourceLocked);
                 });
             }
 
@@ -252,6 +260,21 @@ namespace Raven.Server.Documents
                 }
                 return existingTask;
             }
+        }
+
+        private TestingStuff _forTestingPurposes;
+
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (_forTestingPurposes != null)
+                return _forTestingPurposes;
+
+            return _forTestingPurposes = new TestingStuff();
+        }
+
+        internal class TestingStuff
+        {
+            internal Action<ResourceCache<TResource>> OnRemoveLockAndReturnDispose;
         }
     }
 }
