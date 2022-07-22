@@ -583,7 +583,7 @@ namespace Raven.Server.Documents
 
                     if (database.IsFaulted || database.IsCanceled)
                     {
-                        DatabasesCache.TryRemove(databaseName, out database);
+                        DatabasesCache.TryRemove(databaseName, database);
                         LastRecentlyUsed.TryRemove(databaseName, out var _);
                         // and now we will try creating it again
                     }
@@ -956,12 +956,12 @@ namespace Raven.Server.Documents
 
                 return new DisposableAction(() =>
                 {
-                    DatabasesCache.TryRemove(dbName, out var _);
+                    DatabasesCache.TryRemove(dbName, tcs);
                 });
             }
             catch (Exception)
             {
-                DatabasesCache.TryRemove(dbName, out var _);
+                DatabasesCache.TryRemove(dbName, tcs);
                 throw;
             }
         }

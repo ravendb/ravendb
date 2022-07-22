@@ -479,8 +479,7 @@ namespace RachisTests.DatabaseCluster
                 int val;
                 using (new DisposableAction(() =>
                 {
-                    preferred.ServerStore.DatabasesLandlord.DatabasesCache.TryRemove(databaseName, out var t);
-                    if (t == tcs.Task)
+                    if (preferred.ServerStore.DatabasesLandlord.DatabasesCache.TryRemove(databaseName, tcs.Task))
                         tcs.SetCanceled();
                 }))
                 {
