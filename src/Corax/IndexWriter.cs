@@ -770,8 +770,26 @@ namespace Corax
                 return AddEntriesToTermResult.RemoveTermId;
             }
 
+            if (TryDeltaEncodingToBuffer(entries.Additions, tmpBuf, out var encoded) == false)
+            {
+                AddNewTermToSet(entries.Additions, out termId);;
+                return AddEntriesToTermResult.UpdateTermId;
+            }
+
+            if (encoded.TryCopyTo(smallSet))
+            {
+                // can update in place
+                termId = -1;
+                return AddEntriesToTermResult.NothingToDo;
+            }
+
             Container.Delete(llt, _postingListContainerId, id);
-            AddNewTerm(entries.Additions, tmpBuf, out termId);
+            var allocatedSize = encoded.Length + encoded.Length % 32;  
+
+            termId = Container.Allocate(llt, _postingListContainerId, allocatedSize, out var space);
+            encoded.CopyTo(space);
+            return AddEntriesToTermResult.UpdateTermId;
+            
             return AddEntriesToTermResult.UpdateTermId;
         }
 
@@ -889,8 +907,33 @@ namespace Corax
                 }
             }
         }
+        
+        private bool TryDeltaEncodingToBuffer(List<long> additions, Span<byte> tmpBuf, out Span<byte> encoded)
+        {
+            // try to insert to container value
+            //TODO: using simplest delta encoding, need to do better here
+            int pos = ZigZagEncoding.Encode(tmpBuf, additions.Count);
+            pos += ZigZagEncoding.Encode(tmpBuf, additions[0], pos);
+            for (int i = 1; i < additions.Count; i++)
+            {
+                if (pos + ZigZagEncoding.MaxEncodedSize >= tmpBuf.Length)
+                {
+                    encoded = default;
+                    return false;
+                }
 
-        private unsafe void AddNewTerm(List<long> additions, Span<byte> tmpBuf, out long termId, bool sortingNeeded = true)
+                long entry = additions[i] - additions[i - 1];
+                if (entry == 0)
+                    continue; // we don't need to store duplicates
+
+                pos += ZigZagEncoding.Encode(tmpBuf, entry, pos);
+            }
+
+            encoded = tmpBuf[..pos];
+            return true;
+        }
+
+        private void AddNewTerm(List<long> additions, Span<byte> tmpBuf, out long termId, bool sortingNeeded = true)
         {
             Debug.Assert(additions.Count > 0);
             // common for unique values (guid, date, etc)
@@ -903,39 +946,30 @@ namespace Corax
             if(sortingNeeded)
                 additions.Sort();
 
-            // try to insert to container value
-            //TODO: using simplest delta encoding, need to do better here
-            int pos = ZigZagEncoding.Encode(tmpBuf, additions.Count);
-            pos += ZigZagEncoding.Encode(tmpBuf, additions[0], pos);
-            var llt = Transaction.LowLevelTransaction;
-            for (int i = 1; i < additions.Count; i++)
+            if (TryDeltaEncodingToBuffer(additions, tmpBuf, out var encoded) == false)
             {
-                if (pos + ZigZagEncoding.MaxEncodedSize < tmpBuf.Length)
-                {
-                    long entry = additions[i] - additions[i - 1];
-                    if (entry == 0)
-                        continue; // we don't need to store duplicates
-
-                    pos += ZigZagEncoding.Encode(tmpBuf, entry, pos);
-                    continue;
-                }
-
                 // too big, convert to a set
-                long setId = Container.Allocate(llt, _postingListContainerId, sizeof(SetState), out var setSpace);
-                ref var setState = ref MemoryMarshal.AsRef<SetState>(setSpace);
-                Set.Create(llt, ref setState);
-                var set = new Set(llt, Slices.Empty, setState);
-                additions.Sort();
-                set.Add(additions);
-                setState = set.State;
-                termId = setId | (long)TermIdMask.Set;                
-                return ;
+                AddNewTermToSet(additions, out termId);
+                return;
             }
 
-            var containerId = Container.Allocate(llt, _postingListContainerId, pos, out var space);
-            tmpBuf.Slice(0, pos).CopyTo(space);
+            // we'll increase the size of the allocation to 32 byte boundary. To make it cheaper to add to it in the future
+            var allocatedSize = encoded.Length + encoded.Length % 32;  
+            var containerId = Container.Allocate(Transaction.LowLevelTransaction, _postingListContainerId, allocatedSize, out var space);
+            encoded.CopyTo(space);
 
             termId = containerId | (long)TermIdMask.Small;
+        }
+
+        private unsafe void AddNewTermToSet(List<long> additions, out long termId)
+        {
+            long setId = Container.Allocate(Transaction.LowLevelTransaction, _postingListContainerId, sizeof(SetState), out var setSpace);
+            ref var setState = ref MemoryMarshal.AsRef<SetState>(setSpace);
+            Set.Create(Transaction.LowLevelTransaction, ref setState);
+            var set = new Set(Transaction.LowLevelTransaction, Slices.Empty, setState);
+            set.Add(additions);
+            setState = set.State;
+            termId = setId | (long)TermIdMask.Set;
         }
 
         public void Dispose()
