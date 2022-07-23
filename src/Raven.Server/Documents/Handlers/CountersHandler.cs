@@ -421,7 +421,7 @@ namespace Raven.Server.Documents.Handlers
                     counterGroupDetail.ChangeVector, counterGroupDetail.Values);
 
                 context.LastDatabaseChangeVector ??= DocumentsStorage.GetDatabaseChangeVector(context);
-                context.LastDatabaseChangeVector = context.LastDatabaseChangeVector.MergeWith(counterGroupDetail.ChangeVector);
+                context.LastDatabaseChangeVector = context.LastDatabaseChangeVector.MergeWith(counterGroupDetail.ChangeVector, context);
 
                 if (doc?.Data != null &&
                     _counterUpdates.ContainsKey(counterGroupDetail.DocumentId) == false)
@@ -596,7 +596,7 @@ namespace Raven.Server.Documents.Handlers
                 await processor.ExecuteAsync();
             }
         }
-        
+
         [RavenAction("/databases/*/counters", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public async Task Batch()
         {

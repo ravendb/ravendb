@@ -725,8 +725,8 @@ namespace Raven.Server.Documents.Replication
 
                         lastEtagFromSrc = DocumentsStorage.GetLastReplicatedEtagFrom(
                         documentsContext, getLatestEtagMessage.SourceDatabaseId);
-                    if (_log.IsInfoEnabled)
-                        _log.Info($"GetLastEtag response, last etag: {lastEtagFromSrc}");
+                        if (_log.IsInfoEnabled)
+                            _log.Info($"GetLastEtag response, last etag: {lastEtagFromSrc}");
                     }
 
                     var response = new DynamicJsonValue
@@ -2120,27 +2120,27 @@ namespace Raven.Server.Documents.Replication
             return (_numberOfSiblings + 1) / 2 + 1;
         }
 
-        public async Task<int> WaitForReplicationAsync(int numberOfReplicasToWaitFor, TimeSpan waitForReplicasTimeout, ChangeVector lastChangeVector)
+        public async Task<int> WaitForReplicationAsync(DocumentsOperationContext context, int numberOfReplicasToWaitFor, TimeSpan waitForReplicasTimeout, ChangeVector lastChangeVector)
         {
-            lastChangeVector.StripTrxnTags();
+            lastChangeVector = lastChangeVector.StripTrxnTags(context);
             var sp = Stopwatch.StartNew();
             while (true)
             {
                 var internalDestinations = _internalDestinations.Select(x => x.Url).ToHashSet();
                 var waitForNextReplicationAsync = WaitForNextReplicationAsync();
-                var past = ReplicatedPastInternalDestinations(internalDestinations, lastChangeVector);
+                var past = ReplicatedPastInternalDestinations(context, internalDestinations, lastChangeVector);
                 if (past >= numberOfReplicasToWaitFor)
                     return past;
 
                 var remaining = waitForReplicasTimeout - sp.Elapsed;
                 if (remaining < TimeSpan.Zero)
-                    return ReplicatedPastInternalDestinations(internalDestinations, lastChangeVector);
+                    return ReplicatedPastInternalDestinations(context, internalDestinations, lastChangeVector);
 
                 var timeout = TimeoutManager.WaitFor(remaining);
                 try
                 {
                     if (await Task.WhenAny(waitForNextReplicationAsync, timeout) == timeout)
-                        return ReplicatedPastInternalDestinations(internalDestinations, lastChangeVector);
+                        return ReplicatedPastInternalDestinations(context, internalDestinations, lastChangeVector);
                 }
                 catch (OperationCanceledException e)
                 {
@@ -2148,7 +2148,7 @@ namespace Raven.Server.Documents.Replication
                         _log.Info($"Get exception while trying to get write assurance on a database with {numberOfReplicasToWaitFor} servers. " +
                                   $"Written so far to {past} servers only. " +
                                   $"LastChangeVector is: {lastChangeVector}.", e);
-                    return ReplicatedPastInternalDestinations(internalDestinations, lastChangeVector);
+                    return ReplicatedPastInternalDestinations(context, internalDestinations, lastChangeVector);
                 }
             }
         }
@@ -2175,19 +2175,19 @@ namespace Raven.Server.Documents.Replication
             return count;
         }
 
-        private int ReplicatedPastInternalDestinations(HashSet<string> internalUrls, ChangeVector changeVector)
+        private int ReplicatedPastInternalDestinations(DocumentsOperationContext context, HashSet<string> internalUrls, ChangeVector changeVector)
         {
             var count = 0;
 
             //We need to avoid the case that we removed database from DB group and CV updated only in the destination
-            changeVector.RemoveIds(Database.DocumentsStorage.UnusedDatabaseIds);
+            changeVector.TryRemoveIds(Database.DocumentsStorage.UnusedDatabaseIds, context, out changeVector);
 
             foreach (var destination in _outgoing)
             {
                 if (internalUrls.Contains(destination.Destination.Url) == false)
                     continue;
 
-                var conflictStatus = Database.DocumentsStorage.GetConflictStatus(changeVector, destination.LastAcceptedChangeVector, ChangeVectorMode.Order);
+                var conflictStatus = Database.DocumentsStorage.GetConflictStatus(context, changeVector, destination.LastAcceptedChangeVector, ChangeVectorMode.Order);
                 if (conflictStatus == ConflictStatus.AlreadyMerged)
                     count++;
             }

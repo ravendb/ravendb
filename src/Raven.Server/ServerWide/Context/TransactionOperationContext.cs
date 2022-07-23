@@ -1,4 +1,6 @@
 ﻿using System;
+using Raven.Server.Utils;
+using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Server;
 using Sparrow.Threading;
@@ -38,7 +40,7 @@ namespace Raven.Server.ServerWide.Context
         }
     }
 
-    public abstract class TransactionOperationContext<TTransaction> : JsonOperationContext
+    public abstract class TransactionOperationContext<TTransaction> : JsonOperationContext, IChangeVectorOperationContext 
         where TTransaction : RavenTransaction
     {
         internal const short DefaultTransactionMarker = 2;
@@ -48,11 +50,19 @@ namespace Raven.Server.ServerWide.Context
 
         public TTransaction Transaction;
 
+        private readonly int _maxOfAllocatedChangeVectors;
+        private int _numberOfAllocatedChangeVectors;
+        private FastList<ChangeVector> _allocatedChangeVectors;
+
         protected TransactionOperationContext(int initialSize, int longLivedSize, int maxNumberOfAllocatedStringValues, SharedMultipleUseFlag lowMemoryFlag)
             : base(initialSize, longLivedSize, maxNumberOfAllocatedStringValues, lowMemoryFlag)
         {
             PersistentContext = new TransactionPersistentContext();
             Allocator = new ByteStringContext(lowMemoryFlag);
+
+            _maxOfAllocatedChangeVectors = 2048;
+            if (ChangeVector.PerCoreChangeVectors.TryPull(out _allocatedChangeVectors) == false)
+                _allocatedChangeVectors = new FastList<ChangeVector>(256);
         }
 
         public TTransaction OpenReadTransaction()
@@ -140,6 +150,30 @@ namespace Raven.Server.ServerWide.Context
             base.Dispose();
 
             Allocator.Dispose();
+
+            if (_allocatedChangeVectors != null)
+            {
+                if (ChangeVector.PerCoreChangeVectors.TryPush(_allocatedChangeVectors) == false)
+                {
+                    //foreach (var allocatedStringValue in _allocatedChangeVectors)
+                    //    allocatedStringValue?.Dispose();
+                }
+
+                _allocatedChangeVectors = null;
+            }
+        }
+
+        protected internal override void Renew()
+        {
+            base.Renew();
+
+            if (_allocatedChangeVectors == null)
+            {
+                if (ChangeVector.PerCoreChangeVectors.TryPull(out _allocatedChangeVectors) == false)
+                    _allocatedChangeVectors = new FastList<ChangeVector>(256);
+
+                _numberOfAllocatedChangeVectors = 0;
+            }
         }
 
         protected internal override void Reset(bool forceResetLongLivedAllocator = false)
@@ -149,6 +183,60 @@ namespace Raven.Server.ServerWide.Context
             base.Reset(forceResetLongLivedAllocator);
 
             Allocator.Reset();
+
+            if (_allocatedChangeVectors != null)
+            {
+                //for (var i = 0; i < _numberOfAllocatedChangeVectors; i++)
+                //    _allocatedChangeVectors[i].Reset();
+
+                if (ChangeVector.PerCoreChangeVectors.TryPush(_allocatedChangeVectors) == false)
+                {
+                    //foreach (var allocatedStringValue in _allocatedChangeVectors)
+                    //    allocatedStringValue?.Dispose();
+                }
+
+                _allocatedChangeVectors = null;
+            }
+        }
+
+        public ChangeVector GetChangeVector(string changeVector, bool throwOnRecursion = false)
+        {
+            ChangeVector allocatedChangeVector;
+            if (_numberOfAllocatedChangeVectors < _allocatedChangeVectors.Count)
+            {
+                allocatedChangeVector = _allocatedChangeVectors[_numberOfAllocatedChangeVectors++];
+                allocatedChangeVector.Renew(changeVector, throwOnRecursion, this);
+                return allocatedChangeVector;
+            }
+
+            allocatedChangeVector = new ChangeVector(changeVector, throwOnRecursion, this);
+            if (_numberOfAllocatedChangeVectors < _maxOfAllocatedChangeVectors)
+            {
+                _allocatedChangeVectors.Add(allocatedChangeVector);
+                _numberOfAllocatedChangeVectors++;
+            }
+
+            return allocatedChangeVector;
+        }
+
+        public ChangeVector GetChangeVector(string version, string order)
+        {
+            ChangeVector allocatedChangeVector;
+            if (_numberOfAllocatedChangeVectors < _allocatedChangeVectors.Count)
+            {
+                allocatedChangeVector = _allocatedChangeVectors[_numberOfAllocatedChangeVectors++];
+                allocatedChangeVector.Renew(GetChangeVector(version), GetChangeVector(order));
+                return allocatedChangeVector;
+            }
+
+            allocatedChangeVector = new ChangeVector(new ChangeVector(version, this), new ChangeVector(order, this));
+            if (_numberOfAllocatedChangeVectors < _maxOfAllocatedChangeVectors)
+            {
+                _allocatedChangeVectors.Add(allocatedChangeVector);
+                _numberOfAllocatedChangeVectors++;
+            }
+
+            return allocatedChangeVector;
         }
     }
 }

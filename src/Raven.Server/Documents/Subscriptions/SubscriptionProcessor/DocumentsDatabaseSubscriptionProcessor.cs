@@ -65,7 +65,7 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
         public List<string> ItemsToRemoveFromResend = new List<string>();
         public List<DocumentRecord> BatchItems = new List<DocumentRecord>();
 
-        public override Task<long> RecordBatch(string lastChangeVectorSentInThisBatch) => 
+        public override Task<long> RecordBatch(string lastChangeVectorSentInThisBatch) =>
             SubscriptionConnectionsState.RecordBatchDocuments(BatchItems, ItemsToRemoveFromResend, lastChangeVectorSentInThisBatch);
 
         public override async Task AcknowledgeBatch(long batchId)
@@ -80,7 +80,7 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
                 {
                     var doc = BatchItems[index];
                     var document = Database.DocumentsStorage.GetDocumentOrTombstone(docContext, doc.DocumentId, throwOnConflict: false);
-                    if (ShouldAddToResendTable(document, doc.ChangeVector) == false)
+                    if (ShouldAddToResendTable(docContext, document, doc.ChangeVector) == false)
                     {
                         BatchItems.RemoveAt(index);
                     }
@@ -106,7 +106,7 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
             return Database.DocumentsStorage.GetLastDocumentEtag(context.Transaction.InnerTransaction, collection);
         }
 
-       
+
         protected override SubscriptionFetcher<Document> CreateFetcher()
         {
             return new DocumentSubscriptionFetcher(Database, SubscriptionConnectionsState, Collection);
@@ -140,7 +140,7 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
             if (Fetcher.FetchingFrom == SubscriptionFetcher.FetchingOrigin.Resend)
             {
                 var current = Database.DocumentsStorage.GetDocumentOrTombstone(DocsContext, item.Id, throwOnConflict: false);
-                if (ShouldFetchFromResend(item.Id, current, item.ChangeVector) == false)
+                if (ShouldFetchFromResend(DocsContext, item.Id, current, item.ChangeVector) == false)
                 {
                     item.ChangeVector = string.Empty;
                     reason = $"Skip {item.Id} from resend";
@@ -174,7 +174,7 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
                     reason = $"{item.Id} filtered out by criteria";
                     return false;
                 }
-                
+
                 return true;
             }
             catch (Exception ex)
@@ -185,7 +185,7 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
             }
         }
 
-        private bool ShouldFetchFromResend(string id, DocumentsStorage.DocumentOrTombstone item, string currentChangeVector)
+        private bool ShouldFetchFromResend(DocumentsOperationContext context, string id, DocumentsStorage.DocumentOrTombstone item, string currentChangeVector)
         {
             if (item.Document == null)
             {
@@ -194,12 +194,12 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
                 return false;
             }
 
-            var status = Database.DocumentsStorage.GetConflictStatus(item.Document.ChangeVector, currentChangeVector, ChangeVectorMode.Version);
+            var status = Database.DocumentsStorage.GetConflictStatus(context, item.Document.ChangeVector, currentChangeVector, ChangeVectorMode.Version);
             switch (status)
             {
                 case ConflictStatus.Update:
                     // If document was updated, but the subscription went too far.
-                    var resendStatus = Database.DocumentsStorage.GetConflictStatus(item.Document.ChangeVector, SubscriptionConnectionsState.LastChangeVectorSent, ChangeVectorMode.Order);
+                    var resendStatus = Database.DocumentsStorage.GetConflictStatus(context, item.Document.ChangeVector, SubscriptionConnectionsState.LastChangeVectorSent, ChangeVectorMode.Order);
                     if (resendStatus == ConflictStatus.Update)
                     {
                         // we can clear it from resend list, and it will processed as regular document
@@ -221,11 +221,11 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
             }
         }
 
-        private bool ShouldAddToResendTable(DocumentsStorage.DocumentOrTombstone item, string currentChangeVector)
+        private bool ShouldAddToResendTable(DocumentsOperationContext context, DocumentsStorage.DocumentOrTombstone item, string currentChangeVector)
         {
             if (item.Document != null)
             {
-                var status = Database.DocumentsStorage.GetConflictStatus(item.Document.ChangeVector, currentChangeVector, ChangeVectorMode.Version);
+                var status = Database.DocumentsStorage.GetConflictStatus(context, item.Document.ChangeVector, currentChangeVector, ChangeVectorMode.Version);
                 switch (status)
                 {
                     case ConflictStatus.Update:

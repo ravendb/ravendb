@@ -121,15 +121,16 @@ internal class BatchHandlerProcessorForBulkDocs : AbstractBatchHandlerProcessorF
         }
     }
 
-    protected override async ValueTask WaitForReplicationAsync(ReplicationBatchOptions options, string lastChangeVector)
+    protected override async ValueTask WaitForReplicationAsync(DocumentsOperationContext context, ReplicationBatchOptions options, string lastChangeVector)
     {
         var numberOfReplicasToWaitFor = options.Majority
             ? RequestHandler.Database.ReplicationLoader.GetSizeOfMajority()
             : options.NumberOfReplicasToWaitFor;
 
-        var changeVector = new ChangeVector(lastChangeVector);
+        var changeVector = context.GetChangeVector(lastChangeVector);
 
         var replicatedPast = await RequestHandler.Database.ReplicationLoader.WaitForReplicationAsync(
+            context,
             numberOfReplicasToWaitFor,
             options.WaitForReplicasTimeout,
             changeVector);

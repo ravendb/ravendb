@@ -48,7 +48,7 @@ internal class ShardedBatchHandlerProcessorForBulkDocs : AbstractBatchHandlerPro
         return ValueTask.CompletedTask;
     }
 
-    protected override ValueTask WaitForReplicationAsync(ReplicationBatchOptions options, string lastChangeVector)
+    protected override ValueTask WaitForReplicationAsync(TransactionOperationContext context, ReplicationBatchOptions options, string lastChangeVector)
     {
         // no-op
         // this is passed as a parameter when we execute transaction on each shard

@@ -382,18 +382,13 @@ namespace Raven.Server.Documents
             if (fromReplication == false)
             {
                 context.LastDatabaseChangeVector ??= GetDatabaseChangeVector(context);
-                if (oldChangeVector == null)
-                {
-                    oldChangeVector = context.GetChangeVector(context.LastDatabaseChangeVector);
-                }
-                else
-                {
-                    oldChangeVector = oldChangeVector.MergeWith(context.LastDatabaseChangeVector);
-                }
+                oldChangeVector = oldChangeVector == null
+                    ? context.GetChangeVector(context.LastDatabaseChangeVector)
+                    : oldChangeVector.MergeWith(context.LastDatabaseChangeVector, context);
             }
 
             changeVector = SetDocumentChangeVectorForLocalChange(context, lowerId, oldChangeVector, newEtag);
-            context.SkipChangeVectorValidation = changeVector.RemoveIds(_documentsStorage.UnusedDatabaseIds);
+            context.SkipChangeVectorValidation = changeVector.TryRemoveIds(_documentsStorage.UnusedDatabaseIds, context, out changeVector);
             return (changeVector, nonPersistentFlags);
         }
 
@@ -405,21 +400,21 @@ namespace Raven.Server.Documents
                 return false;
 
             var currentGlobalChangeVector = context.LastDatabaseChangeVector ?? GetDatabaseChangeVector(context);
-            
+
             var clone = context.GetChangeVector(changeVector);
-            clone.StripSinkTags(currentGlobalChangeVector);
+            clone = clone.StripSinkTags(currentGlobalChangeVector, context);
 
             // this is raft created document, so it must contain only the RAFT element 
             if (flags.Contain(DocumentFlags.FromClusterTransaction))
             {
-                context.LastDatabaseChangeVector = ChangeVector.Merge(currentGlobalChangeVector, clone.Order);
+                context.LastDatabaseChangeVector = ChangeVector.Merge(currentGlobalChangeVector, clone.Order, context);
                 return false;
             }
 
             // the resolved document must preserve the original change vector (without the global change vector) to avoid ping-pong replication.
             if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromResolver))
             {
-                context.LastDatabaseChangeVector = ChangeVector.Merge(currentGlobalChangeVector, clone.Order);
+                context.LastDatabaseChangeVector = ChangeVector.Merge(currentGlobalChangeVector, clone.Order, context);
                 return false;
             }
 
@@ -458,47 +453,47 @@ namespace Raven.Server.Documents
                     var idLength = id.Length;
                     var idSuffixLength = 0;
 
-                    if (lastChar == _documentDatabase.IdentityPartsSeparator)
+                if (lastChar == _documentDatabase.IdentityPartsSeparator)
                     {
                         CalculateSuffixForIdentityPartsSeparator(id, ref idSuffixPtr, ref idSuffixLength, ref idLength);
 
-                        string nodeTag = _documentDatabase.ServerStore.NodeTag;
+                    string nodeTag = _documentDatabase.ServerStore.NodeTag;
 
-                        // PERF: we are creating an string and mutating it for performance reasons.
-                        //       while nasty this shouldn't have any side effects because value didn't
-                        //       escape yet the function, so while not pretty it works (and it's safe).
+                    // PERF: we are creating an string and mutating it for performance reasons.
+                    //       while nasty this shouldn't have any side effects because value didn't
+                    //       escape yet the function, so while not pretty it works (and it's safe).      
                         //       
                         int valueLength = idLength + 1 + 19 + nodeTag.Length + idSuffixLength;
                         string value = new('0', valueLength);
-                        fixed (char* valuePtr = value)
-                        {
+                    fixed (char* valuePtr = value)
+                    {
                             char* valueWritePosition = valuePtr + value.Length;
 
                             WriteSuffixForIdentityPartsSeparator(ref valueWritePosition, idSuffixPtr, idSuffixLength);
 
                             valueWritePosition -= nodeTag.Length;
-                            for (int j = 0; j < nodeTag.Length; j++)
+                        for (int j = 0; j < nodeTag.Length; j++)
                                 valueWritePosition[j] = nodeTag[j];
 
-                            int i;
+                        int i;
                             for (i = 0; i < idLength; i++)
-                                valuePtr[i] = id[i];
+                            valuePtr[i] = id[i];
 
-                            i += 19;
-                            valuePtr[i] = '-';
+                        i += 19;
+                        valuePtr[i] = '-';
 
-                            Format.Backwards.WriteNumber(valuePtr + i - 1, (ulong)newEtag);
-                        }
-
-                        id = value;
-
-                        knownNewId = true;
+                        Format.Backwards.WriteNumber(valuePtr + i - 1, (ulong)newEtag);
                     }
-                    else
-                    {
-                        knownNewId = false;
-                    }
+
+                    id = value;
+
+                    knownNewId = true;
                 }
+                else
+                {
+                    knownNewId = false;
+                }
+            }
             }
 
             // Intentionally have just one return statement here for better inlining
@@ -805,8 +800,8 @@ namespace Raven.Server.Documents
         {
             if (oldChangeVector != null)
             {
-                oldChangeVector.UpdateVersion(_documentDatabase.ServerStore.NodeTag, _documentsStorage.Environment.Base64Id, newEtag);
-                oldChangeVector.UpdateOrder(_documentDatabase.ServerStore.NodeTag, _documentsStorage.Environment.Base64Id, newEtag);
+                oldChangeVector = oldChangeVector.UpdateVersion(_documentDatabase.ServerStore.NodeTag, _documentsStorage.Environment.Base64Id, newEtag, context);
+                oldChangeVector = oldChangeVector.UpdateOrder(_documentDatabase.ServerStore.NodeTag, _documentsStorage.Environment.Base64Id, newEtag, context);
                 return oldChangeVector;
             }
             return context.GetChangeVector(_documentsStorage.ConflictsStorage.GetMergedConflictChangeVectorsAndDeleteConflicts(context, lowerId, newEtag));

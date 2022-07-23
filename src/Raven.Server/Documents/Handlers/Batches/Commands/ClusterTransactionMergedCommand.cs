@@ -166,7 +166,7 @@ public class ClusterTransactionMergedCommand : TransactionMergedCommand
                 context.LastDatabaseChangeVector = global;
             }
 
-            global.UpdateOrder(ChangeVectorParser.RaftTag, Database.DatabaseGroupId, count);
+            global = global.UpdateOrder(ChangeVectorParser.RaftTag, Database.DatabaseGroupId, count, context);
             context.LastDatabaseChangeVector = global;
         }
 

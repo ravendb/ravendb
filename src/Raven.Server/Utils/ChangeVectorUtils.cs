@@ -7,6 +7,7 @@ using System.Text;
 using Lucene.Net.Support;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Server;
 using Sparrow.Utils;
 
@@ -268,9 +269,9 @@ namespace Raven.Server.Utils
             return _mergeVectorBuffer.SerializeVector();
         }
 
-        public static ChangeVector NewChangeVector(DocumentDatabase database, long etag)
+        public static ChangeVector NewChangeVector(DocumentDatabase database, long etag, IChangeVectorOperationContext context)
         {
-            return new ChangeVector(NewChangeVector(database.ServerStore.NodeTag, etag, database.DbBase64Id));
+            return context.GetChangeVector(NewChangeVector(database.ServerStore.NodeTag, etag, database.DbBase64Id));
         }
 
         public static string NewChangeVector(string nodeTag, long etag, string dbIdInBase64)

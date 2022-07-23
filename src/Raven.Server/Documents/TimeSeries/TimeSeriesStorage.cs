@@ -2518,11 +2518,11 @@ namespace Raven.Server.Documents.TimeSeries
         {
             var newEtag = _documentsStorage.GenerateNextEtag();
             var databaseChangeVector = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
-            databaseChangeVector.UpdateOrder(_documentDatabase.ServerStore.NodeTag, _documentDatabase.DbBase64Id, newEtag);
+            databaseChangeVector = databaseChangeVector.UpdateOrder(_documentDatabase.ServerStore.NodeTag, _documentDatabase.DbBase64Id, newEtag, context);
             
             if (fromReplicationChangeVector != null)
             {
-                databaseChangeVector = databaseChangeVector.MergeWith(fromReplicationChangeVector);
+                databaseChangeVector = databaseChangeVector.MergeWith(fromReplicationChangeVector, context);
             }
 
             context.LastDatabaseChangeVector = databaseChangeVector;

@@ -406,14 +406,14 @@ namespace Raven.Server.Documents.TcpHandlers
 
         protected override void RaiseNotificationForBatchEnd(string name, SubscriptionBatchStatsAggregator last) => _database.SubscriptionStorage.RaiseNotificationForBatchEnded(name, last);
 
-        protected override string SetLastChangeVectorInThisBatch(string currentLast, Document sentDocument)
+        protected override string SetLastChangeVectorInThisBatch(IChangeVectorOperationContext context, string currentLast, Document sentDocument)
         {
             if (sentDocument.Etag == 0) // got this document from resend
                 return currentLast;
 
             return ChangeVectorUtils.MergeVectors(
                 currentLast,
-                ChangeVectorUtils.NewChangeVector(_database, sentDocument.Etag),
+                ChangeVectorUtils.NewChangeVector(_database, sentDocument.Etag, context),
                 sentDocument.ChangeVector);
             //merge with this node's local etag
         }

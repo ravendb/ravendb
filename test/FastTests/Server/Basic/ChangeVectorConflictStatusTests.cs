@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Utils;
-using Sparrow.Server;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -27,7 +26,7 @@ namespace FastTests.Server.Basic
                 "D:17267243-/3+4WZUBGkWL6/J4GMv2GA, " +
                 "D:46103608-P1lQdjeAckGkdmY9RWr/Bg, " +
                 "A:27850500-iUMDTgYwOkG25uod1g6gSg";
-            
+
             var cv2 =
                 "C:87142328-5j4moMb8A0KxxcL9GhY/nw, " +
                 "B:2146533895-SKM7aNMmSkW92wrQke+D4g, " +
@@ -54,7 +53,7 @@ namespace FastTests.Server.Basic
                 "D:17267243-/3+4WZUBGkWL6/J4GMv2GA, " +
                 "D:46103608-P1lQdjeAckGkdmY9RWr/Bg, " +
                 "A:27850500-iUMDTgYwOkG25uod1g6gSg";
-            
+
             var cv2 =
                 "C:87142328-5j4moMb8A0KxxcL9GhY/nw, " +
                 "B:2146533895-SKM7aNMmSkW92wrQke+D4g, " +
@@ -73,7 +72,7 @@ namespace FastTests.Server.Basic
         [Fact]
         public void EtagShouldNotOverflow2()
         {
-            var x = ChangeVectorUtils.TryUpdateChangeVector("C", "n0rGjcmUT0u7ctxBXlZZPg", 5554138256, new ChangeVector("C:5554138256-n0rGjcmUT0u7ctxBXlZZPg"));
+            var x = ChangeVectorUtils.TryUpdateChangeVector("C", "n0rGjcmUT0u7ctxBXlZZPg", 5554138256, new ChangeVector("C:5554138256-n0rGjcmUT0u7ctxBXlZZPg", null));
 
             Assert.False(x.IsValid);
         }

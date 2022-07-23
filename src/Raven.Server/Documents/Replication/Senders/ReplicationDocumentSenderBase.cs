@@ -187,14 +187,14 @@ namespace Raven.Server.Documents.Replication.Senders
                                     var stream = _parent._database.DocumentsStorage.AttachmentsStorage.GetAttachmentStream(documentsContext, attachment.Base64Hash);
                                     attachment.Stream = stream;
                                     var attachmentItem = AttachmentReplicationItem.From(documentsContext, attachment);
-                                    AddReplicationItemToBatch(attachmentItem, _stats.Storage, replicationState, skippedReplicationItemsInfo);
+                                    AddReplicationItemToBatch(documentsContext, attachmentItem, _stats.Storage, replicationState, skippedReplicationItemsInfo);
                                     replicationState.Size += attachmentItem.Size;
                                 }
                             }
 
                             _lastEtag = item.Etag;
 
-                            if (AddReplicationItemToBatch(item, _stats.Storage, replicationState, skippedReplicationItemsInfo) == false)
+                            if (AddReplicationItemToBatch(documentsContext, item, _stats.Storage, replicationState, skippedReplicationItemsInfo) == false)
                             {
                                 // this item won't be needed anymore
                                 item.Dispose();
@@ -508,9 +508,9 @@ namespace Raven.Server.Documents.Replication.Senders
             }
         }
 
-        private bool AddReplicationItemToBatch(ReplicationBatchItem item, OutgoingReplicationStatsScope stats, ReplicationState state, SkippedReplicationItemsInfo skippedReplicationItemsInfo)
+        private bool AddReplicationItemToBatch(DocumentsOperationContext context, ReplicationBatchItem item, OutgoingReplicationStatsScope stats, ReplicationState state, SkippedReplicationItemsInfo skippedReplicationItemsInfo)
         {
-            if (ShouldSkip(item, stats, skippedReplicationItemsInfo))
+            if (ShouldSkip(context, item, stats, skippedReplicationItemsInfo))
                 return false;
 
             if (skippedReplicationItemsInfo.SkippedItems > 0)
@@ -570,7 +570,7 @@ namespace Raven.Server.Documents.Replication.Senders
             return true;
         }
 
-        protected virtual bool ShouldSkip(ReplicationBatchItem item, OutgoingReplicationStatsScope stats, SkippedReplicationItemsInfo skippedReplicationItemsInfo)
+        protected virtual bool ShouldSkip(DocumentsOperationContext context, ReplicationBatchItem item, OutgoingReplicationStatsScope stats, SkippedReplicationItemsInfo skippedReplicationItemsInfo)
         {
             switch (item)
             {
@@ -609,7 +609,7 @@ namespace Raven.Server.Documents.Replication.Senders
             }
 
             // destination already has it
-            if (_parent._database.DocumentsStorage.GetConflictStatus(item.ChangeVector, _parent.LastAcceptedChangeVector, ChangeVectorMode.Order) == ConflictStatus.AlreadyMerged)
+            if (_parent._database.DocumentsStorage.GetConflictStatus(context, item.ChangeVector, _parent.LastAcceptedChangeVector, ChangeVectorMode.Order) == ConflictStatus.AlreadyMerged)
             {
                 stats.RecordChangeVectorSkip();
                 skippedReplicationItemsInfo.Update(item);
