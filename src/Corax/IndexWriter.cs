@@ -728,7 +728,7 @@ namespace Corax
 
         private AddEntriesToTermResult AddEntriesToTermResultViaSmallSet(Span<byte> tmpBuf, LowLevelTransaction llt, EntriesModifications entries, out long termId, long id)
         {
-            var smallSet = Container.Get(llt, id).ToSpan();
+            var smallSet = Container.GetMutable(llt, id);
             
             entries.Removals.Sort();
             int removalIndex = 0;
@@ -780,9 +780,11 @@ namespace Corax
             }
 
             Container.Delete(llt, _postingListContainerId, id);
-            var allocatedSize = encoded.Length + encoded.Length % 32;  
+            var allocatedSize = encoded.Length + 32 - (encoded.Length % 32);
 
             termId = Container.Allocate(llt, _postingListContainerId, allocatedSize, out var space);
+            termId |= (long)TermIdMask.Small;
+            
             encoded.CopyTo(space);
             return AddEntriesToTermResult.UpdateTermId;
         }
@@ -948,7 +950,7 @@ namespace Corax
             }
 
             // we'll increase the size of the allocation to 32 byte boundary. To make it cheaper to add to it in the future
-            var allocatedSize = encoded.Length + encoded.Length % 32;  
+            var allocatedSize = encoded.Length + 32 - (encoded.Length % 32);  
             var containerId = Container.Allocate(Transaction.LowLevelTransaction, _postingListContainerId, allocatedSize, out var space);
             encoded.CopyTo(space);
 

@@ -79,6 +79,22 @@ namespace Sparrow.Server.Compression
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        public static long[] DecodeDebug(ReadOnlySpan<byte> buffer) 
+        {
+            int count = UnZag(VariableSizeEncoding.Read<int>(buffer, out var len, 0));
+            var results = new long[count];
+            var pos = len;
+            long cur = 0;
+            for (int i = 0; i < count; i++)
+            {
+                cur += Decode<long>(buffer, out len, pos);
+                results[i] = cur;
+                pos += len;
+            }
+            return results;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         private static T UnZag<T>(T value) where T : unmanaged
         {
             if (typeof(T) == typeof(sbyte))
