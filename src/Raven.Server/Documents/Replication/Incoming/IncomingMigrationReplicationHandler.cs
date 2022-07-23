@@ -42,8 +42,8 @@ namespace Raven.Server.Documents.Replication.Incoming
             {
                 var changeVector = context.GetChangeVector(item.ChangeVector);
                 var order = context.DocumentDatabase.DocumentsStorage.GetNewChangeVector(context).ChangeVector;
-                var migratedChangeVector = new ChangeVector(changeVector.Version, order);
-                migratedChangeVector.UpdateOrder(MigrationTag, _shardedDatabase.ShardedDatabaseId, _movingBucket.MigrationIndex);
+                var migratedChangeVector = context.GetChangeVector(changeVector.Version, order);
+                migratedChangeVector = migratedChangeVector.UpdateOrder(MigrationTag, _shardedDatabase.ShardedDatabaseId, _movingBucket.MigrationIndex, context);
                 item.ChangeVector = migratedChangeVector.AsString();
 
                 return order;

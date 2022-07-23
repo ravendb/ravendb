@@ -2,33 +2,39 @@
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Raven.Server.Documents.Replication;
+using Raven.Server.ServerWide.Context;
+using Sparrow.Collections;
+using Sparrow.Json;
 
 namespace Raven.Server.Utils;
 
 public class ChangeVector
 {
+    internal static readonly PerCoreContainer<FastList<ChangeVector>> PerCoreChangeVectors = new PerCoreContainer<FastList<ChangeVector>>(32);
+
     private const char Separator = '|';
     private string _changeVector;
-        
+
     private ChangeVector _order;
     public ChangeVector Order => _order ?? this;
 
     private ChangeVector _version;
     public ChangeVector Version => _version ?? this;
 
-    public ChangeVector(string changeVector) : this(changeVector, throwOnRecursion: false)
+    public ChangeVector(string changeVector, IChangeVectorOperationContext context)
+        : this(changeVector, throwOnRecursion: false, context)
     {
     }
 
-    public ChangeVector(string version, string order)
+    public ChangeVector(ChangeVector version, ChangeVector order)
     {
-        _version = new ChangeVector(version);
-        _order = new ChangeVector(order);
+        _version = version;
+        _order = order;
     }
 
-    private ChangeVector(string changeVector, bool throwOnRecursion) => Renew(changeVector, throwOnRecursion);
+    public ChangeVector(string changeVector, bool throwOnRecursion, IChangeVectorOperationContext context) => Renew(changeVector, throwOnRecursion, context);
 
-    private void Renew(string changeVector, bool throwOnRecursion)
+    public void Renew(string changeVector, bool throwOnRecursion, IChangeVectorOperationContext context)
     {
         _order = null;
         _version = null;
@@ -46,22 +52,27 @@ public class ChangeVector
             if (parts.Length != 2)
                 throw new ArgumentException($"Invalid change vector {changeVector}");
 
-            _order = new ChangeVector(parts[0], throwOnRecursion: true);
-            _version = new ChangeVector(parts[1], throwOnRecursion: true);
+            _order = context.GetChangeVector(parts[0], throwOnRecursion: true);
+            _version = context.GetChangeVector(parts[1], throwOnRecursion: true);
             return;
         }
 
         _changeVector = changeVector;
     }
 
-    public void Renew(string changeVector) => Renew(changeVector, throwOnRecursion: false);
+    public void Renew(ChangeVector version, ChangeVector order)
+    {
+        _order = null;
+        _version = version;
+        _changeVector = order;
+    }
 
-    public bool IsNullOrEmpty => 
-        string.IsNullOrEmpty(_changeVector) && 
-        string.IsNullOrEmpty(_order?._changeVector) && 
+    public bool IsNullOrEmpty =>
+        string.IsNullOrEmpty(_changeVector) &&
+        string.IsNullOrEmpty(_order?._changeVector) &&
         string.IsNullOrEmpty(_version?._changeVector);
 
-    public bool IsSingle => string.IsNullOrEmpty(_order?._changeVector) && 
+    public bool IsSingle => string.IsNullOrEmpty(_order?._changeVector) &&
                             string.IsNullOrEmpty(_version?._changeVector);
 
 
@@ -70,30 +81,32 @@ public class ChangeVector
         if (IsSingle && changeVector.IsSingle)
             return _changeVector == changeVector._changeVector;
 
-        return Order.IsEqual(changeVector.Order) && 
+        return Order.IsEqual(changeVector.Order) &&
                Version.IsEqual(changeVector.Version);
     }
 
-    public ChangeVector MergeWith(ChangeVector changeVector) => Merge(this, changeVector);
+    public ChangeVector MergeWith(ChangeVector changeVector, IChangeVectorOperationContext context) => Merge(this, changeVector, context);
 
-    public ChangeVector MergeWith(string changeVector) => Merge(this, new ChangeVector(changeVector));
+    public ChangeVector MergeWith(string changeVector, IChangeVectorOperationContext context) => Merge(this, context.GetChangeVector(changeVector), context);
 
-    public void UpdateOrder(string nodeTag, string dbId, long etag) => UpdateInternal(nodeTag, dbId, etag, Order);
+    public ChangeVector UpdateOrder(string nodeTag, string dbId, long etag, IChangeVectorOperationContext context) => UpdateInternal(nodeTag, dbId, etag, Order, context);
 
-    public void UpdateVersion(string nodeTag, string dbId, long etag) => UpdateInternal(nodeTag, dbId, etag, Version);
+    public ChangeVector UpdateVersion(string nodeTag, string dbId, long etag, IChangeVectorOperationContext context) => UpdateInternal(nodeTag, dbId, etag, Version, context);
 
     public static ConflictStatus GetConflictStatusForDocument(ChangeVector documentVector1, ChangeVector documentVector2) => GetConflictStatusInternal(documentVector1.Version, documentVector2.Version);
 
     public static ConflictStatus GetConflictStatusForDatabase(ChangeVector documentVector, ChangeVector databaseVector) => GetConflictStatusInternal(documentVector.Order, databaseVector.Order);
 
-    private void UpdateInternal(string nodeTag, string dbId, long etag, ChangeVector changeVector)
+    private ChangeVector UpdateInternal(string nodeTag, string dbId, long etag, ChangeVector changeVector, IChangeVectorOperationContext context)
     {
         EnsureValid();
         var result = ChangeVectorUtils.TryUpdateChangeVector(nodeTag, dbId, etag, changeVector);
         if (result.IsValid)
         {
-            changeVector._changeVector = result.ChangeVector;
+            return context.GetChangeVector(result.ChangeVector);
         }
+
+        return this;
     }
 
     private static ConflictStatus GetConflictStatusInternal(ChangeVector remote, ChangeVector local)
@@ -104,38 +117,40 @@ public class ChangeVector
         return ChangeVectorUtils.GetConflictStatus(remote.AsString(), local.AsString());
     }
 
-    public static ChangeVector Merge(ChangeVector cv1, ChangeVector cv2)
+    public static ChangeVector Merge(ChangeVector cv1, ChangeVector cv2, IChangeVectorOperationContext context)
     {
         if (cv1 == null)
             return cv2;
-            
+
         if (cv2 == null)
             return cv1;
 
         if (cv1.IsSingle && cv2.IsSingle)
         {
             var result = ChangeVectorUtils.MergeVectors(cv1._changeVector, cv2._changeVector);
-            return new ChangeVector(result);
+            return context.GetChangeVector(result);
         }
 
         var orderMerge = ChangeVectorUtils.MergeVectors(cv1.Order._changeVector, cv2.Order._changeVector);
         var versionMerge = ChangeVectorUtils.MergeVectors(cv1.Version._changeVector, cv2.Version._changeVector);
-        return new ChangeVector(versionMerge, orderMerge);
+        return context.GetChangeVector(versionMerge, orderMerge);
     }
 
-    public static ChangeVector Merge(List<ChangeVector> changeVectors)
+    public static ChangeVector Merge(List<ChangeVector> changeVectors, IChangeVectorOperationContext context)
     {
         var result = changeVectors[0];
         for (int i = 1; i < changeVectors.Count; i++)
         {
-            result = Merge(result, changeVectors[i]);
+            result = Merge(result, changeVectors[i], context);
         }
 
         return result;
     }
 
-    public bool RemoveIds(HashSet<string> ids)
+    public bool TryRemoveIds(HashSet<string> ids, IChangeVectorOperationContext context, out ChangeVector changeVector)
     {
+        changeVector = this;
+
         if (IsNullOrEmpty)
             return false;
 
@@ -144,37 +159,54 @@ public class ChangeVector
 
         if (string.IsNullOrEmpty(_changeVector) == false)
         {
-            var entries = _changeVector.ToChangeVectorList();
-            if (entries.RemoveAll(x => ids.Contains(x.DbId)) > 0)
+            if (TryRemoveIdsInternal(_changeVector, ids, out var newChangeVector))
             {
-                _changeVector = entries.SerializeVector();
+                changeVector = context.GetChangeVector(newChangeVector);
                 return true;
             }
 
             return false;
         }
-            
-        return Version.RemoveIds(ids) | Order.RemoveIds(ids);
+
+        var versionSuccess = TryRemoveIdsInternal(Version._changeVector, ids, out var newVersionChangeVector);
+        var orderSuccess = TryRemoveIdsInternal(Order._changeVector, ids, out var newOrderChangeVector);
+
+        if (versionSuccess || orderSuccess)
+        {
+            changeVector = context.GetChangeVector(newVersionChangeVector, newOrderChangeVector);
+            return true;
+        }
+
+        return false;
+
+        static bool TryRemoveIdsInternal(string changeVector, HashSet<string> ids, out string newChangeVector)
+        {
+            var entries = changeVector.ToChangeVectorList();
+            if (entries.RemoveAll(x => ids.Contains(x.DbId)) > 0)
+            {
+                newChangeVector = entries.SerializeVector();
+                return true;
+            }
+
+            newChangeVector = changeVector;
+            return false;
+        }
     }
 
-    public void StripTags(string tag, string exclude)
+    private ChangeVector StripTags(string tag, string exclude, IChangeVectorOperationContext context)
     {
         if (IsNullOrEmpty)
-            return;
+            return this;
 
         if (string.IsNullOrEmpty(_changeVector) == false)
-        {
-            _changeVector = StripTags(_changeVector, tag, exclude);
-            return;
-        }
-            
-        Order.StripTags(tag, exclude);
-        Version.StripTags(tag, exclude);
+            return context.GetChangeVector(StripTags(_changeVector, tag, exclude));
+
+        return context.GetChangeVector(StripTags(Version._changeVector, tag, exclude), StripTags(Order._changeVector, tag, exclude));
     }
 
-    public void StripTrxnTags() => StripTags(ChangeVectorParser.TrxnTag, exclude: null);
-        
-    public void StripSinkTags(string exclude) => StripTags(ChangeVectorParser.SinkTag, exclude);
+    public ChangeVector StripTrxnTags(IChangeVectorOperationContext context) => StripTags(ChangeVectorParser.TrxnTag, exclude: null, context);
+
+    public ChangeVector StripSinkTags(string exclude, IChangeVectorOperationContext context) => StripTags(ChangeVectorParser.SinkTag, exclude, context);
 
     private static string StripTags(string from, string tag, string exclude)
     {
@@ -244,7 +276,7 @@ public class ChangeVector
     public override string ToString()
     {
         EnsureValid();
-            
+
         if (IsSingle)
             return _changeVector;
 
@@ -252,9 +284,9 @@ public class ChangeVector
     }
 }
 
-   
+
 public enum ChangeVectorMode
 {
     Version,
     Order
-}  
+}

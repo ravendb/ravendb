@@ -28,7 +28,7 @@ internal abstract class AbstractBatchHandlerProcessorForBulkDocs<TBatchCommand, 
 
     protected abstract ValueTask WaitForIndexesAsync(IndexBatchOptions options, string lastChangeVector, long lastTombstoneEtag, HashSet<string> modifiedCollections);
 
-    protected abstract ValueTask WaitForReplicationAsync(ReplicationBatchOptions options, string lastChangeVector);
+    protected abstract ValueTask WaitForReplicationAsync(TOperationContext context, ReplicationBatchOptions options, string lastChangeVector);
 
     protected abstract char GetIdentityPartsSeparator();
 
@@ -99,7 +99,7 @@ internal abstract class AbstractBatchHandlerProcessorForBulkDocs<TBatchCommand, 
 
                 if (replicationBatchOptions != null)
                 {
-                    await WaitForReplicationAsync(replicationBatchOptions, command.LastChangeVector);
+                    await WaitForReplicationAsync(context, replicationBatchOptions, command.LastChangeVector);
                 }
 
                 if (indexBatchOptions != null)

@@ -11,6 +11,7 @@ using Raven.Server.Documents.Subscriptions.Stats;
 using Raven.Server.Documents.Subscriptions.SubscriptionProcessor;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Utils;
 
@@ -92,7 +93,7 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "Need to implement events + ws for this");
         }
 
-        protected override string SetLastChangeVectorInThisBatch(string currentLast, Document sentDocument)
+        protected override string SetLastChangeVectorInThisBatch(IChangeVectorOperationContext context, string currentLast, Document sentDocument)
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "All tests pass but wonder if that is correct?");
             return sentDocument.ChangeVector;

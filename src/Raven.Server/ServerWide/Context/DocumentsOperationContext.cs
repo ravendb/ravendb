@@ -13,54 +13,13 @@ namespace Raven.Server.ServerWide.Context
     {
         private readonly DocumentDatabase _documentDatabase;
 
-        private int _maxOfAllocatedChangeVectors;
-        private int _numberOfAllocatedChangeVectors;
-        private FastList<ChangeVector> _changeVectorsPool;
-        private static readonly PerCoreContainer<FastList<ChangeVector>> _perCoreChangeVectorList = new PerCoreContainer<FastList<ChangeVector>>(32);
+
 
         public DocumentsOperationContext(DocumentDatabase documentDatabase, int initialSize, int longLivedSize, int maxNumberOfAllocatedStringValues, SharedMultipleUseFlag lowMemoryFlag)
             : base(initialSize, longLivedSize, maxNumberOfAllocatedStringValues, lowMemoryFlag)
         {
             _documentDatabase = documentDatabase;
-            _maxOfAllocatedChangeVectors = 1024;
-            if (_perCoreChangeVectorList.TryPull(out _changeVectorsPool) == false)
-                _changeVectorsPool = new FastList<ChangeVector>(256);
-        }
 
-        public override void Dispose()
-        {
-            base.Dispose();
-
-            if (_changeVectorsPool != null)
-            {
-                if (_perCoreChangeVectorList.TryPush(_changeVectorsPool) == false)
-                {
-                    /*foreach (var allocatedStringValue in _changeVectorsPool)
-                        allocatedStringValue?.Dispose();*/
-                }
-
-                _changeVectorsPool = null;
-            }
-        }
-
-        public ChangeVector GetChangeVector(string changeVector)
-        {
-            ChangeVector allocatedChangeVector;
-            if (_numberOfAllocatedChangeVectors < _changeVectorsPool.Count)
-            {
-                allocatedChangeVector = _changeVectorsPool[_numberOfAllocatedChangeVectors++];
-                allocatedChangeVector.Renew(changeVector);
-                return allocatedChangeVector;
-            }
-
-            allocatedChangeVector = new ChangeVector(changeVector);
-            if (_numberOfAllocatedChangeVectors < _maxOfAllocatedChangeVectors)
-            {
-                _changeVectorsPool.Add(allocatedChangeVector);
-                _numberOfAllocatedChangeVectors++;
-            }
-
-            return allocatedChangeVector;
         }
 
         internal ChangeVector LastDatabaseChangeVector
@@ -72,15 +31,15 @@ namespace Raven.Server.ServerWide.Context
                     throw new InvalidOperationException($"The global change vector '{value}' cannot contain pipe");
 
 
-                value.StripTrxnTags();
+                value = value.StripTrxnTags(this);
 
                 if (DbIdsToIgnore == null || DbIdsToIgnore.Count == 0 || value.IsNullOrEmpty)
                 {
                     _lastDatabaseChangeVector = value;
                     return;
                 }
-                
-                value.RemoveIds(DbIdsToIgnore);
+
+                value.TryRemoveIds(DbIdsToIgnore, this, out value);
                 _lastDatabaseChangeVector = value;
             }
         }
@@ -120,7 +79,7 @@ namespace Raven.Server.ServerWide.Context
             return shortTermSingleUse;
         }
 
-        
+
 
         protected override DocumentsTransaction CloneReadTransaction(DocumentsTransaction previous)
         {

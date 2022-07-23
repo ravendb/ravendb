@@ -219,7 +219,7 @@ namespace Raven.Server.Documents.Subscriptions
                             {
                                 CancellationTokenSource.Token.ThrowIfCancellationRequested();
 
-                                lastChangeVectorSentInThisBatch = SetLastChangeVectorInThisBatch(lastChangeVectorSentInThisBatch, result.Doc);
+                                lastChangeVectorSentInThisBatch = SetLastChangeVectorInThisBatch(clusterOperationContext, lastChangeVectorSentInThisBatch, result.Doc);
 
                                 if (result.Doc.Data == null)
                                 {
@@ -937,7 +937,7 @@ namespace Raven.Server.Documents.Subscriptions
 
         protected abstract void AfterProcessorCreation();
         protected abstract void RaiseNotificationForBatchEnd(string name, SubscriptionBatchStatsAggregator last);
-        protected abstract string SetLastChangeVectorInThisBatch(string currentLast, Document sentDocument);
+        protected abstract string SetLastChangeVectorInThisBatch(IChangeVectorOperationContext context, string currentLast, Document sentDocument);
         protected abstract Task UpdateStateAfterBatchSentAsync(string lastChangeVectorSentInThisBatch);
 
         private async Task WriteIncludedTimeSeriesAsync(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, SubscriptionBatchStatsScope batchScope,

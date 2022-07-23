@@ -203,7 +203,7 @@ namespace Raven.Server.Documents
                     tx.CreateTree(DocsSlice);
                     tx.CreateTree(LastReplicatedEtagsSlice);
                     tx.CreateTree(GlobalTreeSlice);
-                    
+
                     CollectionsSchema.Create(tx, CollectionsSlice, 32);
 
                     RevisionsStorage = new RevisionsStorage(DocumentDatabase, tx);
@@ -386,8 +386,8 @@ namespace Raven.Server.Documents
         {
             var cv = context.GetChangeVector(changeVector);
             var databaseChangeVector = context.LastDatabaseChangeVector ?? GetDatabaseChangeVector(context);
-            context.SkipChangeVectorValidation = databaseChangeVector.RemoveIds(UnusedDatabaseIds);
-            cv = ChangeVector.Merge(databaseChangeVector, cv);
+            context.SkipChangeVectorValidation = databaseChangeVector.TryRemoveIds(UnusedDatabaseIds, context, out databaseChangeVector);
+            cv = ChangeVector.Merge(databaseChangeVector, cv, context);
             return ChangeVectorUtils.TryUpdateChangeVector(DocumentDatabase, cv).ChangeVector;
         }
 
@@ -402,11 +402,11 @@ namespace Raven.Server.Documents
             var changeVector = context.LastDatabaseChangeVector ??
                                (context.LastDatabaseChangeVector = GetDatabaseChangeVector(context));
 
-            context.SkipChangeVectorValidation = changeVector.RemoveIds(UnusedDatabaseIds);
+            context.SkipChangeVectorValidation = changeVector.TryRemoveIds(UnusedDatabaseIds, context, out changeVector);
 
             if (changeVector.IsNullOrEmpty)
             {
-                context.LastDatabaseChangeVector = ChangeVectorUtils.NewChangeVector(DocumentDatabase, newEtag);
+                context.LastDatabaseChangeVector = ChangeVectorUtils.NewChangeVector(DocumentDatabase, newEtag, context);
                 return context.LastDatabaseChangeVector;
             }
 
@@ -423,7 +423,7 @@ namespace Raven.Server.Documents
         {
             SetFullDatabaseChangeVector(context, changeVector);
 
-            if (changeVector.RemoveIds(UnusedDatabaseIds) == false)
+            if (changeVector.TryRemoveIds(UnusedDatabaseIds, context, out changeVector) == false)
                 ThrowOnNotUpdatedChangeVector(context, changeVector);
 
             var tree = context.Transaction.InnerTransaction.ReadTree(GlobalTreeSlice);
@@ -462,7 +462,7 @@ namespace Raven.Server.Documents
         private static void ThrowOnNotUpdatedChangeVector(DocumentsOperationContext context, ChangeVector changeVector)
         {
             var globalChangeVector = GetDatabaseChangeVector(context);
-            
+
             if (context.SkipChangeVectorValidation)
                 return;
 
@@ -626,7 +626,7 @@ namespace Raven.Server.Documents
             return lastEtag;
         }
 
-        public IEnumerable<Document> GetDocumentsStartingWith(DocumentsOperationContext context, string idPrefix,  string startAfterId,
+        public IEnumerable<Document> GetDocumentsStartingWith(DocumentsOperationContext context, string idPrefix, string startAfterId,
             long start, long take, string collection, Reference<long> skippedResults, DocumentFields fields = DocumentFields.All)
         {
             int alreadyReturnedDocumentsCount = 0;
@@ -635,7 +635,7 @@ namespace Raven.Server.Documents
             var requestedDataField = fields.HasFlag(DocumentFields.Data);
             if (isAllDocs == false && requestedDataField == false)
                 fields |= DocumentFields.Data;
-            
+
             do
             {
                 lastLoadedDocumentsCount = 0;
@@ -1488,7 +1488,7 @@ namespace Raven.Server.Documents
         {
             using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
             {
-                return Delete(context, lowerId, id, expectedChangeVector:null, documentFlags: flags);
+                return Delete(context, lowerId, id, expectedChangeVector: null, documentFlags: flags);
             }
         }
 
@@ -1536,7 +1536,7 @@ namespace Raven.Server.Documents
                 }
 
                 DocumentPutAction.DeleteTombstoneIfNeeded(context, collectionName, lowerId);
-               
+
                 DocumentFlags flags;
                 var localFlags = local.Tombstone.Flags.Strip(DocumentFlags.FromClusterTransaction);
                 if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByEnforceRevisionConfiguration))
@@ -1843,7 +1843,7 @@ namespace Raven.Server.Documents
                     ChangeVectorUtils.ThrowConflictingEtag(lowerId.ToString(), docChangeVector, newEtag, Environment.Base64Id, DocumentDatabase.ServerStore.NodeTag);
 
                 context.LastDatabaseChangeVector ??= GetDatabaseChangeVector(context);
-                context.LastDatabaseChangeVector = ChangeVector.Merge(context.LastDatabaseChangeVector, context.GetChangeVector(mergedChangeVector));
+                context.LastDatabaseChangeVector = ChangeVector.Merge(context.LastDatabaseChangeVector, context.GetChangeVector(mergedChangeVector), context);
                 changeVector = context.LastDatabaseChangeVector;
             }
             else
@@ -1920,7 +1920,7 @@ namespace Raven.Server.Documents
                         }
                         break;
                     default:
-                       Debug.Assert(false, $"FromClusterTransaction, expect change vector of length 1 or 2, {changeVector}");
+                        Debug.Assert(false, $"FromClusterTransaction, expect change vector of length 1 or 2, {changeVector}");
                         break;
                 }
             }
@@ -2139,9 +2139,9 @@ namespace Raven.Server.Documents
         {
             CollectionDetails collectionDetails = new CollectionDetails
             {
-                Name = collection, 
-                CountOfDocuments = 0, 
-                Size = new Client.Util.Size(), 
+                Name = collection,
+                CountOfDocuments = 0,
+                Size = new Client.Util.Size(),
                 DocumentsSize = new Client.Util.Size(),
                 RevisionsSize = new Client.Util.Size(),
                 TombstonesSize = new Client.Util.Size()
@@ -2158,7 +2158,7 @@ namespace Raven.Server.Documents
                 var revisionsSize = GetReportForTable(context, RevisionsStorage.RevisionsSchema, collectionName.GetTableName(CollectionTableType.Revisions))
                     .DataSizeInBytes;
                 var tombstonesSize = GetReportForTable(context, TombstonesSchema, collectionName.GetTableName(CollectionTableType.Tombstones)).DataSizeInBytes;
-                
+
                 collectionDetails.DocumentsSize.SizeInBytes = documentsSize;
                 collectionDetails.RevisionsSize.SizeInBytes = revisionsSize;
                 collectionDetails.TombstonesSize.SizeInBytes = tombstonesSize;
@@ -2266,12 +2266,12 @@ namespace Raven.Server.Documents
         }
 
 
-        public ConflictStatus GetConflictStatus(string remote, string local, ChangeVectorMode mode) => GetConflictStatus(remote, local, mode, out _);
+        public ConflictStatus GetConflictStatus(DocumentsOperationContext context, string remote, string local, ChangeVectorMode mode) => GetConflictStatus(context, remote, local, mode, out _);
 
-        public ConflictStatus GetConflictStatus(string remote, string local, ChangeVectorMode mode, out bool skipValidation)
+        public ConflictStatus GetConflictStatus(DocumentsOperationContext context, string remote, string local, ChangeVectorMode mode, out bool skipValidation)
         {
-            var remoteChangeVector = new ChangeVector(remote);
-            var localChangeVector = new ChangeVector(local);
+            var remoteChangeVector = context.GetChangeVector(remote);
+            var localChangeVector = context.GetChangeVector(local);
 
             skipValidation = false;
             var originalStatus = ChangeVectorUtils.GetConflictStatus(remoteChangeVector, localChangeVector, mode: mode);
@@ -2293,12 +2293,12 @@ namespace Raven.Server.Documents
                 // case 4: incoming change vector A:11, B:12, C:10 -> update                (original: conflict, after: update)
 
                 var original = ChangeVectorUtils.GetConflictStatus(remoteChangeVector, localChangeVector, mode: mode);
-                
-                remoteChangeVector.StripTrxnTags();
-                localChangeVector.StripTrxnTags();
 
-                remoteChangeVector.RemoveIds(UnusedDatabaseIds);
-                skipValidation = localChangeVector.RemoveIds(UnusedDatabaseIds);
+                remoteChangeVector = remoteChangeVector.StripTrxnTags(context);
+                localChangeVector = localChangeVector.StripTrxnTags(context);
+
+                remoteChangeVector.TryRemoveIds(UnusedDatabaseIds, context, out remoteChangeVector);
+                skipValidation = localChangeVector.TryRemoveIds(UnusedDatabaseIds, context, out localChangeVector);
                 var after = ChangeVectorUtils.GetConflictStatus(remoteChangeVector, localChangeVector, mode: mode);
 
                 if (after == ConflictStatus.AlreadyMerged)
@@ -2470,7 +2470,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public static IEnumerable<Table.SeekResult> GetItemsByBucket(ByteStringContext allocator, Table table, 
+        public static IEnumerable<Table.SeekResult> GetItemsByBucket(ByteStringContext allocator, Table table,
             TableSchema.DynamicKeyIndexDef dynamicIndex, int bucket, long etag)
         {
             using (GetBucketAndEtagByteString(allocator, bucket, etag, out var buffer))

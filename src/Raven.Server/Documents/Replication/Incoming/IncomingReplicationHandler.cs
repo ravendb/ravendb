@@ -150,7 +150,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                 if (conflictStatus != ConflictStatus.Update)
                     return false;
 
-                context.LastDatabaseChangeVector = current.MergeWith(_changeVector);
+                context.LastDatabaseChangeVector = current.MergeWith(_changeVector, context);
                 context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += _ =>
                 {
                     try
@@ -382,7 +382,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                         var changeVectorVersion = incomingChangeVector .Version;
                         var changeVectorOrder = incomingChangeVector .Order;
 
-                        context.LastDatabaseChangeVector = ChangeVector.Merge(changeVectorToMerge, context.LastDatabaseChangeVector);
+                        context.LastDatabaseChangeVector = ChangeVector.Merge(changeVectorToMerge, context.LastDatabaseChangeVector, context);
 
                         TimeSeriesStorage tss;
                         LazyStringValue docId;
@@ -465,7 +465,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                                 if (removedChangeVector != null)
                                 {
                                     var removed = context.GetChangeVector(removedChangeVector);
-                                    context.LastDatabaseChangeVector = ChangeVector.Merge(removed, changeVectorOrder);
+                                    context.LastDatabaseChangeVector = ChangeVector.Merge(removed, changeVectorOrder, context);
                                 }
 
                                 break;
@@ -494,7 +494,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                                 if (tss.TryAppendEntireSegment(context, segment, docId, segment.Name, baseline))
                                 {
                                     var databaseChangeVector = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
-                                    context.LastDatabaseChangeVector = ChangeVector.Merge(databaseChangeVector, segmentChangeVector);
+                                    context.LastDatabaseChangeVector = ChangeVector.Merge(databaseChangeVector, segmentChangeVector, context);
                                     continue;
                                 }
 
@@ -506,7 +506,7 @@ namespace Raven.Server.Documents.Replication.Incoming
 
                                 var values = segment.Segment.YieldAllValues(context, context.Allocator, baseline);
                                 var changeVector = tss.AppendTimestamp(context, docId, segment.Collection, segment.Name, values, options);
-                                context.LastDatabaseChangeVector = segmentChangeVector.MergeWith(changeVector);
+                                context.LastDatabaseChangeVector = segmentChangeVector.MergeWith(changeVector, context);
 
                                 break;
 

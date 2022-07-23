@@ -3,6 +3,7 @@ using Raven.Client.Documents.Operations.Replication;
 using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Replication.Stats;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Replication.Senders
@@ -25,7 +26,7 @@ namespace Raven.Server.Documents.Replication.Senders
                                            _parent._database.ForTestingPurposes?.ForceSendTombstones == false;
         }
 
-        protected override bool ShouldSkip(ReplicationBatchItem item, OutgoingReplicationStatsScope stats, SkippedReplicationItemsInfo skippedReplicationItemsInfo)
+        protected override bool ShouldSkip(DocumentsOperationContext context, ReplicationBatchItem item, OutgoingReplicationStatsScope stats, SkippedReplicationItemsInfo skippedReplicationItemsInfo)
         {
             if (ValidatorSaysToSkip(_pathsToSend) || ValidatorSaysToSkip(_destinationAcceptablePaths))
                 return true;
@@ -33,7 +34,7 @@ namespace Raven.Server.Documents.Replication.Senders
             if (_shouldSkipSendingTombstones && ReplicationLoader.IsOfTypePreventDeletions(item))
                 return true;
 
-            return base.ShouldSkip(item, stats, skippedReplicationItemsInfo);
+            return base.ShouldSkip(context, item, stats, skippedReplicationItemsInfo);
 
             
             bool ValidatorSaysToSkip(AllowedPathsValidator validator)
