@@ -933,7 +933,7 @@ namespace Raven.Server.Documents
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing _requestExecutor");
             exceptionAggregator.Execute(() =>
             {
-                if (_requestExecutor.IsValueCreated)
+                if (_requestExecutor?.IsValueCreated == true)
                     _requestExecutor.Value.Dispose();
             });
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed _requestExecutor");
