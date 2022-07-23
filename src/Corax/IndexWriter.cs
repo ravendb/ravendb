@@ -58,12 +58,6 @@ namespace Corax
         {
             public List<long> Additions;
             public List<long> Removals;
-
-            public void Sort()
-            {
-                Additions.Sort();
-                Removals.Sort();
-            }
         }
         
         private readonly Dictionary<Slice, EntriesModifications>[] _buffer;
@@ -736,7 +730,7 @@ namespace Corax
         {
             var smallSet = Container.Get(llt, id).ToSpan();
             
-            entries.Sort();
+            entries.Removals.Sort();
             int removalIndex = 0;
             
             // combine with existing values
@@ -770,6 +764,8 @@ namespace Corax
                 return AddEntriesToTermResult.RemoveTermId;
             }
 
+            entries.Additions.Sort();
+
             if (TryDeltaEncodingToBuffer(entries.Additions, tmpBuf, out var encoded) == false)
             {
                 AddNewTermToSet(entries.Additions, out termId);;
@@ -788,8 +784,6 @@ namespace Corax
 
             termId = Container.Allocate(llt, _postingListContainerId, allocatedSize, out var space);
             encoded.CopyTo(space);
-            return AddEntriesToTermResult.UpdateTermId;
-            
             return AddEntriesToTermResult.UpdateTermId;
         }
 
