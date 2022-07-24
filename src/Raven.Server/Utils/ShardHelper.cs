@@ -351,7 +351,8 @@ namespace Raven.Server.Utils
             ChangeVectorExtensions.ToBase26(builder, Random.Shared.Next());
 
             builder
-                .Append(SuffixIdTerminator);
+                .Append('$')
+                .Append(identityPartsSeparator);
 
             return builder.ToString();
         }
@@ -360,7 +361,5 @@ namespace Raven.Server.Utils
         {
             AdjustAfterSeparator('$', ref buffer, ref size);
         }
-
-        public const char SuffixIdTerminator = '*';
     }
 }

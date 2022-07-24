@@ -83,7 +83,7 @@ public class ShardedBatchCommand : IBatchCommand, IEnumerable<SingleShardedComma
             if (bufferedCommand.IsServerSideIdentity)
             {
                 cmd.Id = ShardHelper.GenerateStickyId(cmd.Id, _databaseContext.IdentityPartsSeparator);
-                shardNumber = _databaseContext.GetShardNumber(_context, cmd.Id.AsSpan(0, cmd.Id.Length - 1));
+                shardNumber = _databaseContext.GetShardNumber(_context, cmd.Id.AsSpan(0, cmd.Id.Length - 2));
             }
             else
             {

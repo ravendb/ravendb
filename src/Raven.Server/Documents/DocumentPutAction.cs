@@ -441,19 +441,19 @@ namespace Raven.Server.Documents
                     var idLength = id.Length;
                     var idSuffixLength = 0;
 
-                    var isIdentityPartsSeparator = lastChar == _documentDatabase.IdentityPartsSeparator;
-
-                    if (isIdentityPartsSeparator == false && lastChar == ShardHelper.SuffixIdTerminator)
+                    if (lastChar == _documentDatabase.IdentityPartsSeparator)
                     {
-                        idSuffixLength = id.Length;
-                        ShardHelper.ExtractStickyId(ref idSuffixPtr, ref idSuffixLength);
+                        var penultimateChar = id[^2];
+                        if (penultimateChar == '$')
+                        {
+                            idSuffixLength = id.Length - 2;
+                           
+                            ShardHelper.ExtractStickyId(ref idSuffixPtr, ref idSuffixLength);
+                            
+                            idSuffixLength += 1; // +1 for identity parts separator
+                            idLength -= idSuffixLength + 2; // +2 for 2x '$'
+                        }
 
-                        idLength -= idSuffixLength + 1; // +1 for '$'
-                        isIdentityPartsSeparator = true;
-                    }
-
-                    if (isIdentityPartsSeparator)
-                    {
                         string nodeTag = _documentDatabase.ServerStore.NodeTag;
 
                         // PERF: we are creating an string and mutating it for performance reasons.
