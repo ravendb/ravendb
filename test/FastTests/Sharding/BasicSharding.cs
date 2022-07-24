@@ -195,8 +195,8 @@ namespace FastTests.Sharding
                 }
             }
         }
-
-        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Sharding)]
+        
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Sharding, Skip = "Fix sharded includes RavenDB-18162")]
         public void CanPutAndGetMultipleItemsWithIncludes()
         {
             using (var store = Sharding.GetDocumentStore())

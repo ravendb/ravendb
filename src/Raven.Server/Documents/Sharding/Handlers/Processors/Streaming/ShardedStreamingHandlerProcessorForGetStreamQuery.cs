@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -45,7 +47,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
             
             var docs = await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(context,
                 new GetDocumentsCommand(new string[] { fromDocument }, null, metadataOnly: false), shard);
-            return (BlittableJsonReaderObject)docs.Results.Items.Current;
+            return (BlittableJsonReaderObject)docs.Results[0];
         }
 
         protected override IDisposable AllocateContext(out TransactionOperationContext context)
@@ -58,20 +60,39 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
             return RequestHandler.DatabaseContext.QueryMetadataCache;
         }
 
+        protected override IStreamQueryResultWriter<BlittableJsonReaderObject> GetBlittableQueryResultWriter(string format, bool isDebug, JsonOperationContext context, HttpResponse response, Stream responseBodyStream, bool fromSharded,
+            string[] propertiesArray, string fileNamePrefix = null)
+        {
+            if (IsCsvFormat(format))
+            {
+                //does not write query stats to stream
+                return new StreamCsvBlittableQueryResultWriter(response, responseBodyStream, propertiesArray, fileNamePrefix);
+            }
+            
+            if (isDebug)
+            {
+                ThrowUnsupportedException($"You have selected \"{format}\" file format, which is not supported.");
+            }
+            
+            return new StreamBlittableDocumentQueryResultWriter(responseBodyStream, context);
+        }
+
         private async ValueTask<(IEnumerator<BlittableJsonReaderObject>, StreamQueryStatistics)> ExecuteQueryAsync(TransactionOperationContext context, IndexQueryServerSide query, string debug, bool ignoreLimit, OperationCancelToken token)
         {
-            //TODO stav: use the time limited token we create in abstract for the entire sharded operation?
-
             var queryProcessor = new ShardedQueryStreamProcessor(context, RequestHandler, query);
             if (queryProcessor.IsMapReduce())
                 throw new NotSupportedInShardingException("MapReduce is not supported in sharded streaming queries");
 
-            queryProcessor.Initialize(out BlittableJsonReaderObject queryTemplate);
+            //TODO stav: should have this?
+            //if(queryProcessor.IsIncludes())
+            //    throw new NotSupportedInShardingException("Includes is not supported in sharded streaming queries");
 
-            var cmds = new PostQueryStreamCommand[RequestHandler.DatabaseContext.ShardCount];
-            for (int i = 0; i < cmds.Length; i++)
+            queryProcessor.Initialize(out Dictionary<int, BlittableJsonReaderObject> queryTemplates);
+
+            var cmds = new Dictionary<int, PostQueryStreamCommand>(RequestHandler.DatabaseContext.ShardCount);
+            foreach(var (shard, queryTemplate) in queryTemplates)
             {
-                cmds[i] = new PostQueryStreamCommand(queryTemplate, debug, ignoreLimit);
+                cmds.Add(shard, new PostQueryStreamCommand(queryTemplate, debug, ignoreLimit));
             }
 
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Stav, DevelopmentHelper.Severity.Normal, "Handle continuation token in streaming");
@@ -87,14 +108,17 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
                 return (ctx, returnToContextPool);
             }, comparer, cmds,  skip: query.Offset ?? 0, take: query.Limit ?? Int32.MaxValue, token.Token);
 
-            return await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(op, token.Token);
+            return await RequestHandler.ShardExecutor.ExecuteParallelForShardsAsync(cmds.Keys.ToArray() ,op, token.Token);
         }
 
         protected override async ValueTask ExecuteAndWriteQueryStreamAsync(TransactionOperationContext context, IndexQueryServerSide query, string format,
             string[] propertiesArray, string fileNamePrefix, bool ignoreLimit, bool _, OperationCancelToken token)
         {
+            //writer is blittable->document or blittable->csv
+
             var (results, queryStatistics) = await ExecuteQueryAsync(context, query, null, ignoreLimit, token);
-            await using (var writer = new StreamBlittableDocumentQueryResultWriter(RequestHandler.ResponseBodyStream(), context))
+            await using (var writer = GetBlittableQueryResultWriter(format, isDebug: false, context, HttpContext.Response, RequestHandler.ResponseBodyStream(), fromSharded: false,
+                             propertiesArray, fileNamePrefix))
             {
                 var queryResult = new StreamDocumentIndexEntriesQueryResult(HttpContext.Response, writer, token);// writes blittable docs as blittable docs
                 queryResult.TotalResults = queryStatistics.TotalResults;
@@ -114,12 +138,11 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
         protected override async ValueTask ExecuteAndWriteIndexQueryStreamEntriesAsync(TransactionOperationContext context, IndexQueryServerSide query, string format, string debug, string[] propertiesArray,
             string fileNamePrefix, bool ignoreLimit, bool _, OperationCancelToken token)
         {
-            //make requests to shards asking for regular json format instead of csv
-            //write results to stream as csv
+            //from debug
 
             var (results, _) = await ExecuteQueryAsync(context, query, debug, ignoreLimit, token);
 
-            await using (var writer = GetBlittableQueryResultWriter(format, context, HttpContext.Response, RequestHandler.ResponseBodyStream(), fromSharded: false, propertiesArray,
+            await using (var writer = GetBlittableQueryResultWriter(format, isDebug: true, context, HttpContext.Response, RequestHandler.ResponseBodyStream(), fromSharded: false, propertiesArray,
                              fileNamePrefix))
             {
                 var queryResult = new StreamDocumentIndexEntriesQueryResult(HttpContext.Response, writer, token);
@@ -148,12 +171,12 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
         private readonly HttpContext _httpContext;
         private readonly Func<(JsonOperationContext, IDisposable)> _allocateJsonContext;
         private readonly IComparer<BlittableJsonReaderObject> _comparer;
-        private readonly PostQueryStreamCommand[] _queryStreamCommands;
+        private readonly Dictionary<int, PostQueryStreamCommand> _queryStreamCommands;
         private readonly int _skip;
         private readonly int _take;
         private readonly CancellationToken _token;
 
-        public ShardedStreamQueryOperation(HttpContext httpContext, Func<(JsonOperationContext, IDisposable)> allocateJsonContext, IComparer<BlittableJsonReaderObject> comparer, PostQueryStreamCommand[] queryStreamCommands, int skip, int take, CancellationToken token)
+        public ShardedStreamQueryOperation(HttpContext httpContext, Func<(JsonOperationContext, IDisposable)> allocateJsonContext, IComparer<BlittableJsonReaderObject> comparer, Dictionary<int, PostQueryStreamCommand> queryStreamCommands, int skip, int take, CancellationToken token)
         {
             _httpContext = httpContext;
             _allocateJsonContext = allocateJsonContext;

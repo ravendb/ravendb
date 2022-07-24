@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -33,7 +34,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
             using (context.OpenReadTransaction())
             {
                 var document = RequestHandler.Database.DocumentsStorage.Get(context, fromDocument);
-                return ValueTask.FromResult(document?.Data);
+                return ValueTask.FromResult(document?.Data.Clone(context));
             }
         }
 
@@ -54,7 +55,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
             string[] propertiesArray, string fileNamePrefix, bool ignoreLimit, bool fromSharded, OperationCancelToken token)
         {
             //writes either csv or blittable documents if is shard
-            await using (var writer = GetBlittableQueryResultWriter(format, context, HttpContext.Response, RequestHandler.ResponseBodyStream(), fromSharded, propertiesArray, fileNamePrefix))
+            await using (var writer = GetBlittableQueryResultWriter(format, isDebug: true, context, HttpContext.Response, RequestHandler.ResponseBodyStream(), fromSharded, propertiesArray, fileNamePrefix))
             {
                 try
                 {
@@ -109,6 +110,37 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
                     throw;
                 }
             }
+        }
+
+        protected override IStreamQueryResultWriter<BlittableJsonReaderObject> GetBlittableQueryResultWriter(string format, bool isDebug, JsonOperationContext context, HttpResponse response, Stream responseBodyStream, bool fromSharded,
+            string[] propertiesArray, string fileNamePrefix = null)
+        {
+            if (fromSharded)
+            {
+                return new StreamBlittableDocumentQueryResultWriter(responseBodyStream, context);
+            }
+            
+            if (IsCsvFormat(format) == false)
+                ThrowUnsupportedException($"You have selected \"{format}\" file format, which is not supported.");
+
+            //does not write query stats to stream
+            return new StreamCsvBlittableQueryResultWriter(response, responseBodyStream, propertiesArray, fileNamePrefix);
+        }
+
+        protected IStreamQueryResultWriter<Document> GetDocumentQueryResultWriter(string format, HttpResponse response, JsonOperationContext context, Stream responseBodyStream,
+            string[] propertiesArray, string fileNamePrefix = null)
+        {
+            if (IsCsvFormat(format))
+            {
+                return new StreamCsvDocumentQueryResultWriter(response, responseBodyStream, propertiesArray, fileNamePrefix);
+            }
+
+            if (propertiesArray != null)
+            {
+                ThrowUnsupportedException("Using json output format with custom fields is not supported.");
+            }
+
+            return new StreamJsonDocumentQueryResultWriter(responseBodyStream, context);
         }
     }
 }

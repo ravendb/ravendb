@@ -8,12 +8,14 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq.Indexing;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
+using Raven.Client.Exceptions.Sharding;
 using Raven.Server.Config;
 using SlowTests.Core.Utils.Entities;
 using Sparrow.Json.Parsing;
@@ -196,8 +198,9 @@ namespace SlowTests.Core.Streaming
             public int Index { get; set; }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
         public void TestFailingProjection(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -330,6 +333,43 @@ namespace SlowTests.Core.Streaming
 
         [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void QueryStreamingLoadIds(Options options)
+        {
+            using (var store = Sharding.GetDocumentStore(options))
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Dog { Owner = "users/3" }, "dogs/1");
+                    session.Store(new Dog { Owner = "users/4" }, "dogs/2");
+                    session.Store(new Dog { Owner = "users/5" }, "dogs/3");
+
+                    session.Store(new User { Count = 7 }, "users/3");
+                    session.Store(new User { Count = 19 }, "users/4");
+                    session.Store(new User { Count = 13 }, "users/5");
+
+                    session.SaveChanges();
+
+                    Assert.NotEqual(Sharding.GetShardNumber(store, "dogs/1"), Sharding.GetShardNumber(store, "dogs/2"));
+
+                    var q = session.Query<Dog>().Where(d => d.Id == "dogs/1" || d.Id == "dogs/2").OrderBy(x => x.Id);
+                    var queryResult = session.Advanced.Stream<Dog>(q);
+
+                    var resList = new List<Dog>();
+
+                    foreach (var res in queryResult)
+                    {
+                        resList.Add(res.Document);
+                    }
+
+                    Assert.Equal(2, resList.Count);
+                    Assert.Equal("dogs/1", resList[0].Id);
+                    Assert.Equal("dogs/2", resList[1].Id);
+                }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void Streaming_Results_Should_Sort_Properly(Options options)
         {
             using (var documentStore = GetDocumentStore(options))
@@ -377,53 +417,71 @@ namespace SlowTests.Core.Streaming
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
-        public void OrderedStreamingQueryWithSkipTake(Options options)
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void Streaming_Query_Sort_By_Name(Options options)
         {
             using (var documentStore = GetDocumentStore(options))
             {
-                documentStore.ExecuteIndex(new FooIndex());
-
                 using (var session = documentStore.OpenSession())
                 {
+                    var random = new System.Random();
+
                     for (int i = 0; i < 100; i++)
-                        session.Store(new Foo { Num = 100 - i });
+                        session.Store(new User { Name = RandomString(random, 5) });
 
                     session.SaveChanges();
                 }
-
-                Indexes.WaitForIndexing(documentStore);
-
-                Foo last = null;
-                int count = 0;
+                
+                string last = null;
 
                 using (var session = documentStore.OpenSession())
                 {
-                    var q = session.Query<Foo, FooIndex>().OrderBy(x => x.Num).Skip(10).Take(80);
+                    var q = session.Query<User>().OrderBy(x => x.Name);
 
                     var enumerator = session.Advanced.Stream(q);
+                    var count = 0;
 
                     while (enumerator.MoveNext())
                     {
-                        Foo foo = (Foo)enumerator.Current.Document;
-                        Debug.WriteLine("{0} - {1}", foo.Id, foo.Num);
-
+                        string name = enumerator.Current.Document.Name;
+                        
                         if (last != null)
                         {
-                            Assert.True(last.Num <= foo.Num);
+                            // If the sort worked, this test should pass
+                            Assert.True(string.Compare(last, name) <= 0);
                         }
 
-                        last = foo;
+                        last = name;
                         count++;
-
-                        if (count == 1)
-                        {
-                            Assert.Equal(11, last.Num);
-                        }
                     }
+                    Assert.Equal(100, count);
+                }
+            }
+        }
 
-                    Assert.Equal(90, last.Num);
-                    Assert.Equal(80, count);
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
+        public async Task Streaming_Query_Custom_Order_Fail(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    var err = await Assert.ThrowsAsync<NotSupportedInShardingException>(async () =>
+                    {
+                        var q = session
+                            .Advanced
+                            .AsyncRawQuery<Company>("from Companies order by custom(Name, 'MySorter')");
+
+                        var stream = await session.Advanced.StreamAsync(q);
+
+                        while (await stream.MoveNextAsync())
+                        {
+
+                        }
+                    });
+
+                    Assert.Contains("Custom sorting is not supported in sharding as of yet", err.Message);
                 }
             }
         }
@@ -458,6 +516,31 @@ namespace SlowTests.Core.Streaming
 
                 Stores.Add(x => x.Name, FieldStorage.Yes);
             }
+        }
+
+        private class Dog
+        {
+            public string Id { get; set; }
+            public string Name { get; set; }
+            public string Owner { get; set; }
+            public string Breed { get; set; }
+            public string Color { get; set; }
+            public int Age { get; set; }
+            public bool IsVaccinated { get; set; }
+        }
+
+        private static string RandomString(Random random, int length)
+        {
+            const string pool = "abcdefghijklmnopqrstuvwxyz";
+            var builder = new StringBuilder();
+
+            for (var i = 0; i < length; i++)
+            {
+                var c = pool[random.Next(0, pool.Length)];
+                builder.Append(c);
+            }
+
+            return builder.ToString();
         }
     }
 }

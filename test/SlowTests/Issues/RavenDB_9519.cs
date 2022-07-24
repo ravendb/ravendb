@@ -14,6 +14,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -85,40 +86,45 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
-        [InlineData("From%20companies")]
-        public async Task ExportingAndImportingCsvUsingQueryFromDocumentShouldWork(string query)
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ExportingAndImportingCsvUsingQueryFromDocumentShouldWork(Options options)
         {
-            using (var store = GetDocumentStore())
+            var query = "From%20companies";
+            Stream stream;
+            using (var storeSharded = GetDocumentStore(options))
             {
-                using (var session = store.OpenSession())
+                using (var session = storeSharded.OpenSession())
                 {
                     session.Store(_testCompany, "companies/1");
-                    session.Store(new { Query = query }, "queries/1");
+                    session.Store(new {Query = query}, "queries/1");
                     session.SaveChanges();
                 }
 
                 var client = new HttpClient();
-                var stream = await client.GetStreamAsync($"{store.Urls[0]}/databases/{store.Database}/streams/queries?fromDocument=queries%2F1&format=csv");
+                stream = await client.GetStreamAsync($"{storeSharded.Urls[0]}/databases/{storeSharded.Database}/streams/queries?fromDocument=queries%2F1&format=csv");
 
-                using (var commands = store.Commands())
+                using (var store = GetDocumentStore())
                 {
-                    var getOperationIdCommand = new GetNextOperationIdCommand();
-                    await commands.RequestExecutor.ExecuteAsync(getOperationIdCommand, commands.Context);
-                    var operationId = getOperationIdCommand.Result;
-                    var csvImportCommand = new CsvImportCommand(stream, null, operationId);
+                    using (var commands = store.Commands())
+                    {
+                        var getOperationIdCommand = new GetNextOperationIdCommand();
+                        await commands.RequestExecutor.ExecuteAsync(getOperationIdCommand, commands.Context);
+                        var operationId = getOperationIdCommand.Result;
+                        var csvImportCommand = new CsvImportCommand(stream, null, operationId);
 
-                    await commands.ExecuteAsync(csvImportCommand);
+                        await commands.ExecuteAsync(csvImportCommand);
 
-                    var operation = new Operation(commands.RequestExecutor, () => store.Changes(), store.Conventions, operationId);
+                        var operation = new Operation(commands.RequestExecutor, () => store.Changes(), store.Conventions, operationId);
 
-                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
-                }
+                        await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
+                    }
 
-                using (var session = store.OpenSession())
-                {
-                    var res = session.Query<Company>().ToList();
-                    Assert.Equal(1, res.Count);
+                    using (var session = store.OpenSession())
+                    {
+                        var res = session.Query<Company>().ToList();
+                        Assert.Equal(1, res.Count);
+                    }
                 }
             }
         }

@@ -1,5 +1,6 @@
-﻿using Raven.Server.Documents.Commands.Streaming;
+﻿using System.Collections.Generic;
 using Raven.Server.Documents.Queries;
+using Raven.Server.Documents.Sharding.Commands;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -12,7 +13,7 @@ namespace Raven.Server.Documents.Sharding.Queries
         {
         }
 
-        public override void CreateQueryCommands(BlittableJsonReaderObject queryTemplate)
+        public override void CreateQueryCommands(Dictionary<int, ShardedQueryCommand> _, Dictionary<int, BlittableJsonReaderObject> queryTemplates, string indexName)
         {
             //this is done in the EP processor
         }

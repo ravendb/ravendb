@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Nest;
 using Raven.Client;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
@@ -82,13 +83,13 @@ public class ShardedQueryProcessor : IDisposable
 
     public long ResultsEtag => _result.ResultEtag;
 
-    public void Initialize(out BlittableJsonReaderObject queryTemplate)
+    public void Initialize(out Dictionary<int, BlittableJsonReaderObject> queryTemplates)
     {
         AssertUsingCustomSorters();
 
         // now we have the index query, we need to process that and decide how to handle this.
         // There are a few different modes to handle:
-        queryTemplate = _query.ToJson(_context);
+        var queryTemplate = _query.ToJson(_context);
         if (_query.Metadata.IsCollectionQuery)
         {
             // * For collection queries that specify ids, we can turn that into a set of loads that 
@@ -97,7 +98,7 @@ public class ShardedQueryProcessor : IDisposable
             (List<Slice> ids, string _) = _query.ExtractIdsFromQuery(_parent.ServerStore, _context.Allocator, _parent.DatabaseContext.DatabaseName);
             if (ids != null)
             {
-                GenerateLoadByIdQueries(ids);
+                GenerateLoadByIdQueries(ids, out queryTemplates);
                 return;
             }
         }
@@ -115,21 +116,28 @@ public class ShardedQueryProcessor : IDisposable
         //   in that case we must send the query without the projection
         RewriteQueryForProjection(ref queryTemplate);
 
+        queryTemplates = new(_parent.DatabaseContext.ShardCount);
+        for (int i = 0; i < _parent.DatabaseContext.ShardCount; i++)
+        {
+            queryTemplates.Add(i, queryTemplate.Clone(_context));
+        }
+
         // * For collection queries that specify startsWith by id(), we need to send to all shards
         // * For collection queries without any where clause, we need to send to all shards
         // * For indexes, we sent to all shards
-        CreateQueryCommands(queryTemplate);
+        CreateQueryCommands(_commands, queryTemplates, _query.Metadata.IndexName);
     }
 
-    public virtual void CreateQueryCommands(BlittableJsonReaderObject queryTemplate)
+    public virtual void CreateQueryCommands(Dictionary<int, ShardedQueryCommand> cmds, Dictionary<int, BlittableJsonReaderObject> queryTemplates, string indexName)
     {
-        for (int i = 0; i < _parent.DatabaseContext.ShardCount; i++)
+        foreach (var (shard, queryTemplate) in queryTemplates)
         {
             //if (_filteredShardIndexes?.Contains(i) == false)
             //    continue;
 
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Use ShardedExecutor");
-            _commands[i] = new ShardedQueryCommand(_parent, HttpMethod.Post, queryTemplate, _query.Metadata.IndexName); //TODO stav: clone queryTemplate?
+
+            cmds[shard] = new ShardedQueryCommand(_parent, HttpMethod.Post, queryTemplate, indexName);
         }
     }
 
@@ -206,7 +214,7 @@ public class ShardedQueryProcessor : IDisposable
         queryTemplate = _context.ReadObject(queryTemplate, "modified-query");
     }
 
-    private void GenerateLoadByIdQueries(IEnumerable<Slice> ids)
+    private void GenerateLoadByIdQueries(IEnumerable<Slice> ids, out Dictionary<int, BlittableJsonReaderObject> queryTemplates)
     {
         const string listParameterName = "p0";
 
@@ -223,6 +231,9 @@ public class ShardedQueryProcessor : IDisposable
             }
         }
 
+        
+        queryTemplates = new ();
+
         foreach ((int shardId, ShardLocator.IdsByShard<Slice> documentIds) in shards)
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "RavenDB-19084 have a way to turn the _query into a json file and then we'll modify that, instead of building it manually");
@@ -235,7 +246,7 @@ public class ShardedQueryProcessor : IDisposable
                 },
                 [nameof(IndexQuery.Query)] = documentQuery.ToString()
             };
-            _commands[shardId] = new ShardedQueryCommand(_parent, HttpMethod.Post, _context.ReadObject(q, "query"), null);
+            queryTemplates.Add(shardId, _context.ReadObject(q, "query"));
 
             IEnumerable<string> GetIds()
             {
@@ -245,6 +256,8 @@ public class ShardedQueryProcessor : IDisposable
                 }
             }
         }
+
+        CreateQueryCommands(cmds, queryTemplates, indexName: null);
     }
 
     public async Task ExecuteShardedOperations()
@@ -498,6 +511,11 @@ public class ShardedQueryProcessor : IDisposable
     public bool IsMapReduce()
     {
         return _isAutoMapReduceQuery || _isMapReduceIndex;
+    }
+
+    public bool IsIncludes()
+    {
+        return _query.Metadata.Includes?.Length > 0;
     }
 
     public void Dispose()

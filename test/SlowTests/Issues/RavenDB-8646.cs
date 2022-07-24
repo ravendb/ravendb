@@ -1,6 +1,9 @@
 ﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Sharding;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -12,10 +15,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void CanStreamQueryWithMapReduceResult()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public void CanStreamQueryWithMapReduceResult(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var index = new ReduceMeByTag();
                 store.ExecuteIndex(index);
@@ -45,6 +49,44 @@ namespace SlowTests.Issues
                         }
                         Assert.True(streamNotEmpty, "Was expecting to have a result in the query stream but didn't get anything.");
                     }
+                }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
+        public void CanStreamShardedQueryWithMapReduceResult(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                var index = new ReduceMeByTag();
+                store.ExecuteIndex(index);
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new ReduceMe
+                    {
+                        Tag = "Foo",
+                        Amount = 2
+                    });
+                    session.Store(new ReduceMe
+                    {
+                        Tag = "Foo",
+                        Amount = 3
+                    });
+                    session.SaveChanges();
+                    Indexes.WaitForIndexing(store);
+                    var query = session.Query<ReduceMe>(index.IndexName);
+                    var notSupportedException = Assert.Throws<NotSupportedInShardingException>(() =>
+                    {
+                        using (var stream = session.Advanced.Stream(query))
+                        {
+                            while (stream.MoveNext())
+                            {
+                            }
+                        }
+                    });
+
+                    Assert.Contains("MapReduce is not supported in sharded streaming queries", notSupportedException.Message);
                 }
             }
         }
