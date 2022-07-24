@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
-using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
@@ -21,7 +20,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         public SingleShardRestoreBackupTask(ServerStore serverStore, RestoreBackupConfigurationBase restoreConfiguration, List<string> filesToRestore, 
             IRestoreSource restoreSource, OperationCancelToken operationCancelToken) : base(serverStore, restoreConfiguration, restoreSource, filesToRestore, operationCancelToken)
         {
-            ValidateResourceName = false;
+            DatabaseValidation = false;
             ChangeDatabaseStateAfterRestore = false;
             HasEncryptionKey = false;
 
@@ -48,15 +47,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         protected override Task OnBeforeRestore(DocumentDatabase database)
         {
             return Task.CompletedTask;
-        }
-
-        protected override ClusterTopology GetClusterTopology()
-        {
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                return ServerStore.GetClusterTopology(context);
-            }
         }
 
         protected override Task<long> SaveDatabaseRecordAsync(string databaseName, DatabaseRecord databaseRecord, Dictionary<string, BlittableJsonReaderObject> databaseValues, RestoreResult restoreResult, Action<IOperationProgress> onProgress)

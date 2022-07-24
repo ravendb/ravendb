@@ -10,7 +10,6 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide.Operations;
-using Raven.Server.Config;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -38,10 +37,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             _extension = extension;
         }
 
-        protected override async Task Restore(DocumentDatabase database, DocumentsOperationContext context)
+        protected override async Task Restore(DocumentDatabase database)
         {
-            await RestoreFromSmugglerFile(Progress, database, _firstFile, context);
-            await SmugglerRestore(database, context);
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            {
+                await RestoreFromSmugglerFile(Progress, database, _firstFile, context);
+                await SmugglerRestore(database, context);
+            }
 
             Result.SnapshotRestore.Processed = true;
 
@@ -73,8 +75,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
             if (_extension == Constants.Documents.PeriodicBackup.EncryptedSnapshotExtension)
             {
-                HasEncryptionKey = RestoreFromConfiguration.EncryptionKey != null ||
-                                    RestoreFromConfiguration.BackupEncryptionSettings?.Key != null;
+                HasEncryptionKey = RestoreConfiguration.EncryptionKey != null ||
+                                    RestoreConfiguration.BackupEncryptionSettings?.Key != null;
             }
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext serverContext))
@@ -85,7 +87,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
             Debug.Assert(RestoreSettings != null);
 
-            if (RestoreFromConfiguration.SkipIndexes)
+            if (RestoreConfiguration.SkipIndexes)
             {
                 // remove all indexes from the database record
                 RestoreSettings.DatabaseRecord.AutoIndexes = null;
@@ -94,6 +96,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
             // removing the snapshot from the list of files
             FilesToRestore.RemoveAt(0);
+        }
+
+        protected override void OnAfterRestore(DocumentDatabase database)
+        {
+            base.OnAfterRestore(database);
+            RegenerateDatabaseIdInIndexes(database);
         }
 
         private async Task<RestoreSettings> SnapshotRestore(JsonOperationContext context, string backupPath,
@@ -106,7 +114,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             var fullBackupPath = RestoreSource.GetBackupPath(backupPath);
             using (var zip = await RestoreSource.GetZipArchiveForSnapshot(fullBackupPath))
             {
-                var restorePath = new VoronPathSetting(RestoreFromConfiguration.DataDirectory);
+                var restorePath = new VoronPathSetting(RestoreConfiguration.DataDirectory);
                 if (Directory.Exists(restorePath.FullPath) == false)
                     Directory.CreateDirectory(restorePath.FullPath);
 
@@ -126,8 +134,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                             {
                                 await using (var entryStream = zipEntry.Open())
                                 {
-                                    var snapshotEncryptionKey = RestoreFromConfiguration.EncryptionKey != null
-                                        ? Convert.FromBase64String(RestoreFromConfiguration.EncryptionKey)
+                                    var snapshotEncryptionKey = RestoreConfiguration.EncryptionKey != null
+                                        ? Convert.FromBase64String(RestoreConfiguration.EncryptionKey)
                                         : null;
 
                                     await using (var stream = GetInputStream(entryStream, snapshotEncryptionKey))
@@ -137,8 +145,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
                                         restoreSettings = JsonDeserializationServer.RestoreSettings(json);
 
-                                        restoreSettings.DatabaseRecord.DatabaseName = RestoreFromConfiguration.DatabaseName;
-                                        DatabaseHelper.Validate(RestoreFromConfiguration.DatabaseName, restoreSettings.DatabaseRecord, ServerStore.Configuration);
+                                        restoreSettings.DatabaseRecord.DatabaseName = RestoreConfiguration.DatabaseName;
+                                        DatabaseHelper.Validate(RestoreConfiguration.DatabaseName, restoreSettings.DatabaseRecord, ServerStore.Configuration);
 
                                         if (restoreSettings.DatabaseRecord.Encrypted && HasEncryptionKey == false)
                                             throw new ArgumentException("Database snapshot is encrypted but the encryption key is missing!");
@@ -246,24 +254,19 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             return fileStream;
         }
 
-        protected override void OnAfterRestore(RavenConfiguration configuration, DocumentDatabase database)
-        {
-            base.OnAfterRestore(configuration, database);
-            RegenerateDatabaseIdInIndexes(configuration, database);
-        }
 
-        private void RegenerateDatabaseIdInIndexes(RavenConfiguration configuration, DocumentDatabase database)
+        private void RegenerateDatabaseIdInIndexes(DocumentDatabase database)
         {
             // this code will generate new DatabaseId for each index.
             // This is something that we need to do when snapshot restore is executed to match the newly generated database id
 
-            var indexesPath = configuration.Indexing.StoragePath.FullPath;
+            var indexesPath = database.Configuration.Indexing.StoragePath.FullPath;
             if (Directory.Exists(indexesPath) == false)
                 return;
 
             foreach (var indexPath in Directory.GetDirectories(indexesPath))
             {
-                Indexes.Index index = null;
+                Index index = null;
                 try
                 {
                     index = Index.Open(indexPath, database, generateNewDatabaseId: true);
