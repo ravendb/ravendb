@@ -4,6 +4,7 @@ using System.Xml.Schema;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -24,11 +25,12 @@ namespace SlowTests.Issues
         {
             public string Id;
         }
-        
-        [Fact]
-        public async Task CanUseCreateCmpXngToInSessionWithNoOtherChanges()
+
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanUseCreateCmpXngToInSessionWithNoOtherChanges(Options options)
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
 
             using (var session = store.OpenAsyncSession(new SessionOptions {TransactionMode = TransactionMode.ClusterWide}))
             {
