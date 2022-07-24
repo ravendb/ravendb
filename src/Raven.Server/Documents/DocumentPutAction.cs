@@ -422,6 +422,10 @@ namespace Raven.Server.Documents
         {
         }
 
+        protected virtual void WriteSuffixForIdentityPartsSeparator(ref char* valueWritePosition, char* idSuffixPtr, int idSuffixLength)
+        {
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private string BuildDocumentId(string id, long newEtag, out bool knownNewId)
         {
@@ -460,14 +464,8 @@ namespace Raven.Server.Documents
                         fixed (char* valuePtr = value)
                         {
                             char* valueWritePosition = valuePtr + value.Length;
-                            if (idSuffixLength > 0)
-                            {
-                                valueWritePosition -= idSuffixLength;
 
-                                valueWritePosition[0] = '$';
-                                for (var j = 0; j < idSuffixLength - 1; j++)
-                                    valueWritePosition[j + 1] = idSuffixPtr[j];
-                            }
+                            WriteSuffixForIdentityPartsSeparator(ref valueWritePosition, idSuffixPtr, idSuffixLength);
 
                             valueWritePosition -= nodeTag.Length;
                             for (int j = 0; j < nodeTag.Length; j++)
