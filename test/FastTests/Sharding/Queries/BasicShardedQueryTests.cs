@@ -699,8 +699,6 @@ select project(o)")
                 {
                     var queryResult = session.Query<Dog>()
                         .Include<Dog, User>(x => x.Owner)
-                        .Take(3)
-                        .Distinct()
                         .ToList();
 
                     Assert.Equal(3, queryResult.Count);
