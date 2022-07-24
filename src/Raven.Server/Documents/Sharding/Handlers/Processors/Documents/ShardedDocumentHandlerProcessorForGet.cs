@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -122,6 +123,17 @@ internal class ShardedDocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
         }
 
         var results = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(op, CancellationToken);
+        if (results.Result == null)
+        {
+            Debug.Assert(results.StatusCode == (int)HttpStatusCode.NotModified);
+            return new DocumentsResult
+            {
+                DocumentsAsync = null,
+                ContinuationToken = token,
+                Etag = results.CombinedEtag
+            };
+        }
+
         var streams = await results.Result.InitializeAsync(RequestHandler.DatabaseContext, CancellationToken);
 
         Disposables.Add(streams);
