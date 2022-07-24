@@ -18,11 +18,10 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
         {
         }
 
-        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding | RavenTestCategory.Indexes)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public void ShouldUpdateReduceOutputReferenceDocumentInsteadOfOverwritingIt(Options options)
+        [Fact]
+        public void ShouldUpdateReduceOutputReferenceDocumentInsteadOfOverwritingIt()
         {
-            using (var store = GetDocumentStore(options))
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -226,11 +225,10 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             }
         }
 
-        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public void ShouldEnsureThatIdsAreUniqueAfterIndexReset(Options options)
+        [Fact]
+        public void ShouldEnsureThatIdsAreUniqueAfterIndexReset()
         {
-            using (var store = GetDocumentStore(options))
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
