@@ -24,4 +24,16 @@ public class ShardedDocumentPutAction : DocumentPutAction
             idLength -= idSuffixLength + 2; // +2 for 2x '$'
         }
     }
+
+    protected override unsafe void WriteSuffixForIdentityPartsSeparator(ref char* valueWritePosition, char* idSuffixPtr, int idSuffixLength)
+    {
+        if (idSuffixLength <= 0) 
+            return;
+
+        valueWritePosition -= idSuffixLength;
+
+        valueWritePosition[0] = '$';
+        for (var j = 0; j < idSuffixLength - 1; j++)
+            valueWritePosition[j + 1] = idSuffixPtr[j];
+    }
 }
