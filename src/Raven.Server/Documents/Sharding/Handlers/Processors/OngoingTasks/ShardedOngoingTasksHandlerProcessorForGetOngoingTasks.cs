@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks
 
         protected override RavenCommand<OngoingTasksResult> CreateCommandForNode(string nodeTag)
         {
-            return new GetOngoingTasksInfoCommand();
+            return new GetOngoingTasksInfoCommand(nodeTag);
         }
 
         protected override bool SupportsCurrentNode => false;
@@ -35,15 +35,25 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks
 
     internal class GetOngoingTasksInfoCommand : RavenCommand<OngoingTasksResult>
     {
+        private readonly string _nodeTag;
+
+        public GetOngoingTasksInfoCommand(string nodeTag = null)
+        {
+            _nodeTag = nodeTag;
+        }
+
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             url = $"{node.Url}/databases/{node.Database}/tasks";
+
+            if (_nodeTag != null)
+                url += $"?nodeTag={_nodeTag}";
 
             var request = new HttpRequestMessage { Method = HttpMethod.Get };
 
             return request;
         }
 
-        public override bool IsReadRequest => false;
+        public override bool IsReadRequest => true;
     }
 }

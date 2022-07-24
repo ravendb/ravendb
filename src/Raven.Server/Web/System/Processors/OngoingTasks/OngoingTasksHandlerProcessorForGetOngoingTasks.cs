@@ -31,7 +31,7 @@ namespace Raven.Server.Web.System.Processors.OngoingTasks
         
         protected override RavenCommand<OngoingTasksResult> CreateCommandForNode(string nodeTag)
         {
-            return new GetOngoingTasksInfoCommand();
+            return new GetOngoingTasksInfoCommand(nodeTag);
         }
         
         protected override bool SupportsCurrentNode => true;
