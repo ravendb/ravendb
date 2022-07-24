@@ -418,6 +418,10 @@ namespace Raven.Server.Documents
             return true;
         }
 
+        protected virtual void CalculateSuffixForIdentityPartsSeparator(string id, ref char* idSuffixPtr, ref int idSuffixLength, ref int idLength)
+        {
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private string BuildDocumentId(string id, long newEtag, out bool knownNewId)
         {
@@ -443,16 +447,7 @@ namespace Raven.Server.Documents
 
                     if (lastChar == _documentDatabase.IdentityPartsSeparator)
                     {
-                        var penultimateChar = id[^2];
-                        if (penultimateChar == '$')
-                        {
-                            idSuffixLength = id.Length - 2;
-                           
-                            ShardHelper.ExtractStickyId(ref idSuffixPtr, ref idSuffixLength);
-                            
-                            idSuffixLength += 1; // +1 for identity parts separator
-                            idLength -= idSuffixLength + 2; // +2 for 2x '$'
-                        }
+                        CalculateSuffixForIdentityPartsSeparator(id, ref idSuffixPtr, ref idSuffixLength, ref idLength);
 
                         string nodeTag = _documentDatabase.ServerStore.NodeTag;
 

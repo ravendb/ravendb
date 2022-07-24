@@ -137,7 +137,7 @@ namespace Raven.Server.Documents
                 };
                 Changes = new DocumentsChanges();
                 TombstoneCleaner = new TombstoneCleaner(this);
-                DocumentsStorage = new DocumentsStorage(this, addToInitLog);
+                DocumentsStorage = CreateDocumentsStorage(addToInitLog);
                 CompareExchangeStorage = new CompareExchangeStorage(this);
                 IndexStore = new IndexStore(this, serverStore);
                 QueryRunner = new QueryRunner(this);
@@ -167,6 +167,11 @@ namespace Raven.Server.Documents
                 Dispose();
                 throw;
             }
+        }
+
+        protected virtual DocumentsStorage CreateDocumentsStorage(Action<string> addToInitLog)
+        {
+            return new DocumentsStorage(this, addToInitLog);
         }
 
         protected virtual byte[] ReadSecretKey(TransactionOperationContext context) => ServerStore.GetSecretKey(context, Name);

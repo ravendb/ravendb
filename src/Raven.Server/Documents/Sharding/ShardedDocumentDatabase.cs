@@ -1,13 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Server.Config;
-using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.ServerWide.Sharding;
 using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.Sharding;
@@ -37,6 +34,11 @@ public class ShardedDocumentDatabase : DocumentDatabase
     protected override void InitializeCompareExchangeStorage()
     {
         CompareExchangeStorage.Initialize(ShardedDatabaseName);
+    }
+
+    protected override DocumentsStorage CreateDocumentsStorage(Action<string> addToInitLog)
+    {
+        return new ShardedDocumentsStorage(this, addToInitLog);
     }
 
     protected override void SetIds(DatabaseTopology topology, string shardedDatabaseId)
