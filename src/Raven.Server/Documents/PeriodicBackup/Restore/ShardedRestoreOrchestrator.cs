@@ -13,10 +13,12 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Client.Util;
 using Raven.Server.Config.Settings;
+using Raven.Server.Documents.Sharding;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Raven.Server.Web.System;
 using Sparrow.Json;
 using Sparrow.Utils;
@@ -49,22 +51,21 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
             _serverStore.EnsureNotPassiveAsync().Wait(_operationCancelToken.Token);
 
+            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                if (_serverStore.Cluster.DatabaseExists(context, _restoreConfiguration.DatabaseName))
+                    throw new ArgumentException($"Cannot restore data to an existing database named {_restoreConfiguration.DatabaseName}");
+
+                _clusterTopology = _serverStore.GetClusterTopology(context);
+            }
+
             if (string.IsNullOrWhiteSpace(_restoreConfiguration.EncryptionKey) == false)
             {
                 _hasEncryptionKey = true;
                 var key = Convert.FromBase64String(_restoreConfiguration.EncryptionKey);
                 if (key.Length != 256 / 8)
                     throw new InvalidOperationException($"The size of the key must be 256 bits, but was {key.Length * 8} bits.");
-
-                
-                using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                using (context.OpenReadTransaction())
-                {
-                    if (_serverStore.Cluster.DatabaseExists(context, _restoreConfiguration.DatabaseName))
-                        throw new ArgumentException($"Cannot restore data to an existing database named {_restoreConfiguration.DatabaseName}");
-
-                    _clusterTopology = _serverStore.GetClusterTopology(context);
-                }
 
                 if (AdminDatabasesHandler.NotUsingHttps(_clusterTopology.GetUrlFromTag(_serverStore.NodeTag)))
                     throw new InvalidOperationException("Cannot restore an encrypted database to a node which doesn't support SSL!");
@@ -94,6 +95,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 InitializeShardingConfiguration(databaseRecord);
 
                 databaseRecord.DatabaseState = DatabaseStateStatus.RestoreInProgress;
+
+
+                var x = _serverStore.DatabasesLandlord.TryGetOrCreateDatabase(databaseName);
 
                 await SaveDatabaseRecord(databaseName, databaseRecord);
 
@@ -126,15 +130,27 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         {
             databaseRecord.Sharding = new ShardingConfiguration
             {
-                Shards = new DatabaseTopology[_restoreConfiguration.ShardRestoreSettings.Length], //todo
-                Orchestrator = new OrchestratorConfiguration { Topology = new OrchestratorTopology { Members = new List<string>() } }
+                Shards = new DatabaseTopology[_restoreConfiguration.ShardRestoreSettings.Length],
+                Orchestrator = new OrchestratorConfiguration
+                {
+                    Topology = new OrchestratorTopology
+                    {
+                        Members = new List<string>()
+                    }
+                }
             };
 
             var nodes = new HashSet<string>();
             for (var i = 0; i < _restoreConfiguration.ShardRestoreSettings.Length; i++)
             {
                 var shardRestoreSetting = _restoreConfiguration.ShardRestoreSettings[i];
-                databaseRecord.Sharding.Shards[i] = new DatabaseTopology { Members = new List<string> { shardRestoreSetting.NodeTag } };
+                databaseRecord.Sharding.Shards[i] = new DatabaseTopology
+                {
+                    Members = new List<string>
+                    {
+                        shardRestoreSetting.NodeTag
+                    }
+                };
 
                 if (nodes.Add(shardRestoreSetting.NodeTag))
                     databaseRecord.Sharding.Orchestrator.Topology.Members.Add(shardRestoreSetting.NodeTag);
@@ -172,7 +188,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
         private async Task<IOperationResult> RestoreOnAllShards(Action<IOperationProgress> onProgress, RestoreBackupConfigurationBase configuration)
         {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Normal, "handle operation progress");
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Normal, "try to replace this with a proper impl. of ServerStore.AddRemoteOperation");
 
             var shardSettings = configuration.ShardRestoreSettings;
             var tasks = new Task<IOperationResult>[shardSettings.Length];
@@ -224,8 +240,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
             var shardRestoreSetting = configuration.ShardRestoreSettings[shardNumber];
 
-            string databaseName = configuration.DatabaseName;
-            configuration.DatabaseName = $"{databaseName}${shardNumber}";
+            configuration.DatabaseName = ShardHelper.ToShardName(configuration.DatabaseName, shardNumber);
             configuration.ShardRestoreSettings = null;
 
             switch (configuration)
@@ -236,7 +251,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 case RestoreFromAzureConfiguration restoreFromAzureConfiguration:
                 case RestoreFromGoogleCloudConfiguration restoreFromGoogleCloudConfiguration:
                 case RestoreFromS3Configuration restoreFromS3Configuration:
-                    Sparrow.Utils.DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Major, "implement sharded cloud restore");
+                    DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Major, "implement sharded cloud restore");
                     throw new NotImplementedException();
                 default:
                     throw new ArgumentOutOfRangeException(nameof(configuration));
@@ -248,9 +263,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         private void Dispose()
         {
             _operationCancelToken?.Dispose();
-
-            if (_singleNodeRequestExecutors == null)
-                return;
 
             foreach (var kvp in _singleNodeRequestExecutors)
             {

@@ -38,6 +38,7 @@ namespace Raven.Client.Documents.Operations.Backups
         protected RestoreBackupConfigurationBase()
         {
         }
+
         public abstract RestoreBackupConfigurationBase Clone();
 
         public virtual DynamicJsonValue ToJson()
@@ -52,24 +53,9 @@ namespace Raven.Client.Documents.Operations.Backups
                 [nameof(SkipIndexes)] = SkipIndexes,
                 [nameof(BackupEncryptionSettings)] = BackupEncryptionSettings,
                 [nameof(Type)] = Type,
-                [nameof(ShardRestoreSettings)] = new DynamicJsonArray(ShardRestoreSettings.Select(x => x.ToJson())),
-            };
-        }
-    }
-
-    public class ShardRestoreSetting : IDynamicJson
-    {
-        public int ShardNumber { get; set; }
-        public string NodeTag { get; set; }
-        public string BackupPath { get; set; }
-
-        public DynamicJsonValue ToJson()
-        {
-            return new DynamicJsonValue
-            {
-                [nameof(ShardNumber)] = ShardNumber,
-                [nameof(NodeTag)] = NodeTag,
-                [nameof(BackupPath)] = BackupPath
+                [nameof(ShardRestoreSettings)] = ShardRestoreSettings != null
+                    ? new DynamicJsonArray(ShardRestoreSettings.Select(x => x.ToJson()))
+                    : null
             };
         }
     }
