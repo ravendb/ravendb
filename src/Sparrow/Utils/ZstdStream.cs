@@ -51,9 +51,6 @@ namespace Sparrow.Utils
         {
             lock (this)
             {
-                if (_compressContext == null)
-                    throw new ObjectDisposedException("_compressContext already disposed");
-
                 fixed (byte* pBuffer = buffer, pOutput = _decompressionInput.Span)
                 {
                     var output = new ZstdLib.ZSTD_outBuffer { Source = pBuffer, Position = UIntPtr.Zero, Size = (UIntPtr)buffer.Length };
@@ -72,9 +69,6 @@ namespace Sparrow.Utils
         {
             lock (this)
             {
-                if (_compressContext == null)
-                    throw new ObjectDisposedException("_compressContext already disposed");
-
                 fixed (byte* pBuffer = buffer, pTempBuffer = _tempBuffer)
                 {
                     var input = new ZstdLib.ZSTD_inBuffer { Source = pBuffer, Position = UIntPtr.Zero, Size = (UIntPtr)buffer.Length };
