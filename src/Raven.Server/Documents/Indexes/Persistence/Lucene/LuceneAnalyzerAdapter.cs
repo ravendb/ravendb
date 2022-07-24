@@ -40,7 +40,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 int currentOutputIdx = 0;
                 var currentTokenIdx = 0;
 
-                var stream = analyzer.TokenStream(null, reader);
+                var stream = analyzer.ReusableTokenStream(null, reader);
                 do
                 {
                     var offset = stream.GetAttribute<IOffsetAttribute>();
