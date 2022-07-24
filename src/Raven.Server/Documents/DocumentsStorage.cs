@@ -179,7 +179,7 @@ namespace Raven.Server.Documents
             );
         }
 
-        public void Initialize(StorageEnvironmentOptions options)
+        private void Initialize(StorageEnvironmentOptions options)
         {
             options.SchemaVersion = SchemaUpgrader.CurrentVersion.DocumentsVersion;
             options.SchemaUpgrader = SchemaUpgrader.Upgrader(SchemaUpgrader.StorageType.Documents, null, this, null);
@@ -213,7 +213,7 @@ namespace Raven.Server.Documents
                     CountersStorage = new CountersStorage(DocumentDatabase, tx);
                     TimeSeriesStorage = new TimeSeriesStorage(DocumentDatabase, tx);
 
-                    DocumentPut = new DocumentPutAction(this, DocumentDatabase);
+                    DocumentPut = CreateDocumentPutAction();
 
                     InitializeLastEtag(tx);
                     _collectionsCache = ReadCollections(tx);
@@ -242,6 +242,11 @@ namespace Raven.Server.Documents
                 options.Dispose();
                 throw;
             }
+        }
+
+        protected virtual DocumentPutAction CreateDocumentPutAction()
+        {
+            return new DocumentPutAction(this, DocumentDatabase);
         }
 
         private void SetTransactionCache(LowLevelTransaction tx)
