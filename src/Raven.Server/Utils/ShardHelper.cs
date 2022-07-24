@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Text;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Client.Util;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
@@ -18,8 +20,6 @@ namespace Raven.Server.Utils
     public static class ShardHelper
     {
         public const int NumberOfBuckets = 1024 * 1024;
-
-        public static int GetRandomBucket() => Random.Shared.Next() % NumberOfBuckets;
 
         /// <summary>
         /// The bucket is a hash of the document id, lower case, reduced to
@@ -339,11 +339,21 @@ namespace Raven.Server.Utils
             }
         }
 
-        public static string GenerateStickyId(string id, int bucket, char identityPartsSeparator)
+        public static string GenerateStickyId(string id, char identityPartsSeparator)
         {
             Debug.Assert(id[^1] == identityPartsSeparator, "id[^1] == identityPartsSeparator");
 
-            return $"{id}${bucket}{SuffixIdTerminator}";
+            var builder = new StringBuilder(id);
+
+            builder
+                .Append('$');
+
+            ChangeVectorExtensions.ToBase26(builder, Random.Shared.Next());
+
+            builder
+                .Append(SuffixIdTerminator);
+
+            return builder.ToString();
         }
 
         public static unsafe void ExtractStickyId(ref char* buffer, ref int size)
