@@ -82,8 +82,8 @@ public class ShardedBatchCommand : IBatchCommand, IEnumerable<SingleShardedComma
             int shardNumber;
             if (bufferedCommand.IsServerSideIdentity)
             {
-                cmd.Id = ShardHelper.GenerateStickyId(cmd.Id, _databaseContext.IdentityPartsSeparator);
-                shardNumber = _databaseContext.GetShardNumber(_context, cmd.Id.AsSpan(0, cmd.Id.Length - 2));
+                cmd.Id = ShardHelper.GenerateStickyId(cmd.Id, _databaseContext.IdentityPartsSeparator);                     // generated id is 'users/$BASE26$/'
+                shardNumber = _databaseContext.GetShardNumber(_context, cmd.Id.AsSpan(0, cmd.Id.Length - 2));   // here we are cheating by cutting '$/' from the end to detect shard number based on BASE26 part
             }
             else
             {
