@@ -22,7 +22,7 @@ class editPeriodicBackupTask extends viewModelBase {
     setupEncryptionKeyView = require("views/resources/setupEncryptionKey.html");
     backupDestinationsView = require("views/partial/backupDestinations.html");
     backupConfigurationView = require("views/partial/backupConfigurationScript.html");
-    
+    backupDestinationTestCredentialsView = require("views/partial/backupDestinationTestCredentialsResults.html");
 
     titleForView: KnockoutComputed<string>;
     configuration = ko.observable<backupConfigurationClass>();
