@@ -53,18 +53,18 @@ namespace SlowTests.MailingList
             public ProcessStepIndex()
             {
                 Map = steps => from step in steps
-                    let se = LoadDocument<StepExecutions>(step.StepExecutionsId)
-                    select new
-                    {
-                        step.DeviceSerial,
-                        step.Group,
-                        step.StepName,
-                        step.Start,
-                        step.Stop,
-                        LatestExecution = se.Executions.All(e => e.ExecutionStopTime < step.Stop),
-                        LatestExecutionInGroup = se.Executions
-                            .Where(e => e.Group == step.Group).All(e => e.ExecutionStopTime < step.Stop)
-                    };
+                               let se = LoadDocument<StepExecutions>(step.StepExecutionsId)
+                               select new
+                               {
+                                   step.DeviceSerial,
+                                   step.Group,
+                                   step.StepName,
+                                   step.Start,
+                                   step.Stop,
+                                   LatestExecution = se.Executions.All(e => e.ExecutionStopTime < step.Stop),
+                                   LatestExecutionInGroup = se.Executions
+                                       .Where(e => e.Group == step.Group).All(e => e.ExecutionStopTime < step.Stop)
+                               };
             }
         }
 
@@ -92,6 +92,31 @@ namespace SlowTests.MailingList
                     }
                 });
                 Assert.Contains("Includes are not supported by this type of query", notSupportedException.Message);
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public void StreamDocumentQueryWithInclude2(Options options)
+        {
+            var store = GetDocumentStore(options);
+            Setup(store);
+            Indexes.WaitForIndexing(store);
+            using (var session = store.OpenSession())
+            {
+                var query = session.Query<ProcessStep, ProcessStepIndex>(); //TODO stav: doesn't throw but doesn't stream includes docs either. is supported? should throw?
+                query.Include(p => p.StepExecutionsId);
+                var resList = new List<ProcessStep>();
+                using (var stream = session.Advanced.Stream(query))
+                {
+                    int count = 0;
+                    foreach (var res in stream)
+                    {
+                        resList.Add(res.Document);
+                        count++;
+                    }
+                    Assert.Equal(1, count);
+                }
             }
         }
 
