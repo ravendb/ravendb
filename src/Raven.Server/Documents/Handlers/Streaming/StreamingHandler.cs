@@ -296,7 +296,7 @@ namespace Raven.Server.Documents.Handlers.Streaming
                     var logger = LoggingSource.Instance.GetLogger<StreamingHandler>(Database.Name);
                     if (logger.IsOperationsEnabled)
                     {
-                        logger.Info($"Issued STREAMING query on index {query.Metadata.IndexName} for: {query.Metadata.Query}, took: {sp.ElapsedMilliseconds}ms");
+                        logger.Operations($"Issued STREAMING query on index {query.Metadata.IndexName} for: {query.Metadata.Query}, took: {sp.ElapsedMilliseconds}ms");
                     }
                 }
             }

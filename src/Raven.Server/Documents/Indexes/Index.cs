@@ -2990,7 +2990,7 @@ namespace Raven.Server.Documents.Indexes
         {
             if (_logger.IsOperationsEnabled)
             {
-                _logger.Info($"Issuing STREAMING query on index {Name} for: {query.Metadata.Query}");
+                _logger.Operations($"Issuing STREAMING query on index {Name} for: {query.Metadata.Query}");
             }
 
             var result = new StreamDocumentQueryResult(response, writer, token);
