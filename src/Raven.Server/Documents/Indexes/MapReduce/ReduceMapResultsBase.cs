@@ -11,7 +11,6 @@ using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Exceptions;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence;
-using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -101,14 +100,16 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             var treeScopeStats = stats.For(IndexingOperation.Reduce.TreeScope, start: false);
             var nestedValuesScopeStats = stats.For(IndexingOperation.Reduce.NestedValuesScope, start: false);
 
+            using var _ = _aggregationBatch;
             foreach (var store in _mapReduceContext.StoreByReduceKeyHash)
             {
                 token.ThrowIfCancellationRequested();
                 
                 using (var reduceKeyHash = indexContext.GetLazyString(store.Key.ToString(CultureInfo.InvariantCulture)))
                 using (store.Value)
-                using (_aggregationBatch)
                 {
+                    _aggregationBatch.Reset();
+                    
                     var modifiedStore = store.Value;
 
                     switch (modifiedStore.Type)
@@ -189,7 +190,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                 using (_nestedValuesReductionStats.NestedValuesRead.Start())
                 {
-                    numberOfEntriesToReduce += section.GetResults(indexContext, _aggregationBatch.Items);
+                    numberOfEntriesToReduce += section.GetResults(indexContext, _aggregationBatch);
                 }
 
                 stats.RecordReduceAttempts(numberOfEntriesToReduce);
@@ -446,17 +447,16 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             TransactionOperationContext indexContext,
             CancellationToken token)
         {
+            _aggregationBatch.Reset();
             using (_treeReductionStats.LeafAggregation.Start())
             {
                 for (int i = 0; i < page.NumberOfEntries; i++)
                 {
                     var valueReader = TreeNodeHeader.Reader(lowLevelTransaction, page.GetNode(i));
-                    var reduceEntry = new BlittableJsonReaderObject(valueReader.Base, valueReader.Length, indexContext);
-
-                    _aggregationBatch.Items.Add(reduceEntry);
+                    _aggregationBatch.Add(indexContext, valueReader.Base, valueReader.Length);
                 }
 
-                return AggregateBatchResults(_aggregationBatch.Items, indexContext, _treeReductionStats.LeafAggregation, token);
+                return AggregateOn(_aggregationBatch.Items, indexContext, _treeReductionStats.LeafAggregation, token);
             }
         }
 
@@ -493,29 +493,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                         for (int j = 0; j < numberOfResults; j++)
                         {
-                            _aggregationBatch.Items.Add(new BlittableJsonReaderObject(tvr.Read(StartOutputResultsPosition + j, out size), size, indexContext));
+                            _aggregationBatch.Add(indexContext, tvr.Read(StartOutputResultsPosition + j, out size), size);
                         }
                     }
                 }
 
-                return AggregateBatchResults(_aggregationBatch.Items, indexContext, _treeReductionStats.BranchAggregation, token);
+                return AggregateOn(_aggregationBatch.Items, indexContext, _treeReductionStats.BranchAggregation, token);
             }
-        }
-
-        private AggregationResult AggregateBatchResults(List<BlittableJsonReaderObject> aggregationBatch, TransactionOperationContext indexContext, IndexingStatsScope stats, CancellationToken token)
-        {
-            AggregationResult result;
-
-            try
-            {
-                result = AggregateOn(aggregationBatch, indexContext, stats, token);
-            }
-            finally
-            {
-                aggregationBatch.Clear();
-            }
-
-            return result;
         }
 
         private void StoreAggregationResult(TreePage page, Table table, AggregationResult result)
@@ -789,21 +773,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             }
         }
 
-        private class AggregationBatch : IDisposable
-        {
-            public readonly List<BlittableJsonReaderObject> Items = new List<BlittableJsonReaderObject>();
-
-            public void Dispose()
-            {
-                foreach (var item in Items)
-                {
-                    item.Dispose();
-                }
-
-                Items.Clear();
-            }
-        }
-
+        
         private class TreeReductionStats
         {
             public IndexingStatsScope LeafAggregation;
@@ -817,4 +787,52 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             public IndexingStatsScope NestedValuesAggregation;
         }
     }
+    
+    public unsafe class AggregationBatch : IDisposable
+    {
+        public readonly List<BlittableJsonReaderObject> Items = new List<BlittableJsonReaderObject>();
+        public readonly Stack<BlittableJsonReaderObject> Pool = new Stack<BlittableJsonReaderObject>();
+            
+        public void Dispose()
+        {
+            foreach (var item in Items)
+            {
+                item.Dispose();
+            }
+
+            foreach (var item in Pool)
+            {
+                item.Dispose();
+            }
+            Pool.Clear();
+            Items.Clear();
+        }
+
+        public void Add(JsonOperationContext indexContext, byte* mem, int size)
+        {
+            BlittableJsonReaderObject reduceEntry;
+            if (Pool.TryPop(out var reuse))
+            {
+                reuse.Reuse(mem, size, indexContext);
+                reduceEntry = reuse;
+            }
+            else
+            {
+                reduceEntry = new BlittableJsonReaderObject(mem, size, indexContext);
+            }
+
+            Items.Add(reduceEntry);
+        }
+
+        public void Reset()
+        {
+            foreach (var item in Items)
+            {
+                item.Dispose();
+                Pool.Push(item);
+            }
+            Items.Clear();
+        }
+    }
+
 }

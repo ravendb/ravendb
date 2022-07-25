@@ -17,11 +17,11 @@ namespace Sparrow.Json
         private AllocatedMemoryData _allocatedMemory;
         private UnmanagedWriteBuffer _buffer;
         private byte* _metadataPtr;
-        private readonly int _size;
-        private readonly int _propCount;
-        private readonly long _currentOffsetSize;
-        private readonly long _currentPropertyIdSize;
-        private readonly bool _isRoot;
+        private int _size;
+        private int _propCount;
+        private long _currentOffsetSize;
+        private long _currentPropertyIdSize;
+        private bool _isRoot;
         private byte* _objStart;
 
         public DynamicJsonValue Modifications;
@@ -48,6 +48,15 @@ namespace Sparrow.Json
 
             return _context.WriteAsync(stream, this, token);
         }
+
+        public void Reuse(byte* mem, int size, JsonOperationContext context, UnmanagedWriteBuffer buffer = default(UnmanagedWriteBuffer))
+        {
+            _mem = mem;
+            _size = size;
+            _context = context;
+            _buffer = buffer;
+            Initialize();
+        }
         
         public BlittableJsonReaderObject(byte* mem, int size, JsonOperationContext context, UnmanagedWriteBuffer buffer = default(UnmanagedWriteBuffer))
             : this(mem, size, context)
@@ -66,20 +75,26 @@ namespace Sparrow.Json
         {
             if (size == 0)
                 ThrowOnZeroSize(size);
-
-            _isRoot = true;
             _mem = mem; // get beginning of memory pointer
             _size = size; // get document size
 
+            Initialize();
+        }
+
+        private void Initialize()
+        {
+
+            _isRoot = true;
+            
             NoCache = NoCache;
 
             var propOffsetStart = _size - 2;
             var propsOffset = ReadVariableSizeIntInReverse(_mem, propOffsetStart, out byte offset);
             // init document level properties
-            if (propsOffset >= size)
+            if (propsOffset >= _size)
                 ThrowInvalidPropertiesOffest();
 
-            SetupPropertiesAccess(mem, propsOffset);
+            SetupPropertiesAccess(propsOffset);
 
             // get pointer to property names array on document level
 
@@ -88,11 +103,11 @@ namespace Sparrow.Json
             // get offset of beginning of data of the main object
             byte propCountOffset;
             _propCount = ReadVariableSizeInt(objStartOffset, out propCountOffset); // get main object properties count
-            _objStart = objStartOffset + mem;
-            _metadataPtr = objStartOffset + mem + propCountOffset;
+            _objStart = objStartOffset + _mem;
+            _metadataPtr = objStartOffset + _mem + propCountOffset;
             // get pointer to current objects property tags metadata collection
 
-            var currentType = (BlittableJsonToken)(*(mem + size - sizeof(byte)));
+            var currentType = (BlittableJsonToken)(*(_mem + _size - sizeof(byte)));
             // get current type byte flags
 
             // analyze main object type and it's offset and propertyIds flags
@@ -108,11 +123,11 @@ namespace Sparrow.Json
                 nameof(size));
         }
 
-        private void SetupPropertiesAccess(byte* mem, int propsOffset)
+        private void SetupPropertiesAccess(int propsOffset)
         {
             AssertContextNotDisposed();
 
-            _propNames = (mem + propsOffset);
+            _propNames = (_mem + propsOffset);
             var propNamesOffsetFlag = (BlittableJsonToken)(*_propNames);
             switch (propNamesOffsetFlag)
             {

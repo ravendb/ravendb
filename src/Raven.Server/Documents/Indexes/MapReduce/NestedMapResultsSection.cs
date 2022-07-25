@@ -144,7 +144,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             _parent.Delete(_nestedValueKey);
         }
 
-        public int GetResults(JsonOperationContext context, List<BlittableJsonReaderObject> results)
+        public int GetResults(JsonOperationContext context, AggregationBatch batch)
         {
             var readResult = _parent.Read(_nestedValueKey);
             if (readResult == null)
@@ -157,7 +157,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             while (entry < end)
             {
                 entries++;
-                results.Add(new BlittableJsonReaderObject((byte*) entry + sizeof(ResultHeader), entry->Size, context));
+                batch.Add(context, (byte*) entry + sizeof(ResultHeader), entry->Size);
                 entry = (ResultHeader*)((byte*)entry + sizeof(ResultHeader) + entry->Size);
             }
             return entries;
