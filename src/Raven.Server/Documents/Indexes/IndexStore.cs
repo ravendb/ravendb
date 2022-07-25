@@ -418,6 +418,9 @@ namespace Raven.Server.Documents.Indexes
                 var name = kvp.Key;
                 var definition = kvp.Value;
 
+                if (definition.Name.StartsWith(Constants.Documents.Indexing.SideBySideIndexNamePrefix, StringComparison.OrdinalIgnoreCase))
+                    continue;
+
                 try
                 {
                     var indexToStart = HandleStaticIndexChange(name, definition);
