@@ -96,6 +96,11 @@ namespace Raven.Server.Web
                 return _requestBodyStream;
             _requestBodyStream = new StreamWithTimeout(GetDecompressedStream(HttpContext.Request.Body, HttpContext.Request.Headers));
 
+            if (TrafficWatchManager.HasRegisteredClients)
+            {
+                HttpContext.Items["RequestStream"] = _requestBodyStream;
+            }
+
             _context.HttpContext.Response.RegisterForDispose(_requestBodyStream);
 
             return _requestBodyStream;
