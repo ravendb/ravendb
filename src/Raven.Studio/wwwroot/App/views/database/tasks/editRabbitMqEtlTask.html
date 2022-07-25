@@ -225,7 +225,7 @@
                                 <div class="help-block" data-bind="validationMessage: script"></div>
                             </div>
                         </div>
-                        <div class="margin-bottom margin-top margin-top-lg">
+                        <div class="margin-bottom-sm margin-top-sm">
                             <div class="flex-horizontal">
                                 <div class="flex-grow">
                                     <div class="dropdown btn-block flex-grow">
@@ -250,7 +250,7 @@
                                     <button class="btn btn-info" data-bind="click: addCollection, enable: inputCollection() && canAddCollection()"><i class="icon-plus"></i> <span>Add Collection</span></button>
                                 </div>
                             </div>
-                            <div data-bind="visible: transformScriptCollections().length" class="margin-top">
+                            <div data-bind="visible: transformScriptCollections().length" class="margin-top-sm">
                                 <label><strong>Collections Selected:</strong></label>
                                 <ul class="well collection-list" data-bind="foreach: transformScriptCollections"> 
                                     <li>
@@ -264,7 +264,7 @@
                             <input id="reset" type="checkbox" data-bind="checked: resetScript">
                             <label for="reset">Apply script to documents from beginning of time (Reset)</label>
                         </div>
-                        <div class="flex-horizontal margin-top margin-top-lg">
+                        <div class="flex-horizontal margin-top">
                             <div data-bind="visible: !$root.enableTestArea()">
                                 <button class="btn btn-success" data-bind="click: $root.saveEditedTransformation, attr: { title : (isNew() ? 'Add' : 'Update') + ' this transformation script' }">
                                     <i class="icon-tick"></i> <span data-bind="text: isNew() ? 'Add' : 'Update'"></span>

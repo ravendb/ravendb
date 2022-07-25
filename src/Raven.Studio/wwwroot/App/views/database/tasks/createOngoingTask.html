@@ -5,26 +5,26 @@
             <h4 class="modal-title" id="myModalLabel">Choose a Task:</h4>
         </div>
         <div class="modal-body">
-            <div class="padding padding-sm text-center">
+            <div class="text-center">
                 <div data-bind="requiredAccess: 'DatabaseAdmin'">
                     <div class="hr-title">
                         <h5>Replication</h5>
                         <hr />
                     </div>
                     <div class="row row-sm flex-row">
-                        <div class="col-sm-4 margin-bottom" title="Create new External Replication task">
+                        <div class="col-sm-4 margin-bottom-sm" title="Create new External Replication task">
                             <a href="#" class="external-replication" data-bind="click: newReplicationTask">
                                 <i class="icon-external-replication"></i><br />External Replication
                             </a>
                         </div>
-                        <div class="col-sm-4 margin-bottom" title="Create new Replication Hub task">
+                        <div class="col-sm-4 margin-bottom-sm" title="Create new Replication Hub task">
                             <div data-bind="attr: { class: $root.canCreateReplicationHubAndSink() ? '' : 'has-disable-reason' }" data-original-title="Not supported in sharded databases"> 
                                 <a href="#" class="pull-replication-hub" data-bind="click: newReplicationHubTask">
                                     <i class="icon-pull-replication-hub"></i><br />Replication Hub
                                 </a>
                             </div>
                         </div>
-                        <div class="col-sm-4 margin-bottom" title="Create new Replication Sink task">
+                        <div class="col-sm-4 margin-bottom-sm" title="Create new Replication Sink task">
                             <div data-bind="attr: { class: $root.canCreateReplicationHubAndSink() ? '' : 'has-disable-reason' }" data-original-title="Not supported in sharded databases">
                                 <a href="#" class="pull-replication-sink" data-bind="click: newReplicationSinkTask">
                                     <i class="icon-pull-replication-agent"></i><br />Replication Sink
@@ -37,34 +37,34 @@
                         <hr />
                     </div>
                     <div class="row row-sm flex-row">
-                        <div class="col-sm-4 margin-bottom" title="Create new RavenDB ETL task">
+                        <div class="col-sm-4 margin-bottom-sm" title="Create new RavenDB ETL task">
                             <a href="#" class="ravendb-etl" data-bind="click: newRavenEtlTask">
                                 <i class="icon-ravendb-etl"></i><br />RavenDB ETL
                             </a>
                         </div>
-                        <div class="col-sm-4 margin-bottom" title="Create new Elasticsearch ETL task">
+                        <div class="col-sm-4 margin-bottom-sm" title="Create new Elasticsearch ETL task">
                             <a href="#" class="elastic-etl" data-bind="click: newElasticSearchEtlTask">
                                 <i class="icon-elastic-search-etl"></i><br />Elasticsearch ETL
                             </a>
                         </div>
-                        <div class="col-sm-4 margin-bottom" title="Create new Kafka ETL task">
+                        <div class="col-sm-4 margin-bottom-sm" title="Create new Kafka ETL task">
                             <a href="#" class="kafka-etl" data-bind="click: newKafkaEtlTask">
                                 <i class="icon-kafka-etl"></i><br />Kafka ETL
                             </a>
                         </div>
                     </div>
                     <div class="row row-sm flex-row">
-                        <div class="col-sm-4 margin-bottom" title="Create new SQL ETL task">
+                        <div class="col-sm-4 margin-bottom-sm" title="Create new SQL ETL task">
                             <a href="#" class="sql-etl" data-bind="click: newSqlEtlTask">
                                 <i class="icon-sql-etl"></i><br />SQL ETL
                             </a>
                         </div>
-                        <div class="col-sm-4 margin-bottom" title="Create new OLAP ETL task">
+                        <div class="col-sm-4 margin-bottom-sm" title="Create new OLAP ETL task">
                             <a href="#" class="olap-etl" data-bind="click: newOlapEtlTask">
                                 <i class="icon-olap-etl"></i><br />OLAP ETL
                             </a>
                         </div>
-                        <div class="col-sm-4 margin-bottom" title="Create new RabbitMQ ETL task">
+                        <div class="col-sm-4 margin-bottom-sm" title="Create new RabbitMQ ETL task">
                             <a href="#" class="rabbitmq-etl" data-bind="click: newRabbitMqEtlTask">
                                 <i class="icon-rabbitmq-etl"></i><br />RabbitMQ ETL
                             </a>
@@ -76,12 +76,12 @@
                     </div>
                 </div>
                 <div class="row row-sm flex-row">
-                    <div class="col-sm-4 margin-bottom" title="Create new Backup task" data-bind="requiredAccess: 'DatabaseAdmin'">
+                    <div class="col-sm-4 margin-bottom-sm" title="Create new Backup task" data-bind="requiredAccess: 'DatabaseAdmin'">
                         <a href="#" class="periodic-backup" data-bind="click: newBackupTask">
                             <i class="icon-backups"></i><br />Periodic Backup
                         </a>
                     </div>
-                    <div class="col-sm-4 margin-bottom" title="Create new Subscription task">
+                    <div class="col-sm-4 margin-bottom-sm" title="Create new Subscription task">
                         <a href="#" class="subscription" data-bind="click: newSubscriptionTask">
                             <i class="icon-subscription"></i><br />Subscription
                         </a>

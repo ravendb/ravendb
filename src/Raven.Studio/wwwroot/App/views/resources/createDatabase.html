@@ -757,7 +757,7 @@
 
 <script type="text/html" id="create-db-replication">
     <h3>Replication Configuration</h3>
-    <div data-bind="with: databaseModel.replication" class="margin-top margin-top-lg">
+    <div data-bind="with: databaseModel.replication" class="margin-top-sm">
         <div class="form-group" data-bind="style: { 'min-height': $root.databaseModel.isFromBackupOrFromOfflineMigration ? '' : '62px' }">
             <div class="input-group" title="Set the number of nodes that will contain the database" 
                  data-bind="css: { 'has-warning': (!$root.databaseModel.isFromBackupOrFromOfflineMigration && $root.showReplicationFactorWarning()) }, validationElement: replicationFactor">
@@ -822,7 +822,7 @@
 
 <script type="text/html" id="create-db-sharding">
     <h3>Sharding Configuration</h3>
-    <div data-bind="with: databaseModel.sharding" class="margin-top margin-top-lg">
+    <div data-bind="with: databaseModel.sharding" class="margin-top-sm">
         <div class="form-group" data-bind="style: { 'min-height': $root.databaseModel.isFromBackupOrFromOfflineMigration ? '' : '62px' }">
             <div class="input-group" title="Set the number of shards for the the database"
                  data-bind="css: { 'has-warning': (!$root.databaseModel.isFromBackupOrFromOfflineMigration && $root.showNumberOfShardsWarning()) }, validationElement: numberOfShards">
