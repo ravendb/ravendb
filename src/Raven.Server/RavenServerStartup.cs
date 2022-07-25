@@ -30,6 +30,7 @@ using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.TrafficWatch;
 using Raven.Server.Web;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -312,7 +313,8 @@ namespace Raven.Server
                 Type = twTuple.Type,
                 ClientIP = context.Connection.RemoteIpAddress?.ToString(),
                 CertificateThumbprint = context.Connection.ClientCertificate?.Thumbprint,
-                ResponseSizeInBytes = ((StreamWithTimeout)context.Items["ResponseStream"])?.TotalWritten ?? 0
+                RequestSizeInBytes = ((StreamWithTimeout)context.Items["RequestStream"])?.TotalRead ?? 0,
+                ResponseSizeInBytes = ((StreamWithTimeout)context.Items["ResponseStream"])?.TotalWritten ?? 0,
             };
 
             TrafficWatchManager.DispatchMessage(twn);
