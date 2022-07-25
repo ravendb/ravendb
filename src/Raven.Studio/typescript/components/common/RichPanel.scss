@@ -74,7 +74,6 @@
         padding: sizes.$gutter-xs math.div(sizes.$gutter, 2);
         padding-left: sizes.$gutter-md;
         display: flex;
-        border-bottom: 1px solid variables.$hr-border;
 
         .rich-panel-detail-item {
             padding: sizes.$gutter-xs math.div(sizes.$gutter, 2);

@@ -17,24 +17,15 @@ interface ReplicationHubPanelProps {
     data: OngoingTaskHubDefinitionInfo;
     onDelete: (task: OngoingTaskSharedInfo) => void;
     toggleState: (task: OngoingTaskSharedInfo, enable: boolean) => void;
-    connectedHubs: OngoingTaskReplicationHubInfo[];
+    ongoingHubs: OngoingTaskReplicationHubInfo[];
 }
 
 function Details(props: ReplicationHubPanelProps & { canEdit: boolean }) {
-    const { connectedHubs, db, data } = props;
+    const { ongoingHubs, db, data } = props;
 
     const delayHumane = data.shared.delayReplicationTime
         ? genUtils.formatTimeSpan(data.shared.delayReplicationTime * 1000, true)
         : null;
-
-    if (connectedHubs.length === 0) {
-        return (
-            <h5 className="text-warning padding-sm">
-                <i className="icon-empty-set"></i>
-                <span>No sinks connected</span>
-            </h5>
-        );
-    }
 
     return (
         <div>
@@ -44,13 +35,30 @@ function Details(props: ReplicationHubPanelProps & { canEdit: boolean }) {
                         Replication Delay Time:
                         <div className="value">{delayHumane}</div>
                     </RichPanelDetailItem>
+                    <RichPanelDetailItem>
+                        Replication Mode:
+                        <div className="value">{data.shared.taskMode}</div>
+                    </RichPanelDetailItem>
+                    <RichPanelDetailItem>
+                        Has Filtering:
+                        <div className="value">{data.shared.hasFiltering ? "True" : "False"}</div>
+                    </RichPanelDetailItem>
                 </RichPanelDetails>
             )}
 
             <div className="margin">
-                {connectedHubs.map((hub) => (
-                    <ReplicationHubPanel key={hub.shared.taskId + hub.shared.taskName} db={db} data={hub} />
+                {ongoingHubs.map((sink) => (
+                    <ReplicationHubPanel key={sink.shared.taskId + sink.shared.taskName} db={db} data={sink} />
                 ))}
+            </div>
+
+            <div className="margin">
+                {ongoingHubs.length === 0 && (
+                    <h5 className="text-warning padding-sm">
+                        <i className="icon-empty-set"></i>
+                        <span>No sinks connected</span>
+                    </h5>
+                )}
             </div>
         </div>
     );
