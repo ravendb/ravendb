@@ -314,6 +314,8 @@ export const ongoingTasksReducer: Reducer<OngoingTasksState, OngoingTaskReducerA
                             delayReplicationTime: incomingTask.DelayReplicationFor
                                 ? genUtils.timeSpanToSeconds(incomingTask.DelayReplicationFor)
                                 : null,
+                            taskMode: incomingTask.Mode,
+                            hasFiltering: incomingTask.WithFiltering,
                             serverWide: incomingTask.Name.startsWith(serverWidePrefix),
                             taskType: "PullReplicationAsHub",
                             mentorName: null,

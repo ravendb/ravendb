@@ -263,7 +263,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
 
                     {externalReplications.length > 0 && (
                         <div key="external-replications">
-                            <div className="hr-title">
+                            <div className="hr-title margin-top-xs">
                                 <h5 className="tasks-list-item external-replication no-text-transform">
                                     <i className="icon-external-replication"></i>
                                     <span>External Replication ({externalReplications.length})</span>
@@ -280,7 +280,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
 
                     {ravenEtls.length > 0 && (
                         <div key="raven-etls">
-                            <div className="hr-title">
+                            <div className="hr-title margin-top-xs">
                                 <h5 className="tasks-list-item ravendb-etl no-text-transform">
                                     <i className="icon-etl"></i>
                                     <span>RavenDB ETL ({ravenEtls.length})</span>
@@ -303,7 +303,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
 
                     {sqlEtls.length > 0 && (
                         <div key="sql-etls">
-                            <div className="hr-title">
+                            <div className="hr-title margin-top-xs">
                                 <h5 className="tasks-list-item sql-etl no-text-transform">
                                     <i className="icon-sql-etl"></i>
                                     <span>SQL ETL ({sqlEtls.length})</span>
@@ -326,7 +326,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
 
                     {olapEtls.length > 0 && (
                         <div key="olap-etls">
-                            <div className="hr-title">
+                            <div className="hr-title margin-top-xs">
                                 <h5 className="tasks-list-item olap-etl no-text-transform">
                                     <i className="icon-olap-etl"></i>
                                     <span>OLAP ETL ({olapEtls.length})</span>
@@ -349,7 +349,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
 
                     {kafkaEtls.length > 0 && (
                         <div key="kafka-etls">
-                            <div className="hr-title">
+                            <div className="hr-title margin-top-xs">
                                 <h5 className="tasks-list-item kafka-etl no-text-transform">
                                     <i className="icon-kafka-etl"></i>
                                     <span>KAFKA ETL ({kafkaEtls.length})</span>
@@ -372,7 +372,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
 
                     {rabbitMqEtls.length > 0 && (
                         <div key="rabbitmq-etls">
-                            <div className="hr-title">
+                            <div className="hr-title margin-top-xs">
                                 <h5 className="tasks-list-item rabbitmq-etl no-text-transform">
                                     <i className="icon-rabbitmq-etl"></i>
                                     <span>RABBITMQ ETL ({rabbitMqEtls.length})</span>
@@ -395,7 +395,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
 
                     {elasticSearchEtls.length > 0 && (
                         <div key="elastic-search-etls">
-                            <div className="hr-title">
+                            <div className="hr-title margin-top-xs">
                                 <h5 className="tasks-list-item elastic-etl no-text-transform">
                                     <i className="icon-elastic-search-etl"></i>
                                     <span>Elasticsearch ETL ({elasticSearchEtls.length})</span>
@@ -418,7 +418,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
 
                     {backups.length > 0 && (
                         <div key="backups">
-                            <div className="hr-title">
+                            <div className="hr-title margin-top-xs">
                                 <h5 className="tasks-list-item periodic-backup no-text-transform">
                                     <i className="icon-backups"></i>
                                     <span>Periodic Backup ({backups.length})</span>
@@ -435,7 +435,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
 
                     {subscriptions.length > 0 && (
                         <div key="subscriptions">
-                            <div className="hr-title">
+                            <div className="hr-title margin-top-xs">
                                 <h5 className="tasks-list-item subscription no-text-transform">
                                     <i className="icon-subscription"></i>
                                     <span>Subscription ({subscriptions.length})</span>
@@ -452,7 +452,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
 
                     {hubDefinitions.length > 0 && (
                         <div key="replication-hubs">
-                            <div className="hr-title">
+                            <div className="hr-title margin-top-xs">
                                 <h5 className="tasks-list-item pull-replication-hub no-text-transform">
                                     <i className="icon-pull-replication-hub"></i>
                                     <span>Replication Hub ({hubDefinitions.length})</span>
@@ -465,7 +465,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                                         {...sharedPanelProps}
                                         key={taskKey(def.shared)}
                                         data={def}
-                                        connectedHubs={replicationHubs.filter(
+                                        ongoingHubs={replicationHubs.filter(
                                             (x) => x.shared.taskId === def.shared.taskId
                                         )}
                                     />
@@ -476,7 +476,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
 
                     {replicationSinks.length > 0 && (
                         <div key="replication-sinks">
-                            <div className="hr-title">
+                            <div className="hr-title margin-top-xs">
                                 <h5 className="tasks-list-item pull-replication-sink no-text-transform">
                                     <i className="icon-pull-replication-agent"></i>
                                     <span>Replication Sink ({replicationSinks.length})</span>

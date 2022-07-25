@@ -4,6 +4,8 @@ import BackupType = Raven.Client.Documents.Operations.Backups.BackupType;
 
 export interface OngoingTaskHubDefinitionSharedInfo extends OngoingTaskSharedInfo {
     delayReplicationTime: number;
+    taskMode: Raven.Client.Documents.Operations.Replication.PullReplicationMode;
+    hasFiltering: boolean;
 }
 
 interface Progress {
