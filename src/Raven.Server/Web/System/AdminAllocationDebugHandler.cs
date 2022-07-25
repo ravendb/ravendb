@@ -80,7 +80,7 @@ namespace Raven.Server.Web.System
             {
                 switch (eventData.EventName)
                 {
-                    case "GCAllocationTick_V3":
+                    case "GCAllocationTick_V4":
                         var type = (string)eventData.Payload[5];
                         if (_allocations.TryGetValue(type, out var info) == false)
                         {
