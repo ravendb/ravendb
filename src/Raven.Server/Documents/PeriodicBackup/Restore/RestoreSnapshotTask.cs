@@ -37,17 +37,17 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             _extension = extension;
         }
 
-        protected override async Task Restore(DocumentDatabase database)
+        protected override async Task Restore()
         {
-            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                await RestoreFromSmugglerFile(Progress, database, _firstFile, context);
-                await SmugglerRestore(database, context);
+                await RestoreFromSmugglerFile(Progress, Database, _firstFile, context);
+                await SmugglerRestore(Database, context);
             }
 
             Result.SnapshotRestore.Processed = true;
 
-            var summary = database.GetDatabaseSummary();
+            var summary = Database.GetDatabaseSummary();
             Result.Documents.ReadCount += summary.DocumentsCount;
             Result.Documents.Attachments.ReadCount += summary.AttachmentsCount;
             Result.Counters.ReadCount += summary.CounterEntriesCount;
@@ -98,10 +98,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             FilesToRestore.RemoveAt(0);
         }
 
-        protected override void OnAfterRestore(DocumentDatabase database)
+        protected override void OnAfterRestore()
         {
-            base.OnAfterRestore(database);
-            RegenerateDatabaseIdInIndexes(database);
+            base.OnAfterRestore();
+            RegenerateDatabaseIdInIndexes(Database);
         }
 
         private async Task<RestoreSettings> SnapshotRestore(JsonOperationContext context, string backupPath,
