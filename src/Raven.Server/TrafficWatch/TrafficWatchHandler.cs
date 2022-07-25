@@ -20,6 +20,14 @@ namespace Raven.Server.TrafficWatch
     {
         private static readonly Logger _logger = LoggingSource.Instance.GetLogger<TrafficWatchHandler>("Server");
 
+        [RavenAction("/admin/traffic-watch/toggle", "GET", AuthorizationStatus.Operator)]
+        public Task Toggle()
+        {
+            var enable = GetBoolValueQueryString("enable", required: true) ?? false;
+            TrafficWatchManager.EnableTrafficWatchToLog = enable;
+            return Task.CompletedTask;
+        }
+
         [RavenAction("/admin/traffic-watch", "GET", AuthorizationStatus.Operator)]
         public async Task TrafficWatchWebsockets()
         {

@@ -2643,7 +2643,7 @@ namespace Raven.Server
                 Operation = header?.Operation ?? TcpConnectionHeaderMessage.OperationTypes.None,
                 OperationVersion = header?.OperationVersion ?? -1
             };
-            TrafficWatchManager.DispatchMessage(twn);
+            TrafficWatchManager.DispatchMessage(twn, null);
         }
 
         public RequestRouter Router { get; private set; }

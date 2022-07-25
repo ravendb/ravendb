@@ -303,7 +303,7 @@ namespace Raven.Server
                 ResponseSizeInBytes = ((StreamWithTimeout)context.Items["ResponseStream"])?.TotalWritten ?? 0
             };
 
-            TrafficWatchManager.DispatchMessage(twn);
+            TrafficWatchManager.DispatchMessage(twn, _logger);
         }
 
         private static void MaybeAddAdditionalExceptionData(DynamicJsonValue djv, Exception exception)
