@@ -47,7 +47,8 @@ namespace Raven.Server.TrafficWatch
             if (logger != null && logger.IsOperationsEnabled && EnableTrafficWatchToLog)
             {
                 var json = trafficWatchData.ToJson();
-                string msg = string.Empty;
+                string msg = "Traffic Watch: ";
+
                 var first = true;
                 foreach (var (name, value) in json.Properties)
                 {
@@ -56,9 +57,13 @@ namespace Raven.Server.TrafficWatch
 
                     first = false;
 
-                    if (name == nameof(TrafficWatchHttpChange.ResponseSizeInBytes))
+                    if (name == nameof(TrafficWatchHttpChange.RequestSizeInBytes))
                     {
-                        msg += new Size((long)value, SizeUnit.Bytes).ToString();
+                        msg += $"request: {new Size((long)value, SizeUnit.Bytes)}";
+                    }
+                    else if (name == nameof(TrafficWatchHttpChange.ResponseSizeInBytes))
+                    {
+                        msg += $"response: {new Size((long)value, SizeUnit.Bytes)}";
                     }
                     else
                     {
