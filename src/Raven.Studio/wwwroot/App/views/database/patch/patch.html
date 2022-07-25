@@ -417,12 +417,10 @@
                 <input id="maxOperations" class="styled" type="checkbox" data-bind="checked: defineMaxOperationsPerSecond">
                 <label for="maxOperations">Limit number of operations</label>
             </div>
-            <div class="margin-left" data-bind="collapse: defineMaxOperationsPerSecond">
-                <div class="margin-left margin-left-lg margin-right margin-right-lg margin-bottom margin-bottom-sm">
-                    <div class="input-group margin-right">
-                        <input id="operationsPerSecond" type="number" min="1" class="form-control input-border" data-bind="numericInput: maxOperationsPerSecond" placeholder="Max operations"/>
-                        <div class="input-group-addon input-border">per second</div>
-                    </div>
+            <div class="" data-bind="collapse: defineMaxOperationsPerSecond">
+                <div class="input-group margin-right">
+                    <input id="operationsPerSecond" type="number" min="1" class="form-control input-border" data-bind="numericInput: maxOperationsPerSecond" placeholder="Max operations"/>
+                    <div class="input-group-addon input-border">per second</div>
                 </div>
             </div>
         </div>
