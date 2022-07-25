@@ -39,8 +39,10 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task ModifyIndexThenRestartServer()
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task ModifyIndexThenRestartServer(bool stopIndex)
         {
             using var server = GetNewServer(new ServerCreationOptions { RunInMemory = false, });
             using var store = GetDocumentStore(new Options { RunInMemory = false, Server = server });
@@ -59,6 +61,10 @@ namespace SlowTests.Issues
                 // Wait for indexing in first node
                 new Index_ItemsByNum().Execute(store);
                 Indexes.WaitForIndexing(store);
+                if (stopIndex)
+                {
+                    store.Maintenance.Send(new StopIndexOperation("Items/ByNum"));
+                }
 
                 //Modify index
                 await Assert.ThrowsAsync<InvalidOperationException>(async () =>
@@ -71,7 +77,9 @@ namespace SlowTests.Issues
                 Assert.Equal(2, indexNames1.Length);
                 Assert.Contains("Items/ByNum", indexNames1);
                 Assert.Contains("ReplacementOf/Items/ByNum", indexNames1);
-                
+
+                // WaitForUserToContinueTheTest(store);
+
                 //restart server
                 var result = await DisposeServerAndWaitForFinishOfDisposalAsync(server);
                 using var newServer = GetNewServer(new ServerCreationOptions
