@@ -36,6 +36,7 @@ using Raven.Server.Documents.Indexes.Static.TimeSeries;
 using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
+using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.ServerWide.Context;
@@ -419,7 +420,9 @@ namespace Raven.Server.Documents.Indexes
                 var definition = kvp.Value;
 
                 if (definition.Name.StartsWith(Constants.Documents.Indexing.SideBySideIndexNamePrefix, StringComparison.OrdinalIgnoreCase))
-                    continue;
+                {
+                    throw new RachisInvalidOperationException($"Index name cannot start with {Constants.Documents.Indexing.SideBySideIndexNamePrefix} but got {definition.Name} of index {name}");
+                }
 
                 try
                 {

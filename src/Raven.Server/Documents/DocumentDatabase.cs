@@ -17,6 +17,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.Handlers;
@@ -60,6 +61,7 @@ using Constants = Raven.Client.Constants;
 using DatabaseInfo = Raven.Client.ServerWide.Operations.DatabaseInfo;
 using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
 using Size = Raven.Client.Util.Size;
+using StudioConfiguration = Raven.Client.Documents.Operations.Configuration.StudioConfiguration;
 
 namespace Raven.Server.Documents
 {
@@ -352,7 +354,7 @@ namespace Raven.Server.Documents
                 {
                     try
                     {
-                        NotifyFeaturesAboutStateChange(record, index);
+                        NotifyFeaturesAboutStateChange(record, index, handleIndexesChange: false);
                         RachisLogIndexNotifications.NotifyListenersAbout(index, null);
                     }
                     catch (Exception e)
@@ -1253,7 +1255,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void NotifyFeaturesAboutStateChange(DatabaseRecord record, long index)
+        private void NotifyFeaturesAboutStateChange(DatabaseRecord record, long index, bool handleIndexesChange = true)
         {
             if (CanSkipDatabaseRecordChange(record.DatabaseName, index))
                 return;
@@ -1291,7 +1293,10 @@ namespace Raven.Server.Documents
 
                         SetUnusedDatabaseIds(record);
                         InitializeFromDatabaseRecord(record);
-                        IndexStore.HandleDatabaseRecordChange(record, index);
+
+                        if(handleIndexesChange)
+                            IndexStore.HandleDatabaseRecordChange(record, index);
+                        
                         ReplicationLoader?.HandleDatabaseRecordChange(record, index);
                         EtlLoader?.HandleDatabaseRecordChange(record);
                         SubscriptionStorage?.HandleDatabaseRecordChange(record);
