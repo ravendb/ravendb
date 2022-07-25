@@ -177,25 +177,27 @@ namespace Raven.Server
             }
             catch (Exception e)
             {
-                sp?.Stop();
-                exception = e;
-
-                CheckVersionAndWrapException(context, ref e);
-
-                MaybeSetExceptionStatusCode(context, _server.ServerStore, e);
-
-                if (context.RequestAborted.IsCancellationRequested)
-                    return;
-
-                using (_server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
+                try
                 {
-                    var djv = new DynamicJsonValue
+                    sp?.Stop();
+                    exception = e;
+
+                    CheckVersionAndWrapException(context, ref e);
+
+                    MaybeSetExceptionStatusCode(context, _server.ServerStore, e);
+
+                    if (context.RequestAborted.IsCancellationRequested)
+                        return;
+
+                    using (_server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
                     {
-                        [nameof(ExceptionDispatcher.ExceptionSchema.Url)] = $"{context.Request.Path}{context.Request.QueryString}",
-                        [nameof(ExceptionDispatcher.ExceptionSchema.Type)] = e.GetType().FullName,
-                        [nameof(ExceptionDispatcher.ExceptionSchema.Message)] = e.Message,
-                        [nameof(ExceptionDispatcher.ExceptionSchema.Error)] = e.ToString()
-                    };
+                        var djv = new DynamicJsonValue
+                        {
+                            [nameof(ExceptionDispatcher.ExceptionSchema.Url)] = $"{context.Request.Path}{context.Request.QueryString}",
+                            [nameof(ExceptionDispatcher.ExceptionSchema.Type)] = e.GetType().FullName,
+                            [nameof(ExceptionDispatcher.ExceptionSchema.Message)] = e.Message,
+                            [nameof(ExceptionDispatcher.ExceptionSchema.Error)] = e.ToString()
+                        };
 
 #if EXCEPTION_ERROR_HUNT
                     var f = Guid.NewGuid() + ".error";
@@ -203,17 +205,27 @@ namespace Raven.Server
                         $"{context.Request.Path}{context.Request.QueryString}" + Environment.NewLine + errorString);
 #endif
 
-                    MaybeAddAdditionalExceptionData(djv, e);
+                        MaybeAddAdditionalExceptionData(djv, e);
 
-                    await using (var writer = new AsyncBlittableJsonTextWriter(ctx, context.Response.Body))
-                    {
-                        var json = ctx.ReadObject(djv, "exception");
-                        writer.WriteObject(json);
-                    }
+                        await using (var writer = new AsyncBlittableJsonTextWriter(ctx, context.Response.Body))
+                        {
+                            var json = ctx.ReadObject(djv, "exception");
+                            writer.WriteObject(json);
+                        }
 
 #if EXCEPTION_ERROR_HUNT
                     File.Delete(f);
 #endif
+                    }
+                }
+                catch (Exception internalException)
+                {
+                    if (_logger.IsOperationsEnabled)
+                    {
+                        _logger.Operations($"Error during error handling of a failed request. Original error: {e}", internalException);
+                    }
+
+                    throw;
                 }
             }
             finally
