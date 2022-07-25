@@ -9,7 +9,6 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
-using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
@@ -33,7 +32,7 @@ using Sparrow.Platform;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
-    public abstract class AbstractRestoreBackupTask
+    public abstract class AbstractRestoreBackupTask : IDisposable
     {
         protected RestoreBackupConfigurationBase RestoreConfiguration { get; set; }
         protected ServerStore ServerStore;
@@ -42,13 +41,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         protected List<string> FilesToRestore;
         protected RestoreSettings RestoreSettings;
         protected readonly OperationCancelToken OperationCancelToken;
-        protected bool HasEncryptionKey;
         protected readonly IRestoreSource RestoreSource;
+        protected bool HasEncryptionKey;
+        protected DocumentDatabase Database;
 
         protected string DatabaseName => RestoreConfiguration.DatabaseName;
         protected static readonly Logger Logger = LoggingSource.Instance.GetLogger<AbstractRestoreBackupTask>("Server");
         protected bool DatabaseValidation = true;
-        protected bool ChangeDatabaseStateAfterRestore = true;
         protected InitializeOptions Options = InitializeOptions.SkipLoadingDatabaseRecord;
 
         private bool _restoringToDefaultDataDirectory;
@@ -77,25 +76,23 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
             try
             {
-                await Initialize();
-
-                var databaseRecord = RestoreSettings.DatabaseRecord;
-                ModifyDatabaseRecordSettings(databaseRecord);
-
-                if (HasEncryptionKey)
+                using (this)
                 {
-                    // save the encryption key so we'll be able to access the database
-                    ServerStore.PutSecretKey(RestoreConfiguration.EncryptionKey,
-                        DatabaseName, overwrite: false);
-                }
-                using (var database = GetDocumentDatabase())
-                {
-                    await OnBeforeRestore(database);
-                    await Restore(database);
-                    OnAfterRestore(database);
+                    await Initialize();
 
-                    await SaveDatabaseRecordAsync(DatabaseName, databaseRecord, null, Result, Progress);
-                    return Result;
+                    if (HasEncryptionKey)
+                    {
+                        // save the encryption key so we'll be able to access the database
+                        ServerStore.PutSecretKey(RestoreConfiguration.EncryptionKey,
+                            DatabaseName, overwrite: false);
+                    }
+
+                    await OnBeforeRestore();
+                    await Restore();
+                    OnAfterRestore();
+
+                    await SaveDatabaseRecordAsync(DatabaseName, RestoreSettings.DatabaseRecord, null, Result, Progress);
+                    return OperationResult();
                 }
             }
             catch (Exception e)
@@ -103,13 +100,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 await OnError(Progress, e);
                 throw;
             }
-            finally
-            {
-                Dispose();
-            }
         }
 
-        protected abstract Task Restore(DocumentDatabase database);
+        protected abstract Task Restore();
 
         protected virtual async Task Initialize()
         {
@@ -173,7 +166,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             };
         }
 
-        protected virtual DocumentDatabase GetDocumentDatabase()
+        protected virtual IOperationResult OperationResult() => Result;
+
+        protected void CreateDocumentDatabase()
         {
             var configuration = CreateDatabaseConfiguration();
             var addToInitLog = new Action<string>(txt => // init log is not save in mem during RestoreBackup
@@ -182,10 +177,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 if (Logger.IsInfoEnabled)
                     Logger.Info(msg);
             });
-            var database = DatabasesLandlord.CreateDocumentDatabase(DatabaseName, configuration, ServerStore, addToInitLog);
-            database.Initialize(Options);
 
-            return database;
+            Database = DatabasesLandlord.CreateDocumentDatabase(DatabaseName, configuration, ServerStore, addToInitLog);
+            Database.Initialize(Options);
         }
 
         protected virtual RavenConfiguration CreateDatabaseConfiguration()
@@ -195,8 +189,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 .CreateDatabaseConfiguration(DatabaseName, ignoreDisabledDatabase: true, ignoreBeenDeleted: true, ignoreNotRelevant: true, RestoreSettings.DatabaseRecord);
         }
 
-        protected virtual async Task OnBeforeRestore(DocumentDatabase database)
+        protected virtual async Task OnBeforeRestore()
         {
+            ModifyDatabaseRecordSettings();
+
+            CreateDocumentDatabase();
+
             var databaseRecord = RestoreSettings.DatabaseRecord;
             databaseRecord.Topology = new DatabaseTopology();
 
@@ -208,22 +206,17 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
             await SaveDatabaseRecordAsync(DatabaseName, databaseRecord, RestoreSettings.DatabaseValues, Result, Progress);
 
-            database.SetIds(databaseRecord);
+            Database.SetIds(RestoreSettings.DatabaseRecord);
         }
 
-        protected virtual void OnAfterRestore(DocumentDatabase database)
+        protected virtual void OnAfterRestore()
         {
             DisableOngoingTasksIfNeeded(RestoreSettings.DatabaseRecord);
-
             SmugglerBase.EnsureProcessed(Result, skipped: false);
-
             Progress.Invoke(Result.Progress);
 
-            if (ChangeDatabaseStateAfterRestore)
-            {
-                // after the db for restore is done, we can safely set the db state to normal and write the DatabaseRecord
-                RestoreSettings.DatabaseRecord.DatabaseState = DatabaseStateStatus.Normal;
-            }
+            // after the db for restore is done, we can safely set the db state to normal and write the DatabaseRecord
+            RestoreSettings.DatabaseRecord.DatabaseState = DatabaseStateStatus.Normal;
         }
 
         protected virtual async Task<long> SaveDatabaseRecordAsync(string databaseName, DatabaseRecord databaseRecord, Dictionary<string,
@@ -288,6 +281,22 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             if (DatabaseValidation)
                 DatabaseHelper.Validate(DatabaseName, RestoreSettings.DatabaseRecord, ServerStore.Configuration);
             
+        }
+
+        protected void ModifyDatabaseRecordSettings()
+        {
+            var databaseRecord = RestoreSettings.DatabaseRecord;
+            databaseRecord.Settings ??= new Dictionary<string, string>();
+
+            var runInMemoryConfigurationKey = RavenConfiguration.GetKey(x => x.Core.RunInMemory);
+            databaseRecord.Settings.Remove(runInMemoryConfigurationKey);
+            if (ServerStore.Configuration.Core.RunInMemory)
+                databaseRecord.Settings[runInMemoryConfigurationKey] = "false";
+
+            var dataDirectoryConfigurationKey = RavenConfiguration.GetKey(x => x.Core.DataDirectory);
+            databaseRecord.Settings.Remove(dataDirectoryConfigurationKey); // removing because we want to restore to given location, not to serialized in backup one
+            if (_restoringToDefaultDataDirectory == false)
+                databaseRecord.Settings[dataDirectoryConfigurationKey] = RestoreConfiguration.DataDirectory;
         }
 
         protected async Task SmugglerRestore(DocumentDatabase database, DocumentsOperationContext context)
@@ -420,6 +429,68 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             return new DecryptingXChaCha20Oly1305Stream(stream, Convert.FromBase64String(RestoreConfiguration.BackupEncryptionSettings.Key));
         }
 
+        protected void DisableOngoingTasksIfNeeded(DatabaseRecord databaseRecord)
+        {
+            if (RestoreConfiguration.DisableOngoingTasks == false)
+                return;
+
+            if (databaseRecord.ExternalReplications != null)
+            {
+                foreach (var task in databaseRecord.ExternalReplications)
+                {
+                    task.Disabled = true;
+                }
+            }
+
+            if (databaseRecord.RavenEtls != null)
+            {
+                foreach (var task in databaseRecord.RavenEtls)
+                {
+                    task.Disabled = true;
+                }
+            }
+
+            if (databaseRecord.SqlEtls != null)
+            {
+                foreach (var task in databaseRecord.SqlEtls)
+                {
+                    task.Disabled = true;
+                }
+            }
+
+            if (databaseRecord.PeriodicBackups != null)
+            {
+                foreach (var task in databaseRecord.PeriodicBackups)
+                {
+                    task.Disabled = true;
+                }
+            }
+
+            if (databaseRecord.ExternalReplications != null)
+            {
+                foreach (var task in databaseRecord.ExternalReplications)
+                {
+                    task.Disabled = true;
+                }
+            }
+
+            if (databaseRecord.HubPullReplications != null)
+            {
+                foreach (var task in databaseRecord.HubPullReplications)
+                {
+                    task.Disabled = true;
+                }
+            }
+
+            if (databaseRecord.SinkPullReplications != null)
+            {
+                foreach (var task in databaseRecord.SinkPullReplications)
+                {
+                    task.Disabled = true;
+                }
+            }
+        }
+
         private ClusterTopology GetClusterTopology()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -529,82 +600,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             return dataDirectory;
         }
 
-        private void DisableOngoingTasksIfNeeded(DatabaseRecord databaseRecord)
-        {
-            if (RestoreConfiguration.DisableOngoingTasks == false)
-                return;
-
-            if (databaseRecord.ExternalReplications != null)
-            {
-                foreach (var task in databaseRecord.ExternalReplications)
-                {
-                    task.Disabled = true;
-                }
-            }
-
-            if (databaseRecord.RavenEtls != null)
-            {
-                foreach (var task in databaseRecord.RavenEtls)
-                {
-                    task.Disabled = true;
-                }
-            }
-
-            if (databaseRecord.SqlEtls != null)
-            {
-                foreach (var task in databaseRecord.SqlEtls)
-                {
-                    task.Disabled = true;
-                }
-            }
-
-            if (databaseRecord.PeriodicBackups != null)
-            {
-                foreach (var task in databaseRecord.PeriodicBackups)
-                {
-                    task.Disabled = true;
-                }
-            }
-
-            if (databaseRecord.ExternalReplications != null)
-            {
-                foreach (var task in databaseRecord.ExternalReplications)
-                {
-                    task.Disabled = true;
-                }
-            }
-
-            if (databaseRecord.HubPullReplications != null)
-            {
-                foreach (var task in databaseRecord.HubPullReplications)
-                {
-                    task.Disabled = true;
-                }
-            }
-
-            if (databaseRecord.SinkPullReplications != null)
-            {
-                foreach (var task in databaseRecord.SinkPullReplications)
-                {
-                    task.Disabled = true;
-                }
-            }
-        }
-
-        private void ModifyDatabaseRecordSettings(DatabaseRecord databaseRecord)
-        {
-            databaseRecord.Settings ??= new Dictionary<string, string>();
-
-            var runInMemoryConfigurationKey = RavenConfiguration.GetKey(x => x.Core.RunInMemory);
-            databaseRecord.Settings.Remove(runInMemoryConfigurationKey);
-            if (ServerStore.Configuration.Core.RunInMemory)
-                databaseRecord.Settings[runInMemoryConfigurationKey] = "false";
-
-            var dataDirectoryConfigurationKey = RavenConfiguration.GetKey(x => x.Core.DataDirectory);
-            databaseRecord.Settings.Remove(dataDirectoryConfigurationKey); // removing because we want to restore to given location, not to serialized in backup one
-            if (_restoringToDefaultDataDirectory == false)
-                databaseRecord.Settings[dataDirectoryConfigurationKey] = RestoreConfiguration.DataDirectory;
-        }
 
         private static bool HasFilesOrDirectories(string location)
         {
@@ -615,10 +610,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                    Directory.GetDirectories(location).Length > 0;
         }
 
-        protected void Dispose()
+        public void Dispose()
         {
-            OperationCancelToken?.Dispose();
+            Database?.Dispose();
             RestoreSource?.Dispose();
+            OperationCancelToken?.Dispose();
         }
     }
 }

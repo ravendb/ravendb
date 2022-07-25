@@ -48,6 +48,12 @@ public class AllNodesExecutor : AbstractExecutor
         }
     }
 
+    public RequestExecutor GetRequestExecutorFoNode(string tag)
+    {
+        _current.TryGetValue(tag, out var executor);
+        return executor;
+    }
+
     private void RegisterForTopologyChange()
     {
         var task = _store.Engine.GetTopologyChanged();

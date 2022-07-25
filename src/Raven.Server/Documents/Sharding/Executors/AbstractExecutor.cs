@@ -20,6 +20,7 @@ public abstract class AbstractExecutor : IDisposable
     }
 
     public abstract RequestExecutor GetRequestExecutorAt(int position);
+
     protected abstract Memory<int> GetAllPositions();
 
     protected abstract void OnCertificateChange(object sender, EventArgs e);

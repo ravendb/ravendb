@@ -13,11 +13,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         {
         }
 
-        protected override async Task Restore(DocumentDatabase database)
+        protected override async Task Restore()
         {
-            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                await SmugglerRestore(database, context);
+                await SmugglerRestore(Database, context);
             }
         }
 

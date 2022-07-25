@@ -61,6 +61,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
         public static async Task<AbstractRestoreBackupTask> CreateBackupTask(ServerStore serverStore, RestoreBackupConfigurationBase configuration, IRestoreSource restoreSource, OperationCancelToken token)
         {
+            if (configuration.ShardRestoreSettings.Length > 0)
+                return new ShardedRestoreOrchestrationTask(serverStore, configuration, token);
+            
             var singleShardRestore = ShardHelper.IsShardedName(configuration.DatabaseName);
 
             var filesToRestore = await GetOrderedFilesToRestore(restoreSource, configuration);

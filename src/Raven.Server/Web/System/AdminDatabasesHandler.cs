@@ -632,35 +632,21 @@ namespace Raven.Server.Web.System
                 var restoreConfiguration = RestoreUtils.GetRestoreConfigurationAndSource(ServerStore, configuration, out var restoreSource);
 
                 await ServerStore.EnsureNotPassiveAsync();
+
                 var cancelToken = CreateOperationToken();
                 var operationId = ServerStore.Operations.GetNextOperationId();
 
-                if (restoreConfiguration.ShardRestoreSettings.Length > 0)
-                {
-                    var shardedRestoreOrchestrator = new ShardedRestoreOrchestrator(ServerStore, restoreConfiguration, cancelToken);
-
-                    _ = ServerStore.Operations.AddLocalOperation(
-                        operationId,
-                        OperationType.DatabaseRestore,
-                        $"Restore sharded database: {restoreConfiguration.DatabaseName}",
-                        detailedDescription: null,
-                        taskFactory: onProgress => Task.Run(async () => await shardedRestoreOrchestrator.Execute(onProgress), cancelToken.Token),
-                        token: cancelToken);
-                }
-                else 
-                {
-                    _ = ServerStore.Operations.AddLocalOperation(
-                        operationId,
-                        OperationType.DatabaseRestore,
-                        $"Database restore: {restoreConfiguration.DatabaseName}",
-                        detailedDescription: null,
-                        taskFactory: onProgress => Task.Run(async () =>
-                        {
-                            var restoreBackupTask = await RestoreUtils.CreateBackupTask(ServerStore, restoreConfiguration, restoreSource, cancelToken);
-                            return await restoreBackupTask.Execute(onProgress);
-                        }, cancelToken.Token),
-                        token: cancelToken);
-                }
+                _ = ServerStore.Operations.AddLocalOperation(
+                    operationId,
+                    OperationType.DatabaseRestore,
+                    $"Database restore: {restoreConfiguration.DatabaseName}",
+                    detailedDescription: null,
+                    taskFactory: onProgress => Task.Run(async () =>
+                    {
+                        var restoreBackupTask = await RestoreUtils.CreateBackupTask(ServerStore, restoreConfiguration, restoreSource, cancelToken);
+                        return await restoreBackupTask.Execute(onProgress);
+                    }, cancelToken.Token),
+                    token: cancelToken);
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
