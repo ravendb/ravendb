@@ -354,7 +354,7 @@ namespace Raven.Server.Documents
                 {
                     try
                     {
-                        NotifyFeaturesAboutStateChange(record, index, handleIndexesChange: false);
+                        NotifyFeaturesAboutStateChange(record, index);
                         RachisLogIndexNotifications.NotifyListenersAbout(index, null);
                     }
                     catch (Exception e)
@@ -1255,7 +1255,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void NotifyFeaturesAboutStateChange(DatabaseRecord record, long index, bool handleIndexesChange = true)
+        private void NotifyFeaturesAboutStateChange(DatabaseRecord record, long index)
         {
             if (CanSkipDatabaseRecordChange(record.DatabaseName, index))
                 return;
@@ -1293,9 +1293,7 @@ namespace Raven.Server.Documents
 
                         SetUnusedDatabaseIds(record);
                         InitializeFromDatabaseRecord(record);
-
-                        if(handleIndexesChange)
-                            IndexStore.HandleDatabaseRecordChange(record, index);
+                        IndexStore.HandleDatabaseRecordChange(record, index);
                         
                         ReplicationLoader?.HandleDatabaseRecordChange(record, index);
                         EtlLoader?.HandleDatabaseRecordChange(record);
