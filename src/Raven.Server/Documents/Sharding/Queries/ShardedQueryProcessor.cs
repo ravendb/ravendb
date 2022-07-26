@@ -323,9 +323,6 @@ public class ShardedQueryProcessor : IDisposable
 
         foreach ((int shardId, ShardLocator.IdsByShard<string> documentIds) in shards)
         {
-            //if (_filteredShardIndexes?.Contains(shardId) == false)
-            //    continue;
-
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "have a way to turn the _query into a json file and then we'll modify that, instead of building it manually");
 
             var queryTemplate = new DynamicJsonValue
