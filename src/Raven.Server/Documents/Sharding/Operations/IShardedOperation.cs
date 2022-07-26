@@ -45,6 +45,9 @@ namespace Raven.Server.Documents.Sharding.Operations
 
         void ModifyHeaders(HttpRequestMessage request)
         {
+            if (HttpRequest == null)
+                return; // this will happen if we are scheduling sharded operation not from a processor, e.g. ShardedIndexCreateController
+
             foreach (var header in HeadersToCopy)
             {
                 if (request.Headers.Contains(header))

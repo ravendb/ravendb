@@ -44,7 +44,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Collections
             _httpContext = httpContext;
         }
 
-        public HttpRequest HttpRequest => _httpContext.Request;
+        public HttpRequest HttpRequest => _httpContext?.Request;
 
         public CollectionStatistics Combine(Memory<CollectionStatistics> results)
         {
