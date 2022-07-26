@@ -634,6 +634,9 @@ namespace Raven.Server.Documents.Indexes
                 if (creationOptions == IndexCreationOptions.Update)
                 {
                     Debug.Assert(currentIndex != null);
+                    var definitionClone = new IndexDefinition();
+                    definition.CopyTo(definitionClone);
+                    definition = definitionClone;
 
                     if (currentIndex is MapReduceIndex oldMapReduceIndex && oldMapReduceIndex.OutputReduceToCollection != null)
                     {
