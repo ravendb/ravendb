@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using System.Threading.Tasks;
 using Nito.AsyncEx;
 
 namespace Sparrow.Utils
@@ -8,7 +9,7 @@ namespace Sparrow.Utils
     /// This class allow us to perform disposal operations without running
     /// into concurrency issues with calling code
     /// </summary>
-    public class DisposeLock
+    internal class DisposeLock
     {
         private readonly string _name;
         private readonly AsyncReaderWriterLock _lock;
@@ -34,6 +35,28 @@ namespace Sparrow.Utils
             }
             
             if (disposable == null || 
+                _cts.IsCancellationRequested)
+            {
+                disposable?.Dispose();
+                ThrowDisposed();
+            }
+
+            return disposable;
+        }
+
+        public async ValueTask<IDisposable> EnsureNotDisposedAsync()
+        {
+            IDisposable disposable = null;
+            try
+            {
+                disposable = await _lock.ReaderLockAsync(_cts.Token).ConfigureAwait(false);
+            }
+            catch
+            {
+                // ignore
+            }
+
+            if (disposable == null ||
                 _cts.IsCancellationRequested)
             {
                 disposable?.Dispose();
