@@ -208,7 +208,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
                 queryStats.TotalResults += qs.TotalResults;
                 queryStats.IndexName = qs.IndexName;
                 queryStats.IsStale |= qs.IsStale;
-                queryStats.TotalResults += qs.TotalResults;
+               
                 if (queryStats.IndexTimestamp < qs.IndexTimestamp)
                 {
                     queryStats.IndexTimestamp = qs.IndexTimestamp;
