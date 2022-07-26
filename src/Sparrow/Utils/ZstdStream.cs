@@ -127,7 +127,7 @@ namespace Sparrow.Utils
 
         public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
         {
-            using (_disposerLock.EnsureNotDisposed())
+            using (await _disposerLock.EnsureNotDisposedAsync().ConfigureAwait(false))
             {
                 while (true)
                 {
@@ -177,7 +177,7 @@ namespace Sparrow.Utils
 
         public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
         {
-            using (_disposerLock.EnsureNotDisposed())
+            using (await _disposerLock.EnsureNotDisposedAsync().ConfigureAwait(false))
             {
                 while (buffer.Length > 0)
                 {
@@ -209,7 +209,7 @@ namespace Sparrow.Utils
 
         public override async Task FlushAsync(CancellationToken cancellationToken)
         {
-            using (_disposerLock.EnsureNotDisposed())
+            using (await _disposerLock.EnsureNotDisposedAsync().ConfigureAwait(false))
             {
                 while (true)
                 {
