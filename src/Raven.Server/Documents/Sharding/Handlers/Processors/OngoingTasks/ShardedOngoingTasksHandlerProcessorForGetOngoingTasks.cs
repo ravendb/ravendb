@@ -35,19 +35,14 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks
 
     internal class GetOngoingTasksInfoCommand : RavenCommand<OngoingTasksResult>
     {
-        private readonly string _nodeTag;
-
-        public GetOngoingTasksInfoCommand(string nodeTag = null)
+        public GetOngoingTasksInfoCommand(string nodeTag)
         {
-            _nodeTag = nodeTag;
+            SelectedNodeTag = nodeTag;
         }
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             url = $"{node.Url}/databases/{node.Database}/tasks";
-
-            if (_nodeTag != null)
-                url += $"?nodeTag={_nodeTag}";
 
             var request = new HttpRequestMessage { Method = HttpMethod.Get };
 
