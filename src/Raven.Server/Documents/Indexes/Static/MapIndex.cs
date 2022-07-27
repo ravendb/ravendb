@@ -9,6 +9,7 @@ using Raven.Server.Documents.Indexes.Configuration;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Queries;
+using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
 using Voron;
 
@@ -179,25 +180,30 @@ namespace Raven.Server.Documents.Indexes.Static
         public static Index CreateNew(IndexDefinition definition, DocumentDatabase documentDatabase)
         {
             var instance = CreateIndexInstance(definition, documentDatabase.Configuration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion);
+            
+            var staticIndex = instance._compiled;
+            staticIndex.CheckDepthOfStackInOutputMap(definition, documentDatabase);
+            
             instance.Initialize(documentDatabase,
                 new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration),
                 documentDatabase.Configuration.PerformanceHints);
 
             return instance;
         }
+        
+        
 
         public static Index Open(StorageEnvironment environment, DocumentDatabase documentDatabase)
         {
             var definition = MapIndexDefinition.Load(environment, out var version);
             var instance = CreateIndexInstance(definition, documentDatabase.Configuration, version);
-
             instance.Initialize(environment, documentDatabase,
                 new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration),
                 documentDatabase.Configuration.PerformanceHints);
 
             return instance;
         }
-
+        
         public static void Update(Index index, IndexDefinition definition, DocumentDatabase documentDatabase)
         {
             var staticMapIndex = (MapIndex)index;

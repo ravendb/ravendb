@@ -10,6 +10,7 @@ using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static.Spatial;
+using Raven.Server.NotificationCenter.Notifications;
 using Sparrow.Json;
 using Spatial4n.Core.Shapes;
 
@@ -177,7 +178,9 @@ namespace Raven.Server.Documents.Indexes.Static
         public readonly Dictionary<string, HashSet<CollectionName>> ReferencedCollections = new Dictionary<string, HashSet<CollectionName>>();
 
         public readonly HashSet<string> CollectionsWithCompareExchangeReferences = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
+        
+        public int StackSizeInSelectClause { get; set; }
+        
         public bool HasDynamicFields { get; set; }
 
         public bool HasBoostedFields { get; set; }
@@ -220,6 +223,21 @@ namespace Raven.Server.Documents.Indexes.Static
             funcs.Add(map);
         }
 
+        internal void CheckDepthOfStackInOutputMap(IndexDefinition indexMetadata, DocumentDatabase documentDatabase)
+        {
+            var performanceHintConfig = documentDatabase.Configuration.PerformanceHints;
+            if (StackSizeInSelectClause > performanceHintConfig.MaxDepthOfRecursionInLinqSelect)
+            {
+                documentDatabase.NotificationCenter.Add(PerformanceHint.Create(
+                    documentDatabase.Name,
+                    $"Index '{indexMetadata.Name}' contains a lot of `let` clause.",
+                    $"Each of let clause is nesting projections and could potentially leads to StackoverflowException.",
+                    PerformanceHintType.Indexing,
+                    NotificationSeverity.Info,
+                    nameof(IndexCompiler)));
+            }
+        }
+        
         protected dynamic TryConvert<T>(object value)
             where T : struct
         {
