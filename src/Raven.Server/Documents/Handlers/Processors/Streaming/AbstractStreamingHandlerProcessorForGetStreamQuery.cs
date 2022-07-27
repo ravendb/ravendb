@@ -1,12 +1,12 @@
 ﻿using System;
 using System.IO;
-using System.Text;
+using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
 using Raven.Client;
-using Raven.Client.Documents.Changes;
 using Raven.Client.Exceptions.Documents;
+using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Documents.Queries;
 using Raven.Server.NotificationCenter;
 using Raven.Server.ServerWide;
@@ -24,12 +24,15 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
 
         protected AbstractStreamingHandlerProcessorForGetStreamQuery([NotNull] TRequestHandler requestHandler, HttpMethod method) : base(requestHandler)
         {
+            if (method != HttpMethod.Post && method != HttpMethod.Get)
+                throw new ArgumentException($"Expected method 'POST' or 'GET' but got '{method.Method}'");
+            
             _method = method;
         }
         
         protected abstract RequestTimeTracker GetTimeTracker();
 
-        protected abstract ValueTask<BlittableJsonReaderObject> GetDocumentData(TOperationContext context, string fromDocument);
+        protected abstract ValueTask<BlittableJsonReaderObject> GetDocumentDataAsync(TOperationContext context, string fromDocument);
 
         protected abstract IDisposable AllocateContext(out TOperationContext context);
 
@@ -68,7 +71,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
                     var fromDocument = RequestHandler.GetStringQueryString("fromDocument", false);
                     if (string.IsNullOrEmpty(fromDocument) == false)
                     {
-                        var docData = await GetDocumentData(context, fromDocument);
+                        var docData = await GetDocumentDataAsync(context, fromDocument);
                         if (docData == null)
                         {
                             throw new DocumentDoesNotExistException($"Was request to stream a query taken from {fromDocument} document, but it does not exist.");
@@ -85,22 +88,14 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
                 }
                 else
                 {
-                    var stream = RequestHandler.TryGetRequestFromStream("ExportOptions") ?? RequestHandler.RequestBodyStream();//TODO stav: dispose stream?
+                    await using var stream = RequestHandler.TryGetRequestFromStream("ExportOptions") ?? RequestHandler.RequestBodyStream();
                     var queryJson = await context.ReadForMemoryAsync(stream, "index/query");
                     query = IndexQueryServerSide.Create(HttpContext, queryJson, GetQueryMetadataCache(), tracker);
                     query.IsStream = true;
-
-                    if (TrafficWatchManager.HasRegisteredClients)
-                    {
-                        var sb = new StringBuilder();
-                        // append stringBuilder with the query
-                        sb.Append(query.Query);
-                        // if query got parameters append with parameters
-                        if (query.QueryParameters != null && query.QueryParameters.Count > 0)
-                            sb.AppendLine().Append(query.QueryParameters);
-                        RequestHandler.AddStringToHttpContext(sb.ToString(), TrafficWatchChangeType.Streams);
-                    }
                 }
+
+                if (TrafficWatchManager.HasRegisteredClients)
+                    RequestHandler.TrafficWatchStreamQuery(query);
 
                 var propertiesArray = properties.Count == 0 ? null : properties.ToArray();
                 // set the exported file name prefix

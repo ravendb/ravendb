@@ -5,6 +5,7 @@ using FastTests;
 using Orders;
 using Raven.Client.Documents;
 using Raven.Client.Exceptions.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,10 +17,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task StreamingOnIndexThatDoesNotExistShouldThrow()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task StreamingOnIndexThatDoesNotExistShouldThrow(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var stream = new MemoryStream())
                 using (var session = store.OpenSession())

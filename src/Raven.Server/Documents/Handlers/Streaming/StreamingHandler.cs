@@ -66,7 +66,7 @@ namespace Raven.Server.Documents.Handlers.Streaming
         [RavenAction("/databases/*/streams/queries", "HEAD", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public Task SteamQueryHead()
         {
-            return Task.CompletedTask; //TODO stav: ?
+            return Task.CompletedTask;
         }
 
         [RavenAction("/databases/*/streams/queries", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, DisableOnCpuCreditsExhaustion = true)]

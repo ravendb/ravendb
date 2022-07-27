@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
                 doPerformanceHintIfTooLong: false);
         }
 
-        protected override ValueTask<BlittableJsonReaderObject> GetDocumentData(DocumentsOperationContext context, string fromDocument)
+        protected override ValueTask<BlittableJsonReaderObject> GetDocumentDataAsync(DocumentsOperationContext context, string fromDocument)
         {
             using (context.OpenReadTransaction())
             {
@@ -55,19 +55,22 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
             string[] propertiesArray, string fileNamePrefix, bool ignoreLimit, bool fromSharded, OperationCancelToken token)
         {
             //writes either csv or blittable documents if is shard
-            await using (var writer = GetBlittableQueryResultWriter(format, isDebug: true, context, HttpContext.Response, RequestHandler.ResponseBodyStream(), fromSharded, propertiesArray, fileNamePrefix))
+            await using (var writer = GetBlittableQueryResultWriter(format, isDebug: true, context, HttpContext.Response, RequestHandler.ResponseBodyStream(),
+                             fromSharded, propertiesArray, fileNamePrefix))
             {
                 try
                 {
-                    await RequestHandler.Database.QueryRunner.ExecuteStreamIndexEntriesQuery(query, _queryContext, HttpContext.Response, writer, ignoreLimit, token).ConfigureAwait(false);
+                    await RequestHandler.Database.QueryRunner.ExecuteStreamIndexEntriesQuery(query, _queryContext, HttpContext.Response, writer, ignoreLimit, token)
+                        .ConfigureAwait(false);
                 }
                 catch (IndexDoesNotExistException)
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                    await writer.WriteErrorAsync($"Index {query.Metadata.IndexName} does not exist");
 
                     if (fromSharded)
                         throw;
+
+                    await writer.WriteErrorAsync($"Index {query.Metadata.IndexName} does not exist");
                 }
             }
         }
@@ -85,10 +88,11 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
                 catch (IndexDoesNotExistException)
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                    await writer.WriteErrorAsync($"Index {query.Metadata.IndexName} does not exist");
 
                     if (fromSharded)
                         throw;
+
+                    await writer.WriteErrorAsync($"Index {query.Metadata.IndexName} does not exist");
                 }
                 catch (Exception e)
                 {
@@ -106,10 +110,26 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
                             }
                         }
                     }
-                    
+
                     throw;
                 }
             }
+        }
+
+        private IStreamQueryResultWriter<Document> GetDocumentQueryResultWriter(string format, HttpResponse response, JsonOperationContext context, Stream responseBodyStream,
+            string[] propertiesArray, string fileNamePrefix = null)
+        {
+            if (IsCsvFormat(format))
+            {
+                return new StreamCsvDocumentQueryResultWriter(response, responseBodyStream, propertiesArray, fileNamePrefix);
+            }
+
+            if (propertiesArray != null)
+            {
+                ThrowUnsupportedException("Using json output format with custom fields is not supported.");
+            }
+
+            return new StreamJsonDocumentQueryResultWriter(responseBodyStream, context);
         }
 
         protected override IStreamQueryResultWriter<BlittableJsonReaderObject> GetBlittableQueryResultWriter(string format, bool isDebug, JsonOperationContext context, HttpResponse response, Stream responseBodyStream, bool fromSharded,
@@ -125,22 +145,6 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
 
             //does not write query stats to stream
             return new StreamCsvBlittableQueryResultWriter(response, responseBodyStream, propertiesArray, fileNamePrefix);
-        }
-
-        protected IStreamQueryResultWriter<Document> GetDocumentQueryResultWriter(string format, HttpResponse response, JsonOperationContext context, Stream responseBodyStream,
-            string[] propertiesArray, string fileNamePrefix = null)
-        {
-            if (IsCsvFormat(format))
-            {
-                return new StreamCsvDocumentQueryResultWriter(response, responseBodyStream, propertiesArray, fileNamePrefix);
-            }
-
-            if (propertiesArray != null)
-            {
-                ThrowUnsupportedException("Using json output format with custom fields is not supported.");
-            }
-
-            return new StreamJsonDocumentQueryResultWriter(responseBodyStream, context);
         }
     }
 }

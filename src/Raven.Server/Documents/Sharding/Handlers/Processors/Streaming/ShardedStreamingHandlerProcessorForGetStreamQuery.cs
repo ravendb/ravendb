@@ -2,15 +2,16 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
-using Raven.Client;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.Operations;
+using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Exceptions.Sharding;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
@@ -24,7 +25,7 @@ using Raven.Server.Documents.Sharding.Queries;
 using Raven.Server.NotificationCenter;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Utils;
 
@@ -41,12 +42,12 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
             return new RequestTimeTracker(HttpContext, Logger, RequestHandler.DatabaseContext.NotificationCenter, RequestHandler.DatabaseContext.Configuration, "StreamQuery", doPerformanceHintIfTooLong: false);
         }
 
-        protected override async ValueTask<BlittableJsonReaderObject> GetDocumentData(TransactionOperationContext context, string fromDocument)
+        protected override async ValueTask<BlittableJsonReaderObject> GetDocumentDataAsync(TransactionOperationContext context, string fromDocument)
         {
             var shard = RequestHandler.DatabaseContext.GetShardNumber(context, fromDocument);
             
             var docs = await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(context,
-                new GetDocumentsCommand(new string[] { fromDocument }, null, metadataOnly: false), shard);
+                new GetDocumentsCommand(new [] { fromDocument }, includes: null, metadataOnly: false), shard);
             return (BlittableJsonReaderObject)docs.Results[0];
         }
 
@@ -115,23 +116,33 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
             string[] propertiesArray, string fileNamePrefix, bool ignoreLimit, bool _, OperationCancelToken token)
         {
             //writer is blittable->document or blittable->csv
-
-            var (results, queryStatistics) = await ExecuteQueryAsync(context, query, null, ignoreLimit, token);
-            await using (var writer = GetBlittableQueryResultWriter(format, isDebug: false, context, HttpContext.Response, RequestHandler.ResponseBodyStream(), fromSharded: false,
-                             propertiesArray, fileNamePrefix))
+            
+            await using (var writer = GetBlittableQueryResultWriter(format, isDebug: false, context, HttpContext.Response, RequestHandler.ResponseBodyStream(),
+                             fromSharded: false, propertiesArray, fileNamePrefix))
             {
-                var queryResult = new StreamDocumentIndexEntriesQueryResult(HttpContext.Response, writer, token);// writes blittable docs as blittable docs
-                queryResult.TotalResults = queryStatistics.TotalResults;
-                queryResult.IndexName = queryStatistics.IndexName;
-                queryResult.IndexTimestamp = queryStatistics.IndexTimestamp;
-                queryResult.IsStale = queryStatistics.IsStale;
-                //queryStatistics.ResultEtag
-
-                foreach (BlittableJsonReaderObject doc in results)
+                try
                 {
-                    await queryResult.AddResultAsync(doc, token.Token);
+                    var (results, queryStatistics) = await ExecuteQueryAsync(context, query, null, ignoreLimit, token);
+
+                    var queryResult = new StreamDocumentIndexEntriesQueryResult(HttpContext.Response, writer, token); // writes blittable docs as blittable docs
+                    queryResult.TotalResults = queryStatistics.TotalResults;
+                    queryResult.IndexName = queryStatistics.IndexName;
+                    queryResult.IndexTimestamp = queryStatistics.IndexTimestamp;
+                    queryResult.IsStale = queryStatistics.IsStale;
+                    queryResult.ResultEtag = queryStatistics.ResultEtag;
+
+                    foreach (BlittableJsonReaderObject doc in results)
+                    {
+                        await queryResult.AddResultAsync(doc, token.Token);
+                    }
+
+                    queryResult.Flush();
                 }
-                queryResult.Flush();
+                catch (IndexDoesNotExistException)
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                    await writer.WriteErrorAsync($"Index {query.Metadata.IndexName} does not exist");
+                }
             }
         }
 
@@ -140,18 +151,27 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
         {
             //from debug
 
-            var (results, _) = await ExecuteQueryAsync(context, query, debug, ignoreLimit, token);
-
             await using (var writer = GetBlittableQueryResultWriter(format, isDebug: true, context, HttpContext.Response, RequestHandler.ResponseBodyStream(), fromSharded: false, propertiesArray,
                              fileNamePrefix))
             {
-                var queryResult = new StreamDocumentIndexEntriesQueryResult(HttpContext.Response, writer, token);
-                
-                foreach (BlittableJsonReaderObject doc in results)
+                try
                 {
-                    await queryResult.AddResultAsync(doc, token.Token);
+                    var (results, _) = await ExecuteQueryAsync(context, query, debug, ignoreLimit, token);
+
+                    var queryResult = new StreamDocumentIndexEntriesQueryResult(HttpContext.Response, writer, token);
+
+                    foreach (BlittableJsonReaderObject doc in results)
+                    {
+                        await queryResult.AddResultAsync(doc, token.Token);
+                    }
+
+                    queryResult.Flush();
                 }
-                queryResult.Flush();
+                catch (IndexDoesNotExistException)
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                    await writer.WriteErrorAsync($"Index {query.Metadata.IndexName} does not exist");
+                }
             }
         }
 
@@ -185,7 +205,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
             _skip = skip;
             _take = take;
             _token = token;
-            ExpectedEtag = null; //TODO stav: what is this
+            ExpectedEtag = null;
         }
 
         public HttpRequest HttpRequest => _httpContext.Request;
@@ -208,7 +228,8 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
                 queryStats.TotalResults += qs.TotalResults;
                 queryStats.IndexName = qs.IndexName;
                 queryStats.IsStale |= qs.IsStale;
-               
+                queryStats.ResultEtag = Hashing.Combine(queryStats.ResultEtag, qs.ResultEtag);
+
                 if (queryStats.IndexTimestamp < qs.IndexTimestamp)
                 {
                     queryStats.IndexTimestamp = qs.IndexTimestamp;
@@ -224,7 +245,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
         {
             foreach (var item in mergedEnumerator)
             {
-                if(skip-- > 0)
+                if (skip-- > 0)
                     continue;
 
                 if (take-- <= 0)
