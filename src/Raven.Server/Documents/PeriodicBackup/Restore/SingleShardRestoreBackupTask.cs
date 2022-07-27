@@ -45,7 +45,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             }
         }
 
-        protected override Task OnBeforeRestore()
+        protected override Task OnBeforeRestoreAsync()
         {
             CreateDocumentDatabase();
             return Task.CompletedTask;

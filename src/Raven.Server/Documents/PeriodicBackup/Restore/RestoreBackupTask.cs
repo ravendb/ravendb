@@ -13,17 +13,17 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         {
         }
 
-        protected override async Task Restore()
+        protected override async Task RestoreAsync()
         {
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                await SmugglerRestore(Database, context);
+                await SmugglerRestoreAsync(Database, context);
             }
         }
 
-        protected override async Task Initialize()
+        protected override async Task InitializeAsync()
         {
-            await base.Initialize();
+            await base.InitializeAsync();
 
             Result.SnapshotRestore.Skipped = true;
             Result.SnapshotRestore.Processed = true;

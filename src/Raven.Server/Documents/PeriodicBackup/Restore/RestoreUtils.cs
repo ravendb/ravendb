@@ -59,14 +59,14 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             return configuration;
         }
 
-        public static async Task<AbstractRestoreBackupTask> CreateBackupTask(ServerStore serverStore, RestoreBackupConfigurationBase configuration, IRestoreSource restoreSource, OperationCancelToken token)
+        public static async Task<AbstractRestoreBackupTask> CreateBackupTaskAsync(ServerStore serverStore, RestoreBackupConfigurationBase configuration, IRestoreSource restoreSource, OperationCancelToken token)
         {
             if (configuration.ShardRestoreSettings.Length > 0)
                 return new ShardedRestoreOrchestrationTask(serverStore, configuration, token);
             
             var singleShardRestore = ShardHelper.IsShardedName(configuration.DatabaseName);
 
-            var filesToRestore = await GetOrderedFilesToRestore(restoreSource, configuration);
+            var filesToRestore = await GetOrderedFilesToRestoreAsync(restoreSource, configuration);
             var firstFile = filesToRestore[0];
             var extension = Path.GetExtension(firstFile);
 
@@ -85,7 +85,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             return new RestoreBackupTask(serverStore, configuration, restoreSource, filesToRestore, token);
         }
 
-        public static async Task<Stream> CopyRemoteStreamLocally(Stream stream, PathSetting tempPath)
+        public static async Task<Stream> CopyRemoteStreamLocallyAsync(Stream stream, PathSetting tempPath)
         {
             if (stream.CanSeek)
                 return stream;
@@ -125,8 +125,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
         }
 
-
-        private static async Task<List<string>> GetOrderedFilesToRestore(IRestoreSource restoreSource, RestoreBackupConfigurationBase configuration)
+        private static async Task<List<string>> GetOrderedFilesToRestoreAsync(IRestoreSource restoreSource, RestoreBackupConfigurationBase configuration)
         {
             var files = await restoreSource.GetFilesForRestore();
 

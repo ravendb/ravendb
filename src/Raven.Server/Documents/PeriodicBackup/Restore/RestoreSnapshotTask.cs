@@ -37,12 +37,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             _extension = extension;
         }
 
-        protected override async Task Restore()
+        protected override async Task RestoreAsync()
         {
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                await RestoreFromSmugglerFile(Progress, Database, _firstFile, context);
-                await SmugglerRestore(Database, context);
+                await RestoreFromSmugglerFileAsync(Progress, Database, _firstFile, context);
+                await SmugglerRestoreAsync(Database, context);
             }
 
             Result.SnapshotRestore.Processed = true;
@@ -63,9 +63,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             Progress.Invoke(Result.Progress);
         }
 
-        protected override async Task Initialize()
+        protected override async Task InitializeAsync()
         {
-            await base.Initialize();
+            await base.InitializeAsync();
             
             Options |= InitializeOptions.GenerateNewDatabaseId;
 
@@ -82,7 +82,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext serverContext))
             {
                 // restore the snapshot
-                RestoreSettings = await SnapshotRestore(serverContext, _firstFile, Progress, Result);
+                RestoreSettings = await RestoreSnapshotAsync(serverContext, _firstFile, Progress, Result);
             }
 
             Debug.Assert(RestoreSettings != null);
@@ -104,7 +104,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             RegenerateDatabaseIdInIndexes(Database);
         }
 
-        private async Task<RestoreSettings> SnapshotRestore(JsonOperationContext context, string backupPath,
+        private async Task<RestoreSettings> RestoreSnapshotAsync(JsonOperationContext context, string backupPath,
             Action<IOperationProgress> onProgress, RestoreResult restoreResult)
         {
             Debug.Assert(onProgress != null);
@@ -204,7 +204,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             return restoreSettings;
         }
 
-        private async Task RestoreFromSmugglerFile(Action<IOperationProgress> onProgress, DocumentDatabase database, string smugglerFile, JsonOperationContext context)
+        private async Task RestoreFromSmugglerFileAsync(Action<IOperationProgress> onProgress, DocumentDatabase database, string smugglerFile, JsonOperationContext context)
         {
             var destination = new DatabaseDestination(database);
 
