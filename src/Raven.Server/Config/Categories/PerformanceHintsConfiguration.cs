@@ -61,7 +61,7 @@ namespace Raven.Server.Config.Categories
         
         [Description("Alert when source document in indexed as field.")]
         [DefaultValue(true)]
-        [ConfigurationEntry("PerformanceHints.Indexing.AlertWhenSourceDocumentIncludedAsProperty", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-        public bool AlertWhenSourceDocumentIncludedAsProperty { get; set; }
+        [ConfigurationEntry("PerformanceHints.Indexing.AlertWhenSourceDocumentIncludedInOutput", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public bool AlertWhenSourceDocumentIncludedInOutput { get; set; }
     }
 }

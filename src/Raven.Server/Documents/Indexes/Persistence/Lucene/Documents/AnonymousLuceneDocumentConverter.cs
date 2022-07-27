@@ -93,7 +93,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     throw new InvalidOperationException($"Field '{property.Key}' is not defined. Available fields: {string.Join(", ", _fields.Keys)}.", e);
                 }
 
-                var numberOfCreatedFields = GetRegularFields(instance, field, value, indexContext, out var shouldSkip, sourceDocument);
+                var numberOfCreatedFields = GetRegularFields(instance, field, value, indexContext, sourceDocument, out var shouldSkip);
 
                 newFields += numberOfCreatedFields;
 

@@ -191,7 +191,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         ///		1. with the supplied name, containing the numeric value as an unanalyzed string - useful for direct queries
         ///		2. with the name: name +'_Range', containing the numeric value in a form that allows range queries
         /// </summary>
-        public int GetRegularFields<T>(T instance, IndexField field, object value, JsonOperationContext indexContext, out bool shouldSkip, object sourceDocument, bool nestedArray = false) where T : ILuceneDocumentWrapper
+        public int GetRegularFields<T>(T instance, IndexField field, object value, JsonOperationContext indexContext, object sourceDocument, out bool shouldSkip,
+            bool nestedArray = false) where T : ILuceneDocumentWrapper
         {
             var path = field.Name;
 
@@ -366,7 +367,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             {
                 var boostedValue = (BoostedValue)value;
 
-                int boostedFields = GetRegularFields(instance, field, boostedValue.Value, indexContext, out _, sourceDocument);
+                int boostedFields = GetRegularFields(instance, field, boostedValue.Value, indexContext, sourceDocument, out _);
                 newFields += boostedFields;
 
                 var fields = instance.GetFields();
@@ -397,7 +398,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
                     using var i = NestedField(count++);
 
-                    newFields += GetRegularFields(instance, field, itemToIndex, indexContext, out _, sourceDocument, nestedArray: true);
+                    newFields += GetRegularFields(instance, field, itemToIndex, indexContext, sourceDocument, out _, nestedArray: true);
                 }
 
                 return newFields;
@@ -454,7 +455,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 var val = TypeConverter.ToBlittableSupportedType(value);
                 if (!(val is DynamicJsonValue json))
                 {
-                    return GetRegularFields(instance, field, val, indexContext, out _, nestedArray);
+                    return GetRegularFields(instance, field, val, indexContext, sourceDocument, out _, nestedArray: nestedArray);
                 }
 
                 foreach (var jsonField in GetComplexObjectFields(path, Scope.CreateJson(json, indexContext), storage, indexing, termVector))
