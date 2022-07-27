@@ -292,12 +292,6 @@ namespace Raven.Server.Documents.Handlers.Streaming
                             await writer.WriteErrorAsync($"Index {query.Metadata.IndexName} does not exist");
                         }
                     }
-
-                    var logger = LoggingSource.Instance.GetLogger<StreamingHandler>(Database.Name);
-                    if (logger.IsOperationsEnabled)
-                    {
-                        logger.Operations($"Issued STREAMING query on index {query.Metadata.IndexName} for: {query.Metadata.Query}, took: {sp.ElapsedMilliseconds}ms");
-                    }
                 }
             }
         }

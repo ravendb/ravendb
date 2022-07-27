@@ -10,7 +10,6 @@ public static class MemoryUtils
     private const string GenericOutMemoryException = "Failed to generate an out of memory exception";
     private static readonly InvertedComparer InvertedComparerInstance = new InvertedComparer();
     private const int MinAllocatedThresholdInBytes = 10 * 1024 * 1024;
-    private const int MinAllocationsToLog = 128 * 1024 * 1024;
 
     public static string GetExtendedMemoryInfo(MemoryInfoResult memoryInfo)
     {
@@ -40,8 +39,6 @@ public static class MemoryUtils
                     }
 
                     sorted[stats.TotalAllocated] = stats.Name;
-
-                    stats.LogAllocations = stats.TotalAllocated >= MinAllocationsToLog;
                 }
 
                 sorted[totalAllocatedForUnknownThreads] = null;

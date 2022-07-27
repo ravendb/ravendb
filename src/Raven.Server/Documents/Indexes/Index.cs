@@ -2988,11 +2988,6 @@ namespace Raven.Server.Documents.Indexes
         public virtual async Task StreamQuery(HttpResponse response, IStreamQueryResultWriter<Document> writer,
             IndexQueryServerSide query, QueryOperationContext queryContext, OperationCancelToken token)
         {
-            if (_logger.IsOperationsEnabled)
-            {
-                _logger.Operations($"Issuing STREAMING query on index {Name} for: {query.Metadata.Query}");
-            }
-
             var result = new StreamDocumentQueryResult(response, writer, token);
             await QueryInternal(result, query, queryContext, pulseDocsReadingTransaction: true, token);
             result.Flush();
