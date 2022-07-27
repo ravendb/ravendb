@@ -165,7 +165,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             if (scope != null)
                 scope.CreatedFieldsCount = 0;
 
-            int numberOfFields = GetFields(new DefaultDocumentLuceneWrapper(Document), key, sourceDocumentId, document, indexContext, writeBuffer);
+            int numberOfFields = GetFields(new DefaultDocumentLuceneWrapper(Document), key, sourceDocumentId, document, indexContext, writeBuffer, scope?.Source);
             if (_fields.Count > 0)
             {
                 shouldSkip = _indexEmptyEntries == false && numberOfFields <= _numberOfBaseFields; // there is always a key field, but we want to filter-out empty documents, some indexes (e.g. TS indexes contain more than 1 field by default)
@@ -177,7 +177,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             return Scope;
         }
 
-        protected abstract int GetFields<T>(T instance, LazyStringValue key, LazyStringValue sourceDocumentId, object document, JsonOperationContext indexContext, IWriteOperationBuffer writeBuffer) where T : ILuceneDocumentWrapper;
+        protected abstract int GetFields<T>(T instance, LazyStringValue key, LazyStringValue sourceDocumentId, object document, JsonOperationContext indexContext,
+            IWriteOperationBuffer writeBuffer, object sourceDocument) where T : ILuceneDocumentWrapper;
 
         /// <summary>
         /// This method generate the fields for indexing documents in lucene from the values.
@@ -190,7 +191,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         ///		1. with the supplied name, containing the numeric value as an unanalyzed string - useful for direct queries
         ///		2. with the name: name +'_Range', containing the numeric value in a form that allows range queries
         /// </summary>
-        public int GetRegularFields<T>(T instance, IndexField field, object value, JsonOperationContext indexContext, out bool shouldSkip, bool nestedArray = false) where T : ILuceneDocumentWrapper
+        public int GetRegularFields<T>(T instance, IndexField field, object value, JsonOperationContext indexContext, out bool shouldSkip, object sourceDocument, bool nestedArray = false) where T : ILuceneDocumentWrapper
         {
             var path = field.Name;
 
@@ -365,7 +366,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             {
                 var boostedValue = (BoostedValue)value;
 
-                int boostedFields = GetRegularFields(instance, field, boostedValue.Value, indexContext, out _);
+                int boostedFields = GetRegularFields(instance, field, boostedValue.Value, indexContext, out _, sourceDocument);
                 newFields += boostedFields;
 
                 var fields = instance.GetFields();
@@ -396,7 +397,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
                     using var i = NestedField(count++);
 
-                    newFields += GetRegularFields(instance, field, itemToIndex, indexContext, out _, nestedArray: true);
+                    newFields += GetRegularFields(instance, field, itemToIndex, indexContext, out _, sourceDocument, nestedArray: true);
                 }
 
                 return newFields;
@@ -426,6 +427,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             if (valueType == ValueType.DynamicJsonObject)
             {
+                if (_index.SourceDocumentIncludedInOutput == false && sourceDocument == value)
+                {
+                    _index.SourceDocumentIncludedInOutput = true;
+                }
+                
                 var dynamicJson = (DynamicBlittableJson)value;
                 return HandleObject(dynamicJson.BlittableJson);
             }

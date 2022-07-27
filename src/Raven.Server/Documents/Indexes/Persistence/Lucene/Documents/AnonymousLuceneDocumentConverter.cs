@@ -40,7 +40,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             _isMultiMap = isMultiMap;
         }
 
-        protected override int GetFields<T>(T instance, LazyStringValue key, LazyStringValue sourceDocumentId, object document, JsonOperationContext indexContext, IWriteOperationBuffer writeBuffer)
+        protected override int GetFields<T>(T instance, LazyStringValue key, LazyStringValue sourceDocumentId, object document, JsonOperationContext indexContext,
+            IWriteOperationBuffer writeBuffer, object sourceDocument)
         {
             int newFields = 0;
             if (key != null)
@@ -92,7 +93,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     throw new InvalidOperationException($"Field '{property.Key}' is not defined. Available fields: {string.Join(", ", _fields.Keys)}.", e);
                 }
 
-                var numberOfCreatedFields = GetRegularFields(instance, field, value, indexContext, out var shouldSkip);
+                var numberOfCreatedFields = GetRegularFields(instance, field, value, indexContext, out var shouldSkip, sourceDocument);
 
                 newFields += numberOfCreatedFields;
 
