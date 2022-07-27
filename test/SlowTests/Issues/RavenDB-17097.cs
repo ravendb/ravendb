@@ -59,15 +59,15 @@ public class RavenDB_17097 : RavenTestBase
     }
 
     [Fact]
-    public async Task FanOutIndexWithIncludedSourceDocumentWillSendNotification()
+    public Task FanOutIndexWithIncludedSourceDocumentWillSendNotification()
     {
-        await NotificationTest<FanOutIndexWithSourceDocument>();
+        return NotificationTest<FanOutIndexWithSourceDocument>();
     }
     
     [Fact]
-    public async Task IncludeDocumentDynamicField()
+    public Task IncludeDocumentDynamicField()
     {
-        await NotificationTest<IncludeDocumentDynamicFieldIndex>();
+        return NotificationTest<IncludeDocumentDynamicFieldIndex>();
     }
     
     private class IncludeDocumentDynamicFieldIndex : AbstractIndexCreationTask<CollectionDocument>

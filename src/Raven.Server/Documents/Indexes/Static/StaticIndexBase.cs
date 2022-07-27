@@ -406,7 +406,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
             using var i = scope.CreateFieldConverter.NestedField(scope.CreatedFieldsCount++);
             var result = new List<AbstractField>();
-            scope.CreateFieldConverter.GetRegularFields(new StaticIndexLuceneDocumentWrapper(result), field, value, CurrentIndexingScope.Current.IndexContext, out _, scope?.Source);
+            scope.CreateFieldConverter.GetRegularFields(new StaticIndexLuceneDocumentWrapper(result), field, value, CurrentIndexingScope.Current.IndexContext, scope?.Source, out _);
             return result;
         }
 

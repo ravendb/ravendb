@@ -4098,22 +4098,21 @@ namespace Raven.Server.Documents.Indexes
             IncludeDocumentsCommand includeDocumentsCommand, IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, IncludeRevisionsCommand includeRevisionsCommand);
 
         public abstract void SaveLastState();
-
         
         protected void HandleSourceDocumentIncludedInMapOutput()
         {
-            if (_alreadyNotifiedAboutIncludingDocumentInOutput || SourceDocumentIncludedInOutput == false || PerformanceHintsConfig.AlertWhenSourceDocumentIncludedAsProperty == false)
+            if (_alreadyNotifiedAboutIncludingDocumentInOutput || SourceDocumentIncludedInOutput == false || PerformanceHintsConfig.AlertWhenSourceDocumentIncludedInOutput == false)
                 return;
-
-            _alreadyNotifiedAboutIncludingDocumentInOutput = true;
             
             DocumentDatabase.NotificationCenter.Add(PerformanceHint.Create(
                 DocumentDatabase.Name,
                 $"Index '{Name}' is including the origin document in output.",
-                $"Please verify index definitions and consider a re-design of your entities or indexes for better indexing performance.",
+                $"Putting the whole document as one of the fields of the index entry isn't usually intentional. Especially when it is a fanout index because the document is included multiple times. Please verify your index definition for better indexing performance.",
                 PerformanceHintType.Indexing,
-                NotificationSeverity.Info,
+                NotificationSeverity.Warning,
                 nameof(Index)));
+            
+            _alreadyNotifiedAboutIncludingDocumentInOutput = true;
         }
         
         protected void HandleIndexOutputsPerDocument(LazyStringValue documentId, int numberOfOutputs, IndexingStatsScope stats)
