@@ -33,5 +33,14 @@ namespace Raven.Server.Documents.Sharding.Handlers
         {
             return Task.CompletedTask;
         }
+
+        [RavenShardedAction("/databases/*/streams/timeseries", "GET")]
+        public async Task Stream()
+        {
+            using (var processor = new ShardedStreamingHandlerProcessorForGetTimeSeries(this))
+            {
+                await processor.ExecuteAsync();
+            }
+        }
     }
 }

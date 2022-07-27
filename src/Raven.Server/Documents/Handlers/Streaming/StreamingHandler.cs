@@ -22,44 +22,9 @@ namespace Raven.Server.Documents.Handlers.Streaming
         [RavenAction("/databases/*/streams/timeseries", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Stream()
         {
-            var documentId = GetStringQueryString("docId");
-            var name = GetStringQueryString("name");
-            var fromStr = GetStringQueryString("from", required: false);
-            var toStr = GetStringQueryString("to", required: false);
-            var offset = GetTimeSpanQueryString("offset", required: false);
-
-            var from = string.IsNullOrEmpty(fromStr)
-                ? DateTime.MinValue
-                : TimeSeriesHandlerProcessorForGetTimeSeries.ParseDate(fromStr, name);
-
-            var to = string.IsNullOrEmpty(toStr)
-                ? DateTime.MaxValue
-                : TimeSeriesHandlerProcessorForGetTimeSeries.ParseDate(toStr, name);
-
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (context.OpenReadTransaction())
+            using (var processor = new StreamingHandlerProcessorForGetTimeSeries(this))
             {
-                using (var token = CreateOperationToken())
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    var reader = new TimeSeriesReader(context, documentId, name, from, to, offset, token.Token);
-
-                    writer.WriteStartObject();
-                    writer.WritePropertyName("Results");
-                    writer.WriteStartArray();
-                    
-                    foreach (var entry in reader.AllValues())
-                    {
-                        context.Write(writer, entry.ToTimeSeriesEntryJson());
-                        writer.WriteComma();
-                        await writer.MaybeFlushAsync(token.Token);
-                    }
-
-                    writer.WriteEndArray();
-                    writer.WriteEndObject();
-
-                    await writer.MaybeFlushAsync(token.Token);
-                }
+                await processor.ExecuteAsync();
             }
         }
 
