@@ -144,12 +144,12 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
         protected override EtlTransformer<RavenEtlItem, ICommandData, EtlStatsScope, EtlPerformanceOperation, JsHandleV8> GetTransformerV8(DocumentsOperationContext context)
         {
-            return new RavenEtlDocumentTransformerV8(Transformation, Database, context, _script);
+            return new RavenEtlTransformerV8(Transformation, Database, context, _script);
         }
 
         protected override EtlTransformer<RavenEtlItem, ICommandData, EtlStatsScope, EtlPerformanceOperation, JsHandleJint> GetTransformerJint(DocumentsOperationContext context)
         {
-            return new RavenEtlDocumentTransformerJint(Transformation, Database, context, _script);
+            return new RavenEtlTransformerJint(Transformation, Database, context, _script);
         }
 
         protected override int LoadInternal(IEnumerable<ICommandData> items, DocumentsOperationContext context, EtlStatsScope scope)

@@ -8,7 +8,7 @@ using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
-using Jint.Native.Function;
+using Jint.Native.Object;
 using Raven.Client;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Operations.TimeSeries;
@@ -19,11 +19,12 @@ using Raven.Client.ServerWide.JavaScript;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static.Spatial;
+using Raven.Server.Documents.Patch.Jint;
+using Raven.Server.Documents.Patch.V8;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Results.TimeSeries;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.Documents.TimeSeries;
-using Raven.Server.Extensions.Jint;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -302,7 +303,9 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
 
                 if (path.IndexOf("[]", StringComparison.InvariantCulture) != -1)
                 {
-                    return EngineHandle.FromObjectGen(_documentIds.Select(LoadDocumentInternal).ToList());
+                    //TODO: egor here we expect array or object? in jint it was creating array
+                    return EngineHandle.CreateArray(_documentIds.Select(LoadDocumentInternal).ToList());
+                    //return EngineHandle.FromObjectGen(_documentIds.Select(LoadDocumentInternal).ToList());
                 } // array
 
                 if (_documentIds.Count == 0)
@@ -1927,12 +1930,25 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
     {
         if (args.Length != 2)
             return CreateErrorAndSetLastExceptionIfNeeded(new InvalidOperationException("Raven_ExplodeArgs(this, args) - must be called with 2 arguments"), JSValueType.ExecutionError);
-
         if (args[1].IsObject && args[1].Object is IBlittableObjectInstance<T> boi)
         {
             SetArgs(args, boi);
             return self;
         }
+
+        //TODO: egor debug code
+         /*if (args[1].IsObject && args[1].Object is BlittableObjectInstanceJint)
+        {
+
+        }
+         if (args[1].IsObject && args[1].Object is ObjectInstance)
+         {
+
+         }
+         if (args[1].IsObject && args[1].Object is BlittableObjectInstanceV8)
+         {
+
+         }*/
         if (args[1].IsNull || args[1].IsUndefined)
             return self;// noop
 

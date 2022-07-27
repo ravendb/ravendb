@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.ETL
         public virtual void Initialize(bool debugMode)
         {
             _returnMainRun = CreateDocumentScriptRunner(debugMode, out DocumentScript);
-            if (DocumentScript == null) //TODO: egor redundant ?
+            if (DocumentScript == null)
                 return;
 
             EngineHandle = DocumentScript.EngineHandle;

@@ -258,15 +258,19 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             }
             else
             {
-                jsArr = EngineHandle.FromObjectGen(args);
+                jsArr = EngineHandle.CreateArray(args);
+
+                //TODO: egor need to care about places that we use FromObjectGen, because passing there the args will create a new object with ObjectWrapper's even if it the objects were arrays
+                //TODO: because it expects jsvalue but we pass jsHandleJint so it jsut process it as object.
+                //jsArr = EngineHandle.FromObjectGen(args);
             }
 
             JsHandleJint o;
-            using (jsArr)
-            {
+            /*using (jsArr)
+            {*/
                 o = EngineHandle.CreateObject();
                 o.FastAddProperty(PartitionKeys, jsArr, false, true, false);
-            }
+            /*}*/
             return o;
         }
 

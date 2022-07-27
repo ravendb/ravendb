@@ -152,7 +152,7 @@ namespace Raven.Server.Documents.Patch.Jint
                 JsUtils.Clear();
                 throw CreateFullError(e);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 JsUtils.Clear();
                 throw;

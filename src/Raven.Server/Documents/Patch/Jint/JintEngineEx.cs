@@ -1,13 +1,13 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using JetBrains.Annotations;
 using Jint;
 using Jint.Constraints;
 using Jint.Native;
-using Jint.Native.Array;
 using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Client.ServerWide.JavaScript;
 using Raven.Client.Util;
@@ -253,6 +253,7 @@ var process = {
 
         public JsHandleJint FromObjectGen(object obj, bool keepAlive = false)
         {
+            Debug.Assert(obj is not IEnumerable, $"FromObjectGen should not receive IEnumerable, use CreateArray() instead!");
             return new JsHandleJint(JsValue.FromObject(Engine, obj));
         }
 

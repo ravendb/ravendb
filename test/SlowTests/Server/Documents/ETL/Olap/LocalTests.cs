@@ -50,7 +50,7 @@ loadToOrders(partitionBy(key),
         ShipVia : this.ShipVia
     });
 ";
-            return SimpleTransformationInternal(script);
+            return SimpleTransformationInternal(script, options);
         }
 
         [Theory]
@@ -70,7 +70,7 @@ loadTo('Orders', partitionBy(key),
     });
 ";
 
-            return SimpleTransformationInternal(script);
+            return SimpleTransformationInternal(script, options);
         }
 
         [Theory]
@@ -90,12 +90,12 @@ loadTo(""Orders"", partitionBy(key),
     });
 ";
 
-            return SimpleTransformationInternal(script);
+            return SimpleTransformationInternal(script, options);
         }
 
-        private async Task SimpleTransformationInternal(string script)
+        private async Task SimpleTransformationInternal(string script, Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = new DateTime(2020, 1, 1);
 
@@ -187,7 +187,7 @@ loadTo(""Orders"", partitionBy(key),
         [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public async Task SimpleTransformation2(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = new DateTime(2020, 1, 1);
 
@@ -297,7 +297,7 @@ loadToOrders(partitionBy(key), o);
         [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public async Task SimpleTransformation_PartitionByDay(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = new DateTime(2020, 1, 1);
 
@@ -383,7 +383,7 @@ loadToOrders(partitionBy(key), o);
         [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public async Task SimpleTransformation_PartitionByHour(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = new DateTime(2020, 1, 1);
 
@@ -473,7 +473,7 @@ loadToOrders(partitionBy(key), o);
         [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public async Task CanHandleMissingFieldsOnSomeDocuments(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = new DateTime(2020, 1, 1);
 
@@ -572,7 +572,7 @@ loadToOrders(partitionBy(key), o);
         [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public async Task CanHandleNullFieldValuesOnSomeDocument(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = new DateTime(2020, 1, 1);
 
@@ -664,7 +664,7 @@ loadToOrders(partitionBy(key), o);
         [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public async Task CanUseSettingFromScript(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = new DateTime(2020, 1, 1);
 
@@ -762,7 +762,7 @@ loadToOrders(partitionBy(key), o);
         [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public async Task LastModifiedTicksShouldMatch(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = new DateTime(2020, 1, 1);
 
@@ -879,7 +879,7 @@ loadToOrders(partitionBy(key), o);
         [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public async Task CanModifyIdColumnName(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 const string idColumn = "OrderId";
 
@@ -1017,7 +1017,7 @@ loadToOrders(partitionBy(key), o);
         [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public async Task SimpleTransformation_NoPartition(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = new DateTime(2020, 1, 1).ToUniversalTime();
 
@@ -1114,7 +1114,7 @@ loadToOrders(noPartition(),
         [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public async Task SimpleTransformation_MultiplePartitions(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = DateTime.SpecifyKind(new DateTime(2020, 1, 1), DateTimeKind.Utc);
 
@@ -1225,7 +1225,7 @@ loadToOrders(partitionBy(
         [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public async Task CanHandleLazyNumbersWithTypeChanges(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -1333,7 +1333,7 @@ loadToOrders(partitionBy(
         [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public async Task SimpleTransformation_CanUseSampleData(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 await store.Maintenance.SendAsync(new CreateSampleDataOperation());
 
@@ -1386,7 +1386,7 @@ for (var i = 0; i < this.Lines.length; i++) {
         [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public async Task CanSpecifyColumnTypeInScript(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -1484,7 +1484,7 @@ for (var i = 0; i < this.Lines.length; i++) {
         [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public async Task CanSpecifyColumnTypeInScript2(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -1628,7 +1628,7 @@ loadToUsers(noPartition(), {
         {
             var countries = new[] { "Argentina", "Brazil", "Israel", "Poland", "United States" };
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var dt = new DateTime(2020, 1, 1);
 
@@ -1772,7 +1772,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()], ['month', orderDate.
         {
             // RavenDB-16663
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var dt = new DateTime(2020, 1, 1);
 
@@ -1837,7 +1837,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
         [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public async Task CanUpdateDocIdColumnName(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var dt = new DateTime(2020, 1, 1);
 
@@ -1985,7 +1985,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
         [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public async Task CanUpdateRunFrequency(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var dt = new DateTime(2020, 1, 1);
 
@@ -2116,7 +2116,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
         [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public async Task CanUpdateCustomPartitionValue(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var dt = new DateTime(2020, 1, 1);
 
@@ -2241,7 +2241,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()], ['location', $custom
         [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public async Task CanUpdateLocalSettings(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var dt = new DateTime(2020, 1, 1);
 
@@ -2387,7 +2387,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
         [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public async Task LastModifiedShouldBeMillisecondsSinceUnixEpoch(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
 
                 var dt = new DateTime(2020, 1, 1);

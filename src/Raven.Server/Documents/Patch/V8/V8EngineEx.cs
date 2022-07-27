@@ -1,8 +1,9 @@
 using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,7 +16,6 @@ using Raven.Server.Documents.Indexes.Static.Counters.V8;
 using Raven.Server.Documents.Indexes.Static.JavaScript.V8;
 using Raven.Server.Documents.Indexes.Static.TimeSeries.V8;
 using Sparrow;
-using Sparrow.Collections;
 using Sparrow.Json;
 using V8.Net;
 
@@ -648,6 +648,7 @@ var process = {
 
     public JsHandleV8 FromObjectGen(object obj, bool keepAlive = false)
     {
+        Debug.Assert(obj is not IEnumerable, $"FromObjectGen should not receive IEnumerable, use CreateArray() instead!");
         var val = Engine.FromObject(obj, keepAlive);
         return new JsHandleV8(ref val);
     }
