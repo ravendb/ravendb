@@ -48,7 +48,7 @@ public class AllNodesExecutor : AbstractExecutor
         }
     }
 
-    public RequestExecutor GetRequestExecutorFoNode(string tag)
+    public RequestExecutor GetRequestExecutorForNode(string tag)
     {
         _current.TryGetValue(tag, out var executor);
         return executor;

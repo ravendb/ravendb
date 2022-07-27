@@ -78,7 +78,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             {
                 using (this)
                 {
-                    await Initialize();
+                    await InitializeAsync();
 
                     if (HasEncryptionKey)
                     {
@@ -87,8 +87,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                             DatabaseName, overwrite: false);
                     }
 
-                    await OnBeforeRestore();
-                    await Restore();
+                    await OnBeforeRestoreAsync();
+                    await RestoreAsync();
                     OnAfterRestore();
 
                     await SaveDatabaseRecordAsync(DatabaseName, RestoreSettings.DatabaseRecord, null, Result, Progress);
@@ -97,14 +97,14 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             }
             catch (Exception e)
             {
-                await OnError(Progress, e);
+                await OnErrorAsync(Progress, e);
                 throw;
             }
         }
 
-        protected abstract Task Restore();
+        protected abstract Task RestoreAsync();
 
-        protected virtual async Task Initialize()
+        protected virtual async Task InitializeAsync()
         {
             var dataDirectoryThatWillBeUsed = string.IsNullOrWhiteSpace(RestoreConfiguration.DataDirectory) ?
                            ServerStore.Configuration.Core.DataDirectory.FullPath :
@@ -189,7 +189,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 .CreateDatabaseConfiguration(DatabaseName, ignoreDisabledDatabase: true, ignoreBeenDeleted: true, ignoreNotRelevant: true, RestoreSettings.DatabaseRecord);
         }
 
-        protected virtual async Task OnBeforeRestore()
+        protected virtual async Task OnBeforeRestoreAsync()
         {
             ModifyDatabaseRecordSettings();
 
@@ -299,7 +299,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 databaseRecord.Settings[dataDirectoryConfigurationKey] = RestoreConfiguration.DataDirectory;
         }
 
-        protected async Task SmugglerRestore(DocumentDatabase database, DocumentsOperationContext context)
+        protected async Task SmugglerRestoreAsync(DocumentDatabase database, DocumentsOperationContext context)
         {
             Debug.Assert(Progress != null);
 
@@ -334,7 +334,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 Progress.Invoke(Result.Progress);
 
                 var filePath = RestoreSource.GetBackupPath(FilesToRestore[i]);
-                await ImportSingleBackupFile(database, Progress, Result, filePath, context, destination, options, isLastFile: false,
+                await ImportSingleBackupFileAsync(database, Progress, Result, filePath, context, destination, options, isLastFile: false,
                     onDatabaseRecordAction: smugglerDatabaseRecord =>
                     {
                         // need to enable revisions before import
@@ -349,7 +349,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
             Progress.Invoke(Result.Progress);
 
-            await ImportSingleBackupFile(database, Progress, Result, lastFilePath, context, destination, options, isLastFile: true,
+            await ImportSingleBackupFileAsync(database, Progress, Result, lastFilePath, context, destination, options, isLastFile: true,
                 onIndexAction: indexAndType =>
                 {
                     if (RestoreConfiguration.SkipIndexes)
@@ -503,7 +503,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             }
         }
 
-        private async Task ImportSingleBackupFile(DocumentDatabase database,
+        private async Task ImportSingleBackupFileAsync(DocumentDatabase database,
             Action<IOperationProgress> onProgress, RestoreResult restoreResult,
             string filePath, JsonOperationContext context,
             DatabaseDestination destination, DatabaseSmugglerOptionsServerSide options, bool isLastFile,
@@ -525,7 +525,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             }
         }
 
-        private async Task OnError(Action<IOperationProgress> onProgress, Exception e)
+        private async Task OnErrorAsync(Action<IOperationProgress> onProgress, Exception e)
         {
             if (Logger.IsOperationsEnabled)
                 Logger.Operations("Failed to restore database", e);

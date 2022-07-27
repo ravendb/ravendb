@@ -30,13 +30,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         {
         }
 
-        protected override async Task Initialize()
+        protected override async Task InitializeAsync()
         {
-            await base.Initialize();
+            await base.InitializeAsync();
             CreateRestoreSettings();
         }
 
-        protected override async Task OnBeforeRestore()
+        protected override async Task OnBeforeRestoreAsync()
         {
             ModifyDatabaseRecordSettings();
             InitializeShardingConfiguration();
@@ -48,12 +48,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             await SaveDatabaseRecordAsync(DatabaseName, databaseRecord, RestoreSettings.DatabaseValues, Result, Progress);
         }
 
-        protected override async Task Restore()
+        protected override async Task RestoreAsync()
         {
             var dbSearchResult = ServerStore.DatabasesLandlord.TryGetOrCreateDatabase(DatabaseName);
             var shardedDbContext = dbSearchResult.DatabaseContext;
 
-            _result = await RestoreOnAllShards(Progress, RestoreConfiguration, shardedDbContext);
+            _result = await RestoreOnAllShardsAsync(Progress, RestoreConfiguration, shardedDbContext);
         }
 
         protected override void OnAfterRestore()
@@ -91,7 +91,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 }
             };
 
-            var nodes = new HashSet<string>();
+            var nodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             for (var i = 0; i < RestoreConfiguration.ShardRestoreSettings.Length; i++)
             {
                 var shardRestoreSetting = RestoreConfiguration.ShardRestoreSettings[i];
@@ -108,7 +108,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             }
         }
 
-        private async Task<IOperationResult> RestoreOnAllShards(Action<IOperationProgress> onProgress, RestoreBackupConfigurationBase configuration,
+        private async Task<IOperationResult> RestoreOnAllShardsAsync(Action<IOperationProgress> onProgress, RestoreBackupConfigurationBase configuration,
             ShardedDatabaseContext shardedDatabaseContext)
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Normal, "try to replace this with a proper impl. of ServerStore.AddRemoteOperation");
@@ -122,7 +122,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 {
                     var cmd = GenerateCommandForShard(ctx, position: i, configuration.Clone());
                     var nodeTag = shardSettings[i].NodeTag;
-                    var executor = shardedDatabaseContext.AllNodesExecutor.GetRequestExecutorFoNode(nodeTag);
+                    var executor = shardedDatabaseContext.AllNodesExecutor.GetRequestExecutorForNode(nodeTag);
                     await executor.ExecuteAsync(cmd, ctx, token: OperationCancelToken.Token);
                     var operationIdResult = cmd.Result;
 
