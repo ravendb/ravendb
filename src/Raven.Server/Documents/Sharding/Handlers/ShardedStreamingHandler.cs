@@ -27,5 +27,11 @@ namespace Raven.Server.Documents.Sharding.Handlers
             using (var processor = new ShardedStreamingHandlerProcessorForGetStreamQuery(this, HttpMethod.Post))
                 await processor.ExecuteAsync();
         }
+
+        [RavenShardedAction("/databases/*/streams/queries", "HEAD")]
+        public Task SteamQueryHead()
+        {
+            return Task.CompletedTask;
+        }
     }
 }
