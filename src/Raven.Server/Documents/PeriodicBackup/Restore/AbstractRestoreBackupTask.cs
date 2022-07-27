@@ -404,7 +404,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     databaseRecord.OlapConnectionStrings = smugglerDatabaseRecord.OlapConnectionStrings;
                     databaseRecord.OlapEtls = smugglerDatabaseRecord.OlapEtls;
                     databaseRecord.ElasticSearchEtls = smugglerDatabaseRecord.ElasticSearchEtls;
-                    // todo
+                    databaseRecord.ElasticSearchConnectionStrings = smugglerDatabaseRecord.ElasticSearchConnectionStrings;
+                    databaseRecord.QueueEtls = smugglerDatabaseRecord.QueueEtls;
+                    databaseRecord.QueueConnectionStrings = smugglerDatabaseRecord.QueueConnectionStrings;
 
                     // need to enable revisions before import
                     database.DocumentsStorage.RevisionsStorage.InitializeFromDatabaseRecord(smugglerDatabaseRecord);
@@ -458,17 +460,33 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 }
             }
 
-            if (databaseRecord.PeriodicBackups != null)
+            if (databaseRecord.ElasticSearchEtls != null)
             {
-                foreach (var task in databaseRecord.PeriodicBackups)
+                foreach (var task in databaseRecord.ElasticSearchEtls)
                 {
                     task.Disabled = true;
                 }
             }
 
-            if (databaseRecord.ExternalReplications != null)
+            if (databaseRecord.OlapEtls != null)
             {
-                foreach (var task in databaseRecord.ExternalReplications)
+                foreach (var task in databaseRecord.OlapEtls)
+                {
+                    task.Disabled = true;
+                }
+            }
+
+            if (databaseRecord.QueueEtls != null)
+            {
+                foreach (var task in databaseRecord.QueueEtls)
+                {
+                    task.Disabled = true;
+                }
+            }
+
+            if (databaseRecord.PeriodicBackups != null)
+            {
+                foreach (var task in databaseRecord.PeriodicBackups)
                 {
                     task.Disabled = true;
                 }
