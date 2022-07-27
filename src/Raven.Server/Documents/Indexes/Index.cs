@@ -256,6 +256,9 @@ namespace Raven.Server.Documents.Indexes
         private readonly double _txAllocationsRatio;
 
         private readonly string _itemType;
+        
+        internal bool SourceDocumentIncludedInOutput;
+        private bool _alreadyNotifiedAboutIncludingDocumentInOutput;
 
         protected Index(IndexType type, IndexSourceType sourceType, IndexDefinitionBaseServerSide definition)
         {
@@ -4096,6 +4099,23 @@ namespace Raven.Server.Documents.Indexes
 
         public abstract void SaveLastState();
 
+        
+        protected void HandleSourceDocumentIncludedInMapOutput()
+        {
+            if (_alreadyNotifiedAboutIncludingDocumentInOutput || SourceDocumentIncludedInOutput == false || PerformanceHintsConfig.AlertWhenSourceDocumentIncludedAsProperty == false)
+                return;
+
+            _alreadyNotifiedAboutIncludingDocumentInOutput = true;
+            
+            DocumentDatabase.NotificationCenter.Add(PerformanceHint.Create(
+                DocumentDatabase.Name,
+                $"Index '{Name}' is including the origin document in output.",
+                $"Please verify index definitions and consider a re-design of your entities or indexes for better indexing performance.",
+                PerformanceHintType.Indexing,
+                NotificationSeverity.Info,
+                nameof(Index)));
+        }
+        
         protected void HandleIndexOutputsPerDocument(LazyStringValue documentId, int numberOfOutputs, IndexingStatsScope stats)
         {
             stats.RecordNumberOfProducedOutputs(numberOfOutputs);
