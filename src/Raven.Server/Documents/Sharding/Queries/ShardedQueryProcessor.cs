@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
@@ -311,34 +312,16 @@ public class ShardedQueryProcessor : IDisposable
 
     private async ValueTask HandleMissingIncludesAsync(HashSet<string> missing)
     {
-        var includeCommands = new Dictionary<int, ShardedQueryCommand>();
-
-        const string listParameterName = "p0";
-
+        var getDocumentsCommands = new Dictionary<int, GetDocumentsCommand>();
         var shards = ShardLocator.GetDocumentIdsByShards(_context, _parent.DatabaseContext, missing);
-
-        var documentQuery = new DocumentQuery<dynamic>(null, null, "@all_docs", false);
-        documentQuery.WhereIn("id()", new List<object>());
-        var query = documentQuery.ToString();
 
         foreach ((int shardId, ShardLocator.IdsByShard<string> documentIds) in shards)
         {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "have a way to turn the _query into a json file and then we'll modify that, instead of building it manually");
-
-            var queryTemplate = new DynamicJsonValue
-            {
-                [nameof(IndexQuery.QueryParameters)] = new DynamicJsonValue
-                {
-                    [listParameterName] = documentIds.Ids
-                },
-                [nameof(IndexQuery.Query)] = query
-            };
-
-            includeCommands[shardId] = new ShardedQueryCommand(_parent, _context.ReadObject(queryTemplate, "query"), null);
+            getDocumentsCommands[shardId] = new GetDocumentsCommand(documentIds.Ids.ToArray(), includes: null, metadataOnly: false);
         }
 
         var tasks = new List<Task>();
-        foreach (var (shardNumber, cmd) in includeCommands)
+        foreach (var (shardNumber, cmd) in getDocumentsCommands)
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "RavenDB-19084 Use ShardedExecutor");
             _disposables.Add(_parent.ContextPool.AllocateOperationContext(out TransactionOperationContext context));
@@ -346,10 +329,16 @@ public class ShardedQueryProcessor : IDisposable
         }
 
         await Task.WhenAll(tasks);
-        foreach (var (_, cmd) in includeCommands)
+        foreach (var (_, cmd) in getDocumentsCommands)
         {
+            if (cmd.Result == null)
+                continue;
+
             foreach (BlittableJsonReaderObject result in cmd.Result.Results)
             {
+                if (result == null)
+                    continue;
+
                 _result.Includes.Add(result);
             }
         }
