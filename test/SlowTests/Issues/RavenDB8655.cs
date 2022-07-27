@@ -1,8 +1,9 @@
-﻿using Tests.Infrastructure;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

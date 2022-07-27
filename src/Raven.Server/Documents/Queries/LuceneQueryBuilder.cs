@@ -7,6 +7,7 @@ using System.Text;
 using Lucene.Net.Analysis;
 using Lucene.Net.Search;
 using Lucene.Net.Spatial.Queries;
+using Nest;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;

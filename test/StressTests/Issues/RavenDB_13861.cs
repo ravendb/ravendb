@@ -1,5 +1,4 @@
-﻿using Tests.Infrastructure;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
@@ -8,6 +7,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.ServerWide.Operations.Certificates;
+using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;

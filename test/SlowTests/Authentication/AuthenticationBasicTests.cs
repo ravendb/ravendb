@@ -1,5 +1,4 @@
-﻿using Tests.Infrastructure;
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="CanAuthenticate.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -32,6 +31,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Web.Authentication;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

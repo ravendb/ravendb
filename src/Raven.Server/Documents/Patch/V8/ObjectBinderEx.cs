@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using V8.Net;
 
 namespace Raven.Server.Documents.Patch.V8

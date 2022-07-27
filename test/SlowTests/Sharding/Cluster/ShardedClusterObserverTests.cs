@@ -1,7 +1,7 @@
-﻿using Tests.Infrastructure;
-using System.Linq;
+﻿using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.ServerWide.Operations;
+using Tests.Infrastructure;
 using Xunit.Abstractions;
 
 namespace SlowTests.Sharding.Cluster

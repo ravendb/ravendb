@@ -1,4 +1,7 @@
-﻿using FastTests;
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
+using FastTests;
 using Raven.Client.Documents.Session;
 using SlowTests.Core.Utils.Entities;
 using Xunit;

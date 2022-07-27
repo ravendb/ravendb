@@ -1,10 +1,10 @@
-﻿using Tests.Infrastructure;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

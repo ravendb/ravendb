@@ -1,6 +1,8 @@
+using System.Linq;
 using Lextm.SharpSnmpLib;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {

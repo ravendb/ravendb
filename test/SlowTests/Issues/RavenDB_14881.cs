@@ -7,6 +7,7 @@ using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.ServerWide;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Platform;
+using Sparrow.Server;
 using Xunit;
 using Xunit.Abstractions;
 

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Queries.Timings;
 using Sparrow.Json;
 

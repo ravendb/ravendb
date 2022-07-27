@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using FastTests;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Xunit;
 using Xunit.Abstractions;

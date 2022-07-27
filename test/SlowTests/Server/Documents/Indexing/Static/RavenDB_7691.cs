@@ -4,7 +4,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.JavaScript;
+using Tests.Infrastructure;
 using Raven.Client.Documents;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.JavaScript;

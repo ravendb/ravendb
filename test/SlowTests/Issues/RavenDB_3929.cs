@@ -1,11 +1,11 @@
-﻿using Tests.Infrastructure;
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_3929.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
 
 using FastTests;
+using Tests.Infrastructure;
 using Raven.Client.Documents.Operations;
 using Xunit;
 using Xunit.Abstractions;

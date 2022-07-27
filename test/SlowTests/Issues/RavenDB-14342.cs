@@ -1,4 +1,3 @@
-using Tests.Infrastructure;
 // -----------------------------------------------------------------------
 //  <copyright file="RavenDB-14342.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
@@ -21,6 +20,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.Utils.Monitoring;
 using Sparrow.Binary;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

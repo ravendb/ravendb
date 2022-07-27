@@ -1,4 +1,3 @@
-using Tests.Infrastructure;
 using System;
 using System.Threading.Tasks;
 using FastTests;
@@ -9,6 +8,7 @@ using Raven.Server;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Patch;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

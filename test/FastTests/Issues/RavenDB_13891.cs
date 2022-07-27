@@ -1,9 +1,9 @@
-﻿using Tests.Infrastructure;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

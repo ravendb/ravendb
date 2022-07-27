@@ -1,6 +1,6 @@
-﻿using Tests.Infrastructure;
-using System;
+﻿using System;
 using FastTests;
+using Tests.Infrastructure;
 using Orders;
 using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;

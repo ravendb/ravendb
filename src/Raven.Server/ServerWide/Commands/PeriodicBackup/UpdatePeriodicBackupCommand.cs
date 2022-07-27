@@ -4,6 +4,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
+using Raven.Server.Config.Categories;
 
 namespace Raven.Server.ServerWide.Commands.PeriodicBackup
 {

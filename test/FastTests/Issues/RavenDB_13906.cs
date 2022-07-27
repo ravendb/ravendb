@@ -1,5 +1,4 @@
-﻿using Tests.Infrastructure;
-using System;
+﻿using System;
 using Raven.Client.Documents.Operations;
 using Tests.Infrastructure;
 using Xunit;

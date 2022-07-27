@@ -1,5 +1,4 @@
-﻿using Tests.Infrastructure;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -17,6 +16,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

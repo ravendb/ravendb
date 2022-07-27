@@ -1,5 +1,4 @@
-﻿using Tests.Infrastructure;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
@@ -7,6 +6,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Server.Utils;
 using SlowTests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

@@ -1,4 +1,5 @@
-﻿using Raven.Client.Documents.Operations.Replication;
+﻿using System.Collections.Generic;
+using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.ServerWide;
 using Sparrow.Json.Parsing;
 

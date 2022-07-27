@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -8,6 +9,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Util;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.ServerWide;

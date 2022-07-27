@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using Raven.Client.ServerWide;
 using Raven.Server.Commercial;
 using Sparrow.Json.Parsing;

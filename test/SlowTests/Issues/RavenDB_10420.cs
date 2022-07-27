@@ -1,5 +1,7 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Orders;
@@ -8,6 +10,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Config;
 using Raven.Server.Documents.PeriodicBackup.Restore;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

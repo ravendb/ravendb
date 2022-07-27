@@ -1,5 +1,4 @@
-﻿using Tests.Infrastructure;
-using System.IO;
+﻿using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
@@ -13,6 +12,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using SlowTests.Core.Utils.Entities;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

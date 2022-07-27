@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using Raven.Client;
+using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Binary;

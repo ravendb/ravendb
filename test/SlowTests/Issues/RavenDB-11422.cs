@@ -1,7 +1,7 @@
-﻿using Tests.Infrastructure;
-using System.Globalization;
+﻿using System.Globalization;
 using System.Linq;
 using FastTests;
+using Tests.Infrastructure;
 using Raven.Client;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;

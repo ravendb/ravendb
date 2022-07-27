@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Server.Replication;
@@ -8,6 +10,7 @@ using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations.Expiration;
+using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide;

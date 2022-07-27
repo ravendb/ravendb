@@ -1,5 +1,4 @@
-﻿using Tests.Infrastructure;
-// //-----------------------------------------------------------------------
+﻿// //-----------------------------------------------------------------------
 // // <copyright company="Hibernating Rhinos LTD">
 // //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // // </copyright>
@@ -8,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using FastTests;
+using Tests.Infrastructure;
 using FastTests.Utils;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;

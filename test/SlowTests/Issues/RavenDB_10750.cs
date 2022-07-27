@@ -1,6 +1,6 @@
-﻿using Tests.Infrastructure;
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
+using Tests.Infrastructure;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Indexes;
 using Raven.Tests.Core.Utils.Entities;

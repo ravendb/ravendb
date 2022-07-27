@@ -1,7 +1,9 @@
 ﻿using System.Threading.Tasks;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.Documents.Handlers.Processors.SampleData;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Web.Studio
 {

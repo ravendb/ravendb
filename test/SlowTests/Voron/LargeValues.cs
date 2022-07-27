@@ -1,9 +1,9 @@
-﻿using Tests.Infrastructure;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using FastTests.Voron;
 using SlowTests.Utils;
+using Tests.Infrastructure;
 using Xunit;
 using Voron;
 using Xunit.Abstractions;

@@ -8,6 +8,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Commands.MultiGet;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.Operations;
+using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Sparrow;
 using Sparrow.Json;
@@ -16,6 +17,7 @@ using Sparrow.Server;
 using Xunit;
 using Xunit.Abstractions;
 using Size = Sparrow.Size;
+using TimeoutException = System.TimeoutException;
 
 namespace SlowTests.Bugs.Caching
 {

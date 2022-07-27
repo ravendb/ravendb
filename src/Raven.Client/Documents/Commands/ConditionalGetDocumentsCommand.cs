@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
+using Raven.Client.Util;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands

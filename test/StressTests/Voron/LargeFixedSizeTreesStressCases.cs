@@ -1,6 +1,7 @@
-﻿using Tests.Infrastructure;
+﻿using FastTests;
 using SlowTests.Utils;
 using SlowTests.Voron;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

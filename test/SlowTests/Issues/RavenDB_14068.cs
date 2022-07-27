@@ -9,6 +9,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Operations.Refresh;
+using Raven.Client.Json;
 using Raven.Client.Util;
 using Raven.Server.Documents.Expiration;
 using Sparrow;

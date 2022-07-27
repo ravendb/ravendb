@@ -11,6 +11,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;

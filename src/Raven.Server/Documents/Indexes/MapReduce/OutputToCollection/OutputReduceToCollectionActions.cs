@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Exceptions;
@@ -14,6 +15,7 @@ using Sparrow.Server.Exceptions;
 using Voron;
 using Voron.Data.BTrees;
 using Voron.Impl;
+using Raven.Server.Config.Categories;
 
 namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 {

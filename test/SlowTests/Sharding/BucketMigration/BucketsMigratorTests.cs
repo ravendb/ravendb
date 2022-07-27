@@ -2,9 +2,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Sharding;
+using Raven.Server.ServerWide.Maintenance;
 using Raven.Server.ServerWide.Maintenance.Sharding;
 using Raven.Server.Utils;
 using Sparrow;

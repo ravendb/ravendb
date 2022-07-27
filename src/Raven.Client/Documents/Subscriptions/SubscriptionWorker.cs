@@ -15,6 +15,7 @@
 using System.Security.Cryptography.X509Certificates;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
+using Raven.Client.ServerWide.Tcp;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Subscriptions

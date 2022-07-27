@@ -1,9 +1,10 @@
-﻿using Tests.Infrastructure;
-using System;
+﻿using System;
 using FastTests;
+using Tests.Infrastructure;
 using Orders;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Documents.Patching;
 using Xunit;
 using Xunit.Abstractions;
 

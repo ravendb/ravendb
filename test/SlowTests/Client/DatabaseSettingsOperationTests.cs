@@ -1,11 +1,11 @@
-﻿using Tests.Infrastructure;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.ServerWide.Operations;
 using Xunit;
 using Xunit.Abstractions;
 using Raven.Client.ServerWide.Operations.Configuration;
+using Tests.Infrastructure;
 
 namespace SlowTests.Client
 {

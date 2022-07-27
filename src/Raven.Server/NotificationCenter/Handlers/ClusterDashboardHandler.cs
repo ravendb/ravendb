@@ -19,6 +19,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Json.Sync;
 using Sparrow.Logging;
+using Sparrow.Server.Json.Sync;
 
 namespace Raven.Server.NotificationCenter.Handlers
 {

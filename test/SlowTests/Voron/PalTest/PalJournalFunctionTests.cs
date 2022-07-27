@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using FastTests;
 using Sparrow.Server.Platform;
+using Voron.Platform;
 using Xunit;
 using Xunit.Abstractions;
 

@@ -9,6 +9,7 @@ using Raven.Server.Documents;
 using Raven.Server.ServerWide;
 using Sparrow;
 using Sparrow.Platform;
+using Sparrow.Server;
 using Sparrow.Utils;
 using Tests.Infrastructure;
 using Voron;

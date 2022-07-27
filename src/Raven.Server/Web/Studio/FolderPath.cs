@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using Raven.Server.Config;
+using System.Runtime.InteropServices;
 using System.Linq;
 using Sparrow.Platform;
 

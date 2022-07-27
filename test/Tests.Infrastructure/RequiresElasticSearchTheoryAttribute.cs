@@ -1,6 +1,7 @@
 ﻿using System;
 using Tests.Infrastructure.ConnectionString;
 using xRetry;
+using Xunit;
 
 namespace Tests.Infrastructure
 {

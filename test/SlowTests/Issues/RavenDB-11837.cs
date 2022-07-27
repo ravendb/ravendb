@@ -1,12 +1,13 @@
-﻿using Tests.Infrastructure;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using FastTests;
+using Tests.Infrastructure;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions.Documents;
 using Xunit;
 using Xunit.Abstractions;
+using JavaScriptException = Raven.Client.Exceptions.Documents.Patching.JavaScriptException;
 
 namespace SlowTests.Issues
 {

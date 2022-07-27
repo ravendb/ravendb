@@ -1,5 +1,4 @@
-﻿using Tests.Infrastructure;
-using System.IO;
+﻿using System.IO;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
 

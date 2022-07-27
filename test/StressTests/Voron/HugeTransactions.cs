@@ -1,5 +1,4 @@
-﻿using Tests.Infrastructure;
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="HugeTransactions.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -12,6 +11,7 @@ using System.Threading.Tasks;
 using FastTests;
 using FastTests.Voron;
 using Sparrow.Compression;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Data.BTrees;
 using Voron.Global;

@@ -1,4 +1,8 @@
-﻿using FastTests;
+﻿using System.Diagnostics;
+using System.Linq;
+using FastTests;
+using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Linq.Indexing;
 using Xunit;
 using Xunit.Abstractions;
 

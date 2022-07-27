@@ -2,6 +2,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
+using SlowTests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
 

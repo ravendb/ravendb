@@ -1,8 +1,8 @@
-﻿using Tests.Infrastructure;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using FastTests;
+using Tests.Infrastructure;
 using Newtonsoft.Json;
 using Orders;
 using Raven.Client;

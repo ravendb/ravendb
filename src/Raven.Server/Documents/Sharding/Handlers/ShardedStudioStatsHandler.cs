@@ -1,5 +1,6 @@
 ﻿extern alias NGC;
 using System.Threading.Tasks;
+using Raven.Server.Documents.Sharding.Handlers.Processors;
 using Raven.Server.Documents.Sharding.Handlers.Processors.Studio;
 using Raven.Server.Routing;
 

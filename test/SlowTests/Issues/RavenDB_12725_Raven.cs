@@ -1,10 +1,10 @@
-﻿using Tests.Infrastructure;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using FastTests;
 using Raven.Server.Config;
 using Raven.Server.Documents;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

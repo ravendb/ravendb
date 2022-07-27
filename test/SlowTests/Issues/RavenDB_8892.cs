@@ -1,6 +1,6 @@
-﻿using Tests.Infrastructure;
-using System;
+﻿using System;
 using FastTests;
+using Tests.Infrastructure;
 using Raven.Client.Documents.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;

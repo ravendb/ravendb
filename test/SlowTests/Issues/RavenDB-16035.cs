@@ -1,6 +1,10 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
+using System.Collections.Generic;
+using System.Threading;
 using FastTests;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Changes;
 using Xunit;
 using Xunit.Abstractions;
 

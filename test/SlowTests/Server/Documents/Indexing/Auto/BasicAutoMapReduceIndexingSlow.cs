@@ -8,6 +8,7 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Queries;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Xunit;
 using Xunit.Abstractions;
 

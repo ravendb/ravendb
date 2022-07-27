@@ -1,4 +1,5 @@
-﻿using System.Net.Http;
+﻿using System;
+using System.Net.Http;
 using Raven.Client.Http;
 using Raven.Client.Util;
 using Sparrow.Json;

@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using Sparrow;
 using Sparrow.Json;
+using Raven.Server.Config.Categories;
 
 namespace Raven.Server.Json
 {

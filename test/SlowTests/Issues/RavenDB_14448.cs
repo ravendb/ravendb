@@ -1,5 +1,4 @@
-﻿using Tests.Infrastructure;
-using System;
+﻿using System;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
@@ -10,6 +9,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

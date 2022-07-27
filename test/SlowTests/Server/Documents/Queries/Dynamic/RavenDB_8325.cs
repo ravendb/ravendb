@@ -1,4 +1,5 @@
-﻿using FastTests;
+﻿using System.Linq;
+using FastTests;
 using Raven.Client;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Queries;

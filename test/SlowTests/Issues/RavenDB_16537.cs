@@ -1,4 +1,5 @@
-﻿using FastTests;
+﻿using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Documents;
 using Xunit;
 using Xunit.Abstractions;

@@ -1,4 +1,3 @@
-using Tests.Infrastructure;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
@@ -8,6 +7,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.TimeSeries;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

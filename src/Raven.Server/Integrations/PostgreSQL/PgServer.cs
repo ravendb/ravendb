@@ -7,6 +7,8 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Server.Config;
+using Raven.Server.Config.Categories;
+using Raven.Server.Exceptions;
 using Raven.Server.Utils.Features;
 using Sparrow.Logging;
 

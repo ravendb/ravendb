@@ -1,5 +1,4 @@
-﻿using Tests.Infrastructure;
-using System;
+﻿using System;
 using System.Net.Http;
 using FastTests;
 using Raven.Client.Documents.Conventions;
@@ -12,6 +11,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.Util;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

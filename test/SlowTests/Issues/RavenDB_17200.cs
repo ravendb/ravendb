@@ -1,7 +1,9 @@
 ﻿using System;
 using FastTests;
+using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

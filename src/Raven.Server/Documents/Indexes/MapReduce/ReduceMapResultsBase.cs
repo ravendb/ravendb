@@ -26,6 +26,7 @@ using Voron.Data.Tables;
 using Voron.Impl;
 using Voron.Data.Compression;
 using Constants = Voron.Global.Constants;
+using Raven.Server.Config.Categories;
 
 namespace Raven.Server.Documents.Indexes.MapReduce
 {

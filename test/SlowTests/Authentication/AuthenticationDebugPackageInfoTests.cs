@@ -5,6 +5,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Documents.Linq;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Documents.Handlers.Debugging;
 using Raven.Server.Routing;

@@ -8,6 +8,8 @@ using Raven.Server;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Categories;
 using Raven.Server.Extensions;
+using Raven.Server.Routing;
+using Raven.Server.Web;
 
 namespace TypingsGenerator
 {

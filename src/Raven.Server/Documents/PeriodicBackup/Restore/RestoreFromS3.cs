@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -5,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Documents.PeriodicBackup.Aws;
+using Raven.Server.Indexing;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 

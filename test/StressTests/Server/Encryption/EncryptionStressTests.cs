@@ -1,11 +1,11 @@
-﻿using Tests.Infrastructure;
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Server.Utils;
 using SlowTests.Core.Utils.Entities;
 using Sparrow.Platform;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

@@ -1,7 +1,7 @@
-﻿using Tests.Infrastructure;
-using System.Linq;
+﻿using System.Linq;
 using Raven.Server.SqlMigration;
 using Raven.Server.SqlMigration.Schema;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

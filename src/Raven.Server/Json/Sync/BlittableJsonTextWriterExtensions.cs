@@ -5,6 +5,7 @@ using Raven.Client.Extensions;
 using Raven.Server.Documents;
 using Sparrow.Json;
 using Sparrow.Json.Sync;
+using Sparrow.Server.Json.Sync;
 
 namespace Raven.Server.Json.Sync
 {

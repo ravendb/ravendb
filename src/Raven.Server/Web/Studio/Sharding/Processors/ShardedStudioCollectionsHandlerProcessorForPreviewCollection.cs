@@ -10,6 +10,7 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Http;
 using Raven.Client.Util;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.Sharding.Commands;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.Sharding.Handlers.ContinuationTokens;

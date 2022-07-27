@@ -1,5 +1,6 @@
 ﻿using System.IO;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Session;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.CompareExchange

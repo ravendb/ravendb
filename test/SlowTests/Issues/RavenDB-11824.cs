@@ -1,7 +1,7 @@
-﻿using Tests.Infrastructure;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using FastTests;
+using Tests.Infrastructure;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
@@ -8,9 +9,11 @@ using Nito.AsyncEx;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Xunit;
 using Xunit.Abstractions;
+using AsyncManualResetEvent = Sparrow.Server.AsyncManualResetEvent;
 
 namespace SlowTests.MailingList
 {

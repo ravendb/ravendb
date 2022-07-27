@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Raven.Server.Documents.Queries.AST;
 
 namespace Raven.Server.Documents.Queries.Revisions
 {

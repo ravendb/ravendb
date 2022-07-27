@@ -1,5 +1,4 @@
-﻿using Tests.Infrastructure;
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_3237.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -7,6 +6,7 @@
 
 using System;
 using FastTests;
+using Tests.Infrastructure;
 using Microsoft.CSharp.RuntimeBinder;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Documents.Indexes.Static;

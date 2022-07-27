@@ -1,5 +1,8 @@
-﻿using Tests.Infrastructure;
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
 using FastTests;
+using Tests.Infrastructure;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
 using Xunit;

@@ -2,9 +2,13 @@
 using FastTests.Voron;
 using Sparrow;
 using Sparrow.Platform;
+using Sparrow.Server;
 using Voron;
+using Voron.Data;
 using Voron.Global;
 using Voron.Impl;
+using Voron.Impl.Journal;
+using Voron.Impl.Paging;
 using Xunit;
 using Xunit.Abstractions;
 

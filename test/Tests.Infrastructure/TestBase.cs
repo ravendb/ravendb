@@ -41,6 +41,7 @@ using Sparrow.Threading;
 using Sparrow.Utils;
 using Tests.Infrastructure.Utils;
 using Voron.Exceptions;
+using Voron.Impl;
 using Xunit;
 using Xunit.Abstractions;
 using XunitLogger;

@@ -9,6 +9,7 @@ using Sparrow.Server.Platform;
 using Sparrow.Threading;
 using Voron.Global;
 using Voron.Impl.Paging;
+using Voron.Platform;
 using Voron.Platform.Posix;
 using Voron.Platform.Win32;
 using Voron.Util.Settings;

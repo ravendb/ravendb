@@ -1,5 +1,6 @@
 ﻿using FastTests;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Identity;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;

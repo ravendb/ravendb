@@ -1,7 +1,7 @@
-﻿using Tests.Infrastructure;
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Orders;
+using Tests.Infrastructure;
 using Xunit;
 using Raven.Client.Documents.Linq;
 using Xunit.Abstractions;

@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.ServerWide;
+using Voron.Util.Settings;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
 {

@@ -1,11 +1,11 @@
-﻿using Tests.Infrastructure;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.ServerWide;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

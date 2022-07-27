@@ -1,6 +1,7 @@
-using Tests.Infrastructure;
+using System;
 using System.Threading.Tasks;
 using FastTests;
+using Tests.Infrastructure;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Xunit;

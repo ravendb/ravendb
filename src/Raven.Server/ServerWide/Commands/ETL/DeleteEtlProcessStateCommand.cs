@@ -1,4 +1,5 @@
 ﻿using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.ServerWide;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 

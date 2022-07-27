@@ -1,5 +1,4 @@
-﻿using Tests.Infrastructure;
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_2936.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -7,13 +6,14 @@
 
 using System;
 using FastTests;
+using Tests.Infrastructure;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
-using Raven.Tests.Core.Utils.Entities;
 
 namespace SlowTests.Issues
 {

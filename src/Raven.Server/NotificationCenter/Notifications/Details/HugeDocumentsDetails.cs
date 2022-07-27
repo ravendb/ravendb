@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Linq;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 namespace Raven.Server.NotificationCenter.Notifications.Details

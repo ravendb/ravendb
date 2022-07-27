@@ -1,5 +1,4 @@
-﻿using Tests.Infrastructure;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -11,6 +10,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.ServerWide;
 using Raven.Server;
 using Sparrow.Server.Exceptions;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

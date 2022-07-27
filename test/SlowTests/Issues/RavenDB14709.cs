@@ -1,10 +1,10 @@
-﻿using Tests.Infrastructure;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using Tests.Infrastructure;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;

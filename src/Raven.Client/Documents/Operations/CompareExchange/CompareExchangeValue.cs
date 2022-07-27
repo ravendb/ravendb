@@ -1,4 +1,5 @@
-﻿using Raven.Client.Documents.Session;
+﻿using System;
+using Raven.Client.Documents.Session;
 using Raven.Client.Json;
 using Sparrow.Json;
 

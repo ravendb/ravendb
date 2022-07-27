@@ -1,5 +1,4 @@
-﻿using Tests.Infrastructure;
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="Repro.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -7,6 +6,7 @@
 
 using System;
 using FastTests;
+using Tests.Infrastructure;
 using Raven.Client.Documents;
 using Xunit;
 using Xunit.Abstractions;

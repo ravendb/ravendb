@@ -1,5 +1,4 @@
-﻿using Tests.Infrastructure;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -14,6 +13,7 @@ using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Voron.Util;
 using Xunit;

@@ -1,5 +1,4 @@
-﻿using Tests.Infrastructure;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -24,6 +23,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Server.Documents.ETL.Olap;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

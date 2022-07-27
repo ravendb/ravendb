@@ -1,3 +1,6 @@
+using System;
+using Sparrow.Json;
+
 namespace Raven.Client.Documents.Session
 {
     public class DocumentsChanges

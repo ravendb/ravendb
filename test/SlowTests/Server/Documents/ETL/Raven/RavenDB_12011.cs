@@ -1,7 +1,7 @@
-﻿using Tests.Infrastructure;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using FastTests;
+using Tests.Infrastructure;
 using Orders;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations.ETL;

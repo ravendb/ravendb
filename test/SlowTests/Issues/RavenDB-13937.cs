@@ -11,6 +11,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
 using Xunit;
+using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
 using Xunit.Abstractions;
 
 namespace SlowTests.Issues

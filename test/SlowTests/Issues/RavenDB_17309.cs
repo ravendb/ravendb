@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests.Server.Replication;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using Tests.Infrastructure.Entities;
 using Xunit;

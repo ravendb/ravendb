@@ -1,8 +1,8 @@
-﻿using Tests.Infrastructure;
-using System;
+﻿using System;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 using Tests.Infrastructure;

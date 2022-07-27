@@ -15,6 +15,7 @@ using Raven.Server.ServerWide.Context;
 using Xunit;
 using Voron;
 using Xunit.Abstractions;
+using Raven.Server.Documents.Indexes;
 
 namespace SlowTests.Tests.NestedIndexing
 {

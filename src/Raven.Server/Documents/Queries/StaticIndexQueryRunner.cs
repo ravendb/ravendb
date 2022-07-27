@@ -8,6 +8,7 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Queries.Facets;
 using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using FacetQuery = Raven.Server.Documents.Queries.Facets.FacetQuery;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;

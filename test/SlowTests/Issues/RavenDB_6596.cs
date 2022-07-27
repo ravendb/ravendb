@@ -1,5 +1,4 @@
-﻿using Tests.Infrastructure;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Reflection;
@@ -8,6 +7,7 @@ using System.Threading.Tasks;
 using FastTests;
 using FastTests.Client;
 using Sparrow.Platform;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

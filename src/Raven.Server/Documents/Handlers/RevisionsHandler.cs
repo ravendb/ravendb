@@ -4,16 +4,9 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Session.Operations;
 using Raven.Server.Documents.Handlers.Processors.Revisions;
-using Raven.Server.Documents.Operations;
-using Raven.Server.Documents.Revisions;
-using Raven.Server.Json;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers
 {

@@ -1,7 +1,7 @@
-﻿using Tests.Infrastructure;
-using System;
+﻿using System;
 using System.Linq;
 using FastTests;
+using Tests.Infrastructure;
 using SlowTests.Core.Utils.Entities.Faceted;
 using Xunit;
 using Xunit.Abstractions;

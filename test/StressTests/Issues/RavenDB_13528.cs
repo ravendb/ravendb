@@ -1,7 +1,7 @@
-﻿using Tests.Infrastructure;
-using System;
+﻿using System;
 using System.Runtime.InteropServices;
 using FastTests.Voron;
+using Tests.Infrastructure;
 using Voron.Global;
 using Xunit.Abstractions;
 

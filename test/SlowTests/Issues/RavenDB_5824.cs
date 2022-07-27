@@ -1,9 +1,16 @@
-﻿using Tests.Infrastructure;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using FastTests;
 using Orders;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Http;
+using Sparrow.Json;
+using Tests.Infrastructure;
 using Tests.Infrastructure.Operations;
 using Xunit;
 using Xunit.Abstractions;

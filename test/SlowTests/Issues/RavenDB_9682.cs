@@ -1,5 +1,5 @@
-﻿using Tests.Infrastructure;
-using FastTests;
+﻿using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

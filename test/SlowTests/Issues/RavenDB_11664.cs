@@ -1,8 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;

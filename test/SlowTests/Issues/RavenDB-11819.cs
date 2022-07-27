@@ -4,6 +4,7 @@ using Raven.Client;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Counters;
+using Raven.Client.Documents.Session;
 using SlowTests.Core.Utils.Entities;
 using Sparrow.Json;
 using Xunit;

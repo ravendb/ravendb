@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Linq.Expressions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
@@ -11,6 +12,7 @@ using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Rachis;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
+using Raven.Server.Config.Categories;
 
 namespace Raven.Server.ServerWide.Commands.Indexes
 {

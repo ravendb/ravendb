@@ -8,7 +8,9 @@ using Lucene.Net.Analysis.Tokenattributes;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Raven.Client;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Queries.LuceneIntegration;
+using Sparrow;
 using Sparrow.Json;
 using Index = Raven.Server.Documents.Indexes.Index;
 

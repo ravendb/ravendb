@@ -1,5 +1,4 @@
-﻿using Tests.Infrastructure;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -7,6 +6,7 @@ using System.Threading.Tasks;
 using Raven.Client.Util;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

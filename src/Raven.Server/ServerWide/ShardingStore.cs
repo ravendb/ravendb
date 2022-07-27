@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using Raven.Client.Util;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.Sharding;
 
 namespace Raven.Server.ServerWide

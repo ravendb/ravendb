@@ -1,8 +1,8 @@
-﻿using Tests.Infrastructure;
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using FastTests;
+using Tests.Infrastructure;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;

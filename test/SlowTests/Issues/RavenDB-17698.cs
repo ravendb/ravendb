@@ -1,12 +1,19 @@
-﻿using Tests.Infrastructure;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.SQL;
+using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
 using SlowTests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

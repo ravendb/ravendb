@@ -1,5 +1,4 @@
-﻿using Tests.Infrastructure;
-using System;
+﻿using System;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
@@ -14,6 +13,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

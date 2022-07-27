@@ -1,5 +1,4 @@
-﻿using Tests.Infrastructure;
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
@@ -16,6 +15,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
 using Raven.Server.Smuggler.Migration;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

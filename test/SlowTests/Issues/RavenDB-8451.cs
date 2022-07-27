@@ -1,5 +1,4 @@
-﻿using Tests.Infrastructure;
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -12,6 +11,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Recovery;
 using Xunit;

@@ -1,5 +1,4 @@
-﻿using Tests.Infrastructure;
-using System;
+﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
@@ -7,6 +6,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

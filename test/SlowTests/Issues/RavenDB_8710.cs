@@ -1,5 +1,5 @@
-﻿using Tests.Infrastructure;
-using FastTests;
+﻿using FastTests;
+using Tests.Infrastructure;
 using Raven.Client.Documents.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;

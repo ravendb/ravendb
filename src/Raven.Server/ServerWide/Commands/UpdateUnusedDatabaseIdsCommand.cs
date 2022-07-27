@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
 using Raven.Client.ServerWide;
 using Sparrow.Json.Parsing;
 

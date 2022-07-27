@@ -17,6 +17,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Sparrow.Threading;
+using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
 
 namespace Raven.Server.Documents.Handlers
 {

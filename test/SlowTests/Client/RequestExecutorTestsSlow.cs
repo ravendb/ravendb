@@ -1,7 +1,7 @@
-﻿using Tests.Infrastructure;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using FastTests;
 using FastTests.Client;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

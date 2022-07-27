@@ -1,5 +1,4 @@
-﻿using Tests.Infrastructure;
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
@@ -7,6 +6,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Utils;
 using SlowTests.Cluster;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

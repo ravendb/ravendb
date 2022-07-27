@@ -1,6 +1,7 @@
-﻿using Tests.Infrastructure;
+﻿using System.Linq;
 using FastTests;
 using Orders;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

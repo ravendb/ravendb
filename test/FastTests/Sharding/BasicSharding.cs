@@ -1,5 +1,4 @@
-﻿using Tests.Infrastructure;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations;
@@ -7,6 +6,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Server.Documents.Replication;
 using Sparrow.Json.Parsing;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

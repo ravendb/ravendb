@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Server.Documents.Indexes;
 using SlowTests.Core.Utils.Entities;
 using SlowTests.Core.Utils.Indexes;
 using Xunit;

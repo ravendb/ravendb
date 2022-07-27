@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Server.Documents.Replication.Outgoing;

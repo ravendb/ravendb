@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System.Collections.Generic;
+using System.IO;
 using FastTests;
 using Orders;
 using Raven.Client.Documents.Indexes;

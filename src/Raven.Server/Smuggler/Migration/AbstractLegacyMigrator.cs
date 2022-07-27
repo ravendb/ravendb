@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Security;
 using Raven.Server.Documents;
 using Raven.Server.Json;

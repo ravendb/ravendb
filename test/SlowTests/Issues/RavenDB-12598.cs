@@ -1,9 +1,10 @@
-﻿using Tests.Infrastructure;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Changes;
+using Tests.Infrastructure;
 using Xunit;
 using FastTests;
 using Raven.Client.Documents.Conventions;

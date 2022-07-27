@@ -1,10 +1,11 @@
-﻿using Tests.Infrastructure;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using FastTests;
+using Tests.Infrastructure;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
+using Raven.Server.Documents.Indexes.Static;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;

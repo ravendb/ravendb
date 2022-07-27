@@ -2,6 +2,8 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using Org.BouncyCastle.Asn1.X509.Qualified;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.ServerWide.JavaScript;
 using Xunit;
 

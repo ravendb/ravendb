@@ -1,5 +1,5 @@
-﻿using Tests.Infrastructure;
-using FastTests;
+﻿using FastTests;
+using Tests.Infrastructure;
 using Newtonsoft.Json.Linq;
 using Raven.Client;
 using Xunit;

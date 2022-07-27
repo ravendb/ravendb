@@ -1,5 +1,4 @@
-﻿using Tests.Infrastructure;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -26,6 +25,7 @@ using Raven.Server.Documents;
 using Raven.Server.Web;
 using Raven.Server.Web.System;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 using Xunit.Sdk;

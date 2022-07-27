@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
+using FastTests.Client;
 using FastTests.Client.Subscriptions;
 using Orders;
 using Raven.Client.Documents.Operations;

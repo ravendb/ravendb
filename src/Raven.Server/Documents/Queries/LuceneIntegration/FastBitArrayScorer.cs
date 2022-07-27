@@ -1,5 +1,6 @@
 ﻿using System.Buffers;
 using System.Collections.Generic;
+using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
 

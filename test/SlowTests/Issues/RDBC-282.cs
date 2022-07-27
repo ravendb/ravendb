@@ -1,5 +1,4 @@
-﻿using Tests.Infrastructure;
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
@@ -8,6 +7,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Changes;
 using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

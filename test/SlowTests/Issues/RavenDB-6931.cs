@@ -1,6 +1,10 @@
-﻿using System.IO;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Text;
 using FastTests;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Attachments;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;

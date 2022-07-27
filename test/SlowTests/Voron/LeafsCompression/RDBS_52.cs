@@ -1,6 +1,9 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using FastTests.Voron;
+using Voron;
 using Voron.Data.BTrees;
+using Voron.Debugging;
 using Voron.Global;
 using Xunit;
 using Xunit.Abstractions;

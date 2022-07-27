@@ -4,6 +4,7 @@ using FastTests;
 using Orders;
 using Raven.Client.Documents.Indexes.Counters;
 using Raven.Client.Documents.Indexes.TimeSeries;
+using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 using Xunit.Abstractions;

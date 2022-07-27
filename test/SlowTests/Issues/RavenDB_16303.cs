@@ -1,5 +1,4 @@
-﻿using Tests.Infrastructure;
-using System;
+﻿using System;
 using System.Data.SqlClient;
 using System.Threading;
 using MySql.Data.MySqlClient;
@@ -10,6 +9,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Server.SqlMigration;
 using SlowTests.Server.Documents.Migration;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

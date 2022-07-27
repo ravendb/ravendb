@@ -17,6 +17,7 @@ using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Json.Sync;
+using Sparrow.Server.Json.Sync;
 
 namespace Raven.Server.Web.System
 {

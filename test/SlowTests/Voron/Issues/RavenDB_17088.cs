@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using FastTests.Voron;
 using Voron;
 using Xunit;

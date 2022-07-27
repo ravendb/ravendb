@@ -1,5 +1,4 @@
-﻿using Tests.Infrastructure;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -11,6 +10,7 @@ using Raven.Server;
 using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
 using StressTests.Issues;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

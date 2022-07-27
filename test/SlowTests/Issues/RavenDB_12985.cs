@@ -1,7 +1,7 @@
-﻿using Tests.Infrastructure;
-using System;
+﻿using System;
 using System.Linq;
 using FastTests;
+using Tests.Infrastructure;
 using Orders;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;

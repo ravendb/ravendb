@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Orders;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Revisions;

@@ -1,9 +1,14 @@
-﻿using Tests.Infrastructure;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using Tests.Infrastructure;
+using Newtonsoft.Json;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
 using Xunit.Abstractions;

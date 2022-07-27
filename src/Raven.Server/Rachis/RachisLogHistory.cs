@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
+using System.Threading;
 using Jint.Native;
+using Raven.Client.ServerWide.JavaScript;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents.Patch.Jint;

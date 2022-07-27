@@ -4,6 +4,7 @@ using Orders;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using System.Linq;
+using System.Threading;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using SlowTests.Core.Utils.Indexes;

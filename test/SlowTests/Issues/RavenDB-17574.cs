@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using FastTests;
+using FastTests.Client;
 using Orders;
 using Raven.Client.Documents;
 using Xunit;

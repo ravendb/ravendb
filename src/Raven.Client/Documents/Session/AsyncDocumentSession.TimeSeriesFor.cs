@@ -4,6 +4,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
+using System.IO;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Documents.TimeSeries;

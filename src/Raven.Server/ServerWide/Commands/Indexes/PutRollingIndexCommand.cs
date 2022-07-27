@@ -4,6 +4,9 @@ using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
+using Raven.Server.Rachis;
+using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.Indexes

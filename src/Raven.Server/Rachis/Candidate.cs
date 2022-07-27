@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Server.ServerWide.Context;
+using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Server.Rachis.Remote;

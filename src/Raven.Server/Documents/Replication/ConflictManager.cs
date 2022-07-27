@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.ServerWide.Context;

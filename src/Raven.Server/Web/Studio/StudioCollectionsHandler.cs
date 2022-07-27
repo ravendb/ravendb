@@ -1,4 +1,5 @@
 ﻿using System.Threading.Tasks;
+using Raven.Client.Documents.Operations;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers.Processors.Studio;
 using Raven.Server.Routing;

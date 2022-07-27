@@ -1,11 +1,11 @@
-﻿using Tests.Infrastructure;
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Tests.Infrastructure;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Queries;
@@ -20,6 +20,7 @@ using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Server;
 using Sparrow.Json;
 using Sparrow.Platform;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

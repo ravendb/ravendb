@@ -12,6 +12,7 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 using Xunit;

@@ -8,14 +8,17 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
+using Raven.Server.Documents.Handlers.Admin.Processors.Indexes;
 using Raven.Server.Documents.Handlers.Processors.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Json;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Index = Raven.Server.Documents.Indexes.Index;
 

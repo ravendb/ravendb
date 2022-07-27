@@ -1,5 +1,4 @@
-﻿using Tests.Infrastructure;
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="CoreTestServer.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -14,6 +13,7 @@ using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Operations.Identities;
 using Raven.Client.ServerWide.Operations;
 using SlowTests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Core.Commands

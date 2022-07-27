@@ -2,6 +2,7 @@
 using System.IO;
 using Sparrow.Json;
 using Sparrow.Json.Sync;
+using Sparrow.Server.Json.Sync;
 
 namespace Raven.Server.Rachis.Json.Sync
 {

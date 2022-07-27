@@ -5,6 +5,7 @@ using Raven.Client;
 using Raven.Server.Documents;
 using Sparrow;
 using Sparrow.Json;
+using Raven.Server.Config.Categories;
 using Raven.Server.Utils;
 
 namespace Raven.Server.Json

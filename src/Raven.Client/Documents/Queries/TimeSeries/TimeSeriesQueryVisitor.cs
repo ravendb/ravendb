@@ -8,6 +8,7 @@ using System.Text;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
+using Raven.Client.Util;
 using Sparrow;
 using Sparrow.Extensions;
 

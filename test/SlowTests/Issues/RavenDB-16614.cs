@@ -4,7 +4,9 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using FastTests;
 using FastTests.Server.Replication;
+using Raven.Client;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
@@ -13,6 +15,7 @@ using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide.Commands;
+using Raven.Server.Utils;
 using Xunit;
 using Xunit.Abstractions;
 
