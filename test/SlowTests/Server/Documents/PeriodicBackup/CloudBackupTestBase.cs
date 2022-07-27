@@ -4,6 +4,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Config;
+using Raven.Server.Config.Categories;
 using Raven.Server.ServerWide;
 using Xunit.Abstractions;
 

@@ -1,4 +1,6 @@
-﻿using Raven.Server.ServerWide.Context;
+﻿using System.Runtime.ExceptionServices;
+using Raven.Client.Exceptions;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.TransactionCommands

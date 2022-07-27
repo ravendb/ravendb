@@ -9,6 +9,7 @@ using Amazon.Glacier.Model;
 using Amazon.Runtime;
 using Amazon.Runtime.Internal.Util;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Server.Config.Categories;
 using Sparrow;
 using Sparrow.Binary;
 

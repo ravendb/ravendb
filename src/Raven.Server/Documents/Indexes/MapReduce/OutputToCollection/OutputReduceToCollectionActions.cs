@@ -15,7 +15,6 @@ using Sparrow.Server.Exceptions;
 using Voron;
 using Voron.Data.BTrees;
 using Voron.Impl;
-using Raven.Server.Config.Categories;
 
 namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 {

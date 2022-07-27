@@ -3,16 +3,13 @@ using System.Collections;
 using System.Collections.Generic;
 using Sparrow;
 using Sparrow.Json;
-using Raven.Server.Config.Categories;
 
 namespace Raven.Server.Json
 {
     public class BlittableJsonTraverser
     {
         public static BlittableJsonTraverser Default = new BlittableJsonTraverser();
-
-        // map-reduce results have always a flat structure, let's ignore separators
-        public static BlittableJsonTraverser FlatMapReduceResults = new BlittableJsonTraverser(new char[] { });
+        public static BlittableJsonTraverser FlatMapReduceResults = new BlittableJsonTraverser(new char[] { }); // map-reduce results have always a flat structure, let's ignore separators
 
         private const char PropertySeparator = '.';
         private const char CollectionSeparatorStartBracket = '[';

@@ -11,7 +11,6 @@ using Raven.Server.Utils;
 using Raven.Server.Utils.Stats;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Raven.Server.Config.Categories;
 
 namespace Raven.Server.Documents.Replication.Stats
 {
@@ -93,7 +92,7 @@ namespace Raven.Server.Documents.Replication.Stats
                 {
                     stats = new IncomingReplicationPerformanceStats[] { new IncomingReplicationPerformanceStats() };
                 }
-
+                
                 yield return handler is IncomingPullReplicationHandler
                     ? IncomingPerformanceStats.ForPullReplication(handler.ConnectionInfo.SourceDatabaseId, handler.SourceFormatted, stats)
                     : IncomingPerformanceStats.ForPushReplication(handler.ConnectionInfo.SourceDatabaseId, handler.GetReplicationPerformanceType(), handler.SourceFormatted, stats);
@@ -305,7 +304,6 @@ namespace Raven.Server.Documents.Replication.Stats
         public abstract class ReplicationPerformanceStatsBase<TPerformance> : IReplicationPerformanceStats
             where TPerformance : ReplicationPerformanceBase
         {
-
             protected ReplicationPerformanceStatsBase(string id, string description, ReplicationPerformanceType type, TPerformance[] performance)
             {
                 Id = id;

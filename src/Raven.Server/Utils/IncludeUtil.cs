@@ -5,7 +5,6 @@ using System.Globalization;
 using Raven.Server.Json;
 using Sparrow;
 using Sparrow.Json;
-using Raven.Server.Config.Categories;
 
 namespace Raven.Server.Utils
 {
@@ -36,21 +35,13 @@ namespace Raven.Server.Utils
             }
         }
 
-        public static void GetDocIdFromInclude(
-            BlittableJsonReaderObject docReader, 
-            StringSegment includePath, 
-            HashSet<string> includedIds, 
-            char identityPartsSeparator)
+        public static void GetDocIdFromInclude(BlittableJsonReaderObject docReader, StringSegment includePath, HashSet<string> includedIds, char identityPartsSeparator)
         {
             var op = new HashSetIncludeOp(includedIds);
             GetDocIdFromInclude(docReader, includePath, identityPartsSeparator, op);
         }
 
-        public static void GetDocIdFromInclude<TIncludeOp>(
-            BlittableJsonReaderObject docReader, 
-            StringSegment includePath, 
-            char identityPartsSeparator, 
-            TIncludeOp op)
+        public static void GetDocIdFromInclude<TIncludeOp>(BlittableJsonReaderObject docReader, StringSegment includePath, char identityPartsSeparator, TIncludeOp op)
             where TIncludeOp : struct, IIncludeOp
         {
             Func<object, StringSegment, char, string> valueHandler = null;

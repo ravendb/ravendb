@@ -1,14 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Text;
 using System.Threading;
-using Jint.Native;
-using Raven.Client.ServerWide.JavaScript;
 using Raven.Client.Util;
 using Raven.Server.Config;
-using Raven.Server.Documents.Patch.Jint;
-using Raven.Server.Documents.Patch.V8;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
@@ -18,7 +13,6 @@ using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
-using V8.Net;
 using Voron;
 using Voron.Data.Tables;
 using Voron.Impl;
@@ -194,11 +188,6 @@ namespace Raven.Server.Rachis
                     return;
             }
 
-            //TODO: egor remove those checks
-            Debug.Assert(result is not JsHandleJint);
-            Debug.Assert(result is not JsHandleV8);
-            Debug.Assert(result is not JsValue);
-            Debug.Assert(result is not InternalHandle);
             if (TypeConverter.IsSupportedType(result) == false)
             {
                 throw new RachisApplyException("We don't support type " + result.GetType().FullName + ".");

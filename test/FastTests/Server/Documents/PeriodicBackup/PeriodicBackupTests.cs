@@ -10,6 +10,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Server.Config.Categories;
 using Xunit;
 using Xunit.Abstractions;
 using BackupConfiguration = Raven.Server.Config.Categories.BackupConfiguration;

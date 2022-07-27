@@ -5,7 +5,6 @@ using Raven.Client.ServerWide;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
-using Raven.Client.ServerWide.JavaScript;
 
 namespace Raven.Server.ServerWide.Commands.Indexes
 {
