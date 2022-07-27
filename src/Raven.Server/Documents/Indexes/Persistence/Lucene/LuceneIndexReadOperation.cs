@@ -88,7 +88,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             // The reason why we keep distincts counts here, is because at the Lucene level there is no sorting unique accesse like we have 
             // in Corax with the SortingMatch. We have to know the page size to account for that. 
-            var pageSize = query.PageSize; //TODO stav: obsolete?
+            var pageSize = query.PageSize;
             var isDistinctCount = pageSize == 0 && query.Metadata.IsDistinct;
             if (isDistinctCount)
                 pageSize = int.MaxValue;
@@ -96,7 +96,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             pageSize = LuceneGetPageSize(_searcher, pageSize);
 
             var docsToGet = pageSize;
-            var position = query.Start; //TODO stav: obsolete?
+            var position = query.Start;
 
             QueryTimingsScope luceneScope = null;
             QueryTimingsScope highlightingScope = null;

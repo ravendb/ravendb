@@ -260,6 +260,14 @@ public class ShardedQueryProcessor : IDisposable
         CreateQueryCommands(cmds, queryTemplates, indexName: null);
     }
 
+    private static IEnumerable<string> GetStringEnumerableFromSliceList(List<Slice> list)
+    {
+        foreach (var slice in list)
+        {
+            yield return slice.ToString();
+        }
+    }
+
     public async Task ExecuteShardedOperations()
     {
         var tasks = new List<Task>();

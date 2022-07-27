@@ -8,6 +8,16 @@ namespace Raven.Server.Web
     {
         internal void TrafficWatchQuery(IndexQueryServerSide indexQuery)
         {
+            TrafficWatchQuery(indexQuery, TrafficWatchChangeType.Queries);
+        }
+
+        internal void TrafficWatchStreamQuery(IndexQueryServerSide indexQuery)
+        {
+            TrafficWatchQuery(indexQuery, TrafficWatchChangeType.Streams);
+        }
+
+        private void TrafficWatchQuery(IndexQueryServerSide indexQuery, TrafficWatchChangeType type)
+        {
             var sb = new StringBuilder();
 
             // append stringBuilder with the query
@@ -16,7 +26,7 @@ namespace Raven.Server.Web
             if (indexQuery.QueryParameters != null && indexQuery.QueryParameters.Count > 0)
                 sb.AppendLine().Append(indexQuery.QueryParameters);
 
-            AddStringToHttpContext(sb.ToString(), TrafficWatchChangeType.Queries);
+            AddStringToHttpContext(sb.ToString(), type);
         }
     }
 }
