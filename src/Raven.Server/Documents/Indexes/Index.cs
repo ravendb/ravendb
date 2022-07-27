@@ -3106,6 +3106,9 @@ namespace Raven.Server.Documents.Indexes
 
                         FillQueryResult(resultToFill, isStale, query.Metadata, queryContext, indexContext);
 
+                        var allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
+                        var threadBefore = NativeMemory.CurrentThreadStats.ManagedThreadId;
+
                         using (var reader = IndexPersistence.OpenIndexReader(indexTx.InnerTransaction))
                         {
                             using (var queryScope = query.Timings?.For(nameof(QueryTimingsScope.Names.Query)))
@@ -3287,6 +3290,12 @@ namespace Raven.Server.Documents.Indexes
                                 if (query.Metadata.FilterScript != null)
                                 {
                                     resultToFill.ScannedResults = scannedResults.Value;
+                                }
+
+                                var after = GC.GetAllocatedBytesForCurrentThread();
+                                if (_logger.IsOperationsEnabled && after - allocatedBefore > 0 && threadBefore == NativeMemory.CurrentThreadStats.ManagedThreadId)
+                                {
+                                    _logger.Operations($"Query for index {Name} for: {query.Metadata.Query}, allocated: {new Size(after - allocatedBefore, SizeUnit.Bytes)}");
                                 }
                             }
                         }
