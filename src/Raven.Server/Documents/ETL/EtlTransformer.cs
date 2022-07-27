@@ -7,116 +7,63 @@ using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Patch;
-using Raven.Server.Documents.Patch.Jint;
-using Raven.Server.Documents.Patch.V8;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.ETL
 {
-    public interface IEtlTransformer<TExtracted, TTransformed, TStatsScope> : IDisposable
-    {
-        public IEnumerable<TTransformed> GetTransformedResults();
-        public void Transform(TExtracted item, TStatsScope stats, EtlProcessState state);
-        public void Initialize(bool debugMode);
-        public List<string> GetDebugOutput();
-    }
     public abstract class EtlTransformer<TExtracted, TTransformed, TStatsScope, TEtlPerformanceOperation, T> : IEtlTransformer<TExtracted, TTransformed, TStatsScope>
         where TExtracted : ExtractedItem
         where TStatsScope : AbstractEtlStatsScope<TStatsScope, TEtlPerformanceOperation>
         where TEtlPerformanceOperation : EtlPerformanceOperation
         where T : struct, IJsHandle<T>
     {
-        public IJsEngineHandle<T> BehaviorsEngineHandle;
-        public IJsEngineHandle<T> DocumentEngineHandle;
 
+        public IJsEngineHandle<T> EngineHandle;
         public DocumentDatabase Database { get; }
         protected readonly DocumentsOperationContext Context;
         protected readonly PatchRequest _mainScript;
-        protected readonly PatchRequest _behaviorFunctions;
         protected SingleRun<T> DocumentScript;
-        protected SingleRun<T> BehaviorsScript;
 
         protected TExtracted Current;
 
         protected ReturnRun _returnMainRun;
-        protected ReturnRun _behaviorFunctionsRun;
 
         protected EtlTransformer(DocumentDatabase database, DocumentsOperationContext context,
-            PatchRequest mainScript, PatchRequest behaviorFunctions)
+            PatchRequest mainScript)
         {
             Database = database;
             Context = context;
             _mainScript = mainScript;
-            _behaviorFunctions = behaviorFunctions;
         }
+
+        public abstract ReturnRun CreateDocumentScriptRunner(bool debugMode, out SingleRun<T> documentScript);
 
         public virtual void Initialize(bool debugMode)
         {
-            if (debugMode)
+            _returnMainRun = CreateDocumentScriptRunner(debugMode, out DocumentScript);
+            if (DocumentScript == null) //TODO: egor redundant ?
+                return;
+
+            EngineHandle = DocumentScript.EngineHandle;
+            EngineHandle.SetGlobalClrCallBack(Transformation.LoadTo, LoadToFunctionTranslator);
+            foreach (var collection in LoadToDestinations)
             {
-                if (BehaviorsScript != null)
-                    BehaviorsScript.DebugMode = true;
-                if (DocumentScript != null)
-                    DocumentScript.DebugMode = true;
+                EngineHandle.SetGlobalClrCallBack($"{Transformation.LoadTo}{collection}", (value, values) => LoadToFunctionTranslator(collection, value, values));
             }
 
-            DocumentEngineHandle = DocumentScript?.EngineHandle;
-            BehaviorsEngineHandle = BehaviorsScript?.EngineHandle;
-
-            if (DocumentEngineHandle != null)
-            {
-                lock (DocumentEngineHandle)
-                {
-                    DocumentEngineHandle.SetGlobalClrCallBack(Transformation.LoadAttachment, LoadAttachment);
-                    DocumentEngineHandle.SetGlobalClrCallBack(Transformation.CountersTransformation.Load, LoadCounter);
-                    DocumentEngineHandle.SetGlobalClrCallBack(Transformation.TimeSeriesTransformation.LoadTimeSeries.Name, LoadTimeSeries);
-                    DocumentEngineHandle.SetGlobalClrCallBack("getAttachments", GetAttachments);
-                    DocumentEngineHandle.SetGlobalClrCallBack("hasAttachment", HasAttachment);
-                    DocumentEngineHandle.SetGlobalClrCallBack("getCounters", GetCounters);
-                    DocumentEngineHandle.SetGlobalClrCallBack("hasCounter", HasCounter);
-                    DocumentEngineHandle.SetGlobalClrCallBack(Transformation.TimeSeriesTransformation.HasTimeSeries.Name, HasTimeSeries);
-                    DocumentEngineHandle.SetGlobalClrCallBack(Transformation.TimeSeriesTransformation.GetTimeSeries.Name, GetTimeSeries);
-
-                    DocumentEngineHandle.SetGlobalClrCallBack(Transformation.LoadTo, LoadToFunctionTranslator);
-
-                    foreach (var collection in LoadToDestinations)
-                    {
-                        DocumentEngineHandle.SetGlobalClrCallBack($"{Transformation.LoadTo}{collection}", (value, values) => LoadToFunctionTranslator(collection, value, values));
-                    }
-
-                    DocumentScript.ExecuteScriptsSource();
-                }
-            }
-
-            //TODO: egor redundant?
-            //if (BehaviorsEngineHandle != null)
-            //{
-            //    lock (BehaviorsEngineHandle)
-            //    {
-            //        BehaviorsScript.SetContext();
-
-            //        foreach (var collection in LoadToDestinations)
-            //        {
-            //            var name = Transformation.LoadTo + collection;
-            //            BehaviorsEngineHandle.SetGlobalClrCallBack(name, (StubJint, StubV8));
-            //        }
-
-            //        BehaviorsEngineHandle.SetGlobalClrCallBack(loadAttachment, (StubJint, StubV8));
-            //        BehaviorsEngineHandle.SetGlobalClrCallBack(loadCounter, (StubJint, StubV8));
-            //        BehaviorsEngineHandle.SetGlobalClrCallBack(loadTimeSeries, (StubJint, StubV8));
-            //        BehaviorsEngineHandle.SetGlobalClrCallBack(getAttachments, (StubJint, StubV8));
-            //        BehaviorsEngineHandle.SetGlobalClrCallBack(hasAttachment, (StubJint, StubV8));
-            //        BehaviorsEngineHandle.SetGlobalClrCallBack(getCounters, (StubJint, StubV8));
-            //        BehaviorsEngineHandle.SetGlobalClrCallBack(hasCounter, (StubJint, StubV8));
-            //        BehaviorsEngineHandle.SetGlobalClrCallBack(hasTimeSeries, (StubJint, StubV8));
-            //        BehaviorsEngineHandle.SetGlobalClrCallBack(getTimeSeries, (StubJint, StubV8));
-
-            //        BehaviorsScript.ExecuteScriptsSource();
-            //    }
-            //}
+            EngineHandle.SetGlobalClrCallBack(Transformation.LoadAttachment, LoadAttachment);
+            EngineHandle.SetGlobalClrCallBack(Transformation.CountersTransformation.Load, LoadCounter);
+            EngineHandle.SetGlobalClrCallBack(Transformation.TimeSeriesTransformation.LoadTimeSeries.Name, LoadTimeSeries);
+            EngineHandle.SetGlobalClrCallBack("getAttachments", GetAttachments);
+            EngineHandle.SetGlobalClrCallBack("hasAttachment", HasAttachment);
+            EngineHandle.SetGlobalClrCallBack("getCounters", GetCounters);
+            EngineHandle.SetGlobalClrCallBack("hasCounter", HasCounter);
+            EngineHandle.SetGlobalClrCallBack(Transformation.TimeSeriesTransformation.HasTimeSeries.Name, HasTimeSeries);
+            EngineHandle.SetGlobalClrCallBack(Transformation.TimeSeriesTransformation.GetTimeSeries.Name, GetTimeSeries);
         }
+
         private T LoadToFunctionTranslator(T self, T[] args)
         {
             if (args.Length != 2)
@@ -129,7 +76,6 @@ namespace Raven.Server.Documents.ETL
             // explicitly not disposing here, this will clear the context from the JavaScriptUtils, but this is 
             // called _midway_ through the script, so that is not something that we want to do. The caller will
             // already be calling that.
-
 
             var result = CreateScriptRunnerResult(args[1].AsObject());
             LoadToFunction(args[0].AsString, result);
@@ -167,13 +113,13 @@ namespace Raven.Server.Documents.ETL
                 var attachment = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(Context, Current.DocumentId, attachmentName, AttachmentType.Document, null);
 
                 if (attachment == null)
-                    return DocumentEngineHandle.Null;
+                    return EngineHandle.Null;
 
                 AddLoadedAttachment(loadAttachmentReference, attachmentName, attachment);
             }
             else
             {
-                return DocumentEngineHandle.Null;
+                return EngineHandle.Null;
             }
 
             return loadAttachmentReference;
@@ -181,7 +127,7 @@ namespace Raven.Server.Documents.ETL
 
         private T CreateLoadAttachmentReference(string attachmentName)
         {
-            return DocumentEngineHandle.CreateValue($"{Transformation.AttachmentMarker}{attachmentName}{Guid.NewGuid():N}");
+            return EngineHandle.CreateValue($"{Transformation.AttachmentMarker}{attachmentName}{Guid.NewGuid():N}");
         }
 
         private T LoadCounter(T self, T[] args)
@@ -197,13 +143,13 @@ namespace Raven.Server.Documents.ETL
                 var value = Database.DocumentsStorage.CountersStorage.GetCounterValue(Context, Current.DocumentId, counterName);
 
                 if (value == null)
-                    return DocumentEngineHandle.Null;
+                    return EngineHandle.Null;
 
                 AddLoadedCounter(loadCounterReference, counterName, value.Value.Value);
             }
             else
             {
-                return DocumentEngineHandle.Null;
+                return EngineHandle.Null;
             }
 
             return loadCounterReference;
@@ -211,13 +157,13 @@ namespace Raven.Server.Documents.ETL
 
         private T CreateLoadCounterReference(string counterName)
         {
-            return DocumentEngineHandle.CreateValue(Transformation.CountersTransformation.Marker + counterName);
+            return EngineHandle.CreateValue(Transformation.CountersTransformation.Marker + counterName);
         }
 
         private T LoadTimeSeries(T self, T[] args)
         {
             if ((Current.Document.Flags & DocumentFlags.HasTimeSeries) == DocumentFlags.HasTimeSeries == false)
-                return DocumentEngineHandle.Null;
+                return EngineHandle.Null;
 
             const int minParamsCount = Transformation.TimeSeriesTransformation.LoadTimeSeries.MinParamsCount;
             const int maxParamsCount = Transformation.TimeSeriesTransformation.LoadTimeSeries.MaxParamsCount;
@@ -237,7 +183,7 @@ namespace Raven.Server.Documents.ETL
 
             var reader = Database.DocumentsStorage.TimeSeriesStorage.GetReader(Context, Current.DocumentId, timeSeriesName, from, to);
             if (reader.AllValues().Any() == false)
-                return DocumentEngineHandle.Null;
+                return EngineHandle.Null;
 
             AddLoadedTimeSeries(loadTimeSeriesReference, timeSeriesName, reader.AllValues());
 
@@ -246,7 +192,7 @@ namespace Raven.Server.Documents.ETL
 
         private T CreateLoadTimeSeriesReference(string timeSeriesName, DateTime from, DateTime to)
         {
-            return DocumentEngineHandle.CreateValue(Transformation.TimeSeriesTransformation.Marker + timeSeriesName + from.Ticks + ':' + to.Ticks);
+            return EngineHandle.CreateValue(Transformation.TimeSeriesTransformation.Marker + timeSeriesName + from.Ticks + ':' + to.Ticks);
         }
 
         private T GetAttachments(T self, T[] args)
@@ -257,7 +203,7 @@ namespace Raven.Server.Documents.ETL
             if (Current.Document.TryGetMetadata(out var metadata) == false ||
                 metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachmentsBlittableArray) == false)
             {
-                return DocumentEngineHandle.CreateEmptyArray();
+                return EngineHandle.CreateEmptyArray();
             }
 
             var attachments = new T[attachmentsBlittableArray.Length];
@@ -267,7 +213,7 @@ namespace Raven.Server.Documents.ETL
                 attachments[i] = (T)DocumentScript.Translate(Context, attachmentsBlittableArray[i]);
             }
 
-            return DocumentEngineHandle.CreateArray(attachments);
+            return EngineHandle.CreateArray(attachments);
         }
 
         private T HasAttachment(T self, T[] args)
@@ -276,12 +222,12 @@ namespace Raven.Server.Documents.ETL
                 ThrowInvalidScriptMethodCall("hasAttachment(name) must be called with one argument (string)");
 
             if ((Current.Document.Flags & DocumentFlags.HasAttachments) != DocumentFlags.HasAttachments)
-                return DocumentEngineHandle.CreateValue(false);
+                return EngineHandle.CreateValue(false);
 
             if (Current.Document.TryGetMetadata(out var metadata) == false ||
                 metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
             {
-                return DocumentEngineHandle.CreateValue(false);
+                return EngineHandle.CreateValue(false);
             }
 
             var checkedName = args[0].AsString;
@@ -292,11 +238,11 @@ namespace Raven.Server.Documents.ETL
 
                 if (attachmentInfo.TryGet(nameof(AttachmentName.Name), out string name) && checkedName.Equals(name, StringComparison.OrdinalIgnoreCase))
                 {
-                    return DocumentEngineHandle.CreateValue(true);
+                    return EngineHandle.CreateValue(true);
                 }
             }
 
-            return DocumentEngineHandle.CreateValue(false);
+            return EngineHandle.CreateValue(false);
         }
 
         private T GetCounters(T self, T[] args)
@@ -307,7 +253,7 @@ namespace Raven.Server.Documents.ETL
             if (Current.Document.TryGetMetadata(out var metadata) == false ||
                 metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray countersArray) == false)
             {
-                return DocumentEngineHandle.CreateEmptyArray();
+                return EngineHandle.CreateEmptyArray();
             }
 
             var counters = new T[countersArray.Length];
@@ -317,7 +263,7 @@ namespace Raven.Server.Documents.ETL
                 counters[i] = (T)DocumentScript.Translate(Context, countersArray[i]);
             }
 
-            return DocumentEngineHandle.CreateArray(counters);
+            return EngineHandle.CreateArray(counters);
         }
 
         private T HasCounter(T self, T[] args)
@@ -326,12 +272,12 @@ namespace Raven.Server.Documents.ETL
                 ThrowInvalidScriptMethodCall("hasCounter(name) must be called with one argument (string)");
 
             if ((Current.Document.Flags & DocumentFlags.HasCounters) != DocumentFlags.HasCounters)
-                return DocumentEngineHandle.CreateValue(false);
+                return EngineHandle.CreateValue(false);
 
             if (Current.Document.TryGetMetadata(out var metadata) == false ||
                 metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray counters) == false)
             {
-                return DocumentEngineHandle.CreateValue(false);
+                return EngineHandle.CreateValue(false);
             }
 
             var checkedName = args[0].AsString;
@@ -341,10 +287,10 @@ namespace Raven.Server.Documents.ETL
                 var counterName = (LazyStringValue)counter;
 
                 if (checkedName.Equals(counterName, StringComparison.OrdinalIgnoreCase))
-                    return DocumentEngineHandle.CreateValue(true);
+                    return EngineHandle.CreateValue(true);
             }
 
-            return DocumentEngineHandle.CreateValue(false);
+            return EngineHandle.CreateValue(false);
         }
 
         private T GetTimeSeries(T self, T[] args)
@@ -356,12 +302,12 @@ namespace Raven.Server.Documents.ETL
                 ThrowInvalidScriptMethodCall($"{signature} must be called without any argument");
 
             if ((Current.Document.Flags & DocumentFlags.HasTimeSeries) != DocumentFlags.HasTimeSeries)
-                return DocumentEngineHandle.CreateValue(false);
+                return EngineHandle.CreateValue(false);
 
             if (Current.Document.TryGetMetadata(out var metadata) == false ||
                 metadata.TryGet(Constants.Documents.Metadata.TimeSeries, out BlittableJsonReaderArray timeSeriesArray) == false)
             {
-                return DocumentEngineHandle.CreateEmptyArray();
+                return EngineHandle.CreateEmptyArray();
             }
 
             var timeSeriesNames = new T[timeSeriesArray.Length];
@@ -369,7 +315,7 @@ namespace Raven.Server.Documents.ETL
             {
                 timeSeriesNames[i] = (T)DocumentScript.Translate(Context, timeSeriesArray[i]);
             }
-            return DocumentEngineHandle.CreateArray(timeSeriesNames);
+            return EngineHandle.CreateArray(timeSeriesNames);
         }
 
         private T HasTimeSeries(T self, T[] args)
@@ -381,12 +327,12 @@ namespace Raven.Server.Documents.ETL
                 ThrowInvalidScriptMethodCall($"{signature} must be called with one argument (string)");
 
             if ((Current.Document.Flags & DocumentFlags.HasTimeSeries) != DocumentFlags.HasTimeSeries)
-                return DocumentEngineHandle.CreateValue(false);
+                return EngineHandle.CreateValue(false);
 
             if (Current.Document.TryGetMetadata(out var metadata) == false ||
                 metadata.TryGet(Constants.Documents.Metadata.TimeSeries, out BlittableJsonReaderArray timeSeriesNames) == false)
             {
-                return DocumentEngineHandle.CreateValue(false);
+                return EngineHandle.CreateValue(false);
             }
 
             var checkedName = args[0].AsString;
@@ -395,10 +341,10 @@ namespace Raven.Server.Documents.ETL
             {
                 var counterName = (LazyStringValue)timeSeries;
                 if (checkedName.Equals(counterName, StringComparison.OrdinalIgnoreCase))
-                    return DocumentEngineHandle.CreateValue(true);
+                    return EngineHandle.CreateValue(true);
             }
 
-            return DocumentEngineHandle.CreateValue(false);
+            return EngineHandle.CreateValue(false);
         }
 
         protected abstract string[] LoadToDestinations { get; }
@@ -422,64 +368,17 @@ namespace Raven.Server.Documents.ETL
 
         public virtual void Dispose()
         {
-            using (_returnMainRun)
-            using (_behaviorFunctionsRun)
-            {
-
-            }
+           _returnMainRun.Dispose();
         }
 
-        public List<string> GetDebugOutput()
+        public virtual List<string> GetDebugOutput()
         {
             var outputs = new List<string>();
 
             if (DocumentScript?.DebugOutput != null)
                 outputs.AddRange(DocumentScript.DebugOutput);
 
-            if (BehaviorsScript?.DebugOutput != null)
-                outputs.AddRange(BehaviorsScript.DebugOutput);
-
             return outputs;
-        }
-    }
-
-    public abstract class EtlTransformerJint<TExtracted, TTransformed, TStatsScope, TEtlPerformanceOperation> : EtlTransformer<TExtracted, TTransformed, TStatsScope, TEtlPerformanceOperation, JsHandleJint>
-        where TExtracted : ExtractedItem
-        where TStatsScope : AbstractEtlStatsScope<TStatsScope, TEtlPerformanceOperation>
-        where TEtlPerformanceOperation : EtlPerformanceOperation
-    {
-        protected EtlTransformerJint(DocumentDatabase database, DocumentsOperationContext context, PatchRequest mainScript, PatchRequest behaviorFunctions)
-            : base(database, context, mainScript, behaviorFunctions)
-        {
-            if (_behaviorFunctions != null)
-                _behaviorFunctionsRun = Database.Scripts.GetScriptRunnerJint(_behaviorFunctions, readOnly: true, out BehaviorsScript, executeScriptsSource: false);
-
-            _returnMainRun = Database.Scripts.GetScriptRunnerJint(_mainScript, readOnly: true, out DocumentScript, executeScriptsSource: false);
-        }
-
-        protected override ScriptRunnerResult<JsHandleJint> CreateScriptRunnerResult(object obj)
-        {
-            return new ScriptRunnerResultJint(DocumentScript, DocumentEngineHandle.FromObjectGen(obj, keepAlive: false)); //TODO: egor true/false?
-        }
-    }
-
-    public abstract class EtlTransformerV8<TExtracted, TTransformed, TStatsScope, TEtlPerformanceOperation> : EtlTransformer<TExtracted, TTransformed, TStatsScope, TEtlPerformanceOperation, JsHandleV8>
-        where TExtracted : ExtractedItem
-        where TStatsScope : AbstractEtlStatsScope<TStatsScope, TEtlPerformanceOperation>
-        where TEtlPerformanceOperation : EtlPerformanceOperation
-    {
-        protected EtlTransformerV8(DocumentDatabase database, DocumentsOperationContext context, PatchRequest mainScript, PatchRequest behaviorFunctions)
-            : base(database, context, mainScript, behaviorFunctions)
-        {
-            if (_behaviorFunctions != null)
-                _behaviorFunctionsRun = Database.Scripts.GetScriptRunnerV8(_behaviorFunctions, readOnly: true, out BehaviorsScript, executeScriptsSource: false);
-
-            _returnMainRun = Database.Scripts.GetScriptRunnerV8(_mainScript, readOnly: true, out DocumentScript, executeScriptsSource: false);
-        }
-
-        protected override ScriptRunnerResult<JsHandleV8> CreateScriptRunnerResult(object obj)
-        {
-            return new ScriptRunnerResultV8(DocumentScript, DocumentEngineHandle.FromObjectGen(obj, keepAlive: false)); //TODO: egor true/false?
         }
     }
 }

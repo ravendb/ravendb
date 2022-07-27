@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
         private readonly List<ElasticSearchIndex> _indexesForScript;
 
         public ElasticSearchDocumentTransformerV8(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, ElasticSearchEtlConfiguration config)
-            : base(database, context, new PatchRequest(transformation.Script, PatchRequestType.ElasticSearchEtl), null)
+            : base(database, context, new PatchRequest(transformation.Script, PatchRequestType.ElasticSearchEtl))
         {
             _config = config;
 

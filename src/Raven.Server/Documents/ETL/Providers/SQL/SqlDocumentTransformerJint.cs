@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
         private EtlStatsScope _stats;
 
         public SqlDocumentTransformerJint(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, SqlEtlConfiguration config)
-            : base(database, context, new PatchRequest(transformation.Script, PatchRequestType.SqlEtl), null)
+            : base(database, context, new PatchRequest(transformation.Script, PatchRequestType.SqlEtl))
         {
             _transformation = transformation;
             _config = config;
@@ -54,8 +54,8 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
         {
             base.Initialize(debugMode);
 
-            DocumentEngineHandle.SetGlobalClrCallBack("varchar", (_, values) => ToVarcharTranslator(DocumentEngineHandle.CreateValue(VarcharFunctionCall.AnsiStringType), values));
-            DocumentEngineHandle.SetGlobalClrCallBack("nvarchar", (_, values) => ToVarcharTranslator(DocumentEngineHandle.CreateValue(VarcharFunctionCall.StringType), values));
+            EngineHandle.SetGlobalClrCallBack("varchar", (_, values) => ToVarcharTranslator(EngineHandle.CreateValue(VarcharFunctionCall.AnsiStringType), values));
+            EngineHandle.SetGlobalClrCallBack("nvarchar", (_, values) => ToVarcharTranslator(EngineHandle.CreateValue(VarcharFunctionCall.StringType), values));
         }
 
         private JsHandleJint ToVarcharTranslator(JsHandleJint type, JsHandleJint[] args)
@@ -68,10 +68,10 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             if (sizeSpecified && args[1].IsNumber == false)
                 throw new InvalidOperationException("varchar() / nvarchar(): second argument must be a number");
 
-            var item = DocumentEngineHandle.CreateObject();
+            var item = EngineHandle.CreateObject();
             item.SetProperty(nameof(VarcharFunctionCall.Type), type, throwOnError: true);
             item.SetProperty(nameof(VarcharFunctionCall.Value), args[0], throwOnError: true);
-            item.SetProperty(nameof(VarcharFunctionCall.Size), sizeSpecified ? args[1] : DocumentEngineHandle.CreateValue(DefaultVarCharSize), throwOnError: true);
+            item.SetProperty(nameof(VarcharFunctionCall.Size), sizeSpecified ? args[1] : EngineHandle.CreateValue(DefaultVarCharSize), throwOnError: true);
 
             return item;
         }

@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         private JsHandleV8 _noPartition;
 
         public OlapDocumentTransformerV8(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, OlapEtlConfiguration config)
-            : base(database, context, new PatchRequest(transformation.Script, PatchRequestType.OlapEtl), null)
+            : base(database, context, new PatchRequest(transformation.Script, PatchRequestType.OlapEtl))
         {
             _config = config;
             _tables = new Dictionary<string, OlapTransformedItems>();
@@ -51,26 +51,25 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             _noPartition.Dispose();
             base.Dispose();
         }
-
         public override void Initialize(bool debugMode)
         {
             base.Initialize(debugMode);
 
-            DocumentEngineHandle.SetGlobalClrCallBack(Transformation.LoadTo, LoadToFunctionTranslator);
+            EngineHandle.SetGlobalClrCallBack(Transformation.LoadTo, LoadToFunctionTranslator);
 
             foreach (var table in LoadToDestinations)
             {
-                DocumentEngineHandle.SetGlobalClrCallBack($"{Transformation.LoadTo}{table}", (_, args) => LoadToFunctionTranslator(table, args));
+                EngineHandle.SetGlobalClrCallBack($"{Transformation.LoadTo}{table}", (_, args) => LoadToFunctionTranslator(table, args));
             }
 
-            DocumentEngineHandle.SetGlobalClrCallBack("partitionBy", PartitionBy);
-            DocumentEngineHandle.SetGlobalClrCallBack("noPartition", NoPartition);
+            EngineHandle.SetGlobalClrCallBack("partitionBy", PartitionBy);
+            EngineHandle.SetGlobalClrCallBack("noPartition", NoPartition);
 
             var customPartitionValue = _config.CustomPartitionValue != null
-                ? DocumentEngineHandle.CreateValue(_config.CustomPartitionValue)
+                ? EngineHandle.CreateValue(_config.CustomPartitionValue)
                 : JsHandleV8.Empty;
 
-            DocumentEngineHandle.SetGlobalProperty(CustomPartition, customPartitionValue);
+            EngineHandle.SetGlobalProperty(CustomPartition, customPartitionValue);
         }
 
         protected override string[] LoadToDestinations { get; }
@@ -248,23 +247,23 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             JsHandleV8 jsArr;
             if (args.Length == 1 && args[0].IsArray == false)
             {
-                jsArr = DocumentEngineHandle.CreateArray(new[]
+                jsArr = EngineHandle.CreateArray(new[]
                 {
-                    DocumentEngineHandle.CreateArray(new[]
+                    EngineHandle.CreateArray(new[]
                     {
-                        DocumentEngineHandle.CreateValue(DefaultPartitionColumnName), args[0]
+                        EngineHandle.CreateValue(DefaultPartitionColumnName), args[0]
                     })
                 });
             }
             else
             {
-                jsArr = DocumentEngineHandle.FromObjectGen(args);
+                jsArr = EngineHandle.FromObjectGen(args);
             }
 
             JsHandleV8 o;
             using (jsArr)
             {
-                o = DocumentEngineHandle.CreateObject();
+                o = EngineHandle.CreateObject();
                 o.FastAddProperty(PartitionKeys, jsArr, false, true, false);
             }
             return o;
@@ -277,8 +276,8 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
             if (_noPartition.IsEmpty)
             {
-                _noPartition = DocumentEngineHandle.CreateObject();
-                _noPartition.FastAddProperty(PartitionKeys, DocumentEngineHandle.Null, writable: false, enumerable: true, configurable: false);
+                _noPartition = EngineHandle.CreateObject();
+                _noPartition.FastAddProperty(PartitionKeys, EngineHandle.Null, writable: false, enumerable: true, configurable: false);
             }
 
             return _noPartition;

@@ -22,7 +22,7 @@ using Sparrow.Json.Parsing;
 //TODO: egor handle double code with RavenEtlDocumentTransformerV8
 namespace Raven.Server.Documents.ETL.Providers.Raven
 {
-    public class RavenEtlDocumentTransformerJint : EtlTransformerJint<RavenEtlItem, ICommandData, EtlStatsScope, EtlPerformanceOperation>
+    public class RavenEtlDocumentTransformerJint : RavenEtlTransformerJint<RavenEtlItem, ICommandData, EtlStatsScope, EtlPerformanceOperation>
     {
         private RavenEtlScriptRunJint _currentRun;
         private readonly Transformation _transformation;
@@ -58,23 +58,37 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
             if (_transformation.IsAddingAttachments)
             {
-                _addAttachmentMethod = DocumentEngineHandle.CreateClrCallBack("addAttachment", AddAttachment, true);
+                _addAttachmentMethod = EngineHandle.CreateClrCallBack("addAttachment", AddAttachment, true);
                 _addAttachmentMethod.ThrowOnError();
             }
 
             if (_transformation.Counters.IsAddingCounters)
             {
                 const string addCounter = Transformation.CountersTransformation.Add;
-                _addCounterMethod = DocumentEngineHandle.CreateClrCallBack(addCounter, AddCounter, true);
+                _addCounterMethod = EngineHandle.CreateClrCallBack(addCounter, AddCounter, true);
                 _addCounterMethod.ThrowOnError();
             }
 
             if (_transformation.TimeSeries.IsAddingTimeSeries)
             {
                 const string addTimeSeries = Transformation.TimeSeriesTransformation.AddTimeSeries.Name;
-                _addTimeSeriesMethod = DocumentEngineHandle.CreateClrCallBack(addTimeSeries, AddTimeSeries, true);
+                _addTimeSeriesMethod = EngineHandle.CreateClrCallBack(addTimeSeries, AddTimeSeries, true);
                 _addTimeSeriesMethod.ThrowOnError();
             }
+        }
+
+        public override ReturnRun CreateBehaviorsScriptRunner(bool debugMode, out SingleRun<JsHandleJint> behaviorsScript)
+        {
+            var returnRun = Database.Scripts.GetScriptRunnerJint(_behaviorFunctions, readOnly: true, out behaviorsScript);
+            if (behaviorsScript != null)
+                behaviorsScript.DebugMode = debugMode;
+
+            return returnRun;
+        }
+
+        public override ReturnRun CreateDocumentScriptRunner(bool debugMode, out SingleRun<JsHandleJint> documentScript)
+        {
+            return EtlTransformerHelper.CreateDocumentScriptRunnerJint(Database, _mainScript, debugMode, out documentScript);
         }
 
         private JsHandleJint AddAttachment(JsHandleJint self, JsHandleJint[] args)
@@ -212,7 +226,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             var metadata = document.GetOrCreate(Constants.Documents.Metadata.Key);
 
             if (loadedToDifferentCollection || metadata.HasProperty(Constants.Documents.Metadata.Collection) == false)
-                metadata.SetProperty(Constants.Documents.Metadata.Collection, DocumentEngineHandle.CreateValue(collectionName), throwOnError: true);
+                metadata.SetProperty(Constants.Documents.Metadata.Collection, EngineHandle.CreateValue(collectionName), throwOnError: true);
 
             if (metadata.HasProperty(Constants.Documents.Metadata.Attachments))
                 metadata.DeleteProperty(Constants.Documents.Metadata.Attachments, throwOnError: true);
@@ -257,7 +271,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         public override void Transform(RavenEtlItem item, EtlStatsScope stats, EtlProcessState state)
         {
             Current = item;
-            _currentRun ??= new RavenEtlScriptRunJint(DocumentEngineHandle, stats);
+            _currentRun ??= new RavenEtlScriptRunJint(EngineHandle, stats);
 
             if (item.IsDelete == false)
             {
