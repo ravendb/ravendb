@@ -69,7 +69,7 @@ namespace SlowTests.Issues
                 //Modify index
                 await Assert.ThrowsAsync<InvalidOperationException>(async () =>
                 {
-                    new Index_ItemsByNum2().Execute(store);
+                    await new Index_ItemsByNum2().ExecuteAsync(store);
                     Indexes.WaitForIndexing(store);
                 });
                 var indexNames1 = store.Maintenance.Send(new GetIndexNamesOperation(0, 10));
@@ -77,8 +77,6 @@ namespace SlowTests.Issues
                 Assert.Equal(2, indexNames1.Length);
                 Assert.Contains("Items/ByNum", indexNames1);
                 Assert.Contains("ReplacementOf/Items/ByNum", indexNames1);
-
-                // WaitForUserToContinueTheTest(store);
 
                 //restart server
                 var result = await DisposeServerAndWaitForFinishOfDisposalAsync(server);
@@ -96,17 +94,7 @@ namespace SlowTests.Issues
                 Assert.Contains("Items/ByNum", indexNames2);
                 Assert.Contains("ReplacementOf/Items/ByNum", indexNames2);
 
-                // WaitForUserToContinueTheTest(store);
-
-                string[] indexNames3 = null;
-                using (var client = new HttpClient())
-                {
-                    Uri uri = new Uri(new Uri(server.WebUrl), $"/databases/{store.Database}/indexes/errors");
-                    var response = await client.GetAsync(uri.ToString());
-                    response.EnsureSuccessStatusCode();
-                    ErrorsContent responseContent = await response.Content.ReadFromJsonAsync<ErrorsContent>();
-                    indexNames3 = responseContent.GetIndexNames();
-                }
+                string[] indexNames3 = store.Maintenance.Send(new GetIndexErrorsOperation()).Select(x => x.Name).ToArray();
                 Assert.NotNull(indexNames3);
                 Assert.Equal(2, indexNames3.Length);
                 Assert.Contains("Items/ByNum", indexNames3);
@@ -134,22 +122,7 @@ namespace SlowTests.Issues
             public int Num { get; set; }
         }
 
-        private class ErrorsContent
-        {
-            public List<ErrorsContentResult> Results { get; set; }
-
-            public class ErrorsContentResult
-            {
-                public string Name { get; set; }
-            }
-
-            public string[] GetIndexNames()
-            {
-                return Results.Select(x => x.Name).ToArray();
-            }
-        }
-
-        public class Index_ItemsByNum : AbstractIndexCreationTask
+        private class Index_ItemsByNum : AbstractIndexCreationTask
         {
             public override string IndexName => "Items/ByNum";
 
@@ -167,7 +140,7 @@ namespace SlowTests.Issues
             }
         }
         
-        public class Index_ItemsByNum2 : AbstractIndexCreationTask
+        private class Index_ItemsByNum2 : AbstractIndexCreationTask
         {
             public override string IndexName => "Items/ByNum";
 

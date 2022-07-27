@@ -419,13 +419,12 @@ namespace Raven.Server.Documents.Indexes
                 var name = kvp.Key;
                 var definition = kvp.Value;
 
-                if (definition.Name.StartsWith(Constants.Documents.Indexing.SideBySideIndexNamePrefix, StringComparison.OrdinalIgnoreCase))
-                {
-                    throw new RachisInvalidOperationException($"Index name cannot start with {Constants.Documents.Indexing.SideBySideIndexNamePrefix} but got {definition.Name} of index {name}");
-                }
-
                 try
                 {
+                    if (definition.Name.StartsWith(Constants.Documents.Indexing.SideBySideIndexNamePrefix, StringComparison.OrdinalIgnoreCase))
+                    {
+                        throw new InvalidOperationException($"Index name cannot start with {Constants.Documents.Indexing.SideBySideIndexNamePrefix} but got {definition.Name} of index {name}");
+                    }
                     var indexToStart = HandleStaticIndexChange(name, definition);
                     if (indexToStart != null)
                     {
@@ -612,6 +611,10 @@ namespace Raven.Server.Documents.Indexes
                     return null;
                 }
 
+                var definitionClone = new IndexDefinition();
+                definition.CopyTo(definitionClone);
+                definition = definitionClone;
+
                 if (creationOptions == IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex)
                 {
                     Debug.Assert(currentIndex != null);
@@ -634,9 +637,6 @@ namespace Raven.Server.Documents.Indexes
                 if (creationOptions == IndexCreationOptions.Update)
                 {
                     Debug.Assert(currentIndex != null);
-                    var definitionClone = new IndexDefinition();
-                    definition.CopyTo(definitionClone);
-                    definition = definitionClone;
 
                     if (currentIndex is MapReduceIndex oldMapReduceIndex && oldMapReduceIndex.OutputReduceToCollection != null)
                     {

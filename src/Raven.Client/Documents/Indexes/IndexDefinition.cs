@@ -523,6 +523,7 @@ namespace Raven.Client.Documents.Indexes
             definition.Reduce = Reduce;
             definition.Maps = new HashSet<string>(Maps);
             definition.Configuration = new IndexConfiguration();
+            definition.State = State;
 #if FEATURE_TEST_INDEX
                 definition.IsTestIndex = IsTestIndex;
 #endif
