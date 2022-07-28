@@ -301,7 +301,7 @@ class editSqlEtlTask extends viewModelBase {
     private initObservables() {
         const model = this.editedSqlEtl();
         
-        this.showAdvancedOptions(!!model.commandTimeout() || model.parameterizedDeletes() || model.forceRecompileQuery() || model.tableQuotation());
+        this.showAdvancedOptions(model.hasAdvancedOptionsDefined());
         
         // Discard test connection result when connection string has changed
         model.connectionStringName.subscribe(() => this.testConnectionResult(null));

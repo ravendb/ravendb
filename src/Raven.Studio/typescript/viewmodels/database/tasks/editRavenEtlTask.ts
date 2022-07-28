@@ -279,7 +279,7 @@ class editRavenEtlTask extends viewModelBase {
     private initObservables() {
         const model = this.editedRavenEtl();
         
-        this.showAdvancedOptions(!!model.loadRequestTimeout());
+        this.showAdvancedOptions(model.hasAdvancedOptionsDefined());
         
         this.shortErrorText = ko.pureComputed(() => {
             const result = this.testConnectionResult();
