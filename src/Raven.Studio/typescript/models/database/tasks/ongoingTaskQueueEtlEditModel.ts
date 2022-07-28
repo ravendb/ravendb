@@ -205,7 +205,7 @@ abstract class ongoingTaskQueueEtlEditModel extends ongoingTaskEditModel {
     }
 
     hasAdvancedOptionsDefined(): boolean {
-        return this.hasOptions()
+        return this.hasOptions();
     }
 }
 
