@@ -4,12 +4,12 @@ import database from "models/resources/database";
 import { RichPanel, RichPanelDetailItem, RichPanelDetails, RichPanelHeader } from "../../../../../common/RichPanel";
 import { OngoingTaskName } from "../shared";
 
-interface ReplicationHubPanelProps {
+interface ReplicationHubConnectedSinkPanelProps {
     db: database;
     data: OngoingTaskReplicationHubInfo;
 }
 
-export function ReplicationHubConnectedSinkPanel(props: ReplicationHubPanelProps) {
+export function ReplicationHubConnectedSinkPanel(props: ReplicationHubConnectedSinkPanelProps) {
     const { data } = props;
 
     return (
