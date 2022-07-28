@@ -55,6 +55,11 @@ namespace Sparrow.Json
             _size = size;
             _context = context;
             _buffer = buffer;
+            _objectsPathCache?.Clear();
+            _objectsPathCacheByIndex?.Clear();
+            _hashCode = 0;
+            Modifications = null;
+            
             Initialize();
         }
         
