@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -245,15 +246,16 @@ namespace SlowTests.Issues
 
                 // Wait for indexing in first node and second node
                 var index = new Categoroies_Details();
-                index.Execute(store);
+                await Cluster.CreateIndexInClusterAsync(store, index);
+
                 foreach (var n in nodes)
                 {
+                    // wait for indexing to finish on the current node
                     Indexes.WaitForIndexing(store,
-                        dbName: store.Database, 
-                        timeout: TimeSpan.FromMinutes(5), 
+                        dbName: store.Database,
+                        timeout: TimeSpan.FromMinutes(2),
                         nodeTag: n.ServerStore.NodeTag);
                 }
-
 
                 // Test
                 CompactSettings settings = new CompactSettings { DatabaseName = store.Database, Documents = true, Indexes = new[] { index.IndexName } };
