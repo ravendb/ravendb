@@ -80,8 +80,8 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Collections
 
         public ShardedStreamDocumentsCollectionOperation(HttpContext httpContext, string collectionName, string etag, ShardedPagingContinuation token)
         {
-            _httpContext = httpContext;
             _collectionName = collectionName;
+            _httpContext = httpContext;
             _token = token;
             ExpectedEtag = etag;
         }
