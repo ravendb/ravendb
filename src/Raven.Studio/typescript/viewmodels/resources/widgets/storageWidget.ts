@@ -127,7 +127,7 @@ class storageWidget extends websocketBasedWidget<Raven.Server.Dashboard.Cluster.
         app.showBootstrapDialog(openSettingsDialog)
             .done((scaleResult: boolean) => {
                 this.scaleToSize(scaleResult);
-                this.controller.layout(); // this will trigger saving to local storage
+                this.controller.saveToLocalStorage();
             });
     }
     
