@@ -151,7 +151,7 @@ class ongoingTaskSqlEtlEditModel extends ongoingTaskEditModel {
     }
 
     hasAdvancedOptionsDefined(): boolean {
-        return !!this.commandTimeout() || this.parameterizedDeletes() || this.forceRecompileQuery() || this.tableQuotation()
+        return !!this.commandTimeout() || this.parameterizedDeletes() || this.forceRecompileQuery() || this.tableQuotation();
     }
 }
 
