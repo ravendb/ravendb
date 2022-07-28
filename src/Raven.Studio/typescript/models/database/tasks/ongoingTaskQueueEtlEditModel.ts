@@ -203,6 +203,10 @@ abstract class ongoingTaskQueueEtlEditModel extends ongoingTaskEditModel {
     hasOptions() {
         return !!this.optionsPerQueue().length;
     }
+
+    hasAdvancedOptionsDefined(): boolean {
+        return this.hasOptions()
+    }
 }
 
 export = ongoingTaskQueueEtlEditModel;

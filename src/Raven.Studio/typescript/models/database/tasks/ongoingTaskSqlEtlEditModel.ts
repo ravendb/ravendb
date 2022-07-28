@@ -149,6 +149,10 @@ class ongoingTaskSqlEtlEditModel extends ongoingTaskEditModel {
                 }
             } as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtlDetails);
     }
+
+    hasAdvancedOptionsDefined(): boolean {
+        return !!this.commandTimeout() || this.parameterizedDeletes() || this.forceRecompileQuery() || this.tableQuotation()
+    }
 }
 
 export = ongoingTaskSqlEtlEditModel;

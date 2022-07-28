@@ -220,7 +220,7 @@ class editKafkaEtlTask extends viewModelBase {
                 .execute()
                 .done((result: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtlDetails) => {
                     this.editedKafkaEtl(new ongoingTaskKafkaEtlEditModel(result));
-                    this.showAdvancedOptions(this.editedKafkaEtl().hasOptions());
+                    this.showAdvancedOptions(this.editedKafkaEtl().hasAdvancedOptionsDefined());
                     deferred.resolve();
                 })
                 .fail(() => { 

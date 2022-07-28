@@ -150,6 +150,10 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
                 },
             } as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtlDetails);
     }
+
+    hasAdvancedOptionsDefined(): boolean {
+        return !!this.loadRequestTimeout();
+    }
 }
 
 export = ongoingTaskRavenEtlEditModel;
