@@ -44,7 +44,7 @@ public class RavenDB_18938 : RavenTestBase
             performanceHint = await notificationsQueue.TryDequeueAsync(TimeSpan.FromSeconds(5));
         } while (performanceHint.Item2["Type"].ToString() != NotificationType.PerformanceHint.ToString());
 
-        Assert.Equal($"Index '{index.IndexName}' contains a lot of `let` clause.", performanceHint.Item2["Title"]);
+        Assert.Equal($"Index '{index.IndexName}' contains a lot of `let` clauses.", performanceHint.Item2["Title"]);
 
         do
         {
@@ -52,7 +52,7 @@ public class RavenDB_18938 : RavenTestBase
         } while (performanceHint.Item2 != null && performanceHint.Item2["Type"].ToString() != NotificationType.PerformanceHint.ToString());
 
         if (performanceHint.Item2 != null)
-            Assert.NotEqual($"Index '{index.IndexName}' contains a lot of `let` clause.", performanceHint.Item2["Title"]);
+            Assert.NotEqual($"Index '{index.IndexName}' contains a lot of `let` clauses.", performanceHint.Item2["Title"]);
     }
 
     [Fact]
