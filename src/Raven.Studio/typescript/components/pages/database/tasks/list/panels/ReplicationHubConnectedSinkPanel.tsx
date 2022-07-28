@@ -9,7 +9,7 @@ interface ReplicationHubPanelProps {
     data: OngoingTaskReplicationHubInfo;
 }
 
-export function ReplicationHubPanel(props: ReplicationHubPanelProps) {
+export function ReplicationHubConnectedSinkPanel(props: ReplicationHubPanelProps) {
     const { data } = props;
 
     return (
