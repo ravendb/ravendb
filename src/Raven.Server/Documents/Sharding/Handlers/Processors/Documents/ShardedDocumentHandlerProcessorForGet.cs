@@ -125,7 +125,7 @@ internal class ShardedDocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
         var results = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(op, CancellationToken);
         if (results.Result == null)
         {
-            Debug.Assert(results.StatusCode == (int)HttpStatusCode.NotModified);
+            Debug.Assert(results.StatusCode == (int)HttpStatusCode.NotModified, $"Got no result but the status code was: {results.StatusCode}");
             return new DocumentsResult
             {
                 DocumentsAsync = null,
