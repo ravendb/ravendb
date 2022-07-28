@@ -230,8 +230,8 @@ namespace Raven.Server.Documents.Indexes.Static
             {
                 documentDatabase.NotificationCenter.Add(PerformanceHint.Create(
                     documentDatabase.Name,
-                    $"Index '{indexMetadata.Name}' contains a lot of `let` clause.",
-                    $"Each of let clause is nesting projections and could potentially leads to StackoverflowException.",
+                    $"Index '{indexMetadata.Name}' contains a lot of `let` clauses.",
+                    $"Each of the let clause is nesting projections and could potentially leads to StackoverflowException.",
                     PerformanceHintType.Indexing,
                     NotificationSeverity.Info,
                     nameof(IndexCompiler)));

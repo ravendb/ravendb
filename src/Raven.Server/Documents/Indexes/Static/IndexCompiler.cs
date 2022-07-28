@@ -858,12 +858,10 @@ namespace Raven.Server.Documents.Indexes.Static
             var rewrittenExpression = (CSharpSyntaxNode)mapRewriter.Visit(expression);
 
             StatementSyntax optimized = null;
-            bool? foundSourceDocumentInProjection;
             try
             {
                 var visitor = new RavenLinqOptimizer(fieldValidator);
                 optimized = visitor.Visit(new RavenLinqPrettifier().Visit(rewrittenExpression)) as StatementSyntax;
-                foundSourceDocumentInProjection = visitor.FoundSourceDocumentInProjection;
             }
             catch (NotSupportedException)
             {
