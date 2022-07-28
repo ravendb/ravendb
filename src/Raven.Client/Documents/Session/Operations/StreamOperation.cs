@@ -148,6 +148,22 @@ namespace Raven.Client.Documents.Session.Operations
             return new StreamCommand(sb.ToString());
         }
 
+        internal static StreamCommand CreateCollectionDocsStreamCommand(string collectionName, int start, int pageSize)
+        {
+            var sb = new StringBuilder("collections/docs?");
+
+            if (string.IsNullOrEmpty(collectionName) == false)
+                sb.Append("name=").Append(Uri.EscapeDataString(collectionName)).Append("&");
+
+            if (start != 0)
+                sb.Append("start=").Append(start).Append("&");
+
+            if (pageSize != int.MaxValue)
+                sb.Append("pageSize=").Append(pageSize).Append("&");
+
+            return new StreamCommand(sb.ToString());
+        }
+
         internal YieldStreamResults SetResultForTimeSeries(StreamResult response)
         {
             var enumerator = new YieldStreamResults(_session, response, _isQueryStream, isTimeSeriesStream: true, isAsync: false, _statistics);

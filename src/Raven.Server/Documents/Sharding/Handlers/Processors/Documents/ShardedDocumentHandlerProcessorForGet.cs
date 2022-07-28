@@ -11,7 +11,7 @@ using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Exceptions.Sharding;
 using Raven.Server.Documents.Handlers.Processors.Documents;
 using Raven.Server.Documents.Queries.Revisions;
-using Raven.Server.Documents.Sharding.Handlers.Processors.Collections;
+using Raven.Server.Documents.Sharding.Handlers.Processors.Streaming;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;

@@ -6,7 +6,6 @@ using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Session.Operations;
-using Raven.Client.Exceptions.Sharding;
 using Raven.Client.Http;
 using Raven.Server.Documents.Handlers.Processors.Collections;
 using Raven.Server.Documents.Sharding.Handlers.ContinuationTokens;
@@ -26,20 +25,15 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Collections
         {
         }
 
-        protected override async ValueTask<(long numberOfResults, long totalDocumentsSizeInBytes)> GetCollectionDocumentsAndWriteAsync(TransactionOperationContext context, string name, int _, int __, CancellationToken token)
+        protected override async ValueTask<(long numberOfResults, long totalDocumentsSizeInBytes)> GetCollectionDocumentsAndWriteAsync(TransactionOperationContext context, string name, int start, int pageSize, CancellationToken token)
         {
-            throw new NotSupportedInShardingException($"Fetching documents by collection not supported in sharding.");
-
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal,
-                "Need to have ShardedStreamDocumentsOperation fetch by collection name");
-
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Arek, DevelopmentHelper.Severity.Normal,
                 "See `null` passed as etag to above new ShardedCollectionPreviewOperation()");
 
-            var continuationToken = RequestHandler.ContinuationTokens.GetOrCreateContinuationToken(context);
+            var continuationToken = RequestHandler.ContinuationTokens.GetOrCreateContinuationToken(context, start, pageSize);
 
-            var op = new ShardedStreamDocumentsOperation(HttpContext, null, continuationToken);
-            var results = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(op);
+            var op = new ShardedStreamDocumentsCollectionOperation(RequestHandler.HttpContext, name, etag: null, continuationToken);
+            var results = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(op, token);
             using var streams = await results.Result.InitializeAsync(RequestHandler.DatabaseContext, HttpContext.RequestAborted);
             var documents = GetDocuments(streams, continuationToken);
 
@@ -70,47 +64,24 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Collections
                 yield return result.Item;
             }
         }
-
-        protected override void AddPagingPerformanceHint(PagingOperationType operation, string action, string details, long numberOfResults, int pageSize, long duration,
-            long totalDocumentsSizeInBytes)
-        {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "Handle sharded AddPagingPerformanceHint");
-        }
     }
 
     public class CollectionResult
     {
-        public List<object> Results;
+        public BlittableJsonReaderArray Results;
         public string ContinuationToken;
     }
 
-    public readonly struct ShardedStreamDocumentsOperation : IShardedStreamableOperation
+    public readonly struct ShardedStreamDocumentsCollectionOperation : IShardedStreamableOperation
     {
-        private readonly string _startsWith;
-        private readonly string _matches;
-        private readonly string _exclude;
-        private readonly string _startAfter;
         private readonly HttpContext _httpContext;
+        private readonly string _collectionName;
         private readonly ShardedPagingContinuation _token;
 
-        public ShardedStreamDocumentsOperation(HttpContext httpContext, string etag, ShardedPagingContinuation token)
-        {
-            _startsWith = null;
-            _matches = null;
-            _exclude = null;
-            _startAfter = null;
-            _httpContext = httpContext;
-            _token = token;
-            ExpectedEtag = etag;
-        }
-
-        public ShardedStreamDocumentsOperation(HttpContext httpContext, string startsWith, string matches, string exclude, string startAfter, string etag, ShardedPagingContinuation token)
+        public ShardedStreamDocumentsCollectionOperation(HttpContext httpContext, string collectionName, string etag, ShardedPagingContinuation token)
         {
             _httpContext = httpContext;
-            _startsWith = startsWith;
-            _matches = matches;
-            _exclude = exclude;
-            _startAfter = startAfter;
+            _collectionName = collectionName;
             _token = token;
             ExpectedEtag = etag;
         }
@@ -118,7 +89,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Collections
         public HttpRequest HttpRequest => _httpContext.Request;
 
         public RavenCommand<StreamResult> CreateCommandForShard(int shardNumber) =>
-            StreamOperation.CreateStreamCommand(_startsWith, _matches, _token.Pages[shardNumber].Start, _token.PageSize, _exclude, _startAfter);
+            StreamOperation.CreateCollectionDocsStreamCommand(_collectionName, _token.Pages[shardNumber].Start, _token.PageSize);
 
         public string ExpectedEtag { get; }
 
