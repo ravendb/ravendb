@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -202,33 +203,25 @@ public class ShardedQueryProcessor : IDisposable
         const string listParameterName = "p0";
 
         var shards = ShardLocator.GetDocumentIdsByShards(context, _parent.DatabaseContext, ids);
-        var sb = new StringBuilder();
-        sb.Append("from '").Append(_query.Metadata.CollectionName).AppendLine("'")
-            .AppendLine($"where id() in (${listParameterName})");
 
-        if (_query.Metadata.Includes?.Length > 0)
+        var documentQuery = new DocumentQuery<dynamic>(null, null, _query.Metadata.CollectionName, false);
+        documentQuery.WhereIn("id()", new List<object>());
+        foreach (var include in _query.Metadata.Includes)
         {
-            sb.Append("include ").AppendJoin(", ", _query.Metadata.Includes).AppendLine();
+            documentQuery.Include(include);
         }
-
-        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Minor, "RavenDB-19084 use DocumentQuery from Client API to build the query");
-
-        var query = sb.ToString();
 
         foreach ((int shardId, ShardLocator.IdsByShard<Slice> documentIds) in shards)
         {
-            //if (_filteredShardIndexes?.Contains(shardId) == false)
-            //    continue;
-
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "RavenDB-19084 have a way to turn the _query into a json file and then we'll modify that, instead of building it manually");
 
             var q = new DynamicJsonValue
             {
                 [nameof(IndexQuery.QueryParameters)] = new DynamicJsonValue
                 {
-                    [listParameterName] = documentIds
+                    [listParameterName] = documentIds.Ids.Select(x => x.ToString())
                 },
-                [nameof(IndexQuery.Query)] = query
+                [nameof(IndexQuery.Query)] = documentQuery.ToString()
             };
             cmds[shardId] = new ShardedQueryCommand(_parent, _context.ReadObject(q, "query"), null);
         }

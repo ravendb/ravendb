@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Documents.Indexes;
@@ -698,6 +699,46 @@ select project(o)")
                 using (var session = store.OpenSession())
                 {
                     var queryResult = session.Query<Dog>()
+                        .Include<Dog, User>(x => x.Owner)
+                        .ToList();
+
+                    Assert.Equal(3, queryResult.Count);
+
+                    var numberOfRequests = session.Advanced.NumberOfRequests;
+                    Assert.Equal(1, numberOfRequests);
+
+                    for (var i = 0; i < 3; i++)
+                    {
+                        Assert.NotNull(session.Load<User>($"users/{i + 1}"));
+                    }
+
+                    Assert.Equal(numberOfRequests, session.Advanced.NumberOfRequests);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        public void BasicIncludeWithSpecificIds()
+        {
+            using (var store = Sharding.GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Dog { Owner = "users/1" }, "dogs/1");
+                    session.Store(new Dog { Owner = "users/2" }, "dogs/2");
+                    session.Store(new Dog { Owner = "users/3" }, "dogs/3");
+
+                    session.Store(new User { Count = 7 }, "users/1");
+                    session.Store(new User { Count = 19 }, "users/2");
+                    session.Store(new User { Count = 13 }, "users/3");
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var queryResult = session.Query<Dog>()
+                        .Where(x => x.Id.In(new[] { "dogs/1", "dogs/2", "dogs/3" }))
                         .Include<Dog, User>(x => x.Owner)
                         .ToList();
 
