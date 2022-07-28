@@ -8,11 +8,22 @@ public static class EtlTransformerHelper
 {
     public static ScriptRunnerResultV8 GetScriptRunnerResultV8(object obj, SingleRun<JsHandleV8> documentScript, IJsEngineHandle<JsHandleV8> documentEngineHandle)
     {
-        return new ScriptRunnerResultV8(documentScript, documentEngineHandle.FromObjectGen(obj, keepAlive: false));//TODO: egor true/false?
+        if (obj is JsHandleV8 jsHandle)
+        {
+            return new ScriptRunnerResultV8(documentScript, jsHandle);
+        }
+
+        return new ScriptRunnerResultV8(documentScript, documentEngineHandle.FromObjectGen(obj, keepAlive: false)); //TODO: egor true/false?
     }
+
     public static ScriptRunnerResultJint GetScriptRunnerResultJint(object obj, SingleRun<JsHandleJint> documentScript, IJsEngineHandle<JsHandleJint> documentEngineHandle)
     {
-        return new ScriptRunnerResultJint(documentScript, documentEngineHandle.FromObjectGen(obj, keepAlive: false));//TODO: egor true/false?
+        if (obj is JsHandleJint jsHandle)
+        {
+            return new ScriptRunnerResultJint(documentScript, jsHandle);
+        }
+
+        return new ScriptRunnerResultJint(documentScript, documentEngineHandle.FromObjectGen(obj, keepAlive: false)); //TODO: egor true/false?
     }
 
     public static ReturnRun CreateDocumentScriptRunnerV8(DocumentDatabase database, PatchRequest mainScript, bool debugMode, out SingleRun<JsHandleV8> documentScript)
