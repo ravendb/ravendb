@@ -9,7 +9,7 @@ import database from "models/resources/database";
 import { RichPanel, RichPanelDetailItem, RichPanelDetails, RichPanelHeader } from "../../../../../common/RichPanel";
 import { useAppUrls } from "hooks/useAppUrls";
 import { useAccessManager } from "hooks/useAccessManager";
-import { ReplicationHubPanel } from "./ReplicationHubPanel";
+import { ReplicationHubConnectedSinkPanel } from "./ReplicationHubConnectedSinkPanel";
 import genUtils from "common/generalUtils";
 
 interface ReplicationHubPanelProps {
@@ -17,11 +17,11 @@ interface ReplicationHubPanelProps {
     data: OngoingTaskHubDefinitionInfo;
     onDelete: (task: OngoingTaskSharedInfo) => void;
     toggleState: (task: OngoingTaskSharedInfo, enable: boolean) => void;
-    ongoingHubs: OngoingTaskReplicationHubInfo[];
+    connectedSinks: OngoingTaskReplicationHubInfo[];
 }
 
 function Details(props: ReplicationHubPanelProps & { canEdit: boolean }) {
-    const { ongoingHubs, db, data } = props;
+    const { connectedSinks, db, data } = props;
 
     const delayHumane = data.shared.delayReplicationTime
         ? genUtils.formatTimeSpan(data.shared.delayReplicationTime * 1000, true)
@@ -29,31 +29,31 @@ function Details(props: ReplicationHubPanelProps & { canEdit: boolean }) {
 
     return (
         <div>
-            {delayHumane && (
-                <RichPanelDetails>
+            <RichPanelDetails>
+                {delayHumane && (
                     <RichPanelDetailItem>
                         Replication Delay Time:
                         <div className="value">{delayHumane}</div>
                     </RichPanelDetailItem>
-                    <RichPanelDetailItem>
-                        Replication Mode:
-                        <div className="value">{data.shared.taskMode}</div>
-                    </RichPanelDetailItem>
-                    <RichPanelDetailItem>
-                        Has Filtering:
-                        <div className="value">{data.shared.hasFiltering ? "True" : "False"}</div>
-                    </RichPanelDetailItem>
-                </RichPanelDetails>
+                )}
+                <RichPanelDetailItem>
+                    Replication Mode:
+                    <div className="value">{data.shared.taskMode}</div>
+                </RichPanelDetailItem>
+                <RichPanelDetailItem>
+                    Has Filtering:
+                    <div className="value">{data.shared.hasFiltering ? "True" : "False"}</div>
+                </RichPanelDetailItem>
+            </RichPanelDetails>
+            {connectedSinks.length > 0 && (
+                <div className="margin">
+                    {connectedSinks.map((sink) => (
+                        <ReplicationHubConnectedSinkPanel key={sink.shared.taskId + sink.shared.taskName} db={db} data={sink}/>
+                    ))}
+                </div>
             )}
-
-            <div className="margin">
-                {ongoingHubs.map((sink) => (
-                    <ReplicationHubPanel key={sink.shared.taskId + sink.shared.taskName} db={db} data={sink} />
-                ))}
-            </div>
-
-            <div className="margin">
-                {ongoingHubs.length === 0 && (
+            <div className="margin-left">
+                {connectedSinks.length === 0 && (
                     <h5 className="text-warning padding-sm">
                         <i className="icon-empty-set"></i>
                         <span>No sinks connected</span>

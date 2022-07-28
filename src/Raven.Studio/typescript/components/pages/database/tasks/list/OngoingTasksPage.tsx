@@ -465,7 +465,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                                         {...sharedPanelProps}
                                         key={taskKey(def.shared)}
                                         data={def}
-                                        ongoingHubs={replicationHubs.filter(
+                                        connectedSinks={replicationHubs.filter(
                                             (x) => x.shared.taskId === def.shared.taskId
                                         )}
                                     />
