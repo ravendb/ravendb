@@ -441,6 +441,13 @@ class trafficWatch extends viewModelBase {
                         sortable: "number"
                 }),
                 new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(grid,
+                    x => trafficWatch.isHttpItem(x) ? x.RequestSizeInBytes : "n/a",
+                    "Request Size", "8%", {
+                        extraClass: rowHighlightRules,
+                        sortable: "number",
+                        transformValue: generalUtils.formatBytesToSize
+                    }),
+                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(grid,
                     x => trafficWatch.isHttpItem(x) ? x.ResponseSizeInBytes : "n/a",
                     "Response Size", "8%", {
                         extraClass: rowHighlightRules,
@@ -480,7 +487,7 @@ class trafficWatch extends viewModelBase {
                 }),
                 new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(grid,
                     x => trafficWatch.formatDetails(x),
-                    "Details", "28%", {
+                    "Details", "20%", {
                         extraClass: rowHighlightRules,
                         sortable: "string"
                 })
