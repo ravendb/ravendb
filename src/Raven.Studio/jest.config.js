@@ -17,7 +17,7 @@ module.exports = {
         "./scripts/setup_jest.js"
     ],
     "setupFilesAfterEnv": [
-      "jest-extended"
+      "jest-extended/all"
     ],
     moduleDirectories: [
         "node_modules",
