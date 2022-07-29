@@ -116,15 +116,47 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
         if (term.Length == 0 || term == Constants.EmptyString)
             return Constants.EmptyStringSlice;
-        
+
         if (term == Constants.NullValue)
             return Constants.NullValueSlice;
 
+<<<<<<< HEAD
         ApplyAnalyzer(term, fieldId, out var encodedTerm); 
         return encodedTerm;
     }
     
     internal ByteStringContext<ByteStringMemoryCache>.InternalScope ApplyAnalyzer(string originalTerm, int fieldId, out Slice value)
+=======
+<<<<<<< HEAD
+        var encoded = Encoding.UTF8.GetBytes(term);
+        Slice termSlice;
+        if (fieldId == Constants.IndexSearcher.NonAnalyzer)
+=======
+        ApplyAnalyzer(term, fieldId, out var encodedTerm);
+        return encodedTerm;
+    }
+
+    internal ByteStringContext<ByteStringMemoryCache>.InternalScope ApplyAnalyzer(string originalTerm, int fieldId, out Slice value)
+    {
+        if (_fieldMapping.TryGetByFieldId(fieldId, out var binding) == false
+            || binding.FieldIndexingMode is FieldIndexingMode.Exact or FieldIndexingMode.Search
+            || binding.Analyzer is null)
+>>>>>>> 6bbf268c08 (RavenDB-18852 Integration of RangeQueries)
+        {
+            Slice.From(Allocator, encoded, out termSlice);
+            return termSlice;
+        }
+
+        Slice.From(Allocator, ApplyAnalyzer(encoded, fieldId), out termSlice);
+        return termSlice;
+    }
+<<<<<<< HEAD
+
+    //todo maciej: notice this is very inefficient. We need to improve it in future. 
+    // Only for KeywordTokenizer
+=======
+
+    internal ByteStringContext<ByteStringMemoryCache>.InternalScope ApplyAnalyzer(ReadOnlySpan<byte> originalTerm, int fieldId, out Slice value)
     {
         if (_fieldMapping.TryGetByFieldId(fieldId, out var binding) == false
             || binding.FieldIndexingMode is FieldIndexingMode.Exact or FieldIndexingMode.Search
@@ -134,6 +166,36 @@ public sealed unsafe partial class IndexSearcher : IDisposable
             value = originalTermSliced;
             return disposable;
         }
+
+        return AnalyzeTerm(binding, originalTerm, fieldId, out value);
+    }
+
+>>>>>>> 6bbf268c08 (RavenDB-18852 Integration of RangeQueries)
+    [SkipLocalsInit]
+    internal unsafe ReadOnlySpan<byte> ApplyAnalyzer(ReadOnlySpan<byte> originalTerm, int fieldId)
+>>>>>>> 6c938dfd8d (RavenDB-18852 Integration of RangeQueries)
+    {
+        if (_fieldMapping.TryGetByFieldId(fieldId, out var binding) == false
+            || binding.FieldIndexingMode is FieldIndexingMode.Exact or FieldIndexingMode.Search
+            || binding.Analyzer is null)
+        {
+<<<<<<< HEAD
+            var disposable = Slice.From(Allocator, originalTerm, ByteStringType.Immutable, out var originalTermSliced);
+            value = originalTermSliced;
+            return disposable;
+=======
+<<<<<<< HEAD
+            return originalTerm;
+>>>>>>> 6c938dfd8d (RavenDB-18852 Integration of RangeQueries)
+        }
+=======
+            value = originalTerm;
+            return default;
+        }
+
+        return AnalyzeTerm(binding, originalTerm.AsSpan(), fieldId, out value);
+    }
+>>>>>>> 6bbf268c08 (RavenDB-18852 Integration of RangeQueries)
 
         using (Slice.From(Allocator, originalTerm, ByteStringType.Immutable, out var originalTermSliced))
         {
@@ -174,7 +236,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     {
         var analyzer = binding.Analyzer!;
         analyzer.GetOutputBuffersSize(originalTerm.Length, out int outputSize, out int tokenSize);
-        
+
         Debug.Assert(outputSize < 1024 * 1024, "Term size is too big for analyzer.");
         Debug.Assert(Unsafe.SizeOf<Token>() * tokenSize < 1024 * 1024, "Analyzer wants to create too much tokens.");
 
@@ -205,21 +267,41 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
         return terms?.NumberOfEntries ?? 0;
     }
-    
+
     public bool TryGetTermsOfField(string field, out ExistsTermProvider existsTermProvider)
     {
         using var _ = Slice.From(Allocator, field, ByteStringType.Immutable, out var fieldName);
         var fields = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
         var terms = fields?.CompactTreeFor(fieldName);
-        
+
         if (terms == null)
         {
             existsTermProvider = default;
             return false;
         }
-        
+
         existsTermProvider = new ExistsTermProvider(this, _transaction.Allocator, terms, fieldName);
         return true;
+    }
+
+    public (Slice FieldName, Slice NumericTree) GetSliceForRangeQueries<T>(string name, T value)
+    {
+        Slice.From(Allocator, name, ByteStringType.Immutable, out var fieldName);
+        Slice numericTree;
+        switch (value)
+        {
+            case long l:
+                Slice.From(Allocator, $"{name}-L", ByteStringType.Immutable, out numericTree);
+                break;
+            case double d:
+                Slice.From(Allocator, $"{name}-D", ByteStringType.Immutable, out numericTree);
+                break;
+            default:
+                numericTree = default;
+                break;
+        }
+
+        return (fieldName, numericTree);
     }
 
     public void Dispose()

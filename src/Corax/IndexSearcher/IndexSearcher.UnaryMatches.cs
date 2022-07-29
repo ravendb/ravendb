@@ -39,7 +39,7 @@ public partial class IndexSearcher
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public UnaryMatch Between<TInner, TValueType>(in TInner set, int fieldId, TValueType leftValue, TValueType rightValue, bool isNegated = false,
+    public UnaryMatch UnaryBetween<TInner, TValueType>(in TInner set, int fieldId, TValueType leftValue, TValueType rightValue, bool isNegated = false,
         int take = Constants.IndexSearcher.TakeAll)
         where TInner : IQueryMatch
     {
@@ -62,7 +62,7 @@ public partial class IndexSearcher
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public UnaryMatch Between<TInner, TValueType>(in TInner set, int fieldId, TValueType leftValue, TValueType rightValue, UnaryMatchOperation leftSide, UnaryMatchOperation rightSide, bool isNegated = false,
+    public UnaryMatch UnaryBetween<TInner, TValueType>(in TInner set, int fieldId, TValueType leftValue, TValueType rightValue, UnaryMatchOperation leftSide, UnaryMatchOperation rightSide, bool isNegated = false,
         int take = Constants.IndexSearcher.TakeAll)
         where TInner : IQueryMatch
     {
