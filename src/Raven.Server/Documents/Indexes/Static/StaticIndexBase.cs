@@ -240,7 +240,8 @@ namespace Raven.Server.Documents.Indexes.Static
                     NotificationSeverity.Info,
                     nameof(IndexCompiler)));
                 
-                Log.Info($"Index '{indexMetadata.Name}' contains a lot of `let` clauses.");
+                if (Log.IsOperationsEnabled)
+                    Log.Operations($"Index '{indexMetadata.Name}' contains a lot of `let` clauses. Stack size is {StackSizeInSelectClause}.");
             }
         }
         
