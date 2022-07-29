@@ -281,7 +281,8 @@ namespace Raven.Server.Documents
             }
         }
 
-        public long GetNumberOfCounterGroupsToProcess(DocumentsOperationContext context, string collection, long afterEtag, out long totalCount)
+        public long GetNumberOfCounterGroupsToProcess(DocumentsOperationContext context, string collection, long afterEtag, out long totalCount,
+            Stopwatch overallDuration)
         {
             var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
             if (collectionName == null)
@@ -300,7 +301,7 @@ namespace Raven.Server.Documents
 
             var indexDef = CountersSchema.FixedSizeIndexes[CollectionCountersEtagsSlice];
 
-            return table.GetNumberOfEntriesAfter(indexDef, afterEtag, out totalCount);
+            return table.GetNumberOfEntriesAfter(indexDef, afterEtag, out totalCount, overallDuration);
         }
 
         public static CounterGroupDetail TableValueToCounterGroupDetail(JsonOperationContext context, ref TableValueReader tvr)

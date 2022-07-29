@@ -2141,17 +2141,18 @@ namespace Raven.Server.Documents
             return DocumentPut.PutDocument(context, id, expectedChangeVector, document, lastModifiedTicks, changeVector, oldChangeVectorForClusterTransactionIndexCheck, flags, nonPersistentFlags);
         }
 
-        public long GetNumberOfDocumentsToProcess(DocumentsOperationContext context, string collection, long afterEtag, out long totalCount)
+        public long GetNumberOfDocumentsToProcess(DocumentsOperationContext context, string collection, long afterEtag, out long totalCount, Stopwatch overallDuration)
         {
-            return GetNumberOfItemsToProcess(context, collection, afterEtag, tombstones: false, totalCount: out totalCount);
+            return GetNumberOfItemsToProcess(context, collection, afterEtag, tombstones: false, totalCount: out totalCount, overallDuration);
         }
 
-        public long GetNumberOfTombstonesToProcess(DocumentsOperationContext context, string collection, long afterEtag, out long totalCount)
+        public long GetNumberOfTombstonesToProcess(DocumentsOperationContext context, string collection, long afterEtag, out long totalCount, Stopwatch overallDuration)
         {
-            return GetNumberOfItemsToProcess(context, collection, afterEtag, tombstones: true, totalCount: out totalCount);
+            return GetNumberOfItemsToProcess(context, collection, afterEtag, tombstones: true, totalCount: out totalCount, overallDuration);
         }
 
-        private long GetNumberOfItemsToProcess(DocumentsOperationContext context, string collection, long afterEtag, bool tombstones, out long totalCount)
+        private long GetNumberOfItemsToProcess(DocumentsOperationContext context, string collection, long afterEtag, bool tombstones, out long totalCount,
+            Stopwatch overallDuration)
         {
             var collectionName = GetCollection(collection, throwIfDoesNotExist: false);
             if (collectionName == null)
@@ -2181,7 +2182,7 @@ namespace Raven.Server.Documents
                 return 0;
             }
 
-            return table.GetNumberOfEntriesAfter(indexDef, afterEtag, out totalCount);
+            return table.GetNumberOfEntriesAfter(indexDef, afterEtag, out totalCount, overallDuration);
         }
 
         public long GetNumberOfDocuments()

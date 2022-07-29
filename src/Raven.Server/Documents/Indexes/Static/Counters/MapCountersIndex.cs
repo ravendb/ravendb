@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
@@ -250,11 +251,12 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
             _mre.Set();
         }
 
-        internal override void UpdateProgressStats(QueryOperationContext queryContext, IndexProgress.CollectionStats progressStats, string collectionName)
+        internal override void UpdateProgressStats(QueryOperationContext queryContext, IndexProgress.CollectionStats progressStats, string collectionName,
+            Stopwatch overallDuration)
         {
             progressStats.NumberOfItemsToProcess +=
                 DocumentDatabase.DocumentsStorage.CountersStorage.GetNumberOfCounterGroupsToProcess(
-                    queryContext.Documents, collectionName, progressStats.LastProcessedItemEtag, out var totalNumberOfItems);
+                    queryContext.Documents, collectionName, progressStats.LastProcessedItemEtag, out var totalNumberOfItems, overallDuration);
             progressStats.TotalNumberOfItems += totalNumberOfItems;
         }
 

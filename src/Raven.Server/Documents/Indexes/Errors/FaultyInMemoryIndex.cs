@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Indexes;
@@ -99,7 +100,7 @@ namespace Raven.Server.Documents.Indexes.Errors
             };
         }
 
-        internal override IndexProgress GetProgress(QueryOperationContext queryContext, bool? isStale = null)
+        internal override IndexProgress GetProgress(QueryOperationContext queryContext, Stopwatch overallDuration, bool? isStale = null)
         {
             return new IndexProgress
             {

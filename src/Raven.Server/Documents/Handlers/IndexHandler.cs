@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -524,6 +525,7 @@ namespace Raven.Server.Documents.Handlers
                 writer.WritePropertyName("Results");
                 writer.WriteStartArray();
 
+                var overallDuration = Stopwatch.StartNew();
                 var first = true;
                 foreach (var index in Database.IndexStore.GetIndexes())
                 {
@@ -532,7 +534,7 @@ namespace Raven.Server.Documents.Handlers
                         if (index.DeployedOnAllNodes && index.IsStale(context) == false)
                             continue;
 
-                        var progress = index.GetProgress(context);
+                        var progress = index.GetProgress(context, overallDuration);
 
                         if (first == false)
                             writer.WriteComma();
