@@ -1107,11 +1107,11 @@ namespace Voron.Data.Tables
             reader = new TableValueReader(id, ptr, size);
         }
 
-        public long GetNumberOfEntriesAfter(TableSchema.FixedSizeSchemaIndexDef index, long afterValue, out long totalCount)
+        public long GetNumberOfEntriesAfter(TableSchema.FixedSizeSchemaIndexDef index, long afterValue, out long totalCount, Stopwatch overallDuration)
         {
             var fst = GetFixedSizeTree(index);
 
-            return fst.GetNumberOfEntriesAfter(afterValue, out totalCount);
+            return fst.GetNumberOfEntriesAfter(afterValue, out totalCount, overallDuration);
         }
 
         public long GetNumberOfEntriesFor(TableSchema.FixedSizeSchemaIndexDef index)

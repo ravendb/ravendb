@@ -1653,7 +1653,7 @@ namespace Voron.Data.Fixed
             return Name.ToString();
         }
 
-        public long GetNumberOfEntriesAfter(TVal value, out long totalCount)
+        public long GetNumberOfEntriesAfter(TVal value, out long totalCount, Stopwatch overallDuration)
         {
             totalCount = NumberOfEntries;
             if (totalCount == 0)
@@ -1677,7 +1677,7 @@ namespace Voron.Data.Fixed
             if (page.LastMatch >= 0)
                 page.LastSearchPosition++;
 
-            var state = new RemainingNumberOfEntriesState { Start = Stopwatch.StartNew() };
+            var state = new RemainingNumberOfEntriesState { Start = overallDuration };
             var maxDepth = _cursor.Count + 1;
             var count = GetRemainingNumberOfEntriesFor(page, maxDepth, maxDepth, ref state);
             while (_cursor.TryPop(out page))

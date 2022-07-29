@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
@@ -272,11 +273,12 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             _mre.Set();
         }
 
-        internal override void UpdateProgressStats(QueryOperationContext queryContext, IndexProgress.CollectionStats progressStats, string collectionName)
+        internal override void UpdateProgressStats(QueryOperationContext queryContext, IndexProgress.CollectionStats progressStats, string collectionName,
+            Stopwatch overallDuration)
         {
             progressStats.NumberOfItemsToProcess +=
                 DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesSegmentsToProcess(
-                    queryContext.Documents, collectionName, progressStats.LastProcessedItemEtag, out var totalCount);
+                    queryContext.Documents, collectionName, progressStats.LastProcessedItemEtag, out var totalCount,overallDuration);
             progressStats.TotalNumberOfItems += totalCount;
         }
     }

@@ -2691,7 +2691,7 @@ namespace Raven.Server.Documents.Indexes
             _indexStorage.Rename(name);
         }
 
-        internal virtual IndexProgress GetProgress(QueryOperationContext queryContext, bool? isStale = null)
+        internal virtual IndexProgress GetProgress(QueryOperationContext queryContext, Stopwatch overallDuration, bool? isStale = null)
         {
             using (CurrentlyInUse(out var valid))
             {
@@ -2712,7 +2712,7 @@ namespace Raven.Server.Documents.Indexes
                     if (disposed)
                         return progress;
 
-                    UpdateIndexProgress(queryContext, progress, null);
+                    UpdateIndexProgress(queryContext, progress, null, overallDuration);
                     return progress;
                 }
 
@@ -2734,14 +2734,14 @@ namespace Raven.Server.Documents.Indexes
 
                     var stats = _indexStorage.ReadStats(tx);
 
-                    UpdateIndexProgress(queryContext, progress, stats);
+                    UpdateIndexProgress(queryContext, progress, stats, overallDuration);
 
                     return progress;
                 }
             }
         }
 
-        private void UpdateIndexProgress(QueryOperationContext queryContext, IndexProgress progress, IndexStats stats)
+        private void UpdateIndexProgress(QueryOperationContext queryContext, IndexProgress progress, IndexStats stats, Stopwatch overallDuration)
         {
             if (DeployedOnAllNodes == false)
             {
@@ -2775,7 +2775,7 @@ namespace Raven.Server.Documents.Indexes
                     };
                 }
 
-                UpdateProgressStats(queryContext, progressStats, collection);
+                UpdateProgressStats(queryContext, progressStats, collection, overallDuration);
             }
 
             var referencedCollections = GetReferencedCollections();
@@ -2805,23 +2805,24 @@ namespace Raven.Server.Documents.Indexes
                                 LastProcessedTombstoneEtag = lastEtags.LastProcessedTombstoneEtag
                             };
 
-                            UpdateProgressStats(queryContext, progressStats, value.Name);
+                            UpdateProgressStats(queryContext, progressStats, value.Name, overallDuration);
                         }
                     }
                 }
             }
         }
 
-        internal virtual void UpdateProgressStats(QueryOperationContext queryContext, IndexProgress.CollectionStats progressStats, string collectionName)
+        internal virtual void UpdateProgressStats(QueryOperationContext queryContext, IndexProgress.CollectionStats progressStats, string collectionName,
+            Stopwatch overallDuration)
         {
             progressStats.NumberOfItemsToProcess +=
                 DocumentDatabase.DocumentsStorage.GetNumberOfDocumentsToProcess(
-                    queryContext.Documents, collectionName, progressStats.LastProcessedItemEtag, out var totalCount);
+                    queryContext.Documents, collectionName, progressStats.LastProcessedItemEtag, out var totalCount, overallDuration);
             progressStats.TotalNumberOfItems += totalCount;
 
             progressStats.NumberOfTombstonesToProcess +=
                 DocumentDatabase.DocumentsStorage.GetNumberOfTombstonesToProcess(
-                    queryContext.Documents, collectionName, progressStats.LastProcessedTombstoneEtag, out totalCount);
+                    queryContext.Documents, collectionName, progressStats.LastProcessedTombstoneEtag, out totalCount, overallDuration);
             progressStats.TotalNumberOfTombstones += totalCount;
         }
 
