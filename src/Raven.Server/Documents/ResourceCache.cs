@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
@@ -149,21 +150,33 @@ namespace Raven.Server.Documents
                 return value;
             }
         }
-        public IDisposable RemoveLockAndReturn(string databaseName, Action<TResource> onSuccess, out TResource resource, [CallerMemberName] string caller = null)
+        public IDisposable RemoveLockAndReturn(string databaseName, Action<TResource> onSuccess, out TResource resource, [CallerMemberName] string caller = null, string reason = null)
         {
             Task<TResource> current = null;
             Task<TResource> resourceLocked;
 
             lock (this)
             {
-                resourceLocked = Task.FromException<TResource>(new DatabaseDisabledException($"The database '{databaseName}' has been unloaded and locked by {caller}")
+                var dbDisabledExMessage = $"The database '{databaseName}' has been unloaded and locked";
+
+                if (string.IsNullOrEmpty(caller) == false) 
+                    dbDisabledExMessage += $" by {caller}";
+
+                if (string.IsNullOrEmpty(reason) == false) 
+                    dbDisabledExMessage += $" because {reason}";
+
+                var databaseDisabledException = new DatabaseDisabledException(dbDisabledExMessage)
                 {
                     Data =
                     {
                         [DatabasesLandlord.DoNotRemove] = true,
-                        ["Source"] = caller
                     }
-                });
+                };
+
+                if (caller != null) 
+                    databaseDisabledException.Data["Source"] = caller;
+
+                resourceLocked = Task.FromException<TResource>(databaseDisabledException);
 
                 resourceLocked.IgnoreUnobservedExceptions();
 
@@ -188,13 +201,17 @@ namespace Raven.Server.Documents
 
                 if (current.IsCompleted == false)
                 {
-                    throw new DatabaseConcurrentLoadTimeoutException($"Attempting to unload database {databaseName} that is loading is not allowed (by {caller})")
-                    {
-                        Data =
-                        {
-                            {caller, null}
-                        }
-                    };
+                    var dbConcurrentLoadTimeoutExMessage = $"Attempting to unload database {databaseName} that is loading is not allowed";
+
+                    if (string.IsNullOrEmpty(caller) == false)
+                        dbConcurrentLoadTimeoutExMessage += $" (by {caller})";
+
+                    var databaseConcurrentLoadTimeoutException = new DatabaseConcurrentLoadTimeoutException(dbConcurrentLoadTimeoutExMessage);
+
+                    if (string.IsNullOrEmpty(caller) == false) 
+                        databaseConcurrentLoadTimeoutException.Data[caller] = null;
+
+                    throw databaseConcurrentLoadTimeoutException;
                 }
 
                 if (current.IsCompletedSuccessfully)
@@ -234,34 +251,6 @@ namespace Raven.Server.Documents
             return null;// never used
         }
 
-        public Task<TResource> Replace(string databaseName, Task<TResource> task)
-        {
-            lock (this)
-            {
-                Task<TResource> existingTask = null;
-                _caseInsensitive.AddOrUpdate(databaseName, segment => task, (key, existing) =>
-                {
-                    existingTask = existing;
-                    return task;
-                });
-
-                ResourceDetails details = null;
-                if (existingTask != null)
-                    _resourceDetails.TryRemove(existingTask, out details);
-
-                _resourceDetails[task] = details ?? new ResourceDetails{InCacheSince = SystemTime.UtcNow};
-
-                if (_mappings.TryGetValue(databaseName, out ConcurrentSet<StringSegment> mappings))
-                {
-                    foreach (var mapping in mappings)
-                    {
-                        _caseSensitive.TryRemove(mapping, out Task<TResource> _);
-                    }
-                }
-                return existingTask;
-            }
-        }
-
         private TestingStuff _forTestingPurposes;
 
         internal TestingStuff ForTestingPurposesOnly()
@@ -269,12 +258,47 @@ namespace Raven.Server.Documents
             if (_forTestingPurposes != null)
                 return _forTestingPurposes;
 
-            return _forTestingPurposes = new TestingStuff();
+            return _forTestingPurposes = new TestingStuff(this);
         }
 
         internal class TestingStuff
         {
+            private readonly ResourceCache<TResource> _parent;
+
+            public TestingStuff(ResourceCache<TResource> parent)
+            {
+                _parent = parent;
+            }
+
             internal Action<ResourceCache<TResource>> OnRemoveLockAndReturnDispose;
+
+            public Task<TResource> Replace(string databaseName, Task<TResource> task)
+            {
+                lock (this)
+                {
+                    Task<TResource> existingTask = null;
+                    _parent._caseInsensitive.AddOrUpdate(databaseName, segment => task, (key, existing) =>
+                    {
+                        existingTask = existing;
+                        return task;
+                    });
+
+                    ResourceDetails details = null;
+                    if (existingTask != null)
+                        _parent._resourceDetails.TryRemove(existingTask, out details);
+
+                    _parent._resourceDetails[task] = details ?? new ResourceDetails { InCacheSince = SystemTime.UtcNow };
+
+                    if (_parent._mappings.TryGetValue(databaseName, out ConcurrentSet<StringSegment> mappings))
+                    {
+                        foreach (var mapping in mappings)
+                        {
+                            _parent._caseSensitive.TryRemove(mapping, out Task<TResource> _);
+                        }
+                    }
+                    return existingTask;
+                }
+            }
         }
     }
 }

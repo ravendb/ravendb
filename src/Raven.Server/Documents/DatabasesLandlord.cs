@@ -936,33 +936,34 @@ namespace Raven.Server.Documents
             return maxLastWork.AddMilliseconds(dbSize / 1024L);
         }
 
-        public async Task<IDisposable> UnloadAndLockDatabase(string dbName, string reason)
+        public Task<IDisposable> UnloadAndLockDatabase(string dbName, string reason)
         {
-            var tcs = Task.FromException<DocumentDatabase>(new DatabaseDisabledException($"The database {dbName} is currently locked because {reason}")
+            return UnloadAndLockDatabaseImpl(DatabasesCache, dbName, CompleteDatabaseUnloading, reason);
+        }
+
+        internal static async Task<IDisposable> UnloadAndLockDatabaseImpl<T>(ResourceCache<T> resourceCache, string dbName, Action<T> unloadDatabaseOnSuccess, string reason)
+        {
+            while (true)
             {
-                Data =
+                try
                 {
-                    [DoNotRemove] = true
+                    return resourceCache.RemoveLockAndReturn(dbName, unloadDatabaseOnSuccess, out _, caller: null, reason: reason);
                 }
-            });
-
-            var t = tcs.IgnoreUnobservedExceptions();
-
-            try
-            {
-                var existing = DatabasesCache.Replace(dbName, tcs);
-                if (existing != null)
-                    (await existing)?.Dispose();
-
-                return new DisposableAction(() =>
+                catch (DatabaseConcurrentLoadTimeoutException)
                 {
-                    DatabasesCache.TryRemove(dbName, tcs);
-                });
-            }
-            catch (Exception)
-            {
-                DatabasesCache.TryRemove(dbName, tcs);
-                throw;
+                    // database is still being loaded
+
+                    await Task.Delay(100);
+                }
+                catch (AggregateException ea)
+                {
+                    var inner = ea.ExtractSingleInnerException();
+
+                    if (inner is DatabaseDisabledException)
+                        throw inner;
+
+                    throw;
+                }
             }
         }
 
