@@ -26,6 +26,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
             entryWriter.WriteNull(field);
         }
         
+        public void WriteEmpty(int field, ref IndexEntryWriter entryWriter)
+        {
+            entryWriter.WriteEmpty(field);
+        }
+        
         public void Write(int field, ReadOnlySpan<byte> value, ref IndexEntryWriter entryWriter)
         {
             entryWriter.Write(field, value);

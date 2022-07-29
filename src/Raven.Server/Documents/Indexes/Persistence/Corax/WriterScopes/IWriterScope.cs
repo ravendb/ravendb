@@ -10,6 +10,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
     public interface IWriterScope
     {
         public void WriteNull(int field, ref IndexEntryWriter entryWriter);
+
+        public void WriteEmpty(int field, ref IndexEntryWriter entryWriter);
+
         public void Write(int field, ReadOnlySpan<byte> value, ref IndexEntryWriter entryWriter);
 
         public void Write(int field, ReadOnlySpan<byte> value, long longValue, double doubleValue, ref IndexEntryWriter entryWriter);

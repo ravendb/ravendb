@@ -83,6 +83,14 @@ public unsafe partial struct IndexEntryWriter : IDisposable
         Unsafe.WriteUnaligned(ref Buffer[_dataIndex], IndexEntryFieldType.Null);
         _dataIndex += sizeof(IndexEntryFieldType);
     }
+    
+    public void WriteEmpty(int field)
+    {
+        // Write known field.
+        _knownFieldsLocations[field] = _dataIndex | Constants.IndexWriter.IntKnownFieldMask;
+        Unsafe.WriteUnaligned(ref _buffer[_dataIndex], IndexEntryFieldType.Empty);
+        _dataIndex += sizeof(IndexEntryFieldType);
+    }
 
     /// <summary>
     ///  Writes binary sequence into buffer (strings etc)

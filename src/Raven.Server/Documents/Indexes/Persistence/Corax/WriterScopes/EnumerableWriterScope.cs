@@ -48,6 +48,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
             _longValues.Add(0);
             _doubleValues.Add(float.NaN);
         }
+        
+        public void WriteEmpty(int field, ref IndexEntryWriter entryWriter)
+        {
+            WriteNull(field, ref entryWriter);
+        }
 
         public void Write(int field, ReadOnlySpan<byte> value, ref IndexEntryWriter entryWriter)
         {
