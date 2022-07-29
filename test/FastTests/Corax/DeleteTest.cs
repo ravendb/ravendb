@@ -78,10 +78,7 @@ namespace FastTests.Corax
             {
                 using var indexSearcher = new IndexSearcher(Env, _analyzers);
                 using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
-                Slice.From(ctx, "Content", out var field);
-                Slice.From(ctx, "Content-L", out var fieldLong);
-                
-                var match = indexSearcher.GreaterThanOrEqualsQuery(field, fieldLong, 0);
+                var match = indexSearcher.GreatThanOrEqualsQuery("Content", 0L, default(NullScoreFunction));
                 Assert.Equal(_longList.Count, match.Fill(ids));
             }
 
@@ -94,10 +91,7 @@ namespace FastTests.Corax
             {
                 using var indexSearcher = new IndexSearcher(Env, _analyzers);
                 using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
-                Slice.From(ctx, "Content", out var field);
-                Slice.From(ctx, "Content-L", out var fieldLong);
-                
-                var match = indexSearcher.GreaterThanOrEqualsQuery(field, fieldLong, 0);
+                var match = indexSearcher.GreatThanOrEqualsQuery("Content", 0L, default(NullScoreFunction));
                 Assert.Equal(_longList.Count -1, match.Fill(ids));
             }
         }
