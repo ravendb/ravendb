@@ -5,8 +5,10 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Corax;
 using Corax.Queries;
+using Parquet.Data;
 using Raven.Server.Documents.Queries;
 using Sparrow.Extensions;
+using Voron;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
@@ -102,6 +104,7 @@ public readonly struct CoraxBooleanItem : IQueryMatch
         {
             baseMatch = (Term, Term2) switch
             {
+<<<<<<< HEAD
                 (long l, long l2) => _indexSearcher.Between(_indexSearcher.ExistsQuery(Name), FieldId, l, l2, BetweenLeft, BetweenRight),
                 (double d, double d2) => _indexSearcher.Between(_indexSearcher.ExistsQuery(Name), FieldId, d, d2, BetweenLeft, BetweenRight),
                 (string s, string s2) => _indexSearcher.Between(_indexSearcher.ExistsQuery(Name), FieldId, s, s2, BetweenLeft, BetweenRight),
@@ -109,11 +112,20 @@ public readonly struct CoraxBooleanItem : IQueryMatch
                 (double d, long l) => _indexSearcher.Between(_indexSearcher.ExistsQuery(Name), FieldId, d, Convert.ToDouble(l), BetweenLeft, BetweenRight),
 
                     _ => throw new InvalidOperationException($"UnaryMatchOperation {Operation} is not supported for type {Term.GetType()}")
+=======
+                (long l, long l2) => _indexSearcher.BetweenQuery(Name, BetweenLeft, BetweenRight, l, l2, _scoreFunction, fieldId: FieldId),
+                (double d, double d2) => _indexSearcher.BetweenQuery(Name, BetweenLeft, BetweenRight, d, d2, _scoreFunction, fieldId: FieldId),
+                (string s, string s2) => _indexSearcher.BetweenQuery(Name, BetweenLeft, BetweenRight, s, s2, _scoreFunction, fieldId: FieldId),
+                (long l, double d) => _indexSearcher.BetweenQuery(Name, BetweenLeft, BetweenRight, Convert.ToDouble(l), d, _scoreFunction, fieldId: FieldId),
+                (double d, long l) => _indexSearcher.BetweenQuery(Name, BetweenLeft, BetweenRight, d, Convert.ToDouble(l), _scoreFunction, fieldId: FieldId),
+                _ => throw new InvalidOperationException($"UnaryMatchOperation {Operation} is not supported for type {Term.GetType()}")
+>>>>>>> 6c938dfd8d (RavenDB-18852 Integration of RangeQueries)
             };
         }
 
         else
         {
+<<<<<<< HEAD
             baseMatch = Term switch
             {
                 long l => _indexSearcher.UnaryQuery(_indexSearcher.ExistsQuery(Name), FieldId, l, Operation),
@@ -126,6 +138,31 @@ public readonly struct CoraxBooleanItem : IQueryMatch
         return _scoreFunction is NullScoreFunction
             ? baseMatch
             : _indexSearcher.Boost(baseMatch, _scoreFunction);
+=======
+            baseMatch = (Operation, Term) switch
+            {
+                (UnaryMatchOperation.LessThan, long term) => _indexSearcher.LessThanQuery(Name, term, _scoreFunction, false, FieldId),
+                (UnaryMatchOperation.LessThan, double term) => _indexSearcher.LessThanQuery(Name, term, _scoreFunction, false, FieldId),
+                (UnaryMatchOperation.LessThan, string term) => _indexSearcher.LessThanQuery(Name, term, _scoreFunction, false, FieldId),
+
+                (UnaryMatchOperation.LessThanOrEqual, long term) => _indexSearcher.LessThanOrEqualsQuery(Name, term, _scoreFunction, false, FieldId),
+                (UnaryMatchOperation.LessThanOrEqual, double term) => _indexSearcher.LessThanOrEqualsQuery(Name, term, _scoreFunction, false, FieldId),
+                (UnaryMatchOperation.LessThanOrEqual, string term) => _indexSearcher.LessThanOrEqualsQuery(Name, term, _scoreFunction, false, FieldId),
+
+                (UnaryMatchOperation.GreaterThan, long term) => _indexSearcher.GreaterThanQuery(Name, term, _scoreFunction, false, FieldId),
+                (UnaryMatchOperation.GreaterThan, double term) => _indexSearcher.GreaterThanQuery(Name, term, _scoreFunction, false, FieldId),
+                (UnaryMatchOperation.GreaterThan, string term) => _indexSearcher.GreaterThanQuery(Name, term, _scoreFunction, false, FieldId),
+
+                
+                (UnaryMatchOperation.GreaterThanOrEqual, long term) => _indexSearcher.GreatThanOrEqualsQuery(Name, term, _scoreFunction, false, FieldId),
+                (UnaryMatchOperation.GreaterThanOrEqual, double term) => _indexSearcher.GreatThanOrEqualsQuery(Name, term, _scoreFunction, false, FieldId),
+                (UnaryMatchOperation.GreaterThanOrEqual, string term) => _indexSearcher.GreatThanOrEqualsQuery(Name, term, _scoreFunction, false, FieldId),
+                _ => throw new ArgumentException("This is only Greater*/Less* Query part")
+            };
+        }
+
+        return baseMatch;
+>>>>>>> 6c938dfd8d (RavenDB-18852 Integration of RangeQueries)
     }
 }
 
@@ -217,6 +254,7 @@ public class CoraxBooleanQuery : IQueryMatch
         {
             if (query.Operation is UnaryMatchOperation.Between)
             {
+<<<<<<< HEAD
                 baseMatch = (query.Term, query.Term2) switch
                 {
                     (long l, long l2) => _indexSearcher.Between(baseMatch ?? _indexSearcher.ExistsQuery(query.Name), query.FieldId, l, l2, query.BetweenLeft,
@@ -238,6 +276,46 @@ public class CoraxBooleanQuery : IQueryMatch
                     double doubleTerm => _indexSearcher.UnaryQuery(baseMatch ?? _indexSearcher.ExistsQuery(query.Name), query.FieldId, doubleTerm, query.Operation, -1),
                     _ => _indexSearcher.UnaryQuery(baseMatch ?? _indexSearcher.ExistsQuery(query.Name), query.FieldId, query.Term as string, query.Operation, -1),
                 };
+=======
+                var nextQuery = (query.Term, query.Term2) switch
+                {
+                    (long l, long l2) => _indexSearcher.BetweenQuery(query.Name, query.BetweenLeft, query.BetweenRight, l, l2, default(NullScoreFunction), fieldId: query.FieldId),
+                    (double d, double d2) => _indexSearcher.BetweenQuery(query.Name, query.BetweenLeft, query.BetweenRight, d, d2, default(NullScoreFunction), fieldId: query.FieldId),
+                    (string s, string s2) => _indexSearcher.BetweenQuery(query.Name, query.BetweenLeft, query.BetweenRight, s, s2, default(NullScoreFunction), fieldId: query.FieldId),
+                    (long l, double d) => _indexSearcher.BetweenQuery(query.Name, query.BetweenLeft, query.BetweenRight, Convert.ToDouble(l), d, default(NullScoreFunction), fieldId: query.FieldId),
+                    (double d, long l) => _indexSearcher.BetweenQuery(query.Name, query.BetweenLeft, query.BetweenRight, d, Convert.ToDouble(l), default(NullScoreFunction), fieldId: query.FieldId),
+                    _ => throw new InvalidOperationException($"UnaryMatchOperation {query.Operation} is not supported for type {query.Term.GetType()}")
+                };
+
+                baseMatch = baseMatch is null
+                    ? nextQuery
+                    : _indexSearcher.And(baseMatch, nextQuery);
+            }
+            else
+            {
+                var nextQuery = (query.Operation, query.Term) switch
+                {
+                    (UnaryMatchOperation.LessThan, long l) => _indexSearcher.LessThanQuery(query.Name, l, default(NullScoreFunction), fieldId: query.FieldId),
+                    (UnaryMatchOperation.LessThan, double d) => _indexSearcher.LessThanQuery(query.Name, d, default(NullScoreFunction), fieldId: query.FieldId),
+                    (UnaryMatchOperation.LessThan, string s) => _indexSearcher.LessThanQuery(query.Name, s, default(NullScoreFunction), fieldId: query.FieldId),
+                    
+                    (UnaryMatchOperation.LessThanOrEqual, long l) => _indexSearcher.LessThanOrEqualsQuery(query.Name, l, default(NullScoreFunction), fieldId: query.FieldId),
+                    (UnaryMatchOperation.LessThanOrEqual, double d) => _indexSearcher.LessThanOrEqualsQuery(query.Name, d, default(NullScoreFunction), fieldId: query.FieldId),
+                    (UnaryMatchOperation.LessThanOrEqual, string s) => _indexSearcher.LessThanOrEqualsQuery(query.Name, s, default(NullScoreFunction), fieldId: query.FieldId),
+                    
+                    (UnaryMatchOperation.GreaterThan, long l) => _indexSearcher.GreaterThanQuery(query.Name, l, default(NullScoreFunction), fieldId: query.FieldId),
+                    (UnaryMatchOperation.GreaterThan, double d) => _indexSearcher.GreaterThanQuery(query.Name, d, default(NullScoreFunction), fieldId: query.FieldId),
+                    (UnaryMatchOperation.GreaterThan, string s) => _indexSearcher.GreaterThanQuery(query.Name, s, default(NullScoreFunction), fieldId: query.FieldId),
+                    
+                    (UnaryMatchOperation.GreaterThanOrEqual, long l) => _indexSearcher.GreatThanOrEqualsQuery(query.Name, l, default(NullScoreFunction), fieldId: query.FieldId),
+                    (UnaryMatchOperation.GreaterThanOrEqual, double d) => _indexSearcher.GreatThanOrEqualsQuery(query.Name, d, default(NullScoreFunction), fieldId: query.FieldId),
+                    (UnaryMatchOperation.GreaterThanOrEqual, string s) => _indexSearcher.GreatThanOrEqualsQuery(query.Name, s, default(NullScoreFunction), fieldId: query.FieldId),
+                };
+                
+                baseMatch = baseMatch is null
+                    ? nextQuery
+                    : _indexSearcher.And(baseMatch, nextQuery);
+>>>>>>> 6c938dfd8d (RavenDB-18852 Integration of RangeQueries)
             }
         }
 
