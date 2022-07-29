@@ -25,7 +25,7 @@ public class RavenDB_17250 : RavenTestBase
     }
  
     [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public void DateAndTimeOnlyTestInIndex(Options options)
     {
         using var store = GetDocumentStore(options);
