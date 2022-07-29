@@ -30,10 +30,8 @@ namespace FastTests.Corax
             IndexEntries();
             using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
             using var searcher = new IndexSearcher(Env);
-            Slice.From(ctx, "Content", out var fieldName);
-            Slice.From(ctx, "3", out var three);
-            var match1 = searcher.GreaterThanQuery(fieldName, three);
-            var expectedList = GetExpectedResult("3");
+            var match1 = searcher.GreaterThanQuery<long, NullScoreFunction>("Content", 3, default);
+            var expectedList = GetExpectedResult(3);
             expectedList.Sort();
             var outputList = FetchFromCorax(ref match1);
             outputList.Sort();
@@ -83,9 +81,7 @@ namespace FastTests.Corax
             IndexEntries();
             using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
             using var searcher = new IndexSearcher(Env);
-            Slice.From(ctx, "0", out var id);
-            Slice.From(ctx, "Content", out var field);
-            var match1 = searcher.LessThanQuery(field, id);
+            var match1 = searcher.LessThanQuery<long, NullScoreFunction>("Content", 0, default);
             var ids = new long[16];
             int read = match1.Fill(ids);
             Assert.Equal(0, read);
@@ -283,6 +279,11 @@ namespace FastTests.Corax
         private List<string> GetExpectedResult(string input)
         {
             return _entries.Where(entry => entry.LongValue.ToString().CompareTo(input) == 1).Select(x => x.Id).ToList();
+        }
+        
+        private List<string> GetExpectedResult(long input)
+        {
+            return _entries.Where(entry => entry.LongValue > input).Select(x => x.Id).ToList();
         }
         
         private class Entry
