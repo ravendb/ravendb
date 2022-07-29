@@ -390,6 +390,62 @@ public static class QueryBuilderHelper
             }
         }
     }
+    
+    internal unsafe static bool TryGetTime(Index index, object value, out long ticks)
+    {
+        ticks = -1;
+        DateTime dt = default;
+        DateTimeOffset dto = default;
+        DateOnly @do = default;
+        TimeOnly to = default;
+        LazyStringParser.Result result = LazyStringParser.Result.Failed;
+
+        switch (value)
+        {
+            case LazyStringValue lsv:
+                result = LazyStringParser.TryParseTimeForQuery(lsv.Buffer, lsv.Size, out dt, out dto, out @do, out to,
+                    index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.ProperlyParseThreeDigitsMillisecondsDates);
+                break;
+            case string valueAsString:
+                fixed (char* buffer = valueAsString)
+                {
+                    result = LazyStringParser.TryParseTimeForQuery(buffer, valueAsString.Length, out dt, out dto, out @do, out to,
+                        index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.ProperlyParseThreeDigitsMillisecondsDates);
+
+                }
+
+                break;
+            default:
+                var otherAsString = value.ToString();
+                fixed (char* buffer = otherAsString)
+                {
+                    result = LazyStringParser.TryParseTimeForQuery(buffer, otherAsString.Length, out dt, out dto, out @do, out to,
+                        index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.ProperlyParseThreeDigitsMillisecondsDates);
+                }
+
+                break;
+        }
+
+        switch (result)
+        {
+            case LazyStringParser.Result.Failed:
+                return false;
+            case LazyStringParser.Result.DateTime:
+                ticks = dt.Ticks;
+                return true;
+            case LazyStringParser.Result.DateTimeOffset:
+                ticks = dto.UtcDateTime.Ticks;
+                return true;
+            case LazyStringParser.Result.TimeOnly:
+                ticks = to.Ticks;
+                return true;
+            case LazyStringParser.Result.DateOnly:
+                ticks = @do.DayNumber * TimeSpan.TicksPerDay;
+                return true;
+            default:
+                throw new InvalidOperationException("Should not happen!");
+        }
+    }
 
     internal static void ThrowInvalidInValue(Query query, BlittableJsonReaderObject parameters, QueryExpression val)
     {
