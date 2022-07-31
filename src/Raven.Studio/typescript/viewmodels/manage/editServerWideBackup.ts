@@ -21,6 +21,8 @@ class editServerWideBackup extends viewModelBase {
     backupDestinationsView = require("views/partial/backupDestinations.html");
     backupConfigurationView = require("views/partial/backupConfigurationScript.html");
     backupDestinationTestCredentialsView = require("views/partial/backupDestinationTestCredentialsResults.html");
+    pinResponsibleNodeButtonsScriptView = require("views/partial/pinResponsibleNodeButtonsScript.html");
+    pinResponsibleNodeTextScriptView = require("views/partial/pinResponsibleNodeTextScript.html");
     
     editedTask = ko.observable<serverWideBackupEditModel>();
     serverConfiguration = ko.observable<periodicBackupServerLimitsResponse>();

@@ -30,6 +30,8 @@ import accessManager = require("common/shell/accessManager");
 class editReplicationHubTask extends viewModelBase {
 
     view = require("views/database/tasks/editReplicationHubTask.html");
+    pinResponsibleNodeButtonsScriptView = require("views/partial/pinResponsibleNodeButtonsScript.html");
+    pinResponsibleNodeTextScriptView = require("views/partial/pinResponsibleNodeTextScript.html");
     
     editedHubTask = ko.observable<ongoingTaskReplicationHubEditModel>();
     editedReplicationAccessItem = ko.observable<replicationAccessHubModel>(null);

@@ -3,6 +3,8 @@ import dialog = require("plugins/dialog");
 
 class storageWidgetSettings extends dialogViewModelBase {
 
+    view = require("views/resources/widgets/settings/storageWidgetSettings.html");
+    
     scaleDriveSize = ko.observable<boolean>();
 
     constructor(scaleToSize: boolean) {

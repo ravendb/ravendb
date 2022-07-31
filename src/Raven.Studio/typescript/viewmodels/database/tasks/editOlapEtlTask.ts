@@ -223,6 +223,8 @@ class editOlapEtlTask extends viewModelBase {
     connectionStringOlapView = require("views/database/settings/connectionStringOlap.html");
     backupConfigurationView = require("views/partial/backupConfigurationScript.html");
     backupDestinationLocalView = require("views/partial/backupDestinationLocal.html");
+    pinResponsibleNodeButtonsScriptView = require("views/partial/pinResponsibleNodeButtonsScript.html");
+    pinResponsibleNodeTextScriptView = require("views/partial/pinResponsibleNodeTextScript.html");
 
     static readonly scriptNamePrefix = "Script_";
     enableTestArea = ko.observable<boolean>(false);

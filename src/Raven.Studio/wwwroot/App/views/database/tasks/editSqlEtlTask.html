@@ -72,12 +72,12 @@
                                         </ul>
                                         <span class="help-block" data-bind="validationMessage: mentorNode"></span>
                                     </div>
-                                    <div data-bind="compose: 'partial/pinResponsibleNodeButtonsScript.html'"></div>
+                                    <div data-bind="compose: $root.pinResponsibleNodeButtonsScriptView"></div>
                                 </div>
                                 <div data-bind="visible: mentorNode">
                                     <div class="form-group small">
                                         <label class="control-label">&nbsp;</label>
-                                        <div class="flex-grow" data-bind="compose: 'partial/pinResponsibleNodeTextScript.html'"></div>
+                                        <div class="flex-grow" data-bind="compose: $root.pinResponsibleNodeTextScriptView"></div>
                                     </div>
                                 </div>
                             </div>

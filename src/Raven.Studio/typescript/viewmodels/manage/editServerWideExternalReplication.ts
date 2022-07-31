@@ -14,6 +14,8 @@ class editServerWideExternalReplication extends viewModelBase {
     
     view = require("views/manage/editServerWideExternalReplication.html");
     certificateUploadInfoForOngoingTasks = require("views/partial/certificateUploadInfoForOngoingTasks.html");
+    pinResponsibleNodeButtonsScriptView = require("views/partial/pinResponsibleNodeButtonsScript.html");
+    pinResponsibleNodeTextScriptView = require("views/partial/pinResponsibleNodeTextScript.html");
     
     editedTask = ko.observable<serverWideExternalReplicationEditModel>();
     isAddingNewExternalReplicationTask = ko.observable<boolean>(true);

@@ -24,7 +24,9 @@ import accessManager = require("common/shell/accessManager");
 class editReplicationSinkTask extends viewModelBase {
 
     view = require("views/database/tasks/editReplicationSinkTask.html");
-    connectionStringView = require("views/database/settings/connectionStringRaven.html")
+    connectionStringView = require("views/database/settings/connectionStringRaven.html");
+    pinResponsibleNodeButtonsScriptView = require("views/partial/pinResponsibleNodeButtonsScript.html");
+    pinResponsibleNodeTextScriptView = require("views/partial/pinResponsibleNodeTextScript.html");
 
     editedSinkTask = ko.observable<ongoingTaskReplicationSinkEditModel>();
     isAddingNewTask = ko.observable<boolean>(true);

@@ -39,7 +39,10 @@ class perCollectionIncludes {
 class editSubscriptionTask extends viewModelBase {
 
     languageService: rqlLanguageService;
+    
     view = require("views/database/tasks/editSubscriptionTask.html");
+    pinResponsibleNodeButtonsScriptView = require("views/partial/pinResponsibleNodeButtonsScript.html");
+    pinResponsibleNodeTextScriptView = require("views/partial/pinResponsibleNodeTextScript.html");
 
     editedSubscription = ko.observable<ongoingTaskSubscriptionEdit>();
     isAddingNewSubscriptionTask = ko.observable<boolean>(true);

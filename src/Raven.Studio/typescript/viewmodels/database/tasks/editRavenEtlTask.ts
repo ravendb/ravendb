@@ -171,6 +171,8 @@ class editRavenEtlTask extends viewModelBase {
     view = require("views/database/tasks/editRavenEtlTask.html");
     connectionStringView = require("views/database/settings/connectionStringRaven.html")
     certificateUploadInfoForOngoingTasks = require("views/partial/certificateUploadInfoForOngoingTasks.html");
+    pinResponsibleNodeButtonsScriptView = require("views/partial/pinResponsibleNodeButtonsScript.html");
+    pinResponsibleNodeTextScriptView = require("views/partial/pinResponsibleNodeTextScript.html");
     
     static readonly scriptNamePrefix = "Script_";
     static isApplyToAll = ongoingTaskRavenEtlTransformationModel.isApplyToAll;

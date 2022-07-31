@@ -88,12 +88,12 @@
                                 </ul>
                                 <span class="help-block" data-bind="validationMessage: mentorNode"></span>
                             </div>
-                            <span data-bind="compose: 'partial/pinResponsibleNodeButtonsScript.html'"></span>
+                            <span data-bind="compose: $root.pinResponsibleNodeButtonsScriptView"></span>
                         </div>
                     </div>
                     <div class="row margin-bottom small">
                         <div class="col-sm-offset-4 col-lg-offset-2 col-sm-4" data-bind="visible: mentorNode">
-                            <div data-bind="compose: 'partial/pinResponsibleNodeTextScript.html'"></div>
+                            <div data-bind="compose: $root.pinResponsibleNodeTextScriptView"></div>
                         </div>
                     </div>
                 </div>
