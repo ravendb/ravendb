@@ -20,6 +20,7 @@ namespace Raven.Client.Documents.Operations.Replication
             {
                 throw new ArgumentException($"'{nameof(name)}' must have value");
             }
+
             _pullReplicationDefinition = new PullReplicationDefinition(name);
         }
 

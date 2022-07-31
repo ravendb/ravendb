@@ -23,6 +23,8 @@ class editPeriodicBackupTask extends viewModelBase {
     backupDestinationsView = require("views/partial/backupDestinations.html");
     backupConfigurationView = require("views/partial/backupConfigurationScript.html");
     backupDestinationTestCredentialsView = require("views/partial/backupDestinationTestCredentialsResults.html");
+    pinResponsibleNodeButtonsScriptView = require("views/partial/pinResponsibleNodeButtonsScript.html");
+    pinResponsibleNodeTextScriptView = require("views/partial/pinResponsibleNodeTextScript.html");
 
     titleForView: KnockoutComputed<string>;
     configuration = ko.observable<backupConfigurationClass>();
@@ -142,11 +144,6 @@ class editPeriodicBackupTask extends viewModelBase {
         popoverUtils.longWithHover($(".backup-age-info"),
             {
                 content: tasksCommonContent.backupAgeInfo
-            });
-
-        popoverUtils.longWithHover($(".responsible-node"),
-            {
-                content: tasksCommonContent.responsibleNodeInfo
             });
     }
 

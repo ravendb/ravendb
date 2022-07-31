@@ -90,36 +90,41 @@ class clusterDashboard extends viewModelBase {
         this.resizeObserver.observe(this.htmlElement);
         
         const throttledLayoutSave = _.debounce(() => {
-            const packeryWidth = this.packery.packer.width;
-            const layout = this.widgets().map(x => {
-                const packeryItem = this.packery.getItem(x.container);
-                return {
-                    left: packeryItem.rect.x / packeryWidth,
-                    top: packeryItem.rect.y,
-                    widget: x
-                }
-            });
-            
-            const sortedLayout = layout.sort((a, b) => a.top === b.top ? a.left - b.left : a.top - b.top);
-            
-            const columnsCount = this.getNumberOfColumnsInPackeryLayout();
-            
-            const widgetsLayout: savedWidgetsLayout = {
-                widgets: sortedLayout.map(x => ({
-                    type: x.widget.getType(),
-                    fullscreen: x.widget.fullscreen(),
-                    config: x.widget.getConfiguration(),
-                    state: x.widget.getState(),
-                    columnIndex: clusterDashboard.getColumnIndex(x.left, columnsCount)
-                })),
-                columns: columnsCount
-            };
-            localStorage.setObject(clusterDashboard.localStorageName, widgetsLayout);
+            this.saveToLocalStorage();
         }, 5_000);
 
         this.packery.on("layoutComplete", throttledLayoutSave);
 
         this.initialized(true);
+    }
+
+    saveToLocalStorage() {
+        const packeryWidth = this.packery.packer.width;
+        const layout = this.widgets().map(x => {
+            const packeryItem = this.packery.getItem(x.container);
+            return {
+                left: packeryItem.rect.x / packeryWidth,
+                top: packeryItem.rect.y,
+                widget: x
+            }
+        });
+
+        const sortedLayout = layout.sort((a, b) => a.top === b.top ? a.left - b.left : a.top - b.top);
+
+        const columnsCount = this.getNumberOfColumnsInPackeryLayout();
+
+        const widgetsLayout: savedWidgetsLayout = {
+            widgets: sortedLayout.map(x => ({
+                type: x.widget.getType(),
+                fullscreen: x.widget.fullscreen(),
+                config: x.widget.getConfiguration(),
+                state: x.widget.getState(),
+                columnIndex: clusterDashboard.getColumnIndex(x.left, columnsCount)
+            })),
+            columns: columnsCount
+        };
+
+        localStorage.setObject(clusterDashboard.localStorageName, widgetsLayout);
     }
     
     private static getColumnIndex(leftPositionPercentage: number, totalColumns: number): number {

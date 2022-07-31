@@ -3,7 +3,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Sparrow.LowMemory;
@@ -38,8 +37,10 @@ namespace Sparrow.Utils
         }
 
         internal static long _totalAllocatedMemory;
+        internal static long _totalAllocatedMemoryByLucene;
 
         public static long TotalAllocatedMemory => _totalAllocatedMemory;
+        public static long TotalAllocatedMemoryByLucene => _totalAllocatedMemoryByLucene;
 
         public static ConcurrentDictionary<string, Lazy<FileMappingInfo>> FileMapping = new ConcurrentDictionary<string, Lazy<FileMappingInfo>>();
 
@@ -122,9 +123,22 @@ namespace Sparrow.Utils
             Free(ptr, size, ThreadAllocations.Value);
         }
 
+        public static void FreeMemoryByLucene(byte* ptr, long size)
+        {
+            Interlocked.Add(ref _totalAllocatedMemoryByLucene, -size);
+            Free(ptr, size, ThreadAllocations.Value);
+        }
+
         public static byte* AllocateMemory(long size)
         {
             ThreadStats _;
+            return AllocateMemory(size, out _);
+        }
+
+        public static byte* AllocateMemoryByLucene(long size)
+        {
+            ThreadStats _;
+            Interlocked.Add(ref _totalAllocatedMemoryByLucene, size);
             return AllocateMemory(size, out _);
         }
 

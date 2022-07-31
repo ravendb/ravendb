@@ -18,6 +18,7 @@ namespace Raven.Client.Documents.Subscriptions
         public string ChangeVector { get; set; }
         public string MentorNode { get; set; }
         public bool Disabled { get; set; }
+        public bool PinToMentorNode { get; set; }
     }
 
     public class SubscriptionCreationOptions<T>
@@ -29,6 +30,8 @@ namespace Raven.Client.Documents.Subscriptions
         public Action<ISubscriptionIncludeBuilder<T>> Includes { get; set; }
         public string ChangeVector { get; set; }
         public string MentorNode { get; set; }
+        public bool PinToMentorNode { get; set; }
+
 
         public SubscriptionCreationOptions ToSubscriptionCreationOptions(DocumentConventions conventions)
         {
@@ -37,6 +40,7 @@ namespace Raven.Client.Documents.Subscriptions
                 Name = Name,
                 ChangeVector = ChangeVector,
                 MentorNode = MentorNode,
+                PinToMentorNode = PinToMentorNode,
                 Disabled = Disabled
             };
             return DocumentSubscriptions.CreateSubscriptionOptionsFromGeneric(conventions, 
