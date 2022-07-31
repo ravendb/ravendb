@@ -30,12 +30,14 @@ namespace Raven.Client.ServerWide
         ulong GetTaskKey();
 
         string GetMentorNode();
-
+        
         string GetDefaultTaskName();
 
         string GetTaskName();
 
         bool IsResourceIntensive();
+
+        bool IsPinnedToMentorNode();
     }
 
     public interface IDatabaseTaskStatus
@@ -103,6 +105,11 @@ namespace Raven.Client.ServerWide
         }
 
         public bool IsResourceIntensive()
+        {
+            return false;
+        }
+
+        public bool IsPinnedToMentorNode()
         {
             return false;
         }
@@ -439,6 +446,9 @@ namespace Raven.Client.ServerWide
             if (mentorNode != null)
             {
                 if (Members.Contains(mentorNode))
+                    return mentorNode;
+                
+                if (AllNodes.Contains(mentorNode) && task.IsPinnedToMentorNode())
                     return mentorNode;
             }
 

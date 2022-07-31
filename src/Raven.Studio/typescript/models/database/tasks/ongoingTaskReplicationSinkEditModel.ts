@@ -50,6 +50,7 @@ class ongoingTaskReplicationSinkEditModel extends ongoingTaskEditModel {
 
         this.connectionStringName(dto.ConnectionStringName);
         this.manualChooseMentor(!!dto.MentorNode);
+        this.pinMentorNode(dto.PinToMentorNode);
         this.hubName(dto.HubDefinitionName);
 
         this.allowReplicationFromHubToSink(dto.Mode.includes("HubToSink"));
@@ -75,6 +76,7 @@ class ongoingTaskReplicationSinkEditModel extends ongoingTaskEditModel {
             TaskId: taskId,
             Name: this.taskName(),
             MentorNode: this.manualChooseMentor() ? this.mentorNode() : undefined,
+            PinToMentorNode: this.pinMentorNode(),
             ConnectionStringName: this.connectionStringName(),
             HubName: this.hubName(),
             Mode: this.replicationMode(),

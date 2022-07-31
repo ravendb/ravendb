@@ -38,8 +38,8 @@ namespace Raven.Server
             NativeMemory.GetCurrentUnmanagedThreadId = () => (ulong)Pal.rvn_get_current_thread_id();
             ZstdLib.CreateDictionaryException = message => new VoronErrorException(message);
 
-            Lucene.Net.Util.UnmanagedStringArray.Segment.AllocateMemory = NativeMemory.AllocateMemory;
-            Lucene.Net.Util.UnmanagedStringArray.Segment.FreeMemory = NativeMemory.Free;
+            Lucene.Net.Util.UnmanagedStringArray.Segment.AllocateMemory = NativeMemory.AllocateMemoryByLucene;
+            Lucene.Net.Util.UnmanagedStringArray.Segment.FreeMemory = NativeMemory.FreeMemoryByLucene;
 
             UseOnlyInvariantCultureInRavenDB();
 

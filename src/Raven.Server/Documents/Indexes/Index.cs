@@ -260,6 +260,9 @@ namespace Raven.Server.Documents.Indexes
         private readonly double _txAllocationsRatio;
 
         private readonly string _itemType;
+        
+        internal bool SourceDocumentIncludedInOutput;
+        private bool _alreadyNotifiedAboutIncludingDocumentInOutput;
 
         protected Index(IndexType type, IndexSourceType sourceType, IndexDefinitionBaseServerSide definition)
         {
@@ -4128,7 +4131,23 @@ namespace Raven.Server.Documents.Indexes
             IncludeDocumentsCommand includeDocumentsCommand, IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, IncludeRevisionsCommand includeRevisionsCommand);
 
         public abstract void SaveLastState();
-
+        
+        protected void HandleSourceDocumentIncludedInMapOutput()
+        {
+            if (_alreadyNotifiedAboutIncludingDocumentInOutput || SourceDocumentIncludedInOutput == false || PerformanceHintsConfig.AlertWhenSourceDocumentIncludedInOutput == false)
+                return;
+            
+            DocumentDatabase.NotificationCenter.Add(PerformanceHint.Create(
+                DocumentDatabase.Name,
+                $"Index '{Name}' is including the origin document in output.",
+                $"Putting the whole document as one of the fields of the index entry isn't usually intentional. Especially when it is a fanout index because the document is included multiple times. Please verify your index definition for better indexing performance.",
+                PerformanceHintType.Indexing,
+                NotificationSeverity.Warning,
+                nameof(Index)));
+            
+            _alreadyNotifiedAboutIncludingDocumentInOutput = true;
+        }
+        
         protected void HandleIndexOutputsPerDocument(LazyStringValue documentId, int numberOfOutputs, IndexingStatsScope stats)
         {
             stats.RecordNumberOfProducedOutputs(numberOfOutputs);

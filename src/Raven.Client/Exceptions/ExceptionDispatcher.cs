@@ -231,25 +231,29 @@ namespace Raven.Client.Exceptions
 
         private static async Task<BlittableJsonReaderObject> GetJson(JsonOperationContext context, HttpResponseMessage response, Stream stream)
         {
+            var ms = context.CheckoutMemoryStream();
+
             BlittableJsonReaderObject json;
+
             try
             {
-                json = await context.ReadForMemoryAsync(stream, "error/response").ConfigureAwait(false);
+                // copying the error stream so we can read it as string if we fail to parse it
+                await stream.CopyToAsync(ms).ConfigureAwait(false);
+                ms.Position = 0;
+                json = await context.ReadForMemoryAsync(ms, "error/response").ConfigureAwait(false);
             }
             catch (Exception e)
             {
-                string content = null;
-                if (stream.CanSeek)
-                {
-                    stream.Position = 0;
-                    using (var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, bufferSize: 4096, leaveOpen: true))
-                        content = await reader.ReadToEndAsync().ConfigureAwait(false);
-                }
-
-                if (content != null)
-                    content = $"Content: {content}";
+                string content = "Content: ";
+                ms.Position = 0;
+                using (var reader = new StreamReader(ms, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, bufferSize: 4096, leaveOpen: true))
+                    content += await reader.ReadToEndAsync().ConfigureAwait(false);
 
                 throw new InvalidOperationException($"Cannot parse the '{response.StatusCode}' response. {content}", e);
+            }
+            finally
+            {
+                context.ReturnMemoryStream(ms);
             }
 
             return json;

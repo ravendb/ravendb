@@ -20,6 +20,9 @@ class editServerWideBackup extends viewModelBase {
     setupEncryptionKeyView = require("views/resources/setupEncryptionKey.html");
     backupDestinationsView = require("views/partial/backupDestinations.html");
     backupConfigurationView = require("views/partial/backupConfigurationScript.html");
+    backupDestinationTestCredentialsView = require("views/partial/backupDestinationTestCredentialsResults.html");
+    pinResponsibleNodeButtonsScriptView = require("views/partial/pinResponsibleNodeButtonsScript.html");
+    pinResponsibleNodeTextScriptView = require("views/partial/pinResponsibleNodeTextScript.html");
     
     editedTask = ko.observable<serverWideBackupEditModel>();
     serverConfiguration = ko.observable<periodicBackupServerLimitsResponse>();
@@ -163,11 +166,6 @@ class editServerWideBackup extends viewModelBase {
         popoverUtils.longWithHover($(".serverwide-snapshot-encryption-info"),
             {
                 content: tasksCommonContent.serverwideSnapshotEncryptionInfo
-            });
-
-        popoverUtils.longWithHover($(".responsible-node"),
-            {
-                content: tasksCommonContent.responsibleNodeInfo
             });
     }
 

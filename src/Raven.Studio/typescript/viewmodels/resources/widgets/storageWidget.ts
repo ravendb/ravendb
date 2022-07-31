@@ -3,6 +3,12 @@ import websocketBasedWidget = require("viewmodels/resources/widgets/websocketBas
 import clusterDashboard = require("viewmodels/resources/clusterDashboard");
 import clusterDashboardWebSocketClient = require("common/clusterDashboardWebSocketClient");
 import mountPointUsage = require("models/resources/widgets/mountPointUsage");
+import storageWidgetSettings = require("viewmodels/resources/widgets/settings/storageWidgetSettings");
+import app = require("durandal/app");
+
+interface storageConfig {
+    scaleToSize: boolean;
+}
 
 class perNodeStorageStats {
     readonly tag: string;
@@ -39,11 +45,12 @@ class perNodeStorageStats {
     }
 }
 
-class storageWidget extends websocketBasedWidget<Raven.Server.Dashboard.Cluster.Notifications.StorageUsagePayload> {
+class storageWidget extends websocketBasedWidget<Raven.Server.Dashboard.Cluster.Notifications.StorageUsagePayload, storageConfig> {
 
     view = require("views/resources/widgets/storageWidget.html");
     
     nodeStats = ko.observableArray<perNodeStorageStats>([]);
+    scaleToSize = ko.observable<boolean>();
 
     sizeFormatter = generalUtils.formatBytesToSize;
     
@@ -56,6 +63,8 @@ class storageWidget extends websocketBasedWidget<Raven.Server.Dashboard.Cluster.
             const stats = new perNodeStorageStats(node.tag());
             this.nodeStats.push(stats);
         }
+        
+        this.scaleToSize.subscribe(() => this.scaleDriveSize());
     }
 
     getType(): Raven.Server.Dashboard.Cluster.ClusterDashboardNotificationType {
@@ -111,6 +120,49 @@ class storageWidget extends websocketBasedWidget<Raven.Server.Dashboard.Cluster.
         if (stats) {
             action(stats);
         }
+
+        this.scaleDriveSize();
+    }
+
+    openWidgetSettings(): void {
+        const openSettingsDialog = new storageWidgetSettings(this.scaleToSize());
+
+        app.showBootstrapDialog(openSettingsDialog)
+            .done((scaleResult: boolean) => {
+                this.scaleToSize(scaleResult);
+                this.controller.saveToLocalStorage();
+            });
+}
+
+    private scaleDriveSize(): void {
+        const scaleToSize = this.scaleToSize();
+        
+        let biggestSize = 0;
+        for (const nodeStat of this.nodeStats()) {
+            for (const mountPoint of nodeStat.mountPoints()) {
+                const size = mountPoint.totalCapacity();
+                if (size > biggestSize) {
+                    biggestSize = size;
+                }
+            }
+        }
+
+        for (const nodeStat of this.nodeStats()) {
+            for (const mountPoint of nodeStat.mountPoints()) {
+                const scaleFactor = scaleToSize ? mountPoint.totalCapacity() / biggestSize * 100 : 100;
+                mountPoint.scaleFactor(scaleFactor);
+            }
+        }
+    }
+
+    getConfiguration(): storageConfig {
+        return {
+            scaleToSize: this.scaleToSize()
+        };
+    }
+
+    restoreConfiguration(config: storageConfig) {
+        this.scaleToSize(config.scaleToSize);
     }
 }
 

@@ -540,7 +540,7 @@ namespace Raven.Server.Documents.Handlers
 
             var details = new BulkOperationResult.OperationDetails
             {
-                Query = query.Query
+                Query = query.QueryParameters?.Count > 0 ? $"{query.Query}{Environment.NewLine}{query.QueryParameters}" : query.Query
             };
 
             var task = Database.Operations.AddOperation(

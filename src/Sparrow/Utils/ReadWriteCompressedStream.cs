@@ -196,8 +196,8 @@ namespace Sparrow.Utils
             Flush();
             base.Dispose(_disposing);
             _output?.Dispose();
-            _input?.Dispose();
             _inner?.Dispose();
+            _input?.Dispose();
         }
 
         protected override void Dispose(bool disposing)
