@@ -1883,8 +1883,8 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
 
                 var result = AddEtl(store, configuration, connectionString);
                 var taskId = result.TaskId;
-
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                
+                Assert.True(etlDone.Wait(_defaultTimeout), await GetPerformanceStats(store.Database, _defaultTimeout));
 
                 var files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories).OrderBy(x => x).ToList();
 
@@ -1934,7 +1934,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                 }
 
                 etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                Assert.True(etlDone.Wait(_defaultTimeout), await GetPerformanceStats(store.Database, _defaultTimeout));
 
                 files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories).OrderBy(x => x).ToList();
                 Assert.Equal(10, files.Count);
@@ -2036,8 +2036,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                     ? _defaultTimeout * 2
                     : _defaultTimeout;
 
-                Assert.True(etlDone.Wait(timeout), 
-                    $"olap etl to local machine did not finish in {timeout.TotalMinutes} minutes. stats : {S3Tests.GetPerformanceStats(database)}");
+                Assert.True(etlDone.Wait(timeout), await GetPerformanceStats(store.Database, timeout));
 
                 var files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories).OrderBy(x => x).ToList();
 
@@ -2077,8 +2076,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                 }
 
                 etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
-                Assert.True(etlDone.Wait(timeout), 
-                    $"olap etl to local machine did not finish in {timeout.TotalMinutes} minutes. stats : {S3Tests.GetPerformanceStats(database)}");
+                Assert.True(etlDone.Wait(timeout), await GetPerformanceStats(store.Database, timeout));
 
                 files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories).OrderBy(x => x).ToList();
                 Assert.Equal(10, files.Count);
@@ -2164,7 +2162,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()], ['location', $custom
                 var result = AddEtl(store, configuration, connectionString);
                 var taskId = result.TaskId;
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                Assert.True(etlDone.Wait(_defaultTimeout), await GetPerformanceStats(store.Database, _defaultTimeout));
 
                 var files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories).ToList();
 
@@ -2203,7 +2201,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()], ['location', $custom
                 }
 
                 etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
-                Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
+                Assert.True(etlDone.Wait(_defaultTimeout), await GetPerformanceStats(store.Database, _defaultTimeout));
 
                 files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories).OrderBy(x => x).ToList();
                 Assert.Equal(10, files.Count);
@@ -2286,7 +2284,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                 var result = AddEtl(store, configuration, connectionString);
                 var taskId = result.TaskId;
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                Assert.True(etlDone.Wait(_defaultTimeout), await GetPerformanceStats(store.Database, _defaultTimeout));
 
                 var files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories).OrderBy(x => x).ToList();
 
@@ -2346,8 +2344,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                 }
 
                 etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
-                var timeout = TimeSpan.FromSeconds(65);
-                Assert.True(etlDone.Wait(timeout), $"waited for etl for {timeout} but it hasn't finished");
+                Assert.True(etlDone.Wait(_defaultTimeout), await GetPerformanceStats(store.Database, _defaultTimeout));
 
                 files = Directory.GetFiles(newPath, searchPattern: AllFilesPattern, SearchOption.AllDirectories).OrderBy(x => x).ToList();
                 Assert.Equal(5, files.Count);
@@ -2501,6 +2498,13 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
             };
 
             return FailoverTests.AddOlapEtl(store, configuration, connectionString);
+        }
+
+        private async Task<string> GetPerformanceStats(string database, TimeSpan timeout)
+        {
+            var documentDatabase = await GetDatabase(database);
+            var performanceStats = S3Tests.GetPerformanceStats(documentDatabase);
+            return $"olap etl to local machine did not finish in {timeout.TotalSeconds} seconds. stats : {performanceStats}";
         }
 
         private class User
