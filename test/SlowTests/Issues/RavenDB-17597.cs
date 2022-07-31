@@ -15,6 +15,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
+using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
@@ -32,6 +33,7 @@ using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 using Xunit.Sdk;
+using Raven.Client;
 
 namespace SlowTests.Issues
 {
@@ -191,6 +193,42 @@ namespace SlowTests.Issues
             }
         }
 
+        [Fact]
+        public async Task SideBySideInRecordShouldBeFaulty()
+        {
+            using var server = GetNewServer(new ServerCreationOptions { RunInMemory = false, });
+            using var store = GetDocumentStore(new Options { RunInMemory = false, Server = server });
+            {
+                // Prepare Server For Test
+                for (int i = 0; i < 5; i++)
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(new Item { Num = 5 });
+                        await session.SaveChangesAsync();
+                    }
+
+                // Wait for indexing in first node
+
+                var index = new Index_ItemsByNum();
+                index.Execute(store);
+                Indexes.WaitForIndexing(store);
+                WaitForUserToContinueTheTest(store);
+
+                var database = await GetDatabase(server, store.Database);
+                var record = new DatabaseRecord(store.Database);
+                record.Indexes = new Dictionary<string, IndexDefinition>();
+                record.AutoIndexes = new Dictionary<string, AutoIndexDefinition>();
+                var sideBySideName = Constants.Documents.Indexing.SideBySideIndexNamePrefix + index.IndexName;
+                record.Indexes[index.IndexName] = new IndexDefinition() { Name = sideBySideName };
+
+                var x = 1;
+                database.IndexStore.HandleDatabaseRecordChange(record, 0);
+
+                var indexes = database.IndexStore.GetIndexes();
+                Assert.NotNull(indexes.SingleOrDefault(i => i.Name == sideBySideName && i.Collections.Contains("@FaultyIndexes")));
+            }
+        }
+
         [Theory]
         [InlineData(false)]
         [InlineData(true)]
@@ -211,11 +249,18 @@ namespace SlowTests.Issues
                 }
 
                 // Wait for indexing in first node
-                new Index_ItemsByNum().Execute(store);
-                Indexes.WaitForIndexing(store);
-                if (stopIndex)
+                try
                 {
-                    store.Maintenance.Send(new StopIndexOperation("Items/ByNum"));
+                    new Index_ItemsByNum().Execute(store);
+                    Indexes.WaitForIndexing(store);
+                    if (stopIndex)
+                    {
+                        store.Maintenance.Send(new StopIndexOperation("Items/ByNum"));
+                    }
+                }
+                catch (Exception e)
+                {
+                    WaitForUserToContinueTheTest(store);
                 }
 
                 //Modify index
