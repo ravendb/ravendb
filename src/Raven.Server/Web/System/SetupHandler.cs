@@ -537,18 +537,16 @@ namespace Raven.Server.Web.System
                     operationId.Value,
                     token: operationCancelToken);
 
-                if (unsecuredSetupInfo.LocalNodeTag != null)
-                {
-                    var zip = ((SetupProgressAndResult)operationResult).SettingsZipFile;
 
-                    var fileName = $"Unsecure.Cluster.Settings {DateTime.UtcNow:yyyy-MM-dd HH-mm}.zip ";
-                    var contentDisposition = $"attachment; filename={fileName}";
+                var zip = ((SetupProgressAndResult)operationResult).SettingsZipFile;
 
-                    HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
-                    HttpContext.Response.ContentType = "application/octet-stream";
+                var fileName = $"Unsecure.Cluster.Settings {DateTime.UtcNow:yyyy-MM-dd HH-mm}.zip ";
+                var contentDisposition = $"attachment; filename={fileName}";
 
-                    await HttpContext.Response.Body.WriteAsync(zip, 0, zip.Length);
-                }
+                HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
+                HttpContext.Response.ContentType = "application/octet-stream";
+
+                await HttpContext.Response.Body.WriteAsync(zip, 0, zip.Length);
             }
         }
 
