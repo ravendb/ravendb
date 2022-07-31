@@ -414,8 +414,8 @@ loadToOrders(partitionBy(key), orderData);
         internal static string GetPerformanceStats(DocumentDatabase database)
         {
             var process = database.EtlLoader.Processes.First();
-            var stats = process?.GetLatestPerformanceStats().ToPerformanceStats();
-            return JsonConvert.SerializeObject(stats);
+            var stats = process.GetPerformanceStats();
+            return string.Join(Environment.NewLine, stats.Select(JsonConvert.SerializeObject));
         }
 
         [AmazonS3Fact]
