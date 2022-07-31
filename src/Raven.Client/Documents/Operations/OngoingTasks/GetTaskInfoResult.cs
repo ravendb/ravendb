@@ -49,8 +49,8 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         public OngoingTaskConnectionStatus TaskConnectionStatus { get; set; }
         public string TaskName { get; set; }
         public string Error { get; set; }
-
         public string MentorNode { get; set; }
+        public bool PinToMentorNode { get; set; }
 
         public virtual DynamicJsonValue ToJson()
         {
@@ -63,6 +63,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
                 [nameof(TaskConnectionStatus)] = TaskConnectionStatus,
                 [nameof(TaskName)] = TaskName,
                 [nameof(MentorNode)] = MentorNode,
+                [nameof(PinToMentorNode)] = PinToMentorNode,
                 [nameof(Error)] = Error
             };
         }
@@ -90,6 +91,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             json[nameof(SubscriptionName)] = SubscriptionName;
             json[nameof(SubscriptionId)] = SubscriptionId;
             json[nameof(MentorNode)] = MentorNode;
+            json[nameof(PinToMentorNode)] = PinToMentorNode;
             json[nameof(ChangeVectorForNextBatchStartingPoint)] = ChangeVectorForNextBatchStartingPoint;
             json[nameof(LastBatchAckTime)] = LastBatchAckTime;
             json[nameof(Disabled)] = Disabled;
@@ -184,6 +186,8 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             json[nameof(AccessName)] = AccessName;
             json[nameof(AllowedHubToSinkPaths)] = AllowedHubToSinkPaths;
             json[nameof(AllowedSinkToHubPaths)] = AllowedSinkToHubPaths;
+            json[nameof(MentorNode)] = MentorNode;
+            json[nameof(PinToMentorNode)] = PinToMentorNode;
             return json;
         }
     }

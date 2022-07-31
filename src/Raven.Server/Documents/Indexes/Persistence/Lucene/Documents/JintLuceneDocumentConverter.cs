@@ -50,7 +50,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         private const string BoostPropertyName = "$boost";
 
         protected override int GetFields<T>(T instance, LazyStringValue key, LazyStringValue sourceDocumentId, object document, JsonOperationContext indexContext,
-            IWriteOperationBuffer writeBuffer)
+            IWriteOperationBuffer writeBuffer, object sourceDocument)
         {
             if (!(document is ObjectInstance documentToProcess))
                 return 0;
@@ -171,7 +171,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                             {
                                 value = TypeConverter.ToBlittableSupportedType(val, flattenArrays: false, forIndexing: true, engine: documentToProcess.Engine,
                                     context: indexContext);
-                                numberOfCreatedFields = GetRegularFields(instance, field, CreateValueForIndexing(value, propertyBoost), indexContext, out _);
+                                numberOfCreatedFields = GetRegularFields(instance, field, CreateValueForIndexing(value, propertyBoost), indexContext, sourceDocument, out _);
 
                                 newFields += numberOfCreatedFields;
 
@@ -219,7 +219,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                                 return; //Ignoring bad spatial field
                             }
 
-                            numberOfCreatedFields = GetRegularFields(instance, field, CreateValueForIndexing(spatial, propertyBoost), indexContext, out _);
+                            numberOfCreatedFields = GetRegularFields(instance, field, CreateValueForIndexing(spatial, propertyBoost), indexContext, sourceDocument, out _);
 
                             newFields += numberOfCreatedFields;
 
@@ -238,7 +238,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             {
                 var value = TypeConverter.ToBlittableSupportedType(actualValue, flattenArrays: false, forIndexing: true, engine: documentToProcess.Engine,
                     context: indexContext);
-                return GetRegularFields(instance, field, CreateValueForIndexing(value, propertyBoost), indexContext, out _);
+                return GetRegularFields(instance, field, CreateValueForIndexing(value, propertyBoost), indexContext, sourceDocument, out _);
             }
             
             bool IsDynamicFieldEnumerable(JsValue propertyDescriptorValue, string propertyAsString, IndexField field, out IEnumerator<JsValue> iterator)

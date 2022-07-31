@@ -19,8 +19,6 @@ import subscriptionRqlSyntax = require("viewmodels/database/tasks/subscriptionRq
 import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleMentorsCommand");
 import eventsCollector = require("common/eventsCollector");
 import generalUtils = require("common/generalUtils");
-import popoverUtils = require("common/popoverUtils");
-import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 import rqlLanguageService = require("common/rqlLanguageService");
 import { highlight, languages } from "prismjs";
 
@@ -137,11 +135,6 @@ class editSubscriptionTask extends viewModelBase {
 
         $('.edit-subscription-task [data-toggle="tooltip"]').tooltip();
 
-        popoverUtils.longWithHover($(".responsible-node"),
-            {
-                content: tasksCommonContent.responsibleNodeInfo
-            });
-        
         document.getElementById('taskName').focus();
 
         const queryEditor = aceEditorBindingHandler.getEditorBySelection($(".query-source"));

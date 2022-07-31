@@ -74,6 +74,14 @@ namespace Raven.Server.Storage
                     {
                         storageEnvironment.Cleanup(tryCleanupRecycledJournals: true);
                     }
+                    catch (ObjectDisposedException)
+                    {
+                        // db is shutting down
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        // db is shutting down
+                    }
                     catch (Exception e)
                     {
                         if (_logger.IsOperationsEnabled)

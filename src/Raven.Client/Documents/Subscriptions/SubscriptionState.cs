@@ -18,6 +18,7 @@ namespace Raven.Client.Documents.Subscriptions
         public long SubscriptionId { get; set; }
         public string SubscriptionName { get; set; }
         public string MentorNode { get; set; }
+        public bool PinToMentorNode { get; set; }
         public string NodeTag { get; set; }
         public DateTime? LastBatchAckTime { get; set; }  // Last time server made some progress with the subscriptions docs  
         public DateTime? LastClientConnectionTime { get; set; } // Last time any client has connected to server (connection dead or alive)
@@ -49,6 +50,11 @@ namespace Raven.Client.Documents.Subscriptions
             return false;
         }
 
+        public bool IsPinnedToMentorNode()
+        {
+            return PinToMentorNode;
+        }
+
         public virtual DynamicJsonValue ToJson()
         {
             var djv = new DynamicJsonValue
@@ -58,6 +64,7 @@ namespace Raven.Client.Documents.Subscriptions
                 [nameof(SubscriptionId)] = SubscriptionId,
                 [nameof(SubscriptionName)] = SubscriptionName,
                 [nameof(MentorNode)] = MentorNode,
+                [nameof(PinToMentorNode)] = PinToMentorNode,
                 [nameof(NodeTag)] = NodeTag,
                 [nameof(LastBatchAckTime)] = LastBatchAckTime,
                 [nameof(LastClientConnectionTime)] = LastClientConnectionTime,

@@ -70,7 +70,8 @@ namespace Raven.Server.Documents.Indexes
             }
 
             HandleIndexOutputsPerDocument(indexItem.Id ?? indexItem.LowerId, numberOfOutputs, stats);
-
+            HandleSourceDocumentIncludedInMapOutput();
+            
             DocumentDatabase.Metrics.MapIndexes.IndexedPerSec.Mark(numberOfOutputs);
 
             return numberOfOutputs;

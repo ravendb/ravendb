@@ -11,6 +11,7 @@ class mountPointUsage {
     ravendbToUsedSpacePercentage: KnockoutComputed<number>;
 
     mountPointLabel: KnockoutComputed<string>;
+    scaleFactor = ko.observable<number>();
 
     constructor() {
         this.mountPointLabel = ko.pureComputed(() => {

@@ -8,8 +8,6 @@ import saveServerWideExternalReplicationCommand = require("commands/serverWide/t
 import connectionStringRavenEtlModel = require("models/database/settings/connectionStringRavenEtlModel");
 import generalUtils = require("common/generalUtils");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
-import popoverUtils = require("common/popoverUtils");
-import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 import discoveryUrl = require("models/database/settings/discoveryUrl");
 
 class editServerWideExternalReplication extends viewModelBase {
@@ -88,11 +86,6 @@ class editServerWideExternalReplication extends viewModelBase {
         super.compositionComplete();
         
         $('.edit-server-wide-replication [data-toggle="tooltip"]').tooltip();
-
-        popoverUtils.longWithHover($(".responsible-node"),
-            {
-                content: tasksCommonContent.responsibleNodeInfo
-            });
     }
    
     private initObservables() {
