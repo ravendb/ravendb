@@ -28,6 +28,7 @@ namespace SlowTests.Server.Documents.ETL.Olap
     {
         internal const string DefaultFrequency = "* * * * *"; // every minute
         internal const string AllFilesPattern = "*.*";
+        private readonly TimeSpan _defaultTimeout = TimeSpan.FromSeconds(65);
 
         public LocalTests(ITestOutputHelper output) : base(output)
         {
@@ -2032,8 +2033,8 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
 
                 var database = await GetDatabase(store.Database);
                 var timeout = database.DocumentsStorage.Environment.Options.RunningOn32Bits
-                    ? TimeSpan.FromMinutes(2)
-                    : TimeSpan.FromMinutes(1);
+                    ? _defaultTimeout * 2
+                    : _defaultTimeout;
 
                 Assert.True(etlDone.Wait(timeout), 
                     $"olap etl to local machine did not finish in {timeout.TotalMinutes} minutes. stats : {S3Tests.GetPerformanceStats(database)}");
