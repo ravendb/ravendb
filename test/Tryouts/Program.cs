@@ -2,9 +2,9 @@ using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using FastTests.Blittable;
-using FastTests.Client.Subscriptions;
 using FastTests.Client;
 using RachisTests;
+using SlowTests.Client.TimeSeries.Replication;
 using SlowTests.Issues;
 using SlowTests.MailingList;
 using SlowTests.Rolling;
@@ -30,11 +30,9 @@ namespace Tryouts
                 try
                 {
                     using (var testOutputHelper = new ConsoleTestOutputHelper())
-                    //using (var test = new RollingIndexesClusterTests(testOutputHelper))
-                    using (var test = new SubscriptionsBasic(testOutputHelper))
+                    using (var test = new ElectionTests(testOutputHelper))
                     {
-                        //await test.RemoveNodeFromDatabaseGroupWhileRollingDeployment();
-                        await test.ShouldStopPullingDocsAndCloseSubscriptionOnSubscriberErrorByDefault();
+                         await test.CanElectOnDivergence4();
                     }
                 }
                 catch (Exception e)
