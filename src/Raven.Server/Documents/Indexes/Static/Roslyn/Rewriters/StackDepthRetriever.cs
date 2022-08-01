@@ -11,8 +11,18 @@ public class StackDepthRetriever : CSharpSyntaxRewriter
 
     private int _selectDepth;
 
-    public int StackSize => _letCounter + _selectDepth;
-    
+    public int StackSize
+    {
+        get
+        {
+            //Skip last select {}
+            if (_selectDepth > 0)
+                _selectDepth--;
+            
+            return _letCounter + _selectDepth;
+        }
+    }
+
     public void Clear()
     {
         _letCounter = 0;

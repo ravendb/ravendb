@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
@@ -44,31 +45,87 @@ public class RavenDB_18938 : RavenTestBase
             performanceHint = await notificationsQueue.TryDequeueAsync(TimeSpan.FromSeconds(5));
         } while (performanceHint.Item2["Type"].ToString() != NotificationType.PerformanceHint.ToString());
 
-        Assert.Equal($"Index '{index.IndexName}' contains a lot of `let` clauses.", performanceHint.Item2["Title"]);
-
+        Assert.Equal($"Index '{index.IndexName}' contains a lot of `let` clauses. Index contains 33 `let` clauses but we suggest not to exceed 32.", performanceHint.Item2["Title"]);
+        WaitForUserToContinueTheTest(store);
         do
         {
             performanceHint = await notificationsQueue.TryDequeueAsync(TimeSpan.FromSeconds(5));
         } while (performanceHint.Item2 != null && performanceHint.Item2["Type"].ToString() != NotificationType.PerformanceHint.ToString());
 
         if (performanceHint.Item2 != null)
-            Assert.NotEqual($"Index '{index.IndexName}' contains a lot of `let` clauses.", performanceHint.Item2["Title"]);
+            Assert.NotEqual($"Index '{index.IndexName}' contains a lot of `let` clauses. Index contains 33 `let` clauses but we suggest not to exceed 32.", performanceHint.Item2["Title"]);
     }
 
     [Fact]
     public Task QuerySyntax() => AssertPerformanceHint<QuerySyntaxIndex>();
 
     [Fact]
+    public Task QuerySyntaxReduce() => AssertPerformanceHint<QuerySyntaxMapReduceIndex>();
+    
+    [Fact]
     public Task MethodSyntax() => AssertPerformanceHint<MethodSyntaxIndex>();
     
     [Fact]
-    public Task BigStackTest() => AssertPerformanceHint<MaxStackTest>();
-    
+    public Task MethodSyntaxReduce() => AssertPerformanceHint<MethodSyntaxMapReduceIndex>();
+
     private class ExampleDocument
     {
         public string Name { get; set; }
     }
 
+    private class MethodSyntaxMapReduceIndex : AbstractIndexCreationTask<ExampleDocument>
+    {
+        public MethodSyntaxMapReduceIndex()
+        {
+            Map = documents => from doc in documents
+                select new
+                {
+                    Name = doc.Name,
+                    Count = 1
+                };
+
+            Reduce = results =>
+                from result in results
+                group result by result.Name
+                into g
+                let a0 = 0
+                let a1 = 1
+                let a2 = 2
+                let a3 = 3
+                let a4 = 4
+                let a5 = 5
+                let a6 = 6
+                let a7 = 7
+                let a8 = 8
+                let a9 = 9
+                let a10 = 10
+                let a11 = 11
+                let a12 = 12
+                let a13 = 13
+                let a14 = 14
+                let a15 = 15
+                let a16 = 16
+                let a17 = 17
+                let a18 = 18
+                let a19 = 19
+                let a20 = 20
+                let a21 = 21
+                let a22 = 22
+                let a23 = 23
+                let a24 = 24
+                let a25 = 25
+                let a26 = 26
+                let a27 = 27
+                let a28 = 28
+                let a29 = 29
+                let a30 = 30
+                let a31 = 31
+                let a32 = 32
+                
+                select new {Name = g.Key, Count = a0 + a1 + a2 + a3 + a4 + a5 + a6 + a7 + a8 + a9 + a10 + a11 + a12 + a13 + a14 + a15 + a16 + a17 + a18 + a19 + a20 + a21 + a22 + a23 + a24 + a25 + a26 + a27 + a28 + a29 + a30 + a31 +  a32};
+        }
+    }
+    
     private class MethodSyntaxIndex : AbstractIndexCreationTask<ExampleDocument>
     {
         public MethodSyntaxIndex()
@@ -147,147 +204,71 @@ public class RavenDB_18938 : RavenTestBase
         }
     }
     
-      private class MaxStackTest : AbstractIndexCreationTask<ExampleDocument>
+    private class QuerySyntaxMapReduceIndex : AbstractIndexCreationTask
     {
-        public MaxStackTest()
+        public QuerySyntaxMapReduceIndex()
         {
-            Map = documents => from doc in documents
-                    let a0 = 0
-                    let a1 = 1
-                    let a2 = 2
-                    let a3 = 3
-                    let a4 = 4
-                    let a5 = 5
-                    let a6 = 6
-                    let a7 = 7
-                    let a8 = 8
-                    let a9 = 9
-                    let a10 = 10
-                    let a11 = 11
-                    let a12 = 12
-                    let a13 = 13
-                    let a14 = 14
-                    let a15 = 15
-                    let a16 = 16
-                    let a17 = 17
-                    let a18 = 18
-                    let a19 = 19
-                    let a20 = 20
-                    let a21 = 21
-                    let a22 = 22
-                    let a23 = 23
-                    let a24 = 24
-                    let a25 = 25
-                    let a26 = 26
-                    let a27 = 27
-                    let a28 = 28
-                    let a29 = 29
-                    let a30 = 30
-                    let a31 = 31
-                    let a32 = 32
-                    let a33 = 33
-                    let a34 = 34
-                    let a35 = 35
-                    let a36 = 36
-                    let a37 = 37
-                    let a38 = 38
-                    let a39 = 39
-                    let a40 = 40
-                    let a41 = 41
-                    let a42 = 42
-                    let a43 = 43
-                    let a44 = 44
-                    let a45 = 45
-                    let a46 = 46
-                    let a47 = 47
-                    let a48 = 48
-                    let a49 = 49
-                    let a50 = 50
-                    let a51 = 51
-                    let a52 = 52
-                    let a53 = 53
-                    let a54 = 54
-                    let a55 = 55
-                    let a56 = 56
-                    let a57 = 57
-                    let a58 = 58
-                    let a59 = 59
-                    let a60 = 60
-                    let a61 = 61
-                    let a62 = 62
-                    let a63 = 63
-                    let a64 = 64
-                    select new {
-                        A0 = a0,
-                        A1 = a1,
-                        A2 = a2,
-                        A3 = a3,
-                        A4 = a4,
-                        A5 = a5,
-                        A6 = a6,
-                        A7 = a7,
-                        A8 = a8,
-                        A9 = a9,
-                        A10 = a10,
-                        A11 = a11,
-                        A12 = a12,
-                        A13 = a13,
-                        A14 = a14,
-                        A15 = a15,
-                        A16 = a16,
-                        A17 = a17,
-                        A18 = a18,
-                        A19 = a19,
-                        A20 = a20,
-                        A21 = a21,
-                        A22 = a22,
-                        A23 = a23,
-                        A24 = a24,
-                        A25 = a25,
-                        A26 = a26,
-                        A27 = a27,
-                        A28 = a28,
-                        A29 = a29,
-                        A30 = a30,
-                        A31 = a31,
-                        A32 = a32,
-                        A33 = a33,
-                        A34 = a34,
-                        A35 = a35,
-                        A36 = a36,
-                        A37 = a37,
-                        A38 = a38,
-                        A39 = a39,
-                        A40 = a40,
-                        A41 = a41,
-                        A42 = a42,
-                        A43 = a43,
-                        A44 = a44,
-                        A45 = a45,
-                        A46 = a46,
-                        A47 = a47,
-                        A48 = a48,
-                        A49 = a49,
-                        A50 = a50,
-                        A51 = a51,
-                        A52 = a52,
-                        A53 = a53,
-                        A54 = a54,
-                        A55 = a55,
-                        A56 = a56,
-                        A57 = a57,
-                        A58 = a58,
-                        A59 = a59,
-                        A60 = a60,
-                        A61 = a61,
-                        A62 = a62,
-                        A63 = a63,
-                        A64 = a64,
-                        Field = doc.Name
-                    };
+        }
+
+        public override IndexDefinition CreateIndexDefinition()
+        {
+            return new IndexDefinition()
+            {
+                Maps =
+                {
+                    @"from documentItself in docs.ExampleDocuments
+                    select new
+                    {
+                        Name = documentItself.Name,
+                        Count = 1
+                    };",
+                },
+                Reduce =
+                    @"from result in results
+                        group result by result.Name into g
+                        let a0 = 0
+                        let a1 = 1
+                        let a2 = 2
+                        let a3 = 3
+                        let a4 = 4
+                        let a5 = 5
+                        let a6 = 6
+                        let a7 = 7
+                        let a8 = 8
+                        let a9 = 9
+                        let a10 = 10
+                        let a11 = 11
+                        let a12 = 12
+                        let a13 = 13
+                        let a14 = 14
+                        let a15 = 15
+                        let a16 = 16
+                        let a17 = 17
+                        let a18 = 18
+                        let a19 = 19
+                        let a20 = 20
+                        let a21 = 21
+                        let a22 = 22
+                        let a23 = 23
+                        let a24 = 24
+                        let a25 = 25
+                        let a26 = 26
+                        let a27 = 27
+                        let a28 = 28
+                        let a29 = 29
+                        let a30 = 30
+                        let a31 = 31
+                        let a32 = 32
+                        select new 
+                        {
+                            Name = g.Key, 
+                            Count = a0 + a1 + a2 + a3 + a4 + a5 + a6 + a7 + a8 + a9 + a10 + a11 + a12 + a13 + a14 + a15 + a16 + a17 + a18 + a19 + a20 + a21 + a22 + a23 + a24 + a25 + a26 + a27 + a28 + a29 + a30 + a31 +  a32
+                        };"
+                
+            };
         }
     }
-    
+
     private class QuerySyntaxIndex : AbstractIndexCreationTask
     {
         public QuerySyntaxIndex()
