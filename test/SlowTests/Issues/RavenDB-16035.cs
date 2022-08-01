@@ -5,6 +5,7 @@ using System.Threading;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Changes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -22,22 +23,22 @@ namespace SlowTests.Issues
         }
         private class Item{}
 
-        [Fact]
-        public void CanMixLazyAndAggressiveCaching()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CanMixLazyAndAggressiveCaching(Options options)
         {
             bool clearCache = false;
-            using var store = GetDocumentStore(new Options
-            {
-                ModifyDocumentStore = documentStore =>
-                {
-                    documentStore.OnSucceedRequest += (sender, args) =>
-                    {
-                        if (clearCache)
-                            documentStore.GetRequestExecutor().Cache.Clear();
-                    };
 
-                }
-            });
+            options.ModifyDocumentStore = documentStore =>
+            {
+                documentStore.OnSucceedRequest += (sender, args) =>
+                {
+                    if (clearCache)
+                        documentStore.GetRequestExecutor().Cache.Clear();
+                };
+            };
+
+            using var store = GetDocumentStore(options);
             
             using (var s = store.OpenSession())
             {

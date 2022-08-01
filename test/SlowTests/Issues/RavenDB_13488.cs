@@ -6,6 +6,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,10 +18,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void ClearShouldClearDefferedCommandsAsWell()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void ClearShouldClearDefferedCommandsAsWell(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 string firstCV = null;
                 using (var session = store.OpenSession())
@@ -56,10 +58,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void ClearShouldClearLazyRequestsAsWell()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void ClearShouldClearLazyRequestsAsWell(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 string firstCV = null;
                 using (var session = store.OpenSession())
@@ -88,10 +91,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void ClearShouldClearClusterOperationsAsWell()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void ClearShouldClearClusterOperationsAsWell(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession(new SessionOptions
                 {

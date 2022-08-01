@@ -7,6 +7,7 @@
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -24,10 +25,11 @@ namespace SlowTests.Issues
             public string Name { get; set; }
         }
 
-        [Fact]
-        public void LazyWithoutSelectNew()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void LazyWithoutSelectNew(Options options)
         {
-            using (var documentStore = GetDocumentStore())
+            using (var documentStore = GetDocumentStore(options))
             {
                 using (var session = documentStore.OpenSession())
                 {
