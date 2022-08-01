@@ -165,7 +165,11 @@ public class ShardedQueryProcessor : IDisposable
         var limit = ((_query.Limit ?? 0) + (_query.Offset ?? 0)) * (long)_parent.DatabaseContext.ShardCount;
         if (limit > int.MaxValue) // overflow
             limit = int.MaxValue;
+
         modifiedArgs[limitToken] = limit;
+
+        queryTemplate.Modifications.Remove(nameof(IndexQueryServerSide.Start));
+        queryTemplate.Modifications.Remove(nameof(IndexQueryServerSide.PageSize));
 
         queryTemplate = _context.ReadObject(queryTemplate, "modified-query");
     }
@@ -352,13 +356,14 @@ public class ShardedQueryProcessor : IDisposable
 
     public void ApplyPaging()
     {
-        if (_query.Offset > 0)
+        if (_query.Offset is > 0 && _result.Results.Count > _query.Offset)
         {
             _result.Results.RemoveRange(0, _query.Offset ?? 0);
-            if (_query.Limit != null && _result.Results.Count > _query.Limit)
-            {
-                _result.Results.RemoveRange(_query.Limit.Value, _result.Results.Count - _query.Limit.Value);
-            }
+        }
+
+        if (_query.Limit is > 0 && _result.Results.Count > _query.Limit)
+        {
+            _result.Results.RemoveRange(_query.Limit.Value, _result.Results.Count - _query.Limit.Value);
         }
     }
 

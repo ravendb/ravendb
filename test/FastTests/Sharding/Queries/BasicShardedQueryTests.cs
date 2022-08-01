@@ -787,6 +787,39 @@ select project(o)")
             }
         }
 
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        public void QueryWithSkipTake()
+        {
+            using (var store = Sharding.GetDocumentStore())
+            {
+                store.ExecuteIndex(new UserMapIndex());
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "f", Age = 6 }, "users/1");
+                    session.Store(new User { Name = "e", Age = 5 }, "users/2");
+                    session.Store(new User { Name = "d", Age = 4 }, "users/3");
+                    session.Store(new User { Name = "c", Age = 3 }, "users/4");
+                    session.Store(new User { Name = "b", Age = 2 }, "users/5");
+                    session.Store(new User { Name = "a", Age = 1 }, "users/6");
+                    session.SaveChanges();
+
+                    Indexes.WaitForIndexing(store);
+
+                    var queryResult = session.Query<UserMapIndex.Result, UserMapIndex>()
+                        .OrderBy(x => x.Name)
+                        .As<User>()
+                        .Skip(2)
+                        .Take(3)
+                        .ToList();
+
+                    Assert.Equal(3, queryResult.Count);
+                    Assert.Equal("c", queryResult[0].Name);
+                    Assert.Equal("d", queryResult[1].Name);
+                    Assert.Equal("e", queryResult[2].Name);
+                }
+            }
+        }
 
         private class AgeResult
         {
