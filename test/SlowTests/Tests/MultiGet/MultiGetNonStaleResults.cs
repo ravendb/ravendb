@@ -4,6 +4,7 @@ using Xunit.Abstractions;
 
 using FastTests;
 using Raven.Client.Documents;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Tests.MultiGet
@@ -32,10 +33,11 @@ namespace SlowTests.Tests.MultiGet
             }
         }
 
-        [Fact]
-        public void ShouldBeAbleToGetNonStaleResults()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void ShouldBeAbleToGetNonStaleResults(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

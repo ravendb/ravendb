@@ -5,6 +5,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,10 +17,11 @@ namespace SlowTests.MailingList
         {
         }
 
-        [Fact]
-        public void CanGetTotalResultsFromStatisticsOnLazySearchAgainstDynamicIndex()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CanGetTotalResultsFromStatisticsOnLazySearchAgainstDynamicIndex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new UserByFirstName().Execute(store);
                 using (var session = store.OpenSession())
@@ -54,10 +56,11 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
-        public void CanGetTotalResultsFromStatisticsOnLazySearchAgainstDynamicIndex_Embedded()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CanGetTotalResultsFromStatisticsOnLazySearchAgainstDynamicIndex_Embedded(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new UserByFirstName().Execute(store);
                 using (var session = store.OpenSession())
@@ -126,10 +129,11 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
-        public void CanGetTotalResultsFromStatisticsOnLazySearchAgainstStaticIndex()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CanGetTotalResultsFromStatisticsOnLazySearchAgainstStaticIndex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new UserByFirstName().Execute(store);
                 using (var session = store.OpenSession())

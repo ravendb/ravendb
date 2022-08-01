@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -22,10 +23,11 @@ namespace SlowTests.MailingList
             public string Id { get; set; }
         }
 
-        [Fact]
-        public void LoadAllStartingWithShouldNotLoadDeletedDocs()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void LoadAllStartingWithShouldNotLoadDeletedDocs(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var doc1 = new Abc
                 {

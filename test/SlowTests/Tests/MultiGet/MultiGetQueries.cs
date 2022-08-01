@@ -4,6 +4,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -156,10 +157,11 @@ namespace SlowTests.Tests.MultiGet
             }
         }
 
-        [Fact]
-        public void LazyOperationsAreBatched()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void LazyOperationsAreBatched(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -174,10 +176,11 @@ namespace SlowTests.Tests.MultiGet
             }
         }
 
-        [Fact]
-        public void LazyMultiLoadOperationWouldBeInTheSession()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void LazyMultiLoadOperationWouldBeInTheSession(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -210,10 +213,11 @@ namespace SlowTests.Tests.MultiGet
             }
         }
 
-        [Fact]
-        public void LazyWithProjection()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void LazyWithProjection(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -273,10 +277,11 @@ namespace SlowTests.Tests.MultiGet
             }
         }
 
-        [Fact]
-        public void LazyMultiLoadOperationWouldBeInTheSession_WithNonStaleResponse()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void LazyMultiLoadOperationWouldBeInTheSession_WithNonStaleResponse(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -304,10 +309,11 @@ namespace SlowTests.Tests.MultiGet
             }
         }
 
-        [Fact]
-        public void CanGetStatisticsWithLazyQueryResults()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CanGetStatisticsWithLazyQueryResults(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

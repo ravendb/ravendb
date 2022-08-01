@@ -5,6 +5,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -32,10 +33,11 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
-        public void CanLazilyCountOnSearchAgainstDynamicIndex()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CanLazilyCountOnSearchAgainstDynamicIndex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new UserByFirstName().Execute(store);
                 using (var session = store.OpenSession())
@@ -84,10 +86,11 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
-        public void CanLazilyCountOnSearchAgainstDynamicIndex_Embedded()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CanLazilyCountOnSearchAgainstDynamicIndex_Embedded(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new UserByFirstName().Execute(store);
                 using (var session = store.OpenSession())
@@ -136,10 +139,11 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
-        public void CanLazilyCountOnSearchAgainstStaticIndex()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CanLazilyCountOnSearchAgainstStaticIndex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new UserByFirstName().Execute(store);
                 using (var session = store.OpenSession())
@@ -187,10 +191,11 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
-        public void CanLazilyCountOnSearchAgainstStaticIndex_Embedded()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CanLazilyCountOnSearchAgainstStaticIndex_Embedded(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new UserByFirstName().Execute(store);
                 using (var session = store.OpenSession())

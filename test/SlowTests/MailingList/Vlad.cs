@@ -6,6 +6,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -23,15 +24,16 @@ namespace SlowTests.MailingList
             public string Name;
         }
 
-        [Fact]
-        public void TestLazyQuery()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void TestLazyQuery(Options options)
         {
             var doc = new SampleDoc
             {
                 Number = DateTime.Now.Ticks,
                 Name = "Test1"
             };
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
