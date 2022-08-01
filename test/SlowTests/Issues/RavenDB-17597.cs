@@ -44,49 +44,43 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public async Task CopyToIndexDefinitionWorksProperly()
+        public void CopyToIndexDefinitionWorksProperly()
         {
             var conf = new IndexConfiguration();
             conf.Add("key1", "val1");
             conf.Add("key2", "val2");
 
-            IndexDefinition a = new IndexDefinition()
+            IndexDefinition a = GetNonDefaultIndexDefinition();
+
+            // Assert 'a' doesn't have default  
+            var defaultDefinition = new IndexDefinition();
+            string[] defPropetisToIgnore = new string[] { "SourceType", "Type" }; // null's with exception.
+            foreach (PropertyInfo property in a.GetType().GetProperties())
             {
-                LockMode = IndexLockMode.Unlock,
-                Reduce = "abc",
-                SourceType = IndexSourceType.Counters,
-                Type = IndexType.JavaScriptMapReduce,
-                OutputReduceToCollection = "abcd",
-                ReduceOutputIndex = 12345,
-                PatternForOutputReduceToCollectionReferences = "abcde",
-                PatternReferencesCollectionName = "abcdef",
-                DeploymentMode = IndexDeploymentMode.Rolling,
-                AdditionalSources = new Dictionary<string, string>(){ {"a", "A"}, {"b", "B"}},
-                AdditionalAssemblies = new HashSet<AdditionalAssembly>(){
-                    AdditionalAssembly.FromNuGet("g","123","http://www.google.com"),
-                    AdditionalAssembly.FromNuGet("e","123","http://www.ebay.com"),
-                },
-                Maps = new HashSet<string>() { "m1", "m2"},
-                Fields = new Dictionary<string, IndexFieldOptions>()
+                if (defPropetisToIgnore.Contains(property.Name))
+                    continue;
+
+                var value1 = property.GetValue(a, null);
+                var value2 = property.GetValue(defaultDefinition, null);
+                Assert.False(value1 == null && value2 == null, $"Property \"{property.Name}\" is equal - original: {value1}, default: {value2}");
+                if (value1 == null || value2 == null)
                 {
-                    {"x", new IndexFieldOptions()
-                        {
-                            Analyzer = "x1",
-                            Spatial = new SpatialOptions()
-                            {
-                                MaxX = 1,
-                                MaxTreeLevel = 2
-                            },
-                            Suggestions = false,
-                            Indexing = FieldIndexing.Exact,
-                            Storage = FieldStorage.No,
-                            TermVector = FieldTermVector.WithPositions
-                        }
-                    },
-                    {"y", null}
-                },
-                Configuration = conf
-            };
+                    continue;
+                }
+
+                var t = Nullable.GetUnderlyingType(property.PropertyType);
+                if (t == null)
+                {
+                    t = property.PropertyType;
+                }
+                dynamic c1 = Convert.ChangeType(value1, t);
+                dynamic c2 = Convert.ChangeType(value2, t);
+
+                Assert.False(c1 == c2, $"Property \"{property.Name}\" is different - equal: {c1}, default: {c2}");
+            }
+
+            // Assert a and b (clone made by CopyTo) are equals by values
+
             IndexDefinition b = new IndexDefinition();
             a.CopyTo(b);
 
@@ -193,6 +187,58 @@ namespace SlowTests.Issues
             }
         }
 
+        private IndexDefinition GetNonDefaultIndexDefinition()
+        {
+            var conf = new IndexConfiguration();
+            conf.Add("key1", "val1");
+            conf.Add("key2", "val2");
+
+
+            var asm1 = AdditionalAssembly.FromNuGet("g", "123", "http://www.google.com", usings: new HashSet<string>() { "xx", "yy" });
+            var asm2 = AdditionalAssembly.FromNuGet("e", "123", "http://www.ebay.com", usings: new HashSet<string>(){"xx","yy"});
+
+            return new IndexDefinition()
+            {
+                Name = "a",
+                Priority = IndexPriority.High,
+                State = IndexState.Error,
+                LockMode = IndexLockMode.LockedError,
+                Reduce = "abc",
+                SourceType = IndexSourceType.Counters,
+                Type = IndexType.JavaScriptMapReduce,
+                OutputReduceToCollection = "abcd",
+                ReduceOutputIndex = 12345,
+                PatternForOutputReduceToCollectionReferences = "abcde",
+                PatternReferencesCollectionName = "abcdef",
+                DeploymentMode = IndexDeploymentMode.Rolling,
+                AdditionalSources = new Dictionary<string, string>() { { "a", "A" }, { "b", "B" } },
+                AdditionalAssemblies = new HashSet<AdditionalAssembly>(){
+                    asm1,
+                    asm2,
+                },
+                Maps = new HashSet<string>() { "m1", "m2" },
+                Fields = new Dictionary<string, IndexFieldOptions>()
+                {
+                    {"x", new IndexFieldOptions()
+                        {
+                            Analyzer = "x1",
+                            Spatial = new SpatialOptions()
+                            {
+                                MaxX = 1,
+                                MaxTreeLevel = 2
+                            },
+                            Suggestions = false,
+                            Indexing = FieldIndexing.Exact,
+                            Storage = FieldStorage.No,
+                            TermVector = FieldTermVector.WithPositions
+                        }
+                    },
+                    {"y", null}
+                },
+                Configuration = conf
+            };
+        }
+
         [Fact]
         public async Task SideBySideInRecordShouldBeFaulty()
         {
@@ -221,7 +267,6 @@ namespace SlowTests.Issues
                 var sideBySideName = Constants.Documents.Indexing.SideBySideIndexNamePrefix + index.IndexName;
                 record.Indexes[index.IndexName] = new IndexDefinition() { Name = sideBySideName };
 
-                var x = 1;
                 database.IndexStore.HandleDatabaseRecordChange(record, 0);
 
                 var indexes = database.IndexStore.GetIndexes();
@@ -249,19 +294,14 @@ namespace SlowTests.Issues
                 }
 
                 // Wait for indexing in first node
-                try
+
+                new Index_ItemsByNum().Execute(store);
+                Indexes.WaitForIndexing(store);
+                if (stopIndex)
                 {
-                    new Index_ItemsByNum().Execute(store);
-                    Indexes.WaitForIndexing(store);
-                    if (stopIndex)
-                    {
-                        store.Maintenance.Send(new StopIndexOperation("Items/ByNum"));
-                    }
+                    store.Maintenance.Send(new StopIndexOperation("Items/ByNum"));
                 }
-                catch (Exception e)
-                {
-                    WaitForUserToContinueTheTest(store);
-                }
+   
 
                 //Modify index
                 await Assert.ThrowsAsync<InvalidOperationException>(async () =>
