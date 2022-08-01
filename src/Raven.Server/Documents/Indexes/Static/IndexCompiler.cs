@@ -529,13 +529,15 @@ namespace Raven.Server.Documents.Indexes.Static
 
             if (string.IsNullOrWhiteSpace(definition.Reduce) == false)
             {
-                statements.Add(HandleReduce(definition.Reduce, fieldNamesValidator, methodDetector, out CompiledIndexField[] groupByFields));
+                statements.Add(HandleReduce(definition.Reduce, fieldNamesValidator, methodDetector, stackDepthRetriever, out CompiledIndexField[] groupByFields));
 
                 var groupByFieldsArray = GetArrayCreationExpression<CompiledIndexField>(
                     groupByFields,
                     (builder, field) => field.WriteTo(builder));
 
                 statements.Add(RoslynHelper.This(nameof(AbstractStaticIndexBase.GroupByFields)).Assign(groupByFieldsArray).AsExpressionStatement());
+                
+                maxDepthInRecursiveLinqQuery = Math.Max(maxDepthInRecursiveLinqQuery, stackDepthRetriever.StackSize);
             }
 
             var fields = GetIndexedFields(definition, fieldNamesValidator);
@@ -672,7 +674,7 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        private static StatementSyntax HandleReduce(string reduce, FieldNamesValidator fieldNamesValidator, MethodDetectorRewriter methodsDetector, out CompiledIndexField[] groupByFields)
+        private static StatementSyntax HandleReduce(string reduce, FieldNamesValidator fieldNamesValidator, MethodDetectorRewriter methodsDetector, StackDepthRetriever stackDepthRetriever, out CompiledIndexField[] groupByFields)
         {
             try
             {
@@ -680,7 +682,8 @@ namespace Raven.Server.Documents.Indexes.Static
                 var expression = SyntaxFactory.ParseExpression(reduce).NormalizeWhitespace();
                 fieldNamesValidator?.Validate(reduce, expression);
                 methodsDetector.Visit(expression);
-
+                stackDepthRetriever.Visit(expression);
+                
                 StatementSyntax result;
 
                 switch (expression)
