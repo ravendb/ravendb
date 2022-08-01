@@ -537,6 +537,9 @@ namespace Raven.Server.Web.System
                     operationId.Value,
                     token: operationCancelToken);
 
+                // unsecured ->  toggle off(no zip only) -> single node  =>> don't create zip
+                if (unsecuredSetupInfo.ZipOnly == false && unsecuredSetupInfo.NodeSetupInfos.Count == 1)
+                    return;
 
                 var zip = ((SetupProgressAndResult)operationResult).SettingsZipFile;
 
