@@ -5,6 +5,7 @@ using System.Text;
 using Corax.Queries;
 using Corax;
 using FastTests.Voron;
+using Sparrow;
 using Sparrow.Server;
 using Voron;
 using Xunit.Abstractions;
@@ -17,7 +18,7 @@ namespace FastTests.Corax
     public class CoraxQueries : StorageTest
     {
         private List<Entry> _entries;
-        private const int IndexId = 0, LongValue = 1;
+        private const int IndexId = 0, LongValue = 1, DoubleValue = 2, TextualValue = 3;
         private IndexFieldsMapping _knownFields;
         public CoraxQueries(ITestOutputHelper output) : base(output)
         {
@@ -172,6 +173,26 @@ namespace FastTests.Corax
         }
 
         [Fact]
+        public void MultiUnaryMatchWithNumerical()
+        {
+            PrepareData();
+            IndexEntries();
+            using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
+            using var searcher = new IndexSearcher(Env);
+      
+            var match0 = searcher.AllEntries();
+            var comparers = new MultiUnaryItem[] {new(LongValue, 3L, UnaryMatchOperation.GreaterThan), new(DoubleValue, 20.5, UnaryMatchOperation.LessThan)};
+            var match1 = searcher.CreateMultiUnaryMatch(match0, comparers);
+            var expectedList = _entries.Where(x => x.LongValue > 3 && x.DoubleValue < 20.5).Select(x => x.Id).ToList();
+            expectedList.Sort();
+            var outputList = FetchFromCorax(ref match1);
+            outputList.Sort();
+            Assert.Equal(expectedList.Count, outputList.Count);
+            for (int i = 0; i < expectedList.Count; ++i) 
+                Assert.Equal(expectedList[i], outputList[i]);
+        }
+
+        [Fact]
         public void MultiTermMatchWithTermMatch()
         {
             PrepareData();
@@ -235,28 +256,39 @@ namespace FastTests.Corax
         {
             entryWriter.Write(IndexId, Encoding.UTF8.GetBytes(entry.Id));
             entryWriter.Write(LongValue, Encoding.UTF8.GetBytes(entry.LongValue.ToString()), entry.LongValue, entry.LongValue);
+            entryWriter.Write(DoubleValue, Encoding.UTF8.GetBytes(entry.DoubleValue.ToString()), (long)entry.DoubleValue, entry.DoubleValue);
+            entryWriter.Write(TextualValue, Encodings.Utf8.GetBytes(entry.TextualValue));
             return entryWriter.Finish(out output);
+            return output;
         }
 
         private IndexFieldsMapping CreateKnownFields(ByteStringContext ctx)
         {
             Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice idSlice);
             Slice.From(ctx, "Content", ByteStringType.Immutable, out Slice longSlice);
+            Slice.From(ctx, "DoubleItem", ByteStringType.Immutable, out Slice doubleSlice);
+            Slice.From(ctx, "TextualItem", ByteStringType.Immutable, out Slice textualSlice);
 
             return new IndexFieldsMapping(ctx)
                         .AddBinding(IndexId, idSlice)
-                        .AddBinding(LongValue, longSlice);
+                        .AddBinding(LongValue, longSlice)
+                        .AddBinding(DoubleValue, doubleSlice)
+                        .AddBinding(TextualValue, textualSlice);
         }
-        
+
+        private const int seed = 1000;
         private void PrepareData(int size = 1000)
         {
+            var random = new Random(seed);
             _entries ??= new();
             for (int i = 0; i < size; ++i)
             {
                 _entries.Add(new Entry()
                 {
                     Id = $"entries/{i}",
-                    LongValue = i
+                    LongValue = i,
+                    DoubleValue = i * random.NextDouble(),
+                    TextualValue = i % 2 == 0 ? "abc" : "cde" 
                 });
             }
         }
@@ -292,6 +324,10 @@ namespace FastTests.Corax
             public string Id { get; set; }
             
             public long LongValue { get; set; }
+            
+            public double DoubleValue { get; set; }
+            
+            public string TextualValue { get; set; }
         }
     }
 }
