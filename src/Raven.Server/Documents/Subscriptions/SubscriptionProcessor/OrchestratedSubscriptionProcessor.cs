@@ -116,12 +116,9 @@ public class OrchestratedSubscriptionProcessor : SubscriptionProcessor
 
         public bool ShouldSkip(ByteStringContext context, LazyStringValue id, ChangeVector changeVector, out string reason)
         {
-            // changeVector = new ChangeVector(changeVector).Order.AsString();
-
             var bucket = ShardHelper.GetBucket(context, id);
             var actualShard = ShardHelper.GetShardNumber(_ranges, bucket);
             var moveIndex = ChangeVectorUtils.GetEtagById(changeVector.Order, _moveId);
-            reason = null;
 
             if (_activeMigration.TryGetValue(bucket, out var migration))
             {

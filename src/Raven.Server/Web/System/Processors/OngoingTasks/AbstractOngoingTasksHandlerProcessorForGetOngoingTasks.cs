@@ -515,7 +515,7 @@ internal abstract class AbstractOngoingTasksHandlerProcessorForGetOngoingTasks<T
             TaskId = subscriptionState.SubscriptionId,
             Query = subscriptionState.Query,
             ChangeVectorForNextBatchStartingPoint = subscriptionState.ChangeVectorForNextBatchStartingPoint,
-            ChangeVectorForNextBatchStartingPointPerShard = subscriptionState.SubscriptionShardingState.ChangeVectorForNextBatchStartingPointPerShard,
+            ChangeVectorForNextBatchStartingPointPerShard = subscriptionState.SubscriptionShardingState?.ChangeVectorForNextBatchStartingPointPerShard,
             SubscriptionId = subscriptionState.SubscriptionId,
             SubscriptionName = subscriptionState.SubscriptionName,
             LastBatchAckTime = subscriptionState.LastBatchAckTime,
