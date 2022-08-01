@@ -118,7 +118,8 @@ loadToOrders(partitionBy(key),
                     }
                 });
 
-            Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
+            var timeout = TimeSpan.FromSeconds(65);
+            Assert.True(etlDone.Wait(timeout), await GetPerformanceStats(mentorNode, dbName, timeout));
 
             var files = Directory.GetFiles(path, "*.*", SearchOption.AllDirectories);
             Assert.Equal(1, files.Length);
@@ -149,7 +150,7 @@ loadToOrders(partitionBy(key),
                 await session.SaveChangesAsync();
             }
 
-            Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
+            Assert.True(etlDone.Wait(timeout), await GetPerformanceStats(newResponsibleNode, dbName, timeout));
 
             files = Directory.GetFiles(path, "*.*", SearchOption.AllDirectories);
             Assert.True(files.Length == 2, $"Expected 2 output files but got {files.Length}. " +
@@ -181,6 +182,13 @@ loadToOrders(partitionBy(key),
 
             var addResult = src.Maintenance.Send(new AddEtlOperation<OlapConnectionString>(configuration));
             return addResult;
+        }
+
+        private static async Task<string> GetPerformanceStats(RavenServer server, string database, TimeSpan timeout)
+        {
+            var documentDatabase = await GetDatabase(server, database);
+            var performanceStats = S3Tests.GetPerformanceStats(documentDatabase);
+            return $"olap etl to local machine did not finish in {timeout.TotalSeconds} seconds. stats : {performanceStats}";
         }
 
     }

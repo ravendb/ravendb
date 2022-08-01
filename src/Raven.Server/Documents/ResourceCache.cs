@@ -241,7 +241,7 @@ namespace Raven.Server.Documents
                 {
                     _forTestingPurposes?.OnRemoveLockAndReturnDispose?.Invoke(this);
 
-                    TryRemove(databaseName, resourceLocked);
+                    TryRemove(databaseName, current);
                 });
             }
 
