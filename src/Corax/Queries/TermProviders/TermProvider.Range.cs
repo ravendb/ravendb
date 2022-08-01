@@ -68,7 +68,7 @@ namespace Corax.Queries
         {
             if (_iterator.MoveNext(out termSlice, out var _) == false)
             {
-                term = TermMatch.CreateEmpty();
+                term = TermMatch.CreateEmpty(_searcher.Allocator);
                 return false;
             }
 
@@ -90,7 +90,7 @@ namespace Corax.Queries
                 if (typeof(THigh) == typeof(Range.Exclusive) && cmp <= 0 || 
                     typeof(THigh) == typeof(Range.Inclusive) && cmp < 0)
                 {
-                    term = TermMatch.CreateEmpty();
+                    term = TermMatch.CreateEmpty(_searcher.Allocator);
                     return false;
                 }
 
@@ -221,7 +221,7 @@ namespace Corax.Queries
 
             Empty:
             termSlice = Slices.Empty;
-            term = TermMatch.CreateEmpty();
+            term = TermMatch.CreateEmpty(_searcher.Allocator);
             return false;
         }
 

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Sparrow.Server;
 
 namespace Corax.Queries
 {
@@ -17,7 +18,7 @@ namespace Corax.Queries
 
         private TInner _inner;
         private TOuter _outer;
-
+        private ByteStringContext _ctx;
         private long _totalResults;
         private long _current;
         private QueryCountConfidence _confidence;
@@ -28,7 +29,9 @@ namespace Corax.Queries
 
         public QueryCountConfidence Confidence => _confidence;
 
-        private BinaryMatch(in TInner inner, in TOuter outer,
+        private BinaryMatch(
+            ByteStringContext ctx,
+            in TInner inner, in TOuter outer,
             delegate*<ref BinaryMatch<TInner, TOuter>, Span<long>, int> fillFunc,
             delegate*<ref BinaryMatch<TInner, TOuter>, Span<long>, int, int> andWithFunc,
             delegate*<ref BinaryMatch<TInner, TOuter>, QueryInspectionNode> inspectionFunc,
@@ -45,6 +48,7 @@ namespace Corax.Queries
             _inner = inner;
             _outer = outer;
             _confidence = confidence;
+            _ctx = ctx;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -75,8 +79,8 @@ namespace Corax.Queries
             {
                 _inner.Score(matches, scores);
 
-                var bufferHolder = QueryContext.MatchesRawPool.Rent(sizeof(float) * scores.Length);
-                var outerScores = MemoryMarshal.Cast<byte, float>(bufferHolder).Slice(0, scores.Length);
+                using var _ =  _ctx.Allocate(sizeof(float) * scores.Length, out var bufferHolder);
+                var outerScores = MemoryMarshal.Cast<byte, float>(bufferHolder.ToSpan())[..scores.Length];
 
                 outerScores.Fill(1); // We will fill the scores with 1.0
 
@@ -86,8 +90,6 @@ namespace Corax.Queries
                 // We multiply the scores from the outer chain with the current scores and return.
                 for(int i = 0; i < scores.Length; i++)
                     scores[i] *= outerScores[i];
-
-                QueryContext.MatchesRawPool.Return(bufferHolder);
 
                 return;
             }

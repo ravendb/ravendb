@@ -1,6 +1,9 @@
 ﻿using System;
+using System.Buffers;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using Corax.Utils;
+using Sparrow.Server;
 using static Voron.Global.Constants;
 
 namespace Corax.Queries
@@ -11,22 +14,26 @@ namespace Corax.Queries
     {
         private int _replayCounter;
         public int ReplayCounter => _replayCounter;
-        
+
+        private readonly ByteStringContext _ctx;
         private TInner _inner;
         public bool IsBoosting => _inner.IsBoosting;
         public long Count => _inner.Count;
         public QueryCountConfidence Confidence => _inner.Confidence;
 
-        public int BufferSize => _buffer == null ? 0 : _buffer.Length;
+        public Span<long> Buffer => MemoryMarshal.Cast<byte, long>(_bufferHolder.ToSpan());
 
-        internal long[] _buffer;
-        internal int _bufferEndIdx;
-
-        public MemoizationMatchProvider(in TInner inner)
+        private int _bufferEndIdx;
+        private ByteString _bufferHolder;
+        private ByteStringContext<ByteStringMemoryCache>.InternalScope _bufferScope;
+        
+        public MemoizationMatchProvider(ByteStringContext ctx, in TInner inner)
         {
+            _ctx = ctx;
             _inner = inner;
             _replayCounter = 0;
-            _buffer = null;
+            _bufferHolder = default;
+            _bufferScope = default;
             _bufferEndIdx = -1;
         }
 
@@ -44,7 +51,7 @@ namespace Corax.Queries
             if (_bufferEndIdx == 0)
                 return Span<long>.Empty;
 
-            return _buffer.AsSpan(0, _bufferEndIdx);
+            return Buffer[.._bufferEndIdx];
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -54,9 +61,10 @@ namespace Corax.Queries
         {
             // We rent a buffer size. 
             int bufferSize = 4 * Math.Min(Math.Max(Size.Kilobyte, (int)_inner.Count), 16 * Size.Kilobyte);
-            _buffer = QueryContext.MatchesPool.Rent(bufferSize);
+            _bufferScope.Dispose();
+            _bufferScope = _ctx.Allocate(bufferSize * sizeof(long), out _bufferHolder);
 
-            var bufferState = _buffer.AsSpan();
+            var bufferState = Buffer;
             int iterations = 0;
 
             int count = 0;
@@ -71,14 +79,14 @@ namespace Corax.Queries
 
                 // We havent finished and probably we will need to expand the temporary buffer.
                 int bufferUsedItems = count + read;
-                if (bufferUsedItems > _buffer.Length * 3 / 4)
+                if (bufferUsedItems > Buffer.Length * 3 / 4)
                 {
                     UnlikelyGrowBuffer(bufferUsedItems);
-                    bufferState = _buffer.AsSpan().Slice(count);
+                    bufferState = Buffer[count..];
                 }
 
                 // Every time this is called we will store in a growable temporary buffer all the matches to be used in the AndNot later.
-                bufferState = bufferState.Slice(read);
+                bufferState = bufferState[read..];
                 count += read;
             }
 
@@ -88,7 +96,7 @@ namespace Corax.Queries
             if (iterations > 1 && count > 1)
             {
                 // We need to sort and remove duplicates.
-                count = Sorting.SortAndRemoveDuplicates(_buffer.AsSpan(0, count));
+                count = Sorting.SortAndRemoveDuplicates(Buffer[..count]);
             }
 
             _bufferEndIdx = count;
@@ -98,7 +106,7 @@ namespace Corax.Queries
         private void UnlikelyGrowBuffer(int currentlyUsed)
         {
             // Calculate the new size. 
-            int currentLength = _buffer.Length;
+            int currentLength = Buffer.Length;
             int size;
             if (currentLength > 16 * Size.Megabyte)
             {
@@ -110,13 +118,13 @@ namespace Corax.Queries
             }
 
             // Allocate the new buffer
-            var newBuffer = QueryContext.MatchesPool.Rent(size);
+            var newBufferScope = _ctx.Allocate(size * sizeof(long), out var newBufferHolder);
 
             // Ensure we copy the content and then switch the buffers. 
-            _buffer.AsSpan(0, currentlyUsed).CopyTo(newBuffer.AsSpan(0, size));
-
-            QueryContext.MatchesPool.Return(_buffer);
-            _buffer = newBuffer;
+            Buffer[..currentlyUsed].CopyTo(MemoryMarshal.Cast<byte,long>(newBufferHolder.ToSpan()));
+            _bufferScope.Dispose();
+            _bufferHolder = newBufferHolder;
+            _bufferHolder = newBufferHolder;
         }
 
         public void Score(Span<long> matches, Span<float> scores)
@@ -131,7 +139,7 @@ namespace Corax.Queries
 
         public void Dispose()
         {
-            QueryContext.MatchesPool.Return(_buffer);
+            _bufferScope.Dispose();
         }
     }
 }
