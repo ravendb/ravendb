@@ -94,7 +94,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             }
             else
             {
-                subscription.NodeTagPerShard[ShardName] = NodeTag;
+                subscription.SubscriptionShardingState.NodeTagPerShard[ShardName] = NodeTag;
             }
 
             subscription.LastBatchAckTime = LastTimeServerMadeProgressWithDocuments;

@@ -129,7 +129,7 @@ public class OrchestratedSubscriptionProcessor : SubscriptionProcessor
                 {
                     // document from old shard, which hasn't been moved yet
                     // check whether it was put into the resend queue before we start the resharding
-                    if (_subscriptionState.IgnoreBucketLesserChangeVector.TryGetValue(migration.MigrationIndex, out var skipChangeVector))
+                    if (_subscriptionState.SubscriptionShardingState.IgnoreBucketLesserChangeVector.TryGetValue(migration.MigrationIndex, out var skipChangeVector))
                     {
                         var status = ChangeVectorUtils.GetConflictStatus(changeVector.Version, skipChangeVector);
                         if (status == ConflictStatus.Update)
@@ -159,7 +159,7 @@ public class OrchestratedSubscriptionProcessor : SubscriptionProcessor
 
             if (moveIndex > 0)
             {
-                if (_subscriptionState.IgnoreBucketLesserChangeVector.TryGetValue(moveIndex, out var skipChangeVector))
+                if (_subscriptionState.SubscriptionShardingState.IgnoreBucketLesserChangeVector.TryGetValue(moveIndex, out var skipChangeVector))
                 {
                     var status = ChangeVectorUtils.GetConflictStatus(changeVector.Version, skipChangeVector, _exclude);
                     if (status == ConflictStatus.AlreadyMerged)

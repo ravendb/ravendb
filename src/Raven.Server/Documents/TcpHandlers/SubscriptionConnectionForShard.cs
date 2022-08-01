@@ -78,7 +78,7 @@ public class SubscriptionConnectionForShard : SubscriptionConnection
     protected override string WhosTaskIsIt(DatabaseTopology topology, SubscriptionState subscriptionState) => 
         topology.WhoseTaskIsIt(_serverStore.Engine.CurrentState, subscriptionState, () =>
         {
-            subscriptionState.NodeTagPerShard.TryGetValue(ShardName, out var tag);
+            subscriptionState.SubscriptionShardingState.NodeTagPerShard.TryGetValue(ShardName, out var tag);
             return tag;
         });
 }

@@ -70,10 +70,10 @@ namespace Raven.Server.ServerWide.Commands.Sharding
             foreach (var (key, state) in ClusterStateMachine.ReadValuesStartingWith(context, SubscriptionState.SubscriptionPrefix(DatabaseName)))
             {
                 var subscriptionState = JsonDeserializationClient.SubscriptionState(state);
-                if (subscriptionState.ChangeVectorForNextBatchStartingPointPerShard.TryGetValue(database, out var changeVector) == false)
+                if (subscriptionState.SubscriptionShardingState.ChangeVectorForNextBatchStartingPointPerShard.TryGetValue(database, out var changeVector) == false)
                     return;
 
-                subscriptionState.IgnoreBucketLesserChangeVector[index] = changeVector;
+                subscriptionState.SubscriptionShardingState.IgnoreBucketLesserChangeVector[index] = changeVector;
 
                 using (state)
                 using (Slice.From(context.Allocator, subscriptionState.SubscriptionName, out Slice valueName))

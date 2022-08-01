@@ -124,9 +124,9 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                     }
                     else
                     {
-                        subscriptionState.ChangeVectorForNextBatchStartingPointPerShard.TryGetValue(ShardName, out string current);
-                        subscriptionState.ChangeVectorForNextBatchStartingPointPerShard[ShardName] = ChangeVectorUtils.MergeVectors(current, CurrentChangeVector);
-                        subscriptionState.NodeTagPerShard[ShardName] = NodeTag;
+                        subscriptionState.SubscriptionShardingState.ChangeVectorForNextBatchStartingPointPerShard.TryGetValue(ShardName, out string current);
+                        subscriptionState.SubscriptionShardingState.ChangeVectorForNextBatchStartingPointPerShard[ShardName] = ChangeVectorUtils.MergeVectors(current, CurrentChangeVector);
+                        subscriptionState.SubscriptionShardingState.NodeTagPerShard[ShardName] = NodeTag;
                     }
 
                     using (var obj = context.ReadObject(subscriptionState.ToJson(), "subscription"))
@@ -189,7 +189,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                 return;
             }
 
-            state.ChangeVectorForNextBatchStartingPointPerShard.TryGetValue(ShardName, out string cvInStorage);
+            state.SubscriptionShardingState.ChangeVectorForNextBatchStartingPointPerShard.TryGetValue(ShardName, out string cvInStorage);
             if (cvInStorage != PreviouslyRecordedChangeVector)
             {
                 throw new SubscriptionChangeVectorUpdateConcurrencyException($"Can't record sharded subscription with name '{subscriptionName}' due to inconsistency in change vector progress. Probably there was an admin intervention that changed the change vector value. Stored value: {cvInStorage}, received value: {PreviouslyRecordedChangeVector}.");

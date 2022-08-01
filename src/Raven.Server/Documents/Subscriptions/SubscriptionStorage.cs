@@ -417,7 +417,7 @@ namespace Raven.Server.Documents.Subscriptions
                 LastBatchAckTime = @base.LastBatchAckTime;
                 LastClientConnectionTime = @base.LastClientConnectionTime;
                 Disabled = @base.Disabled;
-                ChangeVectorForNextBatchStartingPointPerShard = @base.ChangeVectorForNextBatchStartingPointPerShard;
+                SubscriptionShardingState = @base.SubscriptionShardingState;
             }
         }
 

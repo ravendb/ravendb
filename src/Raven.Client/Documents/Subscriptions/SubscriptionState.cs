@@ -13,6 +13,23 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Subscriptions
 {
+    public class SubscriptionShardingState : IDynamicJson
+    {
+        public Dictionary<string, string> ChangeVectorForNextBatchStartingPointPerShard { get; set; }
+        public Dictionary<string, string> NodeTagPerShard { get; set; }
+        public Dictionary<long, string> IgnoreBucketLesserChangeVector { get; set; }
+        
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(ChangeVectorForNextBatchStartingPointPerShard)] = ChangeVectorForNextBatchStartingPointPerShard?.ToJson(),
+                [nameof(IgnoreBucketLesserChangeVector)] = IgnoreBucketLesserChangeVector?.ToJsonWithPrimitiveKey(),
+                [nameof(NodeTagPerShard)] = NodeTagPerShard?.ToJson(),
+            };
+        }
+    }
+
     public class SubscriptionState : IDatabaseTask, IDatabaseTaskStatus
     {
         public string Query { get; set; }
@@ -27,10 +44,7 @@ namespace Raven.Client.Documents.Subscriptions
         public string NodeTag { get; set; }
         public string ChangeVectorForNextBatchStartingPoint { get; set; }
 
-        // for sharded
-        public Dictionary<string, string> ChangeVectorForNextBatchStartingPointPerShard { get; set; }
-        public Dictionary<string, string> NodeTagPerShard { get; set; }
-        public Dictionary<long, string> IgnoreBucketLesserChangeVector { get; set; }
+        public SubscriptionShardingState SubscriptionShardingState { get; set; }
 
         public ulong GetTaskKey()
         {
@@ -70,10 +84,15 @@ namespace Raven.Client.Documents.Subscriptions
                 [nameof(LastBatchAckTime)] = LastBatchAckTime,
                 [nameof(LastClientConnectionTime)] = LastClientConnectionTime,
                 [nameof(Disabled)] = Disabled,
-                [nameof(ChangeVectorForNextBatchStartingPointPerShard)] = ChangeVectorForNextBatchStartingPointPerShard?.ToJson(),
+                /*[nameof(ChangeVectorForNextBatchStartingPointPerShard)] = ChangeVectorForNextBatchStartingPointPerShard?.ToJson(),
                 [nameof(IgnoreBucketLesserChangeVector)] = IgnoreBucketLesserChangeVector?.ToJsonWithPrimitiveKey(),
-                [nameof(NodeTagPerShard)] = NodeTagPerShard?.ToJson(),
+                [nameof(NodeTagPerShard)] = NodeTagPerShard?.ToJson(),*/
             };
+
+            if (SubscriptionShardingState != null)
+            {
+                djv[nameof(SubscriptionShardingState)] = SubscriptionShardingState.ToJson();
+            }
 
             return djv;
         }

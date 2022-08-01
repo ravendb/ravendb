@@ -27,7 +27,7 @@ public class PutShardedSubscriptionCommand : PutSubscriptionCommand
         if (InitialChangeVector == nameof(Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange))
         {
             // use current change vectors saved in state
-            InitialChangeVectorPerShard = existingSubscriptionState.ChangeVectorForNextBatchStartingPointPerShard;
+            InitialChangeVectorPerShard = existingSubscriptionState.SubscriptionShardingState.ChangeVectorForNextBatchStartingPointPerShard;
             return;
         }
 
@@ -35,7 +35,7 @@ public class PutShardedSubscriptionCommand : PutSubscriptionCommand
             return;
 
         // start from LastDocument (the CVs were validated in handler)
-        InitialChangeVectorPerShard = existingSubscriptionState.ChangeVectorForNextBatchStartingPointPerShard;
+        InitialChangeVectorPerShard = existingSubscriptionState.SubscriptionShardingState.ChangeVectorForNextBatchStartingPointPerShard;
         // remove the old state from storage
         RemoveSubscriptionStateFromStorage(context, subscriptionId);
     }
@@ -56,7 +56,10 @@ public class PutShardedSubscriptionCommand : PutSubscriptionCommand
             Disabled = Disabled,
             MentorNode = MentorNode,
             LastClientConnectionTime = null,
-            ChangeVectorForNextBatchStartingPointPerShard = InitialChangeVectorPerShard
+            SubscriptionShardingState = new SubscriptionShardingState
+            {
+                ChangeVectorForNextBatchStartingPointPerShard = InitialChangeVectorPerShard
+            }
         }.ToJson();
     }
 

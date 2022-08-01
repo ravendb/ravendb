@@ -17,8 +17,8 @@ public class SubscriptionConnectionsStateForShard : SubscriptionConnectionsState
 
     protected override void SetLastChangeVectorSent(SubscriptionConnection connection)
     {
-        if (connection.SubscriptionState.ChangeVectorForNextBatchStartingPointPerShard == null ||
-            connection.SubscriptionState.ChangeVectorForNextBatchStartingPointPerShard.TryGetValue(DocumentDatabase.Name, out string cv) == false)
+        if (connection.SubscriptionState.SubscriptionShardingState.ChangeVectorForNextBatchStartingPointPerShard == null ||
+            connection.SubscriptionState.SubscriptionShardingState.ChangeVectorForNextBatchStartingPointPerShard.TryGetValue(DocumentDatabase.Name, out string cv) == false)
         {
             LastChangeVectorSent = null;
         }
