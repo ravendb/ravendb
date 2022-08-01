@@ -26,7 +26,7 @@ public static class Program
                     //new SetAddRemoval(testOutputHelper).AdditionsAndRemovalWork();
 
                     int minFailure = int.MaxValue;
-                    int failureRandom = -1;                    
+                    int failureRandom = -1;
 
                     var rnd = new Random();
                     int number = 500000;
