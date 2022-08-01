@@ -266,13 +266,13 @@ namespace Voron.Data.Tables
             byte* ptr, int size, out ByteString buffer)
         {
             var dicId = BlittableJsonReaderBase.ReadVariableSizeIntInReverse(ptr, size - 1, out var offset);
-            var data = new ReadOnlySpan<byte>(ptr, size - offset);
+            int length = size - offset;
             var dictionary = tx.LowLevelTransaction.Environment.CompressionDictionariesHolder
                 .GetCompressionDictionaryFor(tx, dicId);
 
-            int decompressedSize = ZstdLib.GetDecompressedSize(data);
+            int decompressedSize = ZstdLib.GetDecompressedSize(ptr, length);
             var internalScope = tx.Allocator.Allocate(decompressedSize, out buffer);
-            var actualSize = ZstdLib.Decompress(data, buffer.ToSpan(), dictionary);
+            var actualSize = ZstdLib.Decompress(ptr, length, buffer.Ptr, buffer.Length, dictionary);
             if (actualSize != decompressedSize)
                 throw new InvalidDataException($"Got decompressed size {actualSize} but expected {decompressedSize} in tx #{tx.LowLevelTransaction.Id}, dic id: {dictionary?.Id ?? 0}");
             return internalScope;

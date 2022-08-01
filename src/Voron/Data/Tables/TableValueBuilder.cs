@@ -106,13 +106,6 @@ namespace Voron.Data.Tables
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Add(Span<byte> buffer)
-        {
-            PtrSize ptr = PtrSize.Create(Unsafe.AsPointer(ref buffer[0]), buffer.Length);
-            Add(ref ptr);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Add(void* pointer, int size)
         {
             PtrSize ptr = PtrSize.Create(pointer, size);
