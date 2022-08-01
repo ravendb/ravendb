@@ -161,8 +161,15 @@ namespace Tests.Infrastructure
             sb.AppendLine("Waited too long for a node to become a leader but no leader was elected.");
             foreach (var node in nodes)
             {
-                sb.AppendLine($"'{node.Tag}' is {node.CurrentState} at term {node.CurrentTerm} (running: {node.Candidate.Running})");
-                sb.AppendJoin(Environment.NewLine, node.Candidate.GetStatus().Values);
+                var candidate = node.Candidate;
+                if (candidate == null)
+                {
+                    sb.AppendLine($"'{node.Tag}' is {node.CurrentState} at term {node.CurrentTerm}, current candidate is null {node.LastStateChangeReason}");
+                    continue;
+                }
+
+                sb.AppendLine($"'{node.Tag}' is {node.CurrentState} at term {node.CurrentTerm} (running: {candidate.Running})");
+                sb.AppendJoin(Environment.NewLine, candidate.GetStatus().Values);
                 sb.AppendLine();
             }
 
@@ -371,6 +378,7 @@ namespace Tests.Infrastructure
                 catch (Exception e)
                 {
                     lastException = e;
+                    await Task.Delay(50);
                 }
             } while (retires-- > 0);
 
@@ -496,6 +504,9 @@ namespace Tests.Infrastructure
             public override DynamicJsonValue ToJson(JsonOperationContext context)
             {
                 var djv = base.ToJson(context);
+                UniqueRequestId ??= Guid.NewGuid().ToString();
+                
+                djv[nameof(UniqueRequestId)] = UniqueRequestId;
                 djv[nameof(Name)] = Name;
                 djv[nameof(Value)] = Value;
 

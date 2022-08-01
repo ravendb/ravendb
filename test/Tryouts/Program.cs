@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using FastTests.Blittable;
 using FastTests.Client;
+using RachisTests;
 using SlowTests.Client.TimeSeries.Replication;
 using SlowTests.Issues;
 using SlowTests.MailingList;
@@ -29,9 +30,9 @@ namespace Tryouts
                 try
                 {
                     using (var testOutputHelper = new ConsoleTestOutputHelper())
-                    using (var test = new TimeSeriesReplicationTests(testOutputHelper))
+                    using (var test = new ElectionTests(testOutputHelper))
                     {
-                         await test.PreferDeletedValues3();
+                         await test.CanElectOnDivergence4();
                     }
                 }
                 catch (Exception e)
