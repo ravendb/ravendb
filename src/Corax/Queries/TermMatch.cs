@@ -8,6 +8,7 @@ using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
 using System.Collections.Generic;
+using Sparrow.Server;
 
 namespace Corax.Queries
 {
@@ -27,6 +28,7 @@ namespace Corax.Queries
 
         private Container.Item _container;
         private Set.Iterator _set;
+        private ByteStringContext _ctx;
 
         public bool IsBoosting => _scoreFunc != null;
         public long Count => _totalResults;
@@ -38,6 +40,7 @@ namespace Corax.Queries
         public QueryCountConfidence Confidence => QueryCountConfidence.High;
 
         private TermMatch(
+            ByteStringContext ctx,
             long totalResults,
             delegate*<ref TermMatch, Span<long>, int> fillFunc,
             delegate*<ref TermMatch, Span<long>, int, int> andWithFunc,
@@ -52,6 +55,7 @@ namespace Corax.Queries
             _andWithFunc = andWithFunc;
             _scoreFunc = scoreFunc;
             _inspectFunc = inspectFunc;
+            _ctx = ctx;
 
             _numOfReturnedItems = 0;
             _container = default;
@@ -61,7 +65,7 @@ namespace Corax.Queries
 #endif
         }
 
-        public static TermMatch CreateEmpty()
+        public static TermMatch CreateEmpty(ByteStringContext ctx)
         {
             static int FillFunc(ref TermMatch term, Span<long> matches)
             {
@@ -88,7 +92,7 @@ namespace Corax.Queries
                     });
             }
 
-            return new TermMatch(0, &FillFunc, &AndWithFunc, inspectFunc: &InspectFunc)
+            return new TermMatch(ctx, 0, &FillFunc, &AndWithFunc, inspectFunc: &InspectFunc)
             {
 #if DEBUG
                 Term = "<empty>"
@@ -96,7 +100,7 @@ namespace Corax.Queries
             };            
         }
 
-        public static TermMatch YieldOnce(long value)
+        public static TermMatch YieldOnce(ByteStringContext ctx, long value)
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             static int FillFunc(ref TermMatch term, Span<long> matches)
@@ -138,14 +142,14 @@ namespace Corax.Queries
                     });
             }
 
-            return new TermMatch(1, &FillFunc, &AndWithFunc, inspectFunc: &InspectFunc)
+            return new TermMatch(ctx, 1, &FillFunc, &AndWithFunc, inspectFunc: &InspectFunc)
             {
                 _current = value,
                 _currentIdx = QueryMatch.Start
             };
         }
 
-        public static TermMatch YieldSmall(Container.Item containerItem)
+        public static TermMatch YieldSmall(ByteStringContext ctx, Container.Item containerItem)
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             static int FillFunc(ref TermMatch term, Span<long> matches)
@@ -221,7 +225,7 @@ namespace Corax.Queries
             }
 
             var itemsCount = ZigZagEncoding.Decode<int>(containerItem.ToSpan(), out var len);
-            return new TermMatch(itemsCount, &FillFunc, &AndWithFunc, inspectFunc: &InspectFunc)
+            return new TermMatch(ctx, itemsCount, &FillFunc, &AndWithFunc, inspectFunc: &InspectFunc)
             {
                 _container = containerItem,
                 _currentIdx = len,
@@ -230,7 +234,7 @@ namespace Corax.Queries
             };
         }
 
-        public static TermMatch YieldSet(Set set, bool useAccelerated = true)
+        public static TermMatch YieldSet(ByteStringContext ctx, Set set, bool useAccelerated = true)
         {
             [SkipLocalsInit]
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -302,8 +306,8 @@ namespace Corax.Queries
                 long* inputEndPtr = inputStartPtr + matches;
 
                 // The size of this array is fixed to improve cache locality.
-                var bufferHolder = QueryContext.MatchesPool.Rent(BlockSize);
-                var blockMatches = bufferHolder.AsSpan().Slice(0, BlockSize);
+                using var _ = term._ctx.Allocate(BlockSize * sizeof(long), out var bufferHolder);
+                var blockMatches = MemoryMarshal.Cast<byte, long>(bufferHolder.ToSpan());
                 Debug.Assert(blockMatches.Length == BlockSize);
 
                 long* blockStartPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(blockMatches));                
@@ -424,7 +428,6 @@ namespace Corax.Queries
                     Debug.Assert((isSmallerInput ? largerPtr : smallerPtr) - blockStartPtr <= BlockSize);
                 }
 
-                QueryContext.MatchesPool.Return(bufferHolder);
                 return (int)((ulong)dstPtr - (ulong)inputStartPtr) / sizeof(ulong);
             }            
 
@@ -454,7 +457,7 @@ namespace Corax.Queries
                 useAccelerated = false;
 
             // We will select the AVX version if supported.             
-            return new TermMatch(set.State.NumberOfEntries, &FillFunc, useAccelerated ? &AndWithVectorizedFunc : &AndWithFunc, inspectFunc: &InspectFunc)
+            return new TermMatch(ctx, set.State.NumberOfEntries, &FillFunc, useAccelerated ? &AndWithVectorizedFunc : &AndWithFunc, inspectFunc: &InspectFunc)
             {
                 _set = set.Iterate(),
                 _current = long.MinValue

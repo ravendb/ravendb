@@ -47,7 +47,7 @@ namespace Corax.Queries
                 return true;
             }
 
-            term = TermMatch.CreateEmpty();
+            term = TermMatch.CreateEmpty(_searcher.Allocator);
             return false;
         }
 

@@ -61,7 +61,7 @@ public class SpatialMatch : IQueryMatch
 
             return true;
         }
-        _currentMatch = TermMatch.CreateEmpty();
+        _currentMatch = TermMatch.CreateEmpty(_indexSearcher.Allocator);
         return false;
     }
 
