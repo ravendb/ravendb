@@ -62,9 +62,9 @@ namespace Raven.Server.Documents.Sharding.Handlers
             //TODO - sharding: We probably want to put it in the ShardedDatabaseContext, not use the server one 
             ContextPool = context.RavenServer.ServerStore.ContextPool;
             Logger = LoggingSource.Instance.GetLogger(DatabaseContext.DatabaseName, GetType().FullName);
-
+            
             var request = HttpContext.Request;
-            var url = request.Path.Value;
+            var url = context.RouteMatch.Url;
             var relativeIndex = url.IndexOf('/', 11); //start after "/databases/" and skip the database name
 
             BaseShardUrl = url.Substring(relativeIndex);
