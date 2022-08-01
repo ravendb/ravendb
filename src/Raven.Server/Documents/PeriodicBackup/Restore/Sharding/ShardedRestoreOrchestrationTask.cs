@@ -6,6 +6,7 @@ using Nito.AsyncEx;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Documents.Operations.Backups.Sharding;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
@@ -18,7 +19,7 @@ using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Utils;
 
-namespace Raven.Server.Documents.PeriodicBackup.Restore
+namespace Raven.Server.Documents.PeriodicBackup.Restore.Sharding
 {
     public class ShardedRestoreOrchestrationTask : AbstractRestoreBackupTask
     {
@@ -81,7 +82,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
             databaseRecord.Sharding = new ShardingConfiguration
             {
-                Shards = new DatabaseTopology[RestoreConfiguration.ShardRestoreSettings.Length],
+                Shards = new DatabaseTopology[RestoreConfiguration.ShardRestoreSettings.Shards.Length],
                 Orchestrator = new OrchestratorConfiguration
                 {
                     Topology = new OrchestratorTopology
@@ -92,9 +93,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             };
 
             var nodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            for (var i = 0; i < RestoreConfiguration.ShardRestoreSettings.Length; i++)
+            for (var i = 0; i < RestoreConfiguration.ShardRestoreSettings.Shards.Length; i++)
             {
-                var shardRestoreSetting = RestoreConfiguration.ShardRestoreSettings[i];
+                var shardRestoreSetting = RestoreConfiguration.ShardRestoreSettings.Shards[i];
                 databaseRecord.Sharding.Shards[i] = new DatabaseTopology
                 {
                     Members = new List<string>
@@ -113,7 +114,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Normal, "try to replace this with a proper impl. of ServerStore.AddRemoteOperation");
 
-            var shardSettings = configuration.ShardRestoreSettings;
+            var shardSettings = configuration.ShardRestoreSettings.Shards;
             var tasks = new Task<IOperationResult>[shardSettings.Length];
 
             for (int i = 0; i < tasks.Length; i++)
@@ -138,9 +139,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
         private static RavenCommand<OperationIdResult> GenerateCommandForShard(JsonOperationContext context, int position, RestoreBackupConfigurationBase configuration)
         {
-            Debug.Assert(position < configuration.ShardRestoreSettings?.Length);
+            Debug.Assert(position < configuration.ShardRestoreSettings?.Shards.Length);
 
-            var shardRestoreSetting = configuration.ShardRestoreSettings[position];
+            var shardRestoreSetting = configuration.ShardRestoreSettings.Shards[position];
             configuration.DatabaseName = ShardHelper.ToShardName(configuration.DatabaseName, shardRestoreSetting.ShardNumber);
             configuration.ShardRestoreSettings = null;
 
@@ -161,7 +162,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             return new RestoreBackupOperation(configuration).GetCommand(DocumentConventions.DefaultForServer, context);
         }
 
-        private static IOperationResult CombineResults(IReadOnlyList<Task<IOperationResult>> tasks, IReadOnlyList<ShardRestoreSetting> shardSettings)
+        private static IOperationResult CombineResults(IReadOnlyList<Task<IOperationResult>> tasks, IReadOnlyList<SingleShardRestoreSetting> shardSettings)
         {
             var result = new ShardedSmugglerResult();
             for (var i = 0; i < tasks.Count; i++)

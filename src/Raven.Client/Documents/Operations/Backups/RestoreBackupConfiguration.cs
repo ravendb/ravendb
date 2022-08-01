@@ -1,4 +1,5 @@
-using System.Linq;
+using System;
+using Raven.Client.Documents.Operations.Backups.Sharding;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.Backups
@@ -19,20 +20,25 @@ namespace Raven.Client.Documents.Operations.Backups
 
         protected abstract RestoreType Type { get; }
 
-        public ShardRestoreSetting[] ShardRestoreSettings { get; set; }
+        public ShardRestoreSettings ShardRestoreSettings { get; set; }
 
         public BackupEncryptionSettings BackupEncryptionSettings { get; set; }
 
         protected RestoreBackupConfigurationBase(RestoreBackupConfigurationBase other)
         {
+            if (other == null)
+                throw new ArgumentException(nameof(other));
+
             DatabaseName = other.DatabaseName;
             LastFileNameToRestore = other.LastFileNameToRestore;
             DataDirectory = other.DataDirectory;
             EncryptionKey = other.EncryptionKey;
             DisableOngoingTasks = other.DisableOngoingTasks;
             SkipIndexes = other.SkipIndexes;
-            ShardRestoreSettings = other.ShardRestoreSettings;
-            BackupEncryptionSettings = other.BackupEncryptionSettings;
+            if (other.ShardRestoreSettings != null)
+                ShardRestoreSettings = new ShardRestoreSettings(other.ShardRestoreSettings);
+            if (other.BackupEncryptionSettings != null)
+                BackupEncryptionSettings = new BackupEncryptionSettings(other.BackupEncryptionSettings);
         }
 
         protected RestoreBackupConfigurationBase()
@@ -53,9 +59,7 @@ namespace Raven.Client.Documents.Operations.Backups
                 [nameof(SkipIndexes)] = SkipIndexes,
                 [nameof(BackupEncryptionSettings)] = BackupEncryptionSettings,
                 [nameof(Type)] = Type,
-                [nameof(ShardRestoreSettings)] = ShardRestoreSettings != null
-                    ? new DynamicJsonArray(ShardRestoreSettings.Select(x => x.ToJson()))
-                    : null
+                [nameof(ShardRestoreSettings)] = ShardRestoreSettings?.ToJson()
             };
         }
     }
@@ -100,7 +104,7 @@ namespace Raven.Client.Documents.Operations.Backups
 
         protected RestoreFromS3Configuration(RestoreFromS3Configuration other) : base(other)
         {
-            Settings = other.Settings;
+            Settings = new S3Settings(other.Settings);
         }
 
         public override DynamicJsonValue ToJson()
@@ -129,7 +133,7 @@ namespace Raven.Client.Documents.Operations.Backups
 
         protected RestoreFromAzureConfiguration(RestoreFromAzureConfiguration other) : base(other)
         {
-            Settings = other.Settings;
+            Settings = new AzureSettings(other.Settings);
         }
 
         public override DynamicJsonValue ToJson()
@@ -157,7 +161,7 @@ namespace Raven.Client.Documents.Operations.Backups
 
         protected RestoreFromGoogleCloudConfiguration(RestoreFromGoogleCloudConfiguration other) : base(other)
         {
-            Settings = other.Settings;
+            Settings = new GoogleCloudSettings(other.Settings);
         }
 
         public override DynamicJsonValue ToJson()

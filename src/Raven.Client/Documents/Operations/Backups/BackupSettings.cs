@@ -405,6 +405,20 @@ namespace Raven.Client.Documents.Operations.Backups
         /// </summary>
         public string GoogleCredentialsJson { get; set; }
 
+        public GoogleCloudSettings()
+        {
+        }
+
+        internal GoogleCloudSettings(GoogleCloudSettings settings)
+        {
+            if (settings == null)
+                throw new ArgumentNullException(nameof(settings));
+
+            BucketName = settings.BucketName;
+            RemoteFolderName = settings.RemoteFolderName;
+            GoogleCredentialsJson = settings.GoogleCredentialsJson;
+        }
+
         public override bool HasSettings()
         {
             return string.IsNullOrWhiteSpace(BucketName) == false;

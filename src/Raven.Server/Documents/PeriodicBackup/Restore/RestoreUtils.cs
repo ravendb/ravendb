@@ -7,6 +7,7 @@ using Raven.Client;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
 using Raven.Server.Config.Settings;
+using Raven.Server.Documents.PeriodicBackup.Restore.Sharding;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -61,7 +62,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
         public static async Task<AbstractRestoreBackupTask> CreateBackupTaskAsync(ServerStore serverStore, RestoreBackupConfigurationBase configuration, IRestoreSource restoreSource, OperationCancelToken token)
         {
-            if (configuration.ShardRestoreSettings.Length > 0)
+            if (configuration.ShardRestoreSettings?.Shards.Length > 0)
                 return new ShardedRestoreOrchestrationTask(serverStore, configuration, token);
             
             var singleShardRestore = ShardHelper.IsShardedName(configuration.DatabaseName);

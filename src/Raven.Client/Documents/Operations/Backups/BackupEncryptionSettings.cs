@@ -1,3 +1,4 @@
+using System;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.Backups
@@ -11,6 +12,15 @@ namespace Raven.Client.Documents.Operations.Backups
         {
             Key = null;
             EncryptionMode = EncryptionMode.None;
+        }
+
+        internal BackupEncryptionSettings(BackupEncryptionSettings other)
+        {
+            if (other == null)
+                throw new ArgumentException(nameof(other));
+
+            Key = other.Key;
+            EncryptionMode = other.EncryptionMode;
         }
 
         public DynamicJsonValue ToJson()
