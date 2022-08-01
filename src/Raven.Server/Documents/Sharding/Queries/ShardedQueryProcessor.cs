@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
@@ -94,7 +95,7 @@ public class ShardedQueryProcessor : IDisposable
             (List<Slice> ids, string _) = _query.ExtractIdsFromQuery(_parent.ServerStore, _context.Allocator, _parent.DatabaseContext.DatabaseName);
             if (ids != null)
             {
-                GenerateLoadByIdQueries(ids, _commands, _context);
+                GenerateLoadByIdQueries(ids);
                 return;
             }
         }
@@ -198,17 +199,21 @@ public class ShardedQueryProcessor : IDisposable
         queryTemplate = _context.ReadObject(queryTemplate, "modified-query");
     }
 
-    private void GenerateLoadByIdQueries(IEnumerable<Slice> ids, Dictionary<int, ShardedQueryCommand> cmds, TransactionOperationContext context)
+    private void GenerateLoadByIdQueries(IEnumerable<Slice> ids)
     {
         const string listParameterName = "p0";
 
-        var shards = ShardLocator.GetDocumentIdsByShards(context, _parent.DatabaseContext, ids);
+        var shards = ShardLocator.GetDocumentIdsByShards(_context, _parent.DatabaseContext, ids);
 
         var documentQuery = new DocumentQuery<dynamic>(null, null, _query.Metadata.CollectionName, false);
-        documentQuery.WhereIn("id()", new List<object>());
-        foreach (var include in _query.Metadata.Includes)
+        documentQuery.WhereIn(Constants.Documents.Indexing.Fields.DocumentIdFieldName, new List<object>());
+
+        if (_query.Metadata.Includes is {Length: > 0})
         {
-            documentQuery.Include(include);
+            foreach (var include in _query.Metadata.Includes)
+            {
+                documentQuery.Include(include);
+            }
         }
 
         foreach ((int shardId, ShardLocator.IdsByShard<Slice> documentIds) in shards)
@@ -219,11 +224,19 @@ public class ShardedQueryProcessor : IDisposable
             {
                 [nameof(IndexQuery.QueryParameters)] = new DynamicJsonValue
                 {
-                    [listParameterName] = documentIds.Ids.Select(x => x.ToString())
+                    [listParameterName] = GetIds()
                 },
                 [nameof(IndexQuery.Query)] = documentQuery.ToString()
             };
-            cmds[shardId] = new ShardedQueryCommand(_parent, _context.ReadObject(q, "query"), null);
+            _commands[shardId] = new ShardedQueryCommand(_parent, _context.ReadObject(q, "query"), null);
+
+            IEnumerable<string> GetIds()
+            {
+                foreach (var idAsAlice in documentIds.Ids)
+                {
+                    yield return idAsAlice.ToString();
+                }
+            }
         }
     }
 

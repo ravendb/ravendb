@@ -757,6 +757,37 @@ select project(o)")
             }
         }
 
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        public void BasicQueryWithSpecificIds()
+        {
+            using (var store = Sharding.GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Dog { Owner = "users/1" }, "dogs/1");
+                    session.Store(new Dog { Owner = "users/2" }, "dogs/2");
+                    session.Store(new Dog { Owner = "users/3" }, "dogs/3");
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var queryResult = session.Query<Dog>()
+                        .Where(x => x.Id.In(new[] { "dogs/1", "dogs/2", "dogs/3" }))
+                        .ToList();
+
+                    Assert.Equal(3, queryResult.Count);
+
+                    for (var i = 0; i < 3; i++)
+                    {
+                        Assert.NotNull(session.Load<Dog>($"dogs/{i + 1}"));
+                    }
+                }
+            }
+        }
+
+
         private class AgeResult
         {
             public int Age { get; set; }
