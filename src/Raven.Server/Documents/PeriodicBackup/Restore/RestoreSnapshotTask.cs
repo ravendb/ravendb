@@ -39,11 +39,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
         protected override async Task RestoreAsync()
         {
-            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            {
-                await RestoreFromSmugglerFileAsync(Progress, Database, _firstFile, context);
-                await SmugglerRestoreAsync(Database, context);
-            }
+            await RestoreFromSmugglerFileAsync(Progress, Database, _firstFile, Context);
+            await SmugglerRestoreAsync(Database, Context);
 
             Result.SnapshotRestore.Processed = true;
 
@@ -79,11 +76,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                                     RestoreConfiguration.BackupEncryptionSettings?.Key != null;
             }
 
-            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext serverContext))
-            {
-                // restore the snapshot
-                RestoreSettings = await RestoreSnapshotAsync(serverContext, _firstFile, Progress, Result);
-            }
+            // restore the snapshot
+            RestoreSettings = await RestoreSnapshotAsync(Context, _firstFile, Progress, Result);
 
             Debug.Assert(RestoreSettings != null);
 
