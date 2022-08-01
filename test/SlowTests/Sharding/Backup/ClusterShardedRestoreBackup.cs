@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Documents.Operations.Backups.Sharding;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Tests.Core.Utils.Entities;
@@ -56,12 +57,15 @@ namespace SlowTests.Sharding.Backup
                 var dirs = Directory.GetDirectories(backupPath);
                 Assert.Equal(cluster.Nodes.Count, dirs.Length);
 
-                var settings = new ShardRestoreSetting[dirs.Length];
+                var settings = new ShardRestoreSettings
+                {
+                    Shards = new SingleShardRestoreSetting[dirs.Length]
+                };
 
                 for (var i = 0; i < dirs.Length; i++)
                 {
                     var dir = dirs[i];
-                    settings[i] = new ShardRestoreSetting
+                    settings.Shards[i] = new SingleShardRestoreSetting
                     {
                         ShardNumber = i,
                         BackupPath = dir,

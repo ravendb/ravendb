@@ -12,8 +12,9 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Utils;
 using Sparrow.Json;
+using Sparrow.Utils;
 
-namespace Raven.Server.Documents.PeriodicBackup.Restore
+namespace Raven.Server.Documents.PeriodicBackup.Restore.Sharding
 {
     internal class SingleShardRestoreBackupTask : RestoreBackupTask
     {
@@ -23,8 +24,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             IRestoreSource restoreSource, OperationCancelToken operationCancelToken) : base(serverStore, restoreConfiguration, restoreSource, filesToRestore, operationCancelToken)
         {
             DatabaseValidation = false;
-            HasEncryptionKey = false;
 
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Major, "test encrypted backup & restore");
+            HasEncryptionKey = false;
+            
             _nonShardedDbName = ShardHelper.ToDatabaseName(DatabaseName);
         }
 
