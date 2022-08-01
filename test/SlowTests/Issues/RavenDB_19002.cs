@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Extensions;
 using Raven.Server.Documents;
 using Sparrow.Threading;
 using Xunit;
@@ -118,6 +118,60 @@ public class RavenDB_19002 : NoDisposalNeeded
         foreach (var db in createdDbs)
         {
             Assert.True(db.IsDisposed);
+        }
+    }
+
+
+    [Fact]
+    public void ShouldRemoveFaultyDatabaseTask()
+    {
+        var dbsCache = new ResourceCache<MyDb>();
+
+        var dbName = "foo";
+
+        var loadFailureTask = Task.FromException<MyDb>(new InvalidOperationException("Database load failure"));
+
+        dbsCache.GetOrAdd(dbName, loadFailureTask);
+
+        using (dbsCache.RemoveLockAndReturn(dbName, x => x.Dispose(), out _))
+        {
+
+        }
+
+        var loadAgainTask = new Task<MyDb>(() =>
+        {
+            var myDb = new MyDb(dbName);
+
+            return myDb;
+        }, TaskCreationOptions.RunContinuationsAsynchronously);
+
+        var database1 = dbsCache.GetOrAdd(dbName, loadAgainTask);
+
+        Assert.Equal(loadAgainTask, database1); // should add a new open database task
+     }
+
+    [Fact]
+    public void MustNotRemoveLockTask()
+    {
+        var dbsCache = new ResourceCache<MyDb>();
+
+        var dbName = "foo";
+
+        var loadedDatabaseTask = Task.FromResult(new MyDb(dbName));
+
+        dbsCache.GetOrAdd(dbName, loadedDatabaseTask);
+
+        using (dbsCache.RemoveLockAndReturn(dbName, x => x.Dispose(), out _))
+        {
+            var ex = Assert.Throws<AggregateException>(() =>
+            {
+                using (dbsCache.RemoveLockAndReturn(dbName, x => x.Dispose(), out _))
+                {
+
+                }
+            });
+
+            Assert.Equal("The database 'foo' has been unloaded and locked by MustNotRemoveLockTask", ex.ExtractSingleInnerException().Message);
         }
     }
 }
