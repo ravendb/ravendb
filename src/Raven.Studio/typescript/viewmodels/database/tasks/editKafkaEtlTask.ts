@@ -21,7 +21,6 @@ import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBinding
 import jsonUtil = require("common/jsonUtil");
 import popoverUtils = require("common/popoverUtils");
 import database = require("models/resources/database");
-import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 import documentMetadata = require("models/database/documents/documentMetadata");
 import viewHelpers = require("common/helpers/view/viewHelpers");
 import document = require("models/database/documents/document");
@@ -166,7 +165,9 @@ class editKafkaEtlTask extends viewModelBase {
 
     view = require("views/database/tasks/editKafkaEtlTask.html");
     optionsPerQueueEtlView = require("views/database/tasks/optionsPerQueueEtl.html");
-    connectionStringView = require("views/database/settings/connectionStringKafka.html")
+    connectionStringView = require("views/database/settings/connectionStringKafka.html");
+    pinResponsibleNodeButtonsScriptView = require("views/partial/pinResponsibleNodeButtonsScript.html");
+    pinResponsibleNodeTextScriptView = require("views/partial/pinResponsibleNodeTextScript.html");
     
     static readonly scriptNamePrefix = "Script_";
     static isApplyToAll = ongoingTaskQueueEtlTransformationModel.isApplyToAll;
@@ -251,11 +252,6 @@ class editKafkaEtlTask extends viewModelBase {
         super.compositionComplete();
 
         $('.edit-kafka-etl-task [data-toggle="tooltip"]').tooltip();
-
-        popoverUtils.longWithHover($(".responsible-node"),
-            {
-                content: tasksCommonContent.responsibleNodeInfo
-            });
 
         popoverUtils.longWithHover($(".use-server-certificate"),
             {
