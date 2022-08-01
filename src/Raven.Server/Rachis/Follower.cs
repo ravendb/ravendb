@@ -911,6 +911,18 @@ namespace Raven.Server.Rachis
 
                 if (midpointIndex == negotiation.PrevLogIndex && midpointTerm != negotiation.PrevLogTerm)
                 {
+                    if (HandleDivergenceAtFirstLeaderEntry(context, negotiation, out var lastCommittedIndex))
+                    {
+                        connection.Send(context, new LogLengthNegotiationResponse
+                        {
+                            Status = LogLengthNegotiationResponse.ResponseStatus.Acceptable,
+                            Message = $"agreed on our last committed index {lastCommittedIndex}",
+                            CurrentTerm = _term,
+                            LastLogIndex = lastCommittedIndex,
+                        });
+                        return false;
+                    }
+
                     // our appended entries has been diverged, same index with different terms.
                     if (CanHandleLogDivergence(context, negotiation, ref midpointIndex, ref midpointTerm, ref minIndex, ref maxIndex) == false)
                     {
@@ -966,33 +978,17 @@ namespace Raven.Server.Rachis
                         return true;
                     }
 
-                    using (context.OpenReadTransaction())
+                    if (HandleDivergenceAtFirstLeaderEntry(context, negotiation, out var lastCommittedIndex))
                     {
-                        var term = _engine.GetTermFor(context, negotiation.PrevLogIndex);
-                        if (term != negotiation.PrevLogTerm)
+                        connection.Send(context, new LogLengthNegotiationResponse
                         {
-                            // divergence at the first leader entry
-                            var lastCommittedIndex = _engine.GetLastCommitIndex(context);
-                            if (lastCommittedIndex + 1 == negotiation.PrevLogIndex)
-                            {
-                                if (_engine.Log.IsInfoEnabled)
-                                {
-                                    _engine.Log.Info($"{ToString()}: found divergence at the first leader entry");
-                                }
-
-                                connection.Send(context, new LogLengthNegotiationResponse
-                                {
-                                    Status = LogLengthNegotiationResponse.ResponseStatus.Acceptable,
-                                    Message = $"agreed on our last committed index {lastCommittedIndex}",
-                                    CurrentTerm = _term,
-                                    LastLogIndex = lastCommittedIndex,
-                                });
-
-                                // leader's first entry is the next we need 
-                                return false;
-                            }
-                        }
-                    }
+                            Status = LogLengthNegotiationResponse.ResponseStatus.Acceptable,
+                            Message = $"agreed on our last committed index {lastCommittedIndex}",
+                            CurrentTerm = _term,
+                            LastLogIndex = lastCommittedIndex,
+                        });
+                        return false;
+                    } 
 
                     // the leader already truncated the suggested index
                     // Let's try to negotiate from that index upto our last appended index
@@ -1031,6 +1027,33 @@ namespace Raven.Server.Rachis
                 CurrentTerm = _term,
                 LastLogIndex = midpointIndex,
             });
+
+            return false;
+        }
+
+        private bool HandleDivergenceAtFirstLeaderEntry(ClusterOperationContext context, LogLengthNegotiation negotiation, out long lastCommittedIndex)
+        {
+            lastCommittedIndex = -1;
+
+            using (context.OpenReadTransaction())
+            {
+                var term = _engine.GetTermFor(context, negotiation.PrevLogIndex);
+                if (term != negotiation.PrevLogTerm)
+                {
+                    // divergence at the first leader entry
+                    lastCommittedIndex = _engine.GetLastCommitIndex(context);
+                    if (lastCommittedIndex + 1 == negotiation.PrevLogIndex)
+                    {
+                        if (_engine.Log.IsInfoEnabled)
+                        {
+                            _engine.Log.Info($"{ToString()}: found divergence at the first leader entry");
+                        }
+
+                        // leader's first entry is the next we need 
+                        return true;
+                    }
+                }
+            }
 
             return false;
         }
