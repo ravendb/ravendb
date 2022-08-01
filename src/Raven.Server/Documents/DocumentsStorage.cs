@@ -2491,7 +2491,7 @@ namespace Raven.Server.Documents
                 // has to happen after the commit, but while we are holding the write tx lock
                 context.Transaction.InnerTransaction.LowLevelTransaction.BeforeCommitFinalization += _ =>
                 {
-                    var collectionNames = new Dictionary<string, CollectionName>(_collectionsCache, OrdinalIgnoreCaseStringStructComparer.Instance)
+                    var collectionNames = new Dictionary<string, CollectionName>(_collectionsCache, StringComparer.OrdinalIgnoreCase)
                     {
                         [name.Name] = name
                     };
@@ -2528,7 +2528,7 @@ namespace Raven.Server.Documents
 
         private Dictionary<string, CollectionName> ReadCollections(Transaction tx)
         {
-            var result = new Dictionary<string, CollectionName>(OrdinalIgnoreCaseStringStructComparer.Instance);
+            var result = new Dictionary<string, CollectionName>(StringComparer.OrdinalIgnoreCase);
 
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
