@@ -10,6 +10,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -70,10 +71,11 @@ namespace SlowTests.MailingList
             Indexes.WaitForIndexing(store);
         }
 
-        [Fact]
-        public void Passing_not_embedded_with_empty_convention()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void Passing_not_embedded_with_empty_convention(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Populate(store);
 
@@ -91,10 +93,11 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
-        public void Passing_embedded_disabled_profiling_false()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void Passing_embedded_disabled_profiling_false(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Populate(store);
 
@@ -112,10 +115,11 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
-        public void Passing_not_embedded_with_disabled_profiling_true()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void Passing_not_embedded_with_disabled_profiling_true(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Populate(store);
 
@@ -154,10 +158,11 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
-        public void Failing_when_not_embedded_with_disabled_profiling_false()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void Failing_when_not_embedded_with_disabled_profiling_false(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Populate(store);
 

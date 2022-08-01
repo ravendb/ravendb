@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Linq;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -25,10 +26,11 @@ namespace SlowTests.MailingList.Apo
             public DateTime Date { get; set; }
         }
 
-        [Fact]
-        public void LazyWhereAndOrderBy()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void LazyWhereAndOrderBy(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -55,15 +57,16 @@ namespace SlowTests.MailingList.Apo
             }
         }
 
-        [Fact]
-        public async Task LazyQuery_WhenDefineCallBack_ShouldExecuteAsItIsInRegularQuery()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task LazyQuery_WhenDefineCallBack_ShouldExecuteAsItIsInRegularQuery(Options options)
         {
             var regularQuery = new List<string>();
             var lazyQuery = new List<string>();
             var asyncLazyQuery = new List<string>();
             List<string> current = null;
 
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
             store.OnBeforeQuery += (s, e) =>
             {
                 current.Add("SessionOnBeforeQuery");
@@ -102,16 +105,17 @@ namespace SlowTests.MailingList.Apo
                 return query.Customize(x => x.BeforeQueryExecuted(_ => current.Add("QueryOnBeforeQuery")));
             }
         }
-        
-        [Fact]
-        public async Task CountLazily_WhenDefineCallBack_ShouldExecuteAsItIsInRegularQuery()
+
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CountLazily_WhenDefineCallBack_ShouldExecuteAsItIsInRegularQuery(Options options)
         {
             var regularQuery = new List<string>();
             var lazyQuery = new List<string>();
             var asyncLazyQuery = new List<string>();
             List<string> current = null;
 
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
             store.OnBeforeQuery += (s, e) =>
             {
                 current.Add("SessionOnBeforeQuery");
