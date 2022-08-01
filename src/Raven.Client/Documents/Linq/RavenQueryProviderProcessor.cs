@@ -510,8 +510,13 @@ namespace Raven.Client.Documents.Linq
             }
             if (node.NodeType == ExpressionType.Parameter)
                 return true;
-            if (node.NodeType == ExpressionType.Call && node is MethodCallExpression callExpressionNode && callExpressionNode.Method.Name == "get_Item" && callExpressionNode.Object?.NodeType == ExpressionType.Parameter)
-                return true;
+            if (node.NodeType == ExpressionType.Call && node is MethodCallExpression callExpressionNode && callExpressionNode.Method.Name == "get_Item")
+            {
+                if (callExpressionNode.Object?.NodeType == ExpressionType.Parameter)
+                    return true;
+                
+                return IsMemberAccessForQuerySource(callExpressionNode.Object);
+            }
             if (node.NodeType != ExpressionType.MemberAccess)
                 return false;
             var memberExpression = ((MemberExpression)node);

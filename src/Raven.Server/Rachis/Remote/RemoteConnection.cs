@@ -12,8 +12,8 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server.Json.Sync;
-using Sparrow.Server.Utils;
 using Sparrow.Threading;
+using Sparrow.Utils;
 
 namespace Raven.Server.Rachis.Remote
 {

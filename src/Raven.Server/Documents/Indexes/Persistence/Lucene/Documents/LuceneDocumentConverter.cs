@@ -22,7 +22,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         {
         }
 
-        protected override int GetFields<T>(T instance, LazyStringValue key, LazyStringValue sourceDocumentId, object doc, JsonOperationContext indexContext, IWriteOperationBuffer writeBuffer)
+        protected override int GetFields<T>(T instance, LazyStringValue key, LazyStringValue sourceDocumentId, object doc, JsonOperationContext indexContext,
+            IWriteOperationBuffer writeBuffer, object sourceDocument)
         {
             int newFields = 0;
 
@@ -75,7 +76,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                         continue;
                 }
 
-                newFields += GetRegularFields(instance, indexField, value, indexContext, out _);
+                newFields += GetRegularFields(instance, indexField, value, indexContext, sourceDocument, out _);
             }
 
             return newFields;

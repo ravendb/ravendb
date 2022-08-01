@@ -22,8 +22,6 @@ import viewHelpers = require("common/helpers/view/viewHelpers");
 import documentMetadata = require("models/database/documents/documentMetadata");
 import getDocumentsMetadataByIDPrefixCommand = require("commands/database/documents/getDocumentsMetadataByIDPrefixCommand");
 import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
-import popoverUtils = require("common/popoverUtils");
-import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 import testElasticSearchEtlCommand = require("commands/database/tasks/testElasticSearchEtlCommand");
 import ongoingTaskElasticSearchTransformationModel = require("models/database/tasks/ongoingTaskElasticSearchEtlTransformationModel");
 import discoveryUrl = require("models/database/settings/discoveryUrl");
@@ -169,6 +167,8 @@ class editElasticSearchEtlTask extends viewModelBase {
     
     view = require("views/database/tasks/editElasticSearchEtlTask.html");
     connectionStringView = require("views/database/settings/connectionStringElasticSearch.html");
+    pinResponsibleNodeButtonsScriptView = require("views/partial/pinResponsibleNodeButtonsScript.html");
+    pinResponsibleNodeTextScriptView = require("views/partial/pinResponsibleNodeTextScript.html");
 
     static readonly scriptNamePrefix = "Script_";
     static isApplyToAll = ongoingTaskElasticSearchTransformationModel.isApplyToAll;
@@ -271,11 +271,6 @@ class editElasticSearchEtlTask extends viewModelBase {
         super.compositionComplete();
 
         $('.edit-elastic-search-task [data-toggle="tooltip"]').tooltip();
-
-        popoverUtils.longWithHover($(".responsible-node"),
-            {
-                content: tasksCommonContent.responsibleNodeInfo
-            });
     }
 
     /**************************************************************/

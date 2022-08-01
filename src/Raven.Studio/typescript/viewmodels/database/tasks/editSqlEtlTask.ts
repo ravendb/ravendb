@@ -24,8 +24,6 @@ import documentMetadata = require("models/database/documents/documentMetadata");
 import getDocumentsMetadataByIDPrefixCommand = require("commands/database/documents/getDocumentsMetadataByIDPrefixCommand");
 import testSqlReplicationCommand = require("commands/database/tasks/testSqlReplicationCommand");
 import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
-import popoverUtils = require("common/popoverUtils");
-import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 import { highlight, languages } from "prismjs";
 
 class sqlTaskTestMode {
@@ -174,6 +172,8 @@ class editSqlEtlTask extends viewModelBase {
 
     view = require("views/database/tasks/editSqlEtlTask.html");
     connectionStringView = require("views/database/settings/connectionStringSql.html");
+    pinResponsibleNodeButtonsScriptView = require("views/partial/pinResponsibleNodeButtonsScript.html");
+    pinResponsibleNodeTextScriptView = require("views/partial/pinResponsibleNodeTextScript.html");
 
     static readonly scriptNamePrefix = "Script_";
     static isApplyToAll = ongoingTaskSqlEtlTransformationModel.isApplyToAll;
@@ -278,11 +278,6 @@ class editSqlEtlTask extends viewModelBase {
         super.compositionComplete();
 
         $('.edit-raven-sql-task [data-toggle="tooltip"]').tooltip();
-
-        popoverUtils.longWithHover($(".responsible-node"),
-            {
-                content: tasksCommonContent.responsibleNodeInfo
-            });
     }
     
     /***************************************************/

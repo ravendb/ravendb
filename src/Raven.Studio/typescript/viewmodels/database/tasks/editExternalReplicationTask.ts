@@ -10,8 +10,6 @@ import getConnectionStringsCommand = require("commands/database/settings/getConn
 import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleMentorsCommand");
 import connectionStringRavenEtlModel = require("models/database/settings/connectionStringRavenEtlModel");
 import jsonUtil = require("common/jsonUtil");
-import popoverUtils = require("common/popoverUtils");
-import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 import discoveryUrl = require("models/database/settings/discoveryUrl");
 
 class editExternalReplicationTask extends viewModelBase {
@@ -19,6 +17,8 @@ class editExternalReplicationTask extends viewModelBase {
     view = require("views/database/tasks/editExternalReplicationTask.html");
     connectionStringView = require("views/database/settings/connectionStringRaven.html");
     certificateUploadInfoForOngoingTasks = require("views/partial/certificateUploadInfoForOngoingTasks.html");
+    pinResponsibleNodeButtonsScriptView = require("views/partial/pinResponsibleNodeButtonsScript.html");
+    pinResponsibleNodeTextScriptView = require("views/partial/pinResponsibleNodeTextScript.html");
 
     editedExternalReplication = ko.observable<ongoingTaskReplicationEditModel>();
     isAddingNewReplicationTask = ko.observable<boolean>(true);
@@ -134,6 +134,7 @@ class editExternalReplicationTask extends viewModelBase {
             model.taskName,
             model.taskState,
             model.manualChooseMentor,
+            model.pinMentorNode,
             model.mentorNode,
             model.connectionStringName,
             model.delayReplicationTime,
@@ -148,11 +149,6 @@ class editExternalReplicationTask extends viewModelBase {
         document.getElementById('taskName').focus();
         
         $('.edit-replication-task [data-toggle="tooltip"]').tooltip();
-
-        popoverUtils.longWithHover($(".responsible-node"),
-            {
-                content: tasksCommonContent.responsibleNodeInfo
-            });
     }
 
     saveExternalReplication() {

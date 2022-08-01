@@ -30,6 +30,7 @@ abstract class backupConfiguration {
     snapshot = ko.observable<snapshot>();
     
     mentorNode = ko.observable<string>();
+    
     encryptionSettings = ko.observable<encryptionSettings>();
     
     localSettings = ko.observable<localSettings>();
@@ -66,6 +67,7 @@ abstract class backupConfiguration {
         this.glacierSettings(!dto.GlacierSettings ? glacierSettings.empty(serverLimits.AllowedAwsRegions, "Backup") : new glacierSettings(dto.GlacierSettings, serverLimits.AllowedAwsRegions, "Backup"));
         this.ftpSettings(!dto.FtpSettings ? ftpSettings.empty("Backup") : new ftpSettings(dto.FtpSettings, "Backup"));
         this.isServerWide(isServerWide);
+        
         this.mentorNode(dto.MentorNode);
 
         const folderPath = this.localSettings().folderPath();
@@ -199,6 +201,7 @@ abstract class backupConfiguration {
             GoogleCloudSettings: null,
             FtpSettings: null,
             MentorNode: null,
+            PinToMentorNode: false,
             BackupEncryptionSettings: null,
             SnapshotSettings: null,
             RetentionPolicy: null,

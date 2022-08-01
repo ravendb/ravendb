@@ -12,6 +12,8 @@ namespace Raven.Server.Web.System
 {
     public sealed class AdminAllocationDebugHandler : RequestHandler
     {
+        public const string AllocationEventName = "GCAllocationTick_V4";
+
         [RavenAction("/admin/debug/memory/allocations", "GET", AuthorizationStatus.Operator,
             // intentionally not calling it debug endpoint because it isn't valid for us
             // to do so in debug package (since we force a wait)
@@ -80,7 +82,7 @@ namespace Raven.Server.Web.System
             {
                 switch (eventData.EventName)
                 {
-                    case "GCAllocationTick_V3":
+                    case AllocationEventName:
                         var type = (string)eventData.Payload[5];
                         if (_allocations.TryGetValue(type, out var info) == false)
                         {
