@@ -206,7 +206,7 @@ namespace Voron.Data.CompactTrees
             public CompactPageHeader* Header => (CompactPageHeader*)Page.Pointer;
             
             public Span<ushort> EntriesOffsets => new Span<ushort>(Page.Pointer+ PageHeader.SizeOf, Header->NumberOfEntries);
-
+            public ushort* EntriesOffsetsPtr => (ushort*)(Page.Pointer + PageHeader.SizeOf);
             public string DumpPageDebug(CompactTree tree)
             {
                 var dictionary = tree._dictionaries[Header->DictionaryId];
@@ -752,12 +752,11 @@ namespace Voron.Data.CompactTrees
             // Ensure that the key has already been 'updated' this is internal and shouldn't check explicitly that.
             // It is the responsibility of the caller to ensure that is the case. 
             Debug.Assert(key.Dictionary == state.Header->DictionaryId);
-
+            
             state.Page = _llt.ModifyPage(state.Page.PageNumber);
 
             var valueEncoder = new Encoder();
             valueEncoder.ZigZagEncode(value);
-            var entriesOffsets = state.EntriesOffsets;
             if (state.LastSearchPosition >= 0) // update
             {
                 GetValuePointer(ref state, state.LastSearchPosition, out var b);
@@ -770,11 +769,15 @@ namespace Voron.Data.CompactTrees
                 }
 
                 // remove the entry, we'll need to add it as new
-                entriesOffsets[(state.LastSearchPosition+1)..].CopyTo(entriesOffsets[state.LastSearchPosition..]);
+                int entriesCount = state.Header->NumberOfEntries;
+                ushort* stateEntriesOffsetsPtr = state.EntriesOffsetsPtr;
+                for (int i = state.LastSearchPosition; i < entriesCount - 1; i++)
+                {
+                    stateEntriesOffsetsPtr[i] = stateEntriesOffsetsPtr[i + 1];
+                }
 
                 state.Header->Lower -= sizeof(short);
                 state.Header->FreeSpace += sizeof(short);
-                entriesOffsets = state.EntriesOffsets;
                 if (state.Header->PageFlags.HasFlag(CompactPageFlags.Leaf))
                     _state.NumberOfEntries--; // we aren't counting branch entries
             }
@@ -845,7 +848,13 @@ namespace Voron.Data.CompactTrees
 
             state.Header->Lower += sizeof(short);
             var newEntriesOffsets = state.EntriesOffsets;
-            entriesOffsets[state.LastSearchPosition..].CopyTo(newEntriesOffsets[(state.LastSearchPosition + 1)..]);
+            // entriesOffsets[state.LastSearchPosition..].CopyTo(newEntriesOffsets[(state.LastSearchPosition + 1)..]);
+            var newNumberOfEntries = state.Header->NumberOfEntries;
+            ushort* newEntriesOffsetsPtr = state.EntriesOffsetsPtr;
+            for (int i =  newNumberOfEntries- 1; i >= state.LastSearchPosition; i--)
+            {
+                newEntriesOffsetsPtr[i] = newEntriesOffsetsPtr[i - 1];
+            }
             if (state.Header->PageFlags.HasFlag(CompactPageFlags.Leaf))
                 _state.NumberOfEntries++; // we aren't counting branch entries
             Debug.Assert(state.Header->FreeSpace >= requiredSize + sizeof(ushort));
