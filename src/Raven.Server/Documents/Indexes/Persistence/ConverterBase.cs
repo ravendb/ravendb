@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
             if (fields == null)
                 fields = index.Definition.IndexFields.Values;
 
-            var dictionary = new Dictionary<string, IndexField>(fields.Count, OrdinalStringStructComparer.Instance);
+            var dictionary = new Dictionary<string, IndexField>(fields.Count);
             foreach (var field in fields)
                 dictionary[field.Name] = field;
             _fields = dictionary;

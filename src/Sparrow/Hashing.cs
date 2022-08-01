@@ -1146,9 +1146,44 @@ namespace Sparrow
 
                 return low ^ high;
             }
+            
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public static uint CalculateInline<TCharacterModifier>(ReadOnlySpan<char> buffer, ulong seed = 0x5D70D359C498B3F8ul) where TCharacterModifier : struct, ICharacterModifier
+            {
+                uint high = (uint)(seed >> 32);
+                uint low = (uint)seed;
+
+                int len = buffer.Length;
+                int len2 = len - 2;
+                int position = 0;
+                while (position <= len2)
+                {
+                    MarvinMix(ref high, ref low, CharToUInt32<TCharacterModifier>(buffer, position));
+                    position += 2;
+                }
+
+                uint final = 0x80;
+                if ((len & 1) != 0) // Case we have yet another char available to process.
+                {
+                    TCharacterModifier modifier = default(TCharacterModifier);
+                    final = (final << 16) | modifier.Modify(buffer[position]);
+                }
+
+                MarvinMix(ref high, ref low, final);
+                MarvinMix(ref high, ref low, 0);
+
+                return low ^ high;
+            }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             private static uint CharToUInt32<TCharacterModifier>(string buffer, int position) where TCharacterModifier : struct, ICharacterModifier
+            {
+                TCharacterModifier modifier = default(TCharacterModifier);
+                return (uint)modifier.Modify(buffer[position + 1]) << 16 | modifier.Modify(buffer[position]);
+            }
+            
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private static uint CharToUInt32<TCharacterModifier>(ReadOnlySpan<char> buffer, int position) where TCharacterModifier : struct, ICharacterModifier
             {
                 TCharacterModifier modifier = default(TCharacterModifier);
                 return (uint)modifier.Modify(buffer[position + 1]) << 16 | modifier.Modify(buffer[position]);

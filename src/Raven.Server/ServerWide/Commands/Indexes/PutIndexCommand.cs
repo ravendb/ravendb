@@ -44,7 +44,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
         {
             try
             {
-                var indexNames = record.Indexes.Select(x => x.Value.Name).ToHashSet(OrdinalIgnoreCaseStringStructComparer.Instance);
+                var indexNames = record.Indexes.Select(x => x.Value.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
                 if (indexNames.Add(Definition.Name) == false && record.Indexes.TryGetValue(Definition.Name, out var definition) == false)
                 {

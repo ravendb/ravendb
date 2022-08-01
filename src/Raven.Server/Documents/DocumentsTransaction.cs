@@ -139,7 +139,7 @@ namespace Raven.Server.Documents
         public void AddToCache(string collectionName, CollectionName name)
         {
             if (_collectionCache == null)
-                _collectionCache = new Dictionary<string, CollectionName>(OrdinalIgnoreCaseStringStructComparer.Instance);
+                _collectionCache = new Dictionary<string, CollectionName>(StringComparer.OrdinalIgnoreCase);
 
             _collectionCache.Add(collectionName, name);
         }

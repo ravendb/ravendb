@@ -78,7 +78,7 @@ namespace Raven.Server.Config.Categories
 
         internal static readonly HashSet<string> _allDestinations =
             new HashSet<string>(Enum.GetValues(typeof(PeriodicBackupConfiguration.BackupDestination))
-                .Cast<PeriodicBackupConfiguration.BackupDestination>().Select(x => x.ToString()), OrdinalIgnoreCaseStringStructComparer.Instance);
+                .Cast<PeriodicBackupConfiguration.BackupDestination>().Select(x => x.ToString()), StringComparer.OrdinalIgnoreCase);
 
         private const string _noneDestination = nameof(PeriodicBackupConfiguration.BackupDestination.None);
 
