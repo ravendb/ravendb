@@ -1,27 +1,15 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Security.Cryptography.X509Certificates;
-using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
-using Raven.Client.Documents;
-using Raven.Client.Documents.Operations.Backups;
-using Raven.Client.Documents.Operations.ConnectionStrings;
-using Raven.Client.Documents.Operations.ETL;
-using Raven.Client.Documents.Operations.OngoingTasks;
-using Raven.Client.Documents.Operations.Replication;
-using Raven.Client.Documents.Subscriptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
-using Raven.Server.Config;
-using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Server.Documents.Replication;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.Server.Documents.ETL;
+namespace SlowTests.Server.Documents.OngoingTasks;
 
 public class PinOnGoingTaskToMentorNodeServerWide : ReplicationTestBase
 {

@@ -341,14 +341,14 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                IndexDefinition[] indexDefinitions;
+                (IndexDefinition IndexDefinition, long Version)[] indexDefinitions;
                 if (string.IsNullOrEmpty(name))
                     indexDefinitions = Database.IndexStore
                         .GetIndexes()
                         .OrderBy(x => x.Name)
                         .Skip(start)
                         .Take(pageSize)
-                        .Select(x => x.GetIndexDefinition())
+                        .Select(x => (x.GetIndexDefinition(), x.Definition.Version))
                         .ToArray();
                 else
                 {
@@ -359,20 +359,20 @@ namespace Raven.Server.Documents.Handlers
                         return;
                     }
 
-                    indexDefinitions = new[] { index.GetIndexDefinition() };
+                    indexDefinitions = new[] { (index.GetIndexDefinition(), index.Definition.Version) };
                 }
 
                 writer.WriteStartObject();
 
-                writer.WriteArray(context, "Results", indexDefinitions, (w, c, indexDefinition) =>
+                writer.WriteArray(context, "Results", indexDefinitions, (w, c, keyValue) =>
                 {
                     if (namesOnly)
                     {
-                        w.WriteString(indexDefinition.Name);
+                        w.WriteString(keyValue.IndexDefinition.Name);
                         return;
                     }
 
-                    w.WriteIndexDefinition(c, indexDefinition);
+                    w.WriteIndexDefinition(c, keyValue.IndexDefinition, keyValue.Version);
                 });
 
                 writer.WriteEndObject();

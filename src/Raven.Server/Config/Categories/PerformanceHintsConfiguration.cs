@@ -63,5 +63,10 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(true)]
         [ConfigurationEntry("PerformanceHints.Indexing.AlertWhenSourceDocumentIncludedInOutput", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public bool AlertWhenSourceDocumentIncludedInOutput { get; set; }
+        
+        [Description("Maximum depth of recursion in LINQ Select clause.")]
+        [DefaultValue(32)]
+        [ConfigurationEntry("PerformanceHints.Indexing.MaxDepthOfRecursionInLinqSelect", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public int MaxDepthOfRecursionInLinqSelect { get; set; }
     }
 }
