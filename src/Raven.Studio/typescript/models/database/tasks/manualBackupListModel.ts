@@ -32,7 +32,7 @@ class manualBackupListModel {
         });
 
         this.backupDestinationsHumanized = ko.pureComputed(() => {
-            let destinations: Array<string> = [];
+            const destinations: Array<string> = [];
 
             if (dto.LocalBackup && dto.LocalBackup.BackupDirectory) {
                 destinations.push("Local");

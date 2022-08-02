@@ -9,7 +9,7 @@ abstract class widget<TConfig = unknown, TState = unknown> {
     
     static resizeAnimationDuration = 300;
     
-    protected initialized: boolean = false;
+    protected initialized = false;
 
     controller: clusterDashboard;
     container: HTMLElement;
@@ -19,8 +19,8 @@ abstract class widget<TConfig = unknown, TState = unknown> {
     fullscreen = ko.observable<boolean>(false);
 
     syncUpdatesEnabled = false;
-    firstSyncUpdateTaskId: number = -1;
-    syncUpdateTaskId: number = -1;
+    firstSyncUpdateTaskId = -1;
+    syncUpdateTaskId = -1;
     pendingUpdates: Array<() => void> = [];
     
     configuredFor = ko.observableArray<clusterDashboardWebSocketClient>([]);

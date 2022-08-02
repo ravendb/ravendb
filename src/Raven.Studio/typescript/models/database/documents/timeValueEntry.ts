@@ -170,7 +170,7 @@ class timeValueEntry {
     format() {
         const dto = this.toDto();
 
-        let resultTokens: string[] = [];
+        const resultTokens: string[] = [];
         
         switch (dto.Unit) {
             case "Month":

@@ -57,7 +57,7 @@ abstract class backupConfiguration {
                      Raven.Client.ServerWide.Operations.Configuration.ServerWideBackupConfiguration,
                 serverLimits: periodicBackupServerLimitsResponse,
                 encryptedDatabase: boolean,
-                isServerWide: boolean = false) {
+                isServerWide = false) {
         this.taskId(dto.TaskId);
         this.backupType(dto.BackupType);
         this.localSettings(!dto.LocalSettings ? localSettings.empty("backup") : new localSettings(dto.LocalSettings, "backup"));

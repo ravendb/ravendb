@@ -39,7 +39,7 @@ class databaseOverviewWidget extends abstractDatabaseAndNodeAwareTableWidget<Rav
 
             for (let i = 0; i < items.length; i++) {
                 const item = items[i];
-                let currentDbName = item.database;
+                const currentDbName = item.database;
 
                 if (currentDbName !== prevDbName) {
                     commonItem = databaseOverviewItem.commonData(item);

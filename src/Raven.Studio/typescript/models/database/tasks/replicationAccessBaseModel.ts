@@ -19,7 +19,7 @@ class replicationAccessBaseModel {
         
     dirtyFlag = new ko.DirtyFlag([]);
 
-    constructor(accessName: string, certificate: replicationCertificateModel, hubToSink: prefixPathModel[], sinkToHub: prefixPathModel[], filteringPathsRequired: boolean = true) {
+    constructor(accessName: string, certificate: replicationCertificateModel, hubToSink: prefixPathModel[], sinkToHub: prefixPathModel[], filteringPathsRequired = true) {
        
         this.replicationAccessName(accessName);
         this.hubToSinkPrefixes(hubToSink);

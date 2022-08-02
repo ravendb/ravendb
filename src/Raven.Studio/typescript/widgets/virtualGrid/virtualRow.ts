@@ -6,7 +6,7 @@ import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
  */
 class virtualRow {
     private _item: Object | null = null; // The last item populated into this virtual row.
-    private sortColumnIndex: number = -1;
+    private sortColumnIndex = -1;
     private isItemSelected = false;
     readonly element: JQuery;
     private _top = -9999;
@@ -16,7 +16,7 @@ class virtualRow {
     private _height: number;
     private readonly _disableStripes: boolean;
     
-    constructor(height: number, disableStripes: boolean = false) {
+    constructor(height: number, disableStripes = false) {
         this._height = height;
         this._disableStripes = disableStripes;
         this.element = $(`<div class="virtual-row" style="height: ${this._height}px; top: ${this.top}px"></div>`);

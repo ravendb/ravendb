@@ -8,7 +8,7 @@ class lastUsedAutocomplete {
     private readonly backingField: KnockoutObservable<string>;
     private readonly maxLength: number;
 
-    constructor(contextName: string, backingField: KnockoutObservable<string>, maxLength: number = 5) {
+    constructor(contextName: string, backingField: KnockoutObservable<string>, maxLength = 5) {
         this.contextName = contextName;
         this.backingField = backingField;
         this.maxLength = maxLength;

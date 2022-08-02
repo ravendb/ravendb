@@ -51,7 +51,7 @@ class storageWidget extends websocketBasedWidget<Raven.Server.Dashboard.Cluster.
 
     sizeFormatter = generalUtils.formatBytesToSize;
     
-    previousElementsCount: number = -1;
+    previousElementsCount = -1;
     
     constructor(controller: clusterDashboard) {
         super(controller);
@@ -72,7 +72,7 @@ class storageWidget extends websocketBasedWidget<Raven.Server.Dashboard.Cluster.
         super.compositionComplete();
         this.enableSyncUpdates();
 
-        for (let ws of this.controller.getConnectedLiveClients()) {
+        for (const ws of this.controller.getConnectedLiveClients()) {
             this.onClientConnected(ws);
         }
         

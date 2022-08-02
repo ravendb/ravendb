@@ -380,7 +380,7 @@ class patch extends viewModelBase {
         const matchingDocs = $.Deferred<number>();
         
         if (patchScriptParts.length === 2) {
-            let query = queryCriteria.empty();
+            const query = queryCriteria.empty();
             query.queryText(patchScriptParts[0]);
 
             new queryCommand(this.activeDatabase(), 0, 0, query)

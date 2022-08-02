@@ -16,7 +16,7 @@ class genericProgress {
     constructor(processed: number,
         total: number,
         numberFormatter: (number: number) => string,
-        processedPerSecond: number = 0) {
+        processedPerSecond = 0) {
 
         this.processed(processed);
         this.total(total);

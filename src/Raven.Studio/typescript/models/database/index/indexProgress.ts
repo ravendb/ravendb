@@ -14,7 +14,7 @@ class progress extends genericProgress {
     constructor(processed: number,
                 total: number,
                 numberFormatter: (number: number) => string,
-                processedPerSecond: number = 0,
+                processedPerSecond = 0,
                 isStale = false,
                 indexRunningStatus: Raven.Client.Documents.Indexes.IndexRunningStatus = "Running") {
         super(processed, total, numberFormatter, processedPerSecond);

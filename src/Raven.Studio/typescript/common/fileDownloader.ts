@@ -21,14 +21,14 @@ class fileDownloader {
         }
     }
     
-    static downloadAsTxt(buffer: string | Uint8Array, filename: string, domCacheElementName: string = "link") {
+    static downloadAsTxt(buffer: string | Uint8Array, filename: string, domCacheElementName = "link") {
         domCacheElementName = _.snakeCase(domCacheElementName);
         fileDownloader.cleanup(domCacheElementName);
         const blob = new Blob([buffer], { type: 'text/plain' });
         fileDownloader.createLinkAndStartDownload(blob, filename, domCacheElementName);
     }
 
-    static downloadAsJson(object: any, filename: string, domCacheElementName: string = "link", replacer: (key: string, value: any) => any = null) {
+    static downloadAsJson(object: any, filename: string, domCacheElementName = "link", replacer: (key: string, value: any) => any = null) {
         domCacheElementName = _.snakeCase(domCacheElementName);
         fileDownloader.cleanup(domCacheElementName);
         const modelAsString = JSON.stringify(object, replacer, 2);
@@ -36,7 +36,7 @@ class fileDownloader {
         fileDownloader.createLinkAndStartDownload(blob, filename, domCacheElementName);
     }
 
-    static downloadAsZip(buffer:any, filename: string, domCacheElementName: string = "link") {
+    static downloadAsZip(buffer:any, filename: string, domCacheElementName = "link") {
         fileDownloader.cleanup(domCacheElementName);
         const blob = new Blob([buffer], { type: 'application/zip' });
         fileDownloader.createLinkAndStartDownload(blob, filename, domCacheElementName);

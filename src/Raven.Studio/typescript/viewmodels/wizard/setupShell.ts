@@ -80,7 +80,7 @@ class setupShell extends viewModelBase {
         router.map(setupRoutes.get()).buildNavigationModel();
 
         router.mapUnknownRoutes((instruction: DurandalRouteInstruction) => {
-            const queryString = !!instruction.queryString ? ("?" + instruction.queryString) : "";
+            const queryString = instruction.queryString ? ("?" + instruction.queryString) : "";
 
             messagePublisher.reportError("Unknown route", "The route " + instruction.fragment + queryString + " doesn't exist, redirecting...");
 

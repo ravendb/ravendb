@@ -31,7 +31,7 @@ class graphQueryResults {
     private svg: d3.Selection<void>;
     private zoom: d3.behavior.Zoom<void>;
     private d3cola: cola.D3StyleLayoutAdaptor;
-    private mousePressed: boolean = false;
+    private mousePressed = false;
 
     private edgesContainer: d3.Selection<void>;
     private nodesContainer: d3.Selection<void>;
@@ -330,7 +330,7 @@ class graphQueryResults {
             nodesCache.set(node.Id, node as debugGraphOutputNodeWithLayout);
         });
         
-        const linkCardinalityCache = new Map<String, number>();
+        const linkCardinalityCache = new Map<string, number>();
         
         const results = _.flatMap(data.Edges, edgesByType => {
            return edgesByType.Results.map((edge): debugGraphOutputEdge => {

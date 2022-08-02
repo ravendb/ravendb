@@ -14,7 +14,7 @@ class graphHelper {
         return prefix + value;
     }
     
-    static quadraticBezierCurve(start: { x: number, y: number }, end: {x: number, y: number }, delta: number, shorten: number = 0) {
+    static quadraticBezierCurve(start: { x: number, y: number }, end: {x: number, y: number }, delta: number, shorten = 0) {
         let x1 = start.x;
         let y1 = start.y;
         let x2 = end.x;
@@ -46,7 +46,7 @@ class graphHelper {
         return input.substr(0, approxCharactersToTake);
     }
 
-    static trimText(input: string, lengthProvider: (numberOfCharacters: number) => number, minWidth: number, maxWidth: number, extraPadding: number = 0): { text: string, containerWidth: number } {
+    static trimText(input: string, lengthProvider: (numberOfCharacters: number) => number, minWidth: number, maxWidth: number, extraPadding = 0): { text: string, containerWidth: number } {
         if (!input) {
             return {
                 containerWidth: minWidth,
@@ -113,7 +113,7 @@ class graphHelper {
         ctx.stroke();
     }
     
-    static drawTriangle(ctx: CanvasRenderingContext2D, x: number, y: number, dx: number, dy: number = 8) {
+    static drawTriangle(ctx: CanvasRenderingContext2D, x: number, y: number, dx: number, dy = 8) {
         const markWidth = dy;
         if (dx > markWidth) {
             // draw full triangle
@@ -243,8 +243,8 @@ class graphHelper {
         let currentPosition = getItem(0).x + getItem(0).width + padding;
 
         for (let i = 1; i < items.length; i++) {
-            let item = getItem(i);
-            let requestedX = getDesiredX(i);
+            const item = getItem(i);
+            const requestedX = getDesiredX(i);
 
             if (requestedX - item.width / 2 >= currentPosition) {
                 item.x = requestedX - item.width / 2;
@@ -283,7 +283,7 @@ class graphHelper {
                         done = true;
                     }
 
-                    for (var j = startMoveIdx; j <= i; j++) {
+                    for (let j = startMoveIdx; j <= i; j++) {
                         getItem(j).x -= avgShift;
                     }
 
@@ -428,10 +428,10 @@ class graphHelper {
     }
     
     static movePoints(start: { x: number, y: number }, end: {x: number, y: number }, delta: number): [{ x: number, y: number }, { x: number, y: number }] {
-        let x1 = start.x;
-        let y1 = start.y;
-        let x2 = end.x;
-        let y2 = end.y;
+        const x1 = start.x;
+        const y1 = start.y;
+        const x2 = end.x;
+        const y2 = end.y;
 
         const sign = Math.sign(y1 - y2);
         const coeff = sign ? (-x2 + x1) / (y2 - y1) : (-x2 + x1) / 1e-6;

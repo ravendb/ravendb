@@ -150,7 +150,7 @@ class spatialOptions {
             const earthMeanRadiusKm = 6371.0087714;
             const milesToKm = 1.60934;
 
-            let factor = (earthMeanRadiusKm * Math.PI * 2) / 360;
+            const factor = (earthMeanRadiusKm * Math.PI * 2) / 360;
             x = x * factor;
             y = y * factor;
             if (units === "Miles") {

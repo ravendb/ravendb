@@ -212,7 +212,7 @@ class queryCompleter {
         } else {
             this.providers.collectionFields(collection, prefixToSend, fields => {
                 _.forOwn(fields, (value, key) => {
-                    let formattedFieldType = value.toLowerCase().split(", ").map((fieldType: string) => {
+                    const formattedFieldType = value.toLowerCase().split(", ").map((fieldType: string) => {
                         if (fieldType.length > 5 && fieldType.startsWith("array")) {
                             fieldType = fieldType.substr(5) + "[]";
                         }
@@ -341,7 +341,7 @@ class queryCompleter {
                 case "field":
                     if (!isBeforeComma && !isBeforeBinaryOperation) {
                         const text = token.value;
-                        let fieldPrefix = text
+                        const fieldPrefix = text
                             .split(".")
                             .map(field => field.endsWith("[]") ? field.substring(0, field.length - 2) : field);
 
@@ -645,7 +645,7 @@ class queryCompleter {
                     return this.completeError("empty completion");
                 }
 
-                let alias = lastKeyword.info.alias ? lastKeyword.info.alias + "." : "";
+                const alias = lastKeyword.info.alias ? lastKeyword.info.alias + "." : "";
                 const separator = {caption:",", value: ", ", score: 21, meta: "separator", snippet: ", " + alias + "${1:field} as ${2:alias} "};
                 return this.completeKeywordEnd([separator]);
             }
@@ -753,7 +753,7 @@ class queryCompleter {
             if (keyword === "select") {
                 projectionSelectPosition = position++;
             } else if (keyword === "load") {
-                let alias = lastKeyword.info.alias ? lastKeyword.info.alias + "." : "";
+                const alias = lastKeyword.info.alias ? lastKeyword.info.alias + "." : "";
                 return {caption: keyword, value: keyword + " ", score: 20 - currentPosition, meta: "clause", snippet: "load " + alias + "${1:field} as ${2:alias} "};
             }
             return {caption: keyword, value: keyword + " ", score: 20 - currentPosition, meta: "keyword"};
@@ -777,7 +777,7 @@ class queryCompleter {
         const lastKeyword = this.lastKeyword;
         this.getIndexFields()
             .done((wordList) => {
-                let fieldName = this.trimValue(lastKeyword.fieldName);
+                const fieldName = this.trimValue(lastKeyword.fieldName);
                 if (!wordList.find(x => x.caption === fieldName)) {
                     return this.completeError("Field not in the words list");
                 }

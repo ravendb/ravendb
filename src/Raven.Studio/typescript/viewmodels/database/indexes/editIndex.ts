@@ -412,7 +412,7 @@ class editIndex extends viewModelBase {
         this.previewEditor.resize();
     }
 
-    getTimeTooltip(utcTime: string, isRevisionTime: boolean = false) {
+    getTimeTooltip(utcTime: string, isRevisionTime = false) {
         return ko.pureComputed(() => {
             if (utcTime) {
                 const clickInfo = `<div class="margin-top margin-top-sm">Click to load this index revision</div>`;

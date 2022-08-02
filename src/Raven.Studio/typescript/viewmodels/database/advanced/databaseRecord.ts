@@ -12,7 +12,7 @@ import genUtils = require("common/generalUtils");
 
 class databaseRecord extends viewModelBase {
     isDocumentCollapsed = ko.observable<boolean>(false);
-    forceFold: boolean = true;
+    forceFold = true;
     
     document = ko.observable<document>();
     documentText = ko.observable<string>().extend({ required: true });
@@ -115,7 +115,7 @@ class databaseRecord extends viewModelBase {
         folds.map(f => this.docEditor.getSession().expandFold(f));
     }
     
-    refreshFromServer(reportFetchProgress: boolean = true) {
+    refreshFromServer(reportFetchProgress = true) {
         eventsCollector.default.reportEvent("database-record", "refresh");
         this.fetchDatabaseRecord(this.activeDatabase(), reportFetchProgress);
         this.forceFold = true;
@@ -150,7 +150,7 @@ class databaseRecord extends viewModelBase {
         this.confirm()
             .then(result => {
                 if (result.can) {
-                    let dto = JSON.parse(this.documentText());
+                    const dto = JSON.parse(this.documentText());
                     dto.Settings = genUtils.flattenObj(dto.Settings, "");
                     
                     new saveDatabaseRecordCommand(this.activeDatabase(), dto, dto.Etag)
@@ -163,7 +163,7 @@ class databaseRecord extends viewModelBase {
             });
     }
 
-    private fetchDatabaseRecord(db: database, reportFetchProgress: boolean = false): JQueryPromise<any> {
+    private fetchDatabaseRecord(db: database, reportFetchProgress = false): JQueryPromise<any> {
         return new getDatabaseRecordCommand(db, reportFetchProgress)
             .execute()
             .done((document: document) => this.document(document));

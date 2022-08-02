@@ -7,7 +7,7 @@ class taskItem {
     nodeTags = ko.observableArray<string>();
 
     isTitleItem = ko.observable<boolean>(false);
-    even: boolean = false;
+    even = false;
 
     constructor(type: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType, count: number, dbName?: string, nodes?: string[]) {
         this.taskType(type);

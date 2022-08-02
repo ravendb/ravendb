@@ -63,7 +63,7 @@ class editTimeSeriesEntry extends dialogViewModelBase {
             return date.local().format(editTimeSeriesEntry.localTimeFormat) + " (local)"
         });
 
-        if (!!this.timeSeriesName) {
+        if (this.timeSeriesName) {
             this.getValuesNames();
         }
         

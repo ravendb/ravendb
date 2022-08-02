@@ -24,7 +24,7 @@ class columnItem {
         return !(column instanceof checkedColumn) && !isActionColumn && !isMetadata;
     });
 
-    constructor(col: virtualColumn, editable: boolean, visible: boolean = false) {
+    constructor(col: virtualColumn, editable: boolean, visible = false) {
         this.virtualColumn(col);
         this.editable(editable);
         this.visible(visible);

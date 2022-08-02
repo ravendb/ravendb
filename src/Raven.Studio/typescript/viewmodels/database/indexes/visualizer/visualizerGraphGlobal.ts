@@ -62,7 +62,7 @@ class pageItem extends abstractPageItem {
 
 class collapsedPageItem extends pageItem {
 
-    aggregationCount: number = 1;
+    aggregationCount = 1;
 }
 
 class reduceTreeItem {

@@ -126,7 +126,7 @@ class query extends viewModelBase {
 
     static lastQueryNotExecuted = new Map<string, string>();
     
-    autoOpenGraph: boolean = false;
+    autoOpenGraph = false;
 
     saveQueryFocus = ko.observable<boolean>(false);
 
@@ -181,7 +181,7 @@ class query extends viewModelBase {
     cacheEnabled = ko.observable<boolean>(true);
     lastCriteriaExecuted: queryCriteria = queryCriteria.empty();
 
-    private indexEntriesStateWasTrue: boolean = false; // Used to save current query settings when switching to a 'dynamic' index
+    private indexEntriesStateWasTrue = false; // Used to save current query settings when switching to a 'dynamic' index
 
     columnsSelector = new columnsSelector<document>();
 
@@ -716,7 +716,7 @@ class query extends viewModelBase {
         if (!indexName) {
             this.queriedIndexInfo(null);
         } else {
-            let currentIndex = this.indexes() ? this.indexes().find(i => i.Name === indexName) : null;
+            const currentIndex = this.indexes() ? this.indexes().find(i => i.Name === indexName) : null;
             if (currentIndex) {
                 this.queriedIndexInfo(currentIndex);
             } else {
@@ -1302,7 +1302,7 @@ class query extends viewModelBase {
                 const latitudeProperty = spatialProperties[i].LatitudeProperty;
                 const longitudeProperty = spatialProperties[i].LongitudeProperty;
 
-                let pointsArray: geoPointInfo[] = [];
+                const pointsArray: geoPointInfo[] = [];
                 for (let i = 0; i < queryResults.items.length; i++) {
                     const item = queryResults.items[i];
                     const flatItem = generalUtils.flattenObj(item, "");

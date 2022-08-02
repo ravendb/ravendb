@@ -299,13 +299,13 @@ class indexes extends viewModelBase {
         }
     }
     
-    private highlightIndex(indexName: string, highlight: boolean = true): void {
+    private highlightIndex(indexName: string, highlight = true): void {
         const indexId = index.getUniqueId(indexName);
         const indexElement = document.getElementById(indexId);
         this.highlightIndexElement(indexElement, highlight);
     }
 
-    private highlightIndexElement(indexElement: HTMLElement, highlight: boolean = true): void {
+    private highlightIndexElement(indexElement: HTMLElement, highlight = true): void {
         if (highlight) {
             indexElement.classList.add("blink-style-basic");
         } else {
@@ -313,7 +313,7 @@ class indexes extends viewModelBase {
         }
     }
     
-    private fetchIndexes(forceRefresh: boolean = false): JQueryPromise<void> {
+    private fetchIndexes(forceRefresh = false): JQueryPromise<void> {
         if (!this.autoRefresh()) {
             return;
         }

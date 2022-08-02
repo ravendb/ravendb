@@ -50,7 +50,7 @@ abstract class abstractDatabaseAndNodeAwareTableWidget<TRaw, TStats extends stat
 
         this.enableSyncUpdates();
 
-        for (let ws of this.controller.getConnectedLiveClients()) {
+        for (const ws of this.controller.getConnectedLiveClients()) {
             this.onClientConnected(ws);
         }
     }

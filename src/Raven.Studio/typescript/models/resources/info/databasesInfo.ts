@@ -26,7 +26,7 @@ class databasesInfo {
     }
 
     updateDatabase(newDatabaseInfo: Raven.Client.ServerWide.Operations.DatabaseInfo) {
-        let databaseToUpdate = this.getByName(newDatabaseInfo.Name);
+        const databaseToUpdate = this.getByName(newDatabaseInfo.Name);
 
         if (databaseToUpdate) {
             databaseToUpdate.update(newDatabaseInfo);

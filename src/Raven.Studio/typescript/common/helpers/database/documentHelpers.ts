@@ -21,8 +21,8 @@ class documentHelpers {
                     results.push(curField.toString());
                 }
             } else if (typeof curField == "object" && !!curField) {
-                for (let curInnerField in curField) {
-                    var item = curField[curInnerField];
+                for (const curInnerField in curField) {
+                    const item = curField[curInnerField];
                     documentNodesFlattenedList.push(item);
                 }
             }
@@ -180,12 +180,12 @@ class documentHelpers {
     private static findSchemaForObject(objects: Array<any>): any {
         let result: any = {};
 
-        let [firstDocument] = objects;
+        const [firstDocument] = objects;
 
         const isArray = firstDocument instanceof Array;
         result = isArray ? [] : {};
 
-        for (let prop in firstDocument) {
+        for (const prop in firstDocument) {
             if (firstDocument.hasOwnProperty(prop) === false)
                 continue;
 

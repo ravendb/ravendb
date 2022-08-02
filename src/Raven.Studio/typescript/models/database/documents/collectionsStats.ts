@@ -14,7 +14,7 @@ class collectionsStats  {
 
         this.collections = [];
 
-        for (var key in statsDto.Collections) {
+        for (const key in statsDto.Collections) {
             if (!statsDto.Collections.hasOwnProperty(key))
                 continue;
             this.collections.push(new collection(key, ownerDatabase, statsDto.Collections[key]));

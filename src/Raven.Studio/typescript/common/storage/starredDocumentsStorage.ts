@@ -40,7 +40,7 @@ class starredDocumentsStorage {
         const alreadyStored = _.includes(starred, documentId); 
         if (asStarred) {
             if (!alreadyStored) {
-                let locationToInsert = _.sortedIndex(starred, documentId);
+                const locationToInsert = _.sortedIndex(starred, documentId);
                 starred.splice(locationToInsert, 0, documentId);
                 starredDocumentsStorage.saveToLocalStorage(db, starred);
             }

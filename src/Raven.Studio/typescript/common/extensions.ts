@@ -38,7 +38,7 @@ class extensions {
         return null;
     }
     
-    private static validateAddress(address: string, allowedTypes: Array<addressType>, allowPort: boolean = true) : string {
+    private static validateAddress(address: string, allowedTypes: Array<addressType>, allowPort = true) : string {
         if (!address) {
             return null;
         }

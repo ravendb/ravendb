@@ -16,7 +16,7 @@ abstract class setupEncryptionKey {
     
     isKeyAvailableAgain = ko.observable<boolean>(false);
     
-    protected constructor(key: KnockoutObservable<string>, keyConfirmation: KnockoutObservable<boolean>, databaseName: KnockoutObservable<string>, isKeyAvailableAgain: boolean = false) {
+    protected constructor(key: KnockoutObservable<string>, keyConfirmation: KnockoutObservable<boolean>, databaseName: KnockoutObservable<string>, isKeyAvailableAgain = false) {
         this.key = key;
         this.keyConfirmation = keyConfirmation;
         this.databaseName = databaseName;

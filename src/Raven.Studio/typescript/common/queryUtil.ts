@@ -115,7 +115,7 @@ class queryUtil {
     }
     
     private static findTokenIndexes(query: string) {
-        let tokenIndexes: rqlTokensIndexInfo = {};
+        const tokenIndexes: rqlTokensIndexInfo = {};
 
         let match: RegExpExecArray;
         let keyword;

@@ -36,8 +36,8 @@ class virtualGrid<T> {
     private columns = ko.observableArray<virtualColumn>();
     private isGridVisible = false;
     private selectionDiff: number[] = [];
-    private inIncludeSelectionMode: boolean = true;
-    private generation: number = 1; // used for concurrency control 
+    private inIncludeSelectionMode = true;
+    private generation = 1; // used for concurrency control 
     
     private sortByColumn = ko.observable<sortableVirtualColumn>();
     private sortMode = ko.observable<sortMode>("asc");
@@ -98,7 +98,7 @@ class virtualGrid<T> {
             findRowForCell: cell => this.findRowForCell(cell),
             headerVisible: v => this.settings.showHeader(v),
             init: (fetcher, columnsProvider) => this.init(fetcher, columnsProvider),
-            reset: (hard: boolean = true, retainSort: boolean = true) => this.resetItems(hard, retainSort),
+            reset: (hard = true, retainSort = true) => this.resetItems(hard, retainSort),
             selection: this.selection,
             customRowClassProvider: provider => this.customRowClassProvider = provider,
             findItem: (predicate) => this.findItem(predicate),

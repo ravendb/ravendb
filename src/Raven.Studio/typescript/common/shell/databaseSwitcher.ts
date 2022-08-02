@@ -77,7 +77,7 @@ class databaseSwitcher {
         $('.box-container', this.$selectDatabaseContainer).on('click', "a", function (e: Event) {
             e.stopPropagation();
             self.hide();
-            let a: HTMLAnchorElement = this as HTMLAnchorElement;
+            const a: HTMLAnchorElement = this as HTMLAnchorElement;
             ko.postbox.publish(EVENTS.DatabaseSwitcher.ItemSelected, a.href);
         });
         

@@ -821,7 +821,7 @@ class ongoingTasksStats extends viewModelBase {
         context.lineWidth = ongoingTasksStats.brushSectionLineWidth;
 
         // Draw area chart showing replication work
-        let x1: number, x2: number, y0: number = 0, y1: number;
+        let x1: number, x2: number, y0 = 0, y1: number;
         for (let i = 0; i < workData.length - 1; i++) {
 
             context.beginPath();
@@ -1572,7 +1572,7 @@ class ongoingTasksStats extends viewModelBase {
 
     private drawConnectionError(context: CanvasRenderingContext2D, x: number, y: number,
                                 errorType: Raven.Server.Documents.TcpHandlers.SubscriptionError) {
-        let dyForLine: number = 8;
+        let dyForLine = 8;
        
         let errorIcon: string;
         let iconStyle: string;
@@ -1687,7 +1687,7 @@ class ongoingTasksStats extends viewModelBase {
             const trackDescription = this.getTaskTypeDescription(trackType);
 
             const directionTextWidth = context.measureText(trackDescription).width;
-            let restOfText = ": " + trackName;
+            const restOfText = ": " + trackName;
             const restOfTextWidth = context.measureText(restOfText).width;
 
             const rectWidth = directionTextWidth + restOfTextWidth + 2 * 3 /* left right padding */ + 8 /* arrow space */ + 4; /* padding between arrow and text */

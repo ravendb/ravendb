@@ -55,7 +55,7 @@ abstract class amazonSettings extends backupSettings {
 
         const lowerCaseRegionName = !dto.AwsRegionName ? "" : dto.AwsRegionName.toLowerCase();
         const region = this.availableAwsRegionEndpoints.find(x => x.value === lowerCaseRegionName);
-        this.selectedAwsRegion(!!region ? amazonSettings.getDisplayRegionName(region) : dto.AwsRegionName);
+        this.selectedAwsRegion(region ? amazonSettings.getDisplayRegionName(region) : dto.AwsRegionName);
 
         this.selectedAwsRegion.subscribe(newSelectedAwsRegion => {
             if (!newSelectedAwsRegion) {

@@ -29,7 +29,7 @@ abstract class eventsWebSocketClient<T> extends abstractWebSocketClient<T> {
         this.inErrorState(true);
     }
 
-    protected send(command: string, value?: string, needToSaveSentMessages: boolean = true) {
+    protected send(command: string, value?: string, needToSaveSentMessages = true) {
         this.connectToWebSocketTask.done(() => {
             const args: chagesApiConfigureRequestDto = {
                 Command: command
