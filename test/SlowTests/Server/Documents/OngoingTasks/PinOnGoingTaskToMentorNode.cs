@@ -14,14 +14,12 @@ using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
-using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
-using SlowTests.Server.Documents.Replication;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.Server.Documents.ETL;
+namespace SlowTests.Server.Documents.OngoingTasks;
 
 public class PinOnGoingTaskToMentorNode : ReplicationTestBase
 {
@@ -438,7 +436,7 @@ public class PinOnGoingTaskToMentorNode : ReplicationTestBase
            Server = hubLeader,
            ReplicationFactor = 3,
            AdminCertificate = adminHubClusterCert,
-           ClientCertificate = adminHubClusterCert,
+           ClientCertificate = adminHubClusterCert
         }))
         {
             using (var hubSession = hubStore.OpenAsyncSession())
@@ -486,13 +484,19 @@ public class PinOnGoingTaskToMentorNode : ReplicationTestBase
                 Mode = PullReplicationMode.HubToSink | PullReplicationMode.SinkToHub
             }));
 
+            Assert.True(WaitForDocument(hubStore, "orders/bert/3", 30_000));
+
             var disposedServer = await DisposeServerAndWaitForFinishOfDisposalAsync(sinkMentorNode);
             using (var sinkSession = sinkStore.OpenAsyncSession())
             {
                 await sinkSession.StoreAsync(new User {Name = "Arava",}, "users/1");
                 await sinkSession.SaveChangesAsync();
             }
-            var revivedServer = GetNewServer(new ServerCreationOptions
+
+            // ensure that task is pinned to 'sinkMentorNode' and not taken over by some other node
+            Assert.False(WaitForDocument(hubStore, "users/1"));
+
+            GetNewServer(new ServerCreationOptions
             {
                 CustomSettings = new Dictionary<string, string>
                 {
@@ -502,20 +506,10 @@ public class PinOnGoingTaskToMentorNode : ReplicationTestBase
                 RunInMemory = true,
                 DataDirectory = disposedServer.DataDirectory
             });
-            var waitForNotPassive = revivedServer.ServerStore.Engine.WaitForLeaveState(RachisState.Passive, CancellationToken.None);
-            Assert.True(waitForNotPassive.Wait(TimeSpan.FromSeconds(20_000)));
+
             Assert.True(WaitForDocument<User>(hubStore, "users/1", u => u.Name == "Arava", 30_000));
             Assert.Equal(1, await WaitForValueAsync(async () => await GetMembersCount(hubStore, hubStore.Database), 1));
             Assert.Equal(3, await WaitForValueAsync(async () => await GetMembersCount(sinkStore, sinkStore.Database), 3));
         }
-    }
-    
-    private static AddEtlOperationResult AddEtl<T>(IDocumentStore src, EtlConfiguration<T> configuration, T connectionString) where T : ConnectionString
-    {
-        var putResult = src.Maintenance.Send(new PutConnectionStringOperation<T>(connectionString));
-        Assert.NotNull(putResult.RaftCommandIndex);
-
-        var addResult = src.Maintenance.Send(new AddEtlOperation<T>(configuration));
-        return addResult;
     }
 }
