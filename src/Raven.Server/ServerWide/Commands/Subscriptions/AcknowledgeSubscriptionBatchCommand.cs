@@ -93,13 +93,17 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
         private bool IsLegacyCommand()
         {
-            return BatchId == null || // from old node
-                   BatchId == SubscriptionConnection.NonExistentBatch; // from new node, but has lower cluster version
+            return BatchId == null || // from an old version CSM
+                   BatchId == SubscriptionConnectionBase.NonExistentBatch; // from noop ack
         }
 
         public override void Execute(ClusterOperationContext context, Table items, long index, RawDatabaseRecord record, RachisState state, out object result)
         {
             base.Execute(context, items, index, record, state, out result);
+
+            if (IsLegacyCommand())
+                return;
+
             ExecuteAcknowledgeSubscriptionBatch(context, index);
         }
 

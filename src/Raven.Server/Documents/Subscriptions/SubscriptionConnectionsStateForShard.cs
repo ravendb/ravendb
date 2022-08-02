@@ -34,7 +34,7 @@ public class SubscriptionConnectionsStateForShard : SubscriptionConnectionsState
         return Task.CompletedTask;
     }
 
-    protected override AcknowledgeSubscriptionBatchCommand GetAcknowledgeSubscriptionBatchCommand(string changeVector, long? batchId, List<DocumentRecord> docsToResend)
+    protected override AcknowledgeSubscriptionBatchCommand GetAcknowledgeSubscriptionBatchCommand(string changeVector, long batchId, List<DocumentRecord> docsToResend)
     {
         var cmd = base.GetAcknowledgeSubscriptionBatchCommand(changeVector, batchId, docsToResend);
         cmd.ShardName = ShardedDocumentDatabase.Name;

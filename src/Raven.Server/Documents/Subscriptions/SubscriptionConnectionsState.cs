@@ -165,7 +165,7 @@ namespace Raven.Server.Documents.Subscriptions
             }
         }
 
-        protected virtual AcknowledgeSubscriptionBatchCommand GetAcknowledgeSubscriptionBatchCommand(string changeVector, long? batchId, List<DocumentRecord> docsToResend)
+        protected virtual AcknowledgeSubscriptionBatchCommand GetAcknowledgeSubscriptionBatchCommand(string changeVector, long batchId, List<DocumentRecord> docsToResend)
         {
             return new AcknowledgeSubscriptionBatchCommand(_databaseName, RaftIdGenerator.NewId())
             {
@@ -180,7 +180,7 @@ namespace Raven.Server.Documents.Subscriptions
             };
         }
 
-        public async Task AcknowledgeBatchProcessed(string changeVector, long? batchId, List<DocumentRecord> docsToResend)
+        public async Task AcknowledgeBatchProcessed(string changeVector, long batchId, List<DocumentRecord> docsToResend)
         {
             var command = GetAcknowledgeSubscriptionBatchCommand(changeVector, batchId, docsToResend);
                 

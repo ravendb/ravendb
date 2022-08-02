@@ -27,6 +27,7 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.Server;
 using Sparrow.Utils;
 using Voron.Global;
 
@@ -78,6 +79,21 @@ namespace Raven.Server.Documents.Subscriptions
 
         protected SubscriptionProcessor.SubscriptionProcessor Processor;
 
+        internal TestingStuff ForTestingPurposes;
+
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (ForTestingPurposes != null)
+                return ForTestingPurposes;
+
+            return ForTestingPurposes = new TestingStuff();
+        }
+
+        internal class TestingStuff
+        {
+            internal AsyncManualResetEvent PauseConnection;
+        }
+
         protected SubscriptionConnectionBase(TcpConnectionOptions tcpConnection, ServerStore serverStore, JsonOperationContext.MemoryBuffer memoryBuffer,
             IDisposable tcpConnectionDisposable, string database, CancellationToken token)
         {
@@ -116,6 +132,9 @@ namespace Raven.Server.Documents.Subscriptions
                 {
                     _buffer.SetLength(0);
 
+                    if (ForTestingPurposes?.PauseConnection != null)
+                        await ForTestingPurposes.PauseConnection.WaitAsync();
+                    
                     var inProgressBatchStats = Stats.CreateInProgressBatchStats();
 
                     using (var batchScope = inProgressBatchStats.CreateScope())
