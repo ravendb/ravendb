@@ -5,13 +5,18 @@
     "gulp": "gulp",
     "compile": "npm run gulp compile",
     "restore": "npm run gulp restore",
-    "restore_compile": "npm run gulp restore_compile"
+    "restore_compile": "npm run gulp restore_compile",
+    "lint": "eslint typescript/**/*.{tsx,ts}",
+    "lint-fix": "eslint typescript/**/*.{tsx,ts} --fix"
   },
   "private": true,
   "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^5.32.0",
+    "@typescript-eslint/parser": "^5.32.0",
     "del": "^6.0.0",
     "es6-map": "^0.1.4",
     "es6-set": "^0.1.4",
+    "eslint": "^8.21.0",
     "file-exists": "^5.0.1",
     "glob": "^7.1.7",
     "gulp": "^4.0.2",
