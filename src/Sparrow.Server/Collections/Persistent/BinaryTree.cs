@@ -46,7 +46,7 @@ namespace Sparrow.Server.Collections.Persistent
         }
 
         private readonly Span<byte> _storage;
-        private Span<Node> Nodes => MemoryMarshal.Cast<byte, Node>(_storage.Slice(2));
+        private readonly Span<Node> Nodes => MemoryMarshal.Cast<byte, Node>(_storage[2..]);
 
         private ushort FreeNodes
         {
@@ -172,7 +172,7 @@ namespace Sparrow.Server.Collections.Persistent
             return u.HasValue;
         }
 
-        public bool FindCommonPrefix(ref BitReader key, out T value)
+        public readonly bool FindCommonPrefix(ref BitReader key, out T value)
         {
             Span<Node> nodes = Nodes;
 
