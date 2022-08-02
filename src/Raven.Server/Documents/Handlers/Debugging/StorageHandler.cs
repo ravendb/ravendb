@@ -172,7 +172,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
 
@@ -217,16 +217,14 @@ namespace Raven.Server.Documents.Handlers.Debugging
         [RavenAction("/databases/*/debug/storage/all-environments/report", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
         public async Task AllEnvironmentsReport()
         {
-            var name = GetStringQueryString("database");
-
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
 
                     writer.WritePropertyName("DatabaseName");
-                    writer.WriteString(name);
+                    writer.WriteString(Database.Name);
                     writer.WriteComma();
 
                     writer.WritePropertyName("Environments");
