@@ -2,7 +2,7 @@ module.exports = {
     "env": {
         "browser": true,
         "commonjs": true,
-        "es2016": true
+        "es2021": true
     },
     "extends": [
         "eslint:recommended",
@@ -10,9 +10,13 @@ module.exports = {
     ],
     "parser": "@typescript-eslint/parser",
     "parserOptions": {
+        "ecmaVersion": "latest"
     },
     "plugins": [
         "@typescript-eslint"
+    ],
+    "ignorePatterns": [
+        "typescript/transitions/**/*.ts"
     ],
     "rules": {
         "@typescript-eslint/no-var-requires": "off",

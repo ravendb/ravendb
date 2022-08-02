@@ -101,10 +101,12 @@ class databaseCreationModel {
                 // case 3: Restore points found
                 const restorePoint = this.restore.selectedRestorePoint();
                 if (!restorePoint) {
+                    // eslint-disable-next-line @typescript-eslint/no-inferrable-types
                     const text: string  = `Select restore point... (${count.toLocaleString()} ${count > 1 ? 'options' : 'option'})`;
                     return text;
                 }
                 
+                // eslint-disable-next-line @typescript-eslint/no-inferrable-types
                 const text: string = `${restorePoint.dateTime}, ${restorePoint.backupType()} Backup`;
                 return text;
             }
@@ -401,7 +403,7 @@ class databaseCreationModel {
     protected setupPathValidation(observable: KnockoutObservable<string>, name: string) {
         const maxLength = 248;
 
-        const rg1 = /^[^*?"<>\|]*$/; // forbidden characters * ? " < > |
+        const rg1 = /^[^*?"<>|]*$/; // forbidden characters * ? " < > |
         const rg3 = /^(nul|prn|con|lpt[0-9]|com[0-9])(\.|$)/i; // forbidden file names
         const invalidPrefixCheck = (dbName: string) => {
             const dbToLower = dbName ? dbName.toLocaleLowerCase() : "";
