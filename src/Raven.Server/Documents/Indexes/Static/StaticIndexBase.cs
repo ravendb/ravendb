@@ -10,7 +10,9 @@ using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static.Spatial;
+using Raven.Server.NotificationCenter.Notifications;
 using Sparrow.Json;
+using Sparrow.Logging;
 using Spatial4n.Shapes;
 
 namespace Raven.Server.Documents.Indexes.Static
@@ -178,6 +180,11 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public readonly HashSet<string> CollectionsWithCompareExchangeReferences = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
+        protected static Logger Log = LoggingSource.Instance.GetLogger<AbstractStaticIndexBase>("Server");
+
+        
+        public int StackSizeInSelectClause { get; set; }
+        
         public bool HasDynamicFields { get; set; }
 
         public bool HasBoostedFields { get; set; }
@@ -220,6 +227,24 @@ namespace Raven.Server.Documents.Indexes.Static
             funcs.Add(map);
         }
 
+        internal void CheckDepthOfStackInOutputMap(IndexDefinition indexMetadata, DocumentDatabase documentDatabase)
+        {
+            var performanceHintConfig = documentDatabase.Configuration.PerformanceHints;
+            if (StackSizeInSelectClause > performanceHintConfig.MaxDepthOfRecursionInLinqSelect)
+            {
+                documentDatabase.NotificationCenter.Add(PerformanceHint.Create(
+                    documentDatabase.Name,
+                    $"Index '{indexMetadata.Name}' contains a lot of `let` clauses. Index contains {StackSizeInSelectClause} `let` clauses but we suggest not to exceed {performanceHintConfig.MaxDepthOfRecursionInLinqSelect}.",
+                    $"Each of the let clause is nesting projections and could potentially leads to StackoverflowException.",
+                    PerformanceHintType.Indexing,
+                    NotificationSeverity.Info,
+                    nameof(IndexCompiler)));
+                
+                if (Log.IsOperationsEnabled)
+                    Log.Operations($"Index '{indexMetadata.Name}' contains a lot of `let` clauses. Stack size is {StackSizeInSelectClause}.");
+            }
+        }
+        
         protected dynamic TryConvert<T>(object value)
             where T : struct
         {
