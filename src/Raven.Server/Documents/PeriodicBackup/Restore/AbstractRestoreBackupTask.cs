@@ -45,12 +45,14 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         protected bool HasEncryptionKey;
         protected DocumentDatabase Database;
         protected readonly JsonOperationContext Context;
+
         protected string DatabaseName => RestoreConfiguration.DatabaseName;
         protected static readonly Logger Logger = LoggingSource.Instance.GetLogger<AbstractRestoreBackupTask>("Server");
         protected bool DatabaseValidation = true;
         protected InitializeOptions Options = InitializeOptions.SkipLoadingDatabaseRecord;
 
         private bool _restoringToDefaultDataDirectory;
+        private readonly IDisposable _disposeContext;
 
         protected AbstractRestoreBackupTask(ServerStore serverStore,
             RestoreBackupConfigurationBase restoreConfiguration,
@@ -63,7 +65,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             RestoreSource = restoreSource;
             FilesToRestore = filesToRestore;
             OperationCancelToken = operationCancelToken;
-            ServerStore.ContextPool.AllocateOperationContext(out Context);
+            _disposeContext = ServerStore.ContextPool.AllocateOperationContext(out Context);
         }
 
         public async Task<IOperationResult> Execute(Action<IOperationProgress> onProgress)
@@ -633,8 +635,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         {
             Database?.Dispose();
             RestoreSource?.Dispose();
-            Context?.Dispose();
             OperationCancelToken?.Dispose();
+            _disposeContext?.Dispose();
         }
     }
 }

@@ -11,12 +11,9 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Backups.Sharding;
-using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Operations.Identities;
 using Raven.Client.Documents.Operations.Revisions;
-using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
-using Raven.Client.Documents.Subscriptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
@@ -486,7 +483,7 @@ namespace SlowTests.Sharding.Backup
                     var dirs = Directory.GetDirectories(backupPath);
                     Assert.Equal(3, dirs.Length);
 
-                    var settings = new ShardRestoreSettings
+                    var settings = new ShardedRestoreSettings
                     {
                         Shards = new SingleShardRestoreSetting[dirs.Length]
                     };
