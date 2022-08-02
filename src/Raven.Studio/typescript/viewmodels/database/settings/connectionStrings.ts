@@ -146,7 +146,7 @@ class connectionStrings extends viewModelBase {
         for (let i = 0; i < tasksThatUseConnectionStrings.length; i++) {
             const task = tasksThatUseConnectionStrings[i];
             
-            let taskData = { TaskId: task.TaskId,
+            const taskData = { TaskId: task.TaskId,
                              TaskName: task.TaskName,
                              TaskType: task.TaskType };
             let stringName: string;

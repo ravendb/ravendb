@@ -82,7 +82,7 @@ class registration extends dialogViewModelBase {
         renewLicense: ko.observable<boolean>(false)      
     };
 
-    constructor(licenseStatus: Raven.Server.Commercial.LicenseStatus, canBeDismissed: boolean, canBeClosed: boolean, renewNonExpiredLicense: boolean = false) {
+    constructor(licenseStatus: Raven.Server.Commercial.LicenseStatus, canBeDismissed: boolean, canBeClosed: boolean, renewNonExpiredLicense = false) {
         super();
         
         this.licenseStatus = licenseStatus;
@@ -199,7 +199,7 @@ class registration extends dialogViewModelBase {
         }
     }
 
-    static showRegistrationDialog(license: Raven.Server.Commercial.LicenseStatus, canBeDismissed: boolean, canBeClosed: boolean, renewNonExpiredLicense: boolean = false) {
+    static showRegistrationDialog(license: Raven.Server.Commercial.LicenseStatus, canBeDismissed: boolean, canBeClosed: boolean, renewNonExpiredLicense = false) {
         if ($("#licenseModal").is(":visible") && $("#enterLicenseKey").is(":visible")) {
             return;
         }

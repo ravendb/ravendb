@@ -14,7 +14,7 @@ interface serverCertificateInfo {
 
 class licenseWidget extends widget {
 
-    refreshIntervalId: number = -1;
+    refreshIntervalId = -1;
     isSecureServer = accessManager.default.secureServer();
     
     spinners = {
@@ -59,7 +59,7 @@ class licenseWidget extends widget {
 
                 const nowPlusMonth = moment.utc().add(1, 'months');
                 
-                let expirationClass: string = "";
+                let expirationClass = "";
 
                 if (date.isBefore()) {
                     expirationClass = "text-danger";

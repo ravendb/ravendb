@@ -60,7 +60,7 @@ class database {
         this.name = incomingCopy.Name;
         this.disabled(incomingCopy.Disabled);
         this.environment(incomingCopy.Environment !== "None" ? incomingCopy.Environment : null);
-        if (!!incomingCopy.LoadError) {
+        if (incomingCopy.LoadError) {
             this.errored(true);
         }
         
@@ -83,7 +83,7 @@ class database {
     }
 
     static getNameFromUrl(url: string) {
-        var index = url.indexOf("databases/");
+        const index = url.indexOf("databases/");
         return (index > 0) ? url.substring(index + 10) : "";
     }
 

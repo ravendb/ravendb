@@ -190,7 +190,7 @@ class timingsChart {
         // Given a node in a partition layout, return an array of all of its ancestor
         // nodes, highest first, but excluding the root.
         
-        let path: graphNode[] = [];
+        const path: graphNode[] = [];
         let current = node;
         while (current.parent) {
             path.unshift(current);

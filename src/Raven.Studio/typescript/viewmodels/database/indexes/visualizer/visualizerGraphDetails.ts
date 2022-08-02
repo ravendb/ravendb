@@ -1035,7 +1035,7 @@ class visualizerGraphDetails {
         const yOffset = pageItem.margins.aggregationItemHeight;
 
         branch.aggregationResultAsMap.forEach((value, key) => {
-            let textToDraw = key + ": " + value;
+            const textToDraw = key + ": " + value;
             
             const measuredWidth = ctx.measureText(textToDraw).width;
             

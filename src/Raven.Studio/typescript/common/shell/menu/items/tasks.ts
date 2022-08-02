@@ -4,7 +4,7 @@ import leafMenuItem = require("common/shell/menu/leafMenuItem");
 export = getTasksMenuItem;
 
 function getTasksMenuItem(appUrls: computedAppUrls) {
-    var tasksItems: menuItem[] = [
+    const tasksItems: menuItem[] = [
         new leafMenuItem({
             route: 'databases/tasks/backups',
             moduleId: 'viewmodels/database/tasks/backups',

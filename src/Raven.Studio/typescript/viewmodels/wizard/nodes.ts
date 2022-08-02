@@ -132,7 +132,7 @@ class nodes extends setupStep {
         
         if (this.model.nodes().length) {
 
-            let firstNode = this.model.nodes()[0];
+            const firstNode = this.model.nodes()[0];
 
             if (firstNode.ips().length === 0 ) {
                 firstNode.ips.push(new ipEntry(true));
@@ -219,7 +219,7 @@ class nodes extends setupStep {
     }
     
     private findFirstAvailableNodeTag() {
-        for (let nodesTagsKey of serverSetup.nodesTags) {
+        for (const nodesTagsKey of serverSetup.nodesTags) {
             if (!this.model.nodes().find(x => x.nodeTag() === nodesTagsKey)) {
                 return nodesTagsKey;
             }

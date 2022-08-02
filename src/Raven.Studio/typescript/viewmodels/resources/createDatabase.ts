@@ -456,7 +456,7 @@ class createDatabase extends dialogViewModelBase {
     }
 
     getAvailableSections() {
-        let sections = this.databaseModel.configurationSections;
+        const sections = this.databaseModel.configurationSections;
 
         const restoreSection = sections.find(x => x.id === "restore");
         const legacyMigrationSection = sections.find(x => x.id === "legacyMigration");
@@ -529,7 +529,7 @@ class createDatabase extends dialogViewModelBase {
         }
     }
 
-    private createDatabaseInternal(shouldActive: boolean = true): JQueryPromise<Raven.Client.ServerWide.Operations.DatabasePutResult> {
+    private createDatabaseInternal(shouldActive = true): JQueryPromise<Raven.Client.ServerWide.Operations.DatabasePutResult> {
         this.spinners.create(true);
 
         const databaseDocument = this.databaseModel.toDto();

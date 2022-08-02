@@ -195,7 +195,7 @@ class storageReport extends viewModelBase {
             let totalPageCount = 0;
             let totalNumberOfEntries = 0;
 
-            for (let item of itemsToGroup) {
+            for (const item of itemsToGroup) {
                 totalSize += item.size;
                 totalLength += item.length;
                 totalPageCount += item.pageCount;

@@ -150,7 +150,7 @@ class editDocument extends viewModelBase {
     showHugeDocumentWarning: KnockoutComputed<boolean>;
     
     sizeOnDiskActual = ko.observable<string>();
-    sizeOnDiskAllocated = ko.observable<String>();
+    sizeOnDiskAllocated = ko.observable<string>();
     documentSizeHtml: KnockoutComputed<string>;
     
     editedDocId: KnockoutComputed<string>;
@@ -166,7 +166,7 @@ class editDocument extends viewModelBase {
 
     collapseDocsWhenOpening = ko.observable<boolean>(false);
     isDocumentCollapsed = ko.observable<boolean>(false);
-    forceFold: boolean = false;
+    forceFold = false;
     
     constructor() {
         super();
@@ -762,7 +762,7 @@ class editDocument extends viewModelBase {
         }
     }
     
-    createClone(keepChanges: boolean = false) {
+    createClone(keepChanges = false) {
         const attachments = this.document().__metadata.attachments()
             ? this.document().__metadata.attachments().map(x => editDocument.mapToAttachmentItem(this.editedDocId(), x))
             : [];
@@ -782,7 +782,7 @@ class editDocument extends viewModelBase {
             })
     }
     
-    private createCloneInternal(attachments: attachmentItem[], timeseries: timeSeriesItem[], counters: counterItem[], keepChanges: boolean = false) {
+    private createCloneInternal(attachments: attachmentItem[], timeseries: timeSeriesItem[], counters: counterItem[], keepChanges = false) {
         // Show current document as a clone document...
         router.navigate(window.location.hash + "&isClone=true", { trigger: false, replace: false });
         
@@ -860,7 +860,7 @@ class editDocument extends viewModelBase {
         return true;
     }
     
-    private saveInternal(documentId: string, forceRevisionCreation: boolean = false) {
+    private saveInternal(documentId: string, forceRevisionCreation = false) {
         let message = "";
         let updatedDto: any;
 
@@ -906,7 +906,7 @@ class editDocument extends viewModelBase {
 
         // skip some not necessary meta in headers
         const metaToSkipInHeaders = ['Raven-Replication-History'];
-        for (let i in metaToSkipInHeaders) {
+        for (const i in metaToSkipInHeaders) {
             const skippedHeader = metaToSkipInHeaders[i];
             delete meta[skippedHeader];
         }
@@ -948,7 +948,7 @@ class editDocument extends viewModelBase {
         const currentSelection = this.docEditor.getSelectionRange();
 
         const metadata = localDoc['@metadata'];
-        for (let prop in savedDocumentDto) {
+        for (const prop in savedDocumentDto) {
             if (savedDocumentDto.hasOwnProperty(prop)) {
                 if (prop === "Type")
                     continue;
@@ -1517,7 +1517,7 @@ class normalCrudActions implements editDocumentCrudActions {
     private static resultItemToCounterItem(counterDetail: Raven.Client.Documents.Operations.Counters.CounterDetail): counterItem {
         const counter = counterDetail;
 
-        let valuesPerNode = Array<nodeCounterValue>();
+        const valuesPerNode = Array<nodeCounterValue>();
         for (const nodeDetails in counter.CounterValues) {
             const [nodeTag, dbId] = _.split(nodeDetails, '-', 2);
             valuesPerNode.unshift({

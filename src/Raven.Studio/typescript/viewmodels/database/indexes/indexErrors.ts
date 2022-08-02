@@ -281,7 +281,7 @@ class indexErrors extends viewModelBase {
             });
 
         const mappedReducedItems: indexActionAndCount[] = mappedItems.reduce((result: indexActionAndCount[], next: indexActionAndCount) => {
-            var existing = result.find(x => x.actionName === next.actionName);
+            const existing = result.find(x => x.actionName === next.actionName);
             if (existing) {
                 existing.count += next.count;
             } else {

@@ -8,9 +8,7 @@ import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import generalUtils = require("common/generalUtils");
 
-interface hugeDocumentsDetailsItemDto extends Raven.Server.NotificationCenter.Notifications.Details.HugeDocumentInfo {
-    
-}
+type hugeDocumentsDetailsItemDto = Raven.Server.NotificationCenter.Notifications.Details.HugeDocumentInfo
 
 class hugeDocumentsDetails extends abstractPerformanceHintDetails {
 

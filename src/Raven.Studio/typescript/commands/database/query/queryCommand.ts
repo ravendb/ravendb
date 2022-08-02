@@ -106,7 +106,7 @@ var f = function() {
 }
 f();
 `;
-        let parameters = eval(parametersJs);
+        const parameters = eval(parametersJs);
         const rql = queryText.substring(match.index);
         return [JSON.parse(parameters), rql];
     }

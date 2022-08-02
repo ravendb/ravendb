@@ -240,9 +240,9 @@ class shell extends viewModelBase {
                         this.accessManager.securityClearance(certificate.SecurityClearance);
                         accessManager.clientCertificateThumbprint(certificate.Thumbprint);
 
-                        let databasesAccess: dictionary<databaseAccessLevel> = {};
-                        for (let key in certificate.Permissions) {
-                            let access = certificate.Permissions[key];
+                        const databasesAccess: dictionary<databaseAccessLevel> = {};
+                        for (const key in certificate.Permissions) {
+                            const access = certificate.Permissions[key];
                             databasesAccess[`${key}`] = `Database${access}` as databaseAccessLevel;
                         }
                         accessManager.databasesAccess = databasesAccess;
@@ -336,8 +336,8 @@ class shell extends viewModelBase {
 
     private initializeShellComponents() {
         this.mainMenu.initialize();
-        let updateMenu = (db: database) => {
-            let items = generateMenuItems(db);
+        const updateMenu = (db: database) => {
+            const items = generateMenuItems(db);
             this.mainMenu.update(items);
         };
 

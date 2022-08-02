@@ -6,15 +6,15 @@ class tableNavigationTrait<T> {
     }
 
     tableKeyDown(sender: any, e: KeyboardEvent) {
-        var isKeyUp = e.keyCode === 38;
-        var isKeyDown = e.keyCode === 40;
+        const isKeyUp = e.keyCode === 38;
+        const isKeyDown = e.keyCode === 40;
         if (isKeyUp || isKeyDown) {
             e.preventDefault();
 
-            var oldSelection = this.currentItem();
+            const oldSelection = this.currentItem();
             if (oldSelection) {
-                var oldSelectionIndex = this.allItems().indexOf(oldSelection);
-                var newSelectionIndex = oldSelectionIndex;
+                const oldSelectionIndex = this.allItems().indexOf(oldSelection);
+                let newSelectionIndex = oldSelectionIndex;
                 if (isKeyUp && oldSelectionIndex > 0) {
                     newSelectionIndex--;
                 } else if (isKeyDown && oldSelectionIndex < this.allItems().length - 1) {
@@ -22,7 +22,7 @@ class tableNavigationTrait<T> {
                 }
 
                 this.currentItem(this.allItems()[newSelectionIndex]);
-                var newSelectedRow = $(this.nThRowSelector(newSelectionIndex + 1));
+                const newSelectedRow = $(this.nThRowSelector(newSelectionIndex + 1));
                 if (newSelectedRow) {
                     this.ensureRowVisible(newSelectedRow);
                 }
@@ -33,14 +33,14 @@ class tableNavigationTrait<T> {
     }
 
     ensureRowVisible(row: JQuery) {
-        var $container = $(this.containerSelector);
-        var scrollTop = $container.scrollTop();
-        var scrollBottom = scrollTop + $container.height();
-        var scrollHeight = scrollBottom - scrollTop;
+        const $container = $(this.containerSelector);
+        const scrollTop = $container.scrollTop();
+        const scrollBottom = scrollTop + $container.height();
+        const scrollHeight = scrollBottom - scrollTop;
 
-        var rowPosition = row.position();
-        var rowTop = rowPosition.top;
-        var rowBottom = rowTop + row.height();
+        const rowPosition = row.position();
+        const rowTop = rowPosition.top;
+        const rowBottom = rowTop + row.height();
 
         if (rowTop < 0) {
             $container.scrollTop(scrollTop + rowTop);

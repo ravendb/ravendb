@@ -6,7 +6,7 @@ import collectionsTracker = require("common/helpers/database/collectionsTracker"
 export = getDocumentsMenuItem;
 
 function getDocumentsMenuItem(appUrls: computedAppUrls) {
-    let documentsItems = [
+    const documentsItems = [
         new leafMenuItem({
             title: "List of documents",
             nav: false,

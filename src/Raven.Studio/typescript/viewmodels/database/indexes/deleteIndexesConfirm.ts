@@ -23,7 +23,7 @@ class indexInfoForDelete {
 class deleteIndexesConfirm extends dialogViewModelBase {
     title: string;
     subTitleHtml: string;
-    showWarning: boolean = false;
+    showWarning = false;
     deleteTask = $.Deferred<boolean>();
 
     indexesInfoForDelete = Array<indexInfoForDelete>();

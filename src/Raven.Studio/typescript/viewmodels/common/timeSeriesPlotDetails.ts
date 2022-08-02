@@ -265,7 +265,7 @@ class timeSeriesPlotDetails extends viewModelBase {
 
     private pointer: d3.Selection<void>;
     private tooltip: d3.Selection<void>;
-    private acceptMoveEvents: boolean = false;
+    private acceptMoveEvents = false;
     
     private svg: d3.Selection<void>;
     private hoverSvg: d3.Selection<void>;

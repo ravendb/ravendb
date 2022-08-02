@@ -46,12 +46,12 @@ class lineChart {
     private pointer: d3.Selection<void>;
     private lastXPosition: number = null;
     private tooltip: d3.Selection<void>;
-    private mouseOver: boolean = false;
+    private mouseOver = false;
     
     private xScale: d3.time.Scale<number, number>;
     
     private readonly containerSelector: string | EventTarget;
-    private highlightVisible: boolean = false;
+    private highlightVisible = false;
     
     constructor(containerSelector: string | EventTarget, opts?: chartOpts) {
         this.opts = opts || {} as any;
@@ -333,7 +333,7 @@ class lineChart {
     }
     
     private maybeTrimData() {
-        let hasAnyTrim = false;
+        const hasAnyTrim = false;
         
         for (const datum of this.data) {
             const rangesLengths = datum.ranges.map(x => x.values.length);

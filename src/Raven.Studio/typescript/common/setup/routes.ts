@@ -3,7 +3,7 @@
 class routes {
 
     static get(): Array<DurandalRouteConfiguration> {
-        let routes: DurandalRouteConfiguration[] = [
+        const routes: DurandalRouteConfiguration[] = [
             {
                 route: ["", "welcome"],
                 title: "RavenDB Setup Wizard",

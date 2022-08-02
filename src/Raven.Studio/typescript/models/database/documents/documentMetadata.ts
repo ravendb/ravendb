@@ -118,7 +118,7 @@ class documentMetadata {
 
             this.changeVector(dto['@change-vector']);
 
-            for (let property in dto) {
+            for (const property in dto) {
                 if (property.toUpperCase() !== '@collection'.toUpperCase() &&
                     property.toUpperCase() !== '@flags'.toUpperCase() &&
                     property.toUpperCase() !== 'Raven-Clr-Type'.toUpperCase() &&
@@ -167,7 +167,7 @@ class documentMetadata {
         return dto;
     }
 
-    static filterMetadata(metaDto: documentMetadataDto, removedProps: any[] = null, isClonedDocument: boolean = false) {
+    static filterMetadata(metaDto: documentMetadataDto, removedProps: any[] = null, isClonedDocument = false) {
         // We don't want to show certain reserved properties in the metadata text area.
         // Remove them from the DTO, restore them on save.
         const metaPropsToRemove = ["@id", "@change-vector", "@last-modified", "@attachments", "@counters", "@timeseries"];
@@ -176,7 +176,7 @@ class documentMetadata {
             metaPropsToRemove.push("@flags");
         }
 
-        for (let property in metaDto) {
+        for (const property in metaDto) {
             if (metaDto.hasOwnProperty(property) && _.includes(metaPropsToRemove, property)) {
                 if ((<any>metaDto)[property] && removedProps) {
                     removedProps.push({ name: property, value: (<any>metaDto)[property] });

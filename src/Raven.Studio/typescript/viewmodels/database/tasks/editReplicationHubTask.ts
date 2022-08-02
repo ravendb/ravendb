@@ -166,7 +166,7 @@ class editReplicationHubTask extends viewModelBase {
         });
         
         this.visibleReplicationAccessItems = ko.pureComputed(() => {
-            let items = this.filteredReplicationAccessItems();
+            const items = this.filteredReplicationAccessItems();
             
             const numberOfItemsToShow = this.batchCounter() * this.accessItemsBatch;
             return items.slice(0, numberOfItemsToShow);
@@ -325,7 +325,7 @@ class editReplicationHubTask extends viewModelBase {
 
     cloneItem() {
         const editedItem = this.editedReplicationAccessItem();
-        let cloneItem = new replicationAccessHubModel("", null, editedItem.hubToSinkPrefixes(), editedItem.sinkToHubPrefixes(), editedItem.filteringPathsRequired());
+        const cloneItem = new replicationAccessHubModel("", null, editedItem.hubToSinkPrefixes(), editedItem.sinkToHubPrefixes(), editedItem.filteringPathsRequired());
         this.editedReplicationAccessItem(cloneItem);
         this.initTooltips();
     }
@@ -497,12 +497,12 @@ class editReplicationHubTask extends viewModelBase {
         this.editedReplicationAccessItem().accessConfigurationWasExported(true);
     }
     
-    exportConfiguration(includeAccessInfo: boolean = false) {
+    exportConfiguration(includeAccessInfo = false) {
         const hubTaskItem = this.editedHubTask();
         const databaseName = this.activeDatabase().name;
         const topologyUrls = clusterTopologyManager.default.topology().nodes().map(x => x.serverUrl());
 
-        let configurationToExport = {
+        const configurationToExport = {
             Database: databaseName,
             HubName: hubTaskItem.taskName(),
             TopologyUrls: topologyUrls,

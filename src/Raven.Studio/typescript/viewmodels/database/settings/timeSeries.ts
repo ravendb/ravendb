@@ -212,19 +212,19 @@ class timeSeries extends viewModelBase {
             hasErrors = true;
         }
 
-        for (let namedValues of itemToSave.namedValues()) {
+        for (const namedValues of itemToSave.namedValues()) {
             if (!this.isValid(namedValues.validationGroup)) {
                 hasErrors = true;
             }
             
-            for (let namedValue of namedValues.namedValues()) {
+            for (const namedValue of namedValues.namedValues()) {
                 if (!this.isValid(namedValue.validationGroup)) {
                     hasErrors = true;
                 }
             }
         }
 
-        for (let policy of itemToSave.policies()) {
+        for (const policy of itemToSave.policies()) {
             if (!this.isValid(policy.validationGroup)) {
                 hasErrors = true;
             }

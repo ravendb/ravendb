@@ -42,7 +42,7 @@ class columnPreviewPlugin<T> {
         _.bindAll(this, "defaultMarkupProvider");
     }
     
-    private defaultMarkupProvider(value: any, column: virtualColumn, wrapValue: boolean = true) {
+    private defaultMarkupProvider(value: any, column: virtualColumn, wrapValue = true) {
         const featuresSyntax = this.features.map(f => f.syntax(column, value)).join("");
         
         if (moment.isMoment(value)) { // value instanceof moment isn't reliable 

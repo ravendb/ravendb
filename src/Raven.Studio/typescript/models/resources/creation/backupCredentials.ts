@@ -34,7 +34,7 @@ export abstract class restoreSettings {
 
 export class localServerCredentials extends restoreSettings {
     backupStorageType: restoreSource = 'local'; 
-    backupStorageTypeText: string ='Local Server Directory';
+    backupStorageTypeText ='Local Server Directory';
     mandatoryFieldsText = "Backup Directory";
 
     backupDirectory = ko.observable<string>();
@@ -106,7 +106,7 @@ export class amazonS3Credentials extends restoreSettings {
             CustomServerUrl: this.useCustomS3Host() ? this.customServerUrl() : null,
             ForcePathStyle: this.useCustomS3Host() ? this.forcePathStyle() : false,
         }
-    };
+    }
 
     useAwsRegion(awsRegionEndpoint: { label: string, value: string }) {
         this.regionName(amazonSettings.getDisplayRegionName(awsRegionEndpoint));
@@ -199,7 +199,7 @@ export class azureCredentials extends restoreSettings {
             Disabled: false,
             GetBackupConfigurationScript: null
         }
-    };
+    }
 
     fetchRestorePointsCommand = () => getRestorePointsCommand.forAzureBackup(this.toDto(), true);
 
@@ -242,7 +242,7 @@ export class azureCredentials extends restoreSettings {
 
 export class googleCloudCredentials extends restoreSettings {
     backupStorageType: restoreSource = 'googleCloud';
-    backupStorageTypeText: string ='Google Cloud Platform';
+    backupStorageTypeText ='Google Cloud Platform';
     mandatoryFieldsText = "required fields";
     
     remoteFolder = ko.observable<string>();
@@ -259,7 +259,7 @@ export class googleCloudCredentials extends restoreSettings {
             Disabled: false,
             GetBackupConfigurationScript: null
         }
-    };
+    }
 
     fetchRestorePointsCommand = () => getRestorePointsCommand.forGoogleCloudBackup(this.toDto(), true);
 
