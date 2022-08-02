@@ -12,6 +12,7 @@ using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Server.Documents.Subscriptions;
+using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -129,6 +130,160 @@ namespace SlowTests.Client.Subscriptions
                 await AssertNoLeftovers(store, id);
             }
         }
+
+        [Fact]
+        public async Task MakeSureNoopAckDoesntDeleteItemsFromResend()
+        {
+            DebuggerAttachedTimeout.DisableLongTimespan = true;
+            using (var store = GetDocumentStore())
+            {
+                var id = store.Subscriptions.Create<User>();
+                using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
+                {
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5),
+                    Strategy = SubscriptionOpeningStrategy.Concurrent,
+                    MaxDocsPerBatch = 6
+                }))
+                {
+                    var conn1 = new AsyncManualResetEvent();
+                    var holdConn2 = new AsyncManualResetEvent();
+                    var amre = new AsyncManualResetEvent();
+                    var amre2 = new AsyncManualResetEvent();
+                    var waitForConn2ToFetch = new AsyncManualResetEvent();
+                    var noopSent = new AsyncManualResetEvent();
+                    
+                    using (var session = store.OpenSession())
+                    {
+                        session.Store(new User(), "user/1");
+                        session.Store(new User(), "user/2");
+                        session.Store(new User(), "user/3");
+                        session.Store(new User(), "user/4");
+                        session.Store(new User(), "user/5");
+                        session.Store(new User(), "user/6");
+                        session.SaveChanges();
+                    }
+
+                    //run a connection and pause it
+                    var t = subscription.Run(async x =>
+                    {
+                        amre2.Set();
+                        await amre.WaitAsync();
+                    });
+
+                    await amre2.WaitAsync();
+                    //update a document which is processed right now
+                    using (var session = store.OpenSession())
+                    {
+                        session.Store(new User { Name = "Changed" }, "user/1");
+                        session.Store(new User { Name = "Changed" }, "user/2");
+                        session.SaveChanges();
+                    }
+
+                    //pause the connection in server before it collects the next batch (which will be resend)
+                    var db = await Databases.GetDocumentDatabaseInstanceFor(store);
+                    var conns = db.SubscriptionStorage.GetSubscriptionStateById(Convert.ToInt32(id)).GetConnections();
+                    conns[0].ForTestingPurposesOnly().PauseConnection = conn1;
+
+                    //create new doc for conn2 to have something to fetch
+                    using (var session = store.OpenSession())
+                    {
+                        session.Store(new User(), "user/7");
+                        session.SaveChanges();
+                    }
+
+                    //add connection 2 so subscription cv will be higher than user/1 user/2
+                    using var subscription2 = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
+                    {
+                        TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5),
+                        Strategy = SubscriptionOpeningStrategy.Concurrent,
+                        MaxDocsPerBatch = 6
+                    });
+                    var t2 = subscription2.Run(async (x) =>
+                    {
+                        //will skip user/1 user/2 because they are processed by another
+                        waitForConn2ToFetch.Set();
+                        await holdConn2.WaitAsync();
+                    });
+
+                    await waitForConn2ToFetch.WaitAsync();
+
+                    //let connection ack, but will pause in server from continuing
+                    amre.Set();
+
+                    var executor = store.GetRequestExecutor();
+
+                    //wait for user/1 and user/2 to enter resend because they were processed by conn1 when updated updated
+                    var enteredResend = await WaitForValueAsync(() =>
+                    {
+                        using var _ = executor.ContextPool.AllocateOperationContext(out var ctx);
+                        var cmd = new GetSubscriptionResendListCommand(store.Database, id);
+                        executor.Execute(cmd, ctx);
+                        var res = cmd.Result;
+                        return res.Results.Count(x => (x.Id == "user/1" || x.Id == "user/2") && x.Batch == -1) == 2;
+                    }, true, 3000);
+
+                    if (enteredResend == false)
+                    {
+                        ReleaseConnections();
+                        Assert.False(true, "user/1 and user/2 did not enter the resend table");
+                    }
+
+                    //add new conn3 to trigger noop, it will fetch user/1 OR user/2 and then we pause it in server
+                    using var subscription3 = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
+                    {
+                        TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5),
+                        Strategy = SubscriptionOpeningStrategy.Concurrent,
+                        MaxDocsPerBatch = 2
+                    });
+
+                    bool? noopDeleted = null;
+
+                    //create new doc for conn3
+                    using (var session = store.OpenSession())
+                    {
+                        session.Store(new User(), "user/8");
+                        session.SaveChanges();
+                    }
+
+                    var first = true;
+                    
+                    var _ = subscription3.Run(async (x) =>
+                    {
+                        //will fetch user/2 if resend table was not deleted by noop
+                        //will fetch user/8 if resend was deleted
+                        if (first)
+                        {
+                            if (x.Items.Exists(x => x.Id == "user/8"))
+                            {
+                                noopDeleted = true;
+                            }
+                            else if (x.Items.Exists(x => x.Id == "user/2" || x.Id == "user/1"))
+                            {
+                                noopDeleted = false;
+                            }
+
+                            first = false;
+                        }
+
+                        noopSent.Set();
+                    });
+
+                    await noopSent.WaitAsync();
+                    ReleaseConnections();
+
+                    Assert.NotNull(noopDeleted);
+                    Assert.False(noopDeleted, "Noop deleted resend items with batchId -1");
+
+                    void ReleaseConnections()
+                    {
+                        conns[0].ForTestingPurposesOnly().PauseConnection = null;
+                        conn1.Set();
+                        holdConn2.Set();
+                    }
+                }
+            }
+        }
+
 
         [Fact]
         public async Task ResendAfterConnectionClosed()
