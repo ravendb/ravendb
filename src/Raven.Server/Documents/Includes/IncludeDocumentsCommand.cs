@@ -150,7 +150,8 @@ namespace Raven.Server.Documents.Includes
                         {
                             result.Add(new Document
                             {
-                                Id = _context.GetLazyString(includedDocId)
+                                Id = _context.GetLazyString(includedDocId),
+                                NonPersistentFlags = NonPersistentDocumentFlags.AllowDataAsNull
                             });
                         }
 
