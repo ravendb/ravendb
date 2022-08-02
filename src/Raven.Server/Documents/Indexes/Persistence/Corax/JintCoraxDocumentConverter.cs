@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Amazon.SimpleNotificationService.Model;
 using Jint;
 using Jint.Native;
 using Jint.Native.Object;
@@ -11,9 +10,9 @@ using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes;
 using Raven.Server.Documents.Indexes.Static;
-using Raven.Server.Documents.Patch;
+using Raven.Server.Documents.Patch.Jint;
+using Raven.Server.Utils;
 using Sparrow.Json;
-using Sparrow.Server;
 using CoraxLib = global::Corax;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
@@ -35,9 +34,15 @@ public class JintCoraxDocumentConverter : JintCoraxDocumentConverterBase
     }
 
     //todo maciej: refactor | stop duplicating code from LuceneJint[...] https://github.com/ravendb/ravendb/pull/13730#discussion_r825928762
-    public override Span<byte> SetDocumentFields(LazyStringValue key, LazyStringValue sourceDocumentId, object doc, JsonOperationContext indexContext,
+    public override Span<byte> SetDocumentFields(LazyStringValue key, LazyStringValue sourceDocumentId, object documentObj, JsonOperationContext indexContext,
         out LazyStringValue id, Span<byte> writerBuffer)
     {
+        if (!(documentObj is JsHandleJint jsHandle))
+        {
+            id = null;
+            return Span<byte>.Empty;
+        }
+        var doc = jsHandle.Item;
         if (doc is not ObjectInstance documentToProcess)
         {
             id = null;
@@ -91,8 +96,7 @@ public class JintCoraxDocumentConverter : JintCoraxDocumentConverterBase
                         }
                         else
                         {
-                            value = Utils.TypeConverter.ToBlittableSupportedType(val, flattenArrays: false, forIndexing: true, engine: documentToProcess.Engine,
-                                context: indexContext);
+                            value = TypeConverter.ToBlittableSupportedType(val, _engineEx, flattenArrays: false, forIndexing: true, indexContext);
                             InsertRegularField(field, value, indexContext, ref entryWriter, scope);
                             if (value is IDisposable toDispose1)
                             {
@@ -146,8 +150,7 @@ public class JintCoraxDocumentConverter : JintCoraxDocumentConverterBase
                 }
             }
 
-            value = Utils.TypeConverter.ToBlittableSupportedType(actualValue, flattenArrays: false, forIndexing: true, engine: documentToProcess.Engine,
-                context: indexContext);
+            value = TypeConverter.ToBlittableSupportedType(actualValue, _engineEx, flattenArrays: false, forIndexing: true, indexContext);
             InsertRegularField(field, value, indexContext, ref entryWriter, scope);
 
             if (value is IDisposable toDispose)
@@ -160,9 +163,7 @@ public class JintCoraxDocumentConverter : JintCoraxDocumentConverterBase
 
         if (_storeValue)
         {
-            var storedValue = JsBlittableBridge.Translate(indexContext,
-                documentToProcess.Engine,
-                documentToProcess);
+            var storedValue = JsBlittableBridgeJint.Translate(indexContext, _engineEx, jsHandle);
             unsafe
             {
                 using (_allocator.Allocate(storedValue.Size, out Span<byte> blittableBuffer))
@@ -192,11 +193,13 @@ public abstract class JintCoraxDocumentConverterBase : CoraxDocumentConverterBas
     protected const string NamePropertyName = "$name";
     protected const string SpatialPropertyName = "$spatial";
     protected const string BoostPropertyName = "$boost";
-
+    protected readonly JintEngineEx _engineEx;
     protected JintCoraxDocumentConverterBase(Index index, bool storeValue, bool indexImplicitNull, bool indexEmptyEntries, int numberOfBaseFields, string keyFieldName,
         string storeValueFieldName, ICollection<IndexField> fields = null) : base(index, storeValue, indexImplicitNull, indexEmptyEntries, numberOfBaseFields,
         keyFieldName, storeValueFieldName, fields)
     {
+        var jsIndexJint = (AbstractJavaScriptIndexJint)index._compiled;
+        _engineEx = jsIndexJint.EngineEx;
     }
 
     protected static bool TryGetBoostedValue(ObjectInstance valueToCheck, out JsValue value, out float? boost)

@@ -116,7 +116,6 @@ namespace Raven.Server.Documents
 
             Is32Bits = PlatformDetails.Is32Bits || Configuration.Storage.ForceUsing32BitsPager;
 
-   
             _disposeOnce = new DisposeOnce<SingleAttempt>(DisposeInternal);
 
             try
@@ -566,7 +565,7 @@ namespace Raven.Server.Documents
 
                 if (await ExecuteClusterTransactionOneByOne(batch))
                     batchCollector.AllCommandsBeenProcessed = true;
-                }
+            }
             foreach (var command in batch)
             {
                 OnClusterTransactionCompletion(command, mergedCommands);
@@ -616,24 +615,20 @@ namespace Raven.Server.Documents
             {
                 var index = command.Index;
                 var options = mergedCommands.Options[index];
-                    Task indexTask = null;
-                    if (options.WaitForIndexesTimeout != null)
-                    {
+                Task indexTask = null;
+                if (options.WaitForIndexesTimeout != null)
+                {
                     indexTask = BatchHandlerProcessorForBulkDocs.WaitForIndexesAsync(this, options.WaitForIndexesTimeout.Value,
-                            options.SpecifiedIndexesQueryString, options.WaitForIndexThrow,
-                            mergedCommands.LastChangeVector, mergedCommands.LastTombstoneEtag, mergedCommands.ModifiedCollections);
-                    }
+                        options.SpecifiedIndexesQueryString, options.WaitForIndexThrow,
+                        mergedCommands.LastChangeVector, mergedCommands.LastTombstoneEtag, mergedCommands.ModifiedCollections);
+                }
 
-                var result = new ClusterTransactionCompletionResult
-                    {
-                        Array = mergedCommands.Replies[index],
-                        IndexTask = indexTask,
-                    };
+                var result = new ClusterTransactionCompletionResult { Array = mergedCommands.Replies[index], IndexTask = indexTask, };
                 RachisLogIndexNotifications.NotifyListenersAbout(index, null);
                 ServerStore.Cluster.ClusterTransactionWaiter.TrySetResult(options.TaskId, result);
-                    _nextClusterCommand = command.PreviousCount + command.Commands.Length;
-                    _lastCompletedClusterTransaction = _nextClusterCommand.Value - 1;
-                }
+                _nextClusterCommand = command.PreviousCount + command.Commands.Length;
+                _lastCompletedClusterTransaction = _nextClusterCommand.Value - 1;
+            }
             catch (Exception e)
             {
                 // nothing we can do
@@ -894,10 +889,6 @@ namespace Raven.Server.Documents
                 DocumentsStorage?.Dispose();
             });
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed DocumentsStorage");
-
-         
-         
-        
             
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing _databaseShutdown");
             exceptionAggregator.Execute(() =>

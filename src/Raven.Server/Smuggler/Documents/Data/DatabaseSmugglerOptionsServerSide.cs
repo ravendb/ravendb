@@ -100,7 +100,7 @@ namespace Raven.Server.Smuggler.Documents.Data
                 Collections = Collections,
                 IncludeArtificial = IncludeArtificial,
                 IncludeExpired = IncludeExpired,
-                MaxStepsForTransformScript = MaxStepsForTransformScript,
+                OptionsForTransformScript = OptionsForTransformScript,
                 OperateOnDatabaseRecordTypes = OperateOnDatabaseRecordTypes,
                 OperateOnTypes = OperateOnTypes,
                 RemoveAnalyzers = RemoveAnalyzers,

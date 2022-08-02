@@ -14,7 +14,6 @@ using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Sparrow.Json;
-using Spatial4n.Core.Shapes;
 using Spatial4n.Shapes;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes.Configuration;

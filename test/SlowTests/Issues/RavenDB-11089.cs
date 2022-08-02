@@ -748,7 +748,7 @@ from 'Users' as user select output(user)", queryAsString);
         private string FirstCharToLower(string str) => $"{Char.ToLower(str[0])}{str.Substring(1)}";
 
         [Theory]
-        [RavenExplicitData(SearchEngineMode = RavenSearchEngineMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void CanPatch(Options options)
         {
             options.ModifyDocumentStore = ss =>
@@ -810,7 +810,7 @@ from 'Users' as user select output(user)", queryAsString);
         }
 
         [Theory]
-        [RavenExplicitData(SearchEngineMode= RavenSearchEngineMode.All)]
+        [RavenExplicitData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanPatchAndModify(Options options)
         {
             options.ModifyDocumentStore = ss =>
@@ -829,28 +829,28 @@ from 'Users' as user select output(user)", queryAsString);
                 record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = options.SearchEngineMode.ToString();
                 record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = options.SearchEngineMode.ToString();
             };
+
+            var user = new User { Numbers = new[] { 66 } };
+
+            using (var store = GetDocumentStore(options))
             {
-            var user = new User {Numbers = new[] {66}};
-
-                using (var store = GetDocumentStore(options))
+                using (var session = store.OpenSession())
                 {
-                    using (var session = store.OpenSession())
-                    {
-                        session.Store(user);
-                        session.SaveChanges();
-                    }
-
-                    using (var session = store.OpenSession())
-                    {
-                        var loaded = session.Load<User>(_docId);
-                        loaded.Numbers[0] = 1;
-                        session.Advanced.Patch(loaded, u => u.Numbers[0], 2);
-                        Assert.Throws<InvalidOperationException>(() =>
-                        {
-                            session.SaveChanges();
-                        });
-                    }
+                    session.Store(user);
+                    session.SaveChanges();
                 }
+
+                using (var session = store.OpenSession())
+                {
+                    var loaded = session.Load<User>(_docId);
+                    loaded.Numbers[0] = 1;
+                    session.Advanced.Patch(loaded, u => u.Numbers[0], 2);
+                    Assert.Throws<InvalidOperationException>(() =>
+                    {
+                        session.SaveChanges();
+                    });
+                }
+            }
         }
 
         [Theory]

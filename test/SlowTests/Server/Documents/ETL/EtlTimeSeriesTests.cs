@@ -617,8 +617,8 @@ function loadTimeSeriesOfUsersBehavior(docId, timeSeries)
         }
 
         [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.TimeSeries)]
-        [RavenExplicitData(SearchEngineMode = RavenSearchEngineMode.Lucene, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
-        public async Task RavenEtlWithTimeSeries_WhenChangeDocAndThenItsTimeSeries_ShouldNotSendTimeSeriesTwice(RavenTestParameters config)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task RavenEtlWithTimeSeries_WhenChangeDocAndThenItsTimeSeries_ShouldNotSendTimeSeriesTwice(Options options)
         {
             const int batchSize = 3;
             string[] collections = { "Users" };
@@ -634,15 +634,12 @@ function loadTimeSeriesOfUsersBehavior(docId, timeSeries)
 }
 "; // the month is 0-indexed
 
-            var options = new Options
+            options.ModifyDatabaseRecord = record =>
             {
-                ModifyDatabaseRecord = record =>
-                {
-                    _options?.ModifyDatabaseRecord(record);
-                    record.Settings[RavenConfiguration.GetKey(x => x.Etl.MaxNumberOfExtractedItems)] = $"{batchSize}";
-                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
-                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
-                }
+                _options?.ModifyDatabaseRecord(record);
+                record.Settings[RavenConfiguration.GetKey(x => x.Etl.MaxNumberOfExtractedItems)] = $"{batchSize}";
+                record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = options.SearchEngineMode.ToString();
+                record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = options.SearchEngineMode.ToString();
             };
             var times = Enumerable.Range(0, 2)
                 .Select(i => new DateTime(2020, 04, 27) + TimeSpan.FromSeconds(i))

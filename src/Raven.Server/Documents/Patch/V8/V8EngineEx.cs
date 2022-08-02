@@ -15,6 +15,7 @@ using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Indexes.Static.Counters.V8;
 using Raven.Server.Documents.Indexes.Static.JavaScript.V8;
 using Raven.Server.Documents.Indexes.Static.TimeSeries.V8;
+using Raven.Server.Documents.Patch.Jint;
 using Sparrow;
 using Sparrow.Json;
 using V8.Net;
@@ -648,7 +649,7 @@ var process = {
 
     public JsHandleV8 FromObjectGen(object obj, bool keepAlive = false)
     {
-        Debug.Assert(obj is not IEnumerable, $"FromObjectGen should not receive IEnumerable, use CreateArray() instead!");
+        Debug.Assert(JintEngineEx.AssertFromObjectGen(obj), $"FromObjectGen should not receive IEnumerable, use CreateArray() instead!");
         var val = Engine.FromObject(obj, keepAlive);
         return new JsHandleV8(ref val);
     }

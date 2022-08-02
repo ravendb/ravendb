@@ -8,7 +8,6 @@ using Tests.Infrastructure;
 using Tests.Infrastructure.Extensions;
 using Xunit;
 using Xunit.Abstractions;
-using FastTests.Server.JavaScript;
 
 namespace SlowTests.Issues
 {

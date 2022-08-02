@@ -181,7 +181,7 @@ namespace FastTests
             expected = expected.Replace("    ", "\t");
             actual = actual.Replace("    ", "\t");
             
-            var converted = ConvertRespectingNewLines(expected);
+            var converted = NormalizeNewLines(expected);
 
             Assert.Equal(converted, actual);
         }

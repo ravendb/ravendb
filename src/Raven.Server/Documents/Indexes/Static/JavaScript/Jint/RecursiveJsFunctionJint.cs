@@ -97,10 +97,10 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript.Jint
             {
                 if (ReferenceEquals(x, y)) return true;
 
-                if (x is DynamicJsNull dx)
+                if (x is DynamicJsNullJint dx)
                     return dx.Equals(y);
 
-                if (y is DynamicJsNull dy) 
+                if (y is DynamicJsNullJint dy) 
                     return dy.Equals(x);
 
                 if (x is null)

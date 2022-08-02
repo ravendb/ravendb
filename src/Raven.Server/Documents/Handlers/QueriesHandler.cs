@@ -1,5 +1,4 @@
 ﻿using System.Net.Http;
-using System.Text;
 using System.Threading.Tasks;
 using Raven.Server.Documents.Handlers.Processors.Queries;
 using Raven.Server.Routing;

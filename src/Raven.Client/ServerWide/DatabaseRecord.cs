@@ -24,7 +24,6 @@ using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Operations.Integrations;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Client.Util;
-using Sparrow;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.ServerWide

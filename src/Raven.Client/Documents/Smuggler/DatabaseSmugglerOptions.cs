@@ -1,11 +1,10 @@
-﻿using Sparrow.Json;
+﻿using Raven.Client.ServerWide.JavaScript;
+using Sparrow.Json;
 
 namespace Raven.Client.Documents.Smuggler
 {
     public class JavaScriptOptionsForSmuggler
-
     {
-
         public JavaScriptEngineType EngineType { get; set; } = JavaScriptEngineType.Jint;
 
         public bool StrictMode { get; set; } = true;

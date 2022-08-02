@@ -16,6 +16,7 @@ using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Indexes.Static.JavaScript.Jint;
 using Raven.Server.Extensions.Jint;
+using Sparrow.Json;
 using JSValueType = V8.Net.JSValueType;
 
 namespace Raven.Server.Documents.Patch.Jint
@@ -96,11 +97,6 @@ var process = {
             ExecuteWithReset(ExecEnvCodeJint, "ExecEnvCode");
 
             _jsonStringify = new JsHandleJint(Engine.Evaluate("JSON.stringify"));
-        }
-
-        ~JintEngineEx()
-        {
-            Dispose(false);
         }
 
         public void Dispose()
@@ -253,8 +249,21 @@ var process = {
 
         public JsHandleJint FromObjectGen(object obj, bool keepAlive = false)
         {
-            Debug.Assert(obj is not IEnumerable, $"FromObjectGen should not receive IEnumerable, use CreateArray() instead!");
+            Debug.Assert(AssertFromObjectGen(obj), $"FromObjectGen should not receive IEnumerable, use CreateArray() instead!");
             return new JsHandleJint(JsValue.FromObject(Engine, obj));
+        }
+
+        internal static bool AssertFromObjectGen(object obj)
+        {
+            if (obj is IEnumerable)
+            {
+                if (obj is LazyStringValue)
+                    return true;
+
+                return false;
+            }
+
+            return true;
         }
 
         public JsHandleJint CreateClrCallBack(string propertyName, Func<JsHandleJint, JsHandleJint[], JsHandleJint> func, bool keepAlive = true)

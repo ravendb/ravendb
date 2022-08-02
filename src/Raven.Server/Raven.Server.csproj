@@ -162,7 +162,6 @@
     <PackageReference Include="JetBrains.Annotations" Version="2022.1.0">
       <PrivateAssets>All</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Jint" Version="3.0.30-ravendb" />
     <PackageReference Include="Google.Api.Gax.Rest" Version="4.0.0" />
     <PackageReference Include="Google.Cloud.Storage.V1" Version="4.0.0" />
     <PackageReference Include="Google.Api.Gax.Rest" Version="3.7.0" />

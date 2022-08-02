@@ -1,5 +1,4 @@
 ﻿using System;
-using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Indexing;
 using Sparrow.Json;
@@ -11,14 +10,10 @@ namespace Raven.Server.Documents.Indexes.Persistence
     public abstract class IndexPersistenceBase : IDisposable
     {
         protected readonly Index _index;
-        protected readonly IJavaScriptOptions _jsOptions;
 
         protected IndexPersistenceBase(Index index)
         {
             _index = index;
-            _jsOptions = index.JsOptions;
-
-
         }
 
         public abstract bool HasWriter { get; }

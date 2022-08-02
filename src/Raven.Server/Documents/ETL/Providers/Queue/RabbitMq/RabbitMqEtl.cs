@@ -8,6 +8,8 @@ using RabbitMQ.Client.Exceptions;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Server.Documents.ETL.Stats;
+using Raven.Server.Documents.Patch.Jint;
+using Raven.Server.Documents.Patch.V8;
 using Raven.Server.Exceptions.ETL.QueueEtl;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -28,9 +30,14 @@ public class RabbitMqEtl : QueueEtl<RabbitMqItem>
     {
     }
 
-    protected override EtlTransformer<QueueItem, QueueWithItems<RabbitMqItem>, EtlStatsScope, EtlPerformanceOperation> GetTransformer(DocumentsOperationContext context)
+    protected override EtlTransformer<QueueItem, QueueWithItems<RabbitMqItem>, EtlStatsScope, EtlPerformanceOperation, JsHandleJint> GetTransformerJint(DocumentsOperationContext context)
     {
-        return new RabbitMqDocumentTransformer<RabbitMqItem>(Transformation, Database, context, Configuration);
+        return new RabbitMqDocumentTransformerJint<RabbitMqItem>(Transformation, Database, context, Configuration);
+    }
+
+    protected override EtlTransformer<QueueItem, QueueWithItems<RabbitMqItem>, EtlStatsScope, EtlPerformanceOperation, JsHandleV8> GetTransformerV8(DocumentsOperationContext context)
+    {
+        return new RabbitMqDocumentTransformerV8<RabbitMqItem>(Transformation, Database, context, Configuration);
     }
 
     protected override int PublishMessages(List<QueueWithItems<RabbitMqItem>> itemsPerExchange, BlittableJsonEventBinaryFormatter formatter, out List<string> idsToDelete)

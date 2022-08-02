@@ -36,7 +36,6 @@ using Sparrow.Json;
 using Sparrow.Server;
 using Xunit;
 using Xunit.Abstractions;
-using FastTests.Server.JavaScript;
 using DisposableAction = Voron.Util.DisposableAction;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 

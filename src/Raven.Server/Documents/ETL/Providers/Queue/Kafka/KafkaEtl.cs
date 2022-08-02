@@ -6,6 +6,8 @@ using Confluent.Kafka;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Server.Documents.ETL.Stats;
+using Raven.Server.Documents.Patch.Jint;
+using Raven.Server.Documents.Patch.V8;
 using Raven.Server.Exceptions.ETL.QueueEtl;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -22,9 +24,14 @@ public class KafkaEtl : QueueEtl<KafkaItem>
 
     private string TransactionalId => $"{Database.DbId}-{Name}";
 
-    protected override EtlTransformer<QueueItem, QueueWithItems<KafkaItem>, EtlStatsScope, EtlPerformanceOperation> GetTransformer(DocumentsOperationContext context)
+    protected override EtlTransformer<QueueItem, QueueWithItems<KafkaItem>, EtlStatsScope, EtlPerformanceOperation, JsHandleJint> GetTransformerJint(DocumentsOperationContext context)
     {
-        return new KafkaDocumentTransformer<KafkaItem>(Transformation, Database, context, Configuration);
+        return new KafkaDocumentTransformerJint<KafkaItem>(Transformation, Database, context, Configuration);
+    }
+
+    protected override EtlTransformer<QueueItem, QueueWithItems<KafkaItem>, EtlStatsScope, EtlPerformanceOperation, JsHandleV8> GetTransformerV8(DocumentsOperationContext context)
+    {
+        return new KafkaDocumentTransformerV8<KafkaItem>(Transformation, Database, context, Configuration);
     }
 
     protected override int PublishMessages(List<QueueWithItems<KafkaItem>> itemsPerTopic, BlittableJsonEventBinaryFormatter formatter, out List<string> idsToDelete)

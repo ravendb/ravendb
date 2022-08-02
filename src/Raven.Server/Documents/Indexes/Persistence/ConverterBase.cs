@@ -7,7 +7,6 @@ using Corax.Utils;
 using Lucene.Net.Documents;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
-using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields;
 using Raven.Server.Documents.Indexes.Spatial;
@@ -30,13 +29,11 @@ namespace Raven.Server.Documents.Indexes.Persistence
         protected readonly bool _storeValue;
         protected readonly string _storeValueFieldName;
         protected readonly int _numberOfBaseFields;
-        protected IJavaScriptOptions _jsOptions;
 
         public ConverterBase(Index index, bool storeValue, bool indexImplicitNull, bool indexEmptyEntries, int numberOfBaseFields, string keyFieldName,
             string storeValueFieldName, ICollection<IndexField> fields = null)
         {
             _index = index ?? throw new ArgumentNullException(nameof(index));
-            _jsOptions = index.JsOptions;
             _blittableTraverser = storeValue ? BlittableJsonTraverser.FlatMapReduceResults : BlittableJsonTraverser.Default;
             _indexImplicitNull = indexImplicitNull;
             _indexEmptyEntries = indexEmptyEntries;

@@ -87,8 +87,8 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
         protected HashSet<long> Active;
 
         public SubscriptionPatchDocument Patch;
-        protected ScriptRunner.SingleRun Run;
-        private ScriptRunner.ReturnRun? _returnRun;
+        protected ISingleRun Run;
+        private ReturnRun? _returnRun;
 
         protected DatabaseSubscriptionProcessor(ServerStore server, DocumentDatabase database, SubscriptionConnection connection) : base(server, connection)
         {
@@ -147,10 +147,10 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
             if (_returnRun != null)
                 return; // already init
 
-            _returnRun = Database.Scripts.GetScriptRunner(_jsOptions, Patch, true, out Run);
+            _returnRun = Database.Scripts.GetScriptRunner(Patch, readOnly: true, out Run);
         }
 
-        private protected class ProjectionMetadataModifier : JsBlittableBridge.IResultModifier
+        private protected class ProjectionMetadataModifier : IResultModifier
         {
             public static readonly ProjectionMetadataModifier Instance = new ProjectionMetadataModifier();
 
@@ -158,19 +158,19 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
             {
             }
 
-            public void Modify(ObjectInstance json)
+            public void Modify<T>(T json, IJsEngineHandle<T> engine) where T : struct, IJsHandle<T>
             {
-                ObjectInstance metadata;
-                var value = json.Get(Constants.Documents.Metadata.Key);
-                if (value.Type == Types.Object)
-                    metadata = value.AsObject();
-                else
+                using (var jsMetadata = json.GetProperty(Constants.Documents.Metadata.Key))
                 {
-                    metadata = json.Engine.Object.Construct(Array.Empty<JsValue>());
-                    json.Set(Constants.Documents.Metadata.Key, metadata, false);
-                }
+                    if (!jsMetadata.IsObject)
+                    {
+                        using (var jsMetadataNew = engine.CreateObject())
+                            jsMetadata.Set(jsMetadataNew);
+                        json.SetProperty(Constants.Documents.Metadata.Key, jsMetadata.Clone(), throwOnError: false);
+                    }
 
-                metadata.Set(Constants.Documents.Metadata.Projection, JsBoolean.True, false);
+                    jsMetadata.SetProperty(Constants.Documents.Metadata.Projection, engine.CreateValue(true), throwOnError: false);
+                }
             }
         }
 

@@ -1,9 +1,6 @@
 using System;
-using System.Linq;
 using System.Collections.Generic;
-using Jint;
-using Jint.Native;
-using Jint.Native.Object;
+using System.Linq;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Server.Documents.ETL.Stats;
@@ -13,15 +10,16 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.ETL.Providers.Queue;
 
-public abstract class QueueDocumentTransformer<T, TSelf> : EtlTransformer<QueueItem, QueueWithItems<T>, EtlStatsScope, EtlPerformanceOperation>
-where T : QueueItem
-where TSelf : QueueItem
+public abstract class QueueDocumentTransformer<T, TSelf, TJsType> : EtlTransformer<QueueItem, QueueWithItems<T>, EtlStatsScope, EtlPerformanceOperation, TJsType>
+    where T : QueueItem
+    where TSelf : QueueItem
+    where TJsType : struct, IJsHandle<TJsType>
 {
     private readonly QueueEtlConfiguration _config;
     private readonly Dictionary<string, QueueWithItems<TSelf>> _queues;
 
     protected QueueDocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, QueueEtlConfiguration config)
-        : base(database, context, new PatchRequest(transformation.Script, PatchRequestType.QueueEtl), null)
+        : base(database, context, new PatchRequest(transformation.Script, PatchRequestType.QueueEtl))
     {
         _config = config;
 
@@ -32,17 +30,17 @@ where TSelf : QueueItem
         _queues = new Dictionary<string, QueueWithItems<TSelf>>(destinationQueues.Length, StringComparer.OrdinalIgnoreCase);
     }
 
-    protected override void AddLoadedAttachment(JsValue reference, string name, Attachment attachment)
+    protected override void AddLoadedAttachment(TJsType reference, string name, Attachment attachment)
     {
         throw new NotSupportedException("Attachments aren't supported by Queue ETL");
     }
 
-    protected override void AddLoadedCounter(JsValue reference, string name, long value)
+    protected override void AddLoadedCounter(TJsType reference, string name, long value)
     {
         throw new NotSupportedException("Counters aren't supported by Queue ETL");
     }
 
-    protected override void AddLoadedTimeSeries(JsValue reference, string name, IEnumerable<SingleResult> entries)
+    protected override void AddLoadedTimeSeries(TJsType reference, string name, IEnumerable<SingleResult> entries)
     {
         throw new NotSupportedException("Time series aren't supported by Queue ETL");
     }
@@ -82,14 +80,15 @@ where TSelf : QueueItem
         return queue;
     }
 
-    protected CloudEventAttributes GetCloudEventAttributes(ObjectInstance attributes)
+    protected CloudEventAttributes GetCloudEventAttributes(TJsType attributes)
     {
         var cloudEventAttributes = new CloudEventAttributes();
 
-        attributes.GetOwnPropertyKeys().ForEach(x =>
+        foreach (var x in attributes.GetOwnProperties().Select(x => x.Key))
         {
-            if (CloudEventAttributes.ValidAttributeNames.Contains(x.ToString()) == false)
-                throw new InvalidOperationException($"Unknown attribute passed to loadTo(..., {{ {x}: ... }}). '{x}' is not a valid attribute name (note: field names are case sensitive)");
+            if (CloudEventAttributes.ValidAttributeNames.Contains(x) == false)
+                throw new InvalidOperationException(
+                    $"Unknown attribute passed to loadTo(..., {{ {x}: ... }}). '{x}' is not a valid attribute name (note: field names are case sensitive)");
 
             if (TryGetOptionValue(nameof(CloudEventAttributes.Id), out var messageId))
                 cloudEventAttributes.Id = messageId;
@@ -102,17 +101,17 @@ where TSelf : QueueItem
 
             if (TryGetOptionValue(nameof(CloudEventAttributes.PartitionKey), out var partitionKey))
                 cloudEventAttributes.PartitionKey = partitionKey;
-        });
+        }
 
         return cloudEventAttributes;
 
         bool TryGetOptionValue(string optionName, out string value)
         {
-            var optionValue = attributes.GetOwnProperty(optionName).Value;
+            var optionValue = attributes.GetOwnProperty(optionName);
 
-            if (optionValue != null && optionValue.IsNull() == false && optionValue.IsUndefined() == false)
+            if (optionValue.IsNull == false && optionValue.IsUndefined == false)
             {
-                value = optionValue.AsString();
+                value = optionValue.AsString;
                 return true;
             }
 

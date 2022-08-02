@@ -1,6 +1,7 @@
 ﻿using System;
 using Corax.Exceptions;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.ServerWide.JavaScript;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Static;
@@ -17,9 +18,11 @@ public class CoraxIndexPersistence : IndexPersistenceBase
 {
     private readonly Logger _logger;
     private readonly CoraxDocumentConverterBase _converter;
+    private readonly JavaScriptEngineType _engineType;
 
     public CoraxIndexPersistence(Index index) : base(index)
     {
+        _engineType = index.DocumentDatabase.Configuration.JavaScript.EngineType;
         _logger = LoggingSource.Instance.GetLogger<CoraxIndexPersistence>(index.DocumentDatabase.Name);
         bool storeValue = false;
         switch (index.Type)
@@ -37,7 +40,17 @@ public class CoraxIndexPersistence : IndexPersistenceBase
                 switch (_index.SourceType)
                 {
                     case IndexSourceType.Documents:
-                        _converter = new JintCoraxDocumentConverter((MapIndex)index);
+                        switch (_engineType)
+                        {
+                            case JavaScriptEngineType.Jint:
+                                _converter = new JintCoraxDocumentConverter((MapIndex)index, storeValue: true);
+                                break;
+                            case JavaScriptEngineType.V8:
+                                _converter = new V8CoraxDocumentConverter((MapIndex)index, storeValue: true);
+                                break;
+                            default:
+                                throw new NotSupportedException($"Not supported JS engine type '{_engineType}'.");
+                        }
                         break;
                     case IndexSourceType.TimeSeries:
                         throw new NotSupportedException($"Currently, {nameof(TimeSeries)} is not supported by Corax");
@@ -46,7 +59,17 @@ public class CoraxIndexPersistence : IndexPersistenceBase
                 }
                 break;
             case IndexType.JavaScriptMapReduce:
-                _converter = new JintCoraxDocumentConverter((MapReduceIndex)index, storeValue: true);
+                switch (_engineType)
+                {
+                    case JavaScriptEngineType.Jint:
+                        _converter = new JintCoraxDocumentConverter((MapReduceIndex)index, storeValue: true);
+                        break;
+                    case JavaScriptEngineType.V8:
+                        _converter = new V8CoraxDocumentConverter((MapReduceIndex)index, storeValue: true);
+                        break;
+                    default:
+                        throw new NotSupportedException($"Not supported JS engine type '{_engineType}'.");
+                }
                 break;
         }
         _converter ??= new CoraxDocumentConverter(index, storeValue: storeValue);

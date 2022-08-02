@@ -144,7 +144,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.V8
                                             if (inner.IsStringEx)
                                             {
                                                 spatialField = AbstractStaticIndexBase.GetOrCreateSpatialField(field.Name);
-                                                spatial = AbstractStaticIndexBase.CreateSpatialField(spatialField, inner.AsString);
+                                                spatial = (IEnumerable<AbstractField>)AbstractStaticIndexBase.CreateSpatialField(spatialField, inner.AsString);
                                             }
                                             else if (inner.IsObject)
                                             {
@@ -157,7 +157,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.V8
                                                             using (lng)
                                                             {
                                                                 spatialField = AbstractStaticIndexBase.GetOrCreateSpatialField(field.Name);
-                                                                spatial = AbstractStaticIndexBase.CreateSpatialField(spatialField, lat.AsDouble, lng.AsDouble);
+                                                                spatial = (IEnumerable<AbstractField>)AbstractStaticIndexBase.CreateSpatialField(spatialField, lat.AsDouble, lng.AsDouble);
                                                             }
                                                         }
                                                         else

@@ -11,7 +11,6 @@ using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
 using Tests.Infrastructure;
-using FastTests.Server.JavaScript;
 
 namespace FastTests.Client.Indexing
 {
