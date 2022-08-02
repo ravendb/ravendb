@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
+using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
@@ -128,12 +129,21 @@ public class LetsEncryptValidationHelper
                 await RavenDnsRecordHelper.AssertDnsUpdatedSuccessfully(publicServerUrl, ips, token);
             }
 
-            if (cert != null)
+            // Url's availability check
+            if (cert != null) //Secured
             {
                 // Here we send the actual ips we will bind to in the local machine.
                 await LetsEncryptSimulationHelper.SimulateRunningServer(serverStore, cert, publicServerUrl, nodeTag, localIps.ToArray(), port, serverStore.Configuration.ConfigPath, setupMode, token);
             }
-      
+            else //Unsecured
+            {
+                foreach (var ipEndPoint in localIps)
+                {
+                    var l = new TcpListener(ipEndPoint);
+                    l.Start();
+                    l.Stop();
+                }
+            }
         }
         catch (Exception e)
         {

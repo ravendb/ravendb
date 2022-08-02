@@ -74,7 +74,7 @@ namespace Raven.Server.Commercial
 
                 try
                 {
-                    unsecuredSetupInfo.InfoValidation(new CreateSetupPackageParameters {UnsecuredSetupInfo = unsecuredSetupInfo});
+                    unsecuredSetupInfo.ValidateInfo(new CreateSetupPackageParameters {UnsecuredSetupInfo = unsecuredSetupInfo});
                 }
                 catch (Exception e)
                 {
