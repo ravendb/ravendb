@@ -3,6 +3,7 @@ using System.Linq;
 using System.Net.NetworkInformation;
 using System.Threading.Tasks;
 using Raven.Server.Routing;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Extensions;
@@ -25,7 +26,7 @@ namespace Raven.Server.Web.System
             };
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
             {
                 context.Write(writer, djv);
             }
@@ -68,7 +69,7 @@ namespace Raven.Server.Web.System
             };
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
             {
                 context.Write(writer, djv);
             }

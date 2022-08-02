@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers
@@ -33,7 +34,7 @@ namespace Raven.Server.Documents.Handlers
                     .Skip(start)
                     .Take(pageSize);
 
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
 

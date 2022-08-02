@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Server.Routing;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Meters;
@@ -32,7 +33,7 @@ namespace Raven.Server.Documents.Handlers
         public async Task IoMetrics()
         {
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
             {
                 var result = GetPerformanceMetricsResponse(Database);
                 context.Write(writer, result.ToJson());

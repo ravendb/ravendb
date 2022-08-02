@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Debugging
@@ -16,7 +17,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             using (Database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
 

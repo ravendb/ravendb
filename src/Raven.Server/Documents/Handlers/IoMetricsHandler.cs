@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Raven.Server.Utils.IoMetrics;
 using Sparrow.Json;
 
@@ -15,7 +16,7 @@ namespace Raven.Server.Documents.Handlers
         public async Task IoMetrics()
         {
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
             {
                 var result = IoMetricsUtil.GetIoMetricsResponse(Database.GetAllStoragesEnvironment(), Database.GetAllPerformanceMetrics());
                 context.Write(writer, result.ToJson());

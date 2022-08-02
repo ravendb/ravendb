@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Server.Routing;
+using Raven.Server.Utils;
 using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -18,7 +19,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             {
                 var djv = CpuStatsInternal();
 
-                await using (var write = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var write = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
                 {
                     context.Write(write, djv);
                 }
@@ -32,7 +33,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             {
                 var djv = ProcStatsInternal();
 
-                await using (var write = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var write = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
                 {
                     context.Write(write, djv);
                 }
