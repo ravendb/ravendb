@@ -20,7 +20,7 @@ namespace Raven.Client.Documents.Operations.Backups
 
         protected abstract RestoreType Type { get; }
 
-        public ShardRestoreSettings ShardRestoreSettings { get; set; }
+        public ShardedRestoreSettings ShardRestoreSettings { get; set; }
 
         public BackupEncryptionSettings BackupEncryptionSettings { get; set; }
 
@@ -36,7 +36,7 @@ namespace Raven.Client.Documents.Operations.Backups
             DisableOngoingTasks = other.DisableOngoingTasks;
             SkipIndexes = other.SkipIndexes;
             if (other.ShardRestoreSettings != null)
-                ShardRestoreSettings = new ShardRestoreSettings(other.ShardRestoreSettings);
+                ShardRestoreSettings = new ShardedRestoreSettings(other.ShardRestoreSettings);
             if (other.BackupEncryptionSettings != null)
                 BackupEncryptionSettings = new BackupEncryptionSettings(other.BackupEncryptionSettings);
         }

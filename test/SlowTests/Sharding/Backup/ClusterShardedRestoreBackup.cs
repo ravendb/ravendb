@@ -57,7 +57,7 @@ namespace SlowTests.Sharding.Backup
                 var dirs = Directory.GetDirectories(backupPath);
                 Assert.Equal(cluster.Nodes.Count, dirs.Length);
 
-                var settings = new ShardRestoreSettings
+                var settings = new ShardedRestoreSettings
                 {
                     Shards = new SingleShardRestoreSetting[dirs.Length]
                 };
