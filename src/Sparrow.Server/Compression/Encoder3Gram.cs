@@ -1,6 +1,7 @@
 using System;
 using System.Buffers.Binary;
 using System.Diagnostics;
+using System.Diagnostics.SymbolStore;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -14,7 +15,7 @@ namespace Sparrow.Server.Compression
     internal unsafe struct Interval3Gram
     {
         [FieldOffset(0)]
-        private byte _startKey;
+        public fixed byte KeyBuffer[3];
         [FieldOffset(3)]
         public byte _prefixAndKeyLength;
         [FieldOffset(4)]
@@ -31,8 +32,6 @@ namespace Sparrow.Server.Compression
             get { return (byte)(_prefixAndKeyLength >> 4); }
             set { _prefixAndKeyLength = (byte)(_prefixAndKeyLength & 0x0F | (value << 4)); }
         }
-
-        public Span<byte> StartKey => new(Unsafe.AsPointer(ref _startKey), 3);
     }
 
     public struct Encoder3Gram<TEncoderState> : IEncoderAlgorithm
@@ -147,24 +146,23 @@ namespace Sparrow.Server.Compression
 
             for (int i = 0; i < data.Length; i++)
             {
-                var buffer = outputBuffers[i];
+                Span<byte> buffer = default;
                 var reader = new BitReader(data[i]);
                 int bits = reader.Length;
                 while (bits > 0)
                 {
-                    int length = Lookup(reader, out var symbol, table, tree);
+                    buffer = outputBuffers[i];
+                    int length = Lookup(reader, ref buffer, table, tree);
                     if (length < 0)
                         throw new IOException("Invalid data stream.");
 
                     // Advance the reader.
                     reader.Skip(length);
 
-                    symbol.CopyTo(buffer);
-                    buffer = buffer.Slice(symbol.Length);
 
                     bits -= length;
 
-                    if (symbol[^1] == 0)
+                    if (buffer[^1] == 0)
                         break;
                 }
 
@@ -181,20 +179,18 @@ namespace Sparrow.Server.Compression
 
             for (int i = 0; i < data.Length; i++)
             {
-                var buffer = outputBuffers[i];
+                Span<byte> buffer = default;
                 var reader = new BitReader(data[i]);
                 int bits = dataBits[i];
                 while (bits > 0)
                 {
-                    int length = Lookup(reader, out var symbol, table, tree);
+                    buffer = outputBuffers[i];
+                    int length = Lookup(reader, ref buffer, table, tree);
                     if (length < 0)
                         throw new IOException("Invalid data stream.");
 
                     // Advance the reader.
                     reader.Skip(length);
-
-                    symbol.CopyTo(buffer);
-                    buffer = buffer.Slice(symbol.Length);
 
                     bits -= length;
                 }
@@ -252,22 +248,21 @@ namespace Sparrow.Server.Compression
 
         public int DecodeStochasticBug(ReadOnlySpan<byte> data, Span<byte> outputBuffer)
         {
-            var buffer = outputBuffer;
+            Span<byte> buffer = default;
             var table = EncodingTable;
             var tree = BinaryTree<short>.Open(_state.DecodingTable);
 
             var reader = new BitReader(data);
             while (reader.Length > 0)
             {
-                int length = Lookup(reader, out var symbol, table, tree);
+                buffer = outputBuffer;
+                int length = Lookup(reader, ref buffer, table, tree);
                 if (length < 0)
                     throw new IOException("Invalid data stream.");
 
                 // Need to check here because the compiler does something strange after the Skip() call and kills
                 // the memory content of the symbol ReadOnlySpan.
-                bool hasFinished = symbol[^1] == 0;
-                symbol.CopyTo(buffer);
-                buffer = buffer.Slice(symbol.Length);
+                bool hasFinished = buffer[^1] == 0;
 
                 // Advance the reader.
                 reader.Skip(length);
@@ -281,24 +276,22 @@ namespace Sparrow.Server.Compression
 
         public int Decode(ReadOnlySpan<byte> data, Span<byte> outputBuffer)
         {
-            var buffer = outputBuffer;
+            Span<byte> buffer = default;
             var table = EncodingTable;
             var tree = BinaryTree<short>.Open(_state.DecodingTable);
 
             var reader = new BitReader(data);
             while (reader.Length > 0)
             {
-                int length = Lookup(reader, out var symbol, table, tree);
+                buffer = outputBuffer;
+                int length = Lookup(reader, ref buffer, table, tree);
                 if (length < 0)
                     throw new IOException("Invalid data stream.");
-
-                symbol.CopyTo(buffer);
-                buffer = buffer.Slice(symbol.Length);
 
                 // Advance the reader.
                 reader.Skip(length);
 
-                if (symbol[^1] == 0)
+                if (buffer[^1] == 0)
                     break;
             }
 
@@ -313,15 +306,13 @@ namespace Sparrow.Server.Compression
             var reader = new BitReader(data);
             while (bits > 0)
             {
-                int length = Lookup(reader, out var symbol, table, tree);
+                buffer = outputBuffer;
+                int length = Lookup(reader, ref buffer, table, tree);
                 if (length < 0)
                     throw new IOException("Invalid data stream.");
 
                 // Advance the reader.
                 reader.Skip(length);
-
-                symbol.CopyTo(buffer);
-                buffer = buffer.Slice(symbol.Length);
 
                 bits -= length;
             }
@@ -357,7 +348,7 @@ namespace Sparrow.Server.Compression
 
         private Span<Interval3Gram> EncodingTable => MemoryMarshal.Cast<byte, Interval3Gram>(_state.EncodingTable.Slice(8));
 
-        private void BuildDictionary(in FastList<SymbolCode> symbolCodeList)
+        private unsafe void BuildDictionary(in FastList<SymbolCode> symbolCodeList)
         {
             EncodingTable.Clear(); // Zero out the memory we are going to be using. 
 
@@ -390,14 +381,12 @@ namespace Sparrow.Server.Compression
 
                 // We update the size first to avoid getting a zero size start key.
                 entry.KeyLength = (byte)symbolLength;
-                var startKey = entry.StartKey;
-
                 for (int j = 0; j < 3; j++)
                 {
                     if (j < symbolLength)
-                        startKey[j] = symbol.StartKey[j];
+                        entry.KeyBuffer[j] = symbol.StartKey[j];
                     else
-                        startKey[j] = 0;
+                        entry.KeyBuffer[j] = 0;
                 }
 
                 if (i < dictSize - 1)
@@ -441,7 +430,7 @@ namespace Sparrow.Server.Compression
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private int Lookup(ReadOnlySpan<byte> symbol, ReadOnlySpan<Interval3Gram> table, int numberOfEntries, out Code code)
+        private unsafe int Lookup(ReadOnlySpan<byte> symbol, ReadOnlySpan<Interval3Gram> table, int numberOfEntries, out Code code)
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             static int CompareDictionaryEntry(ReadOnlySpan<byte> s1, ReadOnlySpan<byte> s2)
@@ -472,7 +461,11 @@ namespace Sparrow.Server.Compression
             {
                 int m = (l + r) >> 1;
 
-                int cmp = CompareDictionaryEntry(symbol, table[m].StartKey);
+                int cmp;
+                fixed (byte* p = table[m].KeyBuffer)
+                {
+                    cmp = CompareDictionaryEntry(symbol, new ReadOnlySpan<byte>(p,3));
+                }
                 if (cmp < 0)
                 {
                     r = m;
@@ -492,7 +485,7 @@ namespace Sparrow.Server.Compression
             return table[l].PrefixLength;
         }
 
-        private int Lookup(in BitReader reader, out ReadOnlySpan<byte> symbol, ReadOnlySpan<Interval3Gram> table, in BinaryTree<short> tree)
+        private unsafe int Lookup(in BitReader reader, ref Span<byte> symbol, ReadOnlySpan<Interval3Gram> table, in BinaryTree<short> tree)
         {
             BitReader localReader = reader;
             if (tree.FindCommonPrefix(ref localReader, out var idx))
@@ -501,12 +494,16 @@ namespace Sparrow.Server.Compression
                 //      then the Unsafe at StartKey will get you a dereference to the wrong location and stack spills will
                 //      cause errors when decoding. 
                 ref var intervalGram = ref Unsafe.AsRef(table[idx]);
-                symbol = intervalGram.StartKey.Slice(0, intervalGram.PrefixLength);
+                fixed (byte* p = table[idx].KeyBuffer)
+                {
+                    new Span<byte>(p, intervalGram.PrefixLength).CopyTo(symbol);
+                    symbol = symbol[..intervalGram.PrefixLength];
+                }
 
                 return reader.Length - localReader.Length;
             }
 
-            symbol = ReadOnlySpan<byte>.Empty;
+            symbol = Span<byte>.Empty;
             return -1;
         }
 

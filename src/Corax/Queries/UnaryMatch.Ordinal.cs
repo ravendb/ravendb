@@ -29,11 +29,12 @@ namespace Corax.Queries
 
             var count = match._fillFunc(ref match, innerBuffer);
 
-            var matchesPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(buffer));
-            var baseMatchesPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(innerBuffer));
-            var result = MergeHelper.And(matchesPtr, buffer.Length, matchesPtr, matches, baseMatchesPtr, count);
+            fixed (long* matchesPtr = buffer, baseMatchesPtr = innerBuffer)
+            {
+                var result = MergeHelper.And(matchesPtr, buffer.Length, matchesPtr, matches, baseMatchesPtr, count);
+                return result;
+            }
 
-            return result;
         }
         
         [SkipLocalsInit]

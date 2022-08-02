@@ -105,7 +105,10 @@ namespace Corax.Queries
             else if (typeof(TOut) == typeof(SequenceItem))
             {
                 var readX = reader.Read(fieldId, out var sv);
-                storedValue = (TOut)(object)new SequenceItem((byte*)Unsafe.AsPointer(ref sv[0]), sv.Length);
+                fixed (byte* svp = sv)
+                {
+                    storedValue = (TOut)(object)new SequenceItem(svp, sv.Length);
+                }
                 return readX;
             }
             else if (typeof(TOut) == typeof(NumericalItem<long>))

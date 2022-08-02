@@ -118,10 +118,11 @@ namespace Corax.Queries
             _current = count != 0 ? buffer[count - 1] : QueryMatch.Invalid;
 
         End:
-            if (requiresSort && count > 1)
+        if (requiresSort && count > 1)
+        {
+            // We need to sort and remove duplicates.
+            fixed (long* bufferBasePtr = buffer)
             {
-                // We need to sort and remove duplicates.
-                var bufferBasePtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(buffer));
 
                 MemoryExtensions.Sort(buffer.Slice(0, count));
 
@@ -143,8 +144,9 @@ namespace Corax.Queries
 
                 count = (int)(outputBufferPtr - bufferBasePtr + 1);
             }
+        }
 
-            return count;
+        return count;
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
