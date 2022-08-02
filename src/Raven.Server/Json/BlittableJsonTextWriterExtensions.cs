@@ -1638,13 +1638,19 @@ namespace Raven.Server.Json
 
         public static void WriteDocument(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, Document document, bool metadataOnly, Func<LazyStringValue, bool> filterMetadataProperty = null)
         {
-            if (document?.Data == null)
+            if (document == null)
             {
                 writer.WriteNull();
                 return;
             }
 
             if (document == Document.ExplicitNull)
+            {
+                writer.WriteNull();
+                return;
+            }
+
+            if (document.Data == null && document.NonPersistentFlags.Contain(NonPersistentDocumentFlags.AllowDataAsNull))
             {
                 writer.WriteNull();
                 return;
