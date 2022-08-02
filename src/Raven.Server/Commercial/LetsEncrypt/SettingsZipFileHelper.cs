@@ -153,7 +153,7 @@ public static class SettingsZipFileHelper
                         currentNodeSettingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] =
                             string.Join(";", node.Value.Addresses.Select(ip => IpAddressToUrl(ip, node.Value.Port, scheme:"https")));
                         currentNodeSettingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.TcpServerUrls)] =
-                            string.Join(";", node.Value.Addresses.Select(ip => IpAddressToTcp(ip, node.Value.TcpPort)));
+                            string.Join(";", node.Value.Addresses.Select(ip => IpAddressToUrl(ip, node.Value.TcpPort, scheme: "tcp")));
                     }
 
                     var httpUrl = CertificateUtils.GetServerUrlFromCertificate(parameters.CompleteClusterConfigurationResult.ServerCert, parameters.SetupInfo, node.Key, node.Value.Port, node.Value.TcpPort,
@@ -337,9 +337,9 @@ public static class SettingsZipFileHelper
                     if (node.Value.Addresses.Count != 0)
                     {
                         currentNodeSettingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] =
-                            string.Join(";", node.Value.Addresses.Select(ip => IpAddress(ip, node.Value.Port)));
+                            string.Join(";", node.Value.Addresses.Select(ip => IpAddressToUrl(ip, node.Value.Port, scheme: "http")));
                         currentNodeSettingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.TcpServerUrls)] =
-                            string.Join(";", node.Value.Addresses.Select(ip => IpAddressToTcp(ip, node.Value.TcpPort)));
+                            string.Join(";", node.Value.Addresses.Select(ip => IpAddressToUrl(ip, node.Value.TcpPort, scheme: "tcp")));
                     }
                     
                     var modifiedJsonObj = context.ReadObject(currentNodeSettingsJson, "modified-settings-json");
@@ -678,27 +678,13 @@ public static class SettingsZipFileHelper
         return str;
     }
 
-    internal static string IpAddress(string address, int port)
-    {
-        var url = "http://" + address;
-        if (port != 0)
-            url += ":" + port;
-        return url;
-    }
-    
-    internal static string IpAddressToTcp(string address, int port)
-    {
-        var url = "tcp://" + address;
-        if (port != 0)
-            url += ":" + port;
-        return url;
-    }
-    
-    internal static string IpAddressToUrl(string address, int port, string scheme = "http")
+    internal static string IpAddressToUrl(string address, int port, string scheme)
     {
         var url = scheme + "://" + address;
-        if (port != 80)
+        if ((scheme == "http" && port != 80) || (scheme == "tcp" && port != 0))
             url += ":" + port;
+
         return url;
     }
+
 }

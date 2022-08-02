@@ -143,7 +143,7 @@ public static class SetupWizardUtils
         parameters.OnProgress?.Invoke(parameters.Progress);
 
         foreach ((_, NodeInfo node) in parameters.UnsecuredSetupInfo.NodeSetupInfos)
-            node.PublicServerUrl = string.Join(";", node.Addresses.Select(ip => SettingsZipFileHelper.IpAddress(ip, node.Port)));
+            node.PublicServerUrl = string.Join(";", node.Addresses.Select(ip => SettingsZipFileHelper.IpAddressToUrl(ip, node.Port, scheme: "http")));
         
         (string localNodeTag, NodeInfo nodeInfo) = nodeSetupInfos.First();
 

@@ -68,7 +68,7 @@ namespace Raven.Server.Commercial
             return json;
         }
 
-        public override void InfoValidation(CreateSetupPackageParameters parameters)
+        public override void ValidateInfo(CreateSetupPackageParameters parameters)
         {
             var exceptions = new List<Exception>();
 
@@ -116,7 +116,7 @@ namespace Raven.Server.Commercial
             
             if (Path.HasExtension(parameters.PackageOutputPath) == false)
             {
-                parameters.PackageOutputPath += $"{DateTime.UtcNow:yyyy-MM-dd HH-mm}.zip";
+                parameters.PackageOutputPath += $"_{DateTime.UtcNow:yyyy-MM-dd HH-mm}.zip";
             }
             else if (Path.GetExtension(parameters.PackageOutputPath)?.Equals(".zip", StringComparison.OrdinalIgnoreCase) == false)
             {
@@ -161,7 +161,7 @@ namespace Raven.Server.Commercial
 
     public class UnsecuredSetupInfo : SetupInfoBase
     {
-        public override void InfoValidation(CreateSetupPackageParameters parameters)
+        public override void ValidateInfo(CreateSetupPackageParameters parameters)
         {
             List<Exception> exceptions = new ();
             if (NodeSetupInfos is null || NodeSetupInfos.Any() == false)

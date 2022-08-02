@@ -178,7 +178,7 @@ namespace rvn
             {
                 ValidateSetupOptions(parameters);
                 ExtractSetupInfoObjectFromFile(parameters, out setupInfoBase);
-                setupInfoBase.InfoValidation(parameters);
+                setupInfoBase.ValidateInfo(parameters);
                 
                 switch (setupInfoBase)
                 {

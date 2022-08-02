@@ -14,7 +14,7 @@ public abstract class SetupInfoBase
     public bool ZipOnly { get; set; }
     
     public abstract Task<byte[]> GenerateZipFile(CreateSetupPackageParameters parameters);
-    public abstract void InfoValidation(CreateSetupPackageParameters parameters);
+    public abstract void ValidateInfo(CreateSetupPackageParameters parameters);
     
     public virtual DynamicJsonValue ToJson()
     {

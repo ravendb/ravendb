@@ -20,7 +20,7 @@ public class UnsecuredSetupUtils
                 
                 foreach (var node in unsecuredSetupInfo.NodeSetupInfos.Values)
                 {
-                    node.PublicServerUrl = string.Join(";", node.Addresses.Select(ip => SettingsZipFileHelper.IpAddress(ip, node.Port)));
+                    node.PublicServerUrl = string.Join(";", node.Addresses.Select(ip => SettingsZipFileHelper.IpAddressToUrl(ip, node.Port, scheme: "http")));
                 }
 
                 var completeClusterConfigurationResult = await SetupWizardUtils.CompleteClusterConfigurationUnsecuredSetup(new CompleteClusterConfigurationParameters
