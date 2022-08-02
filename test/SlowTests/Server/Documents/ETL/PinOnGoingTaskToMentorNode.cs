@@ -422,89 +422,91 @@ public class PinOnGoingTaskToMentorNode : ReplicationTestBase
         var hubMentorNode = mentorNodes[0];
         var sinkMentorNode = mentorNodes[1];
         using (var hubStore = GetDocumentStore(new Options
-               {
-                   Server = hubMentorNode,
-                   ReplicationFactor = 1,
-                   AdminCertificate = adminHubClusterCert,
-                   ClientCertificate = adminHubClusterCert,
-               }))
         {
-            using (var sinkStore = GetDocumentStore(new Options
-                   {
-                       Server = hubLeader,
-                       ReplicationFactor = 3,
-                       AdminCertificate = adminHubClusterCert,
-                       ClientCertificate = adminHubClusterCert,
-                   }))
+           Server = hubMentorNode,
+           ReplicationFactor = 1,
+           AdminCertificate = adminHubClusterCert,
+           ClientCertificate = adminHubClusterCert,
+           ModifyDatabaseRecord = r =>
+           {
+               r.Topology = new DatabaseTopology();
+               r.Topology.Members.Add(hubMentorNode.ServerStore.NodeTag);
+           }
+        }))
+        using (var sinkStore = GetDocumentStore(new Options
+        {
+           Server = hubLeader,
+           ReplicationFactor = 3,
+           AdminCertificate = adminHubClusterCert,
+           ClientCertificate = adminHubClusterCert,
+        }))
+        {
+            using (var hubSession = hubStore.OpenAsyncSession())
             {
-    
-                using (var hubSession = hubStore.OpenAsyncSession())
-                {
-                    await hubSession.StoreAsync(new {Type = "Eggs"}, "menus/breakfast");
-                    await hubSession.StoreAsync(new {Name = "Bird Seed Milkshake"}, "recipes/bird-seed-milkshake");
-                    await hubSession.StoreAsync(new {Name = "3 USD"}, "prices/eastus/2");
-                    await hubSession.StoreAsync(new {Name = "3 EUR"}, "prices/eu/1");
-                    await hubSession.SaveChangesAsync();
-                }
-    
-                using (var sinkSession = sinkStore.OpenAsyncSession())
-                {
-                    await sinkSession.StoreAsync(new {Name = "Candy"}, "orders/bert/3");
-                    await sinkSession.SaveChangesAsync();
-                }
-    
-                await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
+                await hubSession.StoreAsync(new {Type = "Eggs"}, "menus/breakfast");
+                await hubSession.StoreAsync(new {Name = "Bird Seed Milkshake"}, "recipes/bird-seed-milkshake");
+                await hubSession.StoreAsync(new {Name = "3 USD"}, "prices/eastus/2");
+                await hubSession.StoreAsync(new {Name = "3 EUR"}, "prices/eu/1");
+                await hubSession.SaveChangesAsync();
+            }
+
+            using (var sinkSession = sinkStore.OpenAsyncSession())
+            {
+                await sinkSession.StoreAsync(new {Name = "Candy"}, "orders/bert/3");
+                await sinkSession.SaveChangesAsync();
+            }
+
+            await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
+            {
+                Name = "Franchises",
+                Mode = PullReplicationMode.HubToSink | PullReplicationMode.SinkToHub,
+                WithFiltering = true,
+            }));
+
+            await hubStore.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation("Franchises",
+                new ReplicationHubAccess
                 {
                     Name = "Franchises",
-                    Mode = PullReplicationMode.HubToSink | PullReplicationMode.SinkToHub,
-                    WithFiltering = true,
+                    CertificateBase64 = Convert.ToBase64String(hubCertificatesHolder.ClientCertificate1.Value.Export(X509ContentType.Cert)),
+                    AllowedSinkToHubPaths = new[] {"orders/*","users/*"},
+                    AllowedHubToSinkPaths = new[] {"menus/*", "prices/eastus/*", "recipes/*"}
                 }));
-    
-                await hubStore.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation("Franchises",
-                    new ReplicationHubAccess
-                    {
-                        Name = "Franchises",
-                        CertificateBase64 = Convert.ToBase64String(hubCertificatesHolder.ClientCertificate1.Value.Export(X509ContentType.Cert)),
-                        AllowedSinkToHubPaths = new[] {"orders/*","users/*"},
-                        AllowedHubToSinkPaths = new[] {"menus/*", "prices/eastus/*", "recipes/*"}
-                    }));
-    
-                await sinkStore.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
-                {
-                    Database = hubStore.Database, Name = "HopperConStr", TopologyDiscoveryUrls = hubStore.Urls
-                }));
-                await sinkStore.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(new PullReplicationAsSink
-                {
-                    ConnectionStringName = "HopperConStr",
-                    PinToMentorNode = true,
-                    MentorNode = sinkMentorNode.ServerStore.NodeTag,
-                    CertificateWithPrivateKey = Convert.ToBase64String(hubCertificatesHolder.ClientCertificate1.Value.Export(X509ContentType.Pfx)),
-                    HubName = "Franchises",
-                    Mode = PullReplicationMode.HubToSink | PullReplicationMode.SinkToHub
-                }));
-    
-                var disposedServer = await DisposeServerAndWaitForFinishOfDisposalAsync(sinkMentorNode);
-                using (var sinkSession = sinkStore.OpenAsyncSession())
-                {
-                    await sinkSession.StoreAsync(new User {Name = "Arava",}, "users/1");
-                    await sinkSession.SaveChangesAsync();
-                }
-                var revivedServer = GetNewServer(new ServerCreationOptions
-                {
-                    CustomSettings = new Dictionary<string, string>
-                    {
-                        {RavenConfiguration.GetKey(x => x.Core.ServerUrls), disposedServer.Url},
-                        {RavenConfiguration.GetKey(x => x.Security.CertificatePath), hubCertificatesHolder.ServerCertificatePath}
-                    },
-                    RunInMemory = true,
-                    DataDirectory = disposedServer.DataDirectory
-                });
-                var waitForNotPassive = revivedServer.ServerStore.Engine.WaitForLeaveState(RachisState.Passive, CancellationToken.None);
-                Assert.True(waitForNotPassive.Wait(TimeSpan.FromSeconds(20_000)));
-                Assert.True(WaitForDocument<User>(hubStore, "users/1", u => u.Name == "Arava", 30_000));
-                Assert.Equal(1, await WaitForValueAsync(async () => await GetMembersCount(hubStore, hubStore.Database), 1));
-                Assert.Equal(3, await WaitForValueAsync(async () => await GetMembersCount(sinkStore, sinkStore.Database), 3));
+
+            await sinkStore.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
+            {
+                Database = hubStore.Database, Name = "HopperConStr", TopologyDiscoveryUrls = hubStore.Urls
+            }));
+            await sinkStore.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(new PullReplicationAsSink
+            {
+                ConnectionStringName = "HopperConStr",
+                PinToMentorNode = true,
+                MentorNode = sinkMentorNode.ServerStore.NodeTag,
+                CertificateWithPrivateKey = Convert.ToBase64String(hubCertificatesHolder.ClientCertificate1.Value.Export(X509ContentType.Pfx)),
+                HubName = "Franchises",
+                Mode = PullReplicationMode.HubToSink | PullReplicationMode.SinkToHub
+            }));
+
+            var disposedServer = await DisposeServerAndWaitForFinishOfDisposalAsync(sinkMentorNode);
+            using (var sinkSession = sinkStore.OpenAsyncSession())
+            {
+                await sinkSession.StoreAsync(new User {Name = "Arava",}, "users/1");
+                await sinkSession.SaveChangesAsync();
             }
+            var revivedServer = GetNewServer(new ServerCreationOptions
+            {
+                CustomSettings = new Dictionary<string, string>
+                {
+                    {RavenConfiguration.GetKey(x => x.Core.ServerUrls), disposedServer.Url},
+                    {RavenConfiguration.GetKey(x => x.Security.CertificatePath), hubCertificatesHolder.ServerCertificatePath}
+                },
+                RunInMemory = true,
+                DataDirectory = disposedServer.DataDirectory
+            });
+            var waitForNotPassive = revivedServer.ServerStore.Engine.WaitForLeaveState(RachisState.Passive, CancellationToken.None);
+            Assert.True(waitForNotPassive.Wait(TimeSpan.FromSeconds(20_000)));
+            Assert.True(WaitForDocument<User>(hubStore, "users/1", u => u.Name == "Arava", 30_000));
+            Assert.Equal(1, await WaitForValueAsync(async () => await GetMembersCount(hubStore, hubStore.Database), 1));
+            Assert.Equal(3, await WaitForValueAsync(async () => await GetMembersCount(sinkStore, sinkStore.Database), 3));
         }
     }
     
