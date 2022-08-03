@@ -30,11 +30,14 @@ public class CoraxDocumentConverter : CoraxDocumentConverterBase
         out ByteString output)
     {
         var document = (Document)doc;
-        var entryWriter = new IndexEntryWriter(_allocator, GetKnownFieldsForWriter());
         id = document.LowerId ?? key;
 
         var scope = new SingleEntryWriterScope(_allocator);
-        
+
+        // We prepare for the next entry.
+        ref var entryWriter = ref GetEntriesWriter();
+        entryWriter.Reset();
+
         object value;
         foreach (var indexField in _fields.Values)
         {
