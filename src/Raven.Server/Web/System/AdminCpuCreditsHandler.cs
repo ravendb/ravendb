@@ -38,7 +38,7 @@ namespace Raven.Server.Web.System
         public async Task GetCpuCredits()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriterForDebug(HttpContext.Request, context,ServerStore, ResponseBodyStream()))
             {
                 var json = Server.CpuCreditsBalance.ToJson();
                 writer.WriteObject(context.ReadObject(json, "cpu/credits"));

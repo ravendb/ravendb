@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         public async Task ListRemoteConnections()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            await using (var write = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
+            await using (var write = new AsyncBlittableJsonTextWriterForDebug(HttpContext.Request, context, ServerStore, ResponseBodyStream()))
             {
                 context.Write(write,
                     new DynamicJsonValue
@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         public async Task ListRecentEngineLogs()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            await using (var write = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
+            await using (var write = new AsyncBlittableJsonTextWriterForDebug(HttpContext.Request, context, ServerStore, ResponseBodyStream()))
             {
                 context.Write(write, ServerStore.Engine.InMemoryDebug.ToJson());
             }
@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         public async Task GetStateChangeHistory()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriterForDebug(HttpContext.Request, context, ServerStore, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
                 writer.WriteArray("States", ServerStore.Engine.PrevStates.Select(s => s.ToString()));
@@ -87,7 +87,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriterForDebug(HttpContext.Request, context, ServerStore, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
                 writer.WritePropertyName("Result");

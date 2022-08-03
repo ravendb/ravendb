@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Handlers
         public async Task IoMetrics()
         {
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriterForDebug(HttpContext.Request, context, ServerStore, ResponseBodyStream()))
             {
                 var result = GetPerformanceMetricsResponse(Database);
                 context.Write(writer, result.ToJson());

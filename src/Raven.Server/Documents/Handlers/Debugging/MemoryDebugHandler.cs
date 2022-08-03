@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     [nameof(GCKind.FullBlocking)] = ToJson(GC.GetGCMemoryInfo(GCKind.FullBlocking)),
                 };
 
-                await using (var write = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
+                await using (var write = new AsyncBlittableJsonTextWriterForDebug(HttpContext.Request, context, ServerStore, ResponseBodyStream()))
                 {
                     context.Write(write, djv);
                 }
@@ -93,7 +93,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             {
                 var djv = LowMemLogInternal();
 
-                await using (var write = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
+                await using (var write = new AsyncBlittableJsonTextWriterForDebug(HttpContext.Request, context, ServerStore, ResponseBodyStream()))
                 {
                     context.Write(write, djv);
                 }
@@ -195,7 +195,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                         ["Details"] = rc.Json
                     };
 
-                    await using (var write = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
+                    await using (var write = new AsyncBlittableJsonTextWriterForDebug(HttpContext.Request, context, ServerStore, ResponseBodyStream()))
                     {
                         context.Write(write, djv);
                     }
@@ -236,7 +236,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                         ["Details"] = result.SmapsResults.ReturnResults()
                     };
 
-                    await using (var write = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
+                    await using (var write = new AsyncBlittableJsonTextWriterForDebug(HttpContext.Request, context, ServerStore, ResponseBodyStream()))
                     {
                         context.Write(write, djv);
                     }
@@ -259,7 +259,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriterForDebug(HttpContext.Request, context, ServerStore, ResponseBodyStream()))
                 {
                     WriteMemoryStats(writer, context, includeThreads, includeMappings);
                 }
@@ -271,7 +271,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                await using (var write = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
+                await using (var write = new AsyncBlittableJsonTextWriterForDebug(HttpContext.Request, context, ServerStore, ResponseBodyStream()))
                 {
                     context.Write(write, EncryptionBuffersPool.Instance.GetStats().ToJson());
                 }
