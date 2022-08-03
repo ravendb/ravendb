@@ -317,8 +317,7 @@ public unsafe readonly ref struct IndexEntryReader
 
             if (type.HasFlag(IndexEntryFieldType.HasNulls))
             {
-                byte* nullTablePtr = (byte*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(_buffer));
-                if (PtrBitVector.GetBitInPointer(nullTablePtr + spanTableOffset, elementIdx) == true)
+                if (PtrBitVector.GetBitInSpan(_buffer.Slice(spanTableOffset), elementIdx) == true)
                     goto HasNull;
 
                 int nullBitStreamSize = totalElements / (sizeof(byte) * 8) + (totalElements % (sizeof(byte) * 8) == 0 ? 0 : 1);
@@ -340,8 +339,7 @@ public unsafe readonly ref struct IndexEntryReader
             if (type.HasFlag(IndexEntryFieldType.HasNulls))
             {
                 var spanTableOffset = Unsafe.ReadUnaligned<int>(ref _buffer[intOffset]);
-                byte* nullTablePtr = (byte*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(_buffer));
-                if (PtrBitVector.GetBitInPointer(nullTablePtr + spanTableOffset, elementIdx) == true)
+                if (PtrBitVector.GetBitInSpan(_buffer.Slice(spanTableOffset), elementIdx) == true)
                     goto HasNull;
             }
 
@@ -353,9 +351,8 @@ public unsafe readonly ref struct IndexEntryReader
         {
             if (type.HasFlag(IndexEntryFieldType.HasNulls))
             {
-                var spanTableOffset = Unsafe.ReadUnaligned<int>(ref _buffer[intOffset]);
-                byte* nullTablePtr = (byte*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(_buffer));
-                if (PtrBitVector.GetBitInPointer(nullTablePtr + spanTableOffset, elementIdx) == true)
+                var spanTableOffset = Unsafe.ReadUnaligned<int>(ref _buffer[intOffset]); 
+                if (PtrBitVector.GetBitInSpan(_buffer.Slice(spanTableOffset), elementIdx) == true)
                     goto HasNull;
             }
 
