@@ -6,6 +6,7 @@ import {
     ICanShowTransformationScriptPreview,
     OngoingTaskActions,
     OngoingTaskName,
+    OngoingTaskResponsibleNode,
     OngoingTaskStatus,
     useTasksOperations,
 } from "../shared";
@@ -59,6 +60,7 @@ export function RabbitMqEtlPanel(props: RabbitMqEtlPanelProps & ICanShowTransfor
         <RichPanel>
             <RichPanelHeader>
                 <OngoingTaskName task={data} canEdit={canEdit} editUrl={editUrl} />
+                <OngoingTaskResponsibleNode task={data} />
                 <OngoingTaskStatus task={data} canEdit={canEdit} toggleState={toggleStateHandler} />
                 <OngoingTaskActions
                     task={data}

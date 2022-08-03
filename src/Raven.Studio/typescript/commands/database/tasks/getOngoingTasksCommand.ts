@@ -15,8 +15,7 @@ class getOngoingTasksCommand extends commandBase {
             ...this.location
         };
 
-        return this.query<Raven.Server.Web.System.OngoingTasksResult>(url, args, this.db)
-            .fail((response: JQueryXHR) => this.reportError("Failed to get ongoing tasks", response.responseText, response.statusText));
+        return this.query<Raven.Server.Web.System.OngoingTasksResult>(url, args, this.db);
     }
 }
 

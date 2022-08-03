@@ -4,7 +4,7 @@ import popoverUtils from "common/popoverUtils";
 
 interface PopoverWithHoverProps extends PopoverUtilsOptions {
     target: string;
-    children: JSX.Element;
+    children: JSX.Element | JSX.Element[];
 }
 
 export function PopoverWithHover(props: PopoverWithHoverProps) {

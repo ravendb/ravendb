@@ -28,9 +28,13 @@ export function SubscriptionTaskDistribution(props: OngoingEtlTaskDistributionPr
 
     const [uniqueTaskId] = useState(() => _.uniqueId("task-id"));
 
+    const visibleNodes = task.nodesInfo.filter(
+        (x) => x.status !== "loaded" || x.details.taskConnectionStatus !== "NotOnThisNode"
+    );
+
     const items = (
         <>
-            {task.nodesInfo.map((nodeInfo) => {
+            {visibleNodes.map((nodeInfo) => {
                 const shard = (
                     <div className="top shard">
                         {nodeInfo.location.shardNumber != null && (
@@ -60,7 +64,7 @@ export function SubscriptionTaskDistribution(props: OngoingEtlTaskDistributionPr
                             {nodeInfo.location.nodeTag}
                         </div>
                         <div>{nodeInfo.status === "loaded" ? nodeInfo.details.taskConnectionStatus : ""}</div>
-                        <div>{hasError ? "error" : "-"}</div>
+                        <div>{hasError ? <i className="icon-warning text-danger" /> : "-"}</div>
                         <SubscriptionTaskProgress task={task} nodeInfo={nodeInfo} />
                         {/* TODO: <SubscriptionTaskProgressTooltip target={id} nodeInfo={nodeInfo} task={task} />*/}
                     </DistributionItem>
@@ -101,6 +105,10 @@ interface SubscriptionTaskProgressProps {
 
 export function SubscriptionTaskProgress(props: SubscriptionTaskProgressProps) {
     const { nodeInfo, task } = props;
+
+    if (nodeInfo.status === "error") {
+        return <ProgressCircle state="running" icon="icon-warning" />;
+    }
 
     //TODO: show clients count?
 

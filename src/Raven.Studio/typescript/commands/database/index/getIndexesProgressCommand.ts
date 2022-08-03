@@ -14,9 +14,7 @@ class getIndexesProgressCommand extends commandBase {
             ...this.location
         }
         const extractor = (response: resultsDto<Raven.Client.Documents.Indexes.IndexProgress>) => response.Results;
-        return this.query(url, args, this.db, extractor)
-            .fail((response: JQueryXHR) =>
-                this.reportError("Failed to compute indexing progress!", response.responseText, response.statusText));
+        return this.query(url, args, this.db, extractor);
     }
 } 
 

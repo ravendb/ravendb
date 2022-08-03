@@ -146,6 +146,15 @@ function iconForState(status: Raven.Client.Documents.Indexes.IndexRunningStatus)
 
 export function IndexProgress(props: IndexProgressProps) {
     const { nodeInfo, inline } = props;
+
+    if (nodeInfo.status === "error") {
+        return (
+            <ProgressCircle inline={inline} state="failed" icon="icon-cancel">
+                Load error
+            </ProgressCircle>
+        );
+    }
+
     if (!nodeInfo.details) {
         return null;
     }

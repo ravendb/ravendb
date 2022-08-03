@@ -44,6 +44,7 @@ import etlScriptDefinitionCache from "models/database/stats/etlScriptDefinitionC
 import TaskUtils from "../../../../utils/TaskUtils";
 import { KafkaEtlPanel } from "./panels/KafkaEtlPanel";
 import { RabbitMqEtlPanel } from "./panels/RabbitMqEtlPanel";
+import useInterval from "hooks/useInterval";
 
 interface OngoingTasksPageProps {
     database: database;
@@ -66,12 +67,20 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
 
     const fetchTasks = useCallback(
         async (location: databaseLocationSpecifier) => {
-            const tasks = await tasksService.getOngoingTasks(database, location);
-            dispatch({
-                type: "TasksLoaded",
-                location,
-                tasks,
-            });
+            try {
+                const tasks = await tasksService.getOngoingTasks(database, location);
+                dispatch({
+                    type: "TasksLoaded",
+                    location,
+                    tasks,
+                });
+            } catch (e) {
+                dispatch({
+                    type: "TasksLoadError",
+                    location,
+                    error: e,
+                });
+            }
         },
         [database, tasksService, dispatch]
     );
@@ -81,14 +90,18 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
         await Promise.all(loadTasks);
     }, [database]);
 
-    const loadMissing = async () => {
-        const loadTasks = tasks.tasks[0].nodesInfo.map(async (nodeInfo) => {
-            if (nodeInfo.status === "notLoaded") {
-                await fetchTasks(nodeInfo.location);
-            }
-        });
+    useInterval(reload, 10_000);
 
-        await Promise.all(loadTasks);
+    const loadMissing = async () => {
+        if (tasks.tasks.length > 0) {
+            const loadTasks = tasks.tasks[0].nodesInfo.map(async (nodeInfo) => {
+                if (nodeInfo.status === "notLoaded") {
+                    await fetchTasks(nodeInfo.location);
+                }
+            });
+
+            await Promise.all(loadTasks);
+        }
     };
 
     useTimeout(loadMissing, 3_000);
@@ -497,5 +510,6 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
 }
 
 function taskKey(task: OngoingTaskSharedInfo) {
-    return task.taskType + "-" + task.taskId;
+    // we don't want to use taskId here - as it changes after edit
+    return task.taskType + "-" + task.taskName;
 }

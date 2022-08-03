@@ -4,6 +4,7 @@ import {
     ConnectionStringItem,
     OngoingTaskActions,
     OngoingTaskName,
+    OngoingTaskResponsibleNode,
     OngoingTaskStatus,
     useTasksOperations,
 } from "../shared";
@@ -19,7 +20,7 @@ function Details(props: ReplicationSinkPanelProps & { canEdit: boolean }) {
     const connectionStringDefined = !!data.shared.destinationDatabase;
     const { appUrl } = useAppUrls();
     const connectionStringsUrl = appUrl.forConnectionStrings(db, "Raven", data.shared.connectionStringName);
-    //TODO: task status
+
     return (
         <RichPanelDetails>
             <RichPanelDetailItem>
@@ -71,6 +72,7 @@ export function ReplicationSinkPanel(props: ReplicationSinkPanelProps) {
         <RichPanel>
             <RichPanelHeader>
                 <OngoingTaskName task={data} canEdit={canEdit} editUrl={editUrl} />
+                <OngoingTaskResponsibleNode task={data} />
                 <OngoingTaskStatus task={data} canEdit={canEdit} toggleState={toggleStateHandler} />
                 <OngoingTaskActions
                     task={data}

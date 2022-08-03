@@ -28,6 +28,22 @@ interface IndexProgressTooltipProps {
 export function IndexProgressTooltip(props: IndexProgressTooltipProps) {
     const { target, nodeInfo, index, globalIndexingStatus, showStaleReason } = props;
 
+    if (nodeInfo.status === "error") {
+        return (
+            <PopoverWithHover target={target} placement="top" delay={100}>
+                <div className="text-danger flex-horizontal">
+                    <div className="flex-start text-warning">
+                        <i className="icon-warning"></i>
+                    </div>
+                    <div>
+                        <div>Unable to load index status:</div>
+                        <div>{nodeInfo.loadError.responseJSON.Message}</div>
+                    </div>
+                </div>
+            </PopoverWithHover>
+        );
+    }
+
     if (!nodeInfo.details) {
         return null;
     }

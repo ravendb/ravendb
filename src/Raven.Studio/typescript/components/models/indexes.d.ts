@@ -1,5 +1,4 @@
 ﻿import IndexSourceType = Raven.Client.Documents.Indexes.IndexSourceType;
-import IndexProgress = Raven.Client.Documents.Indexes.IndexProgress;
 import { loadStatus } from "./common";
 import SearchEngineType = Raven.Client.Documents.Indexes.SearchEngineType;
 
@@ -30,6 +29,7 @@ export interface IndexNodeInfo {
     location: databaseLocationSpecifier;
     status: loadStatus;
     details: IndexNodeInfoDetails;
+    loadError?: any;
     progress: IndexProgressInfo;
 }
 
