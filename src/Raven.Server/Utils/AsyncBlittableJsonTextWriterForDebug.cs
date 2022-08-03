@@ -12,21 +12,19 @@ namespace Raven.Server.Utils
         private readonly ServerStore _serverStore;
         private bool _isFirst = true;
         private bool _isOnlyWrite;
-        private bool _isFromClientApi;
-        private bool _isFromStudio;
+        private bool _skipDebug;
 
         public AsyncBlittableJsonTextWriterForDebug(HttpRequest request, JsonOperationContext context, ServerStore serverStore, Stream stream) : base(context, stream)
         {
             _serverStore = serverStore;
-            _isFromClientApi = request.IsFromClientApi();
-            _isFromStudio = request.IsFromStudio();
+            _skipDebug = request.IsFromClientApi() || request.IsFromStudio();
         }
         
         public override void WriteStartObject()
         {
             base.WriteStartObject();
 
-            if (_isFirst && !_isFromStudio && !_isFromClientApi)
+            if (_isFirst && _skipDebug == false)
             {
                 _isFirst = false;
 
@@ -51,7 +49,7 @@ namespace Raven.Server.Utils
         {
             base.EnsureBuffer(len);
 
-            if (_isOnlyWrite && !_isFromStudio && !_isFromClientApi)
+            if (_isOnlyWrite && _skipDebug == false)
             {
                 _isOnlyWrite = false;
                 WriteComma();
