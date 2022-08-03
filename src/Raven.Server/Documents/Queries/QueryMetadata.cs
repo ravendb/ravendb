@@ -605,8 +605,19 @@ namespace Raven.Server.Documents.Queries
                             if (string.IsNullOrEmpty(path))
                                 return;
 
-                            if (Query.From.Alias != null)
-                                throw new InvalidOperationException($"Alias is not supported `include revisions(..)`.");
+                            var parts = path.Split('.');
+                            if (parts.Length >= 2)
+                            {
+                                var alias = parts[0];
+                                if (Query.From.Alias?.Value == alias)
+                                {
+                                    path = parts[1];
+                                }
+                                else
+                                {
+                                    throw new InvalidOperationException($"Alias {parts[0]} inside `include revisions(..)` is invalid.");
+                                }
+                            }
 
                             if (ParquetTransformedItems.TryParseDate(path, out var dateTimeOffset))
                                 revisionIncludes.AddRevision(dateTimeOffset.DateTime);

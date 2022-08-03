@@ -7,6 +7,8 @@ using FastTests.Utils;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Session.Loaders;
 using Raven.Client.Exceptions;
 using Xunit;
 using Xunit.Abstractions;
@@ -19,8 +21,12 @@ namespace SlowTests.Tests.Linq
         {
         }
 
-        [Fact]
-        public async Task Query_IncludeAllQueryFunctionality()
+        [Theory]
+        [InlineData(false, false)]
+        [InlineData(false, true)]
+        [InlineData(true, false)]
+        [InlineData(true, true)]
+        public async Task Query_IncludeAllQueryFunctionality(bool includeCounters, bool includeTimeSeries)
         {
             using (var store = GetDocumentStore())
             {
@@ -74,24 +80,59 @@ namespace SlowTests.Tests.Linq
                     session.SaveChanges();
                 }
 
+                if (includeCounters)
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        var documentCounters = session.CountersFor(id);
+                        documentCounters.Increment("Likes", 15);
+                        session.SaveChanges();
+                    }
+                }
+                if (includeTimeSeries)
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        session.TimeSeriesFor(id, "Hearthrate").Append(DateTime.Now, 15d);
+                        session.SaveChanges();
+                    }
+                }
+
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<User>()
-                        .Include(builder => builder
-                            .IncludeRevisions(x => x.ChangeVectors)
-                            .IncludeRevisions(x => x.FirstRevision)
-                            .IncludeRevisions(x => x.SecondRevision)).Customize(c => c.WaitForNonStaleResults());
+                        .Include(builder =>
+                        {
+                            builder
+                                .IncludeRevisions(x => x.ChangeVectors)
+                                .IncludeRevisions(x => x.FirstRevision)
+                                .IncludeRevisions(x => x.SecondRevision);
 
+                            if (includeCounters)
+                                builder.IncludeAllCounters();
 
-                    var r = query.ToList();
+                            if (includeTimeSeries)
+                                builder.IncludeTimeSeries("Hearthrate");
+                        }).Customize(c => c.WaitForNonStaleResults()).ToList();
 
                     var revision1 = session.Advanced.Revisions.Get<User>(cvList[0]);
                     var revision2 = session.Advanced.Revisions.Get<User>(cvList[1]);
                     var revision3 = session.Advanced.Revisions.Get<User>(cvList[2]);
-
                     Assert.NotNull(revision1);
                     Assert.NotNull(revision2);
                     Assert.NotNull(revision3);
+
+                    if (includeCounters)
+                    {
+                        Assert.Equal(session.CountersFor(id).Get("Likes").Value, 15);
+                    }
+                    if (includeTimeSeries)
+                    {
+                        var tf = session.TimeSeriesFor(id, "Hearthrate").Get();
+                        Assert.Equal(tf.Length, 1);
+                        Assert.Equal(tf[0].Value, 15d);
+                    }
+
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
                 }
@@ -1715,7 +1756,7 @@ select Foo(u)"
                     var error = Assert.Throws<RavenException>(() => session.Advanced
                         .RawQuery<User>("from Users as u include revisions(u.FirstRevision, x.SecondRevision)")
                         .ToList());
-
+                
                     Assert.Contains("System.InvalidOperationException: Alias is not supported `include revisions(..)`."
                         , error.Message);
                 }
@@ -1729,7 +1770,7 @@ select Foo(u)"
                         .AddParameter("p2", "x.ThirdRevision")
                         .ToList());
 
-                    Assert.Contains("System.InvalidOperationException: Alias is not supported `include revisions(..)`."
+                    Assert.Contains("Alias x inside `include revisions(..)` is invalid."
                         , error.Message);
                 }
             }
@@ -1773,7 +1814,7 @@ select Foo(u)"
                         .AddParameter("p2", "x.ThirdRevision")
                         .ToListAsync());
 
-                    Assert.Contains("System.InvalidOperationException: Alias is not supported `include revisions(..)`."
+                    Assert.Contains("Alias x inside `include revisions(..)` is invalid."
                         , error.Message);
                 }
             }
