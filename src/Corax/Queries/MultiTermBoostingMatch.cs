@@ -305,7 +305,6 @@ namespace Corax.Queries
         {
             int bufferCount = match._bufferIdx;
             var documentsSpan = new Span<long>(match._documentBuffer, bufferCount);
-            var countSpan = new Span<long>(match._countBuffer, bufferCount);
 
             // Get rid of all the elements that are smaller than the first one.
             int eIdx = 0;

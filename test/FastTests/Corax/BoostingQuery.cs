@@ -214,7 +214,7 @@ namespace FastTests.Corax
                 for (int i = 0; i < read; ++i)
                     sortedByCorax.Add(searcher.GetIdentityFor(ids[i]));
 
-                for (int i = 0; i < longList.Count; ++i)
+                for (int i = 0; i < 4; ++i)
                     Assert.Equal(longList[i].Id, sortedByCorax[i]);
             }
         }
