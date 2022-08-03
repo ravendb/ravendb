@@ -47,16 +47,17 @@ public class JintCoraxDocumentConverter : JintCoraxDocumentConverterBase
             return default;
         }
 
-        var entryWriter = new CoraxLib.IndexEntryWriter(_allocator, GetKnownFieldsForWriter());
-
         id = key ?? (sourceDocumentId ?? throw new InvalidDataException("Cannot find any identifier of the document."));
         var scope = new SingleEntryWriterScope(_allocator);
-
 
         if (TryGetBoostedValue(documentToProcess, out var boostedValue, out var documentBoost))
         {
             throw new NotSupportedException("Document boosting is not available in Corax.");
         }
+
+        // We prepare for the next entry.
+        ref var entryWriter = ref GetEntriesWriter();
+        entryWriter.Reset();
 
         scope.Write(0, id.AsSpan(), ref entryWriter);
         int idX = 1;
