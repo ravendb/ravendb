@@ -39,21 +39,11 @@ class queryUtil {
         const fromPart = `from index ${escapedIndexName}`;
         let wherePart = `where ${escapedFieldName} == ${escapedValueName}`;
         
-        if (indexName.startsWith("Auto") && 
-            ((value.startsWith("{") && queryUtil.hasUpperCase(value)) || value === "NULL_VALUE")) {
+        if (indexName.startsWith("Auto") && (value.startsWith("{") || value === "NULL_VALUE")) {
             wherePart = `where exact(${escapedFieldName} == ${escapedValueName})`;
         }
         
         return `${fromPart} ${wherePart}`;
-    }
-
-    static hasUpperCase(value: string): boolean {
-        for (let i = 0; i < value.length; i++) {
-            if (/^[A-Z]$/.test(value[i])) {
-                return true;
-            }
-        }
-        return false;
     }
     
     private static wrapWithSingleQuotes(input: string) {
