@@ -93,7 +93,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Revisions
 
         protected override bool NotModified(string actualEtag)
         {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "Need to figure out the best way to combine ETags and send not modified");
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "RavenDB-19066 Need to figure out the best way to combine ETags and send not modified");
             return false;
         }
 
@@ -125,7 +125,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Revisions
         protected void AddPagingPerformanceHint(PagingOperationType operation, string action, string details, long numberOfResults, int pageSize, long duration,
             long totalDocumentsSizeInBytes)
         {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Pawel, DevelopmentHelper.Severity.Minor, "Implement AddPagingPerformanceHint, collect and pass real params");
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Pawel, DevelopmentHelper.Severity.Minor, "RavenDB-19074 Implement AddPagingPerformanceHint, collect and pass real params");
             RequestHandler.AddPagingPerformanceHint(operation, action, details, numberOfResults, pageSize, duration, totalDocumentsSizeInBytes);
         }
     }

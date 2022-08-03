@@ -32,7 +32,7 @@ namespace Raven.Server.Documents.Sharding.Operations
 
             var span = results.Span;
 
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Arek, DevelopmentHelper.Severity.Normal, "We might get different operations states from different nodes e.g. two BulkOperationResults which succeeded and one OperationExceptionResult");
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Arek, DevelopmentHelper.Severity.Normal, "RavenDB-19082 We might get different operations states from different nodes e.g. two BulkOperationResults which succeeded and one OperationExceptionResult");
 
             for (int i = 0; i < results.Length; i++)
             {
@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.Sharding.Operations
                     case OperationExceptionResult operationException:
                         if (operationExceptionsResult == null)
                         {
-                            operationExceptionsResult = new OperationMultipleExceptionsResult("Operation has failed with multiple errors");
+                            operationExceptionsResult = new OperationMultipleExceptionsResult("RavenDB-19082 Operation has failed with multiple errors");
                             combined.Result = operationExceptionsResult;
                         }
 

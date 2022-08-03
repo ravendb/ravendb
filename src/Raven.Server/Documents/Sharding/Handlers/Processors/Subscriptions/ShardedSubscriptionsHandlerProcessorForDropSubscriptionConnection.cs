@@ -39,14 +39,13 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Subscriptions
                         throw new SubscriptionDoesNotExistException($"Could not find a subscription with a subscription id of {subscriptionId.Value}");
                 }
 
-                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Stav, DevelopmentHelper.Severity.Normal, "Make this identical to the normal EP");
-
+                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Stav, DevelopmentHelper.Severity.Normal, "RavenDB-19079 Make this identical to the normal EP");
                 if (RequestHandler.DatabaseContext.Subscriptions.SubscriptionsConnectionsState.TryRemove(subscriptionId.Value, out var state))
                 {
                     state.Dispose();
                 }
             }
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Stav, DevelopmentHelper.Severity.Normal, "Handle status code");
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Stav, DevelopmentHelper.Severity.Normal, "RavenDB-19079 Handle status code");
         }
     }
 }

@@ -191,7 +191,7 @@ namespace Raven.Server.Documents.Sharding
             {
                 public override int Compare(ShardStreamItem<BlittableJsonReaderObject> x, ShardStreamItem<BlittableJsonReaderObject> y)
                 {
-                    DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Stav, DevelopmentHelper.Severity.Normal, "Avoid allocation here");
+                    DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Stav, DevelopmentHelper.Severity.Normal, "RavenDB-19088 Avoid allocation here");
                     return String.Compare(x.Item.GetMetadata().GetId(), y.Item.GetMetadata().GetId(), StringComparison.OrdinalIgnoreCase);
                 }
 

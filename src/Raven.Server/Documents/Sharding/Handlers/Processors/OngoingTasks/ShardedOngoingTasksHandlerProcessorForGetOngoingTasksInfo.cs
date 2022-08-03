@@ -178,7 +178,7 @@ internal abstract class ShardedOngoingTasksHandlerProcessorForGetOngoingTasksInf
     {
         get
         {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "Fix SubscriptionsCount");
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "RavenDB-19069 Fix SubscriptionsCount");
             return -1;
         }
     }
@@ -187,7 +187,7 @@ internal abstract class ShardedOngoingTasksHandlerProcessorForGetOngoingTasksInf
         ClusterTopology clusterTopology, T replication, Dictionary<string, RavenConnectionString> connectionStrings,
         out string tag, out RavenConnectionString connection)
     {
-        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "implement for sharding - https://issues.hibernatingrhinos.com/issue/RavenDB-13110");
+        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "RavenDB-19069 implement for sharding - https://issues.hibernatingrhinos.com/issue/RavenDB-13110");
 
         (string Url, OngoingTaskConnectionStatus Status) res = (null, OngoingTaskConnectionStatus.None);
 
@@ -205,7 +205,7 @@ internal abstract class ShardedOngoingTasksHandlerProcessorForGetOngoingTasksInf
     protected override ValueTask<PeriodicBackupStatus> GetBackupStatusAsync(long taskId, DatabaseRecord databaseRecord, PeriodicBackupConfiguration backupConfiguration, out string responsibleNodeTag,
         out NextBackup nextBackup, out RunningBackup onGoingBackup, out bool isEncrypted)
     {
-        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "implement for sharding - https://issues.hibernatingrhinos.com/issue/RavenDB-13113");
+        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "RavenDB-19069 implement for sharding - https://issues.hibernatingrhinos.com/issue/RavenDB-13113");
 
         responsibleNodeTag = null;
         nextBackup = null;
@@ -219,7 +219,7 @@ internal abstract class ShardedOngoingTasksHandlerProcessorForGetOngoingTasksInf
     protected override ValueTask<OngoingTaskConnectionStatus> GetSubscriptionConnectionStatusAsync(DatabaseRecord record, SubscriptionState subscriptionState, long key,
         out string tag)
     {
-        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "implement for sharding - https://issues.hibernatingrhinos.com/issue/RavenDB-13113");
+        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "RavenDB-19069 implement for sharding - https://issues.hibernatingrhinos.com/issue/RavenDB-13113");
 
         tag = null;
         OngoingTaskConnectionStatus connectionStatus = OngoingTaskConnectionStatus.NotActive;
@@ -228,7 +228,7 @@ internal abstract class ShardedOngoingTasksHandlerProcessorForGetOngoingTasksInf
 
     protected override ValueTask<OngoingTaskConnectionStatus> GetEtlTaskConnectionStatusAsync<T>(DatabaseRecord record, EtlConfiguration<T> config, out string tag, out string error)
     {
-        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "implement for sharding");
+        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "RavenDB-19069 implement for sharding");
 
         var connectionStatus = OngoingTaskConnectionStatus.None;
         error = null;
@@ -239,7 +239,7 @@ internal abstract class ShardedOngoingTasksHandlerProcessorForGetOngoingTasksInf
 
     protected override ValueTask<RavenEtl> GetProcess(RavenEtlConfiguration config)
     {
-        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "implement for sharding");
+        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "RavenDB-19069 implement for sharding");
 
         RavenEtl process = null;
         return ValueTask.FromResult(process);

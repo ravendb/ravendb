@@ -50,7 +50,7 @@ public class ShardedQueryProcessor : IDisposable
 
     public ShardedQueryProcessor(TransactionOperationContext context, ShardedQueriesHandler parent, IndexQueryServerSide query)
     {
-        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Etag handling");
+        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "RavenDB-19084 Etag handling");
 
         _context = context;
         _result = new ShardedQueryResult();
@@ -60,7 +60,7 @@ public class ShardedQueryProcessor : IDisposable
         _isAutoMapReduceQuery = _query.Metadata.IsDynamic && _query.Metadata.IsGroupBy;
         _commands = new Dictionary<int, ShardedQueryCommand>();
 
-        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Add an option to select the shards for query in the client");
+        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "RavenDB-19084 Add an option to select the shards for query in the client");
         //if (_query.QueryParameters != null && _query.QueryParameters.TryGet("@sharding-context", out BlittableJsonReaderArray filter))
         //{
         //    _filteredShardIndexes = new HashSet<int>();
@@ -98,7 +98,7 @@ public class ShardedQueryProcessor : IDisposable
         }
 
         DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal,
-            "Use a single rewrite method in order to avoid cloning the query twice");
+            "RavenDB-19084 Use a single rewrite method in order to avoid cloning the query twice");
 
         // * For paging queries, we modify the limits on the query to include all the results from all
         //   shards if there is an offset. But if there isn't an offset, we can just get the limit from
@@ -118,7 +118,7 @@ public class ShardedQueryProcessor : IDisposable
             //if (_filteredShardIndexes?.Contains(i) == false)
             //    continue;
 
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Use ShardedExecutor");
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "RavenDB-19084 Use ShardedExecutor");
             _commands[i] = new ShardedQueryCommand(_parent, queryTemplate, _query.Metadata.IndexName);
         }
     }
@@ -210,7 +210,7 @@ public class ShardedQueryProcessor : IDisposable
             sb.Append("include ").AppendJoin(", ", _query.Metadata.Includes).AppendLine();
         }
 
-        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Minor, "use DocumentQuery from Client API to build the query");
+        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Minor, "RavenDB-19084 use DocumentQuery from Client API to build the query");
 
         var query = sb.ToString();
 
@@ -219,7 +219,7 @@ public class ShardedQueryProcessor : IDisposable
             //if (_filteredShardIndexes?.Contains(shardId) == false)
             //    continue;
 
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "have a way to turn the _query into a json file and then we'll modify that, instead of building it manually");
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "RavenDB-19084 have a way to turn the _query into a json file and then we'll modify that, instead of building it manually");
 
             var q = new DynamicJsonValue
             {
@@ -239,7 +239,7 @@ public class ShardedQueryProcessor : IDisposable
 
         foreach (var (shardNumber, cmd) in _commands)
         {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Use ShardedExecutor");
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "RavenDB-19084 Use ShardedExecutor");
 
             _disposables.Add(_parent.ContextPool.AllocateOperationContext(out TransactionOperationContext context));
             var task = _parent.DatabaseContext.ShardExecutor.GetRequestExecutorAt(shardNumber).ExecuteAsync(cmd, context);
@@ -327,7 +327,7 @@ public class ShardedQueryProcessor : IDisposable
         var tasks = new List<Task>();
         foreach (var (shardNumber, cmd) in includeCommands)
         {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Use ShardedExecutor");
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "RavenDB-19084 Use ShardedExecutor");
             _disposables.Add(_parent.ContextPool.AllocateOperationContext(out TransactionOperationContext context));
             tasks.Add(_parent.DatabaseContext.ShardExecutor.GetRequestExecutorAt(shardNumber).ExecuteAsync(cmd, context));
         }
@@ -356,7 +356,7 @@ public class ShardedQueryProcessor : IDisposable
 
     public void MergeResults()
     {
-        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Use IShardedOperation");
+        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "RavenDB-19084 Use IShardedOperation");
 
         _result.Results = new List<BlittableJsonReaderObject>();
 

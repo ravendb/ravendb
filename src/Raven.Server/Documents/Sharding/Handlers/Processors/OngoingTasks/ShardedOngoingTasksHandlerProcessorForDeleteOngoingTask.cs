@@ -14,7 +14,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks
 
         protected override async ValueTask RaiseNotificationForSubscriptionTaskRemoval()
         {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Normal, "how should we handle other nodes? ");
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Normal, "RavenDB-19068 how should we handle other nodes? ");
             var tasks = RequestHandler.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(RequestHandler.DatabaseName);
             foreach (var task in tasks)
             {

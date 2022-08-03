@@ -113,7 +113,7 @@ namespace Raven.Server.Documents.Sharding.Operations
                 missingIncludes.Remove(kvp.Key);
             }
 
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "Handle include of counters/time-series");
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "RavenDB-19067 Handle include of counters/time-series");
 
             return new GetShardedDocumentsResult
             {

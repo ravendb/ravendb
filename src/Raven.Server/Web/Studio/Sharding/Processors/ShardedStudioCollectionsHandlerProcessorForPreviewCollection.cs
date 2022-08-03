@@ -87,7 +87,7 @@ public class ShardedStudioCollectionsHandlerProcessorForPreviewCollection : Abst
     protected override bool NotModified(out string etag)
     {
         DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal,
-            "Need to figure out the best way to combine ETags and send not modified. See `null` passed as etag to above new ShardedCollectionPreviewOperation()");
+            "RavenDB-19066 Need to figure out the best way to combine ETags and send not modified. See `null` passed as etag to above new ShardedCollectionPreviewOperation()");
 
         etag = null;
         return false;

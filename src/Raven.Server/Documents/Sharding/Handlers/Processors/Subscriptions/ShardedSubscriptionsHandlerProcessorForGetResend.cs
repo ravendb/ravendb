@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Subscriptions
 
         protected override HashSet<long> GetActiveBatches(ClusterOperationContext _, SubscriptionState subscriptionState)
         {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Stav, DevelopmentHelper.Severity.Normal, "Get active batches from orchestrator getting orchestrator's node is implemented");
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Stav, DevelopmentHelper.Severity.Normal, "RavenDB-19081 Get active batches from orchestrator getting orchestrator's node is implemented");
             return new HashSet<long>();
         }
     }

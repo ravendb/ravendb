@@ -30,7 +30,7 @@ public class SubscriptionConnectionForShard : SubscriptionConnection
     
     protected override DynamicJsonValue AcceptMessage()
     {
-        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "need to ensure the sharded workers has the same sub definition. by sending my raft index?");
+        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "RavenDB-19085 need to ensure the sharded workers has the same sub definition. by sending my raft index?");
         return base.AcceptMessage();
     }
 

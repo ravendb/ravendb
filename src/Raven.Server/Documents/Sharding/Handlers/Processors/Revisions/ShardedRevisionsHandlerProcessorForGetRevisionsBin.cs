@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Revisions
             var result = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(op);
             await ShardedRevisionsHandlerProcessorForGetRevisions.WriteRevisionsResultAsync(context, RequestHandler, result, totalResult: null, continuationToken);
 
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Pawel, DevelopmentHelper.Severity.Minor, "Implement AddPagingPerformanceHint. Make sure this gets passed real params");
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Pawel, DevelopmentHelper.Severity.Minor, "RavenDB-19074 Implement AddPagingPerformanceHint. Make sure this gets passed real params");
             RequestHandler.AddPagingPerformanceHint(PagingOperationType.Revisions, "GetRevisionsBin", HttpContext.Request.QueryString.Value, 0, pageSize, sw.ElapsedMilliseconds, 0);
         }
 

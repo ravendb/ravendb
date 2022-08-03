@@ -79,7 +79,7 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
 
         public override IDisposable MarkInUse()
         {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "Do we need something like this in the database context?");
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "RavenDB-19085 Do we need something like this in the database context?");
             return null;
         }
 
@@ -90,12 +90,12 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
 
         protected override void RaiseNotificationForBatchEnd(string name, SubscriptionBatchStatsAggregator last)
         {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "Need to implement events + ws for this");
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "RavenDB-19085 Need to implement events + ws for this");
         }
 
         protected override string SetLastChangeVectorInThisBatch(IChangeVectorOperationContext context, string currentLast, Document sentDocument)
         {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "All tests pass but wonder if that is correct?");
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "RavenDB-19085 All tests pass but wonder if that is correct?");
             return sentDocument.ChangeVector;
         }
 

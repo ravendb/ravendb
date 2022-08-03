@@ -28,7 +28,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Collections
         protected override async ValueTask<(long numberOfResults, long totalDocumentsSizeInBytes)> GetCollectionDocumentsAndWriteAsync(TransactionOperationContext context, string name, int start, int pageSize, CancellationToken token)
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Arek, DevelopmentHelper.Severity.Normal,
-                "See `null` passed as etag to above new ShardedCollectionPreviewOperation()");
+                "RavenDB-19066 See `null` passed as etag to above new ShardedCollectionPreviewOperation()");
 
             var continuationToken = RequestHandler.ContinuationTokens.GetOrCreateContinuationToken(context, start, pageSize);
 

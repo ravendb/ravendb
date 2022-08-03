@@ -59,7 +59,7 @@ public partial class ShardedDatabaseContext
 
         public void Update(RawDatabaseRecord record, long index)
         {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Add a test for updated configuration (for projections)");
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "RavenDB-19087 Add a test for updated configuration (for projections)");
             ScriptRunnerCache.UpdateConfiguration(_context.Configuration);
 
             UpdateAnalyzers(record, index);
@@ -74,7 +74,7 @@ public partial class ShardedDatabaseContext
 
         private void UpdateStaticIndexes(Dictionary<string, IndexDefinition> indexDefinitions, Dictionary<string, IndexInformationHolder> indexes)
         {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Major, "handle side-by-side");
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Major, "RavenDB-19087 handle side-by-side");
 
             foreach ((string indexName, IndexDefinition definition) in indexDefinitions)
             {

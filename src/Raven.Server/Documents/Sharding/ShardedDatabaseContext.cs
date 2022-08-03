@@ -44,8 +44,8 @@ namespace Raven.Server.Documents.Sharding
 
         public ShardedDatabaseContext(ServerStore serverStore, DatabaseRecord record)
         {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "reduce the record to the needed fields");
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "Need to refresh all this in case we will add/remove new shard");
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "RavenDB-19086 reduce the record to the needed fields");
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "RavenDB-19086 Need to refresh all this in case we will add/remove new shard");
 
             ServerStore = serverStore;
             _record = record;
@@ -110,7 +110,7 @@ namespace Raven.Server.Documents.Sharding
 
         public int GetShardNumber(TransactionOperationContext context, ReadOnlySpan<char> id)
         {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Pawel, DevelopmentHelper.Severity.Normal, "Optimize this");
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Pawel, DevelopmentHelper.Severity.Normal, "RavenDB-19086 Optimize this");
             var bucket = ShardHelper.GetBucket(context, id.ToString());
 
             return ShardHelper.GetShardNumber(_record.Sharding.BucketRanges, bucket);
@@ -129,7 +129,7 @@ namespace Raven.Server.Documents.Sharding
 
         public void Dispose()
         {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "needs an ExceptionAggregator like DocumentDatabase");
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "RavenDB-19086 needs an ExceptionAggregator like DocumentDatabase");
 
             if (_logger.IsInfoEnabled)
                 _logger.Info($"Disposing {nameof(ShardedDatabaseContext)} of {DatabaseName}.");

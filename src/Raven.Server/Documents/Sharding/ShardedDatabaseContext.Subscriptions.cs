@@ -38,7 +38,7 @@ public partial class ShardedDatabaseContext
         public void Update(RawDatabaseRecord databaseRecord)
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal,
-                "This is almost identical as the one from the subscription storage");
+                "RavenDB-19089 This is almost identical as the one from the subscription storage");
 
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
@@ -74,7 +74,7 @@ public partial class ShardedDatabaseContext
                         continue;
                     }
                     
-                    DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "check modifying of starting point");
+                    DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "RavenDB-19089 check modifying of starting point");
                     /*
                     if (subscriptionState.LastClientConnectionTime == null && 
                         subscriptionState.ChangeVectorForNextBatchStartingPoint != subscriptionConnectionsState.LastChangeVectorSent)
@@ -84,8 +84,8 @@ public partial class ShardedDatabaseContext
                     }
                     */
 
-                    DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "create subscription WhosTaskIsIt");
-                    DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "Need to handle NodeTag, currently is isn't used for sharded because it is shared");
+                    DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "RavenDB-19089 create subscription WhosTaskIsIt");
+                    DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "RavenDB-19089 Need to handle NodeTag, currently is isn't used for sharded because it is shared");
 
                     var whoseTaskIsIt = databaseRecord.TopologyForSubscriptions().WhoseTaskIsIt(_serverStore.Engine.CurrentState, subscriptionState);
                     if (whoseTaskIsIt != _serverStore.NodeTag)
