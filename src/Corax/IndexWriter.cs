@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Xml;
@@ -233,14 +234,28 @@ namespace Corax
                     var fieldName = fieldType == IndexEntryFieldType.Null ? Constants.NullValueSlice : Constants.EmptyStringSlice;
                     ExactInsert(fieldName.AsReadOnlySpan());
                     break;
-
+                
+                case IndexEntryFieldType.TupleListWithNulls:
                 case IndexEntryFieldType.TupleList:
                     if (entryReader.TryReadMany(binding.FieldId, out var iterator) == false)
                         break;
 
                     while (iterator.ReadNext())
                     {
-                        ExactInsert(iterator.Sequence);
+                        if (iterator.IsNull)
+                        {
+                            ExactInsert(Constants.NullValueSlice);
+                            NumericInsert(0L, double.NaN);
+                        }
+                        else if (iterator.IsEmpty)
+                        {
+                            throw new InvalidDataException("Tuple list cannot contain an empty string (otherwise, where did the numeric came from!)");
+                        }
+                        else
+                        {
+                            ExactInsert(iterator.Sequence);
+                            NumericInsert(iterator.Long, iterator.Double);
+                        }
                     }
 
                     break;
@@ -274,7 +289,6 @@ namespace Corax
 
                     break;
 
-                case IndexEntryFieldType.TupleListWithNulls:
                 case IndexEntryFieldType.ListWithNulls:
                 case IndexEntryFieldType.List:
                     if (entryReader.TryReadMany(binding.FieldId, out iterator) == false)
@@ -286,10 +300,6 @@ namespace Corax
                         {
                             var fieldValue = iterator.IsNull ? Constants.NullValueSlice : Constants.EmptyStringSlice;
                             ExactInsert(fieldValue.AsReadOnlySpan());
-                        }
-                        else if ((fieldType & IndexEntryFieldType.Tuple) != 0)
-                        {
-                            NumericInsert(iterator.Long, iterator.Double);
                         }
                         else
                         {
@@ -452,7 +462,7 @@ namespace Corax
                         {
                             if (iterator.IsNull)
                             {
-                                RecordTupleToDelete(binding, Constants.NullValueSlice, double.NaN, 0, forceExact: true);
+                                RecordTupleToDelete(binding, Constants.NullValueSlice, double.NaN, 0);
                             }
                             else if (iterator.IsEmpty)
                             {
@@ -480,7 +490,7 @@ namespace Corax
                             for (int i = 1; i <= spatialIterator.Geohash.Length; ++i)
                             {
                                 var spatialTerm = spatialIterator.Geohash.Slice(0, i);
-                                RecordTermToDelete(spatialTerm, binding);
+                                RecordExactTermToDelete(spatialTerm, binding);
                             }
                         }
 
@@ -514,10 +524,16 @@ namespace Corax
                     }
 
                     case IndexEntryFieldType.SpatialPoint:
-                        throw new ArgumentException("Got SpatialPoint deletion, which is supposed to be SpatialPointList only");
-                        
-                    case IndexEntryFieldType.HasNulls:
-                    case IndexEntryFieldType.Simple:
+                        if (entryReader.Read(binding.FieldId, out valueInEntry) == false)
+                            break;
+
+                        for (int i = 1; i <= valueInEntry.Length; ++i)
+                        {
+                            var spatialTerm = valueInEntry.Slice(0, i);
+                            RecordExactTermToDelete(spatialTerm, binding);
+                        }
+                        break;
+                    default:
                         if (entryReader.Read(binding.FieldId, out var value) == false)
                             break;
                         
@@ -531,26 +547,23 @@ namespace Corax
 
             Container.Delete(llt, _entriesContainerId, entryToDelete); // delete raw index entry
 
-            void RecordTupleToDelete(IndexFieldBinding binding, ReadOnlySpan<byte> termValue, double termDouble, long termLong, bool forceExact = false)
+            void RecordTupleToDelete(IndexFieldBinding binding, ReadOnlySpan<byte> termValue, double termDouble, long termLong)
             {
-                if (forceExact == false)
-                    RecordTermToDelete(termValue, binding);
-                else
-                    RecordExactTermToDelete(termValue, binding);
+                // Is there any reason to analyze string of number?
+                RecordExactTermToDelete(termValue, binding);
 
                 if (_bufferDoubles[binding.FieldId].TryGetValue(termDouble, out var result) == false)
                 {
                     _bufferDoubles[binding.FieldId][termDouble] = result = new EntriesModifications { Additions = new List<long>(), Removals = new List<long>() };
                 }
 
-                result.Removals.Add(entryToDelete);
+                AddMaybeAvoidDuplicate(result.Removals, entryToDelete);
 
                 if (_bufferLongs[binding.FieldId].TryGetValue(termLong, out result) == false)
                 {
                     _bufferLongs[binding.FieldId][termLong] = result = new EntriesModifications { Additions = new List<long>(), Removals = new List<long>() };
                 }
-
-                result.Removals.Add(entryToDelete);
+                AddMaybeAvoidDuplicate(result.Removals, entryToDelete);
             }
 
             void RecordTermToDelete(ReadOnlySpan<byte> termValue, IndexFieldBinding binding)
@@ -594,8 +607,8 @@ namespace Corax
                     _buffer[binding.FieldId][termSlice.Clone(Transaction.Allocator)] =
                         result = new EntriesModifications { Additions = new List<long>(), Removals = new List<long>() };
                 }
-
-                result.Removals.Add(entryToDelete);
+                
+                AddMaybeAvoidDuplicate(result.Removals, entryToDelete);
             }
         }
 
@@ -627,7 +640,7 @@ namespace Corax
 
             if ((idInTree & (long)TermIdMask.Set) != 0)
             {
-                var id = idInTree & ~0b11;
+                var id = idInTree & Constants.StorageMask.ContainerType;
                 var setSpace = Container.GetMutable(Transaction.LowLevelTransaction, id);
                 ref var setState = ref MemoryMarshal.AsRef<SetState>(setSpace);
                 var set = new Set(Transaction.LowLevelTransaction, Slices.Empty, setState);
@@ -640,13 +653,12 @@ namespace Corax
             }
             else if ((idInTree & (long)TermIdMask.Small) != 0)
             {
-                var id = idInTree & ~0b11;
+                var id = idInTree & Constants.StorageMask.ContainerType;
                 var smallSet = Container.Get(Transaction.LowLevelTransaction, id).ToSpan();
                 // combine with existing value
                 var cur = 0L;
                 var count = ZigZagEncoding.Decode<int>(smallSet, out var pos);
-                var idx = 0;
-                while (idx++ < count)
+                for (int idX = 0; idX < count; ++idX)
                 {
                     var value = ZigZagEncoding.Decode<long>(smallSet, out var len, pos);
                     pos += len;
@@ -764,11 +776,11 @@ namespace Corax
         {
             if ((existing & (long)TermIdMask.Set) != 0)
             {
-                return AddEntriesToTermResultViaLargeSet(llt, entries, out termId, existing & ~0b11);
+                return AddEntriesToTermResultViaLargeSet(llt, entries, out termId, existing & Constants.StorageMask.ContainerType);
             }
             if ((existing & (long)TermIdMask.Small) != 0)
             {
-                return AddEntriesToTermResultViaSmallSet(tmpBuf, llt, entries, out termId, existing & ~0b11);
+                return AddEntriesToTermResultViaSmallSet(tmpBuf, llt, entries, out termId, existing & Constants.StorageMask.ContainerType);
             }
             return AddEntriesToTermResultSingleValue(tmpBuf, existing, entries, out termId);
         }
@@ -776,32 +788,35 @@ namespace Corax
         private AddEntriesToTermResult AddEntriesToTermResultViaSmallSet(Span<byte> tmpBuf, LowLevelTransaction llt, EntriesModifications entries, out long termId, long id)
         {
             var smallSet = Container.GetMutable(llt, id);
+            Debug.Assert(entries.Removals.Distinct().Count() == entries.Removals.Count, $"Removals list is not distinct.");
             
             entries.Removals.Sort();
+          
             int removalIndex = 0;
             
             // combine with existing values
-            var cur = 0L;
-            var count = ZigZagEncoding.Decode<int>(smallSet, out var pos);
-            var idx = 0;
-            while (idx++ < count)
+            var currentId = 0L;
+            var count = ZigZagEncoding.Decode<int>(smallSet, out var positionInEncodedBuffer);
+
+            for (int idX = 0; idX < count; ++idX)
             {
-                var value = ZigZagEncoding.Decode<long>(smallSet, out var len, pos);
-                pos += len;
-                cur += value;
+                var value = ZigZagEncoding.Decode<long>(smallSet, out var lengthOfDelta, positionInEncodedBuffer);
+                positionInEncodedBuffer += lengthOfDelta;
+                currentId += value;
+                
                 if (removalIndex < entries.Removals.Count)
                 {
-                    if (cur == entries.Removals[removalIndex])
+                    if (currentId == entries.Removals[removalIndex])
                     {
                         removalIndex++;
                         continue;
                     }
 
-                    if (cur > entries.Removals[removalIndex])
-                        throw new InvalidDataException("Attempt to remove value " + entries.Removals[removalIndex] + ", but got " + cur);
+                    if (currentId > entries.Removals[removalIndex])
+                        throw new InvalidDataException("Attempt to remove value " + entries.Removals[removalIndex] + ", but got " + currentId);
                 }
                 
-                entries.Additions.Add(cur);
+                AddMaybeAvoidDuplicate(entries.Additions, currentId);
             }
 
             if (entries.Additions.Count == 0)
@@ -859,7 +874,7 @@ namespace Corax
             }
             else
             {
-                entries.Additions.Add(existing);
+                AddMaybeAvoidDuplicate(entries.Additions, existing);
             }
             
             AddNewTerm(entries.Additions, tmpBuf, out termId);
