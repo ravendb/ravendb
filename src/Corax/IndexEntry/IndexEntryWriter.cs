@@ -99,13 +99,17 @@ public unsafe partial struct IndexEntryWriter : IDisposable
         ref int fieldLocation = ref KnownFieldsLocations[field];                
         fieldLocation = _dataIndex;
 
-        var buffer = Buffer;
-        int length = VariableSizeEncoding.Write(buffer, value.Length, _dataIndex);
-        _dataIndex += length;        
         if (value.Length == 0)
+        {
+            fieldLocation |= Constants.IndexWriter.IntKnownFieldMask;
+            Unsafe.WriteUnaligned(ref _buffer[_dataIndex], IndexEntryFieldType.Empty);
+            _dataIndex += sizeof(IndexEntryFieldType);
             return;
-
-        value.CopyTo(buffer.Slice(_dataIndex, value.Length));        
+        }
+        
+        int length = VariableSizeEncoding.Write(_buffer, value.Length, _dataIndex);
+        _dataIndex += length;
+        value.CopyTo(_buffer.Slice(_dataIndex, value.Length));
         _dataIndex += value.Length;
     }
 
