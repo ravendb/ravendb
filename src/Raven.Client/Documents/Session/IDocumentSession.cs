@@ -33,7 +33,6 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         ///     Marks the specified entity for deletion. The entity will be deleted when
         ///     <see cref="IDocumentSession.SaveChanges" /> is called.
-        ///     <para>WARNING: This method will not call beforeDelete listener!</para>
         /// </summary>
         /// <param name="id">entity Id</param>
         void Delete(string id);
@@ -41,7 +40,6 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         ///     Marks the specified entity for deletion. The entity will be deleted when
         ///     <see cref="IDocumentSession.SaveChanges" /> is called.
-        ///     <para>WARNING: This method will not call beforeDelete listener!</para>
         /// </summary>
         /// <param name="id">entity Id</param>
         /// <param name="expectedChangeVector">Expected change vector of a document to delete.</param>
