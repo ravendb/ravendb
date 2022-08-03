@@ -522,7 +522,7 @@ namespace Raven.Server.Documents.Indexes.Static
             {
                 var map = maps[i];
                 statements.AddRange(HandleMap(definition.SourceType, map, fieldNamesValidator, methodDetector, stackDepthRetriever, ref members));
-
+                
                 maxDepthInRecursiveLinqQuery = Math.Max(maxDepthInRecursiveLinqQuery, stackDepthRetriever.StackSize);
                 stackDepthRetriever.Clear();
             }
@@ -622,7 +622,10 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 fieldNamesValidator.Validate(map, expression);
                 methodsDetector.Visit(expression);
+                
                 stackDepthRetriever.Visit(expression);
+                stackDepthRetriever.VisitMethodQuery(map);
+                
                 var queryExpression = expression as QueryExpressionSyntax;
                 if (queryExpression != null)
                 {
@@ -682,7 +685,9 @@ namespace Raven.Server.Documents.Indexes.Static
                 var expression = SyntaxFactory.ParseExpression(reduce).NormalizeWhitespace();
                 fieldNamesValidator?.Validate(reduce, expression);
                 methodsDetector.Visit(expression);
+                
                 stackDepthRetriever.Visit(expression);
+                stackDepthRetriever.VisitMethodQuery(reduce);
                 
                 StatementSyntax result;
 
