@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Xml.Linq;
 using Corax.Utils;
 using Sparrow.Server;
 
@@ -203,6 +204,9 @@ namespace Corax.Queries
 
                 // Given that we are going to be calling Fill, which would try to fill the buffer as much as it can there is no
                 // reason why we are not going to try to fill it here but avoid going overboard for leftovers.
+                // What this does is definining a minimum batch of work, if there is less than 16 elements to fill,
+                // it is not worth it to continue trying because the fill call would be higher than the probability of filling
+                // that block. Probably that number will increase in the future, so far 16 is just about right.
                 while (leftoverMatches.Length > 16)
                 {
                     int newIdx;

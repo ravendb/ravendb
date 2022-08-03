@@ -564,7 +564,7 @@ namespace FastTests.Corax
                 // Because there is no guarantee that multiple Fill operations would return sequential non redundant document ids,
                 // we need to sort and remove duplicates before actually testing the final condition. 
                 var sortedActual = actual.ToArray();
-                Sorting.SortAndRemoveDuplicates(sortedActual);
+                Sorting.SortAndRemoveDuplicates(sortedActual.AsSpan());
                 for (int i = 0; i < count; i++)
                 {
                     Assert.Equal(matchesId[i], sortedActual[i]);
@@ -674,7 +674,7 @@ namespace FastTests.Corax
                 } while (read != 0);
 
                 var actualSorted = actual.ToArray();
-                var actualSize = Sorting.SortAndRemoveDuplicates(actualSorted);
+                var actualSize = Sorting.SortAndRemoveDuplicates(actualSorted.AsSpan());
 
                 for (int i = 0; i < actualSize; i++)
                 {
@@ -700,7 +700,7 @@ namespace FastTests.Corax
                     count += read;
                 } while (read != 0);
                 var actualSorted = actual.ToArray();
-                var actualSize = Sorting.SortAndRemoveDuplicates(actualSorted);
+                var actualSize = Sorting.SortAndRemoveDuplicates(actualSorted.AsSpan());
 
                 for (int i = 0; i < actualSize; i++)
                 {
@@ -1481,10 +1481,9 @@ namespace FastTests.Corax
                 } while (read != 0);
 
                 var actualSorted = actual.ToArray();
-                var actualSize = Sorting.SortAndRemoveDuplicates(actualSorted);
+                var actualSize = Sorting.SortAndRemoveDuplicates(actualSorted.AsSpan());
 
-                Assert.Equal((setSize / 3), actualSize);
-                
+                Assert.Equal((setSize / 3), actualSize);                
             }
 
             {
@@ -1504,7 +1503,7 @@ namespace FastTests.Corax
                 } while (read != 0);
 
                 var actualSorted = actual.ToArray();
-                var actualSize = Sorting.SortAndRemoveDuplicates(actualSorted);
+                var actualSize = Sorting.SortAndRemoveDuplicates(actualSorted.AsSpan());
 
                 Assert.Equal((setSize / 3), actualSize);
 
@@ -1567,7 +1566,7 @@ namespace FastTests.Corax
                 } while (read != 0);
 
                 var actualSorted = actual.ToArray();
-                var actualSize = Sorting.SortAndRemoveDuplicates(actualSorted);
+                var actualSize = Sorting.SortAndRemoveDuplicates(actualSorted.AsSpan());
 
                 Assert.Equal((setSize / 3), actualSize);
             }
@@ -1588,7 +1587,7 @@ namespace FastTests.Corax
                 } while (read != 0);
 
                 var actualSorted = actual.ToArray();
-                var actualSize = Sorting.SortAndRemoveDuplicates(actualSorted);
+                var actualSize = Sorting.SortAndRemoveDuplicates(actualSorted.AsSpan());
 
                 Assert.Equal((setSize / 3), actualSize);
             }
