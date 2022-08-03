@@ -17,7 +17,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Studio
 
         protected override async ValueTask<Dictionary<LazyStringValue, FieldType>> GetFieldsAsync(TransactionOperationContext context, string collection, string prefix)
         {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Stav, DevelopmentHelper.Severity.Normal, "Handle NotModified");
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Stav, DevelopmentHelper.Severity.Normal, "RavenDB-19066 Handle NotModified");
 
             using (var token = RequestHandler.CreateOperationToken())
             {

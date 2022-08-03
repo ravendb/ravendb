@@ -27,7 +27,7 @@ public class AllNodesExecutor : AbstractExecutor
     public AllNodesExecutor(ServerStore store, ShardedDatabaseContext database) : base(store)
     {
         DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, 
-            "We might want to kill this entire class and do it differently by returning an index to the client which he will pass on for the next request");
+            "RavenDB-19065 We might want to kill this entire class and do it differently by returning an index to the client which he will pass on for the next request");
 
         _store = store;
         _database = database;

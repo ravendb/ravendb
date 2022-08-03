@@ -39,7 +39,7 @@ internal class ShardedQueriesHandlerProcessorForGet : AbstractQueriesHandlerProc
 
     protected override ValueTask HandleDebug(IndexQueryServerSide query, TransactionOperationContext queryContext, string debug, long? existingResultEtag, OperationCancelToken token)
     {
-        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Implement debug");
+        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "RavenDB-19071 Implement debug");
 
         throw new NotSupportedInShardingException("Query debug is not supported");
     }
@@ -61,7 +61,7 @@ internal class ShardedQueriesHandlerProcessorForGet : AbstractQueriesHandlerProc
     protected override async ValueTask<QueryResultServerSide<BlittableJsonReaderObject>> GetQueryResults(IndexQueryServerSide query, TransactionOperationContext queryContext, long? existingResultEtag, OperationCancelToken token)
     {
         DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal,
-            @"what do we do with: var diagnostics = GetBoolValueQueryString(""diagnostics"", required: false) ?? false");
+            @"RavenDB-19071 what do we do with: var diagnostics = GetBoolValueQueryString(""diagnostics"", required: false) ?? false");
 
         _queryProcessor = new ShardedQueryProcessor(queryContext, RequestHandler, query);
 
@@ -99,7 +99,7 @@ internal class ShardedQueriesHandlerProcessorForGet : AbstractQueriesHandlerProc
 
         // * For JS projections and load clauses, we don't support calling load() on a
         //   document that is not on the same shard
-        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Add a test for that");
+        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "RavenDB-17889 Add a test for that");
 
         return result;
     }

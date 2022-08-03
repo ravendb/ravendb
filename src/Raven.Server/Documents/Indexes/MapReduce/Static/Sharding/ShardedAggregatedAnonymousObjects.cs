@@ -13,8 +13,7 @@ public class ShardedAggregatedAnonymousObjects : AggregatedAnonymousObjects
 
     public ShardedAggregatedAnonymousObjects(List<object> results, IPropertyAccessor propertyAccessor, JsonOperationContext indexContext) : base(results, propertyAccessor, indexContext)
     {
-        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "handle metadata merge, score, distance");
-        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "test this");
+        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "RavenDB-19064 handle metadata merge, score, distance");
 
         ModifyOutputToStore = djv =>
         {

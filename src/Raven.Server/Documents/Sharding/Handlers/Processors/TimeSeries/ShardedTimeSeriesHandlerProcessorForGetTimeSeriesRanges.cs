@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.TimeSeries
                 return;
             }
             
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Stav, DevelopmentHelper.Severity.Normal, "Handle not modified for include tags and its status code");
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Stav, DevelopmentHelper.Severity.Normal, "RavenDB-18595 Handle not modified for include tags and its status code");
 
             if (includeDoc || includeTags)
             {

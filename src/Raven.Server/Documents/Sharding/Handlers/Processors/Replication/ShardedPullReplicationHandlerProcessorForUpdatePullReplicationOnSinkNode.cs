@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Replication
 
         protected override void FillResponsibleNode(TransactionOperationContext context, DynamicJsonValue responseJson, PullReplicationAsSink pullReplication)
         {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "get topology for shard");
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "RavenDB-19069 get topology for shard");
         }
     }
 }

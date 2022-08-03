@@ -34,7 +34,7 @@ public class ShardedMapReduceQueryResultsMerger
 
     public List<BlittableJsonReaderObject> Merge()
     {
-        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Make sure that we have the auto map index in the orchestrator");
+        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "RavenDB-19083 Make sure that we have the auto map index in the orchestrator");
 
         var index = _indexesContext.GetIndex(_indexName);
         if (index == null)
@@ -73,7 +73,7 @@ public class ShardedMapReduceQueryResultsMerger
 
         if (propertyAccessor == null)
         {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "add a test for this");
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "RavenDB-19083 add a test for this");
             return new List<BlittableJsonReaderObject>();
         }
 

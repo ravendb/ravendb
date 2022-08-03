@@ -147,8 +147,6 @@ public abstract class AbstractBatchCommandsReader<TBatchCommand, TOperationConte
 
                 if (commandData.Type == CommandType.PATCH)
                 {
-                    DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "make it nicer");
-
                     commandData.PatchCommand =
                         new PatchDocumentCommand(
                             context,
@@ -177,8 +175,6 @@ public abstract class AbstractBatchCommandsReader<TBatchCommand, TOperationConte
 
                 if (commandData.Type == CommandType.BatchPATCH)
                 {
-                    DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "make it nicer");
-
                     commandData.PatchCommand =
                         new BatchPatchDocumentCommand(
                             context,

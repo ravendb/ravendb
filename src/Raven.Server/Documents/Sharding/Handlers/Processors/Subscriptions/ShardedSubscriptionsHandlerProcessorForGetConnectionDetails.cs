@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Subscriptions
                 return null;
             }
 
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Stav, DevelopmentHelper.Severity.Normal, " make sharded & non-sharded identical.");
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Stav, DevelopmentHelper.Severity.Normal, "RavenDB-19080 make sharded & non-sharded identical.");
             return state.GetSubscriptionConnectionsDetails();
         }
     }
