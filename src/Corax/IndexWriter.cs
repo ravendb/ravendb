@@ -296,6 +296,8 @@ namespace Corax
 
                     while (iterator.ReadNext())
                     {
+                        Debug.Assert((fieldType & IndexEntryFieldType.Tuple) == 0);
+                        
                         if ((fieldType & IndexEntryFieldType.HasNulls) != 0 && (iterator.IsEmpty || iterator.IsNull))
                         {
                             var fieldValue = iterator.IsNull ? Constants.NullValueSlice : Constants.EmptyStringSlice;
@@ -356,8 +358,10 @@ namespace Corax
                 unsafe void ThrowInvalidTokenFoundOnBuffer(IndexFieldBinding binding, ReadOnlySpan<byte> value, Span<byte> wordsBuffer, Span<Token> tokens, Token token)
                 {
                     throw new InvalidDataException(
-                        $"{Environment.NewLine}Got token with: {Environment.NewLine}\tOFFSET {token.Offset}{Environment.NewLine}\tLENGTH: {token.Length}.{Environment.NewLine}" +
-                        $"Total amount of tokens: {tokens.Length}" +
+                        $"{Environment.NewLine}Got token with: " +
+                        $"{Environment.NewLine}\tOFFSET {token.Offset}" +
+                        $"{Environment.NewLine}\tLENGTH: {token.Length}." +
+                        $"{Environment.NewLine}Total amount of tokens: {tokens.Length}" +
                         $"{Environment.NewLine}Buffer contains '{Encodings.Utf8.GetString(wordsBuffer)}' and total length is {wordsBuffer.Length}" +
                         $"{Environment.NewLine}Buffer from ArrayPool: {Environment.NewLine}\tbyte buffer is {_encodingBufferHandler.Length} {Environment.NewLine}\ttokens buffer is {_tokensBufferHandler.Length}" +
                         $"{Environment.NewLine}Original span cointains '{Encodings.Utf8.GetString(value)}' with total length {value.Length}" +
