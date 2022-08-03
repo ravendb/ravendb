@@ -442,16 +442,29 @@ namespace Corax
                         var termValue = fieldType == IndexEntryFieldType.Null ? Constants.NullValueSlice : Constants.EmptyStringSlice;
                         RecordExactTermToDelete(termValue, binding);
                         break;
+                    case IndexEntryFieldType.TupleListWithNulls:
                     case IndexEntryFieldType.TupleList:
+                    {
                         if (entryReader.TryReadMany(binding.FieldId, out var iterator) == false)
                             break;
 
                         while (iterator.ReadNext())
                         {
-                            RecordTupleToDelete(binding, iterator.Sequence, iterator.Double, iterator.Long);
+                            if (iterator.IsNull)
+                            {
+                                RecordTupleToDelete(binding, Constants.NullValueSlice, double.NaN, 0, forceExact: true);
+                            }
+                            else if (iterator.IsEmpty)
+                            {
+                                throw new InvalidDataException("Tuple list cannot contain an empty string (otherwise, where did the numeric came from!)");
+                            }
+                            else
+                            {
+                                RecordTupleToDelete(binding, iterator.Sequence, iterator.Double, iterator.Long);
+                            }
                         }
-
                         break;
+                    }
                     case IndexEntryFieldType.Tuple:
                         if (entryReader.Read(binding.FieldId, out _, out long l, out double d, out Span<byte> valueInEntry) == false)
                             break;
@@ -476,9 +489,40 @@ namespace Corax
                     case IndexEntryFieldType.RawList:
                     case IndexEntryFieldType.Invalid:
                         break;
-                    default:
+                    case IndexEntryFieldType.List:
+                    case IndexEntryFieldType.ListWithNulls:
+                    {
+                        if (entryReader.TryReadMany(binding.FieldId, out var iterator) == false)
+                            break;
+
+                        while (iterator.ReadNext())
+                        {
+                            if (iterator.IsNull)
+                            {
+                                RecordExactTermToDelete(Constants.NullValueSlice, binding);
+                            }
+                            else if (iterator.IsEmpty)
+                            {
+                                RecordExactTermToDelete(Constants.EmptyStringSlice, binding);
+                            }
+                            else
+                            {
+                                RecordTermToDelete(iterator.Sequence, binding); 
+                            }
+                        }
+                        break;
+                    }
+
+                    case IndexEntryFieldType.SpatialPoint:
+                        throw new ArgumentException("Got SpatialPoint deletion, which is supposed to be SpatialPointList only");
+                        
+                    case IndexEntryFieldType.HasNulls:
+                    case IndexEntryFieldType.Simple:
                         if (entryReader.Read(binding.FieldId, out var value) == false)
                             break;
+                        
+                        if(value.IsEmpty)
+                            goto case IndexEntryFieldType.Empty;
 
                         RecordTermToDelete(value, binding);
                         break;
@@ -487,9 +531,12 @@ namespace Corax
 
             Container.Delete(llt, _entriesContainerId, entryToDelete); // delete raw index entry
 
-            void RecordTupleToDelete(IndexFieldBinding binding, ReadOnlySpan<byte> termValue, double termDouble, long termLong)
+            void RecordTupleToDelete(IndexFieldBinding binding, ReadOnlySpan<byte> termValue, double termDouble, long termLong, bool forceExact = false)
             {
-                RecordTermToDelete(termValue, binding);
+                if (forceExact == false)
+                    RecordTermToDelete(termValue, binding);
+                else
+                    RecordExactTermToDelete(termValue, binding);
 
                 if (_bufferDoubles[binding.FieldId].TryGetValue(termDouble, out var result) == false)
                 {

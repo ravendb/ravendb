@@ -74,11 +74,16 @@ public unsafe ref partial struct IndexEntryWriter
         ref int fieldLocation = ref _knownFieldsLocations[field];
         fieldLocation = _dataIndex;
 
+        if (value.Length == 0)
+        {
+            fieldLocation |= Constants.IndexWriter.IntKnownFieldMask;
+            Unsafe.WriteUnaligned(ref _buffer[_dataIndex], IndexEntryFieldType.Empty);
+            _dataIndex += sizeof(IndexEntryFieldType);
+            return;
+        }
+        
         int length = VariableSizeEncoding.Write(_buffer, value.Length, _dataIndex);
         _dataIndex += length;
-        if (value.Length == 0)
-            return;
-
         value.CopyTo(_buffer.Slice(_dataIndex, value.Length));
         _dataIndex += value.Length;
     }
