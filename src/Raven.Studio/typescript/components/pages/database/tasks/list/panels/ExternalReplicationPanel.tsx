@@ -1,7 +1,13 @@
 ﻿import React from "react";
 import { OngoingTaskExternalReplicationInfo } from "../../../../../models/tasks";
 import { RichPanel, RichPanelDetailItem, RichPanelDetails, RichPanelHeader } from "../../../../../common/RichPanel";
-import { ConnectionStringItem, OngoingTaskActions, OngoingTaskName, OngoingTaskStatus } from "../shared";
+import {
+    ConnectionStringItem,
+    OngoingTaskActions,
+    OngoingTaskName,
+    OngoingTaskResponsibleNode,
+    OngoingTaskStatus,
+} from "../shared";
 import { useAccessManager } from "hooks/useAccessManager";
 import { useAppUrls } from "hooks/useAppUrls";
 import { BaseOngoingTaskPanelProps, useTasksOperations } from "../shared";
@@ -78,6 +84,7 @@ export function ExternalReplicationPanel(props: ExternalReplicationPanelProps) {
         <RichPanel>
             <RichPanelHeader>
                 <OngoingTaskName task={data} canEdit={canEdit} editUrl={editUrl} />
+                <OngoingTaskResponsibleNode task={data} />
                 <OngoingTaskStatus task={data} canEdit={canEdit} toggleState={toggleStateHandler} />
                 <OngoingTaskActions
                     task={data}

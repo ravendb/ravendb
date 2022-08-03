@@ -51,13 +51,19 @@ interface ActionProgressLoaded {
     type: "ProgressLoaded";
 }
 
+interface ActionTasksLoadError {
+    type: "TasksLoadError";
+    location: databaseLocationSpecifier;
+    error: JQueryXHR;
+}
+
 interface OngoingTasksState {
     tasks: OngoingTaskInfo[];
     locations: databaseLocationSpecifier[];
     replicationHubs: OngoingTaskHubDefinitionInfo[];
 }
 
-type OngoingTaskReducerAction = ActionTasksLoaded | ActionProgressLoaded;
+type OngoingTaskReducerAction = ActionTasksLoaded | ActionProgressLoaded | ActionTasksLoadError;
 
 const serverWidePrefix = "Server Wide";
 
@@ -101,7 +107,8 @@ function mapSharedInfo(task: OngoingTask): OngoingTaskSharedInfo {
         taskType: TaskUtils.ongoingTaskToStudioTaskType(task),
         taskName: task.TaskName,
         taskId: task.TaskId,
-        mentorName: task.MentorNode,
+        mentorNodeTag: task.MentorNode,
+        responsibleNodeTag: task.ResponsibleNode?.NodeTag,
         taskState: task.TaskState,
         serverWide: task.TaskName.startsWith(serverWidePrefix),
     };
@@ -282,12 +289,23 @@ export const ongoingTasksReducer: Reducer<OngoingTasksState, OngoingTaskReducerA
                     const existingTask = state.tasks.find(
                         (x) => x.shared.taskType === incomingTaskType && x.shared.taskId === incomingTask.TaskId
                     );
+
                     const nodesInfo = existingTask ? existingTask.nodesInfo : initNodesInfo(state.locations);
+                    const existingNodeInfo = existingTask
+                        ? existingTask.nodesInfo.find((x) => databaseLocationComparator(x.location, incomingLocation))
+                        : null;
+
                     const newNodeInfo: OngoingTaskNodeInfo = {
                         location: incomingLocation,
                         status: "loaded",
                         details: mapNodeInfo(incomingTask),
                     };
+
+                    if (existingNodeInfo) {
+                        const { location, status, details, ...restProps } = existingNodeInfo;
+                        // retain other props - like etlProgress
+                        Object.assign(newNodeInfo, restProps);
+                    }
 
                     return {
                         shared: mapSharedInfo(incomingTask),
@@ -318,9 +336,28 @@ export const ongoingTasksReducer: Reducer<OngoingTasksState, OngoingTaskReducerA
                             hasFiltering: incomingTask.WithFiltering,
                             serverWide: incomingTask.Name.startsWith(serverWidePrefix),
                             taskType: "PullReplicationAsHub",
-                            mentorName: null,
+                            mentorNodeTag: null,
+                            responsibleNodeTag: null,
                         },
                         nodesInfo: undefined,
+                    };
+                });
+            });
+        }
+        case "TasksLoadError": {
+            const incomingLocation = action.location;
+            const error = action.error;
+
+            return produce(state, (draft) => {
+                draft.tasks.forEach((task) => {
+                    const nodeInfo = task.nodesInfo.find((x) =>
+                        databaseLocationComparator(x.location, incomingLocation)
+                    );
+                    nodeInfo.status = "error";
+                    nodeInfo.details = {
+                        error: error.responseJSON.Message,
+                        responsibleNode: null,
+                        taskConnectionStatus: null,
                     };
                 });
             });

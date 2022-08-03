@@ -6,6 +6,7 @@ import {
     ICanShowTransformationScriptPreview,
     OngoingTaskActions,
     OngoingTaskName,
+    OngoingTaskResponsibleNode,
     OngoingTaskStatus,
     useTasksOperations,
 } from "../shared";
@@ -69,6 +70,7 @@ export function SqlEtlPanel(props: SqlEtlPanelProps & ICanShowTransformationScri
         <RichPanel>
             <RichPanelHeader>
                 <OngoingTaskName task={data} canEdit={canEdit} editUrl={editUrl} />
+                <OngoingTaskResponsibleNode task={data} />
                 <OngoingTaskStatus task={data} canEdit={canEdit} toggleState={toggleStateHandler} />
                 <OngoingTaskActions
                     task={data}

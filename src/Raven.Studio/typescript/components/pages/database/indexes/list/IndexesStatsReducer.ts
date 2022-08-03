@@ -20,6 +20,12 @@ interface ActionProgressLoaded {
     type: "ProgressLoaded";
 }
 
+interface ActionProgressLoadError {
+    location: databaseLocationSpecifier;
+    error: JQueryXHR;
+    type: "ProgressLoadError";
+}
+
 interface ActionSetIndexPriority {
     indexName: string;
     priority: IndexPriority;
@@ -64,6 +70,7 @@ interface ActionResumeIndexing {
 type IndexesStatsReducerAction =
     | ActionDeleteIndexes
     | ActionStatsLoaded
+    | ActionProgressLoadError
     | ActionProgressLoaded
     | ActionSetIndexPriority
     | ActionSetIndexLockMode
@@ -194,6 +201,22 @@ export const indexesStatsReducer: Reducer<IndexesStatsState, IndexesStatsReducer
                             itemToUpdate.details.stale = false;
                         }
                     }
+                });
+            });
+        }
+        case "ProgressLoadError": {
+            const incomingLocation = action.location;
+            const error = action.error;
+
+            return produce(state, (draft) => {
+                draft.indexes.forEach((index) => {
+                    const nodeInfo = index.nodesInfo.find((x) =>
+                        databaseLocationComparator(x.location, incomingLocation)
+                    );
+
+                    nodeInfo.status = "error";
+                    nodeInfo.details = null;
+                    nodeInfo.loadError = error;
                 });
             });
         }

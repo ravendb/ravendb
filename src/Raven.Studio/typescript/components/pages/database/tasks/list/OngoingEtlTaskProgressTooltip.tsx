@@ -12,6 +12,27 @@ interface OngoingTaskEtlProgressTooltipProps {
 
 export function OngoingEtlTaskProgressTooltip(props: OngoingTaskEtlProgressTooltipProps) {
     const { target, nodeInfo, showPreview } = props;
+
+    if (nodeInfo.status === "error") {
+        return (
+            <PopoverWithHover target={target} placement="top" delay={100}>
+                <div className="text-danger flex-horizontal">
+                    <div className="flex-start text-warning">
+                        <i className="icon-warning"></i>
+                    </div>
+                    <div>
+                        <div>Unable to load task status:</div>
+                        <div>{nodeInfo.details.error}</div>
+                    </div>
+                </div>
+            </PopoverWithHover>
+        );
+    }
+
+    if (nodeInfo.status !== "loaded") {
+        return null;
+    }
+
     return (
         <PopoverWithHover rounded target={target} placement="top" delay={100}>
             <div className="ongoing-tasks-details-tooltip">

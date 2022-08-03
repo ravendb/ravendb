@@ -2,7 +2,7 @@
 import { OngoingTaskReplicationHubInfo } from "../../../../../models/tasks";
 import database from "models/resources/database";
 import { RichPanel, RichPanelDetailItem, RichPanelDetails, RichPanelHeader } from "../../../../../common/RichPanel";
-import { OngoingTaskName } from "../shared";
+import { OngoingTaskName, OngoingTaskResponsibleNode } from "../shared";
 
 interface ReplicationHubConnectedSinkPanelProps {
     db: database;
@@ -16,6 +16,7 @@ export function ReplicationHubConnectedSinkPanel(props: ReplicationHubConnectedS
         <RichPanel>
             <RichPanelHeader>
                 <OngoingTaskName task={data} canEdit={false} editUrl={undefined} />
+                <OngoingTaskResponsibleNode task={data} />
             </RichPanelHeader>
             <RichPanelDetails>
                 <RichPanelDetailItem>

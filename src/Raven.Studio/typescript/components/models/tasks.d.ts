@@ -45,7 +45,8 @@ export interface OngoingTaskSharedInfo {
     taskName: string;
     taskId: number;
     taskType: StudioTaskType;
-    mentorName: string;
+    mentorNodeTag: string;
+    responsibleNodeTag: string;
     taskState: OngoingTaskState;
     serverWide: boolean;
 }

@@ -7,6 +7,7 @@ import {
     ICanShowTransformationScriptPreview,
     OngoingTaskActions,
     OngoingTaskName,
+    OngoingTaskResponsibleNode,
     OngoingTaskStatus,
 } from "../shared";
 import { useAppUrls } from "hooks/useAppUrls";
@@ -84,6 +85,7 @@ export function RavenEtlPanel(props: RavenEtlPanelProps & ICanShowTransformation
         <RichPanel>
             <RichPanelHeader>
                 <OngoingTaskName task={data} canEdit={canEdit} editUrl={editUrl} />
+                <OngoingTaskResponsibleNode task={data} />
                 <OngoingTaskStatus task={data} canEdit={canEdit} toggleState={toggleStateHandler} />
                 <OngoingTaskActions
                     task={data}

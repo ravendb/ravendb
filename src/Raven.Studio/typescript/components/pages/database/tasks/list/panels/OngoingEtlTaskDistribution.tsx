@@ -16,9 +16,13 @@ export function OngoingEtlTaskDistribution(props: OngoingEtlTaskDistributionProp
 
     const [uniqueTaskId] = useState(() => _.uniqueId("task-id"));
 
+    const visibleNodes = task.nodesInfo.filter(
+        (x) => x.status !== "loaded" || x.details.taskConnectionStatus !== "NotOnThisNode"
+    );
+
     const items = (
         <>
-            {task.nodesInfo.map((nodeInfo) => {
+            {visibleNodes.map((nodeInfo) => {
                 const shard = (
                     <div className="top shard">
                         {nodeInfo.location.shardNumber != null && (
@@ -48,7 +52,7 @@ export function OngoingEtlTaskDistribution(props: OngoingEtlTaskDistributionProp
                             {nodeInfo.location.nodeTag}
                         </div>
                         <div>{nodeInfo.status === "loaded" ? nodeInfo.details.taskConnectionStatus : ""}</div>
-                        <div>{hasError ? "error" : "-"}</div>
+                        <div>{hasError ? <i className="icon-warning text-danger" /> : "-"}</div>
                         <OngoingEtlTaskProgress task={task} nodeInfo={nodeInfo} />
                         <OngoingEtlTaskProgressTooltip
                             target={id}

@@ -246,13 +246,21 @@ export function IndexesPage(props: IndexesPageProps) {
     }, [stats, filter]);
 
     const fetchProgress = async (location: databaseLocationSpecifier) => {
-        const progress = await indexesService.getProgress(database, location);
+        try {
+            const progress = await indexesService.getProgress(database, location);
 
-        dispatch({
-            type: "ProgressLoaded",
-            progress,
-            location,
-        });
+            dispatch({
+                type: "ProgressLoaded",
+                progress,
+                location,
+            });
+        } catch (e) {
+            dispatch({
+                type: "ProgressLoadError",
+                error: e,
+                location,
+            });
+        }
     };
 
     const fetchStats = useCallback(

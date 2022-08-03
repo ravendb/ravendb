@@ -51,6 +51,54 @@ export function useTasksOperations(editUrl: string, props: BaseOngoingTaskPanelP
     };
 }
 
+export function OngoingTaskResponsibleNode(props: { task: OngoingTaskInfo }) {
+    const { task } = props;
+    const preferredMentor = task.shared.mentorNodeTag;
+    const currentNode = task.shared.responsibleNodeTag;
+
+    const usingNotPreferredNode = preferredMentor && currentNode ? preferredMentor !== currentNode : false;
+
+    if (currentNode) {
+        if (usingNotPreferredNode) {
+            return (
+                <div className="node">
+                    <div>
+                        <i className="icon-cluster-node"></i>
+                        <span className="text-danger pulse" title="User preferred node for this task">
+                            {preferredMentor}
+                        </span>
+                        <i className="icon-arrow-right pulse text-danger"></i>
+                        <span className="text-success" title="Cluster node that is temporary responsible for this task">
+                            {currentNode}
+                        </span>
+                    </div>
+                </div>
+            );
+        } else {
+            return (
+                <div className="node">
+                    <div
+                        title={
+                            task.shared.taskType === "PullReplicationAsHub"
+                                ? "Hub node that is serving this Sink task"
+                                : "Cluster node that is responsible for this task"
+                        }
+                    >
+                        <i className="icon-cluster-node"></i>
+                        <span>{currentNode}</span>
+                    </div>
+                </div>
+            );
+        }
+    }
+
+    return (
+        <div title="No node is currently handling this task">
+            <i className="icon-cluster-node"></i> N/A
+        </div>
+    );
+}
+
 export function OngoingTaskName(props: { task: OngoingTaskInfo; canEdit: boolean; editUrl: string }) {
     const { task, canEdit, editUrl } = props;
     return (

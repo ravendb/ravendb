@@ -1,5 +1,11 @@
 ﻿import React from "react";
-import { OngoingTaskActions, OngoingTaskName, OngoingTaskStatus, useTasksOperations } from "../shared";
+import {
+    OngoingTaskActions,
+    OngoingTaskName,
+    OngoingTaskResponsibleNode,
+    OngoingTaskStatus,
+    useTasksOperations,
+} from "../shared";
 import {
     OngoingTaskHubDefinitionInfo,
     OngoingTaskReplicationHubInfo,
@@ -48,7 +54,11 @@ function Details(props: ReplicationHubPanelProps & { canEdit: boolean }) {
             {connectedSinks.length > 0 && (
                 <div className="margin">
                     {connectedSinks.map((sink) => (
-                        <ReplicationHubConnectedSinkPanel key={sink.shared.taskId + sink.shared.taskName} db={db} data={sink}/>
+                        <ReplicationHubConnectedSinkPanel
+                            key={sink.shared.taskId + sink.shared.taskName}
+                            db={db}
+                            data={sink}
+                        />
                     ))}
                 </div>
             )}
