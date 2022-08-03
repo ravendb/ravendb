@@ -16,7 +16,7 @@ namespace Raven.Server.Web.System
             var env = ServerStore._env;
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriterForDebug(HttpContext.Request, context, ServerStore, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
                 writer.WritePropertyName("Environment");

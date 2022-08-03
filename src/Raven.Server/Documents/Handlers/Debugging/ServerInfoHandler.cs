@@ -13,7 +13,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         public async Task ServerId()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriterForDebug(HttpContext.Request, context, ServerStore, ResponseBodyStream()))
             {
                 context.Write(writer, new DynamicJsonValue
                 {

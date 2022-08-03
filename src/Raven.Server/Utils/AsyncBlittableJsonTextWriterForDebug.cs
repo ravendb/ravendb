@@ -1,5 +1,7 @@
 ﻿using System;
 using System.IO;
+using Microsoft.AspNetCore.Http;
+using Raven.Server.Extensions;
 using Raven.Server.ServerWide;
 using Sparrow.Json;
 
@@ -10,17 +12,21 @@ namespace Raven.Server.Utils
         private readonly ServerStore _serverStore;
         private bool _isFirst = true;
         private bool _isOnlyWrite;
+        private bool _isFromClientApi;
+        private bool _isFromStudio;
 
-        public AsyncBlittableJsonTextWriterForDebug(JsonOperationContext context, ServerStore serverStore, Stream stream) : base(context, stream)
+        public AsyncBlittableJsonTextWriterForDebug(HttpRequest request, JsonOperationContext context, ServerStore serverStore, Stream stream) : base(context, stream)
         {
             _serverStore = serverStore;
+            _isFromClientApi = request.IsFromClientApi();
+            _isFromStudio = request.IsFromStudio();
         }
         
         public override void WriteStartObject()
         {
             base.WriteStartObject();
 
-            if (_isFirst)
+            if (_isFirst && !_isFromStudio && !_isFromClientApi)
             {
                 _isFirst = false;
 
@@ -45,7 +51,7 @@ namespace Raven.Server.Utils
         {
             base.EnsureBuffer(len);
 
-            if (_isOnlyWrite)
+            if (_isOnlyWrite && !_isFromStudio && !_isFromClientApi)
             {
                 _isOnlyWrite = false;
                 WriteComma();
