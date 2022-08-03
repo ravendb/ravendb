@@ -340,6 +340,7 @@ interface storedQueryDto extends queryDto {
 interface replicationConflictListItemDto {
     Id: string;
     LastModified: string;
+    ConflictsPerDocument: number;
 }
 
 type databaseDisconnectionCause = "Error" | "DatabaseDeleted" | "DatabaseDisabled" | "ChangingDatabase" | "DatabaseIsNotRelevant";
