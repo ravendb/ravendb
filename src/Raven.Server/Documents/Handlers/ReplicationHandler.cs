@@ -64,6 +64,7 @@ namespace Raven.Server.Documents.Handlers
                 var alreadyAdded = new HashSet<LazyStringValue>(LazyStringValueComparer.Instance);
                 var array = new DynamicJsonArray();
                 var conflicts = Database.DocumentsStorage.ConflictsStorage.GetConflictsAfter(context, etag);
+                
                 foreach (var conflict in conflicts)
                 {
                     if (alreadyAdded.Add(conflict.Id))
@@ -75,10 +76,12 @@ namespace Raven.Server.Documents.Handlers
                         }
                         if (pageSize-- <= 0)
                             break;
+                        
                         array.Add(new DynamicJsonValue
                         {
                             [nameof(GetConflictsResult.Id)] = conflict.Id,
-                            [nameof(GetConflictsResult.Conflict.LastModified)] = conflict.LastModified
+                            [nameof(GetConflictsResult.Conflict.LastModified)] = conflict.LastModified,
+                            ["ConflictsPerDocument"] = context.DocumentDatabase.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, conflict.Id).Count
                         });
                     }
                 }
