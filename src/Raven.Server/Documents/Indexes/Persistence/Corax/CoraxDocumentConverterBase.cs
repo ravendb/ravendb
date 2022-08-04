@@ -134,7 +134,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
 
     protected ref IndexEntryWriter GetEntriesWriter()
     {
-        if (!_indexEntryWriterInitialized)
+        if (_indexEntryWriterInitialized == false)
         {
             _indexEntryWriter = new IndexEntryWriter(_allocator, GetKnownFieldsForWriter());
             _indexEntryWriterInitialized = true;
