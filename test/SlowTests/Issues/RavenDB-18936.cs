@@ -108,8 +108,8 @@ public class RavenDB_18936 : RavenTestBase
         WaitForUserToContinueTheTest(store);
         AssertTerm(store, index.IndexName, "Loc", new []
         {
-            Spatial4n.Core.Util.GeohashUtils.EncodeLatLon(10,10,9),
-            Spatial4n.Core.Util.GeohashUtils.EncodeLatLon(20,20,9)
+            Spatial4n.Util.GeohashUtils.EncodeLatLon(10,10,9),
+            Spatial4n.Util.GeohashUtils.EncodeLatLon(20,20,9)
         }
             , isSpatial: true);
     }
