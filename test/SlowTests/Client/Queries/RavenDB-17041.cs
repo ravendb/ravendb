@@ -43,7 +43,7 @@ namespace SlowTests.Client.Queries
             public List<RoleData> Roles;
         }
 
-        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public async Task Can_Include_Secondary_Level_With_Alias(Options options)
         {

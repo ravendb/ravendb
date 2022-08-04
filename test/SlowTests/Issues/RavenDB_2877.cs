@@ -51,7 +51,7 @@ namespace SlowTests.Issues
         }
 
 
-        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
         public async Task CanHandleHandleLongUrl(Options options)
         {

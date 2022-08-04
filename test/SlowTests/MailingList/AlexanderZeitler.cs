@@ -30,7 +30,7 @@ namespace SlowTests.MailingList
             public string HashedPassword { get; set; }
         }
 
-        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void It_should_be_found(Options options)
         {

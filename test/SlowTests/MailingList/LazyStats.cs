@@ -17,7 +17,7 @@ namespace SlowTests.MailingList
         {
         }
 
-        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void CanGetTotalResultsFromStatisticsOnLazySearchAgainstDynamicIndex(Options options)
         {
@@ -56,7 +56,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void CanGetTotalResultsFromStatisticsOnLazySearchAgainstDynamicIndex_Embedded(Options options)
         {
@@ -129,7 +129,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void CanGetTotalResultsFromStatisticsOnLazySearchAgainstStaticIndex(Options options)
         {

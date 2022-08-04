@@ -25,7 +25,7 @@ namespace SlowTests.Issues
             public string Name { get; set; }
         }
 
-        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void LazyWithoutSelectNew(Options options)
         {

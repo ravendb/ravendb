@@ -26,7 +26,7 @@ namespace SlowTests.Issues
             public string Id;
         }
 
-        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanUseCreateCmpXngToInSessionWithNoOtherChanges(Options options)
         {

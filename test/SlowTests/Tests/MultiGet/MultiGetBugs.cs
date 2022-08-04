@@ -32,7 +32,7 @@ namespace SlowTests.Tests.MultiGet
             }
         }
 
-        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void CanUseStats(Options options)
         {

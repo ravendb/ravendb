@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using Xunit.Abstractions;
-
 using FastTests;
 using Raven.Client.Documents;
 using Tests.Infrastructure;
@@ -33,7 +32,7 @@ namespace SlowTests.Tests.MultiGet
             }
         }
 
-        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void ShouldBeAbleToGetNonStaleResults(Options options)
         {
