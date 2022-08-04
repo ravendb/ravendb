@@ -89,8 +89,8 @@ public unsafe partial struct IndexEntryWriter : IDisposable
     /// </summary>
     public void Write(int field, ReadOnlySpan<byte> value)
     {
-        Debug.Assert(field < _knownFields.Count);
-        Debug.Assert(KnownFieldsLocations[field] == Invalid);
+        Debug.Assert(field < _knownFields.Count, "The field must be known");
+        Debug.Assert(KnownFieldsLocations[field] == Invalid, "The field has been written before.");
 
         if (FreeSpace < value.Length + sizeof(long))
             UnlikelyGrowAuxiliaryBuffer();
@@ -121,8 +121,8 @@ public unsafe partial struct IndexEntryWriter : IDisposable
     {
         //STRUCT
         //<type><size_of_binary><binary>
-        Debug.Assert(field < _knownFields.Count);
-        Debug.Assert(KnownFieldsLocations[field] == Invalid);
+        Debug.Assert(field < _knownFields.Count, "The field must be known");
+        Debug.Assert(KnownFieldsLocations[field] == Invalid, "The field has been written before.");
 
         if (FreeSpace < binaryValue.Length + sizeof(long))
             UnlikelyGrowAuxiliaryBuffer();
@@ -159,8 +159,8 @@ public unsafe partial struct IndexEntryWriter : IDisposable
 
     public void WriteSpatial(int field, CoraxSpatialPointEntry entry)
     {
-        Debug.Assert(field < _knownFields.Count);
-        Debug.Assert(KnownFieldsLocations[field] == Invalid);
+        Debug.Assert(field < _knownFields.Count, "The field must be known");
+        Debug.Assert(KnownFieldsLocations[field] == Invalid, "The field has been written before.");
 
         if (entry.Geohash.Length == 0)
             return;
@@ -201,8 +201,8 @@ public unsafe partial struct IndexEntryWriter : IDisposable
     {
         //<type:byte><extended_type:byte><amount_of_items:int><geohashLevel:int><geohash_ptr:int>
         //<longitudes_ptr:int><latitudes_list:double[]><longtitudes_list:double[]><geohashes_list:bytes[]>
-        Debug.Assert(field < _knownFields.Count);
-        Debug.Assert(KnownFieldsLocations[field] == Invalid);
+        Debug.Assert(field < _knownFields.Count, "The field must be known");
+        Debug.Assert(KnownFieldsLocations[field] == Invalid, "The field has been written before.");
 
         if (entries.Length == 0)
             return;
@@ -211,6 +211,8 @@ public unsafe partial struct IndexEntryWriter : IDisposable
         int requiredSpace = 0;
         foreach (var entry in entries)
             requiredSpace += entry.Geohash.Length;
+
+        // We are calculating the space based on the necessary space needed to storage the geohashes values in doubles.
         requiredSpace += sizeof(IndexEntryFieldType) + 2 * entries.Length * sizeof(double) + 4 * sizeof(long);
 
         if (FreeSpace < requiredSpace)
@@ -263,8 +265,8 @@ public unsafe partial struct IndexEntryWriter : IDisposable
 
     public void Write(int field, ReadOnlySpan<byte> value, long longValue, double doubleValue)
     {
-        Debug.Assert(field < _knownFields.Count);
-        Debug.Assert(KnownFieldsLocations[field] == Invalid);
+        Debug.Assert(field < _knownFields.Count, "The field must be known");
+        Debug.Assert(KnownFieldsLocations[field] == Invalid, "The field has been written before.");
 
         if (FreeSpace < sizeof(IndexEntryFieldType) + value.Length + 4 * sizeof(long))
             UnlikelyGrowAuxiliaryBuffer();
@@ -304,14 +306,14 @@ public unsafe partial struct IndexEntryWriter : IDisposable
     public void Write<TEnumerator>(int field, TEnumerator values, IndexEntryFieldType type = IndexEntryFieldType.Null) 
         where TEnumerator : IReadOnlySpanIndexer
     {
-        Debug.Assert(field < _knownFields.Count);
-        Debug.Assert(KnownFieldsLocations[field] == Invalid);
+        Debug.Assert(field < _knownFields.Count, "The field must be known");
+        Debug.Assert(KnownFieldsLocations[field] == Invalid, "The field has been written before.");        
 
-        // Calculate the required space. 
-        int requiredSpace = 0;
+        // We are calculating the space required based on the necessary space needed to store
+        // the lists, metadata and the content. 
+        int requiredSpace = sizeof(IndexEntryFieldType) + 2 * values.Length * sizeof(long) + 4 * sizeof(long);
         for (int i = 0; i < values.Length; i++)
-            requiredSpace += values[i].Length;
-        requiredSpace += sizeof(IndexEntryFieldType) + 2 * values.Length * sizeof(long) + 4 * sizeof(long);
+            requiredSpace += values[i].Length;        
         
         if (FreeSpace < requiredSpace)
             UnlikelyGrowAuxiliaryBuffer(requiredSpace);
@@ -402,17 +404,18 @@ public unsafe partial struct IndexEntryWriter : IDisposable
 
     public unsafe void Write(int field, IReadOnlySpanIndexer values, ReadOnlySpan<long> longValues, ReadOnlySpan<double> doubleValues)
     {
-        Debug.Assert(field < _knownFields.Count);
-        Debug.Assert(KnownFieldsLocations[field] == Invalid);                        
+        Debug.Assert(field < _knownFields.Count, "The field must be known");
+        Debug.Assert(KnownFieldsLocations[field] == Invalid, "The field has been written before.");
 
         if (values.Length != longValues.Length || values.Length != doubleValues.Length)
             throw new ArgumentException("The lengths of the values and longValues and doubleValues must be the same.");
 
-        // Calculate the required space. 
-        int requiredSpace = 0;
+        // We are calculating the space required based on the necessary space needed to store
+        // the lists, metadata and the content.  
+        int requiredSpace = sizeof(IndexEntryFieldType) + 2 * longValues.Length * sizeof(long) + 4 * sizeof(long);
         for (int i = 0; i < values.Length; i++)
             requiredSpace += values[i].Length;
-        requiredSpace += sizeof(IndexEntryFieldType) + 2 * longValues.Length * sizeof(long) + 4 * sizeof(long);
+
 
         if (FreeSpace < requiredSpace)
             UnlikelyGrowAuxiliaryBuffer(requiredSpace);
@@ -484,6 +487,8 @@ public unsafe partial struct IndexEntryWriter : IDisposable
 
     public ByteStringContext<ByteStringMemoryCache>.InternalScope Finish(out ByteString output)
     {
+        // Since we are at the end of the process, as long as we hve 2 longs of space we can
+        // finish the preprocessing to write the data into the new allocated buffer. 
         if (FreeSpace < 2 * sizeof(long))
             UnlikelyGrowAuxiliaryBuffer();
         
@@ -551,7 +556,7 @@ public unsafe partial struct IndexEntryWriter : IDisposable
                 throw new ArgumentException($"'{encodeSize}' is not a valid {nameof(IndexEntryTableEncoding)}.");
         }
 
-        // Create the actual output memory buffer that we are going to be using. 
+        // Create the actual output memory buffer that we are going to be returning to the caller. 
         var scope = _context.Allocate(_dataIndex, out output);
         buffer.Slice(0, _dataIndex).CopyTo(output.ToSpan());
 
