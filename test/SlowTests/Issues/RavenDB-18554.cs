@@ -262,20 +262,50 @@ namespace SlowTests.Issues
 
                 Exception exception = null;
                 List<Categoroies_Details.Entity> l = null;
+                Mutex mutex = new Mutex();
+                var calledOnce = new FlagHolder
+                {
+                    Flag = false
+                };
                 var d = () =>
                 {
                     try
                     {
-                        using (var store2 = new DocumentStore() // DisableTopologyUpdates is false, for letting failover work (failover updates the topology)
-                               {
-                                   Urls = (from node in nodes select node.WebUrl).ToArray<string>(),
-                                   Database = store.Database,
-                               }.Initialize())
+                        // Ensure that call this function once.
+                        mutex.WaitOne();
+                        if (calledOnce.Flag)
+                        {
+                            Console.WriteLine("QueriesShouldFailoverIfIndexIsCompactingCluster: 1.1 Error: ForTestingPurposesOnly().IndexCompaction - Called twice.");
+                            return;
+                        }
+
+                        calledOnce.Flag = true;
+                        mutex.ReleaseMutex();
+
+                        using var store2 = new DocumentStore() // DisableTopologyUpdates is false, for letting failover work (failover updates the topology)
+                        {
+                            Urls = (from node in nodes select node.WebUrl).ToArray<string>()
+                            , Database = store.Database,
+                        };
+                        store2.OnBeforeRequest += async (sender, args) =>
+                        {
+                            Console.WriteLine($"QueriesShouldFailoverIfIndexIsCompactingCluster: 2.   Query started. {args.Url}");
+                        };
+                        store2.OnSucceedRequest += async (sender, args) =>
+                        {
+                            Console.WriteLine($"QueriesShouldFailoverIfIndexIsCompactingCluster: 3.2. Query ended. {args.Url}");
+                        };
+                        store2.OnFailedRequest += async (sender, args) =>
+                        {
+                            Console.WriteLine($"QueriesShouldFailoverIfIndexIsCompactingCluster: 3.1. Query Failed. {args.Url}");
+                        };
+
+                        store2.Initialize();
+
                         using (var session = store2.OpenSession())
                         {
                             l = session.Query<Categoroies_Details.Entity, Categoroies_Details>()
-                                .ProjectInto<Categoroies_Details.Entity>()
-                                .ToList();
+                                .ProjectInto<Categoroies_Details.Entity>().ToList();
                         }
                     }
                     catch (Exception e)
@@ -289,8 +319,10 @@ namespace SlowTests.Issues
                 var database = await GetDatabase(responsibleNode, store.Database);
                 database.IndexStore.ForTestingPurposesOnly().IndexCompaction = d;
 
+                Console.WriteLine("QueriesShouldFailoverIfIndexIsCompactingCluster: 1.   Compacting started.");
                 var operation = await store.Maintenance.Server.SendAsync(new CompactDatabaseOperation(settings));
                 await operation.WaitForCompletionAsync();
+                Console.WriteLine("QueriesShouldFailoverIfIndexIsCompactingCluster: 4.   Compacting finished.");
 
                 // Check if failover succeeded
                 Assert.Null(exception);
@@ -299,6 +331,11 @@ namespace SlowTests.Issues
                 Assert.Equal(categoryId, l[0].Id);
                 Assert.Equal(Categoroies_Details.GenDetails(c), l[0].Details);
             }
+        }
+
+        private class FlagHolder
+        {
+            public bool Flag { get; set; } = false;
         }
 
         class Categoroies_Details : AbstractMultiMapIndexCreationTask<Categoroies_Details.Entity>
