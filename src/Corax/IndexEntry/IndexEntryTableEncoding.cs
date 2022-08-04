@@ -1,5 +1,8 @@
 ﻿namespace Corax;
 
+
+// PERF: This entries are used in a lookup table at the IndexEntryReader. Any modification of these values
+//       would require the modification of the table. 
 public enum IndexEntryTableEncoding : byte
 {
     None = 0b00, // shouldn't be used ever
