@@ -46,145 +46,32 @@ namespace SlowTests.Issues
         [Fact]
         public void CopyToIndexDefinitionWorksProperly()
         {
-            var conf = new IndexConfiguration();
-            conf.Add("key1", "val1");
-            conf.Add("key2", "val2");
-
             IndexDefinition a = GetNonDefaultIndexDefinition();
 
-            // Assert 'a' doesn't have default  
-            var defaultDefinition = new IndexDefinition();
-            string[] defPropetisToIgnore = new string[] { "SourceType", "Type" }; // null's with exception.
-            foreach (PropertyInfo property in a.GetType().GetProperties())
-            {
-                if (defPropetisToIgnore.Contains(property.Name))
-                    continue;
 
-                var value1 = property.GetValue(a, null);
-                var value2 = property.GetValue(defaultDefinition, null);
-                Assert.False(value1 == null && value2 == null, $"Property \"{property.Name}\" is equal - original: {value1}, default: {value2}");
-                if (value1 == null || value2 == null)
-                {
-                    continue;
-                }
+            var defaultIndexDefinition = new IndexDefinition();
 
-                var t = Nullable.GetUnderlyingType(property.PropertyType);
-                if (t == null)
-                {
-                    t = property.PropertyType;
-                }
-                dynamic c1 = Convert.ChangeType(value1, t);
-                dynamic c2 = Convert.ChangeType(value2, t);
+            var differences = defaultIndexDefinition.Compare(a);
 
-                Assert.False(c1 == c2, $"Property \"{property.Name}\" is different - equal: {c1}, default: {c2}");
-            }
+            Assert.Equal(IndexDefinitionCompareDifferences.All, differences);
 
-            // Assert a and b (clone made by CopyTo) are equals by values
+            var fields = typeof(IndexDefinition).GetFields();
+            var properties = typeof(IndexDefinition).GetProperties();
+
+            var enumValues = Enum.GetValues<IndexDefinitionCompareDifferences>();
+
+            Assert.Equal(enumValues.Length -2, //Exclude 'None' and 'All'
+                fields.Length + properties.Length - 7
+                //properties contains also 'Name', 'PatternReferencesCollectionName', 'PatternForOutputReduceToCollectionReferences', 'ReduceOutputIndex', 'OutputReduceToCollection', 'Type', 'SourceType'
+                //which aren't contained in enumValues
+                );
 
             IndexDefinition b = new IndexDefinition();
             a.CopyTo(b);
 
-            //AdditionalSources
-            Assert.NotNull(a.AdditionalSources);
-            Assert.NotNull(b.AdditionalSources);
-            Assert.Equal(a.AdditionalSources.Count, b.AdditionalSources.Count);
-            foreach (var kvp in a.AdditionalSources)
-                Assert.Equal(kvp.Value, b.AdditionalSources[kvp.Key]);
+            differences = b.Compare(a);
 
-            //AdditionalAssemblies
-            Assert.NotNull(a.AdditionalAssemblies);
-            Assert.NotNull(b.AdditionalAssemblies);
-            Assert.Equal(a.AdditionalAssemblies.Count, b.AdditionalAssemblies.Count);
-            foreach (var asm in a.AdditionalAssemblies)
-                Assert.True(b.AdditionalAssemblies.SingleOrDefault(x => x.AssemblyName == asm.AssemblyName &&
-                                                                                                x.AssemblyPath == asm.AssemblyPath &&
-                                                                                                x.PackageName == asm.PackageName &&
-                                                                                                x.PackageVersion == asm.PackageVersion &&
-                                                                                                x.PackageSourceUrl == asm.PackageSourceUrl &&
-                                                                                                StringHashSetEqualsByVal(x.Usings, asm.Usings)) != null
-                                                                                    ,$"b.AdditionalAssemblies doesn't contain {asm}");
-
-            //Maps
-            Assert.NotNull(a.Maps);
-            Assert.NotNull(b.Maps);
-            Assert.Equal(a.Maps.Count, b.Maps.Count);
-            foreach (var m in a.Maps)
-                Assert.Contains(b.Maps, m2 => m2 == m);
-
-            //Fields
-            Assert.NotNull(a.Fields);
-            Assert.NotNull(b.Fields);
-            Assert.True(a.Fields.Count > 0);
-            Assert.True(b.Fields.Count > 0);
-            foreach (var kvp in a.Fields)
-            {
-                var value = kvp.Value;
-                if (value == null)
-                    continue;
-
-                var bValue = b.Fields[kvp.Key];
-                Assert.NotNull(bValue);
-
-                Assert.Equal(value.Indexing, bValue.Indexing);
-                Assert.Equal(value.Analyzer, bValue.Analyzer);
-                Assert.Equal(value.Spatial, bValue.Spatial);
-                Assert.Equal(value.Storage, bValue.Storage);
-                Assert.Equal(value.Suggestions, bValue.Suggestions);
-                Assert.Equal(value.TermVector, bValue.TermVector);
-            }
-
-            //Configuration
-            Assert.NotNull(a.Configuration);
-            Assert.NotNull(b.Configuration);
-            Assert.True(a.Configuration.Count > 0);
-            Assert.True(b.Configuration.Count > 0);
-            foreach (var kvp in a.Configuration)
-                Assert.Equal(kvp.Value, b.Configuration[kvp.Key]);
-
-            var properties = a.GetType().GetProperties();
-            string[] propetisToIgnore = new string[] { 
-                "AdditionalSources", "AdditionalAssemblies", "Maps", "Fields", "Configuration", // collections - need to check it's elements
-                "SourceType" }; // calculated on the fly
-            foreach (PropertyInfo property in a.GetType().GetProperties())
-            {
-                if (propetisToIgnore.Contains(property.Name))
-                    continue;
-
-                var value1 = property.GetValue(a, null);
-                var value2 = property.GetValue(b, null);
-                if (value1 == null && value2 == null)
-                {
-                    continue;
-                }
-                Assert.False(value1 == null || value2 == null, $"Property \"{property.Name}\" is different - expected: {value1}, actual: {value2}");
-                
-                var t = Nullable.GetUnderlyingType(property.PropertyType);
-                if (t == null)
-                {
-                    t = property.PropertyType;
-                }
-                dynamic c1 = Convert.ChangeType(value1, t);
-                dynamic c2 = Convert.ChangeType(value2, t);
-
-                Assert.True(c1 == c2, $"Property \"{property.Name}\" is different - expected: {c1}, actual: {c2}");
-            }
-
-            bool StringHashSetEqualsByVal(HashSet<string> h1, HashSet<string> h2)
-            {
-                if (h1 == h2)
-                    return true;
-                if(h1== null || h2 == null)
-                    return false;
-                if (h1.Count != h2.Count)
-                    return false;
-
-                foreach (var e in h1)
-                {
-                    if (h2.Contains(e) == false)
-                        return false;
-                }
-                return true;
-            }
+            Assert.Equal(IndexDefinitionCompareDifferences.None, differences);
         }
 
         private IndexDefinition GetNonDefaultIndexDefinition()
