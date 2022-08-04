@@ -24,7 +24,7 @@ namespace SlowTests.MailingList
             public string Name;
         }
 
-        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void TestLazyQuery(Options options)
         {

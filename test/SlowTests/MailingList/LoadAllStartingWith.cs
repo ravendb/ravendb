@@ -23,7 +23,7 @@ namespace SlowTests.MailingList
             public string Id { get; set; }
         }
 
-        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void LoadAllStartingWithShouldNotLoadDeletedDocs(Options options)
         {

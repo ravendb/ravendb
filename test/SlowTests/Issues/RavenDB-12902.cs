@@ -207,7 +207,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task AfterLazyQueryExecutedShouldBeExecutedOnlyOnce(Options options)
         {

@@ -15,7 +15,7 @@ namespace SlowTests.Tests.Queries
         {
         }
 
-        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void Can_use_includes_within_multi_load(Options options)
         {
@@ -52,10 +52,11 @@ namespace SlowTests.Tests.Queries
             }
         }
 
-        [Fact]
-        public void can_include_by_primary_string_property()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void can_include_by_primary_string_property(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -130,7 +131,7 @@ namespace SlowTests.Tests.Queries
             }
         }
 
-        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void can_query_with_include_by_primary_string_property(Options options)
         {
@@ -170,7 +171,7 @@ namespace SlowTests.Tests.Queries
             }
         }
 
-        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void can_query_with_include_by_primary_valuetype_property(Options options)
         {

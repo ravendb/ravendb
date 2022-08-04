@@ -26,7 +26,7 @@ namespace SlowTests.MailingList.Apo
             public DateTime Date { get; set; }
         }
 
-        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void LazyWhereAndOrderBy(Options options)
         {
@@ -57,7 +57,7 @@ namespace SlowTests.MailingList.Apo
             }
         }
 
-        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task LazyQuery_WhenDefineCallBack_ShouldExecuteAsItIsInRegularQuery(Options options)
         {
@@ -106,7 +106,7 @@ namespace SlowTests.MailingList.Apo
             }
         }
 
-        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CountLazily_WhenDefineCallBack_ShouldExecuteAsItIsInRegularQuery(Options options)
         {

@@ -70,7 +70,6 @@ namespace SlowTests.Tests.MultiGet
             }
         }
 
-
         [Fact]
         public void CanGetQueryStats()
         {
@@ -153,11 +152,10 @@ namespace SlowTests.Tests.MultiGet
                     session.Advanced.Eagerly.ExecuteAllPendingLazyOperations();
                     Assert.NotNull(user);
                 }
-
             }
         }
 
-        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void LazyOperationsAreBatched(Options options)
         {
@@ -176,7 +174,7 @@ namespace SlowTests.Tests.MultiGet
             }
         }
 
-        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void LazyMultiLoadOperationWouldBeInTheSession(Options options)
         {
@@ -213,7 +211,7 @@ namespace SlowTests.Tests.MultiGet
             }
         }
 
-        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void LazyWithProjection(Options options)
         {
@@ -277,7 +275,7 @@ namespace SlowTests.Tests.MultiGet
             }
         }
 
-        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void LazyMultiLoadOperationWouldBeInTheSession_WithNonStaleResponse(Options options)
         {
@@ -309,7 +307,7 @@ namespace SlowTests.Tests.MultiGet
             }
         }
 
-        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void CanGetStatisticsWithLazyQueryResults(Options options)
         {
@@ -342,7 +340,6 @@ namespace SlowTests.Tests.MultiGet
                     Assert.Equal(1, stats.TotalResults);
                     Assert.Equal(1, stats2.TotalResults);
                 }
-
             }
         }
     }

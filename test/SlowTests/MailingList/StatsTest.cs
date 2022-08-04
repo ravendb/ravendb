@@ -99,7 +99,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void WeeklyStatsIndex_ReturnsCorrectStats(Options options)
         {

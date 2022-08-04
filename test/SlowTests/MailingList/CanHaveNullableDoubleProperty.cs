@@ -18,7 +18,7 @@ namespace SlowTests.MailingList
         {
         }
 
-        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void WillSupportNullableDoubles(Options options)
         {
@@ -47,7 +47,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void WillSupportNullableDoubles2(Options options)
         {

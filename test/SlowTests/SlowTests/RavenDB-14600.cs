@@ -1,7 +1,6 @@
 using System;
 using System.Linq;
 using FastTests;
-using MongoDB.Driver;
 using Newtonsoft.Json;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
@@ -59,7 +58,7 @@ namespace SlowTests.SlowTests
             }
         }
 
-        [RavenTheory(RavenTestCategory.Facets | RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenTheory(RavenTestCategory.Facets)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void CanIncludeComplexFacetResult(Options options)
         {
