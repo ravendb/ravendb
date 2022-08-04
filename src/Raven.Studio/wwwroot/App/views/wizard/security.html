@@ -96,8 +96,7 @@
     </div>
     <div class="text-info bg-info padding padding-sm margin-left-lg margin-top-sm">
         <i class="icon-info margin-right-xs"></i>
-        <span data-bind="if: model.onlyCreateZipFile">Setup Wizard will only create a Setup Package for external setup. Current server will NOT be modified.</span>
-        <span data-bind="if: !model.onlyCreateZipFile()">Setup Wizard will create a Setup Package AND set up the current server.</span>
+        <span data-bind="text: model.setupPackageText"></span>
     </div>
 </div>
 

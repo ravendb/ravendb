@@ -1,7 +1,7 @@
 import commandBase = require("commands/commandBase");
 import endpoints = require("endpoints");
 
-class continueClusterConfigurationUnsecureCommand extends commandBase {
+class continueUnsecureClusterConfigurationCommand extends commandBase {
 
     constructor(private operationId: number, private dto: Raven.Server.Commercial.ContinueSetupInfo) {
         super();
@@ -14,8 +14,8 @@ class continueClusterConfigurationUnsecureCommand extends commandBase {
         const url = endpoints.global.setup.setupContinueUnsecured + this.urlEncodeArgs(args);
 
         return this.post<operationIdDto>(url, JSON.stringify(this.dto), null, { dataType: undefined })
-            .fail((response: JQueryXHR) => this.reportError("Failed to configure cluster node in Unsecure mode", response.responseText, response.statusText));
+            .fail((response: JQueryXHR) => this.reportError("Failed to configure cluster node", response.responseText, response.statusText));
     }
 }
 
-export = continueClusterConfigurationUnsecureCommand;
+export = continueUnsecureClusterConfigurationCommand;

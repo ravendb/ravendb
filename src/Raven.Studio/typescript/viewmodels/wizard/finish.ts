@@ -6,9 +6,9 @@ import endpoints = require("endpoints");
 import router = require("plugins/router");
 import app = require("durandal/app");
 import serverNotificationCenterClient = require("common/serverNotificationCenterClient");
-import continueClusterConfigurationCommand = require("commands/wizard/continueClusterConfigurationCommand");
+import continueSecureClusterConfigurationCommand = require("commands/wizard/continueSecureClusterConfigurationCommand");
+import continueUnsecureClusterConfigurationCommand = require("commands/wizard/continueUnsecureClusterConfigurationCommand");
 import secureInstructions = require("viewmodels/wizard/secureInstructions");
-import continueClusterConfigurationUnsecureCommand = require("commands/wizard/continueClusterConfigurationUnsecureCommand");
 
 type messageItem = {
     message: string;
@@ -137,11 +137,11 @@ class finish extends setupStep {
             .done((operationId: number) => {
                 this.websocket.watchOperation(operationId, e => this.onChange(e));
 
-                if (this.model.continueSetup().isZipFileSecure()) {
-                    new continueClusterConfigurationCommand(operationId, dto)
+                if (this.model.continueSetup().isZipSecure()) {
+                    new continueSecureClusterConfigurationCommand(operationId, dto)
                         .execute();
                 } else {
-                    new continueClusterConfigurationUnsecureCommand(operationId, dto)
+                    new continueUnsecureClusterConfigurationCommand(operationId, dto)
                         .execute();
                 }
             });

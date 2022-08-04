@@ -5,6 +5,7 @@ import serverSetup = require("models/wizard/serverSetup");
 import popoverUtils = require("common/popoverUtils");
 import ipEntry = require("models/wizard/ipEntry");
 import databaseStudioConfigurationModel = require("models/database/settings/databaseStudioConfigurationModel");
+import genUtils = require("common/generalUtils");
 
 class nodes extends setupStep {
 
@@ -286,14 +287,14 @@ class nodes extends setupStep {
             "</ul>";
 
         popoverUtils.longWithHover($("#ip-address-info"), {
-            content: `<small>${ipAddressInfo}</small>`,
+            content: `<small>${genUtils.escapeHtml(ipAddressInfo)}</small>`,
             placement: "top",
             html: true
         });
 
         popoverUtils.longWithHover($("#ip-address-info-with-warning"), {
             // This will be displayed only in 'Lets Encrypt' flow 
-            content: `<small>${ipAddressInfo} <strong>Note:</strong> If Hostname is used then an external ip must also be provided.</small>`,
+            content: `<small>${genUtils.escapeHtml(ipAddressInfo)} <strong>Note:</strong> If Hostname is used then an external ip must also be provided.</small>`,
             placement: "top",
             html: true
         });

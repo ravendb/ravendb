@@ -123,7 +123,7 @@ class nodeInfo {
     }
 
     private initValidation() {
-        const currentHttpPort = window.location.port || "80";
+        const currentHttpPort = window.location.port || "8080";
 
         this.port.extend({
             number: true,
@@ -236,10 +236,11 @@ class nodeInfo {
             Port: this.port() ? parseInt(this.port(), 10) : this.mode() === 'Unsecured' ? 8080 : null,
             TcpPort: this.tcpPort() ? parseInt(this.tcpPort(), 10) : this.mode() === 'Unsecured' ? 38888 : null,
             PublicServerUrl: this.getServerUrl(),
+            PublicTcpServerUrl: null,
             ExternalIpAddress: (this.advancedSettingsCheckBox() && this.externalIpAddress()) ? this.externalIpAddress() : null,
             ExternalPort: (this.advancedSettingsCheckBox() && this.externalHttpsPort()) ? parseInt(this.externalHttpsPort(), 10) : null,
             ExternalTcpPort: (this.advancedSettingsCheckBox() && this.externalTcpPort()) ? parseInt(this.externalTcpPort(), 10) : null
-        } as Raven.Server.Commercial.NodeInfo;
+        }
     }
 }
 

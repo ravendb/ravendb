@@ -19,7 +19,7 @@ class continueConfiguration extends setupStep {
     }
     
     save() {
-        if (!this.model.continueSetup().isZipFileSecure()) {
+        if (!this.model.continueSetup().isZipSecure()) {
             this.model.registerClientCertificate(false);
         }
             

@@ -92,11 +92,6 @@ class unsecured extends setupStep {
             this.initTooltips();
         }
         
-        popoverUtils.longWithHover($("label[for=serverUrl] .icon-info"), // TODO  where is this used ???
-            {
-                content: 'The URL which the server should listen to. It can be hostname, ip address or 0.0.0.0:{port}',
-            });
-        
         this.initTooltips();
     }
 
