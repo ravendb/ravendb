@@ -19,18 +19,23 @@ class continueSetup {
     nodeTag = ko.observable<string>();
     serverUrl = ko.observable<string>();
     
-    isZipFileSecure: KnockoutComputed<boolean>;
+    isZipSecure: KnockoutComputed<boolean>;
+    isZipValid: KnockoutComputed<boolean>;
     
     validationGroup: KnockoutValidationGroup;
+
+    static readonly securePrefix = "https://";
+    static readonly unsecurePrefix = "http://";
     
     constructor() {
         _.bindAll(this, "fileSelected", "onConfigEntrySelected");
+
+        this.isZipSecure = ko.pureComputed(() => {
+            return this.areNodesSecure();
+        })
         
-        this.isZipFileSecure = ko.pureComputed(() => {
-            const nodes = this.nodesInfo();
-            return this.zipFile() && nodes.length && !!nodes[0].publicServerUrl; 
-            // nodes from unsecure zip contain ServerUrl
-            // nodes from secure zip contain PublicServerUrl
+        this.isZipValid = ko.pureComputed(() => {
+            return this.areNodesValid();
         })
         
         this.initValidation();
@@ -40,13 +45,24 @@ class continueSetup {
         this.importedFileName.extend({
             required: true
         });
+        
         this.nodeTag.extend({
             required: true
         });
         
+        this.isZipValid.extend({
+            validation: [
+                {
+                    validator: (val: boolean) => val,
+                    message: "Invalid nodes configuration in zip file"
+                }
+            ]
+        })
+        
         this.validationGroup = ko.validatedObservable({
             importedFileName: this.importedFileName,
-            nodeTag: this.nodeTag
+            nodeTag: this.nodeTag,
+            isZipValid: this.isZipValid
         });
     }
     
@@ -72,12 +88,63 @@ class continueSetup {
         new extractNodesInfoFromPackageCommand(this.zipFile())
             .execute()
             .done((nodesInfo) => {
-                let nodes = nodesInfo.map(x => {
+                const nodes = nodesInfo.map(x => {
                     return { tag: x.Tag, serverUrl: x.ServerUrl, publicServerUrl: x.PublicServerUrl }
                 });
 
                 this.nodesInfo(nodes);
             });
+    }
+
+    private areNodesSecure(): boolean {
+        const nodes = this.nodesInfo();
+
+        if (!this.zipFile() || !nodes.length) {
+            return false;
+        }
+
+        let secure = true;
+        nodes.forEach(node => {
+            if (!this.isNodeSecure(node)) {
+                secure = false;
+            }
+        });
+
+        return secure;
+    }
+
+    private isNodeSecure(node: configurationNodeInfo): boolean {
+        return node.publicServerUrl && node.publicServerUrl.startsWith(continueSetup.securePrefix);
+    }
+    
+    private areNodesValid(): boolean {
+        let isValid = true;
+        
+        const nodes = this.nodesInfo();
+        if (!nodes.length) {
+            return true;
+        }
+        
+        const firstNode = nodes[0];
+        
+        
+        if (firstNode.publicServerUrl) {
+            nodes.forEach(x => {
+                if (!x.publicServerUrl || !x.publicServerUrl.startsWith(continueSetup.securePrefix)) {
+                    console.log('false');
+                    isValid = false;
+                }
+            })
+        } else {
+            nodes.forEach(x => {
+                if (!x.serverUrl || !x.serverUrl.startsWith(continueSetup.unsecurePrefix)) {
+                    console.log('false');
+                    isValid = false;
+                }
+            })
+        }
+        
+        return isValid;
     }
 }
 

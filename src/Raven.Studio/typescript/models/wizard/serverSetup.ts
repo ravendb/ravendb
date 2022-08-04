@@ -49,6 +49,16 @@ class serverSetup {
         return this.certificate().wildcardCertificate();
     });
 
+    setupPackageText = ko.pureComputed(() => {
+        if (this.onlyCreateZipFile()) {
+            return "Setup Wizard will only create a Setup Package for external setup. Current server will NOT be modified.";
+        } else if (this.mode() === "Unsecured") {
+            return "Setup Wizard will set up the current server. A Setup Package will be created only if multiple nodes are configured.";
+        } else {
+            return "Setup Wizard will create a Setup Package AND set up the current server.";
+        }
+    });
+
     nodesValidationGroup: KnockoutValidationGroup;
 
     constructor() {

@@ -35,12 +35,15 @@
                     <span class="help-block" data-bind="validationMessage: nodeTag"></span>
                 </div>
             </div>
-            <div data-bind="visible: isZipFileSecure()">
+            <div data-bind="visible: isZipSecure()">
                 <hr />
                 <div class="checkbox" >
                     <input id="installClientCertificate" type="checkbox" data-bind="checked: $root.model.registerClientCertificate" />
                     <label for="installClientCertificate">Automatically register the admin client certificate in this (local) OS</label>
                 </div>
+            </div>
+            <div data-bind="validationElement: isZipValid">
+                <span class="help-block" data-bind="validationMessage: isZipValid"></span>
             </div>
         </div>
     </div>
