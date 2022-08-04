@@ -579,7 +579,7 @@ public unsafe partial struct IndexEntryWriter : IDisposable
 
             if (isTyped)
             {
-                location |= Unsafe.SizeOf<T>() switch
+                location |= offset switch
                 {
                     sizeof(int) => Constants.IndexWriter.IntKnownFieldMask,
                     sizeof(short) => Constants.IndexWriter.ShortKnownFieldMask,
