@@ -99,7 +99,7 @@ namespace FastTests.Corax
             Slice.From(ctx, "995", out var high);
             Slice.From(ctx, "Content", out var field);
 
-            var match1 = searcher.BetweenQuery("Content", low, high, default(NullScoreFunction));
+            var match1 = searcher.BetweenQuery("Content", low.ToString(), high.ToString(), default(NullScoreFunction));
             var expectedList = _entries.Where(x => x.LongValue is >= 991 and <= 995).Select(x => x.Id).ToList();
             expectedList.Sort();
             var outputList = FetchFromCorax(ref match1);
@@ -120,7 +120,7 @@ namespace FastTests.Corax
             Slice.From(ctx, "Content-L", out var fieldLong);
 
 
-            var match1 = searcher.BetweenQuery("Content", 95, 212, default(NullScoreFunction));
+            var match1 = searcher.BetweenQuery("Content", 95L, 212L, default(NullScoreFunction));
             var expectedList = _entries.Where(x => x.LongValue is >= 95 and <= 212).Select(x => x.Id).ToList();
             expectedList.Sort();
             var outputList = FetchFromCorax(ref match1);
