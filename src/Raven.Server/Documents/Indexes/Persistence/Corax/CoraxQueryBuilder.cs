@@ -649,15 +649,24 @@ public static class CoraxQueryBuilder
                     metadata.QueryText, parameters);
         }
 
-        var scoreFunction = new ConstantScoreFunction(boost);
 
-        var rawQuery = ToCoraxQuery(indexSearcher, serverContext, context, query, expression.Arguments[0], metadata, index, parameters, factories, scoreFunction,
+        var rawQuery = ToCoraxQuery(indexSearcher, serverContext, context, query, expression.Arguments[0], metadata, index, parameters, factories, default(NullScoreFunction),
             indexMapping, highlightingTerms, queryMapping, allEntries, exact,
             buildSteps: buildSteps,
             take: take);
-        return rawQuery.IsBoosting
-            ? rawQuery
-            : indexSearcher.Boost(rawQuery, scoreFunction);
+
+        if (rawQuery is CoraxBooleanItem cbi)
+            rawQuery = cbi.Materialize();
+        else if (rawQuery is CoraxBooleanQuery cbq)
+        {
+            rawQuery = cbq.Materialize();
+            //todo recieve hasBinary
+        }
+        
+        
+        var scoreFunction = new ConstantScoreFunction(boost);
+
+        return indexSearcher.Boost(rawQuery, scoreFunction);
     }
 
     private static IQueryMatch HandleSearch<TScoreFunction>(IndexSearcher indexSearcher, Query query, MethodExpression expression, QueryMetadata metadata,
