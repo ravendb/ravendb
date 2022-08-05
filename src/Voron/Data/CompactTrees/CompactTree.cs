@@ -27,7 +27,7 @@ namespace Voron.Data.CompactTrees
 
         // TODO: Improve interactions with caller code. It is good enough for now but we can encapsulate behavior better to improve readability. 
         private IteratorCursorState _internalCursor = new() { _stk = new CursorState[8], _pos = -1, _len = 0 };
-
+        
         // TODO: We will never rewrite a dictionary, only create new ones. Therefore, we can effectively cache them until removing them. 
         private readonly Dictionary<long, PersistentDictionary> _dictionaries = new(); 
         
@@ -1176,7 +1176,7 @@ namespace Voron.Data.CompactTrees
             return encodedKey;
         }
 
-        private EncodedKey SearchPageAndPushNext(in EncodedKey key, ref IteratorCursorState cstate)
+        private EncodedKey SearchPageAndPushNext(EncodedKey key, ref IteratorCursorState cstate)
         {
             SearchInCurrentPage(key, ref cstate._stk[cstate._pos]);
 
@@ -1432,7 +1432,7 @@ namespace Voron.Data.CompactTrees
             state.LastSearchPosition = ~mid;
         }
 
-        private EncodedKey FuzzySearchPageAndPushNext(in EncodedKey key, ref IteratorCursorState cstate)
+        private EncodedKey FuzzySearchPageAndPushNext(EncodedKey key, ref IteratorCursorState cstate)
         {
             FuzzySearchInCurrentPage(key, ref cstate._stk[cstate._pos]);
 

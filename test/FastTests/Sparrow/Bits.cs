@@ -1,4 +1,8 @@
-﻿using Sparrow.Binary;
+﻿using System;
+using System.Buffers.Binary;
+using System.Runtime.InteropServices;
+using Sparrow.Binary;
+using Sparrow.Server.Binary;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -162,6 +166,77 @@ namespace FastTests.Sparrow
             Assert.Equal(0, Bits.TrailingZeroesInBytes((uint)number));
             Assert.Equal(0, Bits.TrailingZeroesInBytes(number));
             Assert.Equal(0, Bits.TrailingZeroesInBytes((ulong)number));
+        }
+
+
+        [Fact]
+        public void BitReaderEquivalence()
+        {
+            for (int i = 0; i <= 255; i++)
+            {
+                byte value = (byte)i;
+
+                byte valueForSpan = BinaryPrimitives.ReverseEndianness(value);
+                var valueSpan = MemoryMarshal.CreateSpan(ref valueForSpan, 1);
+
+                for (int bits = 1; bits <= sizeof(byte) * 8; bits++)
+                {
+                    var reader = new BitReader(valueSpan, bits);
+                    var reader2 = new TypedBitReader<byte>(value, bits);
+
+                    Assert.Equal(reader.Read(), reader2.Read());
+                }
+            }
+
+            var rnd = new Random(1337);
+            for (int i = ushort.MinValue; i < ushort.MaxValue; i++)
+            {
+                short usvalue = (short)rnd.Next();
+
+                ushort valueForSpan = (ushort)BinaryPrimitives.ReverseEndianness(usvalue);
+                var valueSpan = MemoryMarshal.Cast<ushort, byte>(MemoryMarshal.CreateSpan(ref valueForSpan, 1));
+
+                for (int bits = 1; bits <= sizeof(ushort) * 8; bits++)
+                {
+                    var reader = new BitReader(valueSpan, bits);
+                    var reader2 = new TypedBitReader<short>(usvalue, bits);
+
+                    Assert.Equal(reader.Read(), reader2.Read());
+                }
+            }
+
+            for (int i = 0; i < 50000; i++)
+            {
+                uint usvalue = (uint)rnd.Next();
+
+                uint valueForSpan = (uint)BinaryPrimitives.ReverseEndianness(usvalue);
+                var valueSpan = MemoryMarshal.Cast<uint, byte>(MemoryMarshal.CreateSpan(ref valueForSpan, 1));
+
+                for (int bits = 1; bits <= sizeof(uint) * 8; bits++)
+                {
+                    var reader = new BitReader(valueSpan, bits);
+                    var reader2 = new TypedBitReader<uint>(usvalue, bits);
+
+                    Assert.Equal(reader.Read(), reader2.Read());
+                }
+            }
+
+            for (int i = 0; i <= 100000; i++)
+            {
+                ulong ulvalue = (ulong)rnd.Next();
+
+                ulong valueForSpan = BinaryPrimitives.ReverseEndianness(ulvalue);
+                var valueSpan = MemoryMarshal.Cast<ulong, byte>(MemoryMarshal.CreateSpan(ref valueForSpan, 1));
+
+                for (int bits = 1; bits <= sizeof(ulong) * 8; bits++)
+                {
+                    var reader = new BitReader(valueSpan, bits);
+                    var reader2 = new TypedBitReader<ulong>(ulvalue, bits);
+
+                    Assert.Equal(reader.Read(), reader2.Read());
+                }
+            }
+
         }
     }
 }
