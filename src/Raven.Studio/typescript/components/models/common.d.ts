@@ -3,7 +3,7 @@
 export interface loadableData<T> {
     data: T;
     status: loadStatus;
-    error: any;
+    error?: any;
 }
 
 export interface locationAwareLoadableData<T> extends loadableData<T> {

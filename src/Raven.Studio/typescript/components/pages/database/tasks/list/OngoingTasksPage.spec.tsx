@@ -5,7 +5,6 @@ import { OngoingTasksPage } from "./OngoingTasksPage";
 import * as stories from "./OngoingTasksPage.stories";
 import { composeStories, composeStory } from "@storybook/testing-react";
 import { boundCopy } from "../../../../utils/common";
-import { ExternalReplicationServerWide } from "./OngoingTasksPage.stories";
 
 const { EmptyView, FullView } = composeStories(stories);
 

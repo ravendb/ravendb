@@ -1,17 +1,16 @@
 ﻿import React, { useState } from "react";
-import { DistributionItem, DistributionLegend, LocationDistribution } from "../../../../../common/LocationDistribution";
+import { DistributionItem, DistributionLegend, LocationDistribution } from "../../../../common/LocationDistribution";
 import classNames from "classnames";
-import { AnyEtlOngoingTaskInfo, OngoingEtlTaskNodeInfo, OngoingTaskInfo } from "../../../../../models/tasks";
-import { ProgressCircle } from "../../../../../common/ProgressCircle";
-import { OngoingEtlTaskProgressTooltip } from "../OngoingEtlTaskProgressTooltip";
+import { OngoingTaskInfo, OngoingTaskNodeInfo, OngoingTaskSubscriptionInfo } from "../../../../models/tasks";
+import { ProgressCircle } from "../../../../common/ProgressCircle";
+import { PopoverWithHover } from "../../../../common/PopoverWithHover";
 
 interface OngoingEtlTaskDistributionProps {
-    task: AnyEtlOngoingTaskInfo;
-    showPreview: (transformationName: string) => void;
+    task: OngoingTaskSubscriptionInfo;
 }
 
-export function OngoingEtlTaskDistribution(props: OngoingEtlTaskDistributionProps) {
-    const { task, showPreview } = props;
+export function SubscriptionTaskDistribution(props: OngoingEtlTaskDistributionProps) {
+    const { task } = props;
     const sharded = task.nodesInfo.some((x) => x.location.shardNumber != null);
 
     const [uniqueTaskId] = useState(() => _.uniqueId("task-id"));
@@ -53,13 +52,8 @@ export function OngoingEtlTaskDistribution(props: OngoingEtlTaskDistributionProp
                         </div>
                         <div>{nodeInfo.status === "loaded" ? nodeInfo.details.taskConnectionStatus : ""}</div>
                         <div>{hasError ? <i className="icon-warning text-danger" /> : "-"}</div>
-                        <OngoingEtlTaskProgress task={task} nodeInfo={nodeInfo} />
-                        <OngoingEtlTaskProgressTooltip
-                            target={id}
-                            nodeInfo={nodeInfo}
-                            task={task}
-                            showPreview={showPreview}
-                        />
+                        <SubscriptionTaskProgress task={task} nodeInfo={nodeInfo} />
+                        {/* TODO: <SubscriptionTaskProgressTooltip target={id} nodeInfo={nodeInfo} task={task} />*/}
                     </DistributionItem>
                 );
             })}
@@ -91,38 +85,45 @@ export function OngoingEtlTaskDistribution(props: OngoingEtlTaskDistributionProp
     );
 }
 
-interface OngoingEtlTaskProgressProps {
-    nodeInfo: OngoingEtlTaskNodeInfo;
+interface SubscriptionTaskProgressProps {
+    nodeInfo: OngoingTaskNodeInfo;
     task: OngoingTaskInfo;
 }
 
-export function OngoingEtlTaskProgress(props: OngoingEtlTaskProgressProps) {
+export function SubscriptionTaskProgress(props: SubscriptionTaskProgressProps) {
     const { nodeInfo, task } = props;
-    if (!nodeInfo.etlProgress) {
-        return <ProgressCircle state="running" />;
+
+    if (nodeInfo.status === "error") {
+        return <ProgressCircle state="running" icon="icon-warning" />;
     }
 
-    if (nodeInfo.etlProgress.every((x) => x.completed) && task.shared.taskState === "Enabled") {
-        return (
-            <ProgressCircle state="success" icon="icon-check">
-                up to date
-            </ProgressCircle>
-        );
-    }
-
-    // at least one transformation is not completed - let's calculate total progress
-    const totalItems = nodeInfo.etlProgress.reduce((acc, current) => acc + current.global.total, 0);
-    const totalProcessed = nodeInfo.etlProgress.reduce((acc, current) => acc + current.global.processed, 0);
-
-    const percentage = Math.floor((totalProcessed * 100) / totalItems) / 100;
-    const anyDisabled = nodeInfo.etlProgress.some((x) => x.disabled);
+    //TODO: show clients count?
 
     return (
-        <ProgressCircle state="running" icon={anyDisabled ? "icon-stop" : null} progress={percentage}>
-            {anyDisabled ? "Disabled" : "Running"}
+        <ProgressCircle state="running" icon="icon-check">
+            OK
         </ProgressCircle>
     );
 }
 
-const taskNodeInfoKey = (nodeInfo: OngoingEtlTaskNodeInfo) =>
+interface SubscriptionTaskProgressTooltipProps {
+    target: string;
+    nodeInfo: OngoingTaskNodeInfo;
+    task: OngoingTaskInfo;
+}
+
+function SubscriptionTaskProgressTooltip(props: SubscriptionTaskProgressTooltipProps) {
+    const { target } = props;
+    return (
+        <PopoverWithHover rounded target={target} placement="top" delay={100}>
+            <div className="ongoing-tasks-details-tooltip">
+                <ul>
+                    <li>include clients details (ip port, Strategy, worker id?)</li>
+                </ul>
+            </div>
+        </PopoverWithHover>
+    );
+}
+
+const taskNodeInfoKey = (nodeInfo: OngoingTaskNodeInfo) =>
     nodeInfo.location.shardNumber + "__" + nodeInfo.location.nodeTag;

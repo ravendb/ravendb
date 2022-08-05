@@ -1,7 +1,7 @@
 ﻿import React from "react";
-import { OngoingTaskReplicationHubInfo } from "../../../../../models/tasks";
+import { OngoingTaskReplicationHubInfo } from "../../../../models/tasks";
 import database from "models/resources/database";
-import { RichPanel, RichPanelDetailItem, RichPanelDetails, RichPanelHeader } from "../../../../../common/RichPanel";
+import { RichPanel, RichPanelDetailItem, RichPanelDetails, RichPanelHeader } from "../../../../common/RichPanel";
 import { OngoingTaskName, OngoingTaskResponsibleNode } from "../shared";
 
 interface ReplicationHubConnectedSinkPanelProps {

@@ -1,18 +1,12 @@
 ﻿import React from "react";
-import {
-    OngoingTaskActions,
-    OngoingTaskName,
-    OngoingTaskResponsibleNode,
-    OngoingTaskStatus,
-    useTasksOperations,
-} from "../shared";
+import { OngoingTaskActions, OngoingTaskName, OngoingTaskStatus, useTasksOperations } from "../shared";
 import {
     OngoingTaskHubDefinitionInfo,
     OngoingTaskReplicationHubInfo,
     OngoingTaskSharedInfo,
-} from "../../../../../models/tasks";
+} from "../../../../models/tasks";
 import database from "models/resources/database";
-import { RichPanel, RichPanelDetailItem, RichPanelDetails, RichPanelHeader } from "../../../../../common/RichPanel";
+import { RichPanel, RichPanelDetailItem, RichPanelDetails, RichPanelHeader } from "../../../../common/RichPanel";
 import { useAppUrls } from "hooks/useAppUrls";
 import { useAccessManager } from "hooks/useAccessManager";
 import { ReplicationHubConnectedSinkPanel } from "./ReplicationHubConnectedSinkPanel";

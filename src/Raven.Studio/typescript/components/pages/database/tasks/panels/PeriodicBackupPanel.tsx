@@ -7,13 +7,13 @@ import {
     OngoingTaskStatus,
     useTasksOperations,
 } from "../shared";
-import { OngoingTaskPeriodicBackupInfo } from "../../../../../models/tasks";
+import { OngoingTaskPeriodicBackupInfo } from "../../../../models/tasks";
 import { useAccessManager } from "hooks/useAccessManager";
 import { useAppUrls } from "hooks/useAppUrls";
-import { RichPanel, RichPanelDetailItem, RichPanelDetails, RichPanelHeader } from "../../../../../common/RichPanel";
+import { RichPanel, RichPanelDetailItem, RichPanelDetails, RichPanelHeader } from "../../../../common/RichPanel";
 import genUtils from "common/generalUtils";
 import moment = require("moment");
-import assertUnreachable from "../../../../../utils/assertUnreachable";
+import assertUnreachable from "../../../../utils/assertUnreachable";
 import timeHelpers from "common/timeHelpers";
 import BackupType = Raven.Client.Documents.Operations.Backups.BackupType;
 import classNames from "classnames";
