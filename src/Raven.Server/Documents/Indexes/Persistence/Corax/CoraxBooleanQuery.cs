@@ -103,15 +103,14 @@ public readonly struct CoraxBooleanItem : IQueryMatch
         {
             baseMatch = (Term, Term2) switch
             {
-                (long l, long l2) => _indexSearcher.BetweenQuery(Name, BetweenLeft, BetweenRight, l, l2, _scoreFunction, fieldId: FieldId),
-                (double d, double d2) => _indexSearcher.BetweenQuery(Name, BetweenLeft, BetweenRight, d, d2, _scoreFunction, fieldId: FieldId),
-                (string s, string s2) => _indexSearcher.BetweenQuery(Name, BetweenLeft, BetweenRight, s, s2, _scoreFunction, fieldId: FieldId),
-                (long l, double d) => _indexSearcher.BetweenQuery(Name, BetweenLeft, BetweenRight, Convert.ToDouble(l), d, _scoreFunction, fieldId: FieldId),
-                (double d, long l) => _indexSearcher.BetweenQuery(Name, BetweenLeft, BetweenRight, d, Convert.ToDouble(l), _scoreFunction, fieldId: FieldId),
+                (long l, long l2) => _indexSearcher.BetweenQuery(Name, l, l2, _scoreFunction, leftSide: BetweenLeft, rightSide: BetweenRight, fieldId: FieldId),
+                (double d, double d2) => _indexSearcher.BetweenQuery(Name, d, d2, _scoreFunction, leftSide: BetweenLeft, rightSide: BetweenRight, fieldId: FieldId),
+                (string s, string s2) => _indexSearcher.BetweenQuery(Name, s, s2, _scoreFunction, leftSide: BetweenLeft, rightSide: BetweenRight, fieldId: FieldId),
+                (long l, double d) => _indexSearcher.BetweenQuery(Name, Convert.ToDouble(l), d, _scoreFunction, leftSide: BetweenLeft, rightSide: BetweenRight, fieldId: FieldId),
+                (double d, long l) => _indexSearcher.BetweenQuery(Name, d, Convert.ToDouble(l), _scoreFunction, leftSide: BetweenLeft, rightSide: BetweenRight, fieldId: FieldId),
                 _ => throw new InvalidOperationException($"UnaryMatchOperation {Operation} is not supported for type {Term.GetType()}")
             };
         }
-
         else
         {
             baseMatch = (Operation, Term) switch
@@ -257,19 +256,19 @@ public class CoraxBooleanQuery : IQueryMatch
         {
             var nextQuery = (leftmostClause.Term, leftmostClause.Term2) switch
             {
-                (long l, long l2) => _indexSearcher.BetweenQuery(leftmostClause.Name, leftmostClause.BetweenLeft, leftmostClause.BetweenRight, l, l2,
+                (long l, long l2) => _indexSearcher.BetweenQuery(leftmostClause.Name, l, l2,
                     default(NullScoreFunction),
-                    fieldId: leftmostClause.FieldId),
-                (double d, double d2) => _indexSearcher.BetweenQuery(leftmostClause.Name, leftmostClause.BetweenLeft, leftmostClause.BetweenRight, d, d2,
+                    leftSide: leftmostClause.BetweenLeft, rightSide: leftmostClause.BetweenRight, fieldId: leftmostClause.FieldId),
+                (double d, double d2) => _indexSearcher.BetweenQuery(leftmostClause.Name, d, d2,
                     default(NullScoreFunction),
-                    fieldId: leftmostClause.FieldId),
-                (string s, string s2) => _indexSearcher.BetweenQuery(leftmostClause.Name, leftmostClause.BetweenLeft, leftmostClause.BetweenRight, s, s2,
+                    leftSide: leftmostClause.BetweenLeft, rightSide: leftmostClause.BetweenRight, fieldId: leftmostClause.FieldId),
+                (string s, string s2) => _indexSearcher.BetweenQuery(leftmostClause.Name, s, s2,
                     default(NullScoreFunction),
-                    fieldId: leftmostClause.FieldId),
-                (long l, double d) => _indexSearcher.BetweenQuery(leftmostClause.Name, leftmostClause.BetweenLeft, leftmostClause.BetweenRight, Convert.ToDouble(l), d,
-                    default(NullScoreFunction), fieldId: leftmostClause.FieldId),
-                (double d, long l) => _indexSearcher.BetweenQuery(leftmostClause.Name, leftmostClause.BetweenLeft, leftmostClause.BetweenRight, d, Convert.ToDouble(l),
-                    default(NullScoreFunction), fieldId: leftmostClause.FieldId),
+                    leftSide: leftmostClause.BetweenLeft, rightSide: leftmostClause.BetweenRight, fieldId: leftmostClause.FieldId),
+                (long l, double d) => _indexSearcher.BetweenQuery(leftmostClause.Name, Convert.ToDouble(l), d,
+                    default(NullScoreFunction), leftSide: leftmostClause.BetweenLeft, rightSide: leftmostClause.BetweenRight, fieldId: leftmostClause.FieldId),
+                (double d, long l) => _indexSearcher.BetweenQuery(leftmostClause.Name, d, Convert.ToDouble(l),
+                    default(NullScoreFunction), leftSide: leftmostClause.BetweenLeft, rightSide: leftmostClause.BetweenRight, fieldId: leftmostClause.FieldId),
                 _ => throw new InvalidOperationException($"UnaryMatchOperation {leftmostClause.Operation} is not supported for type {leftmostClause.Term.GetType()}")
             };
 
