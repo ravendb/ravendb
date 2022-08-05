@@ -371,26 +371,81 @@ public unsafe partial struct IndexEntryWriter : IDisposable
         _dataIndex = dataLocation;
     }
 
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private int WriteNullsTableIfRequired<TEnumerator>(TEnumerator values, int dataLocation, ref IndexEntryFieldType indexEntryFieldLocation)
         where TEnumerator : IReadOnlySpanIndexer
+    {        
+        // If we have an small number of values, we just allocate the space for the nulls table in the stack. 
+        if (values.Length < 32 * 8)
+        {            
+            return WriteNullsTableIfRequiredStackalloc(values, dataLocation, ref indexEntryFieldLocation);
+        }
+
+        // If it is big enough, we will just allocate it on the heap and most likely will end up outside of the hot-path when
+        // the JIT compiler aggresively optimize it. 
+        return WriteNullsTableIfRequiredHeap(values, dataLocation, ref indexEntryFieldLocation);
+    }
+
+    private int WriteNullsTableIfRequiredStackalloc<TEnumerator>(TEnumerator values, int dataLocation, ref IndexEntryFieldType indexEntryFieldLocation)
+        where TEnumerator : IReadOnlySpanIndexer
     {
-        // We will include null values if there are nulls to be stored.           
         int nullBitStreamSize = values.Length / (sizeof(byte) * 8) + (values.Length % (sizeof(byte) * 8) == 0 ? 0 : 1);
-        byte* nullStream = stackalloc byte[nullBitStreamSize];
+        Debug.Assert(nullBitStreamSize < 64, "The maximum reasonable to allocate here is 64 bytes.");
+
+        byte* nullBitStreamBuffer = stackalloc byte[nullBitStreamSize];        
+        
+        // We will include null values if there are nulls to be stored.           
         bool hasNull = false;
         for (int i = 0; i < values.Length; i++)
         {
             if (values.IsNull(i))
             {
                 hasNull = true;
-                PtrBitVector.SetBitInPointer(nullStream, i, true);
+                PtrBitVector.SetBitInPointer(nullBitStreamBuffer, i, true);
             }
         }
 
         if (hasNull)
         {
             // Copy the null stream.
-            new ReadOnlySpan<byte>(nullStream, nullBitStreamSize)
+            new ReadOnlySpan<byte>(nullBitStreamBuffer, nullBitStreamSize)
+                .CopyTo(Buffer.Slice(dataLocation, nullBitStreamSize));
+
+            dataLocation += nullBitStreamSize;
+
+            // Signal that we will have to deal with the nulls.
+            indexEntryFieldLocation |= IndexEntryFieldType.HasNulls;
+        }
+
+        return dataLocation;
+    }
+
+    private int WriteNullsTableIfRequiredHeap<TEnumerator>(TEnumerator values, int dataLocation, ref IndexEntryFieldType indexEntryFieldLocation)
+        where TEnumerator : IReadOnlySpanIndexer
+    {
+        int nullBitStreamSize = values.Length / (sizeof(byte) * 8) + (values.Length % (sizeof(byte) * 8) == 0 ? 0 : 1);
+        
+        using var _ = _context.Allocate(nullBitStreamSize, out var nullBitStream);
+        nullBitStream.ToSpan().Fill(0); // Initialize with zeros.
+
+        var nullBitStreamBuffer = nullBitStream.Ptr; 
+
+        // We will include null values if there are nulls to be stored.           
+        bool hasNull = false;
+        for (int i = 0; i < values.Length; i++)
+        {
+            if (values.IsNull(i))
+            {
+                hasNull = true;
+                PtrBitVector.SetBitInPointer(nullBitStreamBuffer, i, true);
+            }
+        }
+
+        if (hasNull)
+        {            
+            // Copy the null stream.
+            new ReadOnlySpan<byte>(nullBitStreamBuffer, nullBitStreamSize)
                 .CopyTo(Buffer.Slice(dataLocation, nullBitStreamSize));
 
             dataLocation += nullBitStreamSize;
