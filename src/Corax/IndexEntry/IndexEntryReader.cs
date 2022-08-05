@@ -473,9 +473,7 @@ public unsafe ref struct IndexEntryReader
         Unsafe.SkipInit(out doubleValue);
         sequenceValue = Span<byte>.Empty;
         return true;
-    }
-
-    private static ReadOnlySpan<byte> TableEncodingLookupTable => new byte[] { 0, 1, 2, 0, 4 };
+    }   
 
     private (int offset, bool isTyped) GetMetadataFieldLocation(Span<byte> buffer, int field)
     {
@@ -490,6 +488,16 @@ public unsafe ref struct IndexEntryReader
             return (_lastFieldAccessedOffset, _lastFieldAccessedIsTyped);
         }
     }
+
+    private static ReadOnlySpan<byte> TableEncodingLookupTable => new byte[] { 0, 1, 2, 0, 4 };
+
+    private static ReadOnlySpan<byte> ByteKnownFieldMaskShiftLookupTable => new byte[]
+    {
+        0,
+        (sizeof(byte) - 1) * 8,
+        (sizeof(short) - 1) * 8,
+        (sizeof(int) - 1) * 8,
+    };
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static (int offset, bool isTyped) GetMetadataFieldLocationUnlikely(Span<byte> buffer, int field)
@@ -510,8 +518,6 @@ public unsafe ref struct IndexEntryReader
             offset = Unsafe.ReadUnaligned<byte>(ref buffer[locationOffset]);
             if (offset == 0xFF)
                 goto Fail;
-            isTyped = (offset & Constants.IndexWriter.ByteKnownFieldMask) != 0;
-            offset &= ~Constants.IndexWriter.ByteKnownFieldMask;
             goto End;
         }
         else if (encoding == IndexEntryTableEncoding.TwoBytes)
@@ -519,8 +525,6 @@ public unsafe ref struct IndexEntryReader
             offset = Unsafe.ReadUnaligned<ushort>(ref buffer[locationOffset]);
             if (offset == 0xFFFF)
                 goto Fail;
-            isTyped = (offset & Constants.IndexWriter.ShortKnownFieldMask) != 0;
-            offset &= ~Constants.IndexWriter.ShortKnownFieldMask;
             goto End;
         }
         else if (encoding == IndexEntryTableEncoding.FourBytes)
@@ -528,8 +532,6 @@ public unsafe ref struct IndexEntryReader
             offset = (int)Unsafe.ReadUnaligned<uint>(ref buffer[locationOffset]);
             if (offset == unchecked((int)0xFFFF_FFFF))
                 goto Fail;
-            isTyped = (offset & Constants.IndexWriter.IntKnownFieldMask) != 0;
-            offset &= ~Constants.IndexWriter.IntKnownFieldMask;
             goto End;
         }
 
@@ -537,6 +539,10 @@ public unsafe ref struct IndexEntryReader
         return (Invalid, false);
 
     End:
+        int mask = 0x80 << ByteKnownFieldMaskShiftLookupTable[(int)encoding];
+        isTyped = (offset & mask) != 0;
+        offset &= ~mask;
+        
         return (offset, isTyped);
     }
 
