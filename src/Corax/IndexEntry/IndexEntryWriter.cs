@@ -51,12 +51,12 @@ public unsafe partial struct IndexEntryWriter : IDisposable
     // so we wont even try to make the process more complex just to deal with them efficienly.
     private int _dynamicFieldIndex;
 
-    public IndexEntryWriter(LowLevelTransaction llt, IndexFieldsMapping knownFields) 
+    public IndexEntryWriter(LowLevelTransaction llt, IndexFieldsMapping knownFields)
         : this(llt.Allocator, knownFields)
     {
     }
 
-    public IndexEntryWriter(ByteStringContext context, IndexFieldsMapping knownFields) 
+    public IndexEntryWriter(ByteStringContext context, IndexFieldsMapping knownFields)
     {
         _context = context;
         _knownFields = knownFields;
@@ -92,6 +92,14 @@ public unsafe partial struct IndexEntryWriter : IDisposable
         _dataIndex += sizeof(IndexEntryFieldType);
     }
 
+    public void WriteEmpty(int field)
+    {
+        // Write known field.
+        KnownFieldsLocations[field] = _dataIndex | Constants.IndexWriter.IntKnownFieldMask;
+        Unsafe.WriteUnaligned(ref Buffer[_dataIndex], IndexEntryFieldType.Empty);
+        _dataIndex += sizeof(IndexEntryFieldType);
+    }
+
     /// <summary>
     ///  Writes binary sequence into buffer (strings etc)
     /// </summary>
@@ -104,21 +112,21 @@ public unsafe partial struct IndexEntryWriter : IDisposable
             UnlikelyGrowAuxiliaryBuffer();
 
         // Write known field.
-        ref int fieldLocation = ref KnownFieldsLocations[field];                
+        ref int fieldLocation = ref KnownFieldsLocations[field];
         fieldLocation = _dataIndex;
 
         var buffer = Buffer;
         if (value.Length == 0)
         {
             fieldLocation |= Constants.IndexWriter.IntKnownFieldMask;
-            Unsafe.WriteUnaligned(ref buffer[_dataIndex], IndexEntryFieldType.Empty);
+            Unsafe.WriteUnaligned(ref Buffer[_dataIndex], IndexEntryFieldType.Empty);
             _dataIndex += sizeof(IndexEntryFieldType);
             return;
         }
-        
-        int length = VariableSizeEncoding.Write(buffer, value.Length, _dataIndex);
+
+        int length = VariableSizeEncoding.Write(Buffer, value.Length, _dataIndex);
         _dataIndex += length;
-        value.CopyTo(buffer.Slice(_dataIndex, value.Length));
+        value.CopyTo(Buffer.Slice(_dataIndex, value.Length));
         _dataIndex += value.Length;
     }
 
@@ -238,7 +246,7 @@ public unsafe partial struct IndexEntryWriter : IDisposable
         ref var indexEntryField = ref Unsafe.AsRef<IndexEntryFieldType>(Unsafe.AsPointer(ref buffer[dataLocation]));
         indexEntryField = IndexEntryFieldType.SpatialPointList;
         dataLocation += sizeof(IndexEntryFieldType);
-        
+
         dataLocation += VariableSizeEncoding.Write(buffer, entries.Length, dataLocation); // Size of list.
 
         dataLocation += VariableSizeEncoding.Write(buffer, geohashLevel, dataLocation); // geohash lvl
@@ -279,7 +287,7 @@ public unsafe partial struct IndexEntryWriter : IDisposable
             UnlikelyGrowAuxiliaryBuffer();
 
         int dataLocation = _dataIndex;
-        var buffer = Buffer;        
+        var buffer = Buffer;
 
         // Write known field pointer.
         ref int fieldLocation = ref KnownFieldsLocations[field];
@@ -312,18 +320,18 @@ public unsafe partial struct IndexEntryWriter : IDisposable
         _dataIndex = dataLocation;
     }
 
-    public void Write<TEnumerator>(int field, TEnumerator values, IndexEntryFieldType type = IndexEntryFieldType.Null) 
+    public void Write<TEnumerator>(int field, TEnumerator values, IndexEntryFieldType type = IndexEntryFieldType.Null)
         where TEnumerator : IReadOnlySpanIndexer
     {
         Debug.Assert(field < _knownFields.Count, "The field must be known");
-        Debug.Assert(KnownFieldsLocations[field] == Invalid, "The field has been written before.");        
+        Debug.Assert(KnownFieldsLocations[field] == Invalid, "The field has been written before.");
 
         // We are calculating the space required based on the necessary space needed to store
         // the lists, metadata and the content. 
         int requiredSpace = sizeof(IndexEntryFieldType) + 2 * values.Length * sizeof(long) + 4 * sizeof(long);
         for (int i = 0; i < values.Length; i++)
-            requiredSpace += values[i].Length;        
-        
+            requiredSpace += values[i].Length;
+
         if (FreeSpace < requiredSpace)
             UnlikelyGrowAuxiliaryBuffer(requiredSpace);
 
@@ -370,7 +378,7 @@ public unsafe partial struct IndexEntryWriter : IDisposable
             dataLocation += value.Length;
             stringLengths[i] = value.Length;
         }
-                
+
         // Write the pointer to the location
         stringPtrTableLocation = dataLocation;
         dataLocation = WriteNullsTableIfRequired(values, dataLocation, ref indexEntryField);
@@ -442,7 +450,7 @@ public unsafe partial struct IndexEntryWriter : IDisposable
         // Write the list metadata information. 
         ref var indexEntryField = ref Unsafe.AsRef<IndexEntryFieldType>(Unsafe.AsPointer(ref buffer[dataLocation]));
         indexEntryField = IndexEntryFieldType.TupleList;
-        dataLocation += sizeof(IndexEntryFieldType);       
+        dataLocation += sizeof(IndexEntryFieldType);
 
         dataLocation += VariableSizeEncoding.Write(buffer, values.Length, dataLocation); // Size of list.
 
@@ -453,7 +461,7 @@ public unsafe partial struct IndexEntryWriter : IDisposable
         // Prepare the location to store the pointer where the long values are going to be stored.
         ref int longPtrLocation = ref Unsafe.AsRef<int>(Unsafe.AsPointer(ref buffer[dataLocation]));
         dataLocation += sizeof(int);
-        
+
         if (values.Length == 0)
         {
             // Write the pointer to the location.
@@ -475,7 +483,7 @@ public unsafe partial struct IndexEntryWriter : IDisposable
         int[] stringLengths = ArrayPool<int>.Shared.Rent(values.Length);
         for (int i = 0; i < values.Length; i++)
         {
-            var value = values[i];            
+            var value = values[i];
             value.CopyTo(buffer.Slice(dataLocation, value.Length));
             dataLocation += value.Length;
             stringLengths[i] = value.Length;
@@ -491,7 +499,7 @@ public unsafe partial struct IndexEntryWriter : IDisposable
         dataLocation += VariableSizeEncoding.WriteMany(buffer, longValues, pos: dataLocation);
 
         ArrayPool<int>.Shared.Return(stringLengths);
-        
+
         Done:
         _dataIndex = dataLocation;
     }
@@ -502,7 +510,7 @@ public unsafe partial struct IndexEntryWriter : IDisposable
         // finish the preprocessing to write the data into the new allocated buffer. 
         if (FreeSpace < 2 * sizeof(long))
             UnlikelyGrowAuxiliaryBuffer();
-        
+
         var knownFieldsLocations = KnownFieldsLocations;
 
         // We need to know how big the metadata table is going to be.
@@ -577,7 +585,7 @@ public unsafe partial struct IndexEntryWriter : IDisposable
         // as many as possible with the same instance, so overall the performance impact is negligible. 
         _dynamicFieldIndex = 0;
         _dataIndex = Unsafe.SizeOf<IndexEntryHeader>();
-        KnownFieldsLocations.Fill(Invalid); 
+        KnownFieldsLocations.Fill(Invalid);
 
         return scope;
     }
@@ -629,8 +637,8 @@ public unsafe partial struct IndexEntryWriter : IDisposable
         // We need to copy the data over to the new buffer.
         Unsafe.CopyBlock(newBuffer.Ptr, _rawBuffer.Ptr, (uint)_rawBuffer.Length);
         Unsafe.CopyBlock(newBuffer.Ptr + newBuffer.Length - KnownFieldMetadataSize - _dynamicFieldIndex,
-                         _rawBuffer.Ptr + _rawBuffer.Length - KnownFieldMetadataSize - _dynamicFieldIndex,
-                         (uint)(_dynamicFieldIndex + KnownFieldMetadataSize));
+            _rawBuffer.Ptr + _rawBuffer.Length - KnownFieldMetadataSize - _dynamicFieldIndex,
+            (uint)(_dynamicFieldIndex + KnownFieldMetadataSize));
 
         _bufferScope.Dispose();
         _bufferScope = newBufferScope;

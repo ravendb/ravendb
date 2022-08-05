@@ -51,8 +51,8 @@ public static class CoraxQueryBuilder
 
                 if (coraxQuery is CoraxBooleanQuery cbq)
                 {
-                    isBinary |= cbq.HasInnerBinary;
                     coraxQuery = cbq.Materialize();
+                    isBinary |= cbq.HasInnerBinary;
                 }
 
                 if (coraxQuery is CoraxBooleanItem cbi)

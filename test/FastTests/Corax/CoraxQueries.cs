@@ -259,7 +259,6 @@ namespace FastTests.Corax
             entryWriter.Write(DoubleValue, Encoding.UTF8.GetBytes(entry.DoubleValue.ToString()), (long)entry.DoubleValue, entry.DoubleValue);
             entryWriter.Write(TextualValue, Encodings.Utf8.GetBytes(entry.TextualValue));
             return entryWriter.Finish(out output);
-            return output;
         }
 
         private IndexFieldsMapping CreateKnownFields(ByteStringContext ctx)
