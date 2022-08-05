@@ -99,6 +99,7 @@ class shell extends viewModelBase {
     colorCustomizationDisabled = ko.observable<boolean>(false);
     applyColorCustomization: KnockoutObservable<boolean>;
     singleShardActive: KnockoutObservable<boolean>;
+    allShardsUrl: KnockoutObservable<string>;
     
     clientCertificate = clientCertificateModel.certificateInfo;
 
@@ -178,6 +179,16 @@ class shell extends viewModelBase {
             }
             
             return db instanceof shard;
+        });
+        
+        this.allShardsUrl = ko.pureComputed(() => {
+            const db = this.activeDatabase();
+            if (!db || !(db instanceof shard)) {
+                return "";
+            }
+            
+            const targetDb = db.root;
+            return appUrl.forCurrentPage(targetDb);           
         });
 
         this.bindToCurrentInstance("toggleMenu");
