@@ -13,6 +13,8 @@ import OngoingTaskPullReplicationAsHub = Raven.Client.Documents.Operations.Ongoi
 import PullReplicationDefinition = Raven.Client.Documents.Operations.Replication.PullReplicationDefinition;
 import OngoingTaskReplication = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskReplication;
 import OngoingTaskSubscription = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSubscription;
+import GetPeriodicBackupStatusOperationResult = Raven.Client.Documents.Operations.Backups.GetPeriodicBackupStatusOperationResult;
+import CloudUploadStatus = Raven.Client.Documents.Operations.Backups.CloudUploadStatus;
 
 export class TasksStubs {
     static getTasksList(): OngoingTasksResult {
@@ -49,6 +51,64 @@ export class TasksStubs {
                 TasksStubs.getKafkaProgress(),
                 TasksStubs.getRabbitProgress(),
             ],
+        };
+    }
+
+    static getManualBackup(): GetPeriodicBackupStatusOperationResult {
+        const emptyUpload: CloudUploadStatus = {
+            LastFullBackup: null as string,
+            LastIncrementalBackup: null as string,
+            FullBackupDurationInMs: null as number,
+            IncrementalBackupDurationInMs: null as number,
+            Exception: null as string,
+            Skipped: true,
+            UploadProgress: {
+                UploadType: "Regular",
+                UploadState: "PendingUpload",
+                UploadedInBytes: 0,
+                TotalInBytes: 0,
+                BytesPutsPerSec: 0.0,
+                UploadTimeInMs: 0,
+            },
+        };
+
+        return {
+            Status: {
+                TaskId: 0,
+                BackupType: "Backup",
+                IsFull: true,
+                NodeTag: "A",
+                LastFullBackup: "2022-08-04T12:25:12.9402638Z",
+                LastIncrementalBackup: null,
+                LastFullBackupInternal: "2022-08-04T12:25:12.9402638Z",
+                LastIncrementalBackupInternal: null,
+                LocalBackup: {
+                    LastFullBackup: "2022-08-04T12:25:52.3441072Z",
+                    LastIncrementalBackup: null,
+                    FullBackupDurationInMs: 2429,
+                    IncrementalBackupDurationInMs: null,
+                    Exception: null,
+                    BackupDirectory: "c:\\temp\\backup22\\2022-08-04-14-25-12.ravendb-db1-A-backup",
+                    FileName: null,
+                    TempFolderUsed: false,
+                },
+                UploadToS3: emptyUpload,
+                UploadToGlacier: emptyUpload,
+                UploadToAzure: emptyUpload,
+                UploadToGoogleCloud: emptyUpload,
+                UploadToFtp: emptyUpload,
+                LastEtag: 8806,
+                LastRaftIndex: { LastEtag: 8 },
+                FolderName: "2022-08-04-14-25-12.ravendb-db1-A-backup",
+                DurationInMs: 2442,
+                LocalRetentionDurationInMs: 0,
+                Version: 0,
+                Error: null,
+                LastOperationId: 3,
+                LastDatabaseChangeVector:
+                    "A:8806-9igKNP9Qh0WWnuROUXOVjQ, A:2568-F9I6Egqwm0Kz+K0oFVIR9Q, A:13366-IG4VwBTOnkqoT/uwgm2OQg, A:2568-OSKWIRBEDEGoAxbEIiFJeQ",
+                IsEncrypted: false,
+            },
         };
     }
 

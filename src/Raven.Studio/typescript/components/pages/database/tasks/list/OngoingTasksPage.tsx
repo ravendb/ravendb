@@ -8,7 +8,7 @@ import createOngoingTask from "viewmodels/database/tasks/createOngoingTask";
 import app from "durandal/app";
 import useTimeout from "hooks/useTimeout";
 import appUrl from "common/appUrl";
-import { ExternalReplicationPanel } from "./panels/ExternalReplicationPanel";
+import { ExternalReplicationPanel } from "../panels/ExternalReplicationPanel";
 import {
     OngoingTaskElasticSearchEtlInfo,
     OngoingTaskExternalReplicationInfo,
@@ -23,27 +23,24 @@ import {
     OngoingTaskSqlEtlInfo,
     OngoingTaskSubscriptionInfo,
 } from "../../../../models/tasks";
-import { RavenEtlPanel } from "./panels/RavenEtlPanel";
-import { SqlEtlPanel } from "./panels/SqlEtlPanel";
-import { OlapEtlPanel } from "./panels/OlapEtlPanel";
-import { ElasticSearchEtlPanel } from "./panels/ElasticSearchEtlPanel";
-import { PeriodicBackupPanel } from "./panels/PeriodicBackupPanel";
-import { SubscriptionPanel } from "./panels/SubscriptionPanel";
-import { ReplicationSinkPanel } from "./panels/ReplicationSinkPanel";
-import viewHelpers from "common/helpers/view/viewHelpers";
-import genUtils from "common/generalUtils";
-import ongoingTaskModel from "models/database/tasks/ongoingTaskModel";
-import { ReplicationHubDefinitionPanel } from "./panels/ReplicationHubDefinitionPanel";
+import { RavenEtlPanel } from "../panels/RavenEtlPanel";
+import { SqlEtlPanel } from "../panels/SqlEtlPanel";
+import { OlapEtlPanel } from "../panels/OlapEtlPanel";
+import { ElasticSearchEtlPanel } from "../panels/ElasticSearchEtlPanel";
+import { PeriodicBackupPanel } from "../panels/PeriodicBackupPanel";
+import { SubscriptionPanel } from "../panels/SubscriptionPanel";
+import { ReplicationSinkPanel } from "../panels/ReplicationSinkPanel";
+import { ReplicationHubDefinitionPanel } from "../panels/ReplicationHubDefinitionPanel";
 import useBoolean from "hooks/useBoolean";
 import { OngoingTaskProgressProvider } from "./OngoingTaskProgressProvider";
-import { BaseOngoingTaskPanelProps } from "./shared";
+import { BaseOngoingTaskPanelProps, taskKey } from "../shared";
 import EtlTaskProgress = Raven.Server.Documents.ETL.Stats.EtlTaskProgress;
 
 import "./OngoingTaskPage.scss";
 import etlScriptDefinitionCache from "models/database/stats/etlScriptDefinitionCache";
 import TaskUtils from "../../../../utils/TaskUtils";
-import { KafkaEtlPanel } from "./panels/KafkaEtlPanel";
-import { RabbitMqEtlPanel } from "./panels/RabbitMqEtlPanel";
+import { KafkaEtlPanel } from "../panels/KafkaEtlPanel";
+import { RabbitMqEtlPanel } from "../panels/RabbitMqEtlPanel";
 import useInterval from "hooks/useInterval";
 
 interface OngoingTasksPageProps {
@@ -88,7 +85,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
     const reload = useCallback(async () => {
         const loadTasks = tasks.locations.map((location) => fetchTasks(location));
         await Promise.all(loadTasks);
-    }, [database]);
+    }, [database, tasks, fetchTasks]);
 
     useInterval(reload, 10_000);
 
@@ -120,76 +117,18 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
 
     const deleteTask = useCallback(
         async (task: OngoingTaskSharedInfo) => {
-            await tasksService.deleteOngoingTask(
-                database,
-                TaskUtils.studioTaskTypeToTaskType(task.taskType),
-                task.taskId,
-                task.taskName
-            );
-
+            await tasksService.deleteOngoingTask(database, task);
             await reload();
         },
-        [tasksService]
-    );
-
-    const onDeleteConfirmation = useCallback(
-        (task: OngoingTaskSharedInfo) => {
-            const taskType = ongoingTaskModel.formatStudioTaskType(task.taskType);
-            viewHelpers
-                .confirmationMessage(
-                    "Delete Ongoing Task?",
-                    `You're deleting ${taskType} task: <br /><ul><li><strong>${genUtils.escapeHtml(
-                        task.taskName
-                    )}</strong></li></ul>`,
-                    {
-                        buttons: ["Cancel", "Delete"],
-                        html: true,
-                    }
-                )
-                .done((result) => {
-                    if (result.can) {
-                        deleteTask(task);
-                    }
-                });
-        },
-        [database]
+        [tasksService, database, reload]
     );
 
     const toggleOngoingTask = useCallback(
         async (task: OngoingTaskSharedInfo, enable: boolean) => {
-            await tasksService.toggleOngoingTask(
-                database,
-                TaskUtils.studioTaskTypeToTaskType(task.taskType),
-                task.taskId,
-                task.taskName,
-                enable
-            );
+            await tasksService.toggleOngoingTask(database, task, enable);
             await reload();
         },
         [database, tasksService]
-    );
-
-    const onToggleStateConfirmation = useCallback(
-        (task: OngoingTaskSharedInfo, enable: boolean) => {
-            const confirmationTitle = enable ? "Enable Task" : "Disable Task";
-            const taskType = ongoingTaskModel.formatStudioTaskType(task.taskType);
-            const confirmationMsg = enable
-                ? `You're enabling ${taskType} task:<br><ul><li><strong>${task.taskName}</strong></li></ul>`
-                : `You're disabling ${taskType} task:<br><ul><li><strong>${task.taskName}</strong></li></ul>`;
-            const confirmButtonText = enable ? "Enable" : "Disable";
-
-            viewHelpers
-                .confirmationMessage(confirmationTitle, confirmationMsg, {
-                    buttons: ["Cancel", confirmButtonText],
-                    html: true,
-                })
-                .done((result) => {
-                    if (result.can) {
-                        toggleOngoingTask(task, enable);
-                    }
-                });
-        },
-        [toggleOngoingTask]
     );
 
     const onEtlProgress = useCallback(
@@ -238,8 +177,8 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
 
     const sharedPanelProps: Omit<BaseOngoingTaskPanelProps<OngoingTaskInfo>, "data"> = {
         db: database,
-        onDelete: onDeleteConfirmation,
-        toggleState: onToggleStateConfirmation,
+        onDelete: deleteTask,
+        toggleState: toggleOngoingTask,
     };
 
     return (
@@ -512,9 +451,4 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
             </div>
         </div>
     );
-}
-
-function taskKey(task: OngoingTaskSharedInfo) {
-    // we don't want to use taskId here - as it changes after edit
-    return task.taskType + "-" + task.taskName;
 }

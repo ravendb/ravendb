@@ -4,12 +4,15 @@ import {
     OngoingEtlTaskNodeInfo,
     OngoingTaskInfo,
     OngoingTaskSharedInfo,
-} from "../../../../models/tasks";
+} from "../../../models/tasks";
 import useBoolean from "hooks/useBoolean";
 import React, { useCallback } from "react";
 import router from "plugins/router";
-import { withPreventDefault } from "../../../../utils/common";
-import { RichPanelDetailItem } from "../../../../common/RichPanel";
+import { withPreventDefault } from "../../../utils/common";
+import { RichPanelDetailItem } from "../../../common/RichPanel";
+import ongoingTaskModel from "models/database/tasks/ongoingTaskModel";
+import viewHelpers from "common/helpers/view/viewHelpers";
+import genUtils from "common/generalUtils";
 
 export interface BaseOngoingTaskPanelProps<T extends OngoingTaskInfo> {
     db: database;
@@ -32,10 +35,49 @@ export function useTasksOperations(editUrl: string, props: BaseOngoingTaskPanelP
     }, [editUrl]);
 
     const onDeleteHandler = useCallback(() => {
-        onDelete(data.shared);
-    }, [data.shared, onDelete]);
+        const task = data.shared;
+        const taskType = ongoingTaskModel.formatStudioTaskType(task.taskType);
+        viewHelpers
+            .confirmationMessage(
+                "Delete Ongoing Task?",
+                `You're deleting ${taskType} task: <br /><ul><li><strong>${genUtils.escapeHtml(
+                    task.taskName
+                )}</strong></li></ul>`,
+                {
+                    buttons: ["Cancel", "Delete"],
+                    html: true,
+                }
+            )
+            .done((result) => {
+                if (result.can) {
+                    onDelete(task);
+                }
+            });
+    }, [database, onDelete]);
 
-    const toggleStateHandler = useCallback((e: boolean) => toggleState(data.shared, e), [data]);
+    const toggleStateHandler = useCallback(
+        (enable: boolean) => {
+            const task = data.shared;
+            const confirmationTitle = enable ? "Enable Task" : "Disable Task";
+            const taskType = ongoingTaskModel.formatStudioTaskType(task.taskType);
+            const confirmationMsg = enable
+                ? `You're enabling ${taskType} task:<br><ul><li><strong>${task.taskName}</strong></li></ul>`
+                : `You're disabling ${taskType} task:<br><ul><li><strong>${task.taskName}</strong></li></ul>`;
+            const confirmButtonText = enable ? "Enable" : "Disable";
+
+            viewHelpers
+                .confirmationMessage(confirmationTitle, confirmationMsg, {
+                    buttons: ["Cancel", confirmButtonText],
+                    html: true,
+                })
+                .done((result) => {
+                    if (result.can) {
+                        toggleState(task, enable);
+                    }
+                });
+        },
+        [toggleState]
+    );
 
     const toggleDetails = useCallback(() => {
         toggleDetailsVisible();
@@ -252,4 +294,9 @@ function findScriptsWithOutMatchingDocuments(
     return Array.from(perScriptCounts.entries())
         .filter((x) => x[1] === 0)
         .map((x) => x[0]);
+}
+
+export function taskKey(task: OngoingTaskSharedInfo) {
+    // we don't want to use taskId here - as it changes after edit
+    return task.taskType + "-" + task.taskName;
 }

@@ -1,6 +1,6 @@
 ﻿import React from "react";
-import { RichPanel, RichPanelDetailItem, RichPanelDetails, RichPanelHeader } from "../../../../../common/RichPanel";
-import { OngoingTaskSubscriptionInfo } from "../../../../../models/tasks";
+import { RichPanel, RichPanelDetailItem, RichPanelDetails, RichPanelHeader } from "../../../../common/RichPanel";
+import { OngoingTaskSubscriptionInfo } from "../../../../models/tasks";
 import {
     BaseOngoingTaskPanelProps,
     OngoingTaskActions,
