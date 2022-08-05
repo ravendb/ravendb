@@ -408,12 +408,12 @@ namespace Sparrow.Server.Compression
 
                 entry.Code = symbolCodeList[i].Code;
 
-                int codeValue = BinaryPrimitives.ReverseEndianness(entry.Code.Value << (sizeof(int) * 8 - entry.Code.Length));
-                var codeValueSpan = MemoryMarshal.Cast<int, byte>(MemoryMarshal.CreateSpan(ref codeValue, 1));
-                var reader = new BitReader(codeValueSpan, entry.Code.Length);
+                uint codeValue = (uint)entry.Code.Value << (sizeof(int) * 8 - entry.Code.Length);
+                
                 maxBitSequenceLength = Math.Max(maxBitSequenceLength, entry.Code.Length);
                 minBitSequenceLength = Math.Min(minBitSequenceLength, entry.Code.Length);
 
+                var reader = new TypedBitReader<uint>(codeValue, entry.Code.Length);
                 tree.Add(ref reader, (short)i);
             }
 
