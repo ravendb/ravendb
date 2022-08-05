@@ -701,8 +701,8 @@ class appUrl {
             const isDifferentDatabaseInAddress = !currentDatabaseName || currentDatabaseName !== db.name.toLowerCase();
             if (isDifferentDatabaseInAddress) {
                 const existingAddress = window.location.hash;
-                const existingQueryString = currentDatabaseName ? "database=" + encodeURIComponent(currentDatabaseName) : null;
-                const newQueryString = "database=" + encodeURIComponent(db.name);
+                const existingQueryString = currentDatabaseName ? "database=" + currentDatabaseName : null;
+                const newQueryString = "database=" + db.name;
                 return existingQueryString ?
                     existingAddress.replace(existingQueryString, newQueryString) :
                     existingAddress + (window.location.hash.indexOf("?") >= 0 ? "&" : "?") + db.type + "=" + encodeURIComponent(db.name);
