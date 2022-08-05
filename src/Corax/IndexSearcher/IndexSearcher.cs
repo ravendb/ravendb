@@ -107,7 +107,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     //We cannot dispose them before the whole query is executed because they are an integral part of IQueryMatch.
     //We know that the Slices are automatically disposed when the transaction is closed so we don't need to track them.
     [SkipLocalsInit]
-    private Slice EncodeAndApplyAnalyzer(string term, int fieldId)
+    internal Slice EncodeAndApplyAnalyzer(string term, int fieldId)
     {
         if (term is null)
             return default;
