@@ -316,6 +316,10 @@ namespace TypingsGenerator
             scripter.AddType(typeof(DatabaseSmugglerImportOptions));
             scripter.AddType(typeof(DatabaseSmugglerOptionsServerSide));
             scripter.AddType(typeof(SmugglerResult));
+            scripter.AddType(typeof(ShardedSmugglerResult));
+            scripter.AddType(typeof(ShardedSmugglerProgress));
+            scripter.AddType(typeof(ShardedBackupResult));
+            scripter.AddType(typeof(ShardedBackupProgress));
             scripter.AddType(typeof(SingleDatabaseMigrationConfiguration));
             scripter.AddType(typeof(OfflineMigrationResult));
             scripter.AddType(typeof(OfflineMigrationProgress));

@@ -440,7 +440,12 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                             </div>
                             <div>
                                 {backups.map((x) => (
-                                    <PeriodicBackupPanel {...sharedPanelProps} key={taskKey(x.shared)} data={x} />
+                                    <PeriodicBackupPanel
+                                        forceReload={reload}
+                                        {...sharedPanelProps}
+                                        key={taskKey(x.shared)}
+                                        data={x}
+                                    />
                                 ))}
                             </div>
                         </div>
