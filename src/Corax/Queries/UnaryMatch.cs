@@ -17,7 +17,8 @@ namespace Corax.Queries
         NotEquals,
         Between,
         NotBetween,
-        AllIn
+        AllIn,
+        Unknown
     }
 
     public enum UnaryMatchOperationMode
