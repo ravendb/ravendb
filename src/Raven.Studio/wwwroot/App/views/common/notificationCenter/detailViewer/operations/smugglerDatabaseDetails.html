@@ -17,6 +17,11 @@
             <div class="notification-time" data-bind="text: op.displayDate().format('LLL')"></div>
         </div>
         <div class="modal-body">
+            <div class="bg-info padding padding-sm small margin-bottom flex-horizontal" data-bind="visible: shardedSmugglerInProgress">
+                <div><i class="icon-info"></i></div>
+                <div>Report contains progress for shard #<span data-bind="text: currentShard"></span> only. Full report will be available when operation is done for all shards.</div>
+            </div>
+            
             <h3 class="text-danger" data-bind="visible: operationFailed">Operation failed!</h3>
             <div class="export-list" data-bind="visible: exportItems().length">
                 <div class="export-legend">
@@ -90,6 +95,7 @@
                     </div>
                 </div>
             </div>
+            
             <div class="clearfix" data-bind="visible: !operationFailed()">
                 <div class="pull-right margin-top">
                     <button class="btn btn-default btn-sm" data-bind="click: toggleDetails, text: detailsVisible() ? 'Hide details':'Show details', clickBubble: false">

@@ -78,7 +78,6 @@ export interface OngoingTaskPeriodicBackupSharedInfo extends OngoingTaskSharedIn
     backupType: BackupType;
     encrypted: boolean;
     nextBackup: Raven.Client.Documents.Operations.OngoingTasks.NextBackup;
-    onGoingBackup: Raven.Client.Documents.Operations.OngoingTasks.RunningBackup;
     retentionPolicy: Raven.Client.Documents.Operations.Backups.RetentionPolicy;
 }
 
@@ -132,7 +131,9 @@ export interface OngoingTaskExternalReplicationNodeInfoDetails extends OngoingTa
 
 export interface OngoingTaskOlapEtlNodeInfoDetails extends OngoingTaskNodeInfoDetails {}
 
-export interface OngoingTaskPeriodicBackupNodeInfoDetails extends OngoingTaskNodeInfoDetails {}
+export interface OngoingTaskPeriodicBackupNodeInfoDetails extends OngoingTaskNodeInfoDetails {
+    onGoingBackup: Raven.Client.Documents.Operations.OngoingTasks.RunningBackup;
+}
 
 export interface OngoingTaskRavenEtlNodeInfoDetails extends OngoingTaskNodeInfoDetails {}
 

@@ -5,6 +5,24 @@ import notificationCenter = require("common/notifications/notificationCenter");
 import abstractOperationDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/abstractOperationDetails");
 import generalUtils = require("common/generalUtils");
 import genericProgress = require("common/helpers/database/genericProgress");
+import ShardedSmugglerResult = Raven.Client.Documents.Smuggler.ShardedSmugglerResult;
+import CountsWithSkippedCountAndLastEtag = Raven.Client.Documents.Smuggler.SmugglerProgressBase.CountsWithSkippedCountAndLastEtag;
+import Counts = Raven.Client.Documents.Smuggler.SmugglerProgressBase.Counts;
+import CountsWithLastEtagAndAttachments = Raven.Client.Documents.Smuggler.SmugglerProgressBase.CountsWithLastEtagAndAttachments;
+import CountsWithLastEtag = Raven.Client.Documents.Smuggler.SmugglerProgressBase.CountsWithLastEtag;
+import DatabaseRecordProgress = Raven.Client.Documents.Smuggler.SmugglerProgressBase.DatabaseRecordProgress;
+import SmugglerProgressBase = Raven.Client.Documents.Smuggler.SmugglerProgressBase;
+import RestoreProgress = Raven.Client.ServerWide.Operations.RestoreProgress;
+import OfflineMigrationProgress = Raven.Client.Documents.Smuggler.OfflineMigrationProgress;
+import SmugglerResult = Raven.Client.Documents.Smuggler.SmugglerResult;
+import OperationChanged = Raven.Server.NotificationCenter.Notifications.OperationChanged;
+import BackupProgress = Raven.Client.Documents.Operations.Backups.BackupProgress;
+import CloudUploadStatus = Raven.Client.Documents.Operations.Backups.CloudUploadStatus;
+import ShardedSmugglerProgress = Raven.Client.Documents.Smuggler.ShardedSmugglerProgress;
+import ShardedBackupResult = Raven.Client.Documents.Operations.Backups.ShardedBackupResult;
+import ShardNodeSmugglerResult = Raven.Client.Documents.Smuggler.ShardNodeSmugglerResult;
+import ShardNodeBackupResult = Raven.Client.Documents.Operations.Backups.ShardNodeBackupResult;
+import BackupResult = Raven.Client.Documents.Operations.Backups.BackupResult;
 
 type smugglerListItemStatus = "processed" | "skipped" | "processing" | "pending" | "processedWithErrors";
 
@@ -30,7 +48,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
 
     view = require("views/common/notificationCenter/detailViewer/operations/smugglerDatabaseDetails.html");
     
-    private sizeFormatter = generalUtils.formatBytesToSize;
+    private static sizeFormatter = generalUtils.formatBytesToSize;
 
     static extractingDataStageName = "Extracting data";
     static ProcessingText = 'Processing';
@@ -48,11 +66,111 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
     previousProgressMessages: string[];
     processingSpeed: KnockoutComputed<string>;
 
+    shardedSmugglerInProgress: KnockoutComputed<boolean>;
+    currentShard: KnockoutComputed<number>;
+
     constructor(op: operation, notificationCenter: notificationCenter) {
         super(op, notificationCenter);
         this.bindToCurrentInstance("toggleDetails");
 
         this.initObservables();
+    }
+    
+    private static extractType(value: object): string {
+        return value && "$type" in value ? (value as any)["$type"] : null;
+    }
+    
+    private static isShardedResult(value: object): value is ShardedSmugglerResult {
+        const type = smugglerDatabaseDetails.extractType(value);
+
+        if (!type) {
+            return false;
+        }
+        
+        return type.includes("ShardedSmugglerResult") || type.includes("ShardedBackupResult");
+    }
+    
+    private static isShardedProgress(value: object): value is ShardedSmugglerProgress {
+        const type = smugglerDatabaseDetails.extractType(value);
+
+        if (!type) {
+            return false;
+        }
+        
+        return type.includes("ShardedSmugglerProgress") || type.includes("ShardedBackupProgress");
+    }
+    
+    private static isShardedBackupResult(value: object): value is ShardedBackupResult {
+        const type = smugglerDatabaseDetails.extractType(value);
+        if (!type) {
+            return false;
+        }
+
+        return type.includes("ShardedBackupResult");
+    }
+    
+    private mergeShardedResult(result: ShardedSmugglerResult | ShardedBackupResult): SmugglerProgressBase {
+        const mergeCounts = (items: Counts[]): Counts => {
+            return {
+                ReadCount: items.reduce((p, c) => p + c.ReadCount, 0),
+                ErroredCount: items.reduce((p, c) => p + c.ErroredCount, 0),
+                Skipped: items.every(x => x.Skipped),
+                Processed: items.some(x => x.Processed),
+                StartTime: null
+            }
+        }
+        
+        const mergeCountsWithLastEtag = (items: CountsWithLastEtag[]): CountsWithLastEtag => {
+            return {
+                ...mergeCounts(items),
+                LastEtag: -1,
+            }
+        }
+        
+        const mergeCountsWithAttachments = (items: CountsWithLastEtagAndAttachments[]): CountsWithLastEtagAndAttachments => {
+            return {
+                ...mergeCountsWithLastEtag(items),
+                Attachments: mergeCounts(items.map(x => x.Attachments))
+            }
+        }
+        
+        const mergeCountsWithSkipped = (items: CountsWithSkippedCountAndLastEtag[]): CountsWithSkippedCountAndLastEtag => {
+            return {
+                ...mergeCountsWithAttachments(items),
+                SkippedCount: items.reduce((p, c) => p + c.SkippedCount, 0),
+            }
+        }
+        
+        const results: Array<ShardNodeSmugglerResult | ShardNodeBackupResult> = result.Results;
+        
+        let extraProps: object = {};
+        
+        if (smugglerDatabaseDetails.isShardedBackupResult(result)) {
+            // noinspection UnnecessaryLocalVariableJS
+            const backup: Partial<BackupResult> = {
+                SnapshotBackup: mergeCounts(result.Results.map(x => x.Result.SnapshotBackup))
+            }
+            
+            extraProps = backup;
+        }
+        
+        return {
+            CanMerge: false,
+            CompareExchange: mergeCountsWithLastEtag(results.map(x => x.Result.CompareExchange)),
+            CompareExchangeTombstones: mergeCounts(results.map(x => x.Result.CompareExchangeTombstones)),
+            Conflicts: mergeCountsWithLastEtag(results.map(x => x.Result.Conflicts)),
+            Counters: mergeCountsWithLastEtag(results.map(x => x.Result.Counters)),
+            DatabaseRecord: mergeCounts(results.map(x => x.Result.DatabaseRecord)) as DatabaseRecordProgress, 
+            Documents: mergeCountsWithSkipped(results.map(x => x.Result.Documents)),
+            Identities: mergeCountsWithLastEtag(results.map(x => x.Result.Identities)),
+            Indexes: mergeCounts(results.map(x => x.Result.Indexes)),
+            ReplicationHubCertificates: mergeCounts(results.map(x => x.Result.ReplicationHubCertificates)),
+            RevisionDocuments: mergeCountsWithAttachments(results.map(x => x.Result.RevisionDocuments)),
+            Subscriptions: mergeCounts(results.map(x => x.Result.Subscriptions)),
+            TimeSeries: mergeCountsWithLastEtag(results.map(x => x.Result.TimeSeries)),
+            Tombstones: mergeCountsWithLastEtag(results.map(x => x.Result.Tombstones)),
+            ...extraProps
+        };
     }
 
     protected initObservables() {
@@ -62,15 +180,19 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
             if (this.op.status() === "Faulted") {
                 return [];
             }
-
-            const status = (this.op.isCompleted() ? this.op.result() : this.op.progress()) as Raven.Client.Documents.Smuggler.SmugglerProgressBase;
+            
+            let status = (this.op.isCompleted() ? this.op.result() : this.op.progress()) as SmugglerProgressBase;
             if (!status) {
                 return [];
             }
-
+            
+            if (smugglerDatabaseDetails.isShardedResult(status)) {
+                status = this.mergeShardedResult(status);
+            }
+            
             const result: smugglerListItem[] = [];
             if ("SnapshotBackup" in status) {
-                const backupCount = (status as Raven.Client.Documents.Operations.Backups.BackupProgress).SnapshotBackup;
+                const backupCount = (status as BackupProgress).SnapshotBackup;
 
                 // skip it this case means it is not backup progress object or it is backup of non-binary data
                 if (!backupCount.Skipped) {
@@ -79,7 +201,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
             }
 
             if ("SnapshotRestore" in status) {
-                const restoreCounts = (status as Raven.Client.ServerWide.Operations.RestoreProgress).SnapshotRestore;
+                const restoreCounts = (status as RestoreProgress).SnapshotRestore;
                 
                 // skip it this case means it is not restore progress object or it is restore of non-binary data 
                 if (!restoreCounts.Skipped) {
@@ -88,7 +210,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
             }
             
             if (this.op.taskType() === "MigrationFromLegacyData") {
-                const migrationCounts = (status as Raven.Client.Documents.Smuggler.OfflineMigrationProgress).DataExporter;
+                const migrationCounts = (status as OfflineMigrationProgress).DataExporter;
                 result.push(this.mapToExportListItem(smugglerDatabaseDetails.extractingDataStageName, migrationCounts));
             }
 
@@ -97,14 +219,14 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
             if (this.op.taskType() === "CollectionImportFromCsv" || isDatabaseMigration) {
                 result.push(this.mapToExportListItem("Documents", status.Documents));
                 if (isDatabaseMigration) {
-                    const attachments = (status.Documents as Raven.Client.Documents.Smuggler.SmugglerProgressBase.CountsWithLastEtagAndAttachments).Attachments;
+                    const attachments = (status.Documents as CountsWithLastEtagAndAttachments).Attachments;
                     result.push(this.mapToExportListItem("Attachments", attachments, true));
                 }
             } else {
                 result.push(this.mapToExportListItem("Database Record", status.DatabaseRecord));
                 result.push(this.mapToExportListItem("Documents", status.Documents));
 
-                const attachments = (status.Documents as Raven.Client.Documents.Smuggler.SmugglerProgressBase.CountsWithLastEtagAndAttachments).Attachments;
+                const attachments = (status.Documents as CountsWithLastEtagAndAttachments).Attachments;
                 result.push(this.mapToExportListItem("Attachments", attachments, true));
                 
                 result.push(this.mapToExportListItem("Counters", status.Counters, true));
@@ -115,7 +237,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
                 }
                 
                 result.push(this.mapToExportListItem("Revisions", status.RevisionDocuments));
-                const revisionsAttachments = (status.RevisionDocuments as Raven.Client.Documents.Smuggler.SmugglerProgressBase.CountsWithLastEtagAndAttachments).Attachments;
+                const revisionsAttachments = (status.RevisionDocuments as CountsWithLastEtagAndAttachments).Attachments;
                 result.push(this.mapToExportListItem("Attachments", revisionsAttachments, true));
 
                 result.push(this.mapToExportListItem("Conflicts", status.Conflicts));
@@ -159,43 +281,16 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
                 return [];
             }
 
-            const status = (this.op.isCompleted() ? this.op.result() : this.op.progress()) as Raven.Client.Documents.Smuggler.SmugglerProgressBase;
+            const status = (this.op.isCompleted() ? this.op.result() : this.op.progress()) as SmugglerProgressBase;
             if (!status) {
                 return [];
             }
-
-            const result: uploadListItem[] = [];
-            if ("S3Backup" in status) {
-                const s3BackupStatus = (status as Raven.Client.Documents.Operations.Backups.BackupProgress).S3Backup;
-                const backupStatus = s3BackupStatus as Raven.Client.Documents.Operations.Backups.CloudUploadStatus;
-                this.addToUploadItems("S3", result, backupStatus);
+            
+            if (smugglerDatabaseDetails.isShardedResult(status)) {
+                return status.Results.flatMap(shardResult => smugglerDatabaseDetails.mapUploadItems(shardResult.Result));
+            } else {
+                return smugglerDatabaseDetails.mapUploadItems(status);    
             }
-
-            if ("AzureBackup" in status) {
-                const azureBackupStatus = (status as Raven.Client.Documents.Operations.Backups.BackupProgress).AzureBackup;
-                const backupStatus = azureBackupStatus as Raven.Client.Documents.Operations.Backups.CloudUploadStatus;
-                this.addToUploadItems("Azure", result, backupStatus);
-            }
-
-            if ("GoogleCloudBackup" in status) {
-                const googleCloudBackupStatus = (status as Raven.Client.Documents.Operations.Backups.BackupProgress).GoogleCloudBackup;
-                const backupStatus = googleCloudBackupStatus as Raven.Client.Documents.Operations.Backups.CloudUploadStatus;
-                this.addToUploadItems("Google Cloud", result, backupStatus);
-            }
-
-            if ("GlacierBackup" in status) {
-                const glacierBackupStatus = (status as Raven.Client.Documents.Operations.Backups.BackupProgress).GlacierBackup;
-                const backupStatus = glacierBackupStatus as Raven.Client.Documents.Operations.Backups.CloudUploadStatus;
-                this.addToUploadItems("Glacier", result, backupStatus);
-            }
-
-            if ("FtpBackup" in status) {
-                const ftpBackupStatus = (status as Raven.Client.Documents.Operations.Backups.BackupProgress).FtpBackup;
-                const backupStatus = ftpBackupStatus as Raven.Client.Documents.Operations.Backups.CloudUploadStatus;
-                this.addToUploadItems("FTP", result, backupStatus);
-            }
-
-            return result;
         });
          
         this.messages = ko.pureComputed(() => {
@@ -204,10 +299,15 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
                 const previousMessages = this.previousProgressMessages || [];
                 return previousMessages.concat(...errors);
             } else if (this.op.isCompleted()) {
-                const result = this.op.result() as Raven.Client.Documents.Smuggler.SmugglerResult;
-                return result ? result.Messages : [];
+                const result = this.op.result() as SmugglerResult;
+                
+                if (smugglerDatabaseDetails.isShardedResult(result)) {
+                    return result.Results.flatMap(x => x.Result.Messages);
+                } else {
+                    return result ? result.Messages : [];    
+                }
             } else {
-                const progress = this.op.progress() as Raven.Client.Documents.Smuggler.SmugglerResult;
+                const progress = this.op.progress() as SmugglerResult;
                 if (progress) {
                     this.previousProgressMessages = progress.Messages;
                 }
@@ -226,6 +326,69 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
         if (this.operationFailed()) {
             this.detailsVisible(true);
         }
+        
+        this.shardedSmugglerInProgress = ko.pureComputed(() => smugglerDatabaseDetails.isShardedProgress(this.op.progress() as object));
+        
+        this.currentShard = ko.pureComputed(() => {
+            const progress = this.op.progress() as object;
+            if (!smugglerDatabaseDetails.isShardedProgress(progress)) {
+                return null;
+            }
+            
+            return progress.ShardNumber;
+        });
+    }
+    
+    private static mapUploadItems(status: SmugglerProgressBase): uploadListItem[] {
+        const result: uploadListItem[] = [];
+        if ("S3Backup" in status) {
+            const s3BackupStatus = (status as BackupProgress).S3Backup;
+            const backupStatus = s3BackupStatus as CloudUploadStatus;
+            result.push(smugglerDatabaseDetails.mapUploadItem("S3", backupStatus));
+        }
+
+        if ("AzureBackup" in status) {
+            const azureBackupStatus = (status as BackupProgress).AzureBackup;
+            const backupStatus = azureBackupStatus as CloudUploadStatus;
+            result.push(smugglerDatabaseDetails.mapUploadItem("Azure", backupStatus));
+        }
+
+        if ("GoogleCloudBackup" in status) {
+            const googleCloudBackupStatus = (status as BackupProgress).GoogleCloudBackup;
+            const backupStatus = googleCloudBackupStatus as CloudUploadStatus;
+            result.push(smugglerDatabaseDetails.mapUploadItem("Google Cloud", backupStatus));
+        }
+
+        if ("GlacierBackup" in status) {
+            const glacierBackupStatus = (status as BackupProgress).GlacierBackup;
+            const backupStatus = glacierBackupStatus as CloudUploadStatus;
+            result.push(smugglerDatabaseDetails.mapUploadItem("Glacier", backupStatus));
+        }
+
+        if ("FtpBackup" in status) {
+            const ftpBackupStatus = (status as BackupProgress).FtpBackup;
+            const backupStatus = ftpBackupStatus as CloudUploadStatus;
+            result.push(smugglerDatabaseDetails.mapUploadItem("FTP", backupStatus));
+        }
+
+        return result.filter(x => x);
+    }
+
+    private static mapUploadItem(backupType: string, backupStatus: CloudUploadStatus): uploadListItem | null {
+        if (backupStatus.Skipped) {
+            return null;
+        }
+
+        const uploadProgress = new genericProgress(
+            backupStatus.UploadProgress.UploadedInBytes,
+            backupStatus.UploadProgress.TotalInBytes,
+            (number: number) => this.sizeFormatter(number),
+            backupStatus.UploadProgress.BytesPutsPerSec);
+
+        return {
+            name: `Upload to ${backupType}`,
+            uploadProgress: uploadProgress
+        };
     }
     
     private static findCurrentlyProcessingItems(result: Array<smugglerListItem>): string[] {
@@ -247,26 +410,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
         return [];
     }
 
-    private addToUploadItems(backupType: string, items: Array<uploadListItem>,
-        backupStatus: Raven.Client.Documents.Operations.Backups.CloudUploadStatus) {
-
-        if (backupStatus.Skipped) {
-            return;
-        }
-
-        const uploadProgress = new genericProgress(
-            backupStatus.UploadProgress.UploadedInBytes,
-            backupStatus.UploadProgress.TotalInBytes,
-            (number: number) => this.sizeFormatter(number),
-            backupStatus.UploadProgress.BytesPutsPerSec);
-
-        items.push({
-            name: `Upload to ${backupType}`,
-            uploadProgress: uploadProgress
-        });
-    }
-
-    private scrollDown() {
+    private static scrollDown() {
         const messages = $(".export-messages")[0];
         if (messages) {
             messages.scrollTop = messages.scrollHeight;
@@ -282,18 +426,18 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
 
         this.registerDisposable(this.messagesJoined.subscribe(() => {
             if (this.tail()) {
-                this.scrollDown();
+                smugglerDatabaseDetails.scrollDown();
             }
         }));
 
         this.registerDisposable(this.tail.subscribe(enabled => {
             if (enabled) {
-                this.scrollDown();
+                smugglerDatabaseDetails.scrollDown();
             }
         }));
     }
 
-    private mapToExportListItem(name: string, item: Raven.Client.Documents.Smuggler.SmugglerProgressBase.Counts, isNested: boolean = false): smugglerListItem {
+    private mapToExportListItem(name: string, item: Counts, isNested: boolean = false): smugglerListItem {
         let stage: smugglerListItemStatus = "processing";
         
         if (item.Skipped) {
@@ -308,9 +452,9 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
         let processingSpeedText = smugglerDatabaseDetails.ProcessingText;
         const isDocuments = name === "Documents";
 
-        const skippedCount = isDocuments ? (item as Raven.Client.Documents.Smuggler.SmugglerProgressBase.CountsWithSkippedCountAndLastEtag).SkippedCount : 0;
+        const skippedCount = isDocuments ? (item as CountsWithSkippedCountAndLastEtag).SkippedCount : 0;
         
-        if (this.showSpeed(name) && item.StartTime) {
+        if (smugglerDatabaseDetails.showSpeed(name) && item.StartTime) {
             const itemsCount = item.ReadCount + skippedCount + item.ErroredCount;
             
             if (itemsCount === this.itemsLastCount[name]) {
@@ -335,7 +479,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
         };
     }
 
-    private showSpeed(name: string) {
+    private static showSpeed(name: string) {
         return name === "Documents" || name === "Revisions" || name === "Counters" || name === "TimeSeries";
     }
     
@@ -362,7 +506,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
         return app.showBootstrapDialog(new smugglerDatabaseDetails(op, center));
     }
 
-    static merge(existing: operation, incoming: Raven.Server.NotificationCenter.Notifications.OperationChanged): boolean {
+    static merge(existing: operation, incoming: OperationChanged): boolean {
         if (!smugglerDatabaseDetails.supportsDetailsFor(existing)) {
             return false;
         }
@@ -373,13 +517,13 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
             // object was just created  - only copy message -> message field
 
             if (!existing.isCompleted()) {
-                const result = existing.progress() as Raven.Client.Documents.Smuggler.SmugglerResult;
+                const result = existing.progress() as SmugglerResult;
                 result.Messages = [result.Message];
             }
             
         } else if (incoming.State.Status === "InProgress") { // if incoming operation is in progress, then merge messages into existing item
-            const incomingResult = incoming.State.Progress as Raven.Client.Documents.Smuggler.SmugglerResult;
-            const existingResult = existing.progress() as Raven.Client.Documents.Smuggler.SmugglerResult;
+            const incomingResult = incoming.State.Progress as SmugglerResult;
+            const existingResult = existing.progress() as SmugglerResult;
 
             incomingResult.Messages = existingResult.Messages.concat(incomingResult.Message);
         }

@@ -16,8 +16,14 @@ import moment = require("moment");
 import assertUnreachable from "../../../../../utils/assertUnreachable";
 import timeHelpers from "common/timeHelpers";
 import BackupType = Raven.Client.Documents.Operations.Backups.BackupType;
+import classNames from "classnames";
+import notificationCenter from "common/notifications/notificationCenter";
+import backupNow = require("viewmodels/database/tasks/backupNow");
+import app from "durandal/app";
+import clusterTopologyManager from "common/shell/clusterTopologyManager";
+import backupNowPeriodicCommand from "commands/database/tasks/backupNowPeriodicCommand";
 
-type PeriodicBackupPanelProps = BaseOngoingTaskPanelProps<OngoingTaskPeriodicBackupInfo>;
+type PeriodicBackupPanelProps = BaseOngoingTaskPanelProps<OngoingTaskPeriodicBackupInfo> & { forceReload: () => void };
 
 const neverBackedUpText = "Never backed up";
 
@@ -35,8 +41,20 @@ function formatBackupType(backupType: BackupType, isFull: boolean) {
     }
 }
 
-function Details(props: PeriodicBackupPanelProps) {
-    const { data } = props;
+function findBackupNowBlockReason(data: OngoingTaskPeriodicBackupInfo, runningOnAnotherNode: boolean): string {
+    if (!data.shared.nextBackup) {
+        return "No backup destinations";
+    }
+
+    if (runningOnAnotherNode) {
+        return "Backup in progress on node " + data.shared.responsibleNodeTag;
+    }
+
+    return null;
+}
+
+function Details(props: PeriodicBackupPanelProps & { canEdit: boolean }) {
+    const { data, canEdit, db, forceReload } = props;
 
     const backupDestinationsHumanized = data.shared.backupDestinations.length
         ? data.shared.backupDestinations.join(", ")
@@ -55,13 +73,6 @@ function Details(props: PeriodicBackupPanelProps) {
         if (!nextBackup) {
             return "N/A";
         }
-        /* TODO
-        if (this.isRunningOnAnotherNode()) {
-                this.textClass("text-info");
-                // the backup is running on another node
-                return `Backup is already running or should start shortly on node ${this.responsibleNode().NodeTag}`;
-            }
-         */
 
         const now = timeHelpers.utcNowWithSecondPrecision();
         const diff = moment.utc(nextBackup.DateTime).diff(now);
@@ -71,8 +82,11 @@ function Details(props: PeriodicBackupPanelProps) {
         return `in ${formatDuration} (${backupTypeText})`;
     }, [data.shared]);
 
+    const onGoingBackup = data.nodesInfo.map((x) => x.details?.onGoingBackup).find((x) => x);
+    const runningOnAnotherNode =
+        onGoingBackup && data.shared.responsibleNodeTag !== clusterTopologyManager.default.localNodeTag();
+
     const onGoingBackupHumanized = useMemo(() => {
-        const onGoingBackup = data.shared.onGoingBackup;
         if (!onGoingBackup) {
             return null;
         }
@@ -94,7 +108,47 @@ function Details(props: PeriodicBackupPanelProps) {
         return genUtils.formatTimeSpan(retentionPolicyPeriod, true);
     }, [data.shared]);
 
-    //TODO: lastExecutingNode - does it make sense in case of sharding?
+    const backupNowVisible = !data.shared.serverWide || canEdit;
+    const backupNowBlockReason = findBackupNowBlockReason(data, runningOnAnotherNode);
+
+    const backupNowInProgress = !!onGoingBackup;
+    const neverBackedUp = !data.shared.lastFullBackup;
+
+    const onBackupNow = () => {
+        if (onGoingBackup && onGoingBackup.RunningBackupTaskId) {
+            notificationCenter.instance.openDetailsForOperationById(db, onGoingBackup.RunningBackupTaskId);
+            return;
+        }
+
+        const backupNowViewModel = new backupNow(formatBackupType(data.shared.backupType, true));
+
+        backupNowViewModel.result.done((confirmResult: backupNowConfirmResult) => {
+            if (confirmResult.can) {
+                const task = new backupNowPeriodicCommand(
+                    db,
+                    data.shared.taskId,
+                    confirmResult.isFullBackup,
+                    data.shared.taskName
+                );
+                task.execute().done(
+                    (backupNowResult: Raven.Client.Documents.Operations.Backups.StartBackupOperationResult) => {
+                        forceReload();
+
+                        if (
+                            backupNowResult &&
+                            clusterTopologyManager.default.localNodeTag() === backupNowResult.ResponsibleNode
+                        ) {
+                            // running on this node
+                            const operationId = backupNowResult.OperationId;
+                            notificationCenter.instance.openDetailsForOperationById(db, operationId);
+                        }
+                    }
+                );
+            }
+        });
+
+        app.showBootstrapDialog(backupNowViewModel);
+    };
 
     return (
         <RichPanelDetails>
@@ -130,35 +184,33 @@ function Details(props: PeriodicBackupPanelProps) {
                 Retention Policy:
                 <div className="value">{retentionPolicyHumanized}</div>
             </RichPanelDetailItem>
-        </RichPanelDetails>
-    );
-    /*
- TODO
-    return (
-                
-                <div className="flex-noshrink flex-grow flex-start text-right">
+
+            <RichPanelDetailItem>
+                {backupNowVisible && (
                     <button
-                        className="btn backup-now"
-                        data-bind="click: backupNow, enable: isBackupNowEnabled(), visible: isBackupNowVisible(),
-                                             css: { 'btn-default': !neverBackedUp(), 'btn-info': backupNowInProgress, 'btn-spinner': backupNowInProgress, 'btn-warning': !backupNowInProgress() && neverBackedUp() },
-                                             attr: { 'title':  disabledBackupNowReason() || 'Click to trigger the backup task now' },
-                                             requiredAccess: 'DatabaseAdmin'"
+                        type="button"
+                        onClick={onBackupNow}
+                        className={classNames("btn backup-now", {
+                            "btn-default": !neverBackedUp,
+                            "btn-info": backupNowInProgress,
+                            "btn-spinner": backupNowInProgress,
+                            "btn-warning": !backupNowInProgress && neverBackedUp,
+                        })}
+                        disabled={!!backupNowBlockReason}
+                        title={backupNowBlockReason ?? "Click to trigger the backup task now"}
                     >
                         <i className="icon-backups"></i>
-                        <span data-bind="text: backupNowInProgress() ? 'Show backup progress' : 'Backup now'"></span>
+                        <span>{backupNowInProgress ? "Show backup progress" : "Backup now"}</span>
                     </button>
-                    <button className="btn btn-default" data-bind="click: refreshBackupInfo" title="Refresh info">
-                        <i className="icon-refresh"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-    );*/
+                )}
+            </RichPanelDetailItem>
+        </RichPanelDetails>
+    );
 }
 
 function BackupEncryption(props: { encrypted: boolean }) {
     return (
-        <div>
+        <div className="margin-left-xs margin-right-xs">
             {props.encrypted ? (
                 <small title="Backup is encrypted">
                     <i className="icon-encryption text-success"></i>
@@ -173,7 +225,6 @@ function BackupEncryption(props: { encrypted: boolean }) {
 }
 
 export function PeriodicBackupPanel(props: PeriodicBackupPanelProps) {
-    //TODO: hide state for server wide!
     const { db, data } = props;
 
     const { isAdminAccessOrAbove } = useAccessManager();
@@ -203,190 +254,7 @@ export function PeriodicBackupPanel(props: PeriodicBackupPanelProps) {
                     toggleDetails={toggleDetails}
                 />
             </RichPanelHeader>
-            {detailsVisible && <Details {...props} />}
+            {detailsVisible && <Details canEdit={canEdit} {...props} />}
         </RichPanel>
     );
 }
-
-/* TODO
-
-class ongoingTaskBackupListModel extends ongoingTaskListModel {
-    
-    private watchProvider: (task: ongoingTaskBackupListModel) => void;
-
-    backupNowInProgress = ko.observable<boolean>(false);
-    isRunningOnAnotherNode: KnockoutComputed<boolean>;
-    disabledBackupNowReason = ko.observable<string>();
-    isBackupNowEnabled: KnockoutComputed<boolean>;
-    isBackupNowVisible: KnockoutComputed<boolean>;
-    neverBackedUp = ko.observable<boolean>(false);
-    fullBackupTypeName: KnockoutComputed<string>;
-    isBackupEncrypted = ko.observable<boolean>();
-    lastExecutingNode = ko.observable<string>();
-
-    throttledRefreshBackupInfo: () => void;
-
-    constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup, watchProvider: (task: ongoingTaskBackupListModel) => void) {
-        super();
-        
-        this.throttledRefreshBackupInfo = _.throttle(() => this.refreshBackupInfo(false), 60 * 1000);
-        
-        this.watchProvider = watchProvider;
-        this.update(dto);
-        
-        this.initializeObservables();
-    }
-
-    initializeObservables() {
-        super.initializeObservables();
-        
-        this.editUrl = ko.pureComputed(()=> {
-             const urls = appUrl.forCurrentDatabase();
-
-             return urls.editPeriodicBackupTask(this.taskId)();
-        });
-
-        this.isBackupNowEnabled = ko.pureComputed(() => {
-            if (this.nextBackupHumanized() === "N/A") {
-                this.disabledBackupNowReason("No backup destinations");
-                return false;
-            }
-
-            if (this.isRunningOnAnotherNode()) {
-                // the backup is running on another node
-                this.disabledBackupNowReason(`Backup in progress on node ${this.responsibleNode().NodeTag}`);
-                return false;
-            }
-
-            this.disabledBackupNowReason(null);
-            return true;
-        });
-
-        this.isBackupNowVisible = ko.pureComputed(() => {
-            return  !this.isServerWide() || accessManager.default.isClusterAdminOrClusterNode();
-        });
-        
-        this.isRunningOnAnotherNode = ko.pureComputed(() => {
-            const responsibleNode = this.responsibleNode();
-            if (!responsibleNode || !responsibleNode.NodeTag) {
-                return false;
-            }
-
-            if (responsibleNode.NodeTag === clusterTopologyManager.default.localNodeTag()) {
-                return false;
-            }
-
-            const nextBackup = this.nextBackup();
-            if (!nextBackup) {
-                return false;
-            }
-
-            const now = timeHelpers.utcNowWithSecondPrecision();
-            const diff = moment.utc(nextBackup.DateTime).diff(now);
-            return diff <= 0;
-        });
-
-        this.fullBackupTypeName = ko.pureComputed(() => this.getBackupType(this.backupType(), true));
-    }
-
-    update(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup) {
-        super.update(dto);
-
-        if (this.onGoingBackup()) {
-            this.watchProvider(this);
-        }
-
-        this.backupNowInProgress(!!this.onGoingBackup());
-        
-        this.isServerWide(this.taskName().startsWith(ongoingTaskBackupListModel.serverWideNamePrefixFromServer));
-    }
-
-
-    refreshBackupInfo(reportFailure: boolean) {
-        if (connectionStatus.showConnectionLost()) {
-            // looks like we don't have connection to server, skip index progress update 
-            return $.Deferred<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup>().fail();
-        }
-
-        return ongoingTaskInfoCommand.forBackup(this.activeDatabase(), this.taskId, reportFailure)
-            .execute()
-            .done((result: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup) => this.update(result));
-    }
-
-    backupNow() {
-        const db = this.activeDatabase();
-        const onGoingBackup = this.onGoingBackup();
-        if (onGoingBackup) {
-            const runningOperationId = onGoingBackup.RunningBackupTaskId;
-            if (runningOperationId) {
-                notificationCenter.instance.openDetailsForOperationById(db, runningOperationId);
-                return;
-            }
-        }
-
-        const backupNowViewModel = new backupNow(this.getBackupType(this.backupType(), true));
-        backupNowViewModel
-            .result
-            .done((confirmResult: backupNowConfirmResult) => {
-                if (confirmResult.can) {
-                    this.backupNowInProgress(true);
-
-                    const task = new backupNowPeriodicCommand(this.activeDatabase(), this.taskId, confirmResult.isFullBackup, this.taskName());
-                    task.execute()
-                        .done((backupNowResult: Raven.Client.Documents.Operations.Backups.StartBackupOperationResult) => {
-                            this.refreshBackupInfo(true);
-                            this.watchProvider(this);
-
-                            if (backupNowResult && clusterTopologyManager.default.localNodeTag() === backupNowResult.ResponsibleNode) {
-                                // running on this node
-                                const operationId = backupNowResult.OperationId;
-                                if (!this.onGoingBackup()) {
-                                    this.onGoingBackup({
-                                        IsFull: confirmResult.isFullBackup,
-                                        RunningBackupTaskId: operationId
-                                    });
-                                }
-                                notificationCenter.instance.openDetailsForOperationById(db, operationId);
-                            }
-                        })
-                        .fail(() => {
-                            // we failed to start the backup task
-                            this.backupNowInProgress(false);
-                        });
-                        // backupNowInProgress is set to false after operation is finished
-                }
-            });
-
-        app.showBootstrapDialog(backupNowViewModel);
-    }
-}
-
-
-
-    private watchBackupCompletion(task: ongoingTaskBackupListModel) {
-        if (!this.watchedBackups.has(task.taskId)) {
-            let intervalId = setInterval(() => {
-                task.refreshBackupInfo(false)
-                    .done(result => {
-                        if (!result.OnGoingBackup) {
-                            clearInterval(intervalId);
-                            intervalId = null;
-                            this.watchedBackups.delete(task.taskId);
-                        }
-                    })
-            }, 3000);
-            this.watchedBackups.set(task.taskId, intervalId as unknown as number);
-
-            this.registerDisposable({
-                dispose: () => {
-                    if (intervalId) {
-                        clearInterval(intervalId);
-                        intervalId = null;
-                        this.watchedBackups.delete(task.taskId);
-                    }
-                }
-            });
-        }
-    }
-
- */

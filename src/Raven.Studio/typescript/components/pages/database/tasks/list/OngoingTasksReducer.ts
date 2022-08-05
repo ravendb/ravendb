@@ -10,6 +10,7 @@ import {
     OngoingTaskNodeInfoDetails,
     OngoingTaskNodeProgressDetails,
     OngoingTaskOlapEtlSharedInfo,
+    OngoingTaskPeriodicBackupNodeInfoDetails,
     OngoingTaskPeriodicBackupSharedInfo,
     OngoingTaskRabbitMqEtlSharedInfo,
     OngoingTaskRavenEtlSharedInfo,
@@ -199,7 +200,6 @@ function mapSharedInfo(task: OngoingTask): OngoingTaskSharedInfo {
                 lastIncrementalBackup: incoming.LastIncrementalBackup,
                 backupType: incoming.BackupType,
                 encrypted: incoming.IsEncrypted,
-                onGoingBackup: incoming.OnGoingBackup,
                 nextBackup: incoming.NextBackup,
                 retentionPolicy: incoming.RetentionPolicy,
             };
@@ -259,11 +259,23 @@ function mapSharedInfo(task: OngoingTask): OngoingTaskSharedInfo {
 }
 
 function mapNodeInfo(task: OngoingTask): OngoingTaskNodeInfoDetails {
-    return {
+    const commonProps: OngoingTaskNodeInfoDetails = {
         taskConnectionStatus: task.TaskConnectionStatus,
         responsibleNode: task.ResponsibleNode?.NodeTag,
         error: task.Error,
     };
+    switch (task.TaskType) {
+        case "Backup": {
+            const incoming = task as OngoingTaskBackup;
+            return {
+                ...commonProps,
+                onGoingBackup: incoming.OnGoingBackup,
+            } as OngoingTaskPeriodicBackupNodeInfoDetails;
+        }
+
+        default:
+            return commonProps;
+    }
 }
 
 function initNodesInfo(locations: databaseLocationSpecifier[]): OngoingTaskNodeInfo[] {
