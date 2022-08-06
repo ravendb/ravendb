@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Sparrow;
@@ -9,7 +10,21 @@ namespace Voron.Data.CompactTrees;
 
 unsafe partial class CompactTree
 {
-
+    public void VerifyOrderOfElements()
+    {
+        var it = Iterate();
+        it.Reset();
+        Span<byte> prevKey = Span<byte>.Empty;
+        while (it.MoveNext(out Span<byte> key, out var v))
+        {
+            if (prevKey.SequenceCompareTo(key) > 0)
+            {
+                throw new InvalidDataException("The items in the compact tree are not sorted!");
+            }
+            prevKey = key;
+        }
+    }
+    
     public void Verify()
     {
         IteratorCursorState cursor = new() { _stk = new CursorState[8], _pos = -1, _len = 0 };
@@ -61,9 +76,12 @@ unsafe partial class CompactTree
 
     private void VerifyNode(ref CursorState current)
     {
-        var dictionary = _dictionaries[current.Header->DictionaryId];
+        var dictionary = GetEncodingDictionary(current.Header->DictionaryId);
+        if (current.Header->NumberOfEntries == 0)
+            return;
 
-        int len = GetEncodedEntry(current.Page, current.EntriesOffsets[0], out var lastEncodedKey, out var l);
+        _ = GetEncodedEntry(current.Page, current.EntriesOffsets[0], out var lastEncodedKey, out var l);
+
 
         Span<byte> lastDecodedKey = new byte[dictionary.GetMaxDecodingBytes(lastEncodedKey)];
         dictionary.Decode(lastEncodedKey, ref lastDecodedKey);

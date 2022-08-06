@@ -29,6 +29,8 @@
     <EmbeddedResource Include="Corax\Bugs\Corax.Set.Removals.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </EmbeddedResource>
+    <None Remove="Corax\Bugs\Terms.log.gz" />
+    <EmbeddedResource Include="Corax\Bugs\Terms.log.gz" />
   </ItemGroup>
   <ItemGroup>
     <Compile Remove="Sparrow\BitVectors.cs" />
