@@ -45,7 +45,6 @@ public abstract class AbstractJavaScriptIndex<T> : AbstractJavaScriptIndexBase
 
             var mapReferencedCollections = InitializeEngine(maps, mapCode);
 
-            //TODO: egor why we have both of them??? Cant we use only _definitions?
             _definitionsForParsing = GetDefinitionsForParsingJint();
             _definitions = GetDefinitions();
 

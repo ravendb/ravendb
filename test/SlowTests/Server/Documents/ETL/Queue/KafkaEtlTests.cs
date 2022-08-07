@@ -25,10 +25,11 @@ public class KafkaEtlTests : KafkaEtlTestBase
     {
     }
 
-    [RequiresKafkaFact]
-    public void SimpleScript()
+    [RequiresKafkaTheory]
+    [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+    public void SimpleScript(Options options)
     {
-        using (var store = GetDocumentStore())
+        using (var store = GetDocumentStore(options))
         {
             var config = SetupQueueEtlToKafka(store, DefaultScript, DefaultCollections);
             var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
@@ -64,11 +65,12 @@ public class KafkaEtlTests : KafkaEtlTestBase
             etlDone.Reset();
         }
     }
-    
-    [RequiresKafkaFact]
-    public void TestAreHeadersPresent()
+
+    [RequiresKafkaTheory]
+    [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+    public void TestAreHeadersPresent(Options options)
     {
-        using (var store = GetDocumentStore())
+        using (var store = GetDocumentStore(options))
         {
             var config = SetupQueueEtlToKafka(store, DefaultScript, DefaultCollections);
             var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
@@ -106,10 +108,11 @@ public class KafkaEtlTests : KafkaEtlTestBase
         }
     }
 
-    [RequiresKafkaFact]
-    public void SimpleScriptWithManyDocuments()
+    [RequiresKafkaTheory]
+    [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+    public void SimpleScriptWithManyDocuments(Options options)
     {
-        using var store = GetDocumentStore();
+        using var store = GetDocumentStore(options);
 
         var numberOfOrders = 10;
         var numberOfLinesPerOrder = 2;
@@ -158,10 +161,11 @@ public class KafkaEtlTests : KafkaEtlTestBase
         }
     }
 
-    [RequiresKafkaFact()]
-    public void Docs_from_two_collections_loaded_to_single_one()
+    [RequiresKafkaTheory]
+    [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+    public void Docs_from_two_collections_loaded_to_single_one(Options options)
     {
-        using var store = GetDocumentStore();
+        using var store = GetDocumentStore(options);
 
         var config = SetupQueueEtlToKafka(store,
             @"var userData = { UserId: id(this), Name: this.Name }; loadToUsers" + TopicSuffix + @"(userData)", new[] { "Users", "People" });
@@ -218,8 +222,9 @@ public class KafkaEtlTests : KafkaEtlTestBase
         Assert.Equal("No `loadTo<QueueName>()` method call found in 'test' script", errors[0]);
     }
 
-    [Fact]
-    public void Error_if_script_is_empty()
+    [RequiresKafkaTheory]
+    [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+    public void Error_if_script_is_empty(Options options)
     {
         var config = new QueueEtlConfiguration
         {
@@ -244,10 +249,11 @@ public class KafkaEtlTests : KafkaEtlTestBase
         Assert.Equal("Script 'test' must not be empty", errors[0]);
     }
 
-    [Fact]
-    public async Task CanTestScript()
+    [RequiresKafkaTheory]
+    [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+    public async Task CanTestScript(Options options)
     {
-        using (var store = GetDocumentStore())
+        using (var store = GetDocumentStore(options))
         {
             using (var session = store.OpenAsyncSession())
             {
@@ -323,10 +329,11 @@ output('test output')"
         }
     }
 
-    [RequiresKafkaFact]
-    public void CanPassAttributesToLoadToMethod()
+    [RequiresKafkaTheory]
+    [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+    public void CanPassAttributesToLoadToMethod(Options options)
     {
-        using (var store = GetDocumentStore())
+        using (var store = GetDocumentStore(options))
         {
             var config = SetupQueueEtlToKafka(store,
                 @$"loadToUsers{TopicSuffix}(this, {{
@@ -374,10 +381,11 @@ output('test output')"
         }
     }
 
-    [RequiresKafkaFact]
-    public void ShouldDeleteDocumentsAfterProcessing()
+    [RequiresKafkaTheory]
+    [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+    public void ShouldDeleteDocumentsAfterProcessing(Options options)
     {
-        using (var store = GetDocumentStore())
+        using (var store = GetDocumentStore(options))
         {
             var config = SetupQueueEtlToKafka(store,
                 @$"loadToUsers{TopicSuffix}(this)", new[] { "Users" }, new[]{

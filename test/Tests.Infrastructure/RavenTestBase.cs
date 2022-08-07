@@ -743,7 +743,7 @@ namespace FastTests
                 }
             }
 
-            public static Options ForMode(RavenDatabaseMode mode, RavenJavascriptEngineMode? javascriptMode = null)
+            public static Options ForMode(RavenDatabaseMode mode, RavenJavascriptEngineMode? javascriptMode = null, RavenSearchEngineMode? searchEngineMode = null)
             {
                 var options = new Options();
                 switch (mode)
@@ -752,6 +752,7 @@ namespace FastTests
                         options.DatabaseMode = RavenDatabaseMode.Single;
                         options.AddToDescription($"{nameof(RavenDataAttribute.DatabaseMode)} = {nameof(RavenDatabaseMode.Single)}");
                         options = ForJavascriptMode(options, javascriptMode);
+                        options = ForSearchEngineMode(options, searchEngineMode);
                         return options;
                     case RavenDatabaseMode.Sharded:
 
@@ -779,14 +780,43 @@ namespace FastTests
                         options.DatabaseMode = RavenDatabaseMode.Sharded;
                         options.AddToDescription($"{nameof(RavenDataAttribute.DatabaseMode)} = {nameof(RavenDatabaseMode.Sharded)}");
                         options = ForJavascriptMode(options, javascriptMode);
-
+                        options = ForSearchEngineMode(options, searchEngineMode);
                         return options;
                     case RavenDatabaseMode.All:
                     default:
                         throw new ArgumentOutOfRangeException(nameof(mode), mode, null);
                 }
             }
+            private static Options ForSearchEngineMode(Options options, RavenSearchEngineMode? mode)
+            {
+                if (mode == null)
+                    return options;
 
+                switch (mode)
+                {
+                    case RavenSearchEngineMode.Lucene:
+                        options.SearchEngineMode = RavenSearchEngineMode.Lucene;
+                        options.ModifyDatabaseRecord += record =>
+                        {
+                            record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = RavenSearchEngineMode.Lucene.ToString();
+                            record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = RavenSearchEngineMode.Lucene.ToString();
+                        };
+                        options.AddToDescription($"{nameof(RavenDataAttribute.SearchEngineMode)} = {nameof(RavenSearchEngineMode.Lucene)}");
+                        return options;
+                    case RavenSearchEngineMode.Corax:
+                        options.SearchEngineMode = RavenSearchEngineMode.Corax;
+                        options.ModifyDatabaseRecord += record =>
+                        {
+                            record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = RavenSearchEngineMode.Corax.ToString();
+                            record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = RavenSearchEngineMode.Corax.ToString();
+                        };
+                        options.AddToDescription($"{nameof(RavenDataAttribute.SearchEngineMode)} = {nameof(RavenSearchEngineMode.Corax)}");
+                        return options;
+                    case RavenSearchEngineMode.All:
+                    default:
+                        throw new ArgumentOutOfRangeException(nameof(mode), mode, null);
+                }
+            }
             public void AddToDescription(string descriptionToAdd)
             {
                 _descriptionBuilder ??= new StringBuilder();
@@ -977,6 +1007,8 @@ namespace FastTests
                     RunInMemory = RunInMemory,
                     Server = Server,
                     DatabaseMode = DatabaseMode,
+                    SearchEngineMode = SearchEngineMode,
+                    JavascriptEngineMode = JavascriptEngineMode,
                     _descriptionBuilder = new StringBuilder(_descriptionBuilder.ToString())
                 };
             }

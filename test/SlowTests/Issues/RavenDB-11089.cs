@@ -390,7 +390,7 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [RavenData(RavenSearchEngineMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void Can_Project_Into_Class_With_Let(Options options)
         {
             options.ModifyDocumentStore = ss =>
@@ -810,7 +810,7 @@ from 'Users' as user select output(user)", queryAsString);
         }
 
         [Theory]
-        [RavenExplicitData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void CanPatchAndModify(Options options)
         {
             options.ModifyDocumentStore = ss =>

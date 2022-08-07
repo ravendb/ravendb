@@ -25,10 +25,11 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
     {
     }
 
-    [RequiresRabbitMqFact]
-    public void SimpleScript()
+    [RequiresRabbitMqTheory]
+    [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+    public void SimpleScript(Options options)
     {
-        using (var store = GetDocumentStore())
+        using (var store = GetDocumentStore(options))
         {
             var config = SetupQueueEtlToRabbitMq(store, DefaultScript, DefaultCollections);
             var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
@@ -70,10 +71,11 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
         }
     }
 
-    [RequiresRabbitMqFact]
-    public void CanUseRoutingKeyWithAutomaticDeclarations()
+    [RequiresRabbitMqTheory]
+    [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+    public void CanUseRoutingKeyWithAutomaticDeclarations(Options options)
     {
-        using var store = GetDocumentStore();
+        using var store = GetDocumentStore(options);
 
         var config = SetupQueueEtlToRabbitMq(store,
             @"var userData = { UserId: id(this), Name: this.Name }; loadToUsers" + ExchangeSuffix + @"(userData, this['@metadata']['@collection'])",
@@ -118,10 +120,11 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
         Assert.Equal("James Smith", user.Name);
     }
 
-    [RequiresRabbitMqFact]
-    public void CanUseRoutingKeyWithCustomDeclarations()
+    [RequiresRabbitMqTheory]
+    [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+    public void CanUseRoutingKeyWithCustomDeclarations(Options options)
     {
-        using var store = GetDocumentStore();
+        using var store = GetDocumentStore(options);
 
         using var channel = CreateRabbitMqChannel();
 
@@ -177,10 +180,11 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
     }
 
 
-    [RequiresRabbitMqFact]
-    public void CanPushDirectlyToTheQueue()
+    [RequiresRabbitMqTheory]
+    [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+    public void CanPushDirectlyToTheQueue(Options options)
     {
-        using var store = GetDocumentStore();
+        using var store = GetDocumentStore(options);
 
         var config = SetupQueueEtlToRabbitMq(store,
             @$"loadTo('', {{ UserId: id(this), Name: this.Name }}, 'Users{ExchangeSuffix}')",
@@ -213,10 +217,11 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
         Assert.Equal("Joe Doe", user.Name);
     }
 
-    [RequiresRabbitMqFact]
-    public void TestAreHeadersPresent()
+    [RequiresRabbitMqTheory]
+    [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+    public void TestAreHeadersPresent(Options options)
     {
-        using (var store = GetDocumentStore())
+        using (var store = GetDocumentStore(options))
         {
             var config = SetupQueueEtlToRabbitMq(store, DefaultScript, DefaultCollections);
             var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
@@ -257,10 +262,11 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
         }
     }
 
-    [RequiresRabbitMqFact]
-    public void SimpleScriptWithManyDocuments()
+    [RequiresRabbitMqTheory]
+    [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+    public void SimpleScriptWithManyDocuments(Options options)
     {
-        using var store = GetDocumentStore();
+        using var store = GetDocumentStore(options);
 
         var numberOfOrders = 10;
         var numberOfLinesPerOrder = 2;
@@ -308,10 +314,11 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
         }
     }
 
-    [RequiresRabbitMqFact]
-    public void Docs_from_two_collections_loaded_to_single_one()
+    [RequiresRabbitMqTheory]
+    [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+    public void Docs_from_two_collections_loaded_to_single_one(Options options)
     {
-        using var store = GetDocumentStore();
+        using var store = GetDocumentStore(options);
 
         var config = SetupQueueEtlToRabbitMq(store,
             @"var userData = { UserId: id(this), Name: this.Name }; loadToUsers" + ExchangeSuffix + @"(userData)",
@@ -499,10 +506,11 @@ output('test output')"
         }
     }
 
-    [RequiresRabbitMqFact]
-    public void CanPassAttributesToLoadToMethod()
+    [RequiresRabbitMqTheory]
+    [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+    public void CanPassAttributesToLoadToMethod(Options options)
     {
-        using (var store = GetDocumentStore())
+        using (var store = GetDocumentStore(options))
         {
             var config = SetupQueueEtlToRabbitMq(store,
                 @$"loadToUsers{ExchangeSuffix}(this, {{
@@ -546,10 +554,11 @@ output('test output')"
         }
     }
 
-    [RequiresRabbitMqFact]
-    public void ShouldDeleteDocumentsAfterProcessing()
+    [RequiresRabbitMqTheory]
+    [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+    public void ShouldDeleteDocumentsAfterProcessing(Options options)
     {
-        using (var store = GetDocumentStore())
+        using (var store = GetDocumentStore(options))
         {
             var config = SetupQueueEtlToRabbitMq(store,
                 @$"loadToUsers{ExchangeSuffix}(this)", new[] { "Users" },

@@ -88,7 +88,7 @@ public class RavenDataAttribute : DataAttribute
         if (mode.HasFlag(RavenSearchEngineMode.Corax))
         {
             var coraxOptions = options.Clone();
-
+            coraxOptions.SearchEngineMode = RavenSearchEngineMode.Corax;
             coraxOptions.ModifyDatabaseRecord += record =>
             {
                 record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = "Corax";
@@ -101,7 +101,7 @@ public class RavenDataAttribute : DataAttribute
         if (mode.HasFlag(RavenSearchEngineMode.Lucene))
         {
             var luceneOptions = options.Clone();
-
+            luceneOptions.SearchEngineMode = RavenSearchEngineMode.Lucene;
             luceneOptions.ModifyDatabaseRecord += record =>
             {
                 record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = "Lucene";

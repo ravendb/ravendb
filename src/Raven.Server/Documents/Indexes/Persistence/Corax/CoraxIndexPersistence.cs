@@ -43,10 +43,10 @@ public class CoraxIndexPersistence : IndexPersistenceBase
                         switch (_engineType)
                         {
                             case JavaScriptEngineType.Jint:
-                                _converter = new JintCoraxDocumentConverter((MapIndex)index, storeValue: true);
+                                _converter = new JintCoraxDocumentConverter((MapIndex)index);
                                 break;
                             case JavaScriptEngineType.V8:
-                                _converter = new V8CoraxDocumentConverter((MapIndex)index, storeValue: true);
+                                _converter = new V8CoraxDocumentConverter((MapIndex)index);
                                 break;
                             default:
                                 throw new NotSupportedException($"Not supported JS engine type '{_engineType}'.");

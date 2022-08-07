@@ -61,10 +61,6 @@ var process = {
         public JintEngineEx(RavenConfiguration configuration, JintPreventResolvingTasksReferenceResolver refResolver = null)
         {
             var jsOptions = configuration.JavaScript;
-            //if (refResolver == null)
-            //{
-            //    refResolver = new JintPreventResolvingTasksReferenceResolver();
-            //}
             Engine = new Engine(options =>
             {
                 if (jsOptions == null)

@@ -158,8 +158,12 @@ namespace Raven.Server.Documents.Indexes.Static
             return (functionObject, functionExp);
         }
 
-        public JavaScriptMapOperationJint(AbstractJavaScriptIndexJint index, JavaScriptIndexUtils<JsHandleJint> jsIndexUtils, FunctionInstance mapFuncJint, JsHandleJint mapFunc, string indexName, string mapString) : base(index, jsIndexUtils, mapFuncJint, mapFunc, indexName, mapString)
+        protected readonly JintPreventResolvingTasksReferenceResolver _resolver;
+
+        public JavaScriptMapOperationJint(AbstractJavaScriptIndexJint index, JavaScriptIndexUtils<JsHandleJint> jsIndexUtils, FunctionInstance mapFuncJint, JsHandleJint mapFunc, string indexName, string mapString) 
+            : base(index, jsIndexUtils, mapFuncJint, mapFunc, indexName, mapString)
         {
+            _resolver = index.EngineEx.RefResolver;
         }
     }
 
@@ -176,7 +180,6 @@ namespace Raven.Server.Documents.Indexes.Static
         public FunctionInstance MapFuncJint;
         public T MapFunc;
 
-        protected readonly JintPreventResolvingTasksReferenceResolver _resolver;
 
         public bool HasDynamicReturns;
 
@@ -189,7 +192,7 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             _index = index;
             EngineForParsing = jsIndexUtils.EngineForParsing;
-            _engineStaticJint = (Engine)EngineForParsing;
+            _engineStaticJint = EngineForParsing;
 
             _jsIndexUtils = jsIndexUtils;
             _engineHandle = _jsIndexUtils.EngineHandle;
@@ -198,9 +201,6 @@ namespace Raven.Server.Documents.Indexes.Static
             MapFuncJint = mapFuncJint ?? throw new ArgumentNullException(nameof(mapFuncJint));
             IndexName = indexName;
             MapString = mapString;
-
-            if (_engineHandle.EngineType == JavaScriptEngineType.Jint)
-                _resolver = ((JintEngineEx)_engineHandle).RefResolver;
         }
 
         public IEnumerable<T> IndexingFunction(IEnumerable<object> items)

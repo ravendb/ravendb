@@ -61,7 +61,7 @@ public abstract class KafkaDocumentTransformerBase<T, TJsType> : QueueDocumentTr
         if (args.Length == 3 && args[2].IsObject == false)
             ThrowInvalidScriptMethodCall($"{methodSignature} third argument must be an object");
 
-        return LoadToFunctionTranslatorWithAttributesInternal(args[0].AsString, args[1], args.Length == 3 ? args[2] : default);
+        return LoadToFunctionTranslatorWithAttributesInternal(args[0].AsString, args[1], args.Length == 3 ? args[2] : EngineHandle.Null);
     }
 
     private TJsType LoadToFunctionTranslatorWithAttributes(string name, TJsType[] args)
@@ -77,7 +77,7 @@ public abstract class KafkaDocumentTransformerBase<T, TJsType> : QueueDocumentTr
         if (args.Length == 2 && args[1].IsObject == false)
             ThrowInvalidScriptMethodCall($"{methodSignature} argument 'attributes' must be an object");
 
-        return LoadToFunctionTranslatorWithAttributesInternal(name, args[0], args.Length == 2 ? args[1] : default);
+        return LoadToFunctionTranslatorWithAttributesInternal(name, args[0], args.Length == 2 ? args[1] : EngineHandle.Null);
     }
 
     private TJsType LoadToFunctionTranslatorWithAttributesInternal(string name, TJsType obj, TJsType attributes)

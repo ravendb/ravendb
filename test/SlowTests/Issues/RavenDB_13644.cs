@@ -55,9 +55,6 @@ namespace SlowTests.Issues
         {
             using (var store =  GetDocumentStore(options))
             {
-            // TODO: EGOR remove such lines
-                var termsCountNull = options.JavascriptEngineMode.ToString() is null or "Jint" ? 0 : 0;
-
                 var index = new TIndex();
                 var indexName = index.IndexName;
                 index.Execute(store);
@@ -97,9 +94,7 @@ namespace SlowTests.Issues
                 Assert.False(staleness.IsStale);
 
                 terms = store.Maintenance.Send(new GetTermsOperation(indexName, "City", null));
-                Assert.Equal(termsCountNull, terms.Length);
-                if (termsCountNull > 0)
-                    Assert.Contains(IndexingFields.NullValue, terms);
+                Assert.Equal(0, terms.Length);
 
                 store.Maintenance.Send(new StopIndexingOperation());
 
@@ -216,9 +211,7 @@ namespace SlowTests.Issues
                 Assert.False(staleness.IsStale);
 
                 terms = store.Maintenance.Send(new GetTermsOperation(indexName, "City", null));
-                Assert.Equal(1 + termsCountNull, terms.Length);
-                if (termsCountNull > 0)
-                    Assert.Contains(IndexingFields.NullValue, terms);
+                Assert.Equal(1, terms.Length);
                 Assert.Contains("torun", terms);
 
                 // live add compare without stopping indexing

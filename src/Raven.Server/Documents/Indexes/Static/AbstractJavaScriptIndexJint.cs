@@ -24,8 +24,7 @@ public abstract class AbstractJavaScriptIndexJint : AbstractJavaScriptIndex<JsHa
     {
         // we create the engine instance directly instead of using SingleRun
         // because the index is single threaded and long lived
-        var refResolver = new JintPreventResolvingTasksReferenceResolver();
-        EngineEx = new JintEngineEx(configuration, refResolver);
+        EngineEx = new JintEngineEx(configuration, new JintPreventResolvingTasksReferenceResolver());
         Engine = EngineEx.Engine;
         _engineForParsing = EngineEx;
         EngineHandle = EngineEx;

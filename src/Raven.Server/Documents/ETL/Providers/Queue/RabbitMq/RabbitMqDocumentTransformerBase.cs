@@ -60,7 +60,7 @@ public abstract class RabbitMqDocumentTransformerBase<T, TJsType> : QueueDocumen
             ThrowInvalidScriptMethodCall($"{methodSignature} second argument must be an object");
 
         string routingKey = null;
-        TJsType attributes = default;
+        TJsType attributes = EngineHandle.Null;
 
         if (args.Length == 3)
         {
@@ -91,7 +91,7 @@ public abstract class RabbitMqDocumentTransformerBase<T, TJsType> : QueueDocumen
             ThrowInvalidScriptMethodCall($"{methodSignature} argument 'obj' must be an object");
 
         string routingKey = null;
-        TJsType attributes = default;
+        TJsType attributes = EngineHandle.Null;
 
         if (args.Length == 2)
         {

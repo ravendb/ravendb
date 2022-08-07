@@ -511,6 +511,8 @@ return attachments.map(attachment => ({
         }
 
         // [shlomo] jint version is going to work after upgrading jint-ravendb
+
+        //TODO: egor this test passes when using previous "Jint" Version="3.0.30-ravendb" 
         [Theory]
         [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void Can_Index_Attachments_JavaScript(Options options)

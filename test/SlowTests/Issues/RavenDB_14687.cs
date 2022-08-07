@@ -29,7 +29,7 @@ namespace SlowTests.Issues
             var initialMaxDurationForScript = new TimeSetting(20, TimeUnit.Milliseconds);
             options.ModifyDatabaseRecord +=record =>
             {
-                //TODO: egor make this work
+                //TODO: egor make this work & add test that create 2 indexes 1 jint & 1 v8 on same db
                 //record.Settings[RavenConfiguration.GetKey(x => x.Indexing.JsStrictMode)] = initialStrictModeForScript.ToString();
                 //record.Settings[RavenConfiguration.GetKey(x => x.Indexing.JsMaxSteps)] = initialMaxStepsForScript.ToString();
                 //record.Settings[RavenConfiguration.GetKey(x => x.Indexing.JsMaxDuration)] = initialMaxDurationForScript.GetValue(TimeUnit.Milliseconds).ToString();
