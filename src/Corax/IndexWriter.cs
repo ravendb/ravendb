@@ -776,7 +776,7 @@ namespace Corax
 
                 long termId;
                 ReadOnlySpan<byte> termsSpan = term.AsSpan();
-                if (fieldTree.TryGetValue(termsSpan, out var existing, out var encodedKey) == false)
+                if (fieldTree.TryGetNextValue(termsSpan, out var existing, out var encodedKey) == false)
                 {
                     Debug.Assert(entries.Removals.Count == 0);
                     AddNewTerm(entries.Additions, tmpBuf, out termId);
