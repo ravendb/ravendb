@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.IO;
+using Raven.Server.Exceptions;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow.Global;
@@ -214,8 +215,27 @@ namespace Raven.Server.Indexing
         public override void Write(byte[] buffer, int offset, int count)
         {
             var pos = InnerStream.Position;
-            InnerStream.Write(buffer, offset, count);
-            _length = Math.Max(_length, pos + count);
+            try
+            {
+                InnerStream.Write(buffer, offset, count);
+                _length = Math.Max(_length, pos + count);
+            }
+            catch (IOException e)
+            {
+                if (IsDiskFull(e))
+                {
+                    throw new OutOfDiskSpaceException("Out of disk space", e);
+                }
+            }
+        }
+
+        private static bool IsDiskFull(Exception ex)
+        {
+            const int HR_ERROR_HANDLE_DISK_FULL = unchecked((int)0x80070027);
+            const int HR_ERROR_DISK_FULL = unchecked((int)0x80070070);
+
+            return ex.HResult == HR_ERROR_HANDLE_DISK_FULL
+                   || ex.HResult == HR_ERROR_DISK_FULL;
         }
 
         public override bool CanRead => InnerStream.CanRead;
