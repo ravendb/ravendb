@@ -19,6 +19,9 @@ namespace Raven.Server.Dashboard.Cluster.Notifications
         public RachisState NodeState { get; set; }
         
         public DateTime StartTime { get; set; }
+        
+        public string ServerVersion { get; set; }
+        public string OsName { get; set; }
 
         public override ClusterDashboardNotificationType Type => ClusterDashboardNotificationType.ClusterOverview;
         
@@ -31,6 +34,8 @@ namespace Raven.Server.Dashboard.Cluster.Notifications
             json[nameof(NodeType)] = NodeType;
             json[nameof(NodeState)] = NodeState;
             json[nameof(StartTime)] = StartTime;
+            json[nameof(ServerVersion)] = ServerVersion;
+            json[nameof(OsName)] = OsName;
 
             return json;
         }
