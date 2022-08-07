@@ -1,6 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
-using System.Security.Cryptography.X509Certificates;
 
 namespace Raven.Client.Extensions
 {
@@ -13,46 +11,22 @@ namespace Raven.Client.Extensions
             return value;
         }
 
-        public static bool ContentEquals<TKey, TValue>(IDictionary<TKey, TValue> x, IDictionary<TKey, TValue> y, bool compareNullValues = true)
+        public static bool ContentEquals<TKey, TValue>(IDictionary<TKey, TValue> x, IDictionary<TKey, TValue> y)
         {
             if (x == null || y == null)
                 return x == null && y == null;
 
-            var xNullsCount = 0;
-            var yNullsCount = 0;
-            KeyValuePair<TKey, TValue>[] yNulls = y.Where(kvp => kvp.Value == null).ToArray();
-            if (compareNullValues == false)
-            {
-                xNullsCount = x.Where(kvp => kvp.Value == null).ToArray().Length;
-                yNullsCount = yNulls.Length;
-            }
-
-            if (x.Count - xNullsCount != y.Count - yNullsCount)
+            if (x.Count != y.Count)
                 return false;
 
             foreach (var v in x)
             {
-                if ( compareNullValues==false && v.Value == null )
-                    continue;
                 TValue value;
                 if (y.TryGetValue(v.Key, out value) == false)
                     return false;
 
                 if (Equals(value, v.Value) == false)
                     return false;
-            }
-
-            if (compareNullValues)
-            {
-                foreach (var v in yNulls)
-                {
-                    TValue value;
-                    if (x.TryGetValue(v.Key, out value) == false)
-                        return false;
-
-                    if (Equals(value, null) == false)
-                        return false;
-                }
             }
 
             return true;
