@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,6 +18,7 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Indexes;
+using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server;
@@ -221,14 +223,50 @@ namespace SlowTests.Issues
         [Fact]
         public async Task QueriesShouldFailoverIfIndexIsCompactingCluster()
         {
-            var (nodes, leader) = await CreateRaftCluster(2);
+            // var (nodes, leader) = await CreateRaftCluster(2);
+            var (nodes, leader) = await CreateRaftCluster(2, watcherCluster: true);
+            leader.ServerStore.Observer.Suspended = true;
             Assert.Equal(nodes.Count, 2);
+            var sb = new ConcurrentStringBuilder();
+            int x = 3;
+            var printFlag = false;
+            Func<string, bool> shouldntPrint = (url) =>
+            {
+                return printFlag == false || url.Contains("operation", StringComparison.OrdinalIgnoreCase) ||
+                       url.Contains("healthcheck", StringComparison.OrdinalIgnoreCase);
+            };
             var storeOptions = new Options
             {
                 Server = leader,
                 ReplicationFactor = nodes.Count,
                 RunInMemory = false,
-                ModifyDocumentStore = (store) => store.Conventions.DisableTopologyUpdates = true
+
+                ModifyDocumentStore = s =>
+                {
+                    s.OnBeforeRequest += (sender, args) =>
+                    {
+                        if (shouldntPrint(args.Url))
+                            return;
+                        sb.Append($"QueriesShouldFailoverIfIndexIsCompactingCluster: {x}.   Query started. {args.Url}\n");
+                        x += 2;
+                    };
+                    s.OnSucceedRequest += (sender, args) =>
+                    {
+                        if (shouldntPrint(args.Url))
+                            return;
+                        if (args.Url.Contains("topology", StringComparison.OrdinalIgnoreCase))
+                            sb.Append($"QueriesShouldFailoverIfIndexIsCompactingCluster: 2.   Query Topology ended. {args.Url}\n");
+                        else
+                            sb.Append($"QueriesShouldFailoverIfIndexIsCompactingCluster: 6.   Query ended. {args.Url}\n");
+                    };
+                    s.OnFailedRequest += (sender, args) =>
+                    {
+                        if (shouldntPrint(args.Url))
+                            return;
+                        sb.Append($"QueriesShouldFailoverIfIndexIsCompactingCluster: 4.   Query Failed. {args.Url}\n");
+                    };
+                    // s.Conventions.DisableTopologyUpdates = true;
+                }
             };
 
             using (var store = GetDocumentStore(storeOptions))
@@ -259,50 +297,18 @@ namespace SlowTests.Issues
 
                 // Test
                 CompactSettings settings = new CompactSettings { DatabaseName = store.Database, Documents = true, Indexes = new[] { index.IndexName } };
-
                 Exception exception = null;
                 List<Categoroies_Details.Entity> l = null;
-                Mutex mutex = new Mutex();
-                var calledOnce = new FlagHolder
-                {
-                    Flag = false
-                };
+                var responsibleNodeTag = store.GetRequestExecutor(store.Database).Topology.Nodes[0].ClusterTag;
+                var responsibleNodeUrl = store.GetRequestExecutor(store.Database).Topology.Nodes[0].Url;
+                sb.Append($"responsibleNode: {responsibleNodeTag} {responsibleNodeUrl}\n");
                 var d = () =>
                 {
+                    printFlag = true;
                     try
                     {
                         // Ensure that call this function once.
-                        mutex.WaitOne();
-                        if (calledOnce.Flag)
-                        {
-                            Console.WriteLine("QueriesShouldFailoverIfIndexIsCompactingCluster: 1.1 Error: ForTestingPurposesOnly().IndexCompaction - Called twice.");
-                            return;
-                        }
-
-                        calledOnce.Flag = true;
-                        mutex.ReleaseMutex();
-
-                        using var store2 = new DocumentStore() // DisableTopologyUpdates is false, for letting failover work (failover updates the topology)
-                        {
-                            Urls = (from node in nodes select node.WebUrl).ToArray<string>()
-                            , Database = store.Database,
-                        };
-                        store2.OnBeforeRequest += async (sender, args) =>
-                        {
-                            Console.WriteLine($"QueriesShouldFailoverIfIndexIsCompactingCluster: 2.   Query started. {args.Url}");
-                        };
-                        store2.OnSucceedRequest += async (sender, args) =>
-                        {
-                            Console.WriteLine($"QueriesShouldFailoverIfIndexIsCompactingCluster: 3.2. Query ended. {args.Url}");
-                        };
-                        store2.OnFailedRequest += async (sender, args) =>
-                        {
-                            Console.WriteLine($"QueriesShouldFailoverIfIndexIsCompactingCluster: 3.1. Query Failed. {args.Url}");
-                        };
-
-                        store2.Initialize();
-
-                        using (var session = store2.OpenSession())
+                        using (var session = store.OpenSession())
                         {
                             l = session.Query<Categoroies_Details.Entity, Categoroies_Details>()
                                 .ProjectInto<Categoroies_Details.Entity>().ToList();
@@ -314,15 +320,16 @@ namespace SlowTests.Issues
                     }
                 };
 
-                var responsibleNodeUrl = store.GetRequestExecutor(store.Database).Topology.Nodes[0].Url;
-                var responsibleNode = nodes.Single(n => n.ServerStore.GetNodeHttpServerUrl() == responsibleNodeUrl);
+                
+                var responsibleNode = nodes.Single(n => n.ServerStore.NodeTag == responsibleNodeTag);
                 var database = await GetDatabase(responsibleNode, store.Database);
                 database.IndexStore.ForTestingPurposesOnly().IndexCompaction = d;
 
-                Console.WriteLine("QueriesShouldFailoverIfIndexIsCompactingCluster: 1.   Compacting started.");
-                var operation = await store.Maintenance.Server.SendAsync(new CompactDatabaseOperation(settings));
+                sb.Append($"QueriesShouldFailoverIfIndexIsCompactingCluster: 1.   Compacting started {responsibleNodeTag}.\n");
+                var operation = await store.Maintenance.Server.SendAsync(new CompactDatabaseOperation(settings, responsibleNodeTag));
                 await operation.WaitForCompletionAsync();
-                Console.WriteLine("QueriesShouldFailoverIfIndexIsCompactingCluster: 4.   Compacting finished.");
+                sb.Append("QueriesShouldFailoverIfIndexIsCompactingCluster: 7.   Compacting finished.\n");
+                Console.WriteLine(sb);
 
                 // Check if failover succeeded
                 Assert.Null(exception);
@@ -333,9 +340,49 @@ namespace SlowTests.Issues
             }
         }
 
-        private class FlagHolder
+        private class ConcurrentStringBuilder
         {
-            public bool Flag { get; set; } = false;
+            private StringBuilder _sb;
+            private Mutex _mutex;
+            public ConcurrentStringBuilder()
+            {
+                _sb = new StringBuilder();
+                _mutex = new Mutex();
+            }
+
+            public void Append(string s)
+            {
+                _mutex.WaitOne();
+                _sb.Append(s);
+                _mutex.ReleaseMutex();
+            }
+
+            public override string ToString()
+            {
+                return _sb.ToString();
+            }
+        }
+
+        private class ConcurrentFlag
+        {
+            private Mutex _mutex;
+            private bool _value;
+            public bool Value
+            {
+                get => _value;
+                set
+                {
+                    _mutex.WaitOne();
+                    _value = value;
+                    _mutex.ReleaseMutex();
+                }
+            }
+
+            public ConcurrentFlag()
+            {
+                _value = false;
+                _mutex = new Mutex();
+            }
         }
 
         class Categoroies_Details : AbstractMultiMapIndexCreationTask<Categoroies_Details.Entity>
