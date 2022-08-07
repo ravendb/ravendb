@@ -908,9 +908,12 @@ for (var i = 0; i < this.Lines.length; i++){
             if (string.IsNullOrEmpty(googleCloudSettings.RemoteFolderName) == false)
                 remoteFolderName = $"{googleCloudSettings.RemoteFolderName}/{remoteFolderName}";
 
-            googleCloudSettings.RemoteFolderName = remoteFolderName;
-
-            return googleCloudSettings;
+            return new GoogleCloudSettings
+            {
+                BucketName = googleCloudSettings.BucketName,
+                GoogleCredentialsJson = googleCloudSettings.GoogleCredentialsJson,
+                RemoteFolderName = remoteFolderName
+            };
         }
 
         private static async Task DeleteObjects(GoogleCloudSettings settings)
