@@ -605,17 +605,13 @@ namespace Raven.Server.Documents.Queries
                             if (string.IsNullOrEmpty(path))
                                 return;
 
-                            var parts = path.Split('.');
-                            if (parts.Length >= 2)
+                            int dotIndex = path.IndexOf('.');
+                            if (dotIndex > -1)
                             {
-                                var alias = parts[0];
+                                var alias = path.Substring(0, dotIndex);
                                 if (Query.From.Alias?.Value == alias)
                                 {
-                                    path = parts[1];
-                                }
-                                else
-                                {
-                                    throw new InvalidOperationException($"Alias {parts[0]} inside `include revisions(..)` is invalid.");
+                                    path = path.Substring(dotIndex + 1);
                                 }
                             }
 

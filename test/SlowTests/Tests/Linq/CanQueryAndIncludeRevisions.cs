@@ -113,7 +113,9 @@ namespace SlowTests.Tests.Linq
 
                             if (includeTimeSeries)
                                 builder.IncludeTimeSeries("Hearthrate");
-                        }).Customize(c => c.WaitForNonStaleResults()).ToList();
+                        });
+
+                    query.Customize(c => c.WaitForNonStaleResults()).ToList();
 
                     var revision1 = session.Advanced.Revisions.Get<User>(cvList[0]);
                     var revision2 = session.Advanced.Revisions.Get<User>(cvList[1]);
@@ -138,6 +140,114 @@ namespace SlowTests.Tests.Linq
                 }
             }
         }
+
+
+        [Theory]
+        [InlineData(false, false)]
+        [InlineData(false, true)]
+        [InlineData(true, false)]
+        [InlineData(true, true)]
+        public async Task Query_IncludeAllQueryFunctionality_NestedField(bool includeCounters, bool includeTimeSeries)
+        {
+            using (var store = GetDocumentStore())
+            {
+                var cvList = new List<string>();
+
+                const string id = "users/rhino";
+
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new UserNested { Name = "Omer", Revisions = new Revisions()},  id);
+
+                    session.SaveChanges();
+                }
+
+                string changeVector;
+                var beforeDateTime = DateTime.UtcNow;
+                using (var session = store.OpenSession())
+                {
+                    var metadatas = session.Advanced.Revisions.GetMetadataFor(id);
+                    Assert.Equal(1, metadatas.Count);
+
+                    changeVector = metadatas.First().GetString(Constants.Documents.Metadata.ChangeVector);
+
+                    session.Advanced.Patch<UserNested, string>(id, x => x.Revisions.FirstRevision, changeVector);
+
+                    session.SaveChanges();
+
+                    cvList.Add(changeVector);
+
+                    metadatas = session.Advanced.Revisions.GetMetadataFor(id);
+
+                    changeVector = metadatas[0].GetString(Constants.Documents.Metadata.ChangeVector);
+
+                    cvList.Add(changeVector);
+
+                    session.Advanced.Patch<UserNested, string>(id, x => x.SecondRevision, changeVector);
+
+                    session.SaveChanges();
+                }
+
+                if (includeCounters)
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        var documentCounters = session.CountersFor(id);
+                        documentCounters.Increment("Likes", 15);
+                        session.SaveChanges();
+                    }
+                }
+                if (includeTimeSeries)
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        session.TimeSeriesFor(id, "Hearthrate").Append(DateTime.Now, 15d);
+                        session.SaveChanges();
+                    }
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<UserNested>()
+                        .Include(builder =>
+                        {
+                            builder
+                                .IncludeRevisions(x => x.Revisions.FirstRevision)
+                                .IncludeRevisions(x => x.SecondRevision);
+
+                            if (includeCounters)
+                                builder.IncludeAllCounters();
+
+                            if (includeTimeSeries)
+                                builder.IncludeTimeSeries("Hearthrate");
+                        });
+
+                    query.Customize(c => c.WaitForNonStaleResults()).ToList();
+
+                    var revision1 = session.Advanced.Revisions.Get<UserNested>(cvList[0]);
+                    var revision2 = session.Advanced.Revisions.Get<UserNested>(cvList[1]);
+                    Assert.NotNull(revision1);
+                    Assert.NotNull(revision2);
+
+                    if (includeCounters)
+                    {
+                        Assert.Equal(session.CountersFor(id).Get("Likes").Value, 15);
+                    }
+
+                    if (includeTimeSeries)
+                    {
+                        var tf = session.TimeSeriesFor(id, "Hearthrate").Get();
+                        Assert.Equal(tf.Length, 1);
+                        Assert.Equal(tf[0].Value, 15d);
+                    }
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                }
+            }
+        }
+
 
         [Fact]
         public async Task Query_IncludeAllQueryFunctionalityAsync()
@@ -1828,6 +1938,20 @@ select Foo(u)"
             public string SecondRevision { get; set; }
             public string ThirdRevision { get; set; }
             public List<string> ChangeVectors { get; set; }
+        }
+
+        private class UserNested
+        {
+            public string Name { get; set; }
+            public string SecondRevision { get; set; }
+            public string ThirdRevision { get; set; }
+
+            public Revisions Revisions { get; set; }
+        }
+
+        private class Revisions
+        {
+            public string FirstRevision { get; set; }
         }
 
         private class NameIndex : AbstractIndexCreationTask<User>

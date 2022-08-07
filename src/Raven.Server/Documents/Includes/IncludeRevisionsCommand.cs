@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using JetBrains.Annotations;
 using Raven.Server.Documents.Queries.Revisions;
+using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
@@ -62,9 +63,10 @@ namespace Raven.Server.Documents.Includes
             {
                   foreach (var path in _pathsForRevisionsChangeVectors)
                   {
-                      if (document.Data.TryGet(path, out object singleOrMultipleCv) == false)
-                          return;
-                                
+                      var bt = BlittableJsonTraverser.Default;
+                      if (bt.TryRead(document.Data, path, out var singleOrMultipleCv, out var _) == false)
+                          continue;
+
                       switch (singleOrMultipleCv)
                       {
                           case BlittableJsonReaderArray blittableJsonReaderArray:
