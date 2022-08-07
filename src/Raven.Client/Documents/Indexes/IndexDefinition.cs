@@ -125,7 +125,7 @@ namespace Raven.Client.Documents.Indexes
                     result |= IndexDefinitionCompareDifferences.Reduce;
             }
 
-            if (DictionaryExtensions.ContentEquals(other.Fields, Fields, compareNullValues: false) == false) //compareNullValues is false because CopyTo doesnt copy kvp's with null values.
+            if (DictionaryExtensions.ContentEquals(other.Fields, Fields) == false) //compareNullValues is false because CopyTo doesnt copy kvp's with null values.
                 result |= IndexDefinitionCompareDifferences.Fields;
 
             bool configurationEquals;

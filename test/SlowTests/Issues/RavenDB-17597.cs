@@ -120,7 +120,20 @@ namespace SlowTests.Issues
                             TermVector = FieldTermVector.WithPositions
                         }
                     },
-                    {"y", null}
+                    {"y", new IndexFieldOptions()
+                        {
+                            Analyzer = "y1",
+                            Spatial = new SpatialOptions()
+                            {
+                                MaxX = 2,
+                                MaxTreeLevel = 3
+                            },
+                            Suggestions = false,
+                            Indexing = FieldIndexing.Exact,
+                            Storage = FieldStorage.No,
+                            TermVector = FieldTermVector.WithPositions
+                        }
+                    }
                 },
                 Configuration = conf
             };
