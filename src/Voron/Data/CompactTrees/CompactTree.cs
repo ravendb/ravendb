@@ -204,6 +204,20 @@ namespace Voron.Data.CompactTrees
             
             public Span<ushort> EntriesOffsets => new Span<ushort>(Page.Pointer+ PageHeader.SizeOf, Header->NumberOfEntries);
             public ushort* EntriesOffsetsPtr => (ushort*)(Page.Pointer + PageHeader.SizeOf);
+            
+            public int ComputeFreeSpace()
+            {
+                var usedSpace = PageHeader.SizeOf + sizeof(ushort) * Header->NumberOfEntries;
+                var sb = usedSpace + Environment.NewLine;
+                for (int i = 0; i < Header->NumberOfEntries; i++)
+                {
+                    GetEntryBuffer(Page, EntriesOffsets[i], out _, out var len);
+                    sb += len + Environment.NewLine;
+                    usedSpace += len;
+                }
+
+                return (Constants.Storage.PageSize - usedSpace);
+            }
             public string DumpPageDebug(CompactTree tree)
             {
                 var dictionary = tree.GetEncodingDictionary(Header->DictionaryId);
@@ -600,6 +614,7 @@ namespace Voron.Data.CompactTrees
                     InitializeStateForTryGetNextValue(); // we change the structure of the tree, so we can't reuse 
             }
 
+            VerifySizeOf(ref state);
             return true;
         }                
 
@@ -879,13 +894,14 @@ namespace Voron.Data.CompactTrees
                 // remove the entry, we'll need to add it as new
                 int entriesCount = state.Header->NumberOfEntries;
                 ushort* stateEntriesOffsetsPtr = state.EntriesOffsetsPtr;
+                GetEntryBuffer(state.Page, state.EntriesOffsets[state.LastSearchPosition], out _, out var totalEntrySize);
                 for (int i = state.LastSearchPosition; i < entriesCount - 1; i++)
                 {
                     stateEntriesOffsetsPtr[i] = stateEntriesOffsetsPtr[i + 1];
                 }
 
                 state.Header->Lower -= sizeof(short);
-                state.Header->FreeSpace += sizeof(short);
+                state.Header->FreeSpace += (ushort)(sizeof(short) + totalEntrySize);
                 if (state.Header->PageFlags.HasFlag(CompactPageFlags.Leaf))
                     _state.NumberOfEntries--; // we aren't counting branch entries
             }
@@ -975,7 +991,7 @@ namespace Voron.Data.CompactTrees
             writePos += key.Encoded.Length;
             Memory.Copy(writePos, valueEncoder.Buffer, valueEncoder.Length);
             newEntriesOffsets[state.LastSearchPosition] = state.Header->Upper;
-
+            VerifySizeOf(ref state);
             return key;
         }
 
@@ -1037,6 +1053,7 @@ namespace Voron.Data.CompactTrees
                 InitializeStateForTryGetNextValue(); 
             }
 
+            VerifySizeOf(ref state);
             return causeForSplit;
         }
 
@@ -1065,11 +1082,25 @@ namespace Voron.Data.CompactTrees
             }
             state.Header->Lower -= (ushort)(sizeof(ushort) * entriesCopied);
             state.Header->FreeSpace += (ushort)(sizeCopied);
+            
+            VerifySizeOf(ref state);
+            
             var pageEntries = new Span<ushort>(page.Pointer + PageHeader.SizeOf, header->NumberOfEntries);
             GetEncodedEntry(page, pageEntries[0], out var splitKey, out _);
 
             return EncodedKey.From(splitKey, this, ((CompactPageHeader*)page.Pointer)->DictionaryId);
         }
+
+        [Conditional("DEBUG")]
+        private void VerifySizeOf(ref CursorState p)
+        {
+            var actualFreeSpace = p.ComputeFreeSpace();
+            if (p.Header->FreeSpace != actualFreeSpace)
+            {
+                throw new InvalidOperationException("The sizes do not match! FreeSpace: " + p.Header->FreeSpace + " but actually was space: " + actualFreeSpace);
+            }
+        }
+
         
 
         [Conditional("DEBUG")]
