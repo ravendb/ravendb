@@ -1,8 +1,8 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
-using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
@@ -25,10 +25,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
     public class ShardedOutgoingReplicationHandler : AbstractOutgoingReplicationHandler<TransactionContextPool, TransactionOperationContext>
     {
         private readonly ShardedDatabaseContext.ShardedReplicationContext _parent;
-        private ManualResetEvent _hasBatch = new(false);
-        private ReplicationBatch _batch;
-        private TaskCompletionSource _tcs;
-
+        private readonly BlockingCollection<ReplicationBatch> _batches = new BlockingCollection<ReplicationBatch>();
         private readonly byte[] _tempBuffer = new byte[32 * 1024];
         private long _lastEtag;
 
@@ -55,54 +52,53 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
         protected override void Replicate()
         {
-            while (_cts.Token.IsCancellationRequested == false)
+            ReplicationBatch batch = null;
+            try
             {
-                var hasBatch = _hasBatch.WaitOne(3000); //TODO: time for that
-                _hasBatch.Reset();
-                using (_parent.Server.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                while (_cts.Token.IsCancellationRequested == false)
                 {
-                    var stats = _lastStats = new OutgoingReplicationStatsAggregator(_parent.GetNextReplicationStatsId(), _lastStats);
-                    AddReplicationPerformance(stats);
+                    var hasBatch = _batches.TryTake(out batch, TimeSpan.FromSeconds(3));
 
-                    using (var scope = stats.CreateScope())
+                    using (_parent.Server.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     {
-                        EnsureValidStats(scope);
+                        var stats = _lastStats = new OutgoingReplicationStatsAggregator(_parent.GetNextReplicationStatsId(), _lastStats);
+                        AddReplicationPerformance(stats);
 
-                        if (hasBatch == false)
+                        using (var scope = stats.CreateScope())
                         {
-                            _lastSentDocumentEtag = _lastEtag;
-                            _lastDocumentSentTime = DateTime.UtcNow;
+                            EnsureValidStats(scope);
 
-                            SendHeartbeat(LastDatabaseChangeVector);
-                            continue;
-                        }
+                            if (hasBatch == false)
+                            {
+                                _lastSentDocumentEtag = _lastEtag;
+                                _lastDocumentSentTime = DateTime.UtcNow;
 
-                        var batch = _batch;
-                        var tcs = _tcs;
-                        MissingAttachmentsInLastBatch = false;
+                                SendHeartbeat(LastDatabaseChangeVector);
+                                continue;
+                            }
 
-                        try
-                        {
+                            MissingAttachmentsInLastBatch = false;
+
                             using (_stats.Network.Start())
                             {
                                 if (batch.Items.Count > 0)
                                 {
                                     _lastEtag = batch.Items.Last().Etag;
                                 }
-                                
+
                                 var didWork = SendDocumentsBatch(context, batch, _stats.Network);
                                 _tcpConnectionOptions._lastEtagSent = _lastEtag;
-                                tcs.TrySetResult();
+                                batch.BatchSent.TrySetResult();
                             }
-                        }
-                        catch (Exception e)
-                        {
-                            tcs.TrySetException(e);
-                            return;
-                            //TODO: is the connection still alive, need to abort?
                         }
                     }
                 }
+            }
+            catch (Exception e)
+            {
+                batch?.BatchSent.TrySetException(e);
+                throw;
+                //TODO: is the connection still alive, need to abort?
             }
         }
 
@@ -190,7 +186,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 LastDatabaseChangeVector = replicationBatchReply.DatabaseChangeVector;
                 CurrentEtag = replicationBatchReply.CurrentEtag;
             }
-                
+
             return replicationBatchReply;
         }
 
@@ -225,6 +221,12 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
         protected override void OnBeforeDispose()
         {
+            _batches.CompleteAdding();
+            foreach (var batch in _batches)
+            {
+                batch.BatchSent.TrySetCanceled();
+            }
+
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "Handle this");
         }
 
@@ -235,6 +237,12 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
         protected override void OnFailed(Exception e)
         {
+            _batches.CompleteAdding();
+            foreach (var batch in _batches)
+            {
+                batch.BatchSent.TrySetException(e);
+            }
+       
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "Handle this");
         }
 
@@ -242,11 +250,10 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
         public Task SendBatch(ReplicationBatch batch)
         {
-            _batch = batch;
-            var taskCompletionSource = new TaskCompletionSource();
-            _tcs = taskCompletionSource;
-            _hasBatch.Set();
-            return taskCompletionSource.Task;
+            batch.BatchSent = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            _batches.Add(batch);
+            return batch.BatchSent.Task;
+
         }
     }
 }

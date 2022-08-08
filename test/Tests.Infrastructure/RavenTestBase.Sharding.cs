@@ -168,7 +168,7 @@ public partial class RavenTestBase
                 DatabaseContext = database,
                 HttpContext = new DefaultHttpContext()
             };
-            handler.Init(ctx);
+            handler.InitForOfflineOperation(ctx);
             return new ShardedOngoingTasksHandlerProcessorForGetOngoingTasks(handler);
         }
 

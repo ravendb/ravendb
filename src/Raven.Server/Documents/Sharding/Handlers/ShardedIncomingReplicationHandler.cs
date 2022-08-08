@@ -43,9 +43,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
             {
                 var node = new ShardReplicationNode { Shard = i, Database = ShardHelper.ToShardName(_parent.DatabaseName, i) };
                 var info = GetConnectionInfo(node);
-                if (info == null)
-                    continue;
-
+          
                 _handlers[i] = new ShardedOutgoingReplicationHandler(parent, node, info, connectionInfo.SourceDatabaseId);
                 _handlers[i].Start();
             }
@@ -88,24 +86,8 @@ namespace Raven.Server.Documents.Sharding.Handlers
         protected override DynamicJsonValue GetHeartbeatStatusMessage(TransactionOperationContext context, long lastDocumentEtag, string handledMessageType)
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "implement this");
-            string mergedChangeVector = "";
-            long lastEtag = int.MaxValue;
-            foreach (var handler in _handlers)
-            {
-                var lastChangeVector = handler.LastDatabaseChangeVector;
-                mergedChangeVector = ChangeVectorUtils.MergeVectors(mergedChangeVector, lastChangeVector);
-                var myEtag = handler.CurrentEtag;
-                lastEtag = Math.Min(lastEtag, myEtag);
-            }
-
-            LastReplicateChangeVector = mergedChangeVector;
-            LastEtag = lastEtag;
-
-            var heartbeat = base.GetHeartbeatStatusMessage(context, lastDocumentEtag, handledMessageType);
-            heartbeat[nameof(ReplicationMessageReply.CurrentEtag)] = LastEtag;
-            heartbeat[nameof(ReplicationMessageReply.DatabaseChangeVector)] = LastReplicateChangeVector;
-           
-            return heartbeat;
+          
+            return base.GetHeartbeatStatusMessage(context, lastDocumentEtag, handledMessageType);
         }
 
         protected override void InvokeOnDocumentsReceived()
@@ -116,7 +98,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
         {
         }
 
-        protected override Task HandleBatchAsync(TransactionOperationContext context, IncomingReplicationHandler.DataForReplicationCommand dataForReplicationCommand, long lastEtag)
+        protected override async Task HandleBatchAsync(TransactionOperationContext context, IncomingReplicationHandler.DataForReplicationCommand dataForReplicationCommand, long lastEtag)
         {
             var batches = PrepareReplicationDataForShards(context, dataForReplicationCommand);
             var tasks = new Task[batches.Length];
@@ -124,11 +106,9 @@ namespace Raven.Server.Documents.Sharding.Handlers
             {
                 tasks[i] = _handlers[i].SendBatch(batches[i]);
             }
-            return Task.WhenAll(tasks);
-        }
 
-        protected override void HandleMissingAttachmentsIfNeeded()
-        {
+            await Task.WhenAll(tasks);
+
             foreach (ShardedOutgoingReplicationHandler handler in _handlers)
             {
                 if (handler.MissingAttachmentsInLastBatch)
@@ -187,6 +167,8 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
         private byte[] GetBufferFromAttachmentStream(Stream stream)
         {
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "Avoid this");
+
             var length = (int)stream.Length;
             var buffer = new byte[length];
 
@@ -234,10 +216,20 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
         protected override void DisposeInternal()
         {
-            foreach (var handler in _handlers)
+            Parallel.ForEach(_handlers, instance =>
             {
-                handler.Dispose();
-            }
+                try
+                {
+                    instance?.Dispose();
+                }
+                catch (Exception e)
+                {
+                    if (Logger.IsInfoEnabled)
+                    {
+                        Logger.Info($"Failed to dispose sharded outgoing replication to {instance?.DestinationFormatted}", e);
+                    }
+                }
+            });
 
             base.DisposeInternal();
         }

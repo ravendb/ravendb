@@ -6,7 +6,7 @@ using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Replication.Outgoing
 {
-    public class OutgoingMigrationReplicationHandler : OutgoingReplicationHandlerBase
+    public class OutgoingMigrationReplicationHandler : DatabaseOutgoingReplicationHandlerBase
     {
         public readonly BucketMigrationReplication BucketMigrationNode;
         public OutgoingMigrationReplicationHandler(ReplicationLoader parent, DocumentDatabase database, BucketMigrationReplication node, TcpConnectionInfo connectionInfo) : base(parent, database, node, connectionInfo)

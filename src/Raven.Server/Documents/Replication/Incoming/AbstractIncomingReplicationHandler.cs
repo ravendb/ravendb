@@ -491,8 +491,6 @@ namespace Raven.Server.Documents.Replication.Incoming
                                 msgContext.Write(writer, msg);
                                 writer.Flush();
                             }
-
-                            HandleMissingAttachmentsIfNeeded();
                         }
                     }
 
@@ -590,8 +588,6 @@ namespace Raven.Server.Documents.Replication.Incoming
         protected abstract void HandleHeartbeatMessage(TOperationContext jsonOperationContext, BlittableJsonReaderObject blittableJsonReaderObject);
 
         public abstract LiveReplicationPerformanceCollector.ReplicationPerformanceType GetReplicationPerformanceType();
-
-        protected abstract void HandleMissingAttachmentsIfNeeded();
 
         public bool IsDisposed => _disposeOnce.Disposed;
 

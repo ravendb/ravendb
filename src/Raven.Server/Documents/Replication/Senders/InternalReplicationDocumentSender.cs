@@ -6,7 +6,7 @@ namespace Raven.Server.Documents.Replication.Senders
 {
     public class InternalReplicationDocumentSender : ReplicationDocumentSenderBase
     {
-        public InternalReplicationDocumentSender(Stream stream, OutgoingReplicationHandlerBase parent, Logger log) : base(stream, parent, log)
+        public InternalReplicationDocumentSender(Stream stream, DatabaseOutgoingReplicationHandlerBase parent, Logger log) : base(stream, parent, log)
         {
         }
     }

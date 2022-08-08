@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
@@ -26,7 +25,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Replication.Outgoing
 {
-    public abstract class OutgoingReplicationHandlerBase : AbstractOutgoingReplicationHandler<DocumentsContextPool, DocumentsOperationContext>, IReportOutgoingReplicationPerformance
+    public abstract class DatabaseOutgoingReplicationHandlerBase : AbstractOutgoingReplicationHandler<DocumentsContextPool, DocumentsOperationContext>
     {
         public const string AlertTitle = "Replication";
 
@@ -35,15 +34,15 @@ namespace Raven.Server.Documents.Replication.Outgoing
         internal readonly ReplicationLoader _parent;
         internal DateTime _lastDocumentSentTime;
 
-        public event Action<OutgoingReplicationHandlerBase, Exception> Failed;
+        public event Action<DatabaseOutgoingReplicationHandlerBase, Exception> Failed;
 
-        public event Action<OutgoingReplicationHandlerBase> SuccessfulTwoWaysCommunication;
+        public event Action<DatabaseOutgoingReplicationHandlerBase> SuccessfulTwoWaysCommunication;
 
-        public event Action<OutgoingReplicationHandlerBase> SuccessfulReplication;
+        public event Action<DatabaseOutgoingReplicationHandlerBase> SuccessfulReplication;
 
-        public event Action<OutgoingReplicationHandlerBase> DocumentsSend;
+        public event Action<DatabaseOutgoingReplicationHandlerBase> DocumentsSend;
 
-        protected OutgoingReplicationHandlerBase(ReplicationLoader parent, DocumentDatabase database, ReplicationNode node, TcpConnectionInfo connectionInfo)
+        protected DatabaseOutgoingReplicationHandlerBase(ReplicationLoader parent, DocumentDatabase database, ReplicationNode node, TcpConnectionInfo connectionInfo)
         : base(connectionInfo, parent._server, database.Name, node, database.DatabaseShutdown, database.DocumentsStorage.ContextPool)
         {
             _parent = parent;
@@ -73,10 +72,10 @@ namespace Raven.Server.Documents.Replication.Outgoing
                 return true;
             if (obj.GetType() != GetType())
                 return false;
-            return Equals((OutgoingReplicationHandlerBase)obj);
+            return Equals((DatabaseOutgoingReplicationHandlerBase)obj);
         }
 
-        public bool Equals(OutgoingReplicationHandlerBase other)
+        public bool Equals(DatabaseOutgoingReplicationHandlerBase other)
         {
             return Destination.Equals(other.Destination);
         }
