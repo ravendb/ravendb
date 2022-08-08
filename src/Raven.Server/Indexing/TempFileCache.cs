@@ -8,6 +8,9 @@ using Sparrow.Global;
 using Sparrow.LowMemory;
 using Sparrow.Utils;
 using Voron;
+using Raven.Server.Utils;
+using Sparrow.Server.Exceptions;
+using Sparrow.Server.Utils;
 
 namespace Raven.Server.Indexing
 {
@@ -206,10 +209,20 @@ namespace Raven.Server.Indexing
 
         public override void SetLength(long value)
         {
-            if (InnerStream.Length < value)
-                InnerStream.SetLength(value);
+            try
+            {
+                if (InnerStream.Length < value)
+                    InnerStream.SetLength(value);
 
-            _length = value;
+                _length = value;
+            }
+            catch (IOException e)
+            {
+                if (e.IsOutOfDiskSpaceException())
+                {
+                    ThrowDiskFullException();
+                }
+            }
         }
 
         public override void Write(byte[] buffer, int offset, int count)
@@ -222,20 +235,20 @@ namespace Raven.Server.Indexing
             }
             catch (IOException e)
             {
-                if (IsDiskFull(e))
+                if (e.IsOutOfDiskSpaceException())
                 {
-                    throw new OutOfDiskSpaceException("Out of disk space", e);
+                    ThrowDiskFullException();
                 }
             }
         }
 
-        private static bool IsDiskFull(Exception ex)
+        private void ThrowDiskFullException()
         {
-            const int HR_ERROR_HANDLE_DISK_FULL = unchecked((int)0x80070027);
-            const int HR_ERROR_DISK_FULL = unchecked((int)0x80070070);
-
-            return ex.HResult == HR_ERROR_HANDLE_DISK_FULL
-                   || ex.HResult == HR_ERROR_DISK_FULL;
+            var folderPath = Path.GetDirectoryName(InnerStream.Name); // file Absolute Path
+            var driveInfo = DiskUtils.GetDiskSpaceInfo(folderPath);
+            var freeSpace = driveInfo != null ? driveInfo.TotalFreeSpace.ToString() : "N/A";
+            throw new DiskFullException($"There isn't enough space to flush the buffer in: {folderPath}. " +
+                                        $"Currently available space: {freeSpace}");
         }
 
         public override bool CanRead => InnerStream.CanRead;
