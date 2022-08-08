@@ -954,8 +954,9 @@ namespace FastTests.Corax
 
                 foreach (var entry in list)
                 {
-                    using var __ = CreateIndexEntryDouble(ref entryWriter, entry, out var data);
-                    indexWriter.Index(entry.Id, data.ToSpan());
+                    var entryWriter = new IndexEntryWriter(buffer.ToSpan(), knownFields);
+                    var data = CreateIndexEntryDouble(ref entryWriter, entry);
+                    indexWriter.Index(entry.Id, data);
                 }
 
                 indexWriter.Commit();
