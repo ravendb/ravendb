@@ -1341,7 +1341,7 @@ namespace RachisTests.DatabaseCluster
             using (var store2 = GetDocumentStore())
             {
                 var database = await Databases.GetDocumentDatabaseInstanceFor(store1);
-                var handlers = new HashSet<OutgoingReplicationHandlerBase>();
+                var handlers = new HashSet<DatabaseOutgoingReplicationHandlerBase>();
 
                 database.ReplicationLoader.OutgoingReplicationAdded += handler =>
                 {
@@ -1358,7 +1358,7 @@ namespace RachisTests.DatabaseCluster
                 {
                     foreach (var handler in database.ReplicationLoader.OutgoingHandlers)
                     {
-                        handlers.Add(handler as OutgoingReplicationHandlerBase);
+                        handlers.Add(handler as DatabaseOutgoingReplicationHandlerBase);
                     }
 
                     return handlers.Count;

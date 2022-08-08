@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.ServerWide.Tcp;
@@ -94,6 +95,7 @@ namespace Raven.Server.Documents.Sharding
     {
         public List<ReplicationBatchItem> Items = new();
         public Dictionary<Slice, AttachmentReplicationItem> Attachments;
+        public TaskCompletionSource BatchSent;
     }
 
     public class ShardReplicationNode : ExternalReplication

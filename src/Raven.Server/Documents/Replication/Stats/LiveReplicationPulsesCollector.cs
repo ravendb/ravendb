@@ -32,15 +32,15 @@ namespace Raven.Server.Documents.Replication.Stats
                 IncomingHandlerAdded(handler as IncomingReplicationHandler);
 
             foreach (var handler in _database.ReplicationLoader.OutgoingHandlers)
-                OutgoingHandlerAdded(handler as OutgoingReplicationHandlerBase);
+                OutgoingHandlerAdded(handler as DatabaseOutgoingReplicationHandlerBase);
         }
 
-        private void OutgoingHandlerRemoved(OutgoingReplicationHandlerBase handler)
+        private void OutgoingHandlerRemoved(DatabaseOutgoingReplicationHandlerBase handler)
         {
             handler.HandleReplicationPulse -= HandleReplicationPulse;
         }
 
-        private void OutgoingHandlerAdded(OutgoingReplicationHandlerBase handler)
+        private void OutgoingHandlerAdded(DatabaseOutgoingReplicationHandlerBase handler)
         {
             handler.HandleReplicationPulse += HandleReplicationPulse;
         }

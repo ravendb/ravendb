@@ -55,6 +55,13 @@ namespace Raven.Server.Documents.Sharding.Handlers
             return ShardExecutor.ExecuteSingleShardAsync(context, command, shardNumber, token);
         }
 
+        public void InitForOfflineOperation(RequestHandlerContext context)
+        {
+            base.Init(context);
+            DatabaseContext = context.DatabaseContext;
+            ContextPool = context.RavenServer.ServerStore.ContextPool;
+        }
+
         public override void Init(RequestHandlerContext context)
         {
             base.Init(context);
@@ -62,19 +69,16 @@ namespace Raven.Server.Documents.Sharding.Handlers
             //TODO - sharding: We probably want to put it in the ShardedDatabaseContext, not use the server one 
             ContextPool = context.RavenServer.ServerStore.ContextPool;
             Logger = LoggingSource.Instance.GetLogger(DatabaseContext.DatabaseName, GetType().FullName);
-            
+
             var request = HttpContext.Request;
             var url = context.RouteMatch.Url;
 
-            if (string.IsNullOrEmpty(url) == false)
-            {
-                var relativeIndex = url.IndexOf('/', 11); //start after "/databases/" and skip the database name
-                BaseShardUrl = url.Substring(relativeIndex);
+            var relativeIndex = url.IndexOf('/', 11); //start after "/databases/" and skip the database name
+            BaseShardUrl = url.Substring(relativeIndex);
 
-                RelativeShardUrl = BaseShardUrl + request.QueryString;
-                Method = new HttpMethod(request.Method);
-            }
-            
+            RelativeShardUrl = BaseShardUrl + request.QueryString;
+            Method = new HttpMethod(request.Method);
+
             context.HttpContext.Response.OnStarting(() => CheckForChanges(context));
         }
 

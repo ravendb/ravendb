@@ -1,6 +1,5 @@
 ﻿using System;
 using Raven.Client.Documents.Replication;
-using Raven.Server.ServerWide;
 
 namespace Raven.Server.Documents.Replication.Outgoing
 {
@@ -11,7 +10,6 @@ namespace Raven.Server.Documents.Replication.Outgoing
         public string LastAcceptedChangeVector { get; set; }
         public ReplicationNode Destination { get; }
         public bool IsConnectionDisposed { get; }
-        public ServerStore Server { get; }
         public string GetNode();
         public void Start();
     }

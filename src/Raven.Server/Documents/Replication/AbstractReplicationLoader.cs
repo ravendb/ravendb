@@ -11,7 +11,6 @@ using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
-using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Documents.Replication.Incoming;
 using Raven.Server.Documents.Replication.Outgoing;
@@ -22,7 +21,6 @@ using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Json.Sync;
@@ -40,13 +38,7 @@ namespace Raven.Server.Documents.Replication
         internal readonly ServerStore _server;
         
         protected readonly Logger _logger;
-        protected readonly ConcurrentDictionary<ReplicationNode, ConnectionShutdownInfo> _outgoingFailureInfo = new ConcurrentDictionary<ReplicationNode, ConnectionShutdownInfo>();
-        protected readonly ConcurrentSet<ConnectionShutdownInfo> _reconnectQueue = new ConcurrentSet<ConnectionShutdownInfo>();
         protected readonly ConcurrentDictionary<string, IAbstractIncomingReplicationHandler> _incoming = new ConcurrentDictionary<string, IAbstractIncomingReplicationHandler>();
-        protected readonly ConcurrentSet<IAbstractOutgoingReplicationHandler> _outgoing = new ConcurrentSet<IAbstractOutgoingReplicationHandler>();
-        
-        public IEnumerable<ReplicationNode> OutgoingConnections => _outgoing.Select(x => x.Node);
-        public IEnumerable<IAbstractOutgoingReplicationHandler> OutgoingHandlers => _outgoing;
 
         // PERF: _incoming locks if you do _incoming.Values. Using .Select
         // directly and fetching the Value avoids this problem.
@@ -55,9 +47,6 @@ namespace Raven.Server.Documents.Replication
         // PERF: _incoming locks if you do _incoming.Values. Using .Select
         // directly and fetching the Value avoids this problem.
         public IEnumerable<IAbstractIncomingReplicationHandler> IncomingHandlers => _incoming.Select(x => x.Value);
-        public IEnumerable<ReplicationNode> ReconnectQueue => _reconnectQueue.Select(x => x.Node);
-
-        public IReadOnlyDictionary<ReplicationNode, ConnectionShutdownInfo> OutgoingFailureInfo => _outgoingFailureInfo;
         public string DatabaseName => _databaseName;
         public ServerStore Server => _server;
 
@@ -310,20 +299,7 @@ namespace Raven.Server.Documents.Replication
                         // ignored
                     }
                 }
-                foreach (var outgoing in _outgoing)
-                {
-                    try
-                    {
-                        outgoing.Dispose();
-                    }
-                    catch
-                    {
-                        // ignored
-                    }
-                }
-
-
-                _outgoing.Clear();
+         
                 _incoming.Clear();
             }
             finally
