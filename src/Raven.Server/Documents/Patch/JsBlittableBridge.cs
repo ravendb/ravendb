@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Jint.Runtime.Interop;
 using Raven.Client;
+using Raven.Server.Documents.Patch.Jint;
+using Raven.Server.Documents.Patch.V8;
 using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Utils;
@@ -355,6 +357,20 @@ public abstract class JsBlittableBridge<T>
             writer.FinalizeDocument();
 
             return writer.CreateReader();
+        }
+    }
+
+    public static BlittableJsonReaderObject Translate(JsonOperationContext context, IJsEngineHandle<T> scriptEngine, T objectInstance, IResultModifier modifier = null,
+        BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None, bool isRoot = true)
+    {
+        switch (scriptEngine)
+        {
+            case V8EngineEx ex when objectInstance is JsHandleV8 jsHandleV8:
+                return new JsBlittableBridgeV8(ex).Translate(context, jsHandleV8, modifier, usageMode, isRoot);
+            case JintEngineEx ex2 when objectInstance is JsHandleJint jsHandleJint:
+                return new JsBlittableBridgeJint(ex2).Translate(context, jsHandleJint, modifier, usageMode, isRoot);
+            default:
+                throw new ArgumentException($"expected {nameof(V8EngineEx)} and {nameof(JsHandleV8)} or {nameof(JintEngineEx)} and {nameof(JsHandleJint)} but got: {scriptEngine.GetType().Name} and {objectInstance.GetType().Name}");
         }
     }
 }

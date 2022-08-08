@@ -29,8 +29,14 @@ namespace Raven.Server.Documents.Indexes.Persistence
         protected readonly bool _storeValue;
         protected readonly string _storeValueFieldName;
         protected readonly int _numberOfBaseFields;
+        protected const string ValuePropertyName = "$value";
+        protected const string OptionsPropertyName = "$options";
+        protected const string NamePropertyName = "$name";
+        protected const string SpatialPropertyName = "$spatial";
+        protected const string BoostPropertyName = "$boost";
+        protected IndexFieldOptions _allFields;
 
-        public ConverterBase(Index index, bool storeValue, bool indexImplicitNull, bool indexEmptyEntries, int numberOfBaseFields, string keyFieldName,
+        protected ConverterBase(Index index, bool storeValue, bool indexImplicitNull, bool indexEmptyEntries, int numberOfBaseFields, string keyFieldName,
             string storeValueFieldName, ICollection<IndexField> fields = null)
         {
             _index = index ?? throw new ArgumentNullException(nameof(index));

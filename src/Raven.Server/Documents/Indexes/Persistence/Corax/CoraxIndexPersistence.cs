@@ -43,10 +43,10 @@ public class CoraxIndexPersistence : IndexPersistenceBase
                         switch (_engineType)
                         {
                             case JavaScriptEngineType.Jint:
-                                _converter = new JintCoraxDocumentConverter((MapIndex)index);
+                                _converter = new CoraxJavascriptDocumentConverterJint((MapIndex)index);
                                 break;
                             case JavaScriptEngineType.V8:
-                                _converter = new V8CoraxDocumentConverter((MapIndex)index);
+                                _converter = new CoraxJavascriptDocumentConverterV8((MapIndex)index);
                                 break;
                             default:
                                 throw new NotSupportedException($"Not supported JS engine type '{_engineType}'.");
@@ -62,10 +62,10 @@ public class CoraxIndexPersistence : IndexPersistenceBase
                 switch (_engineType)
                 {
                     case JavaScriptEngineType.Jint:
-                        _converter = new JintCoraxDocumentConverter((MapReduceIndex)index, storeValue: true);
+                        _converter = new CoraxJavascriptDocumentConverterJint((MapReduceIndex)index, storeValue: true);
                         break;
                     case JavaScriptEngineType.V8:
-                        _converter = new V8CoraxDocumentConverter((MapReduceIndex)index, storeValue: true);
+                        _converter = new CoraxJavascriptDocumentConverterV8((MapReduceIndex)index, storeValue: true);
                         break;
                     default:
                         throw new NotSupportedException($"Not supported JS engine type '{_engineType}'.");
