@@ -1866,8 +1866,8 @@ select Foo(u)"
                     var error = Assert.Throws<RavenException>(() => session.Advanced
                         .RawQuery<User>("from Users as u include revisions(u.FirstRevision, x.SecondRevision)")
                         .ToList());
-                
-                    Assert.Contains("System.InvalidOperationException: Alias is not supported `include revisions(..)`."
+
+                    Assert.Contains("Field `x.SecondRevision` inside `include revisions(..)` is invalid."
                         , error.Message);
                 }
 
@@ -1880,7 +1880,7 @@ select Foo(u)"
                         .AddParameter("p2", "x.ThirdRevision")
                         .ToList());
 
-                    Assert.Contains("Alias x inside `include revisions(..)` is invalid."
+                    Assert.Contains("Field `x.ThirdRevision` inside `include revisions(..)` is invalid."
                         , error.Message);
                 }
             }
@@ -1911,7 +1911,7 @@ select Foo(u)"
                         .RawQuery<User>("from Users as u include revisions(u.FirstRevision, x.SecondRevision)")
                         .ToList());
 
-                    Assert.Contains("System.InvalidOperationException: Alias is not supported `include revisions(..)`."
+                    Assert.Contains("Field `x.SecondRevision` inside `include revisions(..)` is invalid."
                         , error.Message);
                 }
 
@@ -1924,7 +1924,7 @@ select Foo(u)"
                         .AddParameter("p2", "x.ThirdRevision")
                         .ToListAsync());
 
-                    Assert.Contains("Alias x inside `include revisions(..)` is invalid."
+                    Assert.Contains("Field `x.ThirdRevision` inside `include revisions(..)` is invalid."
                         , error.Message);
                 }
             }
