@@ -822,10 +822,7 @@ namespace FastTests.Corax
             {
                 using var __ = CreateIndexEntry(ref entryWriter, entry, out var data);
                 indexWriter.Index(entry.Id, data.ToSpan());
-<<<<<<< HEAD
-=======
                 entryWriter.Reset();
->>>>>>> 4f7ef00ca1 (RavenDB-18872: Changing the underlying assumptions for IndexEntryWriter)
             }
 
             indexWriter.Commit();
@@ -961,10 +958,7 @@ namespace FastTests.Corax
                 {
                     using var __ = CreateIndexEntryDouble(ref entryWriter, entry, out var data);
                     indexWriter.Index(entry.Id, data.ToSpan());
-<<<<<<< HEAD
-=======
                     entryWriter.Reset();
->>>>>>> 4f7ef00ca1 (RavenDB-18872: Changing the underlying assumptions for IndexEntryWriter)
                 }
 
                 indexWriter.Commit();

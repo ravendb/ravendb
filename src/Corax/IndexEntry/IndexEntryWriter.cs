@@ -292,8 +292,7 @@ public unsafe partial struct IndexEntryWriter : IDisposable
         // Write known field pointer.
         ref int fieldLocation = ref KnownFieldsLocations[field];
         fieldLocation = dataLocation | Constants.IndexWriter.IntKnownFieldMask;
-
-        var buffer = Buffer;
+        
 
         // Write the tuple information. 
         ref var indexEntryField = ref Unsafe.AsRef<IndexEntryFieldType>(Unsafe.AsPointer(ref buffer[dataLocation]));
@@ -341,8 +340,7 @@ public unsafe partial struct IndexEntryWriter : IDisposable
         // Write known field pointer.
         ref int fieldLocation = ref KnownFieldsLocations[field];
         fieldLocation = dataLocation | Constants.IndexWriter.IntKnownFieldMask;
-
-        var buffer = Buffer;
+        
 
         // Write the list metadata information. 
         ref var indexEntryField = ref Unsafe.AsRef<IndexEntryFieldType>(Unsafe.AsPointer(ref buffer[dataLocation]));

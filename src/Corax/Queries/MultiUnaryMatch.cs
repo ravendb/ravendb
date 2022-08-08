@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Voron;
@@ -16,15 +18,18 @@ public unsafe struct MultiUnaryItem
     public int FieldId;
 
     public DataType Type;
-    private Slice SliceValueLeft;
-    private long LongValueLeft;
-    private double DoubleValueLeft;
-    private Slice SliceValueRight;
-    private long LongValueRight;
-    private double DoubleValueRight;
-    private bool _isBetween;
+    internal Slice SliceValueLeft;
+    internal long LongValueLeft;
+    internal double DoubleValueLeft;
+    internal Slice SliceValueRight;
+    internal long LongValueRight;
+    internal double DoubleValueRight;
+    internal bool IsBetween;
+    internal UnaryMatchOperation LeftSideOperation;
+    internal UnaryMatchOperation RightSideOperation;
     public UnaryMode Mode;
 
+    
     public enum UnaryMode
     {
         // This case is used for NotEquals 
@@ -55,7 +60,9 @@ public unsafe struct MultiUnaryItem
         Mode = UnaryMode.Any;
         FieldId = fieldId;
         Type = dataType;
-        _isBetween = isBetween;
+        this.IsBetween = isBetween;
+        LeftSideOperation = leftOperation;
+        RightSideOperation = rightOperation;
         
         switch (leftOperation)
         {
@@ -135,13 +142,13 @@ public unsafe struct MultiUnaryItem
         if (Type == DataType.Long)
         {
             leftResult = _longComparerLeft(LongValueLeft, CoherseValueTypeToLong(value));
-            if (_isBetween)
+            if (IsBetween)
                 return leftResult & _longComparerRight(LongValueRight, CoherseValueTypeToLong(value));
             return leftResult;
         }
 
         leftResult = _doubleComparerLeft(DoubleValueLeft, CoherseValueTypeToDouble(value));
-        if (_isBetween)
+        if (IsBetween)
             return leftResult & _doubleComparerRight(DoubleValueRight, CoherseValueTypeToDouble(value));
         return leftResult;
     }
@@ -150,7 +157,7 @@ public unsafe struct MultiUnaryItem
     public bool CompareLiteral(ReadOnlySpan<byte> value)
     {
         var leftResult = _byteComparerLeft(SliceValueLeft.AsSpan(), value);
-        return _isBetween
+        return IsBetween
             ? leftResult & _byteComparerRight(SliceValueRight.AsSpan(), value)
             : leftResult;
     }
@@ -548,6 +555,42 @@ public struct MultiUnaryMatch<TInner> : IQueryMatch
 
     public QueryInspectionNode Inspect()
     {
-        throw new NotImplementedException();
+        var dict = new Dictionary<string, string>() {{nameof(Count), $"Unknown"}};
+
+        for (int index = 0; index < _comparers.Length; index++)
+        {
+            MultiUnaryItem comparer = _comparers[index];
+            var prefix = $"Comparer no. {index}";
+            dict.Add($"{prefix} Mode", comparer.Mode.ToString());
+            dict.Add($"{prefix} Type", comparer.Type.ToString());
+            dict.Add($"{prefix} IsBetween", comparer.IsBetween.ToString());
+            dict.Add($"{prefix} LeftComparer", comparer.LeftSideOperation.ToString());
+            if(comparer.IsBetween)
+                dict.Add($"{prefix} RightComparer", comparer.RightSideOperation.ToString());
+                
+            
+            switch (comparer.Type)
+            {
+                case MultiUnaryItem.DataType.Long:
+                    dict.Add($"{prefix} LeftValue", comparer.LongValueLeft.ToString(CultureInfo.InvariantCulture));
+                    if (comparer.IsBetween)
+                        dict.Add($"{prefix} RightValue", comparer.LongValueRight.ToString(CultureInfo.InvariantCulture));
+                    break;
+                case MultiUnaryItem.DataType.Double:
+                    dict.Add($"{prefix} LeftValue", comparer.DoubleValueLeft.ToString(CultureInfo.InvariantCulture));
+                    if (comparer.IsBetween)
+                        dict.Add($"{prefix} RightValue", comparer.DoubleValueRight.ToString(CultureInfo.InvariantCulture));
+                    break;
+                default:
+                    dict.Add($"{prefix} LeftValue", comparer.SliceValueLeft.ToString());
+                    if (comparer.IsBetween)
+                        dict.Add($"{prefix} RightValue", comparer.SliceValueRight.ToString());
+                    break;
+            }
+        }
+
+        return new QueryInspectionNode($"{nameof(MultiUnaryMatch<TInner>)}",
+            children: new List<QueryInspectionNode> { _inner.Inspect() },
+            parameters: dict);
     }
 }

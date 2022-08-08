@@ -102,7 +102,7 @@ public partial class IndexSearcher
         int fieldId = Constants.IndexSearcher.NonAnalyzer)
         where TScoreFunction : IQueryScoreFunction
     {
-        return GreatBuilder<Range.Exclusive, Range.Inclusive, TValue, TScoreFunction>(field, value, scoreFunction, isNegated);
+        return GreatBuilder<Range.Exclusive, Range.Inclusive, TValue, TScoreFunction>(field, value, scoreFunction, isNegated, fieldId);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -110,7 +110,7 @@ public partial class IndexSearcher
         int fieldId = Constants.IndexSearcher.NonAnalyzer)
         where TScoreFunction : IQueryScoreFunction
     {
-        return GreatBuilder<Range.Inclusive, Range.Inclusive, TValue, TScoreFunction>(field, value, scoreFunction, isNegated);
+        return GreatBuilder<Range.Inclusive, Range.Inclusive, TValue, TScoreFunction>(field, value, scoreFunction, isNegated, fieldId);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -140,12 +140,12 @@ public partial class IndexSearcher
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public MultiTermMatch LessThanOrEqualsQuery<TValue, TScoreFunction>(string field, TValue value, TScoreFunction scoreFunction = default, bool isNegated = false, int fieldId = Constants.IndexSearcher.NonAnalyzer) where TScoreFunction : IQueryScoreFunction 
-        => LessBuilder<Range.Inclusive, Range.Inclusive, TValue, TScoreFunction>(field, value, scoreFunction, isNegated);
+        => LessBuilder<Range.Inclusive, Range.Inclusive, TValue, TScoreFunction>(field, value, scoreFunction, isNegated, fieldId);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public MultiTermMatch LessThanQuery<TValue, TScoreFunction>(string field, TValue value, TScoreFunction scoreFunction = default, bool isNegated = false,
         int fieldId = Constants.IndexSearcher.NonAnalyzer) where TScoreFunction : IQueryScoreFunction
-        => LessBuilder<Range.Inclusive, Range.Exclusive, TValue, TScoreFunction>(field, value, scoreFunction, isNegated);
+        => LessBuilder<Range.Inclusive, Range.Exclusive, TValue, TScoreFunction>(field, value, scoreFunction, isNegated, fieldId);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private MultiTermMatch LessBuilder<TLeftRange, TRightRange, TValue, TScoreFunction>(string field, TValue value, TScoreFunction scoreFunction = default,

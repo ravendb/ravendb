@@ -224,7 +224,7 @@ public class CoraxBooleanQuery : IQueryMatch
                 }
 
                 //In the first place we've to do (true and NOT))
-                second = _indexSearcher.AndNot<MultiTermMatch, TermMatch>(_indexSearcher.ExistsQuery(query.Name), (TermMatch)second);
+                baseMatch = _indexSearcher.AndNot<MultiTermMatch, TermMatch>(_indexSearcher.ExistsQuery(query.Name), (TermMatch)second);
                 HasInnerBinary = true;
                 goto Reduce;
             }
@@ -232,6 +232,8 @@ public class CoraxBooleanQuery : IQueryMatch
 
             // TermMatch:
             // This should be more complex. Should we always perform AND for TermMatch? For example there could be a case when performing RangeQueries in first place will limit our set very well so scanning would be better option.
+
+            
             if (baseMatch == null)
             {
                 baseMatch = second;
@@ -241,9 +243,9 @@ public class CoraxBooleanQuery : IQueryMatch
                 baseMatch = _indexSearcher.And(baseMatch, second);
                 HasInnerBinary = true;
             }
-
             Reduce:
             reduced++;
+
         }
 
         stack = stack.Slice(reduced);
