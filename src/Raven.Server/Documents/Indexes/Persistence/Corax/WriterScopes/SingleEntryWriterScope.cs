@@ -1,11 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Text;
 using Corax;
 using Corax.Utils;
-using Lextm.SharpSnmpLib;
-using Raven.Server.Documents.Indexes.Spatial;
-using Sparrow;
 using Sparrow.Json;
 using Sparrow.Server;
 
@@ -58,8 +54,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
 
         public void Write(int field, BlittableJsonReaderObject reader, ref IndexEntryWriter entryWriter)
         {
-            using var scope = new BlittableWriterScope(reader);
-            scope.Write(field, ref entryWriter);
+            new BlittableWriterScope(reader).Write(field, ref entryWriter);
         }
 
         public void Write(int field, CoraxSpatialPointEntry entry, ref IndexEntryWriter entryWriter)

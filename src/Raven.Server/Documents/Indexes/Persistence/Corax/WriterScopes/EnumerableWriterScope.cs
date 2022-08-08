@@ -1,33 +1,30 @@
 ﻿using System;
-using System.Buffers;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using Corax;
 using Corax.Utils;
-using K4os.Compression.LZ4.Internal;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Server;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
 {
-    public class EnumerableWriterScope : IWriterScope
+    public unsafe class EnumerableWriterScope : IWriterScope
     {
         //todo maciej: this is only temp implementation. Related: https://issues.hibernatingrhinos.com/issue/RavenDB-17243
         private readonly ByteStringContext _allocator;
-        private readonly List<Memory<byte>> _stringValues;
+        
+        private readonly List<ByteString> _stringValues;
         private readonly List<long> _longValues;
         private readonly List<double> _doubleValues;
         private readonly List<CoraxSpatialPointEntry> _spatialValues;
-        private const int MaxSizePerBlittable = (2 << 11);
+
         private readonly List<BlittableJsonReaderObject> _blittableJsonReaderObjects;
         private (int Strings, int Longs, int Doubles, int Raws, int Spatials) _count;        
 
-        public EnumerableWriterScope(List<Memory<byte>> stringValues, List<long> longValues, List<double> doubleValues, List<CoraxSpatialPointEntry> spatialValues,
+        public EnumerableWriterScope(List<ByteString> stringValues, List<long> longValues, List<double> doubleValues, List<CoraxSpatialPointEntry> spatialValues,
             List<BlittableJsonReaderObject> blittableJsonReaderObjects, ByteStringContext allocator)
         {
             _count = (0, 0, 0, 0, 0);
@@ -44,7 +41,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
             // We cannot know if we are writing a tuple or a list. But we know that at finish
             // we will be able to figure out based on the stored counts. Therefore,
             // we will write a null here and then write the real value in the finish method.
-            _stringValues.Add(default(Memory<byte>));
+            _stringValues.Add(default);
             _longValues.Add(0);
             _doubleValues.Add(float.NaN);
         }
@@ -54,8 +51,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
             if (_count.Longs != 0 || _count.Doubles != 0)
                 throw new InvalidOperationException("Cannot mix tuples writes with straightforward writes");
 
+            // Copy the value to write into memory allocated and controlled by the scope.  
+            _allocator.Allocate(value.Length, out var buffer);
+            value.CopyTo(buffer.ToSpan());
+
             _count.Strings++;
-            _stringValues.Add(new Memory<byte>(value.ToArray()));
+            _stringValues.Add(buffer);
             _longValues.Add(0);
             _doubleValues.Add(float.NaN);
         }
@@ -65,7 +66,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
             if (_count.Strings != _count.Longs || _count.Strings != _count.Doubles)
                 throw new InvalidOperationException("Cannot write a tuple with a different number of values than the previous tuple.");
 
-            _stringValues.Add(new Memory<byte>(value.ToArray()));
+            // Copy the value to write into memory allocated and controlled by the scope.  
+            _allocator.Allocate(value.Length, out var buffer);
+            value.CopyTo(buffer.ToSpan());
+
+            _stringValues.Add(buffer);
             _longValues.Add(longValue);
             _doubleValues.Add(doubleValue);
             _count.Strings++;
@@ -75,13 +80,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
 
         public void Write(int field, string value, ref IndexEntryWriter entryWriter)
         {
-            using (_allocator.Allocate(Encoding.UTF8.GetByteCount(value), out var buffer))
-            {
-                var length = Encoding.UTF8.GetBytes(value, buffer.ToSpan());
-                buffer.Truncate(length);
-                _stringValues.Add(new Memory<byte>(buffer.ToSpan().ToArray()));
-                _count.Strings++;
-            }
+            _allocator.Allocate(Encoding.UTF8.GetMaxByteCount(value.Length), out var buffer);
+
+            var length = Encoding.UTF8.GetBytes(value, buffer.ToSpan());
+            buffer.Truncate(length);
+            _stringValues.Add(buffer);
+            _count.Strings++;
         }
 
         public void Write(int field, string value, long longValue, double doubleValue, ref IndexEntryWriter entryWriter)
@@ -124,24 +128,30 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
             // Even in the case of stored null values, the number of strings and doubles would match. 
             else if (_count.Strings == _count.Doubles && _count.Raws == 0)
             {                
-                entryWriter.Write(field, new StringArrayIterator(_stringValues), CollectionsMarshal.AsSpan(_longValues), CollectionsMarshal.AsSpan(_doubleValues));
+                entryWriter.Write(field, new ByteStringIterator(_stringValues), CollectionsMarshal.AsSpan(_longValues), CollectionsMarshal.AsSpan(_doubleValues));
             }
             else if (_count is { Raws: > 0, Strings: 0 })
             {
                 if (_count.Raws == 1)
                 {
-                    using var blittScope = new BlittableWriterScope(_blittableJsonReaderObjects[0]);
-                    blittScope.Write(field, ref entryWriter);
+                    new BlittableWriterScope(_blittableJsonReaderObjects[0]).Write(field, ref entryWriter);
                 }
                 else
                 {
-                    using var blittableIterator = new BlittableIterator(_blittableJsonReaderObjects);
-                    entryWriter.Write(field, blittableIterator, IndexEntryFieldType.Raw);
+                    entryWriter.Write(field, new BlittableIterator(_blittableJsonReaderObjects), IndexEntryFieldType.Raw);
                 }
             }
             else
             {
-                entryWriter.Write(field, new StringArrayIterator(_stringValues));
+                entryWriter.Write(field, new ByteStringIterator(_stringValues));
+            }
+
+            var stringSpan = CollectionsMarshal.AsSpan(_stringValues);
+            for (int i = 0; i < _stringValues.Count; i++)
+            {
+                ref var item = ref stringSpan[i];
+                if (item.HasValue)
+                    _allocator.Release(ref item);
             }
             
             _stringValues.Clear();
@@ -150,12 +160,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
             _blittableJsonReaderObjects.Clear();
             _spatialValues.Clear();
         }
-
-        private struct StringArrayIterator : IReadOnlySpanIndexer
+        
+        private struct ByteStringIterator : IReadOnlySpanIndexer
         {
-            private readonly List<Memory<byte>> _values;
+            private readonly List<ByteString> _values;
 
-            public StringArrayIterator(List<Memory<byte>> values)
+            public ByteStringIterator(List<ByteString> values)
             {
                 _values = values;
             }
@@ -167,10 +177,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
                 if (i < 0 || i >= Length)
                     throw new ArgumentOutOfRangeException();
 
-                return _values[i].Length == 0;
+                return !_values[i].HasValue;
             }
 
-            public ReadOnlySpan<byte> this[int i] => _values[i].Span;
+            public ReadOnlySpan<byte> this[int i] => IsNull(i) ? ReadOnlySpan<byte>.Empty : _values[i].ToReadOnlySpan();
         }
 
         private struct BlittableIterator : IReadOnlySpanIndexer, IDisposable
@@ -196,7 +206,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
 
             public ReadOnlySpan<byte> this[int i] => Memory(i);
 
-            private unsafe ReadOnlySpan<byte> Memory(int id)
+            private ReadOnlySpan<byte> Memory(int id)
             {
                 var reader = _values[id];
                 if (reader.HasParent == false)
