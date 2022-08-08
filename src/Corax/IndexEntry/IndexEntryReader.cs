@@ -489,7 +489,7 @@ public unsafe ref struct IndexEntryReader
         }
     }
 
-    private static ReadOnlySpan<byte> TableEncodingLookupTable => new byte[] { 0, 1, 2, 0, 4 };
+    private static ReadOnlySpan<byte> TableEncodingLookupTable => new byte[] { 0, 1, 2, 4 };
 
     private static ReadOnlySpan<byte> ByteKnownFieldMaskShiftLookupTable => new byte[]
     {
@@ -511,36 +511,37 @@ public unsafe ref struct IndexEntryReader
         int locationOffset = buffer.Length - (knownFieldsCount * encodeSize) + field * encodeSize;
 
         int offset;
-        bool isTyped;
-
-        if (encoding == IndexEntryTableEncoding.OneByte)
+        switch (encoding)
         {
-            offset = Unsafe.ReadUnaligned<byte>(ref buffer[locationOffset]);
-            if (offset == 0xFF)
-                goto Fail;
-            goto End;
+            case IndexEntryTableEncoding.OneByte:
+            {
+                offset = Unsafe.ReadUnaligned<byte>(ref buffer[locationOffset]);
+                if (offset == 0xFF)
+                    goto Fail;
+                goto End;
+            }
+            case IndexEntryTableEncoding.TwoBytes:
+            {
+                offset = Unsafe.ReadUnaligned<ushort>(ref buffer[locationOffset]);
+                if (offset == 0xFFFF)
+                    goto Fail;
+                goto End;
+            }
+            case IndexEntryTableEncoding.FourBytes:
+            {
+                offset = (int)Unsafe.ReadUnaligned<uint>(ref buffer[locationOffset]);
+                if (offset == unchecked((int)0xFFFF_FFFF))
+                    goto Fail;
+                goto End;
+            }
         }
-        else if (encoding == IndexEntryTableEncoding.TwoBytes)
-        {
-            offset = Unsafe.ReadUnaligned<ushort>(ref buffer[locationOffset]);
-            if (offset == 0xFFFF)
-                goto Fail;
-            goto End;
-        }
-        else if (encoding == IndexEntryTableEncoding.FourBytes)
-        {
-            offset = (int)Unsafe.ReadUnaligned<uint>(ref buffer[locationOffset]);
-            if (offset == unchecked((int)0xFFFF_FFFF))
-                goto Fail;
-            goto End;
-        }
-
-    Fail:
+        
+        Fail:
         return (Invalid, false);
 
-    End:
+        End:
         int mask = 0x80 << ByteKnownFieldMaskShiftLookupTable[(int)encoding];
-        isTyped = (offset & mask) != 0;
+        bool isTyped = (offset & mask) != 0;
         offset &= ~mask;
         
         return (offset, isTyped);
