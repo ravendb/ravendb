@@ -10,7 +10,6 @@ using Sparrow.Utils;
 using Voron;
 using Raven.Server.Utils;
 using Sparrow.Server.Exceptions;
-using Sparrow.Server.Utils;
 
 namespace Raven.Server.Indexing
 {
@@ -220,7 +219,7 @@ namespace Raven.Server.Indexing
             {
                 if (e.IsOutOfDiskSpaceException())
                 {
-                    ThrowDiskFullException();
+                    IndexingUtils.ThrowDiskFullException(InnerStream.Name);
                 }
             }
         }
@@ -233,22 +232,10 @@ namespace Raven.Server.Indexing
                 InnerStream.Write(buffer, offset, count);
                 _length = Math.Max(_length, pos + count);
             }
-            catch (IOException e)
+            catch (IOException e) when(e.IsOutOfDiskSpaceException())
             {
-                if (e.IsOutOfDiskSpaceException())
-                {
-                    ThrowDiskFullException();
-                }
+                IndexingUtils.ThrowDiskFullException(InnerStream.Name);
             }
-        }
-
-        private void ThrowDiskFullException()
-        {
-            var folderPath = Path.GetDirectoryName(InnerStream.Name); // file Absolute Path
-            var driveInfo = DiskUtils.GetDiskSpaceInfo(folderPath);
-            var freeSpace = driveInfo != null ? driveInfo.TotalFreeSpace.ToString() : "N/A";
-            throw new DiskFullException($"There isn't enough space to flush the buffer in: {folderPath}. " +
-                                        $"Currently available space: {freeSpace}");
         }
 
         public override bool CanRead => InnerStream.CanRead;

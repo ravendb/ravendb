@@ -62,7 +62,7 @@ namespace Raven.Server.Indexing
             }
             catch (IOException ioe) when (ioe.IsOutOfDiskSpaceException())
             {
-                ThrowDiskFullException();
+                IndexingUtils.ThrowDiskFullException(_fileCache.FullPath);
             }
         }
 
@@ -77,7 +77,7 @@ namespace Raven.Server.Indexing
             }
             catch (IOException ioe) when (ioe.IsOutOfDiskSpaceException())
             {
-                ThrowDiskFullException();
+                IndexingUtils.ThrowDiskFullException(_fileCache.FullPath);
             }
         }
 
@@ -97,7 +97,7 @@ namespace Raven.Server.Indexing
             }
             catch (IOException ioe) when (ioe.IsOutOfDiskSpaceException())
             {
-                ThrowDiskFullException();
+                IndexingUtils.ThrowDiskFullException(_fileCache.FullPath);
             }
         }
 
@@ -159,20 +159,11 @@ namespace Raven.Server.Indexing
                 if (e is IOException ioe && e.IsOutOfDiskSpaceException())
                 {
                     // can happen when trying to copy from the file stream
-                    ThrowDiskFullException();
+                    IndexingUtils.ThrowDiskFullException(_fileCache.FullPath);
                 }
 
                 throw;
             }
-        }
-
-        private void ThrowDiskFullException()
-        {
-            var folderPath = _fileCache.FullPath;
-            var driveInfo = DiskUtils.GetDiskSpaceInfo(folderPath);
-            var freeSpace = driveInfo != null ? driveInfo.TotalFreeSpace.ToString() : "N/A";
-            throw new DiskFullException($"There isn't enough space to flush the buffer in: {folderPath}. " +
-                                        $"Currently available space: {freeSpace}");
         }
     }
 }

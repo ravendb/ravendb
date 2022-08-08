@@ -28,9 +28,12 @@ namespace Raven.Server.Utils
 
         public static bool IsOutOfDiskSpaceException(this Exception ioe)
         {
-            var expectedDiskFullError = PlatformDetails.RunningOnPosix ? (int)Errno.ENOSPC : (int)Win32NativeFileErrors.ERROR_DISK_FULL;
+            var expectedDiskFullError_Posix = (int)Errno.ENOSPC;
+            var expectedDiskFullError1_Win = (int)(Win32NativeFileErrors.ERROR_DISK_FULL);
+            var expectedDiskFullError2_Win = (int)(Win32NativeFileErrors.ERROR_HANDLE_DISK_FULL);
             var errorCode = PlatformDetails.RunningOnPosix ? ioe.HResult : ioe.HResult & 0xFFFF;
-            return errorCode == expectedDiskFullError;
+            return PlatformDetails.RunningOnPosix ? errorCode == expectedDiskFullError_Posix : 
+                                        errorCode == expectedDiskFullError1_Win || errorCode == expectedDiskFullError2_Win;
         }
 
         public static bool IsRavenDiskFullException(this Exception e)
