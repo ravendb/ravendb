@@ -16,7 +16,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUseLastModifiedInAutoIndex(Options options)
         {
             using (var store = GetDocumentStore(options))
