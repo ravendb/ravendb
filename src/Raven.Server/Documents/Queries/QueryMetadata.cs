@@ -592,10 +592,16 @@ namespace Raven.Server.Documents.Queries
                 switch (queryExpression)
                 {
                     case FieldExpression fe:
-                        if (Query.From.Alias != null)
-                            throw new InvalidOperationException($"Alias is not supported `include revisions(..)`.");
-
-                        revisionIncludes.AddRevision(fe.FieldValue);
+                        var fieldPath = fe.FieldValue;
+                        if (fe.Compound.Count > 1)
+                        {
+                            var alias = fe.Compound[0].Value;
+                            if (Query.From.Alias?.Value == alias)
+                            {
+                                fieldPath = fe.FieldValueWithoutAlias;
+                            }
+                        }
+                        revisionIncludes.AddRevision(fieldPath);
                         break;
 
                     case ValueExpression ve:

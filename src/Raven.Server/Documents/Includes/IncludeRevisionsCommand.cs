@@ -65,7 +65,7 @@ namespace Raven.Server.Documents.Includes
                   {
                       var bt = BlittableJsonTraverser.Default;
                       if (bt.TryRead(document.Data, path, out var singleOrMultipleCv, out var _) == false)
-                          continue;
+                        throw new InvalidOperationException($"Field `{path}` inside `include revisions(..)` is invalid.");
 
                       switch (singleOrMultipleCv)
                       {
