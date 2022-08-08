@@ -33,7 +33,7 @@ public class AnonymousCoraxDocumentConverter : CoraxDocumentConverterBase
         IPropertyAccessor accessor;
 
         if (_isMultiMap == false)
-            accessor = _propertyAccessor ??= PropertyAccessor.Create(documentToProcess.GetType(), documentToProcess, engineType: null);
+            accessor = _propertyAccessor ??= PropertyAccessor.Create(documentToProcess.GetType(), documentToProcess);
         else
             accessor = TypeConverter.GetPropertyAccessor(documentToProcess);
 

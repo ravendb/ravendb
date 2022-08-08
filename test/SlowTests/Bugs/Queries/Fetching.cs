@@ -1,6 +1,5 @@
 ﻿using FastTests;
 using Newtonsoft.Json;
-using System.Linq;
 using Newtonsoft.Json.Linq;
 using Raven.Client;
 using Xunit;

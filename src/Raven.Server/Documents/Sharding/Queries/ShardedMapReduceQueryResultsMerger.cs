@@ -67,7 +67,7 @@ public class ShardedMapReduceQueryResultsMerger
         IPropertyAccessor propertyAccessor = null;
         foreach (var output in reducingFunc(blittableToDynamicWrapper))
         {
-            propertyAccessor ??= PropertyAccessor.Create(output.GetType(), output, _indexesContext.JsEngineType);
+            propertyAccessor ??= PropertyAccessor.Create(output.GetType(), output);
             results.Add(output);
         }
 

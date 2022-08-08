@@ -1,5 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Exceptions.Sharding;
 using Raven.Tests.Core.Utils.Entities;

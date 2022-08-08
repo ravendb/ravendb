@@ -5,18 +5,15 @@ using System.Dynamic;
 using System.Linq;
 using Raven.Server.Utils;
 using Sparrow.Json;
-using Raven.Client.ServerWide.JavaScript;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
     public class DynamicDictionary : DynamicObject, IDictionary<object, object>, IEnumerable<object>
     {
-        protected readonly JavaScriptEngineType _jsEngineType;
         private readonly Dictionary<object, object> _dictionary;
 
-        public DynamicDictionary(JavaScriptEngineType jsEngineType, Dictionary<object, object> dictionary)
+        public DynamicDictionary(Dictionary<object, object> dictionary)
         {
-            _jsEngineType = jsEngineType;
             _dictionary = dictionary;
         }
 

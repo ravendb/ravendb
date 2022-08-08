@@ -8,7 +8,6 @@ using Microsoft.CodeAnalysis.Formatting;
 using Microsoft.Extensions.Primitives;
 using NCrontab.Advanced;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations.Migration;
 using Raven.Client.Util;

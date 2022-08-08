@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             }
 
             if (_index.OutputReduceToCollectionPropertyAccessor == null)
-                _index.OutputReduceToCollectionPropertyAccessor = PropertyAccessor.Create(reduceObject.GetType(), reduceObject, _database.Configuration.JavaScript.EngineType);
+                _index.OutputReduceToCollectionPropertyAccessor = PropertyAccessor.Create(reduceObject.GetType(), reduceObject);
 
             var reduceObjectJson = GenerateReduceOutput(reduceObject, stats, out string referenceDocumentId);
 

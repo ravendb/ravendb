@@ -578,12 +578,10 @@ namespace SlowTests.Client.TimeSeries
                     session.SaveChanges();
                 }
 
-                var count = 10_000;
-
                 using (var session = store.OpenSession())
                 {
                     var ts = session.IncrementalTimeSeriesFor("users/ayende", IncrementalTsName);
-                    for (int i = 0; i < count; i++)
+                    for (int i = 0; i < 10_000; i++)
                     {
                         ts.Increment(baseline.AddMinutes(i), i);
                     }
@@ -594,7 +592,7 @@ namespace SlowTests.Client.TimeSeries
                 {
                     var ts = session.IncrementalTimeSeriesFor("users/ayende", IncrementalTsName).Get();
 
-                    Assert.Equal(count, ts.Length);
+                    Assert.Equal(10_000, ts.Length);
                 }
             }
         }

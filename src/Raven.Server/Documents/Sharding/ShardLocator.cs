@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Sparrow.Json;
 using Voron;
 
 namespace Raven.Server.Documents.Sharding

@@ -45,7 +45,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             {
                 token.ThrowIfCancellationRequested();
                 if (_propertyAccessor == null)
-                    _propertyAccessor = PropertyAccessor.Create(output.GetType(), output, _engineType);
+                    _propertyAccessor = PropertyAccessor.Create(output.GetType(), output);
 
                 resultObjects.Add(output);
             }

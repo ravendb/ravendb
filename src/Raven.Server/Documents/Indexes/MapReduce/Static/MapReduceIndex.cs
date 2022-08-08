@@ -504,11 +504,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             private readonly bool _isMultiMap;
             private IPropertyAccessor _propertyAccessor;
             private readonly AbstractStaticIndexBase _compiledIndex;
-            protected readonly JavaScriptEngineType _engineType;
 
             public AnonymousObjectToBlittableMapResultsEnumerableWrapper(MapReduceIndex index, TransactionOperationContext indexContext)
             {
-                _engineType = index.DocumentDatabase.Configuration.JavaScript.EngineType;
                 _indexContext = indexContext;
                 _groupByFields = index.Definition.GroupByFields;
                 _isMultiMap = index.IsMultiMap;
@@ -574,9 +572,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                     {
                         IPropertyAccessor accessor;
                         if (_parent._isMultiMap == false)
-                            accessor = _parent._propertyAccessor ??= PropertyAccessor.CreateMapReduceOutputAccessor(output.GetType(), output, _groupByFields, _parent._engineType);
+                            accessor = _parent._propertyAccessor ??= PropertyAccessor.CreateMapReduceOutputAccessor(output.GetType(), output, _groupByFields);
                         else
-                            accessor = TypeConverter.GetPropertyAccessorForMapReduceOutput(output, _groupByFields, _parent._engineType);
+                            accessor = TypeConverter.GetPropertyAccessorForMapReduceOutput(output, _groupByFields);
 
                         _reduceKeyProcessor.Reset();
 

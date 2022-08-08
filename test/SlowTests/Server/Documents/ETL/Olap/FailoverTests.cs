@@ -1,5 +1,4 @@
-﻿using Tests.Infrastructure;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -16,6 +15,7 @@ using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.ServerWide;
 using Raven.Server;
 using Raven.Server.Documents.ETL;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 using static SlowTests.Issues.RavenDB_17096;

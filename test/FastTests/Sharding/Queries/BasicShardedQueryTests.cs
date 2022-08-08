@@ -1,5 +1,4 @@
-﻿using Tests.Infrastructure;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents;
@@ -11,6 +10,7 @@ using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Exceptions.Sharding;
 using Raven.Server.Documents.Sharding;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -464,7 +464,6 @@ order by o.Freight as {sortType}
                         .ToList();
 
                     Assert.Equal(4, queryResult.Count);
-                  //  WaitForUserToContinueTheTest(store);
                     Assert.Equal(0.3m, queryResult[0].Discount);
                     Assert.Equal(0.5m, queryResult[1].Discount);
                     Assert.Equal(0.2m, queryResult[2].Discount);

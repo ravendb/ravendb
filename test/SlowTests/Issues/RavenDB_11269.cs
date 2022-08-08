@@ -46,8 +46,8 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     var query = from o in session.Query<Order>()
-                                let employee = RavenQuery.Load<Employee>(o.Employee)
-                                select employee;
+	                            let employee = RavenQuery.Load<Employee>(o.Employee)
+	                            select employee;
 
                     Assert.Equal("from 'Orders' as o load o?.Employee as employee select employee", query.ToString());
 

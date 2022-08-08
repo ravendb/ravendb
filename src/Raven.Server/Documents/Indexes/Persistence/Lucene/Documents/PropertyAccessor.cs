@@ -23,7 +23,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         protected readonly List<KeyValuePair<string, Accessor>> _propertiesInOrder =
             new List<KeyValuePair<string, Accessor>>();
 
-        public static IPropertyAccessor Create(Type type, object instance, JavaScriptEngineType? engineType)
+        public static IPropertyAccessor Create(Type type, object instance)
         {
             if (instance is JsHandleJint jint)
             {
@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static IPropertyAccessor CreateMapReduceOutputAccessor(Type type, object instance, Dictionary<string, CompiledIndexField> groupByFields, JavaScriptEngineType engineType, bool isObjectInstance = false)
+        internal static IPropertyAccessor CreateMapReduceOutputAccessor(Type type, object instance, Dictionary<string, CompiledIndexField> groupByFields, bool isObjectInstance = false)
         {
             if(instance is JsHandleJint jint)
             {

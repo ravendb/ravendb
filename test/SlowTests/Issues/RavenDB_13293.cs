@@ -1,5 +1,4 @@
-﻿using Tests.Infrastructure;
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -22,6 +21,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Server;
 using Raven.Server.Config;
 using SlowTests.Rolling;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

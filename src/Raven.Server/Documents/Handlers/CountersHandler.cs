@@ -13,7 +13,6 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions.Documents;
-using Raven.Client.Exceptions.Documents.Counters;
 using Raven.Client.Json.Serialization;
 using Raven.Server.Documents.Handlers.Processors.Counters;
 using Raven.Server.Routing;

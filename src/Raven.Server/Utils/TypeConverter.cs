@@ -869,22 +869,22 @@ namespace Raven.Server.Utils
             var type = value.GetType();
 
             if (value is Dictionary<string, object>) // don't use cache when using dictionaries
-                return PropertyAccessor.Create(type, value, engineType: null);
+                return PropertyAccessor.Create(type, value);
 
-            return PropertyAccessorCache.GetOrAdd(type, x => PropertyAccessor.Create(type, value, engineType: null));
+            return PropertyAccessorCache.GetOrAdd(type, x => PropertyAccessor.Create(type, value));
         }
 
-        public static IPropertyAccessor GetPropertyAccessorForMapReduceOutput(object value, Dictionary<string, CompiledIndexField> groupByFields, JavaScriptEngineType engineType)
+        public static IPropertyAccessor GetPropertyAccessorForMapReduceOutput(object value, Dictionary<string, CompiledIndexField> groupByFields)
         {
             var type = value.GetType();
             //TODO: egor check this!
             if (typeof(IObjectInstance<>).IsAssignableFrom(type)) // We don't cache JS types
-                return PropertyAccessor.CreateMapReduceOutputAccessor(type, value, groupByFields, engineType, isObjectInstance: true);
+                return PropertyAccessor.CreateMapReduceOutputAccessor(type, value, groupByFields, isObjectInstance: true);
 
             if (value is Dictionary<string, object>) // don't use cache when using dictionaries
-                return PropertyAccessor.Create(type, value, engineType);
+                return PropertyAccessor.Create(type, value);
 
-            return PropertyAccessorForMapReduceOutputCache.GetOrAdd(type, x => PropertyAccessor.CreateMapReduceOutputAccessor(type, value, groupByFields, engineType));
+            return PropertyAccessorForMapReduceOutputCache.GetOrAdd(type, x => PropertyAccessor.CreateMapReduceOutputAccessor(type, value, groupByFields));
         }
 
 

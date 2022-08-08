@@ -31,7 +31,6 @@ using Raven.Client.ServerWide.Operations.Migration;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Client.Util;
 using Raven.Server.Config;
-using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes.Auto;
@@ -57,7 +56,6 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server;
 using Voron.Util.Settings;
-using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
 using Index = Raven.Server.Documents.Indexes.Index;
 using Size = Sparrow.Size;
 
