@@ -66,6 +66,7 @@
         "imports-loader": "^4.0.0",
         "jest": "^28.1.3",
         "jest-cli": "^28.1.3",
+        "jest-environment-jsdom": "^28.1.3",
         "jest-extended": "^3.0.1",
         "jest-junit": "^14.0.0",
         "less": "^3.7.1",
