@@ -324,7 +324,7 @@ namespace Raven.Client.Documents.Queries
             }
         }
 
-        private void Write(BlittableJsonReaderObject json)
+        internal void Write(BlittableJsonReaderObject json)
         {
             _buffer.Write(json.BasePointer, json.Size);
         }

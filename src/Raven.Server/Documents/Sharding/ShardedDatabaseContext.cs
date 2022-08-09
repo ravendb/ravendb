@@ -88,8 +88,6 @@ namespace Raven.Server.Documents.Sharding
 
         public string DatabaseName => _record.DatabaseName;
 
-        public int NumberOfShardNodes => _record.Sharding.Shards.Length;
-
         public char IdentityPartsSeparator => _record.Client?.IdentityPartsSeparator ?? Constants.Identities.DefaultSeparator;
 
         public bool Encrypted => _record.Encrypted;
