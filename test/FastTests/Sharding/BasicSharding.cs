@@ -157,7 +157,7 @@ namespace FastTests.Sharding
             }
         }
 
-        [RavenFact(RavenTestCategory.Patching | RavenTestCategory.Sharding, Skip = "Fix includes RavenDB-19125")]
+        [RavenFact(RavenTestCategory.Patching | RavenTestCategory.Sharding)]
         public void CanPatch()
         {
             using (var store = Sharding.GetDocumentStore())
@@ -196,7 +196,7 @@ namespace FastTests.Sharding
             }
         }
         
-        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Sharding, Skip = "Fix includes RavenDB-19125")]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Sharding)]
         public async Task CanPutAndGetMultipleItemsWithIncludes()
         {
             using (var store = Sharding.GetDocumentStore())

@@ -266,7 +266,7 @@ namespace FastTests.Client
             }
         }
 
-        [RavenTheory(RavenTestCategory.Querying, Skip = "Fix includes RavenDB-19125")]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void Can_Include_By_Primary_List_Of_Strings_Using_IIncludeBuilder(Options options)
         {
