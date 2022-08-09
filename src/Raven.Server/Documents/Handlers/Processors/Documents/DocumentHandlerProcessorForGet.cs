@@ -93,7 +93,7 @@ internal class DocumentHandlerProcessorForGet : AbstractDocumentHandlerProcessor
             includeCompareExchangeValues?.Gather(document);
         }
 
-        includeDocs.Fill(includes, RequestHandler.GetBoolFromHeaders(Constants.Headers.Sharded) ?? false);
+        includeDocs.Fill(includes, includeMissingAsNull: false);
         includeCompareExchangeValues?.Materialize();
 
         var actualEtag = ComputeHttpEtags.ComputeEtagForDocuments(documents, includes, includeCounters, includeTimeSeries, includeCompareExchangeValues);
