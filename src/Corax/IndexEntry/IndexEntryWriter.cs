@@ -164,7 +164,10 @@ public unsafe partial struct IndexEntryWriter : IDisposable
         if (entry.Geohash.Length == 0)
             return;
 
-        int requiredSpace = sizeof(IndexEntryFieldType) + entry.Geohash.Length + 4 * sizeof(long);
+        // Since Geohashes are ASCII characters, the total required space is exactly the length
+        int maxGeohashLength = entry.Geohash.Length;
+        
+        int requiredSpace = sizeof(IndexEntryFieldType) + maxGeohashLength + 4 * sizeof(long);
         if (FreeSpace < requiredSpace)
             UnlikelyGrowAuxiliaryBuffer(requiredSpace);
 
@@ -186,17 +189,13 @@ public unsafe partial struct IndexEntryWriter : IDisposable
         Unsafe.WriteUnaligned(ref buffer[dataLocation], entry.Longitude);
         dataLocation += sizeof(double);
 
-        // Copy the actual string data.
-        dataLocation += VariableSizeEncoding.Write(buffer, (byte)entry.Geohash.Length, dataLocation);
-
-        int geohashLength = entry.Geohash.Length;
-        Span<byte> encodedGeohash = Encodings.Utf8.GetBytes(entry.Geohash);
-        encodedGeohash.CopyTo(buffer.Slice(dataLocation, geohashLength));
-
+        // Copy the actual geohash data and since they are ASCII characters we can know beforehand the size.
+        dataLocation += VariableSizeEncoding.Write(buffer, maxGeohashLength, dataLocation);
+        int geohashLength = Encodings.Utf8.GetBytes(entry.Geohash.AsSpan(), buffer.Slice(dataLocation, maxGeohashLength));
         _dataIndex = dataLocation + geohashLength;
     }
 
-    public void WriteSpatial(int field, ReadOnlySpan<CoraxSpatialPointEntry> entries, int geohashLevel = SpatialUtils.DefaultGeohashLevel)
+    public void WriteSpatial(int field, ReadOnlySpan<CoraxSpatialPointEntry> entries)
     {
         //<type:byte><extended_type:byte><amount_of_items:int><geohashLevel:int><geohash_ptr:int>
         //<longitudes_ptr:int><latitudes_list:double[]><longtitudes_list:double[]><geohashes_list:bytes[]>
@@ -208,8 +207,13 @@ public unsafe partial struct IndexEntryWriter : IDisposable
 
         // Since Geohashes are ASCII characters, the total required space is exactly the length
         int requiredSpace = 0;
+        int maxGeohashLength = 0;
         foreach (var entry in entries)
-            requiredSpace += entry.Geohash.Length;
+        {
+            int geohashLength = entry.Geohash.Length;
+            requiredSpace += geohashLength;
+            maxGeohashLength = Math.Max(maxGeohashLength, geohashLength);
+        }
 
         // We are calculating the space based on the necessary space needed to storage the geohashes values in doubles.
         requiredSpace += sizeof(IndexEntryFieldType) + 2 * entries.Length * sizeof(double) + 4 * sizeof(long);
@@ -232,31 +236,32 @@ public unsafe partial struct IndexEntryWriter : IDisposable
         
         dataLocation += VariableSizeEncoding.Write(buffer, entries.Length, dataLocation); // Size of list.
 
-        dataLocation += VariableSizeEncoding.Write(buffer, geohashLevel, dataLocation); // geohash lvl
+        dataLocation += VariableSizeEncoding.Write(buffer, maxGeohashLength, dataLocation); // geohash lvl
 
+        // We reserve the space for the pointers to the geohashes and longitudes locations.
         ref int geohashPtrTableLocation = ref Unsafe.AsRef<int>(Unsafe.AsPointer(ref buffer[dataLocation]));
         dataLocation += sizeof(int);
-
         ref int longitudesPtrLocation = ref Unsafe.AsRef<int>(Unsafe.AsPointer(ref buffer[dataLocation]));
         dataLocation += sizeof(int);
 
+        // Then we immediately start with writing down the latitudes.
         var latitudesList = MemoryMarshal.Cast<byte, double>(buffer.Slice(dataLocation, entries.Length * sizeof(double)));
-        for (int i = 0; i < entries.Length; ++i)
-            latitudesList[i] = entries[i].Latitude;
         dataLocation += entries.Length * sizeof(double);
-
-        longitudesPtrLocation = dataLocation;
+        
+        longitudesPtrLocation = dataLocation; // We write the current location.
         var longitudesList = MemoryMarshal.Cast<byte, double>(buffer.Slice(dataLocation, entries.Length * sizeof(double)));
-        for (int i = 0; i < entries.Length; ++i)
-            longitudesList[i] = entries[i].Longitude;
         dataLocation += entries.Length * sizeof(double);
 
-        geohashPtrTableLocation = dataLocation;
+        geohashPtrTableLocation = dataLocation; // We write the current location.
         for (int i = 0; i < entries.Length; ++i)
         {
-            var geohashBytes = Encodings.Utf8.GetBytes(entries[i].Geohash);
-            geohashBytes.CopyTo(buffer[dataLocation..]);
-            dataLocation += geohashLevel;
+            ref var entry = ref Unsafe.AsRef(entries[i]);
+            latitudesList[i] = entry.Latitude;
+            longitudesList[i] = entry.Longitude;
+
+            int writtenBytes = Encodings.Utf8.GetBytes(entry.Geohash.AsSpan(), buffer.Slice(dataLocation, maxGeohashLength));
+            Debug.Assert(writtenBytes == maxGeohashLength, "If this assumption does not hold, we are wasting space.");
+            dataLocation += maxGeohashLength;
         }
 
         _dataIndex = dataLocation;
