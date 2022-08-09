@@ -52,9 +52,9 @@ namespace Raven.Server.Documents.Replication
 
         public event Action<IncomingReplicationHandler> IncomingReplicationRemoved;
 
-        public event Action<DatabaseOutgoingReplicationHandlerBase> OutgoingReplicationAdded;
+        public event Action<DatabaseOutgoingReplicationHandler> OutgoingReplicationAdded;
 
-        public event Action<DatabaseOutgoingReplicationHandlerBase> OutgoingReplicationRemoved;
+        public event Action<DatabaseOutgoingReplicationHandler> OutgoingReplicationRemoved;
 
         internal ManualResetEventSlim DebugWaitAndRunReplicationOnce;
         internal readonly int MinimalHeartbeatInterval;
@@ -64,7 +64,7 @@ namespace Raven.Server.Documents.Replication
 
         public ResolveConflictOnReplicationConfigurationChange ConflictResolver;
 
-        private readonly ConcurrentSet<DatabaseOutgoingReplicationHandlerBase> _outgoing = new ConcurrentSet<DatabaseOutgoingReplicationHandlerBase>();
+        private readonly ConcurrentSet<DatabaseOutgoingReplicationHandler> _outgoing = new ConcurrentSet<DatabaseOutgoingReplicationHandler>();
         private readonly ConcurrentDictionary<ReplicationNode, ConnectionShutdownInfo> _outgoingFailureInfo = new ConcurrentDictionary<ReplicationNode, ConnectionShutdownInfo>();
         private readonly ConcurrentSet<ConnectionShutdownInfo> _reconnectQueue = new ConcurrentSet<ConnectionShutdownInfo>();
         private readonly ConcurrentDictionary<IncomingConnectionInfo, DateTime> _incomingLastActivityTime = new ConcurrentDictionary<IncomingConnectionInfo, DateTime>();
@@ -81,7 +81,7 @@ namespace Raven.Server.Documents.Replication
         private readonly ConcurrentDictionary<ReplicationNode, LastEtagPerDestination> _lastSendEtagPerDestination = new ConcurrentDictionary<ReplicationNode, LastEtagPerDestination>();
 
         public IEnumerable<ReplicationNode> OutgoingConnections => _outgoing.Select(x => x.Node);
-        public IEnumerable<DatabaseOutgoingReplicationHandlerBase> OutgoingHandlers => _outgoing;
+        public IEnumerable<DatabaseOutgoingReplicationHandler> OutgoingHandlers => _outgoing;
         public IEnumerable<ReplicationNode> ReconnectQueue => _reconnectQueue.Select(x => x.Node);
         public IReadOnlyDictionary<ReplicationNode, ConnectionShutdownInfo> OutgoingFailureInfo => _outgoingFailureInfo;
 
@@ -466,7 +466,7 @@ namespace Raven.Server.Documents.Replication
             TcpConnectionOptions tcpConnectionOptions,
             JsonOperationContext.MemoryBuffer buffer,
             PullReplicationAsSink destination,
-            DatabaseOutgoingReplicationHandlerBase source)
+            DatabaseOutgoingReplicationHandler source)
         {
             using (source)
             {
@@ -559,7 +559,7 @@ namespace Raven.Server.Documents.Replication
 
             try
             {
-                DatabaseOutgoingReplicationHandlerBase outgoingReplication = GetOutgoingReplicationHandlerInstance(info, node);
+                DatabaseOutgoingReplicationHandler outgoingReplication = GetOutgoingReplicationHandlerInstance(info, node);
 
                 if (outgoingReplication == null)
                     return;
@@ -1055,7 +1055,7 @@ namespace Raven.Server.Documents.Replication
                         {
                             switch (instance)
                             {
-                                case DatabaseOutgoingReplicationHandlerBase outHandler:
+                                case DatabaseOutgoingReplicationHandler outHandler:
                                     _logger.Info($"Failed to dispose outgoing replication to {outHandler.DestinationFormatted}", e);
                                     break;
 
@@ -1468,12 +1468,12 @@ namespace Raven.Server.Documents.Replication
             return null;
         }
 
-        private DatabaseOutgoingReplicationHandlerBase GetOutgoingReplicationHandlerInstance(TcpConnectionInfo info, ReplicationNode node)
+        private DatabaseOutgoingReplicationHandler GetOutgoingReplicationHandlerInstance(TcpConnectionInfo info, ReplicationNode node)
         {
             if (Database == null)
                 return null;
 
-            DatabaseOutgoingReplicationHandlerBase outgoingReplication;
+            DatabaseOutgoingReplicationHandler outgoingReplication;
 
             switch (node)
             {
@@ -1628,7 +1628,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private void OnOutgoingSendingFailed(DatabaseOutgoingReplicationHandlerBase instance, Exception e)
+        private void OnOutgoingSendingFailed(DatabaseOutgoingReplicationHandler instance, Exception e)
         {
             using (instance)
             {
@@ -1658,7 +1658,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private void UpdateLastEtag(DatabaseOutgoingReplicationHandlerBase instance)
+        private void UpdateLastEtag(DatabaseOutgoingReplicationHandler instance)
         {
             var etagPerDestination = _lastSendEtagPerDestination.GetOrAdd(
                 instance.Node,
@@ -1670,7 +1670,7 @@ namespace Raven.Server.Documents.Replication
             Interlocked.Exchange(ref etagPerDestination.LastEtag, instance._lastSentDocumentEtag);
         }
 
-        private void OnOutgoingSendingSucceeded(DatabaseOutgoingReplicationHandlerBase instance)
+        private void OnOutgoingSendingSucceeded(DatabaseOutgoingReplicationHandler instance)
         {
             UpdateLastEtag(instance);
 
@@ -1680,7 +1680,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private void ResetReplicationFailuresInfo(DatabaseOutgoingReplicationHandlerBase instance)
+        private void ResetReplicationFailuresInfo(DatabaseOutgoingReplicationHandler instance)
         {
             if (_outgoingFailureInfo.TryGetValue(instance.Node, out ConnectionShutdownInfo failureInfo))
                 failureInfo.Reset();
@@ -1933,7 +1933,7 @@ namespace Raven.Server.Documents.Replication
 
         internal class TestingStuff
         {
-            public Action<DatabaseOutgoingReplicationHandlerBase> OnOutgoingReplicationStart;
+            public Action<DatabaseOutgoingReplicationHandler> OnOutgoingReplicationStart;
         }
     }
 

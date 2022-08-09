@@ -35,7 +35,7 @@ namespace Raven.Server.Documents.Replication.Senders
         private readonly Dictionary<Slice, AttachmentReplicationItem> _replicaAttachmentStreams = new Dictionary<Slice, AttachmentReplicationItem>(SliceComparer.Instance);
         private readonly byte[] _tempBuffer = new byte[32 * 1024];
         private readonly Stream _stream;
-        internal readonly DatabaseOutgoingReplicationHandlerBase _parent;
+        internal readonly DatabaseOutgoingReplicationHandler _parent;
         private OutgoingReplicationStatsScope _statsInstance;
         protected readonly ReplicationStats _stats = new ReplicationStats();
         public bool MissingAttachmentsInLastBatch { get; private set; }
@@ -44,7 +44,7 @@ namespace Raven.Server.Documents.Replication.Senders
         private readonly int _numberOfAttachmentsTrackedForDeduplication;
         private readonly ByteStringContext _context; // required to clone the hashes 
 
-        protected ReplicationDocumentSenderBase(Stream stream, DatabaseOutgoingReplicationHandlerBase parent, Logger log)
+        protected ReplicationDocumentSenderBase(Stream stream, DatabaseOutgoingReplicationHandler parent, Logger log)
         {
             Log = log;
             _stream = stream;

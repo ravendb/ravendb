@@ -97,8 +97,16 @@ namespace Raven.Server.Documents.Sharding.Handlers
             catch (Exception e)
             {
                 batch?.BatchSent.TrySetException(e);
+                try
+                {
+                    _tcpConnectionOptions.Dispose();
+                }
+                catch
+                {
+                    // nothing we can do
+                }
+                
                 throw;
-                //TODO: is the connection still alive, need to abort?
             }
         }
 
