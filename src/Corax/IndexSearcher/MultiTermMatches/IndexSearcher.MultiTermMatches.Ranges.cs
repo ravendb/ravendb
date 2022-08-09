@@ -34,6 +34,7 @@ public partial class IndexSearcher
                 //(x, y>
                 (UnaryMatchOperation.GreaterThan, UnaryMatchOperation.LessThanOrEqual) => RangeBuilder<TScoreFunction, Range.Exclusive, Range.Inclusive>(names.FieldName,
                     names.NumericTree, (long)(object)low, (long)(object)high, scoreFunction, isNegated),
+                _ => throw new ArgumentOutOfRangeException($"Unknown operation at {nameof(BetweenQuery)}.")
             };
         }
 
@@ -56,6 +57,8 @@ public partial class IndexSearcher
                 //(x, y>
                 (UnaryMatchOperation.GreaterThan, UnaryMatchOperation.LessThanOrEqual) => RangeBuilder<TScoreFunction, Range.Exclusive, Range.Inclusive>(names.FieldName,
                     names.NumericTree, (double)(object)low, (double)(object)high, scoreFunction, isNegated),
+                _ => throw new ArgumentOutOfRangeException($"Unknown operation at {nameof(BetweenQuery)}.")
+
             };
         }
 
@@ -81,22 +84,14 @@ public partial class IndexSearcher
                 //(x, y>
                 (UnaryMatchOperation.GreaterThan, UnaryMatchOperation.LessThanOrEqual) => RangeBuilder<TScoreFunction, Range.Exclusive, Range.Inclusive>(names.FieldName,
                     leftValue, rightValue, scoreFunction, isNegated),
+
+                _ => throw new ArgumentOutOfRangeException($"Unknown operation at {nameof(BetweenQuery)}.")
             };
         }
 
         throw new ArgumentException($"{typeof(TValue)} is not supported in {nameof(BetweenQuery)}");
     }
-    //
-    // [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    // public MultiTermMatch CreateRangeQuery<TValue, TScoreFunction>(string field, TValue value, TScoreFunction scoreFunction = default, bool isNegated = false,
-    //     int fieldId = Constants.IndexSearcher.NonAnalyzer)         where TScoreFunction : IQueryScoreFunction
-    //
-    // {
-    //     MultiTermMatch.Create(
-    //         MultiTermBoostingMatch<EndsWithTermProvider>.Create(
-    //             this, new EndsWithTermProvider(this, _transaction.Allocator, terms, fieldName, fieldId, slicedTerm), scoreFunction))
-    // }
-
+    
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public MultiTermMatch GreaterThanQuery<TValue, TScoreFunction>(string field, TValue value, TScoreFunction scoreFunction = default, bool isNegated = false,
         int fieldId = Constants.IndexSearcher.NonAnalyzer)

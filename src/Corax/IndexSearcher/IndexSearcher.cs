@@ -40,8 +40,8 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
     private readonly bool _ownsTransaction;
 
-    private Tree _metadataTree; 
-    
+    private Tree _metadataTree;
+
     // The reason why we want to have the transaction open for us is so that we avoid having
     // to explicitly provide the index searcher with opening semantics and also every new
     // searcher becomes essentially a unit of work which makes reusing assets tracking more explicit.
@@ -120,18 +120,6 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         if (term == Constants.NullValue)
             return Constants.NullValueSlice;
 
-<<<<<<< HEAD
-        ApplyAnalyzer(term, fieldId, out var encodedTerm); 
-        return encodedTerm;
-    }
-    
-    internal ByteStringContext<ByteStringMemoryCache>.InternalScope ApplyAnalyzer(string originalTerm, int fieldId, out Slice value)
-=======
-<<<<<<< HEAD
-        var encoded = Encoding.UTF8.GetBytes(term);
-        Slice termSlice;
-        if (fieldId == Constants.IndexSearcher.NonAnalyzer)
-=======
         ApplyAnalyzer(term, fieldId, out var encodedTerm);
         return encodedTerm;
     }
@@ -141,68 +129,18 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         if (_fieldMapping.TryGetByFieldId(fieldId, out var binding) == false
             || binding.FieldIndexingMode is FieldIndexingMode.Exact or FieldIndexingMode.Search
             || binding.Analyzer is null)
->>>>>>> 6bbf268c08 (RavenDB-18852 Integration of RangeQueries)
-        {
-            Slice.From(Allocator, encoded, out termSlice);
-            return termSlice;
-        }
-
-        Slice.From(Allocator, ApplyAnalyzer(encoded, fieldId), out termSlice);
-        return termSlice;
-    }
-<<<<<<< HEAD
-
-    //todo maciej: notice this is very inefficient. We need to improve it in future. 
-    // Only for KeywordTokenizer
-=======
-
-    internal ByteStringContext<ByteStringMemoryCache>.InternalScope ApplyAnalyzer(ReadOnlySpan<byte> originalTerm, int fieldId, out Slice value)
-    {
-        if (_fieldMapping.TryGetByFieldId(fieldId, out var binding) == false
-            || binding.FieldIndexingMode is FieldIndexingMode.Exact or FieldIndexingMode.Search
-            || binding.Analyzer is null)
         {
             var disposable = Slice.From(Allocator, originalTerm, ByteStringType.Immutable, out var originalTermSliced);
             value = originalTermSliced;
             return disposable;
         }
-
-        return AnalyzeTerm(binding, originalTerm, fieldId, out value);
-    }
-
->>>>>>> 6bbf268c08 (RavenDB-18852 Integration of RangeQueries)
-    [SkipLocalsInit]
-    internal unsafe ReadOnlySpan<byte> ApplyAnalyzer(ReadOnlySpan<byte> originalTerm, int fieldId)
->>>>>>> 6c938dfd8d (RavenDB-18852 Integration of RangeQueries)
-    {
-        if (_fieldMapping.TryGetByFieldId(fieldId, out var binding) == false
-            || binding.FieldIndexingMode is FieldIndexingMode.Exact or FieldIndexingMode.Search
-            || binding.Analyzer is null)
-        {
-<<<<<<< HEAD
-            var disposable = Slice.From(Allocator, originalTerm, ByteStringType.Immutable, out var originalTermSliced);
-            value = originalTermSliced;
-            return disposable;
-=======
-<<<<<<< HEAD
-            return originalTerm;
->>>>>>> 6c938dfd8d (RavenDB-18852 Integration of RangeQueries)
-        }
-=======
-            value = originalTerm;
-            return default;
-        }
-
-        return AnalyzeTerm(binding, originalTerm.AsSpan(), fieldId, out value);
-    }
->>>>>>> 6bbf268c08 (RavenDB-18852 Integration of RangeQueries)
 
         using (Slice.From(Allocator, originalTerm, ByteStringType.Immutable, out var originalTermSliced))
         {
             return AnalyzeTerm(binding, originalTermSliced, fieldId, out value);
         }
     }
-    
+
     internal ByteStringContext<ByteStringMemoryCache>.InternalScope ApplyAnalyzer(ReadOnlySpan<byte> originalTerm, int fieldId, out Slice value)
     {
         if (_fieldMapping.TryGetByFieldId(fieldId, out var binding) == false
@@ -216,7 +154,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
         return AnalyzeTerm(binding, originalTerm, fieldId, out value);
     }
-    
+
     [SkipLocalsInit]
     internal ByteStringContext<ByteStringMemoryCache>.InternalScope ApplyAnalyzer(Slice originalTerm, int fieldId, out Slice value)
     {
@@ -224,10 +162,10 @@ public sealed unsafe partial class IndexSearcher : IDisposable
             || binding.FieldIndexingMode is FieldIndexingMode.Exact or FieldIndexingMode.Search
             || binding.Analyzer is null)
         {
-            value =  originalTerm;
+            value = originalTerm;
             return default;
         }
-        
+
         return AnalyzeTerm(binding, originalTerm.AsSpan(), fieldId, out value);
     }
 

@@ -255,14 +255,9 @@ namespace FastTests.Corax
         {
             entryWriter.Write(IndexId, Encoding.UTF8.GetBytes(entry.Id));
             entryWriter.Write(LongValue, Encoding.UTF8.GetBytes(entry.LongValue.ToString()), entry.LongValue, entry.LongValue);
-<<<<<<< HEAD
-            return entryWriter.Finish(out output);
-=======
             entryWriter.Write(DoubleValue, Encoding.UTF8.GetBytes(entry.DoubleValue.ToString()), (long)entry.DoubleValue, entry.DoubleValue);
             entryWriter.Write(TextualValue, Encodings.Utf8.GetBytes(entry.TextualValue));
-            entryWriter.Finish(out output);
-            return output;
->>>>>>> 99b6517930 (RavenDB-18852 Initial work on MergedUnaryMatch)
+            return entryWriter.Finish(out output);
         }
 
         private IndexFieldsMapping CreateKnownFields(ByteStringContext ctx)
