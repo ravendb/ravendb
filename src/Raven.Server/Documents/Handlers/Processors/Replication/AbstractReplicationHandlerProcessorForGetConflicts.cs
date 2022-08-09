@@ -53,7 +53,8 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
                     array.Add(new DynamicJsonValue
                     {
                         [nameof(GetConflictsPreviewResult.ConflictPreview.Id)] = conflict.Id,
-                        [nameof(GetConflictsPreviewResult.ConflictPreview.LastModified)] = conflict.LastModified
+                        [nameof(GetConflictsPreviewResult.ConflictPreview.LastModified)] = conflict.LastModified,
+                        [nameof(GetConflictsPreviewResult.ConflictPreview.ConflictsPerDocument)] = conflict.ConflictsPerDocument
                     });
                 }
 

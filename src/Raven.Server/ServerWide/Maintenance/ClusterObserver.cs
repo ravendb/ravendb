@@ -11,6 +11,7 @@ using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Exceptions;
+using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
@@ -40,7 +41,7 @@ namespace Raven.Server.ServerWide.Maintenance
         private readonly ClusterMaintenanceSupervisor _maintenance;
         private readonly string _nodeTag;
         private readonly RachisConsensus<ClusterStateMachine> _engine;
-        private readonly TransactionContextPool _contextPool;
+        private readonly ClusterContextPool _contextPool;
         private readonly Logger _logger;
 
         private readonly TimeSpan _supervisorSamplePeriod;
@@ -60,7 +61,7 @@ namespace Raven.Server.ServerWide.Maintenance
             ClusterMaintenanceSupervisor maintenance,
             RachisConsensus<ClusterStateMachine> engine,
             long term,
-            TransactionContextPool contextPool,
+            ClusterContextPool contextPool,
             CancellationToken token)
         {
             _maintenance = maintenance;
@@ -184,20 +185,22 @@ namespace Raven.Server.ServerWide.Maintenance
 
         private async Task AnalyzeLatestStats(
             Dictionary<string, ClusterNodeStatusReport> newStats,
-            Dictionary<string, ClusterNodeStatusReport> prevStats
-            )
+            Dictionary<string, ClusterNodeStatusReport> prevStats)
         {
             var currentLeader = _engine.CurrentLeader;
             if (currentLeader == null)
                 return;
 
             var updateCommands = new List<(UpdateTopologyCommand Update, string Reason)>();
+            var cleanUnusedAutoIndexesCommands = new List<(UpdateDatabaseCommand Update, string Reason)>();
+            var cleanCompareExchangeTombstonesCommands = new List<CleanCompareExchangeTombstonesCommand>();
+
             Dictionary<string, long> cleanUpState = null;
             List<DeleteDatabaseCommand> deletions = null;
 
             List<string> databases;
 
-            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (_contextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
             {
                 databases = _engine.StateMachine.GetDatabaseNames(context).ToList();
@@ -210,7 +213,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
             foreach (var database in databases)
             {
-                using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (_contextPool.AllocateOperationContext(out ClusterOperationContext context))
                 using (context.OpenReadTransaction())
                 {
                     var clusterTopology = _server.GetClusterTopology(context);
@@ -283,32 +286,40 @@ namespace Raven.Server.ServerWide.Maintenance
                         var cleanUp = mergedState.States.Min(s => CleanUpDatabaseValues(s) ?? -1);
                         if (cleanUp > 0)
                         {
-                            if (cleanUpState == null)
-                                cleanUpState = new Dictionary<string, long>();
-
+                            cleanUpState ??= new Dictionary<string, long>();
                             cleanUpState.Add(database, cleanUp);
                         }
 
                         if (cleanupIndexes)
-                            await CleanUpUnusedAutoIndexes(database, mergedState);
+                        {
+                            foreach (var state in mergedState.States)
+                            {
+                                var cleanupCommandsForDatabase = GetUnusedAutoIndexes(state);
+                                cleanUnusedAutoIndexesCommands.AddRange(cleanupCommandsForDatabase);
+                            }
+                        }
 
                         if (cleanupTombstones)
                         {
-                            var cleanupState = await CleanUpCompareExchangeTombstones(database, mergedState, context);
-                            switch (cleanupState)
+                            foreach (var state in mergedState.States)
                             {
-                                case CompareExchangeTombstonesCleanupState.HasMoreTombstones:
-                                case CompareExchangeTombstonesCleanupState.InvalidDatabaseObservationState:
-                                    _hasMoreTombstones = true;
-                                    break;
+                                var cmd = GetCompareExchangeTombstonesToCleanup(state.Name, state, context, out var cleanupState);
+                                switch (cleanupState)
+                                {
+                                    case CompareExchangeTombstonesCleanupState.InvalidDatabaseObservationState:
+                                        _hasMoreTombstones = true;
+                                        break;
+                                    case CompareExchangeTombstonesCleanupState.HasMoreTombstones:
+                                        Debug.Assert(cmd != null);
+                                        cleanCompareExchangeTombstonesCommands.Add(cmd);
+                                        break;
+                                    case CompareExchangeTombstonesCleanupState.InvalidPeriodicBackupStatus:
+                                    case CompareExchangeTombstonesCleanupState.NoMoreTombstones:
+                                        break;
 
-                                case CompareExchangeTombstonesCleanupState.InvalidPeriodicBackupStatus:
-                                case CompareExchangeTombstonesCleanupState.NoMoreTombstones:
-                                    _hasMoreTombstones |= false;
-                                    break;
-
-                                default:
-                                    throw new NotSupportedException($"Not supported state: '{cleanupState}'.");
+                                    default:
+                                        throw new NotSupportedException($"Not supported state: '{cleanupState}'.");
+                                } 
                             }
                         }
                     }
@@ -316,19 +327,35 @@ namespace Raven.Server.ServerWide.Maintenance
             }
 
             if (cleanupIndexes)
-                _lastIndexCleanupTimeInTicks = now.Ticks;
+            {
+                foreach (var (cmd, updateReason) in cleanUnusedAutoIndexesCommands)
+                {
+                    await _engine.PutAsync(cmd);
+                    AddToDecisionLog(cmd.DatabaseName, updateReason);
+                }
 
-            if (cleanupTombstones && _hasMoreTombstones == false)
-                _lastTombstonesCleanupTimeInTicks = now.Ticks;
+                _lastIndexCleanupTimeInTicks = now.Ticks;
+            }
+
+            if (cleanupTombstones)
+            {
+                foreach (var cmd in cleanCompareExchangeTombstonesCommands)
+                {
+                    var result = await _server.SendToLeaderAsync(cmd);
+                    await _server.Cluster.WaitForIndexNotification(result.Index);
+                    var hasMore = (bool)result.Result;
+
+                    _hasMoreTombstones |= hasMore;
+                }
+
+                if (_hasMoreTombstones == false)
+                    _lastTombstonesCleanupTimeInTicks = now.Ticks;
+            }
 
             if (cleanupExpiredCompareExchange)
             {
-                using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
-                using (context.OpenReadTransaction())
-                {
-                    if (await RemoveExpiredCompareExchange(context, now.Ticks) == false)
-                        _lastExpiredCompareExchangeCleanupTimeInTicks = now.Ticks;
-                }
+                if (await RemoveExpiredCompareExchange(now.Ticks) == false)
+                    _lastExpiredCompareExchangeCleanupTimeInTicks = now.Ticks;
             }
 
             foreach (var command in updateCommands)
@@ -345,7 +372,7 @@ namespace Raven.Server.ServerWide.Maintenance
                     );
                     NotificationCenter.Add(alert);
                 }
-                catch (ConcurrencyException)
+                catch (Exception e) when (e.ExtractSingleInnerException() is ConcurrencyException)
                 {
                     // this is sort of expected, if the database was
                     // modified by someone else, we'll avoid changing
@@ -360,7 +387,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 foreach (var command in deletions)
                 {
                     AddToDecisionLog(command.DatabaseName,
-                         $"We reached the replication factor on '{command.DatabaseName}', so we try to remove promotables/rehabs from: {string.Join(", ", command.FromNodes)}");
+                        $"We reached the replication factor on '{command.DatabaseName}', so we try to remove promotables/rehabs from: {string.Join(", ", command.FromNodes)}");
 
                     await Delete(command);
                 }
@@ -474,87 +501,29 @@ namespace Raven.Server.ServerWide.Maintenance
             return hash.ToString("X");
         }
 
-        internal async Task CleanUpUnusedAutoIndexes(string database, MergedDatabaseObservationState databaseState)
+        internal List<(UpdateDatabaseCommand Update, string Reason)> GetUnusedAutoIndexes(DatabaseObservationState databaseState)
         {
+            const string autoIndexPrefix = "Auto/";
+            var cleanupCommands = new List<(UpdateDatabaseCommand Update, string Reason)>();
+
+            if (AllDatabaseNodesHasReport(databaseState) == false)
+                return cleanupCommands;
+
             var indexes = new Dictionary<string, TimeSpan>();
 
-            var lowestDatabaseUptime = TimeSpan.MaxValue;
+            var lowestDatabaseUpTime = TimeSpan.MaxValue;
             var newestIndexQueryTime = TimeSpan.MaxValue;
-
-            foreach (var state in databaseState.States)
-            {
-                if (state == null)
-                    return;
-
-                if (CheckStateForAutoIndexes(state, indexes, ref lowestDatabaseUptime, ref newestIndexQueryTime)) 
-                    return;
-            }
-
-            if (indexes.Count == 0)
-                return;
-
-            var settings = databaseState.RawDatabase.Settings;
-            var timeToWaitBeforeMarkingAutoIndexAsIdle = (TimeSetting)RavenConfiguration.GetValue(x => x.Indexing.TimeToWaitBeforeMarkingAutoIndexAsIdle, _server.Configuration, settings);
-            var timeToWaitBeforeDeletingAutoIndexMarkedAsIdle = (TimeSetting)RavenConfiguration.GetValue(x => x.Indexing.TimeToWaitBeforeDeletingAutoIndexMarkedAsIdle, _server.Configuration, settings);
-
-            foreach (var kvp in indexes)
-            {
-                TimeSpan difference;
-                if (lowestDatabaseUptime > kvp.Value)
-                    difference = kvp.Value;
-                else
-                {
-                    difference = kvp.Value - newestIndexQueryTime;
-                    if (difference == TimeSpan.Zero && lowestDatabaseUptime > kvp.Value)
-                        difference = kvp.Value;
-                }
-
-                var state = IndexState.Normal;
-                if (databaseState.RawDatabase.AutoIndexes.TryGetValue(kvp.Key, out var definition) && definition.State.HasValue)
-                    state = definition.State.Value;
-
-                if (state == IndexState.Idle && difference >= timeToWaitBeforeDeletingAutoIndexMarkedAsIdle.AsTimeSpan)
-                {
-                    await _engine.PutAsync(new DeleteIndexCommand(kvp.Key, database, RaftIdGenerator.NewId()));
-
-                    AddToDecisionLog(database, $"Deleting idle auto-index '{kvp.Key}' because last query time value is '{difference}' and threshold is set to '{timeToWaitBeforeDeletingAutoIndexMarkedAsIdle.AsTimeSpan}'.");
-
-                    continue;
-                }
-
-                if (state == IndexState.Normal && difference >= timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan)
-                {
-                    await _engine.PutAsync(new SetIndexStateCommand(kvp.Key, IndexState.Idle, database, RaftIdGenerator.NewId()));
-
-                    AddToDecisionLog(database, $"Marking auto-index '{kvp.Key}' as idle because last query time value is '{difference}' and threshold is set to '{timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan}'.");
-
-                    continue;
-                }
-
-                if (state == IndexState.Idle && difference < timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan)
-                {
-                    await _engine.PutAsync(new SetIndexStateCommand(kvp.Key, IndexState.Normal, database, Guid.NewGuid().ToString()));
-
-                    AddToDecisionLog(database, $"Marking idle auto-index '{kvp.Key}' as normal because last query time value is '{difference}' and threshold is set to '{timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan}'.");
-                }
-            }
-        }
-
-        private static bool CheckStateForAutoIndexes(DatabaseObservationState databaseState, Dictionary<string, TimeSpan> indexes, ref TimeSpan lowestDatabaseUptime, ref TimeSpan newestIndexQueryTime)
-        {
-            if (AllDatabaseNodesHasReport(databaseState) == false)
-                return true;
 
             foreach (var node in databaseState.DatabaseTopology.AllNodes)
             {
                 if (databaseState.Current.TryGetValue(node, out var nodeReport) == false)
-                    return true;
+                    return cleanupCommands;
 
                 if (nodeReport.Report.TryGetValue(databaseState.Name, out var report) == false)
-                    return true;
+                    return cleanupCommands;
 
-                if (report.UpTime.HasValue && lowestDatabaseUptime > report.UpTime)
-                    lowestDatabaseUptime = report.UpTime.Value;
+                if (report.UpTime.HasValue && lowestDatabaseUpTime > report.UpTime)
+                    lowestDatabaseUpTime = report.UpTime.Value;
 
                 foreach (var kvp in report.LastIndexStats)
                 {
@@ -566,7 +535,7 @@ namespace Raven.Server.ServerWide.Maintenance
                         newestIndexQueryTime = lastQueried.Value;
 
                     var indexName = kvp.Key;
-                    if (indexName.StartsWith("Auto/", StringComparison.OrdinalIgnoreCase) == false)
+                    if (indexName.StartsWith(autoIndexPrefix, StringComparison.OrdinalIgnoreCase) == false)
                         continue;
 
                     if (indexes.TryGetValue(indexName, out var lq) == false || lq > lastQueried)
@@ -576,50 +545,74 @@ namespace Raven.Server.ServerWide.Maintenance
                 }
             }
 
-            return false;
-        }
+            if (indexes.Count == 0)
+                return cleanupCommands;
 
-        internal async Task<CompareExchangeTombstonesCleanupState> CleanUpCompareExchangeTombstones<TRavenTransaction>(string databaseName, MergedDatabaseObservationState mergedState, TransactionOperationContext<TRavenTransaction> context) where TRavenTransaction : RavenTransaction
-        {
-            const int amountToDelete = 8192;
-            var hasMore = false;
+            var settings = databaseState.ReadSettings();
+            var timeToWaitBeforeMarkingAutoIndexAsIdle = (TimeSetting)RavenConfiguration.GetValue(x => x.Indexing.TimeToWaitBeforeMarkingAutoIndexAsIdle, _server.Configuration, settings);
+            var timeToWaitBeforeDeletingAutoIndexMarkedAsIdle = (TimeSetting)RavenConfiguration.GetValue(x => x.Indexing.TimeToWaitBeforeDeletingAutoIndexMarkedAsIdle, _server.Configuration, settings);
 
-            if (_server.Cluster.HasCompareExchangeTombstones(context, databaseName))
+            foreach (var kvp in indexes)
             {
-                long maxEtag = 0L;
-                
-                mergedState ??= MergedDatabaseObservationState.Empty;
-
-                foreach (var state in mergedState.States)
+                TimeSpan difference;
+                if (lowestDatabaseUpTime > kvp.Value)
+                    difference = kvp.Value;
+                else
                 {
-                    var cleanupState = GetMaxCompareExchangeTombstonesEtagToDelete(context, databaseName, state, out maxEtag);
-                    switch (cleanupState)
-                    {
-                        case CompareExchangeTombstonesCleanupState.HasMoreTombstones:
-                            continue;
-
-                        case CompareExchangeTombstonesCleanupState.InvalidDatabaseObservationState:
-                        case CompareExchangeTombstonesCleanupState.InvalidPeriodicBackupStatus:
-                        case CompareExchangeTombstonesCleanupState.NoMoreTombstones:
-                            return cleanupState;
-
-                        default:
-                            throw new NotSupportedException($"Not supported state: '{cleanupState}'.");
-                    }
+                    difference = kvp.Value - newestIndexQueryTime;
+                    if (difference == TimeSpan.Zero && lowestDatabaseUpTime > kvp.Value)
+                        difference = kvp.Value;
                 }
 
-                if (maxEtag <= 0)
-                    return CompareExchangeTombstonesCleanupState.NoMoreTombstones;
+                var state = IndexState.Normal;
+                if (databaseState.TryGetAutoIndex(kvp.Key, out var definition) && definition.State.HasValue)
+                    state = definition.State.Value;
 
-                var result = await _server.SendToLeaderAsync(new CleanCompareExchangeTombstonesCommand(databaseName, maxEtag, amountToDelete, RaftIdGenerator.NewId()));
-                await _server.Cluster.WaitForIndexNotification(result.Index);
-                hasMore = (bool)result.Result;
+                if (state == IndexState.Idle && difference >= timeToWaitBeforeDeletingAutoIndexMarkedAsIdle.AsTimeSpan)
+                {
+                    var deleteIndexCommand = new DeleteIndexCommand(kvp.Key, databaseState.Name, RaftIdGenerator.NewId());
+                    var updateReason = $"Deleting idle auto-index '{kvp.Key}' because last query time value is '{difference}' and threshold is set to '{timeToWaitBeforeDeletingAutoIndexMarkedAsIdle.AsTimeSpan}'.";
+
+                    cleanupCommands.Add((deleteIndexCommand, updateReason));
+                    continue;
+                }
+
+                if (state == IndexState.Normal && difference >= timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan)
+                {
+                    var setIndexStateCommand = new SetIndexStateCommand(kvp.Key, IndexState.Idle, databaseState.Name, RaftIdGenerator.NewId());
+                    var updateReason = $"Marking auto-index '{kvp.Key}' as idle because last query time value is '{difference}' and threshold is set to '{timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan}'.";
+                    
+                    cleanupCommands.Add((setIndexStateCommand, updateReason));
+                    continue;
+                }
+
+                if (state == IndexState.Idle && difference < timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan)
+                {
+                    var setIndexStateCommand = new SetIndexStateCommand(kvp.Key, IndexState.Normal, databaseState.Name, Guid.NewGuid().ToString());
+                    var updateReason = $"Marking idle auto-index '{kvp.Key}' as normal because last query time value is '{difference}' and threshold is set to '{timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan}'.";
+                    
+                    cleanupCommands.Add((setIndexStateCommand, updateReason));
+                }
             }
 
-            if (hasMore)
-                return CompareExchangeTombstonesCleanupState.HasMoreTombstones;
+            return cleanupCommands;
+        }
 
-            return CompareExchangeTombstonesCleanupState.NoMoreTombstones;
+        internal CleanCompareExchangeTombstonesCommand GetCompareExchangeTombstonesToCleanup(string databaseName, DatabaseObservationState state, ClusterOperationContext context, out CompareExchangeTombstonesCleanupState cleanupState)
+        {
+            const int amountToDelete = 8192;
+
+            if (_server.Cluster.HasCompareExchangeTombstones(context, databaseName) == false)
+            {
+                cleanupState = CompareExchangeTombstonesCleanupState.NoMoreTombstones;
+                return null;
+            }
+
+            cleanupState = GetMaxCompareExchangeTombstonesEtagToDelete(context, databaseName, state, out long maxEtag);
+
+            return cleanupState == CompareExchangeTombstonesCleanupState.HasMoreTombstones 
+                ? new CleanCompareExchangeTombstonesCommand(databaseName, maxEtag, amountToDelete, RaftIdGenerator.NewId()) 
+                : null;
         }
 
         public enum CompareExchangeTombstonesCleanupState
@@ -635,8 +628,15 @@ namespace Raven.Server.ServerWide.Maintenance
             List<long> periodicBackupTaskIds;
             maxEtag = long.MaxValue;
 
-            using (var rawRecord = _server.Cluster.ReadRawDatabaseRecord(context, databaseName))
-                periodicBackupTaskIds = rawRecord.PeriodicBackupsTaskIds;
+            if (state?.RawDatabase != null)
+            {
+                periodicBackupTaskIds = state.RawDatabase.PeriodicBackupsTaskIds;
+            }
+            else
+            {
+                using (var rawRecord = _server.Cluster.ReadRawDatabaseRecord(context, databaseName))
+                    periodicBackupTaskIds = rawRecord.PeriodicBackupsTaskIds;
+            }
 
             if (periodicBackupTaskIds != null && periodicBackupTaskIds.Count > 0)
             {
@@ -712,11 +712,15 @@ namespace Raven.Server.ServerWide.Maintenance
             return CompareExchangeTombstonesCleanupState.HasMoreTombstones;
         }
 
-        private async Task<bool> RemoveExpiredCompareExchange(TransactionOperationContext context, long nowTicks)
+        private async Task<bool> RemoveExpiredCompareExchange(long nowTicks)
         {
             const int batchSize = 1024;
-            if (CompareExchangeExpirationStorage.HasExpired(context, nowTicks) == false)
-                return false;
+            using (_contextPool.AllocateOperationContext(out ClusterOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                if (CompareExchangeExpirationStorage.HasExpired(context, nowTicks) == false)
+                    return false;
+            }
 
             var result = await _server.SendToLeaderAsync(new DeleteExpiredCompareExchangeCommand(nowTicks, batchSize, RaftIdGenerator.NewId()));
             await _server.Cluster.WaitForIndexNotification(result.Index);
@@ -909,8 +913,8 @@ namespace Raven.Server.ServerWide.Maintenance
 
                 // database distribution is off and the node is down
                 if (databaseTopology.DynamicNodesDistribution == false && (
-                    databaseTopology.PromotablesStatus.TryGetValue(member, out var currentStatus) == false
-                    || currentStatus != DatabasePromotionStatus.NotResponding))
+                        databaseTopology.PromotablesStatus.TryGetValue(member, out var currentStatus) == false
+                        || currentStatus != DatabasePromotionStatus.NotResponding))
                 {
                     databaseTopology.DemotionReasons[member] = "Not responding";
                     databaseTopology.PromotablesStatus[member] = DatabasePromotionStatus.NotResponding;
@@ -1232,7 +1236,7 @@ namespace Raven.Server.ServerWide.Maintenance
             }
 
             return grace < lastSuccessfulUpdate && graceMs > databaseUpTime.Value.TotalMilliseconds;
-            }
+        }
 
         private int GetNumberOfRespondingNodes(DatabaseObservationState state)
         {
@@ -1445,7 +1449,7 @@ namespace Raven.Server.ServerWide.Maintenance
                           $"Last sent Etag: {lastSentEtag:#,#;;0}" + Environment.NewLine +
                           $"Mentor's Etag: {mentorsEtag:#,#;;0}";
 
-                LogMessage($"Mentor {mentorNode} hasn't sent all of the documents yet to {promotable} (time diff: {timeDiff}, sent etag: {lastSentEtag}/{mentorsEtag})", database: dbName);
+                LogMessage($"Mentor {mentorNode} hasn't sent all of the documents yet to {promotable} (time diff: {timeDiff}, sent etag: {lastSentEtag:#,#;;0}/{mentorsEtag:#,#;;0})", database: dbName);
 
                 if (topology.DemotionReasons.TryGetValue(promotable, out var demotionReason) == false ||
                     msg.Equals(demotionReason) == false)
@@ -1751,7 +1755,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 var lastIndexEtag = currentIndexStats.LastIndexedEtag;
                 if (lastPrevEtag > lastIndexEtag)
                 {
-                    reason = $"Index '{mentorIndex.Key}' is in state '{currentIndexStats.State}' and not up-to-date (prev: {lastPrevEtag}, current: {lastIndexEtag}).";
+                    reason = $"Index '{mentorIndex.Key}' is in state '{currentIndexStats.State}' and not up-to-date (prev: {lastPrevEtag:#,#;;0}, current: {lastIndexEtag:#,#;;0}).";
                     return false;
                 }
             }

@@ -19,8 +19,6 @@ import subscriptionRqlSyntax = require("viewmodels/database/tasks/subscriptionRq
 import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleMentorsCommand");
 import eventsCollector = require("common/eventsCollector");
 import generalUtils = require("common/generalUtils");
-import popoverUtils = require("common/popoverUtils");
-import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 import rqlLanguageService = require("common/rqlLanguageService");
 import { highlight, languages } from "prismjs";
 import shardViewModelBase from "viewmodels/shardViewModelBase";
@@ -43,7 +41,10 @@ class perCollectionIncludes {
 class editSubscriptionTask extends shardViewModelBase {
 
     languageService: rqlLanguageService;
+    
     view = require("views/database/tasks/editSubscriptionTask.html");
+    pinResponsibleNodeButtonsScriptView = require("views/partial/pinResponsibleNodeButtonsScript.html");
+    pinResponsibleNodeTextScriptView = require("views/partial/pinResponsibleNodeTextScript.html");
 
     editedSubscription = ko.observable<ongoingTaskSubscriptionEdit>();
     isAddingNewSubscriptionTask = ko.observable<boolean>(true);
@@ -139,11 +140,6 @@ class editSubscriptionTask extends shardViewModelBase {
 
         $('.edit-subscription-task [data-toggle="tooltip"]').tooltip();
 
-        popoverUtils.longWithHover($(".responsible-node"),
-            {
-                content: tasksCommonContent.responsibleNodeInfo
-            });
-        
         document.getElementById('taskName').focus();
 
         const queryEditor = aceEditorBindingHandler.getEditorBySelection($(".query-source"));

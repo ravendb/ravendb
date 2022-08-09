@@ -6,7 +6,7 @@ namespace Raven.Client.Documents.Session
 {
     public abstract partial class AbstractDocumentQuery<T, TSelf>
     {
-        protected Explanations Explanations;
+        protected Explanations Explanations = new Explanations();
 
         protected ExplanationToken ExplanationToken;
 
@@ -17,7 +17,9 @@ namespace Raven.Client.Documents.Session
 
             var optionsParameterName = options != null ? AddQueryParameter(options) : null;
             ExplanationToken = ExplanationToken.Create(optionsParameterName);
-            Explanations = explanations = new Explanations();
+            Explanations.ShouldBeIncluded = true;
+            explanations = Explanations;
         }
+
     }
 }

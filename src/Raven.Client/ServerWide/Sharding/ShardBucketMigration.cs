@@ -46,4 +46,6 @@ public class ShardBucketMigration : IDatabaseTask
     public string GetTaskName() => $"Bucket '{Bucket}' migration from '{SourceShard}' to '{DestinationShard}' @ {MigrationIndex}";
 
     public bool IsResourceIntensive() => false;
+
+    public bool IsPinnedToMentorNode() => false;
 }

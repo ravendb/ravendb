@@ -266,13 +266,13 @@ namespace Voron.Data.Tables
             byte* ptr, int size, out ByteString buffer)
         {
             var dicId = BlittableJsonReaderBase.ReadVariableSizeIntInReverse(ptr, size - 1, out var offset);
-            var data = new ReadOnlySpan<byte>(ptr, size - offset);
+            int length = size - offset;
             var dictionary = tx.LowLevelTransaction.Environment.CompressionDictionariesHolder
                 .GetCompressionDictionaryFor(tx, dicId);
 
-            int decompressedSize = ZstdLib.GetDecompressedSize(data);
+            int decompressedSize = ZstdLib.GetDecompressedSize(ptr, length);
             var internalScope = tx.Allocator.Allocate(decompressedSize, out buffer);
-            var actualSize = ZstdLib.Decompress(data, buffer.ToSpan(), dictionary);
+            var actualSize = ZstdLib.Decompress(ptr, length, buffer.Ptr, buffer.Length, dictionary);
             if (actualSize != decompressedSize)
                 throw new InvalidDataException($"Got decompressed size {actualSize} but expected {decompressedSize} in tx #{tx.LowLevelTransaction.Id}, dic id: {dictionary?.Id ?? 0}");
             return internalScope;
@@ -1145,11 +1145,12 @@ namespace Voron.Data.Tables
             reader = new TableValueReader(id, ptr, size);
         }
 
-        public long GetNumberOfEntriesAfter(TableSchema.FixedSizeKeyIndexDef index, long afterValue, out long totalCount)
+
+        public long GetNumberOfEntriesAfter(TableSchema.FixedSizeKeyIndexDef index, long afterValue, out long totalCount, Stopwatch overallDuration)
         {
             var fst = GetFixedSizeTree(index);
 
-            return fst.GetNumberOfEntriesAfter(afterValue, out totalCount);
+            return fst.GetNumberOfEntriesAfter(afterValue, out totalCount, overallDuration);
         }
 
         public long GetNumberOfEntriesFor(TableSchema.FixedSizeKeyIndexDef index)

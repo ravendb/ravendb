@@ -46,7 +46,6 @@ namespace Voron.Data.Sets
         public void Remove(long value)
         {
             // caller ensures that the value *already exists* in the set
-            
             FindPageFor(value);
             ref var state = ref _stk[_pos];
             state.Page = _llt.ModifyPage(state.Page.PageNumber);
@@ -78,8 +77,11 @@ namespace Voron.Data.Sets
 
         private void MaybeMergeLeafPage(in SetLeafPage leaf)
         {
+            if (_pos == 0)
+                return; // no parent branch to go to...
+            
             PopPage();
-
+            
             ref var parent = ref _stk[_pos];
             
             var branch = new SetBranchPage(parent.Page);
@@ -91,6 +93,9 @@ namespace Voron.Data.Sets
             var siblingHeader = (SetLeafPageHeader*)siblingPage.Pointer;
             if (siblingHeader->SetFlags != ExtendedPageType.SetLeaf)
                 return;
+
+            if (siblingHeader->Baseline != leaf.Header->Baseline)
+                return; // we cannot merge pages from different leafs
 
             var sibling = new SetLeafPage(siblingPage);
             if (sibling.SpaceUsed + leaf.SpaceUsed > Constants.Storage.PageSize / 2 + Constants.Storage.PageSize / 4)
@@ -181,6 +186,40 @@ namespace Voron.Data.Sets
         private static int GetSiblingIndex(in SetCursorState parent)
         {
             return parent.LastSearchPosition == 0 ? 1 : parent.LastSearchPosition - 1;
+        }
+
+        /// <summary>
+        /// We do a bulk removal of the values in the tree. The values are *assumed to already exists* in the tree.
+        /// </summary>
+        public void Remove(List<long> values)
+        {
+            int index = 0;
+            while (index < values.Count)
+            {
+                FindPageFor(values[index]);
+                ref var state = ref _stk[_pos];
+                state.Page = _llt.ModifyPage(state.Page.PageNumber);
+                var leafPage = new SetLeafPage(state.Page);
+                long nextPageStart = NextParentLimit();
+
+                for (; index < values.Count && values[index] < nextPageStart; index++)
+                {
+                    if (leafPage.Remove(_llt, values[index]) == false)
+                    {
+                        // shouldn't really happen, but may because removing a value may change
+                        // the compression rate. if we can't add the removal, we'll just remove
+                        // using single value method, and resume the bulk mode on the next one 
+                        Remove(values[index++]);
+                        break; 
+                    }
+                    _state.NumberOfEntries--;
+                }
+                
+                // because we are in bulk mode, we only want to try to do a merge if the 
+                // page is 75% empty, rather than try to be eager about this
+                if (leafPage.SpaceUsed < (Constants.Storage.PageSize / 4) * 3) 
+                    MaybeMergeLeafPage(in leafPage);
+            }
         }
 
         public void Add(List<long> values)
@@ -675,6 +714,28 @@ namespace Voron.Data.Sets
             public void Reset()
             {
                 throw new NotSupportedException();
+            }
+        }
+
+        public List<long> AllPages()
+        {
+            var result = new List<long>();
+            Add(_llt.GetPage(_state.RootPage));
+            return result;
+
+            void Add(Page p)
+            {
+                result.Add(p.PageNumber);
+                var state = new SetCursorState { Page = p, };
+                if (state.BranchHeader->SetFlags != ExtendedPageType.SetBranch)
+                    return;
+                
+                var branch = new SetBranchPage(state.Page);
+                foreach (var child in branch.GetAllChildPages())
+                {
+                    var childPage = _llt.GetPage(child);
+                    Add(childPage);
+                }
             }
         }
     }

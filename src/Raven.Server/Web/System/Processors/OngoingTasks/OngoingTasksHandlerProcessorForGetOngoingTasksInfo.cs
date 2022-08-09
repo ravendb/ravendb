@@ -20,6 +20,7 @@ using Raven.Server.Documents.Replication.Incoming;
 using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using NotImplementedException = System.NotImplementedException;
 
 namespace Raven.Server.Web.System.Processors.OngoingTasks;
@@ -73,6 +74,7 @@ internal abstract class OngoingTasksHandlerProcessorForGetOngoingTasksInfo : Abs
                     TaskName = ravenEtl.Name,
                     TaskState = taskState,
                     MentorNode = ravenEtl.MentorNode,
+                    PinToMentorNode = ravenEtl.PinToMentorNode,
                     ResponsibleNode = new NodeId
                     {
                         NodeTag = tag,
@@ -114,6 +116,7 @@ internal abstract class OngoingTasksHandlerProcessorForGetOngoingTasksInfo : Abs
                     TaskConnectionStatus = connectionStatus,
                     TaskState = taskState,
                     MentorNode = sqlEtl.MentorNode,
+                    PinToMentorNode = sqlEtl.PinToMentorNode,
                     ResponsibleNode = new NodeId
                     {
                         NodeTag = tag,
@@ -152,6 +155,7 @@ internal abstract class OngoingTasksHandlerProcessorForGetOngoingTasksInfo : Abs
                     TaskConnectionStatus = connectionStatus,
                     TaskState = taskState,
                     MentorNode = olapEtl.MentorNode,
+                    PinToMentorNode = olapEtl.PinToMentorNode,
                     ResponsibleNode = new NodeId
                     {
                         NodeTag = tag,
@@ -183,6 +187,7 @@ internal abstract class OngoingTasksHandlerProcessorForGetOngoingTasksInfo : Abs
                     TaskConnectionStatus = connectionStatus,
                     TaskState = taskState,
                     MentorNode = elasticSearchEtl.MentorNode,
+                    PinToMentorNode = elasticSearchEtl.PinToMentorNode,
                     ResponsibleNode = new NodeId
                     {
                         NodeTag = tag,
@@ -214,6 +219,7 @@ internal abstract class OngoingTasksHandlerProcessorForGetOngoingTasksInfo : Abs
                     TaskConnectionStatus = connectionStatus,
                     TaskState = taskState,
                     MentorNode = queueEtl.MentorNode,
+                    PinToMentorNode = queueEtl.PinToMentorNode,
                     ResponsibleNode = new NodeId
                     {
                         NodeTag = tag,
@@ -332,6 +338,7 @@ internal abstract class OngoingTasksHandlerProcessorForGetOngoingTasksInfo : Abs
                 TaskName = subscriptionState.SubscriptionName,
                 TaskState = subscriptionState.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
                 MentorNode = subscriptionState.MentorNode,
+                PinToMentorNode = subscriptionState.PinToMentorNode,
                 TaskId = subscriptionState.SubscriptionId,
                 Query = subscriptionState.Query,
                 TaskConnectionStatus = connectionStatus,
@@ -426,6 +433,7 @@ internal abstract class OngoingTasksHandlerProcessorForGetOngoingTasksInfo : Abs
             DestinationDatabase = ex.Database,
             DestinationUrl = connectionResult.Url,
             MentorNode = ex.MentorNode,
+            PinToMentorNode = ex.PinToMentorNode,
             TaskConnectionStatus = connectionResult.Status,
             DelayReplicationFor = ex.DelayReplicationFor
         };

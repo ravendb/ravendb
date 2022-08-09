@@ -5,17 +5,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Operations;
-using Raven.Client.Http;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.ServerWide;
-using Raven.Client.ServerWide.Operations;
 using Raven.Server;
-using Raven.Server.Documents.Commands;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
-using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
@@ -45,6 +40,16 @@ public partial class RavenTestBase
         {
             var updateIndex = LastRaftIndexForCommand(_parent.Server, commandType);
             await _parent.Server.ServerStore.Cluster.WaitForIndexNotification(updateIndex, TimeSpan.FromSeconds(10));
+        }
+
+        public async Task CreateIndexInClusterAsync(IDocumentStore store, AbstractIndexCreationTask index)
+        {
+            var results = (await store.Maintenance.ForDatabase(store.Database)
+                                        .SendAsync(new PutIndexesOperation(index.CreateIndexDefinition())))
+                                        .Single(r => r.Index == index.IndexName);
+
+            // wait for index creation on cluster
+            await WaitForRaftIndexToBeAppliedInClusterAsync(results.RaftCommandIndex);
         }
 
         public long LastRaftIndexForCommand(RavenServer server, string commandType)

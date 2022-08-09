@@ -24,7 +24,6 @@ import getDocumentWithMetadataCommand = require("commands/database/documents/get
 import testQueueEtlCommand = require("commands/database/tasks/testQueueEtlCommand");
 import document = require("models/database/documents/document");
 import popoverUtils = require("common/popoverUtils");
-import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 import { highlight, languages } from "prismjs";
 
 class rabbitMqTaskTestMode {
@@ -160,7 +159,9 @@ class editRabbitMqEtlTask extends viewModelBase {
 
     view = require("views/database/tasks/editRabbitMqEtlTask.html");
     optionsPerQueueEtlView = require("views/database/tasks/optionsPerQueueEtl.html");
-    connectionStringView = require("views/database/settings/connectionStringRabbitMq.html")
+    connectionStringView = require("views/database/settings/connectionStringRabbitMq.html");
+    pinResponsibleNodeButtonsScriptView = require("views/partial/pinResponsibleNodeButtonsScript.html");
+    pinResponsibleNodeTextScriptView = require("views/partial/pinResponsibleNodeTextScript.html");
     
     static readonly scriptNamePrefix = "Script_";
     static isApplyToAll = ongoingTaskQueueEtlTransformationModel.isApplyToAll;
@@ -214,7 +215,7 @@ class editRabbitMqEtlTask extends viewModelBase {
                 .execute()
                 .done((result: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtlDetails) => {
                     this.editedRabbitMqEtl(new ongoingTaskRabbitMqEtlEditModel(result));
-                    this.showAdvancedOptions(this.editedRabbitMqEtl().hasOptions());
+                    this.showAdvancedOptions(this.editedRabbitMqEtl().hasAdvancedOptionsDefined());
                     deferred.resolve();
                 })
                 .fail(() => { 
@@ -245,11 +246,6 @@ class editRabbitMqEtlTask extends viewModelBase {
         super.compositionComplete();
 
         $('.edit-rabbitmq-etl-task [data-toggle="tooltip"]').tooltip();
-
-        popoverUtils.longWithHover($(".responsible-node"),
-            {
-                content: tasksCommonContent.responsibleNodeInfo
-            });
 
         popoverUtils.longWithHover($(".skip-automatic-declaration"),
             {

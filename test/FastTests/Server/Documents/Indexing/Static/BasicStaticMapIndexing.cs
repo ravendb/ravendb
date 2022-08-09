@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -416,7 +417,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                         IndexProgress progress;
                         using (context.OpenReadTransaction())
                         {
-                            progress = index.GetProgress(queryContext);
+                            progress = index.GetProgress(queryContext, Stopwatch.StartNew());
                         }
 
                         Assert.Equal(0, progress.Collections["Users"].LastProcessedItemEtag);
@@ -432,7 +433,7 @@ namespace FastTests.Server.Documents.Indexing.Static
 
                         using (context.OpenReadTransaction())
                         {
-                            progress = index.GetProgress(queryContext);
+                            progress = index.GetProgress(queryContext, Stopwatch.StartNew());
                         }
 
                         Assert.Equal(2, progress.Collections["Users"].LastProcessedItemEtag);
@@ -475,7 +476,7 @@ namespace FastTests.Server.Documents.Indexing.Static
 
                         using (context.OpenReadTransaction())
                         {
-                            progress = index.GetProgress(queryContext);
+                            progress = index.GetProgress(queryContext, Stopwatch.StartNew());
                         }
 
                         Assert.Equal(2, progress.Collections["Users"].LastProcessedItemEtag);
@@ -491,7 +492,7 @@ namespace FastTests.Server.Documents.Indexing.Static
 
                         using (context.OpenReadTransaction())
                         {
-                            progress = index.GetProgress(queryContext);
+                            progress = index.GetProgress(queryContext, Stopwatch.StartNew());
                         }
 
                         Assert.Equal(5, progress.Collections["Users"].LastProcessedItemEtag);

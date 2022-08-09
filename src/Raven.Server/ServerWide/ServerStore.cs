@@ -450,7 +450,7 @@ namespace Raven.Server.ServerWide
 
                     var term = _engine.CurrentTerm;
                     using (ClusterMaintenanceSupervisor = new ClusterMaintenanceSupervisor(this, _engine.Tag, term))
-                    using (Observer = new ClusterObserver(this, ClusterMaintenanceSupervisor, _engine, term, ContextPool, ServerShutdown))
+                    using (Observer = new ClusterObserver(this, ClusterMaintenanceSupervisor, _engine, term, _engine.ContextPool, ServerShutdown))
                     {
                         var oldNodes = new Dictionary<string, string>();
                         while (_engine.LeaderTag == NodeTag && term == _engine.CurrentTerm)

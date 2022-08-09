@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using Corax.Queries;
+using Sparrow.Server;
 
 namespace Corax;
 
@@ -21,53 +22,53 @@ public partial class IndexSearcher
         // do all the work to figure out what to emit. The cost is in instantiation not on execution.                         
         if (set1.GetType() == typeof(TermMatch) && set2.GetType() == typeof(TermMatch))
         {
-            return BinaryMatch.Create(BinaryMatch<TermMatch, TermMatch>.YieldAnd((TermMatch)(object)set1, (TermMatch)(object)set2));
+            return BinaryMatch.Create(BinaryMatch<TermMatch, TermMatch>.YieldAnd(Allocator, (TermMatch)(object)set1, (TermMatch)(object)set2));
         }
         else if (set1.GetType() == typeof(BinaryMatch) && set2.GetType() == typeof(TermMatch))
         {
-            return BinaryMatch.Create(BinaryMatch<BinaryMatch, TermMatch>.YieldAnd((BinaryMatch)(object)set1, (TermMatch)(object)set2));
+            return BinaryMatch.Create(BinaryMatch<BinaryMatch, TermMatch>.YieldAnd(Allocator, (BinaryMatch)(object)set1, (TermMatch)(object)set2));
         }
         else if (set1.GetType() == typeof(TermMatch) && set2.GetType() == typeof(BinaryMatch))
         {
-            return BinaryMatch.Create(BinaryMatch<TermMatch, BinaryMatch>.YieldAnd((TermMatch)(object)set1, (BinaryMatch)(object)set2));
+            return BinaryMatch.Create(BinaryMatch<TermMatch, BinaryMatch>.YieldAnd(Allocator, (TermMatch)(object)set1, (BinaryMatch)(object)set2));
         }
         else if (set1.GetType() == typeof(BinaryMatch) && set2.GetType() == typeof(BinaryMatch))
         {
-            return BinaryMatch.Create(BinaryMatch<BinaryMatch, BinaryMatch>.YieldAnd((BinaryMatch)(object)set1, (BinaryMatch)(object)set2));
+            return BinaryMatch.Create(BinaryMatch<BinaryMatch, BinaryMatch>.YieldAnd(Allocator, (BinaryMatch)(object)set1, (BinaryMatch)(object)set2));
         }
 
-        return BinaryMatch.Create(BinaryMatch<TInner, TOuter>.YieldAnd(in set1, in set2));
+        return BinaryMatch.Create(BinaryMatch<TInner, TOuter>.YieldAnd(Allocator, in set1, in set2));
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public BinaryMatch Or<TInner, TOuter>(in TInner set1, in TOuter set2)
+    public BinaryMatch Or<TInner, TOuter>( in TInner set1, in TOuter set2)
         where TInner : IQueryMatch
         where TOuter : IQueryMatch
     {
         // When faced with a MultiTermMatch and something else, lets first calculate the something else.
         if (set2.GetType() == typeof(MultiTermMatch) && set1.GetType() != typeof(MultiTermMatch))
-            return Or(set2, set1);
+            return Or( set2, set1);
 
         // If any of the generic types is not known to be a struct (calling from interface) the code executed will
         // do all the work to figure out what to emit. The cost is in instantiation not on execution. 
         if (set1.GetType() == typeof(TermMatch) && set2.GetType() == typeof(TermMatch))
         {
-            return BinaryMatch.Create(BinaryMatch<TermMatch, TermMatch>.YieldOr((TermMatch)(object)set1, (TermMatch)(object)set2));
+            return BinaryMatch.Create(BinaryMatch<TermMatch, TermMatch>.YieldOr(Allocator, (TermMatch)(object)set1, (TermMatch)(object)set2));
         }
         else if (set1.GetType() == typeof(BinaryMatch) && set2.GetType() == typeof(TermMatch))
         {
-            return BinaryMatch.Create(BinaryMatch<BinaryMatch, TermMatch>.YieldOr((BinaryMatch)(object)set1, (TermMatch)(object)set2));
+            return BinaryMatch.Create(BinaryMatch<BinaryMatch, TermMatch>.YieldOr(Allocator, (BinaryMatch)(object)set1, (TermMatch)(object)set2));
         }
         else if (set1.GetType() == typeof(TermMatch) && set2.GetType() == typeof(BinaryMatch))
         {
-            return BinaryMatch.Create(BinaryMatch<TermMatch, BinaryMatch>.YieldOr((TermMatch)(object)set1, (BinaryMatch)(object)set2));
+            return BinaryMatch.Create(BinaryMatch<TermMatch, BinaryMatch>.YieldOr(Allocator, (TermMatch)(object)set1, (BinaryMatch)(object)set2));
         }
         else if (set1.GetType() == typeof(BinaryMatch) && set2.GetType() == typeof(BinaryMatch))
         {
-            return BinaryMatch.Create(BinaryMatch<BinaryMatch, BinaryMatch>.YieldOr((BinaryMatch)(object)set1, (BinaryMatch)(object)set2));
+            return BinaryMatch.Create(BinaryMatch<BinaryMatch, BinaryMatch>.YieldOr(Allocator, (BinaryMatch)(object)set1, (BinaryMatch)(object)set2));
         }
 
-        return BinaryMatch.Create(BinaryMatch<TInner, TOuter>.YieldOr(in set1, in set2));
+        return BinaryMatch.Create(BinaryMatch<TInner, TOuter>.YieldOr(Allocator, in set1, in set2));
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Amazon.SimpleNotificationService.Model;
 using Corax;
 using Raven.Client.Documents.Indexes;
@@ -45,21 +46,12 @@ public class AnonymousCoraxDocumentConverter : CoraxDocumentConverterBase
         var scope = new SingleEntryWriterScope(_allocator);
         var storedValue = _storeValue ? new DynamicJsonValue() : null;
 
-
         foreach (var property in accessor.GetPropertiesInOrder(documentToProcess))
         {
             var value = property.Value;
 
-            IndexField field;
-            if (knownFields.TryGetByFieldName(property.Key, out var binding))
-            {
-                field = _fields[property.Key];
-                field.Id = binding.FieldId;
-            }
-            else
-            {
+            if(_fields.TryGetValue(property.Key, out var field)== false)
                 throw new InvalidOperationException($"Field '{property.Key}' is not defined. Available fields: {string.Join(", ", _fields.Keys)}.");
-            }            
 
             if (storedValue is not null)
             {

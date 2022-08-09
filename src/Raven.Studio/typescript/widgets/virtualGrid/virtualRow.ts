@@ -77,7 +77,7 @@ class virtualRow {
                 }
             } else {
                 // make sure we clear classes (is any)
-                this.element.attr("class", "virtual-row");
+                this.element.attr("class", this._even ? "virtual-row even" : "virtual-row");
             }
 
             // Update the selected status. Displays as a different row color.
@@ -114,6 +114,7 @@ class virtualRow {
         this._even = null;
         this.element.text("");
         this.element.removeClass("selected");
+        this.element.removeClass("even");
     }
 
     private createCellsHtml(item: Object, columns: virtualColumn[], isSelected: boolean, sortColumnIndex: number): string {

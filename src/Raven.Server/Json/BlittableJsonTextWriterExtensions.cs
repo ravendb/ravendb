@@ -20,6 +20,7 @@ using Raven.Server.Documents.Commands.Indexes;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Handlers.Processors.TimeSeries;
 using Raven.Server.Documents.Includes;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Indexes.Spatial;
 using Raven.Server.Documents.Queries;
@@ -1175,13 +1176,20 @@ namespace Raven.Server.Json
             }
         }
 
-        public static void WriteIndexDefinition(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, IndexDefinition indexDefinition, bool removeAnalyzers = false)
+        public static void WriteIndexDefinition(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, IndexDefinition indexDefinition, long? indexVersion = null)
         {
             writer.WriteStartObject();
 
             writer.WritePropertyName(nameof(indexDefinition.Name));
             writer.WriteString(indexDefinition.Name);
             writer.WriteComma();
+
+            if (indexVersion != null)
+            {
+                writer.WritePropertyName(nameof(IndexDefinitionBaseServerSide.Version));
+                writer.WriteInteger(indexVersion.Value);
+                writer.WriteComma();
+            }
 
             writer.WritePropertyName(nameof(indexDefinition.SourceType));
             writer.WriteString(indexDefinition.SourceType.ToString());
@@ -1312,7 +1320,7 @@ namespace Raven.Server.Json
                 isFirstInternal = false;
                 writer.WritePropertyName(kvp.Key);
                 if (kvp.Value != null)
-                    writer.WriteIndexFieldOptions(context, kvp.Value, removeAnalyzers);
+                    writer.WriteIndexFieldOptions(context, kvp.Value, removeAnalyzers: false);
                 else
                     writer.WriteNull();
             }

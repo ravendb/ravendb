@@ -37,6 +37,7 @@ class ongoingTaskElasticSearchEtlEditModel extends ongoingTaskEditModel {
             this.taskState,
             this.connectionStringName,
             this.mentorNode,
+            this.pinMentorNode,
             this.manualChooseMentor
         ])
     }
@@ -85,6 +86,8 @@ class ongoingTaskElasticSearchEtlEditModel extends ongoingTaskEditModel {
         if (configuration) {
             this.connectionStringName(configuration.ConnectionStringName);
             this.manualChooseMentor(!!configuration.MentorNode);
+            this.pinMentorNode(configuration.PinToMentorNode);
+            this.mentorNode(configuration.MentorNode);
             
             if (configuration.Transforms) {
                 this.transformationScripts(configuration.Transforms.map(x => new ongoingTaskElasticSearchEtlTransformationModel(x, false, false)));
@@ -105,6 +108,7 @@ class ongoingTaskElasticSearchEtlEditModel extends ongoingTaskEditModel {
             AllowEtlOnNonEncryptedChannel: true,
             Disabled: this.taskState() === "Disabled",
             MentorNode: this.manualChooseMentor() ? this.mentorNode() : undefined,
+            PinToMentorNode: this.pinMentorNode(),
             Transforms: this.transformationScripts().map(x => x.toDto()),
             ElasticIndexes: this.elasticIndexes().map(x => x.toDto())
         };

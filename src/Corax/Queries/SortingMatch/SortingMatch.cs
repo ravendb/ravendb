@@ -105,7 +105,10 @@ namespace Corax.Queries
             else if (typeof(TOut) == typeof(SequenceItem))
             {
                 var readX = reader.Read(fieldId, out var sv);
-                storedValue = (TOut)(object)new SequenceItem((byte*)Unsafe.AsPointer(ref sv[0]), sv.Length);
+                fixed (byte* svp = sv)
+                {
+                    storedValue = (TOut)(object)new SequenceItem(svp, sv.Length);
+                }
                 return readX;
             }
             else if (typeof(TOut) == typeof(NumericalItem<long>))
@@ -145,8 +148,8 @@ namespace Corax.Queries
 
             int floatArraySize = 2 * sizeof(float) * matches.Length;
             int matchesArraySize = sizeof(long) * matches.Length;
-            var bufferHolder = QueryContext.MatchesRawPool.Rent(floatArraySize + matchesArraySize);
-            var allScoresValues = MemoryMarshal.Cast<byte, float>(bufferHolder.AsSpan().Slice(0, floatArraySize));
+            using var _ = _searcher.Allocator.Allocate(floatArraySize + matchesArraySize, out var bufferHolder);
+            var allScoresValues = MemoryMarshal.Cast<byte, float>(bufferHolder.ToSpan()[..floatArraySize]);
 
             // PERF: We want to avoid to share cache lines, that's why the second array will move toward the end of the array. 
             var matchesScores = allScoresValues[..matches.Length];
@@ -163,7 +166,7 @@ namespace Corax.Queries
             var sorter = new Sorter<float, long, NumericDescendingComparer>();
             sorter.Sort(matchesScores[0..totalMatches], matches[0..totalMatches]);
 
-            Span<long> bValues = MemoryMarshal.Cast<byte, long>(bufferHolder.AsSpan().Slice(floatArraySize, matchesArraySize));
+            Span<long> bValues = MemoryMarshal.Cast<byte, long>(bufferHolder.ToSpan().Slice(floatArraySize, matchesArraySize));
             var searcher = _searcher;
             while (true)
             {
@@ -263,7 +266,6 @@ namespace Corax.Queries
                 totalMatches = kIdx;
             }
 
-            QueryContext.MatchesRawPool.Return(bufferHolder);
             TotalResults += totalMatches;
             return totalMatches;
         }
@@ -285,9 +287,9 @@ namespace Corax.Queries
             
             int matchesArraySize = sizeof(long) * matches.Length;
             int itemArraySize = 2 * Unsafe.SizeOf<MatchComparer<TComparer, TOut>.Item>() * matches.Length;
-            var bufferHolder = QueryContext.MatchesRawPool.Rent(itemArraySize + matchesArraySize);
+            using var _ = _searcher.Allocator.Allocate(itemArraySize + matchesArraySize, out var bufferHolder);
 
-            var itemKeys = MemoryMarshal.Cast<byte, MatchComparer<TComparer, TOut>.Item>(bufferHolder.AsSpan().Slice(0, itemArraySize));
+            var itemKeys = MemoryMarshal.Cast<byte, MatchComparer<TComparer, TOut>.Item>(bufferHolder.ToSpan().Slice(0, itemArraySize));
             Debug.Assert(itemKeys.Length == 2 * matches.Length);
 
             // PERF: We want to avoid to share cache lines, that's why the second array will move toward the end of the array. 
@@ -313,7 +315,7 @@ namespace Corax.Queries
             var sorter = new Sorter<MatchComparer<TComparer, TOut>.Item, long, MatchComparer<TComparer, TOut>>(comparer);
             sorter.Sort(matchesKeys[0..totalMatches], matches);
 
-            Span<long> bValues = MemoryMarshal.Cast<byte, long>(bufferHolder.AsSpan().Slice(itemArraySize, matchesArraySize));
+            Span<long> bValues = MemoryMarshal.Cast<byte, long>(bufferHolder.ToSpan().Slice(itemArraySize, matchesArraySize));
             Debug.Assert(bValues.Length == matches.Length);
             while (true)
             {
@@ -324,7 +326,6 @@ namespace Corax.Queries
                 // When we don't have any new batch, we are done.
                 if (bTotalMatches == 0)
                 {
-                    QueryContext.MatchesRawPool.Return(bufferHolder);
                     return totalMatches;
                 }
 

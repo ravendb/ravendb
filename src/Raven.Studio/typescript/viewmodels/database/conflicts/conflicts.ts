@@ -9,6 +9,8 @@ import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBinding
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
+import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
+import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import messagePublisher = require("common/messagePublisher");
 import document = require("models/database/documents/document");
 import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
@@ -19,8 +21,6 @@ import moment = require("moment");
 import { highlight, languages } from "prismjs";
 import shardViewModelBase from "viewmodels/shardViewModelBase";
 import database = require("models/resources/database");
-import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
-import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 
 class conflictItem {
     
@@ -120,13 +120,31 @@ class conflicts extends shardViewModelBase {
         grid.headerVisible(true);
         grid.init((s, t) => this.fetchConflicts(s, t), () =>
             [
-                new hyperlinkColumn<replicationConflictListItemDto>(grid, x => x.Id, x => appUrl.forConflicts(this.db, x.Id), "Document", "50%",
+                new hyperlinkColumn<replicationConflictListItemDto>(grid, x => x.Id, x => appUrl.forConflicts(this.db, x.Id), "Document", "40%",
                     {
                         handler: (item, event) => this.handleLoadAction(item, event)
                     }),
-                new textColumn<replicationConflictListItemDto>(grid, x => x.LastModified, "Date", "50%")
+                new textColumn<replicationConflictListItemDto>(grid, x => x.ConflictsPerDocument, "#", "10%", {
+                    headerTitle: "Conflicts per document"
+                }),
+                new textColumn<replicationConflictListItemDto>(grid, x => x.LastModified, "Last Modified", "45%")
             ]
         );
+
+        this.columnPreview.install(".conflicts-grid", ".js-conflict-details-tooltip",
+            (details: replicationConflictListItemDto, column: virtualColumn, e: JQueryEventObject,
+             onValue: (context: any, valueToCopy?: string) => void) => {
+                if (column instanceof textColumn) {
+                    if (column.header === "Last Modified") {
+                        onValue(moment.utc(details.LastModified), details.LastModified);
+                    } else {
+                        const value = column.getCellValue(details);
+                        if (value) {
+                            onValue(generalUtils.escapeHtml(value), value);
+                        }
+                    }
+                }
+            });
 
         // if we have some document at this point select this value
         // it is used during per url initialization

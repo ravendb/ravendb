@@ -24,8 +24,6 @@ import documentMetadata = require("models/database/documents/documentMetadata");
 import getDocumentsMetadataByIDPrefixCommand = require("commands/database/documents/getDocumentsMetadataByIDPrefixCommand");
 import testSqlReplicationCommand = require("commands/database/tasks/testSqlReplicationCommand");
 import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
-import popoverUtils = require("common/popoverUtils");
-import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 import { highlight, languages } from "prismjs";
 import shardViewModelBase from "viewmodels/shardViewModelBase";
 
@@ -175,6 +173,8 @@ class editSqlEtlTask extends shardViewModelBase {
 
     view = require("views/database/tasks/editSqlEtlTask.html");
     connectionStringView = require("views/database/settings/connectionStringSql.html");
+    pinResponsibleNodeButtonsScriptView = require("views/partial/pinResponsibleNodeButtonsScript.html");
+    pinResponsibleNodeTextScriptView = require("views/partial/pinResponsibleNodeTextScript.html");
 
     static readonly scriptNamePrefix = "Script_";
     static isApplyToAll = ongoingTaskSqlEtlTransformationModel.isApplyToAll;
@@ -279,11 +279,6 @@ class editSqlEtlTask extends shardViewModelBase {
         super.compositionComplete();
 
         $('.edit-raven-sql-task [data-toggle="tooltip"]').tooltip();
-
-        popoverUtils.longWithHover($(".responsible-node"),
-            {
-                content: tasksCommonContent.responsibleNodeInfo
-            });
     }
     
     /***************************************************/
@@ -300,8 +295,12 @@ class editSqlEtlTask extends shardViewModelBase {
     }
 
     private initObservables() {
+        const model = this.editedSqlEtl();
+        
+        this.showAdvancedOptions(model.hasAdvancedOptionsDefined());
+        
         // Discard test connection result when connection string has changed
-        this.editedSqlEtl().connectionStringName.subscribe(() => this.testConnectionResult(null));
+        model.connectionStringName.subscribe(() => this.testConnectionResult(null));
 
         this.shortErrorText = ko.pureComputed(() => {
             const result = this.testConnectionResult();
@@ -321,7 +320,7 @@ class editSqlEtlTask extends shardViewModelBase {
         this.newConnectionString(connectionStringSqlEtlModel.empty());
         this.newConnectionString().setNameUniquenessValidator(name => !this.sqlEtlConnectionStringsNames().find(x => x.toLocaleLowerCase() === name.toLocaleLowerCase()));
 
-        const connectionStringName = this.editedSqlEtl().connectionStringName();
+        const connectionStringName = model.connectionStringName();
         const connectionStringIsMissing = connectionStringName && !this.sqlEtlConnectionStringsNames()
             .find(x => x.toLocaleLowerCase() === connectionStringName.toLocaleLowerCase());
         
@@ -332,7 +331,7 @@ class editSqlEtlTask extends shardViewModelBase {
         if (connectionStringIsMissing) {
             // looks like user imported data w/o connection strings, prefill form with desired name
             this.newConnectionString().connectionStringName(connectionStringName);
-            this.editedSqlEtl().connectionStringName(null);
+            model.connectionStringName(null);
         }
 
         // Discard test connection result when needed
@@ -341,11 +340,10 @@ class editSqlEtlTask extends shardViewModelBase {
         this.newConnectionString().connectionString.subscribe(() => this.testConnectionResult(null));
         
         this.connectionStringDefined = ko.pureComputed(() => {
-            const editedEtl = this.editedSqlEtl();
             if (this.createNewConnectionString()) {
                 return !!this.newConnectionString().connectionString();
             } else {
-                return !!editedEtl.connectionStringName();
+                return !!model.connectionStringName();
             }
         });
         
@@ -354,7 +352,7 @@ class editSqlEtlTask extends shardViewModelBase {
         });
 
         const dtoProvider = () => {
-            const dto = this.editedSqlEtl().toDto();
+            const dto = model.toDto();
 
             // override transforms - use only current transformation
             const transformationScriptDto = this.editedTransformationScriptSandbox().toDto();
@@ -387,7 +385,7 @@ class editSqlEtlTask extends shardViewModelBase {
                     // by closing we let user know that connection string is required
                     this.enableTestArea(false);
                     // run global validation - to show connection string errors
-                    this.isValid(this.editedSqlEtl().validationGroup);
+                    this.isValid(model.validationGroup);
                     
                     return false;
                 }

@@ -1450,8 +1450,10 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         {
             QueryStats.UpdateQueryStats(queryResult);
             QueryHighlightings.Update(queryResult);
-            Explanations?.Update(queryResult);
-            QueryTimings?.Update(queryResult);
+            if (Explanations.ShouldBeIncluded)
+                Explanations.Update(queryResult);
+            if (QueryTimings.ShouldBeIncluded)
+                QueryTimings.Update(queryResult);
         }
 
         private void BuildSelect(StringBuilder writer)

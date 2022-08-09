@@ -168,6 +168,7 @@ export class TasksStubs {
                 Disabled: true,
                 MinimumBackupAgeToKeep: "1.00:00:00",
             },
+            PinToMentorNode: false,
         };
     }
 
@@ -186,6 +187,7 @@ export class TasksStubs {
             DelayReplicationFor: null,
             TopologyDiscoveryUrls: ["http://target-raven:8080"],
             DestinationDatabase: "r-ext",
+            PinToMentorNode: false,
         };
     }
 
@@ -203,6 +205,7 @@ export class TasksStubs {
             MentorNode: null,
             TaskConnectionStatus: "Active",
             TopologyDiscoveryUrls: ["http://url1", "http://url2"],
+            PinToMentorNode: false,
         };
     }
 
@@ -220,6 +223,7 @@ export class TasksStubs {
             MentorNode: null,
             TaskConnectionStatus: "Active",
             ConnectionStringDefined: true,
+            PinToMentorNode: false,
         };
     }
 
@@ -235,6 +239,7 @@ export class TasksStubs {
             Error: null,
             MentorNode: null,
             TaskConnectionStatus: "Active",
+            PinToMentorNode: false,
         };
     }
 
@@ -251,6 +256,7 @@ export class TasksStubs {
             MentorNode: null,
             BrokerType: "Kafka",
             Url: "localhost:9092",
+            PinToMentorNode: false,
         };
     }
 
@@ -267,6 +273,7 @@ export class TasksStubs {
             MentorNode: null,
             Url: "localhost:6006",
             BrokerType: "RabbitMq",
+            PinToMentorNode: false,
         };
     }
 
@@ -291,6 +298,7 @@ export class TasksStubs {
             TopologyDiscoveryUrls: ["http://hub-server:8080"],
             AccessName: null,
             CertificatePublicKey: null,
+            PinToMentorNode: false,
         };
     }
 
@@ -307,6 +315,7 @@ export class TasksStubs {
             DestinationDatabase: "target-hub-db",
             DestinationUrl: "http://target-hub-host:8080",
             DelayReplicationFor: null,
+            PinToMentorNode: false,
         };
     }
 
@@ -321,6 +330,7 @@ export class TasksStubs {
             PreventDeletionsMode: "None",
             Name: "hub1",
             WithFiltering: false,
+            PinToMentorNode: false,
         };
     }
 
@@ -336,6 +346,7 @@ export class TasksStubs {
             MentorNode: null,
             TaskConnectionStatus: "Active",
             NodesUrls: ["http://elastic1:8081", "http://elastic2:8081"],
+            PinToMentorNode: false,
         };
     }
 
@@ -357,6 +368,7 @@ export class TasksStubs {
             SubscriptionName: "NamedSubscription",
             LastClientConnectionTime: moment.utc().add(-2, "hours").toISOString(),
             ChangeVectorForNextBatchStartingPointPerShard: null,
+            PinToMentorNode: false,
         };
     }
 

@@ -118,8 +118,10 @@ namespace Corax
 
                 unsafe
                 {
-                    byte* nullTablePtr = (byte*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(_buffer));
-                    return PtrBitVector.GetBitInPointer(nullTablePtr + _nullTableOffset, _currentIdx);
+                    fixed (byte* nullTablePtr = _buffer)
+                    {
+                        return PtrBitVector.GetBitInPointer(nullTablePtr + _nullTableOffset, _currentIdx);
+                    }
                 }
             }
         }

@@ -1,6 +1,9 @@
 <div>
     <div class="cluster-dashboard-item-header">
         <h3> <i class="icon-storage"></i> <span>Storage</span></h3>
+        <button class="btn btn-default btn-sm" data-bind="click: openWidgetSettings" title="Open widget settings">
+            <i class="icon-settings"></i>
+        </button>
         <button class="btn btn-warning btn-sm" data-bind="click: remove" title="Remove widget from board">
             <i class="icon-trash"></i>
         </button>
@@ -21,17 +24,17 @@
                         <div class="details-list" data-bind="foreach: mountPoints">
                             <div class="mount" data-bind="text: mountPointLabel, visible: $parent.mountPoints().length > 1"></div>
                             <div class="storage-legend">
-                                <div class="storage-ravendb" data-toggle="tooltip" data-placement="top" title="RavenDB" 
+                                <div class="storage-ravendb" data-toggle="tooltip" data-placement="top" title="Used by RavenDB"
                                      data-bind="text: $root.sizeFormatter(ravenSize())"></div>
-                                <div class="storage-used" data-toggle="tooltip" data-placement="top" title="Storage Used"
+                                <div class="storage-used" data-toggle="tooltip" data-placement="top" title="Storage used"
                                     data-bind="text: $root.sizeFormatter(usedSpace())"></div>
                                 <div class="storage-free" data-toggle="tooltip" data-placement="top" title="Free"
                                     data-bind="text: $root.sizeFormatter(freeSpace())"></div>
                                 <div class="flex-grow"></div>
-                                <div class="storage-total" data-toggle="tooltip" data-placement="top" title="Storage Available"
+                                <div class="storage-total" data-toggle="tooltip" data-placement="top" title="Total storage available"
                                     data-bind="text: $root.sizeFormatter(totalCapacity())"></div>
                             </div>
-                            <div class="storage-chart">
+                            <div class="storage-chart" data-bind="style: { width: scaleFactor() + '%' }">
                                 <div class="storage-used" data-bind="style: { width: usedSpacePercentage() + '%' }">
                                     <div class="storage-ravendb" data-bind="style: { width: ravendbToUsedSpacePercentage() + '%' }"></div>
                                 </div>

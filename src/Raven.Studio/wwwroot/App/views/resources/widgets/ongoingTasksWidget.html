@@ -9,18 +9,15 @@
                           attr: { title: fullscreen() ? 'Minimize widget' : 'Maximize widget' }"></i>
         </button>
     </div>
-    <div class="tasks-container" style="position: relative;">
-        <div data-bind="foreach: taskList">
-            <div data-bind="attr: { class: 'task-item ' + typeClass() }">
-                <div class="task-name" data-bind="css: { 'text-muted': !taskCount() }">
-                    <i data-bind="attr: { class: iconClass }"></i><span data-bind="text: getFormattedTaskName()"></span>
+    <div class="databases-list" style="position: relative;">
+        <div class="list-container">
+            <div class="tasks-list">
+                <virtual-grid class="resizable no-margin"
+                              params="controller: gridController, condensed: true, disableStripes: true"></virtual-grid>
+                <div class="absolute-center loading" data-bind="visible: $root.spinners.loading">
+                    <div class="global-spinner"></div>
                 </div>
-                <div class="task-count" data-bind="text: taskCount, visible: taskCount"></div>
-                <div class="task-count no-count" data-bind="visible: !taskCount()"><i class="icon-cancel text-muted"></i></div>
-                <div class="task-node" data-bind="foreach: taskNodes().nodesArray">
-                    <span data-bind="text: $data, attr: { class: $root.getNodeClass($data) }"></span>
                 </div>
             </div>
         </div>
     </div>
-</div>

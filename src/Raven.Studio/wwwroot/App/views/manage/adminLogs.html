@@ -130,6 +130,76 @@
                     </div>
                 </div>
             </div>
+            <div class="btn-group dropdown-menu-right" id="downloadLogs">
+                <button class="btn btn-info dropdown-toggle" type="button" data-toggle="dropdown" data-bind="click: onOpenDownload">
+                    <i class="icon-export"></i><span>Download Logs</span>
+                    <span class="caret"></span>
+                </button>
+                <div class="dropdown-menu slidein-style" data-bind="dropdownPanel: true">
+                    <form class="flex-form" autocomplete="off">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <div class="margin-bottom margin-left">
+                                        <h4>Specify logs date range:</h4>
+                                    </div>
+                                </div>
+                                <div class="modal-body margin-top margin-bottom-lg margin-right-sm">
+                                    <div class="form-group" >
+                                        <label for="startDate" class="control-label">Start Date</label>
+                                        <div class="flex-grow margin-left">
+                                            <div class="checkbox no-padding-left">
+                                                <input id="useMinStartDate" class="styled" type="checkbox" data-bind="checked: useMinStartDate">
+                                                <label for="useMinStartDate">
+                                                    <span class="margin-left-xs">Use minimum</span>
+                                                </label>
+                                            </div>
+                                            <code class="form-control-static pull-right" data-bind="text: dateFormattedAsUtc(startDate()), visible: !useMinStartDate()"></code>
+                                            <div class="input-group margin-top margin-top-sm" data-bind="visible: !useMinStartDate(), validationElement: startDate">
+                                                <input type="text" class="form-control" id="startDate" placeholder="Start date"
+                                                       data-bind="datePicker: startDate, datepickerOptions: datePickerOptions" />
+                                                <div class="input-group-addon">(local)</div>
+                                                <span class="help-block" data-bind="validationMessage: startDate"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="form-group margin-top-lg">
+                                        <label for="endDate" class="control-label">End Date</label>
+                                        <div class="flex-grow margin-left">
+                                            <div class="checkbox no-padding-left">
+                                                <input id="useMinEndDate" class="styled" type="checkbox" data-bind="checked: useMaxEndDate">
+                                                <label for="useMinEndDate">
+                                                    <span class="margin-left-xs">Use maximum</span>
+                                                </label>
+                                            </div>
+                                            <code class="form-control-static pull-right" data-bind="text: dateFormattedAsUtc(endDate()), visible: !useMaxEndDate()"></code>
+                                            <div class="input-group margin-top margin-top-sm" data-bind="visible: !useMaxEndDate(), validationElement: endDate">
+                                                <input type="text" class="form-control" id="endDate" placeholder="End date"
+                                                       data-bind="datePicker: endDate, datepickerOptions: datePickerOptions" />
+                                                <div class="input-group-addon">(local)</div>
+                                                <span class="help-block" data-bind="validationMessage: endDate"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <div class="flex-horizontal margin-top-sm margin-bottom-sm margin-right-sm">
+                                        <div class="flex-separator"></div>
+                                        <div class="btn-group">
+                                            <button class="btn btn-default btn-sm margin-right-xs close-panel" title="Click to close dropdown">
+                                                <span>Close</span>
+                                            </button>
+                                            <button class="btn btn-success btn-sm" title="Click to download log files" data-bind="click: onDownloadLogs">
+                                                <span>Download</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
             <small class="margin-left margin-left-sm">
                 <label>Log Level:</label>
                 <strong data-bind="text: onDiskConfiguration().selectedLogMode"></strong>
@@ -172,3 +242,10 @@
 </script>
 
 <script type="text/html" id="admin-log-item-template"><pre class="item"></pre></script>
+
+<div class="hidden">
+    <form method="get" download target="hidden-form" id="downloadLogsForm">
+        <input type="hidden" name="from" />
+        <input type="hidden" name="to" />
+    </form>
+</div>

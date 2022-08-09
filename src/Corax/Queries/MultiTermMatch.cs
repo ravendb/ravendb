@@ -94,8 +94,8 @@ namespace Corax.Queries
             // the statistics guarrant those approaches, etc. Currently we apply memoization but without any limit to 
             // size of the result and it's subsequent usage of memory. 
 
-            var bufferHolder = QueryContext.MatchesRawPool.Rent(3 * sizeof(long) * buffer.Length);
-            var longBuffer = MemoryMarshal.Cast<byte, long>(bufferHolder);
+            using var _ = _context.Allocate(3 * sizeof(long) * buffer.Length, out var bufferHolder);
+            var longBuffer = MemoryMarshal.Cast<byte, long>(bufferHolder.ToSpan());
 
             // PERF: We want to avoid to share cache lines, that's why the third array will move toward the end of the array. 
             Span<long> results = longBuffer.Slice(0, buffer.Length);
@@ -133,7 +133,6 @@ namespace Corax.Queries
             
             results[0..totalSize].CopyTo(buffer);
 
-            QueryContext.MatchesRawPool.Return(bufferHolder);
             return totalSize;
         }
 

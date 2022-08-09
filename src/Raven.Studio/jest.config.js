@@ -20,7 +20,7 @@ module.exports = {
     ],
     "setupFilesAfterEnv": [
         "./scripts/setup_runtime.ts",
-        "jest-extended"
+        "jest-extended/all",
     ],
     moduleDirectories: [
         "node_modules",

@@ -78,13 +78,25 @@ namespace Sparrow.Json
 
         public bool GrowAllocation(AllocatedMemoryData allocation, int sizeIncrease)
         {
+            // we need to keep the total allocation size as power of 2
+            var totalAllocation = Bits.PowerOf2(allocation.SizeInBytes + sizeIncrease);
+            var index = Bits.MostSignificantBit(totalAllocation) - 1;
+            if (_freed[index] != null)
+            {
+                // once we increase the size of the allocation,
+                // it might return to the array of fragmented chunks (_free) for future reuse
+                // however it isn't going to be used since we always request the initial allocation
+                // and only after that we request to grow its size, so it will remain forever in the pool
+                // https://ayende.com/blog/197825-C/production-postmortem-efficiency-all-the-way-to-out-of-memory-error?key=e100f37887a0471db8f78c1a5f831f88
+                return false;
+            }
+
             byte* end = allocation.Address + allocation.SizeInBytes;
             var distance = end - _ptrCurrent;
             if (distance != 0)
                 return false;
 
-            // we need to keep the total allocation size as power of 2
-            sizeIncrease = Bits.PowerOf2(allocation.SizeInBytes + sizeIncrease) - allocation.SizeInBytes;
+            sizeIncrease = totalAllocation - allocation.SizeInBytes;
 
             if (_used + sizeIncrease > _allocated)
                 return false;

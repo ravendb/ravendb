@@ -347,6 +347,7 @@ internal abstract class AbstractOngoingTasksHandlerProcessorForGetOngoingTasks<T
             DestinationUrl = res.Url,
             TopologyDiscoveryUrls = connection?.TopologyDiscoveryUrls,
             MentorNode = watcher.MentorNode,
+            PinToMentorNode = watcher.PinToMentorNode,
             TaskConnectionStatus = res.Status,
             DelayReplicationFor = watcher.DelayReplicationFor
         };
@@ -369,6 +370,7 @@ internal abstract class AbstractOngoingTasksHandlerProcessorForGetOngoingTasks<T
             DestinationUrl = sinkReplicationStatus.Url,
             TopologyDiscoveryUrls = sinkReplicationConnection?.TopologyDiscoveryUrls,
             MentorNode = sinkReplication.MentorNode,
+            PinToMentorNode = sinkReplication.PinToMentorNode,
             TaskConnectionStatus = sinkReplicationStatus.Status,
             AccessName = sinkReplication.AccessName,
             AllowedHubToSinkPaths = sinkReplication.AllowedHubToSinkPaths,
@@ -402,6 +404,7 @@ internal abstract class AbstractOngoingTasksHandlerProcessorForGetOngoingTasks<T
             TaskName = backupConfiguration.Name,
             TaskState = backupConfiguration.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
             MentorNode = backupConfiguration.MentorNode,
+            PinToMentorNode = backupConfiguration.PinToMentorNode,
             LastExecutingNodeTag = backupStatus?.NodeTag,
             LastFullBackup = backupStatus?.LastFullBackup,
             LastIncrementalBackup = backupStatus?.LastIncrementalBackup,
@@ -434,6 +437,7 @@ internal abstract class AbstractOngoingTasksHandlerProcessorForGetOngoingTasks<T
                 NodeTag = sqlNode,
                 NodeUrl = clusterTopology.GetUrlFromTag(sqlNode)
             },
+            PinToMentorNode = config.PinToMentorNode,
             Error = sqlEtlError
         };
     }
@@ -449,6 +453,7 @@ internal abstract class AbstractOngoingTasksHandlerProcessorForGetOngoingTasks<T
             TaskState = OngoingTasksHandler.GetEtlTaskState(config),
             TaskConnectionStatus = GetEtlTaskConnectionStatusAsync(record, config, out var sqlNode, out var sqlEtlError).Result,
             ResponsibleNode = new NodeId { NodeTag = sqlNode, NodeUrl = clusterTopology.GetUrlFromTag(sqlNode) },
+            PinToMentorNode = config.PinToMentorNode,
             Error = sqlEtlError
         };
     }
@@ -482,6 +487,7 @@ internal abstract class AbstractOngoingTasksHandlerProcessorForGetOngoingTasks<T
             DestinationUrl = process?.Url,
             TaskConnectionStatus = GetEtlTaskConnectionStatusAsync(record, config, out var node, out var ravenEtlError).Result,
             ResponsibleNode = new NodeId { NodeTag = node, NodeUrl = clusterTopology.GetUrlFromTag(node) },
+            PinToMentorNode = config.PinToMentorNode,
             Error = ravenEtlError
         };
     }
@@ -501,6 +507,7 @@ internal abstract class AbstractOngoingTasksHandlerProcessorForGetOngoingTasks<T
                 NodeTag = nodeES,
                 NodeUrl = clusterTopology.GetUrlFromTag(nodeES)
             },
+            PinToMentorNode = config.PinToMentorNode,
             Error = elasticSearchEtlError
         };
     }
@@ -522,6 +529,7 @@ internal abstract class AbstractOngoingTasksHandlerProcessorForGetOngoingTasks<T
             Disabled = subscriptionState.Disabled,
             LastClientConnectionTime = subscriptionState.LastClientConnectionTime,
             MentorNode = subscriptionState.MentorNode,
+            PinToMentorNode = subscriptionState.PinToMentorNode,
             ResponsibleNode = new NodeId { NodeTag = tag, NodeUrl = clusterTopology.GetUrlFromTag(tag) },
             TaskConnectionStatus = connectionStatus
         };

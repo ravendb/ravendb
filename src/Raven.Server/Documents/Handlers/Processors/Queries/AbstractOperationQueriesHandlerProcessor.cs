@@ -80,7 +80,7 @@ internal abstract class AbstractOperationQueriesHandlerProcessor<TRequestHandler
     {
         return new BulkOperationResult.OperationDetails
         {
-            Query = query.Query
+            Query = query.QueryParameters?.Count > 0 ? $"{query.Query}{Environment.NewLine}{query.QueryParameters}" : query.Query
         };
     }
 }

@@ -80,10 +80,19 @@ namespace Raven.Client.Documents.Linq
 
                 if (callExpression.Method.Name == "get_Item")
                 {
-                    var parent = GetPath(callExpression.Object);
-
                     var itemKey = GetValueFromExpression(callExpression.Arguments[0], callExpression.Method.GetParameters()[0].ParameterType).ToString();
 
+                    if (callExpression.Object?.NodeType == ExpressionType.Parameter)
+                    {
+                        return new Result
+                        {
+                            MemberType = callExpression.Method.ReturnType,
+                            IsNestedPath = false,
+                            Path = callExpression.Object + "." + itemKey //we've to gather alias because part of our dict would be treated as alias 
+                        };
+                    }
+
+                    var parent = GetPath(callExpression.Object);
                     return new Result
                     {
                         MemberType = callExpression.Method.ReturnType,
@@ -163,7 +172,7 @@ namespace Raven.Client.Documents.Linq
                     break;
             }
 
-
+            var isNested = false;
             if (memberExpression.Expression is MemberExpression mi && 
                 mi.Member.Name == "Value" &&
                 mi.Member.DeclaringType != null && 
@@ -172,6 +181,12 @@ namespace Raven.Client.Documents.Linq
                 )
             {
                 path = mi.Expression + "." + memberExpression.Member.Name;
+            }
+            else if (memberExpression.Expression is MethodCallExpression methodCallExpression &&
+                     methodCallExpression.Method.Name == "get_Item")
+            {
+                path = GetPath(memberExpression.Expression, isFilterActive).Path + "." + memberExpression.Member.Name;
+                isNested = true;
             }
             else
             {
@@ -183,7 +198,7 @@ namespace Raven.Client.Documents.Linq
             var result = new Result
             {
                 Path = path,
-                IsNestedPath = memberExpression.Expression is MemberExpression,
+                IsNestedPath = memberExpression.Expression is MemberExpression || isNested,
                 MemberType = memberExpression.Member.GetMemberType(),
                 MaybeProperty = memberExpression.Member as PropertyInfo
             };
@@ -341,7 +356,7 @@ namespace Raven.Client.Documents.Linq
 
             if (expression is LambdaExpression lambdaExpression)
                 return GetMemberExpression(lambdaExpression.Body);
-
+            
             if (!(expression is MemberExpression memberExpression))
             {
                 throw new InvalidOperationException("Could not understand how to translate '" + expression + "' to a RavenDB query." +
@@ -505,6 +520,13 @@ namespace Raven.Client.Documents.Linq
                 switch (cur.Expression?.NodeType)
                 {
                     case ExpressionType.Call:
+                        if (cur.Expression is MethodCallExpression mce && mce.Method.Name == "get_Item")
+                        {
+                            break;
+                            //nested dictionary support eg. Where(i => i["x"]["y"].Name == "test")
+                        }
+                        ThrowArgumentException();
+                        break;
                     case ExpressionType.Invoke:
                     case ExpressionType.Add:
                     case ExpressionType.And:
@@ -525,11 +547,16 @@ namespace Raven.Client.Documents.Linq
                     case ExpressionType.Conditional:
                     case ExpressionType.ArrayIndex:
                     case null:
-
-                        throw new ArgumentException("Not supported computation: " + memberExpression +
-                                                    ". You cannot use computation in RavenDB queries (only simple member expressions are allowed).");
+                        ThrowArgumentException();
+                        break;
                 }
                 cur = cur.Expression as MemberExpression;
+            }
+
+            void ThrowArgumentException()
+            {
+                throw new ArgumentException("Not supported computation: " + memberExpression +
+                                            ". You cannot use computation in RavenDB queries (only simple member expressions are allowed).");
             }
         }
 

@@ -17,7 +17,6 @@ import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBinding
 import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleMentorsCommand");
 import jsonUtil = require("common/jsonUtil");
 import popoverUtils = require("common/popoverUtils");
-import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 import backupSettings = require("models/database/tasks/periodicBackup/backupSettings");
 import testPeriodicBackupCredentialsCommand = require("commands/serverWide/testPeriodicBackupCredentialsCommand");
 import getPeriodicBackupConfigCommand = require("commands/database/tasks/getPeriodicBackupConfigCommand");
@@ -225,6 +224,8 @@ class editOlapEtlTask extends shardViewModelBase {
     connectionStringOlapView = require("views/database/settings/connectionStringOlap.html");
     backupConfigurationView = require("views/partial/backupConfigurationScript.html");
     backupDestinationLocalView = require("views/partial/backupDestinationLocal.html");
+    pinResponsibleNodeButtonsScriptView = require("views/partial/pinResponsibleNodeButtonsScript.html");
+    pinResponsibleNodeTextScriptView = require("views/partial/pinResponsibleNodeTextScript.html");
 
     static readonly scriptNamePrefix = "Script_";
     enableTestArea = ko.observable<boolean>(false);
@@ -328,11 +329,6 @@ class editOlapEtlTask extends shardViewModelBase {
         super.compositionComplete();
 
         $('.edit-raven-olap-task [data-toggle="tooltip"]').tooltip();
-
-        popoverUtils.longWithHover($(".responsible-node"),
-            {
-                content: tasksCommonContent.responsibleNodeInfo
-            });
 
         popoverUtils.longWithHover($(".keep-files-on-disk"),
             {

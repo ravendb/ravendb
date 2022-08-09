@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Raven.Client.Documents.Changes;
@@ -117,7 +118,7 @@ namespace Raven.Server.Documents
                 var conflict = new GetConflictsPreviewResult.ConflictPreview
                 {
                     Id = documentConflict.Id,
-                    LastModified = documentConflict.LastModified
+                    LastModified = documentConflict.LastModified,
                 };
 
                 conflicts.Add(conflict);
@@ -128,7 +129,11 @@ namespace Raven.Server.Documents
             return new GetConflictsPreviewResult
             {
                 TotalResults = GetNumberOfConflicts(context),
-                Results = conflicts.ToArray()
+                Results = conflicts.Select(c=>
+                {
+                    c.ConflictsPerDocument = GetConflictsFor(context, c.Id).Count;
+                    return c;
+                }).ToArray()
             };
         }
 

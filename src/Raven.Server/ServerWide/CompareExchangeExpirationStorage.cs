@@ -34,7 +34,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public static bool HasExpired(TransactionOperationContext context, long currentTicks)
+        public static bool HasExpired(ClusterOperationContext context, long currentTicks)
         {
             var expirationTree = context.Transaction.InnerTransaction.ReadTree(CompareExchangeByExpiration);
             using (var it = expirationTree.Iterate(false))

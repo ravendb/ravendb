@@ -22,7 +22,7 @@ public unsafe partial class IndexSearcher
         if (terms == null)
         {
             // If either the term or the field does not exist the request will be empty. 
-            return TermMatch.CreateEmpty();
+            return TermMatch.CreateEmpty(Allocator);
         }
 
         Slice termSlice;
@@ -49,7 +49,7 @@ public unsafe partial class IndexSearcher
         if (terms == null)
         {
             // If either the term or the field does not exist the request will be empty. 
-            return TermMatch.CreateEmpty();
+            return TermMatch.CreateEmpty(Allocator);
         }
 
         return TermQuery(terms, term);
@@ -64,7 +64,7 @@ public unsafe partial class IndexSearcher
     internal TermMatch TermQuery(CompactTree tree, ReadOnlySpan<byte> term, int fieldId = Constants.IndexSearcher.NonAnalyzer)
     {
         if (tree.TryGetValue(term, out var value) == false)
-            return TermMatch.CreateEmpty();
+            return TermMatch.CreateEmpty(Allocator);
 
         TermMatch matches;
         if ((value & (long)TermIdMask.Set) != 0)
@@ -73,17 +73,17 @@ public unsafe partial class IndexSearcher
             var setStateSpan = Container.Get(_transaction.LowLevelTransaction, setId).ToSpan();
             ref readonly var setState = ref MemoryMarshal.AsRef<SetState>(setStateSpan);
             var set = new Set(_transaction.LowLevelTransaction, Slices.Empty, setState);
-            matches = TermMatch.YieldSet(set, IsAccelerated);
+            matches = TermMatch.YieldSet(Allocator, set, IsAccelerated);
         }
         else if ((value & (long)TermIdMask.Small) != 0)
         {
             var smallSetId = value & Constants.StorageMask.ContainerType;
             var small = Container.Get(_transaction.LowLevelTransaction, smallSetId);
-            matches = TermMatch.YieldSmall(small);
+            matches = TermMatch.YieldSmall(Allocator, small);
         }
         else
         {
-            matches = TermMatch.YieldOnce(value);
+            matches = TermMatch.YieldOnce(Allocator, value);
         }
 #if DEBUG
         matches.Term = Encoding.UTF8.GetString(term);

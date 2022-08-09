@@ -926,7 +926,7 @@ namespace Voron.Impl
             UntrackDirtyPage(pageNumber);
         }
 
-        internal void FreePage(long pageNumber)
+        public void FreePage(long pageNumber)
         {
             if (_disposed != TxState.None)
                 ThrowObjectDisposed();

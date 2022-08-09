@@ -58,5 +58,15 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(1024)]
         [ConfigurationEntry("PerformanceHints.Indexing.MaxNumberOfLoadsPerReference", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public int MaxNumberOfLoadsPerReference { get; set; }
+        
+        [Description("Alert when source document in indexed as field.")]
+        [DefaultValue(true)]
+        [ConfigurationEntry("PerformanceHints.Indexing.AlertWhenSourceDocumentIncludedInOutput", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public bool AlertWhenSourceDocumentIncludedInOutput { get; set; }
+        
+        [Description("Maximum depth of recursion in LINQ Select clause.")]
+        [DefaultValue(32)]
+        [ConfigurationEntry("PerformanceHints.Indexing.MaxDepthOfRecursionInLinqSelect", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public int MaxDepthOfRecursionInLinqSelect { get; set; }
     }
 }

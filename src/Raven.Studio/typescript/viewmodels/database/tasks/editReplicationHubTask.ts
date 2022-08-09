@@ -24,7 +24,6 @@ import deleteReplicationHubAccessConfigCommand = require("commands/database/task
 import genUtils = require("common/generalUtils");
 import certificateUtils = require("common/certificateUtils");
 import viewHelpers = require("common/helpers/view/viewHelpers");
-import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 import accessManager = require("common/shell/accessManager");
 import shardViewModelBase from "viewmodels/shardViewModelBase";
 import database from "models/resources/database";
@@ -34,6 +33,8 @@ import { shardingTodo } from "common/developmentHelper";
 class editReplicationHubTask extends shardViewModelBase {
 
     view = require("views/database/tasks/editReplicationHubTask.html");
+    pinResponsibleNodeButtonsScriptView = require("views/partial/pinResponsibleNodeButtonsScript.html");
+    pinResponsibleNodeTextScriptView = require("views/partial/pinResponsibleNodeTextScript.html");
     
     editedHubTask = ko.observable<ongoingTaskReplicationHubEditModel>();
     editedReplicationAccessItem = ko.observable<replicationAccessHubModel>(null);
@@ -163,11 +164,6 @@ class editReplicationHubTask extends shardViewModelBase {
                         "</li>" +
                     "</ul>"
             });
-
-        popoverUtils.longWithHover($(".responsible-node"),
-            {
-                content: tasksCommonContent.responsibleNodeInfo
-            });
     }
     
     private loadPossibleMentors() {
@@ -213,6 +209,7 @@ class editReplicationHubTask extends shardViewModelBase {
             model.disabled,
             model.manualChooseMentor,
             model.mentorNode,
+            model.pinMentorNode,
             model.delayReplicationTime,
             model.showDelayReplication,
             model.preventDeletions,

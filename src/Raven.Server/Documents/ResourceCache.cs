@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
@@ -84,28 +85,39 @@ namespace Raven.Server.Documents
                 
         }
 
-        public bool TryRemove(StringSegment resourceName, out Task<TResource> resourceTask)
+        public bool TryRemove(StringSegment resourceName, Task<TResource> resourceTask)
         {
-            if (_caseInsensitive.TryRemove(resourceName, out resourceTask) == false)
+            if (_caseInsensitive.TryRemove(new KeyValuePair<StringSegment, Task<TResource>>(resourceName, resourceTask)) == false)
                 return false;
-            
+
             _resourceDetails.TryRemove(resourceTask, out _);
 
             lock (this)
             {
-                RemoveCaseSensitive(resourceName);
+                RemoveCaseSensitive(resourceName, resourceTask);
             }
 
             return true;
         }
 
-        private void RemoveCaseSensitive(StringSegment resourceName)
+        public bool TryGetAndRemove(StringSegment resourceName, out Task<TResource> resourceTask)
+        {
+            if (TryGetValue(resourceName, out resourceTask) == false)
+                return false;
+
+            if (TryRemove(resourceName, resourceTask) == false)
+                return false;
+
+            return true;
+        }
+
+        private void RemoveCaseSensitive(StringSegment resourceName, Task<TResource> resourceTask)
         {
             if (_mappings.TryGetValue(resourceName, out ConcurrentSet<StringSegment> mappings))
             {
                 foreach (var mapping in mappings)
                 {
-                    _caseSensitive.TryRemove(mapping, out Task<TResource> _);
+                    _caseSensitive.TryRemove(new KeyValuePair<StringSegment, Task<TResource>>(mapping, resourceTask));
                 }
             }
         }
@@ -149,21 +161,35 @@ namespace Raven.Server.Documents
                 return value;
             }
         }
-        public IDisposable RemoveLockAndReturn(string databaseName, Action<TResource> onSuccess, out TResource resource, [CallerMemberName] string caller = null)
+        public IDisposable RemoveLockAndReturn(string databaseName, Action<TResource> onSuccess, out TResource resource, [CallerMemberName] string caller = null, string reason = null)
         {
             Task<TResource> current = null;
+            Task<TResource> resourceLocked;
+
             lock (this)
             {
-                var task = Task.FromException<TResource>(new DatabaseDisabledException($"The database '{databaseName}' has been unloaded and locked by {caller}")
+                var dbDisabledExMessage = $"The database '{databaseName}' has been unloaded and locked";
+
+                if (string.IsNullOrEmpty(caller) == false) 
+                    dbDisabledExMessage += $" by {caller}";
+
+                if (string.IsNullOrEmpty(reason) == false) 
+                    dbDisabledExMessage += $" because {reason}";
+
+                var databaseDisabledException = new DatabaseDisabledException(dbDisabledExMessage)
                 {
                     Data =
                     {
                         [DatabasesLandlord.DoNotRemove] = true,
-                        ["Source"] = caller
                     }
-                });
+                };
 
-                task.IgnoreUnobservedExceptions();
+                if (caller != null) 
+                    databaseDisabledException.Data["Source"] = caller;
+
+                resourceLocked = Task.FromException<TResource>(databaseDisabledException);
+
+                resourceLocked.IgnoreUnobservedExceptions();
 
                 bool found = false;
                 while (found == false)
@@ -172,32 +198,38 @@ namespace Raven.Server.Documents
                     if (found == false)
                     {
                         resource = default(TResource);
-                        if (_caseInsensitive.TryAdd(databaseName, task) == false) 
+                        if (_caseInsensitive.TryAdd(databaseName, resourceLocked) == false) 
                             continue;
 
                         return new DisposableAction(() =>
                         {
-                            TryRemove(databaseName, out _);
+                            _forTestingPurposes?.OnRemoveLockAndReturnDispose?.Invoke(this);
+
+                            TryRemove(databaseName, resourceLocked);
                         });
                     }
                 }
 
                 if (current.IsCompleted == false)
                 {
-                    throw new DatabaseConcurrentLoadTimeoutException($"Attempting to unload database {databaseName} that is loading is not allowed (by {caller})")
-                    {
-                        Data =
-                        {
-                            {caller, null}
-                        }
-                    };
+                    var dbConcurrentLoadTimeoutExMessage = $"Attempting to unload database {databaseName} that is loading is not allowed";
+
+                    if (string.IsNullOrEmpty(caller) == false)
+                        dbConcurrentLoadTimeoutExMessage += $" (by {caller})";
+
+                    var databaseConcurrentLoadTimeoutException = new DatabaseConcurrentLoadTimeoutException(dbConcurrentLoadTimeoutExMessage);
+
+                    if (string.IsNullOrEmpty(caller) == false) 
+                        databaseConcurrentLoadTimeoutException.Data[caller] = null;
+
+                    throw databaseConcurrentLoadTimeoutException;
                 }
 
                 if (current.IsCompletedSuccessfully)
                 {
-                    _caseInsensitive.TryUpdate(databaseName, task, current);
+                    _caseInsensitive.TryUpdate(databaseName, resourceLocked, current);
                     _resourceDetails.TryRemove(current, out _);
-                    RemoveCaseSensitive(databaseName);
+                    RemoveCaseSensitive(databaseName, current);
                 }
             }
             if (current.IsCompletedSuccessfully)
@@ -206,7 +238,9 @@ namespace Raven.Server.Documents
                 onSuccess?.Invoke(current.Result);
                 return new DisposableAction(() =>
                 {
-                    TryRemove(databaseName, out _);
+                    _forTestingPurposes?.OnRemoveLockAndReturnDispose?.Invoke(this);
+
+                    TryRemove(databaseName, resourceLocked);
                 });
             }
 
@@ -216,7 +250,9 @@ namespace Raven.Server.Documents
                 resource = default; 
                 return new DisposableAction(() =>
                 {
-                    TryRemove(databaseName, out _);
+                    _forTestingPurposes?.OnRemoveLockAndReturnDispose?.Invoke(this);
+
+                    TryRemove(databaseName, current);
                 });
             }
 
@@ -226,31 +262,53 @@ namespace Raven.Server.Documents
             return null;// never used
         }
 
-        public Task<TResource> Replace(string databaseName, Task<TResource> task)
+        private TestingStuff _forTestingPurposes;
+
+        internal TestingStuff ForTestingPurposesOnly()
         {
-            lock (this)
+            if (_forTestingPurposes != null)
+                return _forTestingPurposes;
+
+            return _forTestingPurposes = new TestingStuff(this);
+        }
+
+        internal class TestingStuff
+        {
+            private readonly ResourceCache<TResource> _parent;
+
+            public TestingStuff(ResourceCache<TResource> parent)
             {
-                Task<TResource> existingTask = null;
-                _caseInsensitive.AddOrUpdate(databaseName, segment => task, (key, existing) =>
+                _parent = parent;
+            }
+
+            internal Action<ResourceCache<TResource>> OnRemoveLockAndReturnDispose;
+
+            public Task<TResource> Replace(string databaseName, Task<TResource> task)
+            {
+                lock (this)
                 {
-                    existingTask = existing;
-                    return task;
-                });
-
-                ResourceDetails details = null;
-                if (existingTask != null)
-                    _resourceDetails.TryRemove(existingTask, out details);
-
-                _resourceDetails[task] = details ?? new ResourceDetails{InCacheSince = SystemTime.UtcNow};
-
-                if (_mappings.TryGetValue(databaseName, out ConcurrentSet<StringSegment> mappings))
-                {
-                    foreach (var mapping in mappings)
+                    Task<TResource> existingTask = null;
+                    _parent._caseInsensitive.AddOrUpdate(databaseName, segment => task, (key, existing) =>
                     {
-                        _caseSensitive.TryRemove(mapping, out Task<TResource> _);
+                        existingTask = existing;
+                        return task;
+                    });
+
+                    ResourceDetails details = null;
+                    if (existingTask != null)
+                        _parent._resourceDetails.TryRemove(existingTask, out details);
+
+                    _parent._resourceDetails[task] = details ?? new ResourceDetails { InCacheSince = SystemTime.UtcNow };
+
+                    if (_parent._mappings.TryGetValue(databaseName, out ConcurrentSet<StringSegment> mappings))
+                    {
+                        foreach (var mapping in mappings)
+                        {
+                            _parent._caseSensitive.TryRemove(mapping, out Task<TResource> _);
+                        }
                     }
+                    return existingTask;
                 }
-                return existingTask;
             }
         }
     }

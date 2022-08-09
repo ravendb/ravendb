@@ -1,88 +1,84 @@
 import clusterDashboard = require("viewmodels/resources/clusterDashboard");
 import websocketBasedWidget = require("viewmodels/resources/widgets/websocketBasedWidget");
-
-class taskNodes {
-    nodes = ko.observable<Set<string>>();
-    nodesArray: KnockoutComputed<string[]>;
-
-    constructor() {
-        this.nodes(new Set<string>());
-        this.nodesArray = ko.pureComputed(() => _.sortBy(Array.from(this.nodes())));
-    }
-
-    addNode(nodeTag: string): void {
-        const nodeSet = this.nodes();
-        nodeSet.add(nodeTag);
-        this.nodes(nodeSet);
-    }
-
-    removeNode(nodeTag: string): void {
-        const nodeSet = this.nodes();
-        nodeSet.delete(nodeTag);
-        this.nodes(nodeSet);
-    }
-}
-
-// inner table item
-class databaseTaskItem {
-    databaseName = ko.observable<string>();
-    taskCount = ko.observable<number>();
-    taskNodes = ko.observable<taskNodes>();
-    
-    constructor() {
-        this.taskNodes(new taskNodes());
-    }
-}
-
-// parent table item
-class ongoingTaskItem {
-    taskName = ko.observable<string>();
-    taskCount = ko.observable<number>();
-    taskNodes = ko.observable<taskNodes>();
-    
-    innerItems = ko.observableArray<databaseTaskItem>([]);
-
-    typeClass = ko.observable<string>();
-    iconClass = ko.observable<string>();
-
-    constructor(name: string, count: number, typeClass: string, iconClass: string) {
-        this.taskName(name);
-        this.taskCount(count);
-        this.taskNodes(new taskNodes());
-        
-        this.typeClass(typeClass);
-        this.iconClass(iconClass);
-    }
-
-    getFormattedTaskName(): string {
-        switch (this.taskName()) {
-            case "ExternalReplicationCount": return "External Replication";
-            case "ReplicationHubCount": return "Replication Hub";
-            case "ReplicationSinkCount": return "Replication Sink";
-            case "RavenEtlCount": return "RavenDB ETL";
-            case "OlapEtlCount": return "OLAP ETL";
-            case "SqlEtlCount": return "SQL ETL";
-            case "ElasticSearchEtlCount": return "Elasticsearch ETL";
-            case "KafkaEtlCount": return "Kafka ETL";
-            case "RabbitMqEtlCount": return "RabbitMQ ETL";
-            case "PeriodicBackupCount": return "Backup";
-            case "SubscriptionCount": return "Subscription";
-        }
-    }
-}
-
-class nodeRawData {
-    nodeTag = ko.observable<string>();
-    databaseItems = ko.observableArray<Raven.Server.Dashboard.DatabaseOngoingTasksInfoItem>([]);
-}
+import virtualGridController = require("widgets/virtualGrid/virtualGridController");
+import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
+import iconsPlusTextColumn = require("widgets/virtualGrid/columns/iconsPlusTextColumn");
+import textColumn = require("widgets/virtualGrid/columns/textColumn");
+import genUtils = require("common/generalUtils");
+import clusterDashboardWebSocketClient = require("common/clusterDashboardWebSocketClient");
+import multiNodeTagsColumn = require("widgets/virtualGrid/columns/multiNodeTagsColumn");
+import taskItem = require("models/resources/widgets/taskItem");
 
 class ongoingTasksWidget extends websocketBasedWidget<Raven.Server.Dashboard.Cluster.Notifications.OngoingTasksPayload> {
 
     view = require("views/resources/widgets/ongoingTasksWidget.html");
     
-    allNodesData = ko.observableArray<nodeRawData>();
+    static readonly taskInfoRecord: Record<StudioTaskType, taskInfo> = {
+        "Replication": {
+            nameForUI: "External Replication",
+            icon: "icon-external-replication",
+            colorClass: "external-replication"
+        },
+        "PullReplicationAsHub": {
+            nameForUI: "Replication Hub",
+            icon: "icon-pull-replication-hub",
+            colorClass: "replication-hub"
+        },
+        "PullReplicationAsSink": {
+            nameForUI: "Replication Sink",
+            icon: "icon-pull-replication-agent",
+            colorClass: "replication-sink"
+        },
+        "RavenEtl": {
+            nameForUI: "RavenDB ETL",
+            icon: "icon-ravendb-etl",
+            colorClass: "ravendb-etl"
+        },
+        "OlapEtl": {
+            nameForUI: "OLAP ETL",
+            icon: "icon-olap-etl",
+            colorClass: "olap-etl"
+        },
+        "SqlEtl": {
+            nameForUI: "SQL ETL",
+            icon: "icon-sql-etl",
+            colorClass: "sql-etl"
+        },
+        "ElasticSearchEtl": {
+            nameForUI: "Elasticsearch ETL",
+            icon: "icon-elastic-search-etl",
+            colorClass: "elastic-etl"
+        },
+        "KafkaQueueEtl": {
+            nameForUI: "Kafka ETL",
+            icon: "icon-kafka-etl",
+            colorClass: "kafka-etl"
+        },
+        "RabbitQueueEtl": {
+            nameForUI: "RabbitMQ ETL",
+            icon: "icon-rabbitmq-etl",
+            colorClass: "rabbitmq-etl"
+        },
+        "Backup": {
+            nameForUI: "Backup",
+            icon: "icon-backups",
+            colorClass: "periodic-backup"
+        },
+        "Subscription": {
+            nameForUI: "Subscription",
+            icon: "icon-subscription",
+            colorClass: "subscription"
+    }
+    }
+
+    protected gridController = ko.observable<virtualGridController<taskItem>>();
     
-    taskList = ko.observableArray<ongoingTaskItem>([]);
+    rawData = ko.observableArray<rawTaskItem>([]);
+    dataToShow = ko.observableArray<taskItem>([]);
+
+    spinners = {
+        loading: ko.observable<boolean>(true)
+    }
 
     getType(): Raven.Server.Dashboard.Cluster.ClusterDashboardNotificationType {
         return "OngoingTasks";
@@ -90,121 +86,246 @@ class ongoingTasksWidget extends websocketBasedWidget<Raven.Server.Dashboard.Clu
 
     constructor(controller: clusterDashboard) {
         super(controller);
-        
-        this.taskList([
-            new ongoingTaskItem("ExternalReplicationCount", 0, "external-replication", "icon-external-replication"),
-            new ongoingTaskItem("ReplicationHubCount", 0, "replication-hub", "icon-pull-replication-hub"),
-            new ongoingTaskItem("ReplicationSinkCount", 0, "replication-sink", "icon-pull-replication-agent"),
-            new ongoingTaskItem("RavenEtlCount", 0, "ravendb-etl", "icon-ravendb-etl"),
-            new ongoingTaskItem("OlapEtlCount", 0, "olap-etl", "icon-olap-etl"),
-            new ongoingTaskItem("SqlEtlCount", 0, "sql-etl", "icon-sql-etl"),
-            new ongoingTaskItem("ElasticSearchEtlCount", 0, "elastic-etl", "icon-elastic-search-etl"),
-            new ongoingTaskItem("KafkaEtlCount", 0, "kafka-etl", "icon-kafka-etl"),
-            new ongoingTaskItem("RabbitMqEtlCount", 0, "rabbitmq-etl", "icon-rabbitmq-etl"),
-            new ongoingTaskItem("PeriodicBackupCount", 0, "periodic-backup", "icon-backups"),
-            new ongoingTaskItem("SubscriptionCount", 0, "subscription", "icon-subscription")
-        ]);
-    }
+}
 
     compositionComplete() {
         super.compositionComplete();
+    
+        const grid = this.gridController();
+        grid.headerVisible(true);
+        
+        grid.customRowClassProvider(item => item.even ? ["even"] : []);
+        
+        grid.init(() => this.getGridData(), (containerWidth, results) => this.prepareColumns(containerWidth, results));
+
         this.enableSyncUpdates();
 
         for (let ws of this.controller.getConnectedLiveClients()) {
             this.onClientConnected(ws);
-        }
-    }
-
-    onData(nodeTag: string, data: Raven.Server.Dashboard.Cluster.Notifications.OngoingTasksPayload) {
-        
-        const nodeToUpdate = this.allNodesData().find(node => node.nodeTag() === nodeTag);
-
-        if (nodeToUpdate) {
-            data.Items.forEach(dbInfo => {
-                const filteredArray = nodeToUpdate.databaseItems().filter(x => x.Database !== dbInfo.Database);
-                filteredArray.push(dbInfo);
-                nodeToUpdate.databaseItems(filteredArray);
-            });
-        } else {
-            const nodeToUpdate = new nodeRawData();
-            nodeToUpdate.nodeTag(nodeTag);
-            data.Items.forEach(dbInfo => nodeToUpdate.databaseItems().push(dbInfo));
-            this.allNodesData().push(nodeToUpdate);
-        }
-        
-        // at this point allNodesData is updated - now update UI classes
-        this.initTaskList();
-        
-        this.allNodesData().forEach(node => {
-            for (let i = 0; i < this.taskList().length; i++) {
-                this.sumTaskCount(node, this.taskList()[i])
-            }
-        });
-    }
-    
-    private sumTaskCount(node: nodeRawData, taskItem: ongoingTaskItem): void {
-        let mustAddNode = false;
-        
-        node.databaseItems().forEach(dbItem => {
-            const countToAdd = dbItem[taskItem.taskName() as keyof Raven.Server.Dashboard.DatabaseOngoingTasksInfoItem] as number;
-            const totalCount = taskItem.taskCount();
-            
-            taskItem.taskCount(totalCount + countToAdd);
-            mustAddNode = mustAddNode || countToAdd > 0;
-
-            this.manageInnerItems(taskItem, dbItem.Database, countToAdd, node.nodeTag());
-        });
-        
-        this.manageParentItemNodes(taskItem, node.nodeTag(), mustAddNode);
-    }
-    
-    private manageInnerItems(taskItem: ongoingTaskItem, database: string, countToAdd: number, nodeTag: string): void {
-        // find relevant inner item and update
-        // TODO: this area is not fully checked - need to debug when adding databases details to the Tasks Panel - RavenDB-18161
-        
-        const innerItems = taskItem.innerItems();
-        const databaseToUpdate = innerItems.find(db => db.databaseName() === database);
-        
-        if (databaseToUpdate) {
-            if (countToAdd > 0) {
-                const totalCount = databaseToUpdate.taskCount();
-                databaseToUpdate.taskCount(totalCount + countToAdd);
-                databaseToUpdate.taskNodes().addNode(nodeTag);
-            } else {
-                databaseToUpdate.taskNodes().removeNode(nodeTag);
-                if (databaseToUpdate.taskCount() === 0) {
-                    const filteredArray = innerItems.filter(db => db.databaseName() !== database);
-                    taskItem.innerItems(filteredArray);
-                }
-            }
-        } else {
-            const databaseToUpdate = new databaseTaskItem();
-            databaseToUpdate.databaseName(database);
-            databaseToUpdate.taskCount(countToAdd);
-            databaseToUpdate.taskNodes().addNode(nodeTag)
-            taskItem.innerItems().push(databaseToUpdate);
-        }
-    }
-    
-    private manageParentItemNodes(taskItem: ongoingTaskItem, tag: string, mustAddNode: boolean): void {
-        if (mustAddNode) {
-            taskItem.taskNodes().addNode(tag)
-        } else {
-            taskItem.taskNodes().removeNode(tag)
-        }
-    }
-    
-    private initTaskList(): void {
-        this.taskList().forEach(task => {
-            task.taskCount(0);
-            task.taskNodes(new taskNodes());
-            task.innerItems([]);
-        });
-    }
-
-    getNodeClass(nodeTag: string): string {
-        return `node-label node-${nodeTag}`;
     }
 }
+
+    protected afterSyncUpdate(updatesCount: number) {
+        this.gridController().reset(false);
+    }
+    
+    afterComponentResized() {
+        super.afterComponentResized();
+        this.gridController().reset(true, true);
+    }
+
+    onClientDisconnected(ws: clusterDashboardWebSocketClient) {
+        super.onClientDisconnected(ws);
+
+        this.gridController().reset(false);
+    }
+        
+    private getGridData(): JQueryPromise<pagedResult<taskItem>> {
+        const items = this.dataToShow();
+
+        this.applyPerDatabaseStripes(items);
+        
+        return $.when({
+            totalResultCount: items.length,
+            items
+        });
+    }
+
+    private getTaskTypeHtml(item: taskItem): iconPlusText[] {
+        const name = ongoingTasksWidget.taskInfoRecord[item.taskType()].nameForUI;
+        
+        return [{
+            title: name + " task",
+            text: name,
+            iconClass: ongoingTasksWidget.taskInfoRecord[item.taskType()].icon,
+            textClass: ongoingTasksWidget.taskInfoRecord[item.taskType()].colorClass
+        }];
+        }
+
+    private getTaskCountHtml(item: taskItem): iconPlusText[] {
+        return [{
+            title: this.getTaskCountTitle(item),
+            text: this.getTaskCountText(item),
+            iconClass: this.getTaskCountIcon(item),
+            textClass: this.getTaskCountClass(item)
+        }];
+    }
+
+    private getTaskCountTitle(item: taskItem): string {
+        if (item.isTitleItem()) {
+            const count = item.taskCount();
+            const taskPart = count > 1 ? "tasks" : "task";
+
+            return count > 0 ? `Total of ${count} ${item.taskType()} ${taskPart}` : "";
+}
+
+        return "";
+}
+
+    private getTaskCountText(item: taskItem): string {
+        const count = item.taskCount();
+
+        if (item.isTitleItem() && !item.taskCount()) {
+            return "";
+        } 
+    
+        return count.toLocaleString();
+    }
+    
+    private getTaskCountIcon(item: taskItem): string {
+        if (item.isTitleItem() && !item.taskCount()) {
+            return "icon-cancel";
+    }
+
+        return "";
+    }
+
+    private getTaskCountClass(item: taskItem): string {
+        if (!item.isTitleItem()) {
+            return ""
+    }
+        
+        if (item.taskCount()) {
+            return "text-bold";
+    }
+
+        return "text-muted small";
+        }
+
+    private prepareColumns(containerWidth: number, results: pagedResult<taskItem>): virtualColumn[] {
+        const grid = this.gridController();
+        return [
+            new iconsPlusTextColumn<taskItem>(grid, x => x.isTitleItem() ? this.getTaskTypeHtml(x) : "", "Task", "30%", {
+                headerTitle: "Tasks type"
+            }),
+
+            new iconsPlusTextColumn<taskItem>(grid, x => this.getTaskCountHtml(x), "Count", "15%", {
+                headerTitle: "Tasks count"
+            }),
+
+            new textColumn<taskItem>(grid, x => x.isTitleItem() ? "" : x.databaseName(), "Database", "30%", {
+                title: x => x.databaseName()
+            }),
+
+            new multiNodeTagsColumn(grid, taskItem.createNodeTagsProvider(), "20%", {
+                headerTitle: "Nodes running the tasks"
+            })
+        ];
+        }
+
+    reducePerDatabase(itemsArray: rawTaskItem[]): taskItem[] {
+        const output: taskItem[] = [];
+        
+        for (let rawItem of itemsArray) {
+            const existingItem = output.find(x => x.databaseName() === rawItem.dbName)
+
+            if (existingItem) {
+                existingItem.updateWith(rawItem.count, rawItem.node);
+        } else {
+                output.push(taskItem.itemFromRaw(rawItem));
+        }
+        }
+        
+        return output;
+    }
+        
+    private getTaskType(input: string): StudioTaskType {
+        switch (input) {
+            case "ExternalReplicationCount":
+                return "Replication";
+            case "ReplicationHubCount":
+                return "PullReplicationAsHub";
+            case "ReplicationSinkCount":
+                return "PullReplicationAsSink";
+            case "RavenEtlCount":
+                return "RavenEtl";
+            case "SqlEtlCount":
+                return "SqlEtl";
+            case "OlapEtlCount":
+                return "OlapEtl";
+            case "ElasticSearchEtlCount":
+                return "ElasticSearchEtl";
+            case "KafkaEtlCount":
+                return "KafkaQueueEtl";
+            case "RabbitMqEtlCount":
+                return "RabbitQueueEtl";
+            case "PeriodicBackupCount":
+                return "Backup";
+            case "SubscriptionCount":
+                return "Subscription";
+            default:
+                throw new Error("Unknown task type count received:" + input);
+            }
+    }
+    
+    onData(nodeTag: string, data: Raven.Server.Dashboard.Cluster.Notifications.OngoingTasksPayload) {
+        this.spinners.loading(false);
+        
+        // 1. update raw data
+        const rawDataWithoutIncomingNode = this.rawData().filter(x => x.node !== nodeTag);
+        const tempRawData = rawDataWithoutIncomingNode;
+            
+        data.Items.forEach(x => {
+            for (let key in x) {
+                if (!x.hasOwnProperty(key))
+                    continue;
+
+                const value = (x as any)[key];
+                
+                if (key !== "Database" && value > 0) {
+                    const taskType = this.getTaskType(key);
+                    
+                    tempRawData.push({
+                        type: taskType,
+                        count: value,
+                        dbName: genUtils.escapeHtml(x.Database),
+                        node: nodeTag
+        });
+                }
+            }
+        });
+        
+        this.rawData(tempRawData);
+
+        // 2. create the data to show
+        const tempDataToShow: Array<taskItem> = [];
+
+        for (const taskType in ongoingTasksWidget.taskInfoRecord) {
+            const filteredItemsByType = this.rawData().filter(x => x.type === taskType);
+            
+            const reducedItems = this.reducePerDatabase(filteredItemsByType);
+
+            if (reducedItems && reducedItems.length) {
+                reducedItems.sort((a: taskItem, b: taskItem) => genUtils.sortAlphaNumeric(a.databaseName(), b.databaseName()));
+                reducedItems.map(x => x.nodeTags().sort((a: string, b: string) => genUtils.sortAlphaNumeric(a, b)));
+    }
+    
+            const totalTasksPerType = reducedItems.reduce((sum, item) => sum + item.taskCount(), 0);
+            const titleItem = new taskItem(taskType as StudioTaskType, totalTasksPerType);
+        
+            tempDataToShow.push(titleItem);
+        
+            if (reducedItems && reducedItems.length) {
+                tempDataToShow.push(...reducedItems);
+                }
+
+            this.dataToShow(tempDataToShow);
+            }
+        }
+    
+    protected applyPerDatabaseStripes(items: taskItem[]) {
+        // TODO: RavenDB-17013 - stripes not working correctly after scroll
+
+        for (let i = 0; i < items.length; i++) {
+            const item = items[i];
+
+            if (item.isTitleItem()) {
+                item.even = true;
+        } else {
+                item.even = false;
+        }
+    }
+    }
+    }
 
 export = ongoingTasksWidget;

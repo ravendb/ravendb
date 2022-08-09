@@ -21,6 +21,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     private readonly Transaction _transaction;
     private readonly IndexFieldsMapping _fieldMapping;
     private Page _lastPage = default;
+    private long? _numberOfEntries;
 
     /// <summary>
     /// When true no SIMD instruction will be used. Useful for checking that optimized algorithms behave in the same
@@ -30,7 +31,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
     public bool IsAccelerated => Avx2.IsSupported && !ForceNonAccelerated;
 
-    public long NumberOfEntries => _metadataTree?.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0;
+    public long NumberOfEntries => _numberOfEntries ??= _metadataTree?.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0;
 
     internal ByteStringContext Allocator => _transaction.Allocator;
 

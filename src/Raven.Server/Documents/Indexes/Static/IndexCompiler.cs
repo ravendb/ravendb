@@ -507,30 +507,37 @@ namespace Raven.Server.Documents.Indexes.Static
                     RegisterPackage(dependency, userDefined: false, references);
             }
         }
-
+        
         private static MemberDeclarationSyntax CreateClass(string name, IndexDefinition definition)
         {
             var statements = new List<StatementSyntax>();
             var maps = definition.Maps.ToList();
             var fieldNamesValidator = new FieldNamesValidator();
             var methodDetector = new MethodDetectorRewriter();
+            var stackDepthRetriever = new StackDepthRetriever();
             var members = new SyntaxList<MemberDeclarationSyntax>();
-
+            var maxDepthInRecursiveLinqQuery = 0;
+            
             for (var i = 0; i < maps.Count; i++)
             {
                 var map = maps[i];
-                statements.AddRange(HandleMap(definition.SourceType, map, fieldNamesValidator, methodDetector, ref members));
+                statements.AddRange(HandleMap(definition.SourceType, map, fieldNamesValidator, methodDetector, stackDepthRetriever, ref members));
+
+                maxDepthInRecursiveLinqQuery = Math.Max(maxDepthInRecursiveLinqQuery, stackDepthRetriever.StackSize);
+                stackDepthRetriever.Clear();
             }
 
             if (string.IsNullOrWhiteSpace(definition.Reduce) == false)
             {
-                statements.Add(HandleReduce(definition.Reduce, fieldNamesValidator, methodDetector, out CompiledIndexField[] groupByFields));
+                statements.Add(HandleReduce(definition.Reduce, fieldNamesValidator, methodDetector, stackDepthRetriever, out CompiledIndexField[] groupByFields));
 
                 var groupByFieldsArray = GetArrayCreationExpression<CompiledIndexField>(
                     groupByFields,
                     (builder, field) => field.WriteTo(builder));
 
                 statements.Add(RoslynHelper.This(nameof(AbstractStaticIndexBase.GroupByFields)).Assign(groupByFieldsArray).AsExpressionStatement());
+                
+                maxDepthInRecursiveLinqQuery = Math.Max(maxDepthInRecursiveLinqQuery, stackDepthRetriever.StackSize);
             }
 
             var fields = GetIndexedFields(definition, fieldNamesValidator);
@@ -543,6 +550,8 @@ namespace Raven.Server.Documents.Indexes.Static
 
             var methods = methodDetector.Methods;
 
+            statements.Add(RoslynHelper.This(nameof(AbstractStaticIndexBase.StackSizeInSelectClause)).Assign(SyntaxFactory.ParseExpression($"{maxDepthInRecursiveLinqQuery}")).AsExpressionStatement());
+            
             if (methods.HasCreateField)
                 statements.Add(RoslynHelper.This(nameof(AbstractStaticIndexBase.HasDynamicFields)).Assign(SyntaxFactory.LiteralExpression(SyntaxKind.TrueLiteralExpression)).AsExpressionStatement());
 
@@ -603,7 +612,7 @@ namespace Raven.Server.Documents.Indexes.Static
             return fields;
         }
 
-        private static List<StatementSyntax> HandleMap(IndexSourceType type, string map, FieldNamesValidator fieldNamesValidator, MethodDetectorRewriter methodsDetector,
+        private static List<StatementSyntax> HandleMap(IndexSourceType type, string map, FieldNamesValidator fieldNamesValidator, MethodDetectorRewriter methodsDetector, StackDepthRetriever stackDepthRetriever,
             ref SyntaxList<MemberDeclarationSyntax> members)
         {
             try
@@ -613,10 +622,11 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 fieldNamesValidator.Validate(map, expression);
                 methodsDetector.Visit(expression);
-
+                stackDepthRetriever.Visit(expression);
                 var queryExpression = expression as QueryExpressionSyntax;
                 if (queryExpression != null)
                 {
+                    
                     switch (type)
                     {
                         case IndexSourceType.Documents:
@@ -664,7 +674,7 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        private static StatementSyntax HandleReduce(string reduce, FieldNamesValidator fieldNamesValidator, MethodDetectorRewriter methodsDetector, out CompiledIndexField[] groupByFields)
+        private static StatementSyntax HandleReduce(string reduce, FieldNamesValidator fieldNamesValidator, MethodDetectorRewriter methodsDetector, StackDepthRetriever stackDepthRetriever, out CompiledIndexField[] groupByFields)
         {
             try
             {
@@ -672,7 +682,8 @@ namespace Raven.Server.Documents.Indexes.Static
                 var expression = SyntaxFactory.ParseExpression(reduce).NormalizeWhitespace();
                 fieldNamesValidator?.Validate(reduce, expression);
                 methodsDetector.Visit(expression);
-
+                stackDepthRetriever.Visit(expression);
+                
                 StatementSyntax result;
 
                 switch (expression)
@@ -850,7 +861,6 @@ namespace Raven.Server.Documents.Indexes.Static
             var rewrittenExpression = (CSharpSyntaxNode)mapRewriter.Visit(expression);
 
             StatementSyntax optimized = null;
-
             try
             {
                 var visitor = new RavenLinqOptimizer(fieldValidator);
@@ -888,6 +898,7 @@ namespace Raven.Server.Documents.Indexes.Static
             }
             else
             {
+                //This is unoptimized case. We will scan C# code is manner thisMAX.[...]...doc;
                 mapExpression = SyntaxFactory.SimpleLambdaExpression(SyntaxFactory.Parameter(SyntaxFactory.Identifier(identifier)), rewrittenExpression);
             }
 
