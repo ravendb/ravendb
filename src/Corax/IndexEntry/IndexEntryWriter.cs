@@ -9,7 +9,6 @@ using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Server;
 using Sparrow.Server.Compression;
-using Voron;
 using Voron.Impl;
 
 namespace Corax;
@@ -375,56 +374,51 @@ public unsafe partial struct IndexEntryWriter : IDisposable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private int WriteNullsTableIfRequired<TEnumerator>(TEnumerator values, int dataLocation, ref IndexEntryFieldType indexEntryFieldLocation)
         where TEnumerator : IReadOnlySpanIndexer
-    {        
+    {
         // If we have an small number of values, we just allocate the space for the nulls table in the stack. 
-        if (values.Length < 32 * 8)
-        {            
-            return WriteNullsTableIfRequiredStackalloc(values, dataLocation, ref indexEntryFieldLocation);
+        // Since the table is a bitmap, we can pack 8 values in a byte.
+        if (values.Length < 32 * Bits.InByte)
+        {
+            int nullBitStreamSize = values.Length / Bits.InByte + (values.Length % Bits.InByte == 0 ? 0 : 1);
+            Debug.Assert(nullBitStreamSize < 64, "The maximum reasonable to allocate here is 64 bytes.");
+
+            byte* nullBitStreamBuffer = stackalloc byte[nullBitStreamSize];
+
+            // We will include null values if there are nulls to be stored.           
+            bool hasNull = false;
+            for (int i = 0; i < values.Length; i++)
+            {
+                if (values.IsNull(i))
+                {
+                    hasNull = true;
+                    PtrBitVector.SetBitInPointer(nullBitStreamBuffer, i, true);
+                }
+            }
+
+            if (hasNull)
+            {
+                // Copy the null stream.
+                new ReadOnlySpan<byte>(nullBitStreamBuffer, nullBitStreamSize)
+                    .CopyTo(Buffer.Slice(dataLocation, nullBitStreamSize));
+
+                dataLocation += nullBitStreamSize;
+
+                // Signal that we will have to deal with the nulls.
+                indexEntryFieldLocation |= IndexEntryFieldType.HasNulls;
+            }
+
+            return dataLocation;
         }
 
         // If it is big enough, we will just allocate it on the heap and most likely will end up outside of the hot-path when
-        // the JIT compiler aggresively optimize it. 
+        // the JIT compiler aggressively optimize it. 
         return WriteNullsTableIfRequiredHeap(values, dataLocation, ref indexEntryFieldLocation);
-    }
-
-    private int WriteNullsTableIfRequiredStackalloc<TEnumerator>(TEnumerator values, int dataLocation, ref IndexEntryFieldType indexEntryFieldLocation)
-        where TEnumerator : IReadOnlySpanIndexer
-    {
-        int nullBitStreamSize = values.Length / (sizeof(byte) * 8) + (values.Length % (sizeof(byte) * 8) == 0 ? 0 : 1);
-        Debug.Assert(nullBitStreamSize < 64, "The maximum reasonable to allocate here is 64 bytes.");
-
-        byte* nullBitStreamBuffer = stackalloc byte[nullBitStreamSize];        
-        
-        // We will include null values if there are nulls to be stored.           
-        bool hasNull = false;
-        for (int i = 0; i < values.Length; i++)
-        {
-            if (values.IsNull(i))
-            {
-                hasNull = true;
-                PtrBitVector.SetBitInPointer(nullBitStreamBuffer, i, true);
-            }
-        }
-
-        if (hasNull)
-        {
-            // Copy the null stream.
-            new ReadOnlySpan<byte>(nullBitStreamBuffer, nullBitStreamSize)
-                .CopyTo(Buffer.Slice(dataLocation, nullBitStreamSize));
-
-            dataLocation += nullBitStreamSize;
-
-            // Signal that we will have to deal with the nulls.
-            indexEntryFieldLocation |= IndexEntryFieldType.HasNulls;
-        }
-
-        return dataLocation;
     }
 
     private int WriteNullsTableIfRequiredHeap<TEnumerator>(TEnumerator values, int dataLocation, ref IndexEntryFieldType indexEntryFieldLocation)
         where TEnumerator : IReadOnlySpanIndexer
     {
-        int nullBitStreamSize = values.Length / (sizeof(byte) * 8) + (values.Length % (sizeof(byte) * 8) == 0 ? 0 : 1);
+        int nullBitStreamSize = values.Length / Bits.InByte + (values.Length % Bits.InByte == 0 ? 0 : 1);
         
         using var _ = _context.Allocate(nullBitStreamSize, out var nullBitStream);
         nullBitStream.ToSpan().Fill(0); // Initialize with zeros.
@@ -463,14 +457,13 @@ public unsafe partial struct IndexEntryWriter : IDisposable
         Debug.Assert(KnownFieldsLocations[field] == Invalid, "The field has been written before.");
 
         if (values.Length != longValues.Length || values.Length != doubleValues.Length)
-            throw new ArgumentException("The lengths of the values and longValues and doubleValues must be the same.");
+            throw new ArgumentException($"The lengths of the {nameof(values)} and {nameof(longValues)} and {nameof(doubleValues)} must be the same.");
 
         // We are calculating the space required based on the necessary space needed to store
         // the lists, metadata and the content.  
         int requiredSpace = sizeof(IndexEntryFieldType) + 2 * longValues.Length * sizeof(long) + 4 * sizeof(long);
         for (int i = 0; i < values.Length; i++)
             requiredSpace += values[i].Length;
-
 
         if (FreeSpace < requiredSpace)
             UnlikelyGrowAuxiliaryBuffer(requiredSpace);
@@ -551,9 +544,8 @@ public unsafe partial struct IndexEntryWriter : IDisposable
 
         // We need to know how big the metadata table is going to be.
         int maxOffset = 0;
-        for (int i = 0; i < knownFieldsLocations.Length; i++)
+        foreach (var offset in knownFieldsLocations)
         {
-            int offset = knownFieldsLocations[i];
             if (offset != Invalid)
                 maxOffset = Math.Max(offset & LocationMask, maxOffset);
         }
@@ -616,7 +608,7 @@ public unsafe partial struct IndexEntryWriter : IDisposable
         buffer.Slice(0, _dataIndex).CopyTo(output.ToSpan());
 
         // We are done, we are preparing the stage for the next one. One could argue that why to 
-        // prepare for the next after finish instead of explicitely call something like `.Reset()`
+        // prepare for the next after finish instead of explicitly call something like `.Reset()`
         // if we dont know if are going to be write another entry. The usage pattern is to write
         // as many as possible with the same instance, so overall the performance impact is negligible. 
         _dynamicFieldIndex = 0;

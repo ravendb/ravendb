@@ -5,6 +5,11 @@ namespace Sparrow.Binary
 {
     public static class Bits
     {
+        public const int InByte = 8;
+        public const int InShort = 16;
+        public const int InInt = 32;
+        public const int InLong = 64;
+
         private const int GB = 1024 * 1024 * 1024;
 
         //https://stackoverflow.com/questions/2709430/count-number-of-bits-in-a-64-bit-long-big-integer
