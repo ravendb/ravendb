@@ -17,6 +17,7 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Sharding;
 using Raven.Server.Config;
+using SlowTests.Core.Session;
 using SlowTests.Core.Utils.Entities;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
@@ -333,7 +334,7 @@ namespace SlowTests.Core.Streaming
 
         [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public void QueryStreamingLoadIds(Options options)
+        public void QueryStreamingGetIds(Options options)
         {
             using (var store = Sharding.GetDocumentStore(options))
             {
@@ -352,6 +353,44 @@ namespace SlowTests.Core.Streaming
                     Assert.NotEqual(Sharding.GetShardNumber(store, "dogs/1"), Sharding.GetShardNumber(store, "dogs/2"));
 
                     var q = session.Query<Dog>().Where(d => d.Id == "dogs/1" || d.Id == "dogs/2").OrderBy(x => x.Id);
+                    var queryResult = session.Advanced.Stream<Dog>(q);
+
+                    var resList = new List<Dog>();
+
+                    foreach (var res in queryResult)
+                    {
+                        resList.Add(res.Document);
+                    }
+
+                    Assert.Equal(2, resList.Count);
+                    Assert.Equal("dogs/1", resList[0].Id);
+                    Assert.Equal("dogs/2", resList[1].Id);
+                }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void QueryStreamingLoadIds(Options options)
+        {
+            using (var store = Sharding.GetDocumentStore(options))
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Dog { Owner = "users/3" }, "dogs/1");
+                    session.Store(new Dog { Owner = "users/4" }, "dogs/2");
+                    session.Store(new Dog { Owner = "users/5" }, "dogs/3");
+
+                    session.Store(new User { Count = 7 }, "users/3");
+                    session.Store(new User { Count = 19 }, "users/4");
+                    session.Store(new User { Count = 13 }, "users/5");
+
+                    session.SaveChanges();
+
+                    Assert.NotEqual(Sharding.GetShardNumber(store, "dogs/1"), Sharding.GetShardNumber(store, "dogs/2"));
+
+                    var q = session.Advanced.DocumentQuery<Dog>().WhereIn(x => x.Id, new[] { "dogs/1", "dogs/2" }).OrderBy("Id");
+                    
                     var queryResult = session.Advanced.Stream<Dog>(q);
 
                     var resList = new List<Dog>();

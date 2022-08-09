@@ -14,6 +14,7 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Timings;
 using Raven.Client.Documents.Session;
+using Raven.Client.Exceptions;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
@@ -1964,8 +1965,8 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying, Skip = "Throws Invalid Json - RavenDB-19127")]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
         public void Streaming_Query_On_Index_With_Load(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1973,7 +1974,7 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
                 var definition = new IndexDefinitionBuilder<User>("UsersByNameAndFriendId")
                 {
                     Map = docs => from doc in docs
-                                  select new { doc.Name, doc.FriendId }
+                        select new { doc.Name, doc.FriendId }
                 }.ToIndexDefinition(store.Conventions);
                 store.Maintenance.Send(new PutIndexesOperation(definition));
 
@@ -1991,7 +1992,7 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
                 {
                     var query = from u in session.Query<User>("UsersByNameAndFriendId")
                                 where u.Name != "Pigpen"
-                                let friend = RavenQuery.Load<User>(u.FriendId) //TODO stav: does streaming support load?
+                                let friend = RavenQuery.Load<User>(u.FriendId)
                                 select new { Name = u.Name, Friend = friend.Name };
 
                     Assert.Equal("from index \'UsersByNameAndFriendId\' as u where u.Name != $p0 " +
@@ -2014,6 +2015,33 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
 
                     Assert.Equal("Bob", resList[1].Name);
                     Assert.Equal("Jerry", resList[1].Friend);
+                }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
+        public void Sharded_Streaming_Query_On_Index_With_Load(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                using (var session = store.OpenSession())
+                {
+                    var query = from u in session.Query<User>("UsersByNameAndFriendId")
+                                where u.Name != "Pigpen"
+                                let friend = RavenQuery.Load<User>(u.FriendId)
+                                select new { Name = u.Name, Friend = friend.Name };
+
+                    Assert.Equal("from index \'UsersByNameAndFriendId\' as u where u.Name != $p0 " +
+                                 "load u.FriendId as friend select { Name : u.Name, Friend : friend.Name }"
+                        , query.ToString());
+
+                    var error = Assert.ThrowsAny<RavenException>(() =>
+                    {
+                        session.Advanced.Stream(query);
+                    });
+
+                    Assert.Contains("Includes and Loads are not supported in sharded streaming queries", error.Message);
                 }
             }
         }

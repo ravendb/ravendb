@@ -7,6 +7,7 @@ using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Util;
 using Sparrow.Json;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Commands.Streaming
 {
@@ -56,8 +57,10 @@ namespace Raven.Server.Documents.Commands.Streaming
             Result = new StreamResult
             {
                 Response = response,
-                Stream = new StreamWithTimeout(responseStream) //TODO stav: leave as stream with timeout?
+                Stream = new StreamWithTimeout(responseStream)
             };
+
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Stav, DevelopmentHelper.Severity.Normal, "Handle possible stream timeout when not reading from stream for a while");
 
             return ResponseDisposeHandling.Manually;
         }

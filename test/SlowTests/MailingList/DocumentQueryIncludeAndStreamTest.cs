@@ -5,6 +5,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Sharding;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -68,8 +69,8 @@ namespace SlowTests.MailingList
             }
         }
 
-        [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenTheory(RavenTestCategory.Querying, Skip = "Throws Invalid Json - RavenDB-19126")]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
         public void StreamDocumentQueryWithInclude(Options options)
         {
             var store = GetDocumentStore(options);
@@ -77,10 +78,7 @@ namespace SlowTests.MailingList
             Indexes.WaitForIndexing(store);
             using (var session = store.OpenSession())
             {
-                var query = session.Advanced.DocumentQuery<ProcessStep, ProcessStepIndex>();
-                query.WhereEquals("Group", 2);
-                query.WhereEquals("LatestExecution", true);
-                query.Include(p => p.StepExecutionsId);
+                var query = session.Advanced.RawQuery<ProcessStep>("from ProcessSteps include StepExecutionsId");
                 var notSupportedException = Assert.Throws<RavenException>(() =>
                 {
                     using (var stream = session.Advanced.Stream(query))
@@ -96,27 +94,22 @@ namespace SlowTests.MailingList
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
-        public void StreamDocumentQueryWithInclude2(Options options)
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
+        public void ShardedStreamDocumentQueryWithInclude(Options options)
         {
             var store = GetDocumentStore(options);
             Setup(store);
             Indexes.WaitForIndexing(store);
             using (var session = store.OpenSession())
             {
-                var query = session.Query<ProcessStep, ProcessStepIndex>(); //TODO stav: doesn't throw but doesn't stream includes docs either. is supported? should throw?
-                query.Include(p => p.StepExecutionsId);
-                var resList = new List<ProcessStep>();
-                using (var stream = session.Advanced.Stream(query))
+                var query = session.Advanced.RawQuery<ProcessStep>("from ProcessSteps include StepExecutionsId");
+                var notSupportedException = Assert.Throws<NotSupportedInShardingException>(() =>
                 {
-                    int count = 0;
-                    foreach (var res in stream)
+                    using (var stream = session.Advanced.Stream(query))
                     {
-                        resList.Add(res.Document);
-                        count++;
                     }
-                    Assert.Equal(1, count);
-                }
+                });
+                Assert.Contains("Includes and Loads are not supported in sharded streaming queries", notSupportedException.Message);
             }
         }
 

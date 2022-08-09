@@ -1,18 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net.Http;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Nest;
 using Raven.Client;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Sharding;
-using Raven.Client.Http;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
@@ -125,10 +121,10 @@ public class ShardedQueryProcessor : IDisposable
         // * For collection queries that specify startsWith by id(), we need to send to all shards
         // * For collection queries without any where clause, we need to send to all shards
         // * For indexes, we sent to all shards
-        CreateQueryCommands(_commands, queryTemplates, _query.Metadata.IndexName);
+        CreateQueryCommands(queryTemplates, _query.Metadata.IndexName);
     }
 
-    public virtual void CreateQueryCommands(Dictionary<int, ShardedQueryCommand> cmds, Dictionary<int, BlittableJsonReaderObject> queryTemplates, string indexName)
+    public virtual void CreateQueryCommands(Dictionary<int, BlittableJsonReaderObject> queryTemplates, string indexName)
     {
         foreach (var (shard, queryTemplate) in queryTemplates)
         {
@@ -137,7 +133,7 @@ public class ShardedQueryProcessor : IDisposable
 
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Use ShardedExecutor");
 
-            cmds[shard] = new ShardedQueryCommand(_parent, HttpMethod.Post, queryTemplate, indexName);
+            _commands.TryAdd(shard, new ShardedQueryCommand(_parent, HttpMethod.Post, queryTemplate, indexName));
         }
     }
 
@@ -257,15 +253,7 @@ public class ShardedQueryProcessor : IDisposable
             }
         }
 
-        CreateQueryCommands(cmds, queryTemplates, indexName: null);
-    }
-
-    private static IEnumerable<string> GetStringEnumerableFromSliceList(List<Slice> list)
-    {
-        foreach (var slice in list)
-        {
-            yield return slice.ToString();
-        }
+        CreateQueryCommands(queryTemplates, indexName: null);
     }
 
     public async Task ExecuteShardedOperations()
