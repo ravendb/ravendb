@@ -36,7 +36,7 @@ public class SetupUnsecuredClusterUsingRvn : ClusterTestBase
             ZipOnly = false,
             NodeSetupInfos = new Dictionary<string,NodeInfo>()
             {
-                ["A"] = new() { Port = 443, TcpPort = 38887, Addresses = new List<string> { "127.0.0.1" } },
+                ["A"] = new() { Port = GetAvailablePort(), TcpPort = GetAvailablePort(), Addresses = new List<string> { "127.0.0.1" } },
             }
         };
       
@@ -110,9 +110,9 @@ public class SetupUnsecuredClusterUsingRvn : ClusterTestBase
             ZipOnly = false,
             NodeSetupInfos = new Dictionary<string,NodeInfo>()
             {
-                ["A"] = new() { Port = 443, TcpPort = 38887, Addresses = new List<string> { "127.0.0.1" } },
-                ["B"] = new() { Port = 448, TcpPort = 38888, Addresses = new List<string> { "127.0.0.1" } },
-                ["C"] = new() { Port = 446, TcpPort = 38889, Addresses = new List<string> { "127.0.0.1" } }
+                ["A"] = new() { Port = GetAvailablePort(), TcpPort = GetAvailablePort(), Addresses = new List<string> { "127.0.0.1" } },
+                ["B"] = new() { Port = GetAvailablePort(), TcpPort = GetAvailablePort(), Addresses = new List<string> { "127.0.0.1" } },
+                ["C"] = new() { Port = GetAvailablePort(), TcpPort = GetAvailablePort(), Addresses = new List<string> { "127.0.0.1" } }
             }
         };
         Assert.True(unsecuredSetupInfo.ZipOnly == false, nameof(unsecuredSetupInfo.ZipOnly) + " != false");

@@ -73,11 +73,6 @@ namespace SlowTests.Authentication
                 email = command.Result.Email;
             }
 
-            var tcpListener = new TcpListener(IPAddress.Loopback, 0);
-            tcpListener.Start();
-            var port = ((IPEndPoint)tcpListener.LocalEndpoint).Port;
-            tcpListener.Stop();
-
             var setupInfo = new SetupInfo
             {
                 Domain = domain,
@@ -93,7 +88,7 @@ namespace SlowTests.Authentication
                 {
                     ["A"] = new NodeInfo
                     {
-                        Port = port,
+                        Port = GetAvailablePort(),
                         Addresses = new List<string>
                         {
                             "127.0.0.1"
