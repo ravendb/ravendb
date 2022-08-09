@@ -9,7 +9,7 @@ using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Replication.Outgoing
 {
-    public abstract class OutgoingPullReplicationHandler : DatabaseOutgoingReplicationHandlerBase
+    public abstract class OutgoingPullReplicationHandler : DatabaseOutgoingReplicationHandler
     {
         public string[] PathsToSend;
         private string[] _destinationAcceptablePaths;

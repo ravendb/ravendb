@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.Replication;
+using Raven.Client.Exceptions.Sharding;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.ReplicationItems;
@@ -46,9 +47,9 @@ namespace Raven.Server.Documents.Sharding
                 switch (header.AuthorizeInfo?.AuthorizeAs)
                 {
                     case TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PullReplication:
-                        throw new InvalidOperationException("Pull Replication is not supported for sharded database");
+                        throw new NotSupportedInShardingException("Pull Replication is not supported for sharded database");
                     case TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PushReplication:
-                        throw new InvalidOperationException("Push Replication is not supported for sharded database");
+                        throw new NotSupportedInShardingException("Push Replication is not supported for sharded database");
 
                     case null:
                         return;
