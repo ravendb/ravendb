@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using Nest;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Persistence;
@@ -53,13 +55,73 @@ namespace Raven.Server.Documents.Indexes
         {
             EnsureValidStats(stats);
 
-            bool mustDelete = true;
+            int numberOfOutputs;
             if (SearchEngineType == SearchEngineType.Lucene)
             {
-                using (_stats.BloomStats.Start())
+                numberOfOutputs = UpdateIndexEntriesLucene(indexItem, mapResults, writer, indexContext, stats);
+            }
+            else if(SearchEngineType == SearchEngineType.Corax)
+            {
+                numberOfOutputs = UpdateIndexEntriesCorax(indexItem, mapResults, writer, indexContext, stats);
+            }
+            else
+            {
+                throw new ArgumentOutOfRangeException(nameof(SearchEngineType), SearchEngineType + " is not a supported value");
+            }
+
+
+            HandleIndexOutputsPerDocument(indexItem.Id ?? indexItem.LowerId, numberOfOutputs, stats);
+            HandleSourceDocumentIncludedInMapOutput();
+            
+            DocumentDatabase.Metrics.MapIndexes.IndexedPerSec.Mark(numberOfOutputs);
+
+            return numberOfOutputs;
+        }
+
+        private int UpdateIndexEntriesCorax(IndexItem indexItem, IEnumerable mapResults, Lazy<IndexWriteOperationBase> writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        {
+            var it = mapResults.GetEnumerator();
+            try
+            {
+                if (it.MoveNext() == false)
+                    return 0; // not results at all
+
+                var first = it.Current;
+
+                if (it.MoveNext() == false)
                 {
-                    mustDelete = _filters.Add(indexItem.LowerId) == false;
+                    // we have just _one_ entry for the map, can try to optimize
+                    writer.Value.UpdateDocument(indexItem.LowerId, indexItem.LowerSourceDocumentId, first, stats, indexContext);
+                    return 1;
                 }
+                else
+                {
+                    writer.Value.Delete(indexItem.LowerId, stats);
+                    writer.Value.IndexDocument(indexItem.LowerId, indexItem.LowerSourceDocumentId, first, stats, indexContext);
+                    var numberOfOutputs = 1; // the first
+                    do
+                    {
+                        numberOfOutputs++;
+                        writer.Value.IndexDocument(indexItem.LowerId, indexItem.LowerSourceDocumentId, it.Current, stats, indexContext);
+                    } while (it.MoveNext());
+
+                    return numberOfOutputs;
+                }
+
+            }
+            finally
+            {
+                if(it is IDisposable d)
+                    d.Dispose();
+            }
+        }
+
+        private int UpdateIndexEntriesLucene(IndexItem indexItem, IEnumerable mapResults, Lazy<IndexWriteOperationBase> writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        {
+            bool mustDelete;
+            using (_stats.BloomStats.Start())
+            {
+                mustDelete = _filters.Add(indexItem.LowerId) == false;
             }
 
             if (indexItem.SkipLuceneDelete == false && mustDelete)
@@ -72,11 +134,6 @@ namespace Raven.Server.Documents.Indexes
 
                 numberOfOutputs++;
             }
-
-            HandleIndexOutputsPerDocument(indexItem.Id ?? indexItem.LowerId, numberOfOutputs, stats);
-            HandleSourceDocumentIncludedInMapOutput();
-            
-            DocumentDatabase.Metrics.MapIndexes.IndexedPerSec.Mark(numberOfOutputs);
 
             return numberOfOutputs;
         }

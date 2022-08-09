@@ -126,6 +126,166 @@ namespace Corax
             using var _ = Slice.From(Transaction.Allocator, id, out var idSlice);
             return Index(idSlice, data);
         }
+
+        public long Update(string field, Span<byte> key, LazyStringValue id, Span<byte> data)
+        {
+            if (TryGetEntryTermId(field, key, out var entryId) == false)
+            {
+                return Index(id, data);
+            }
+            if((entryId & ~0b00) == 0) 
+            {
+                RecordDeletion(entryId);
+                return Index(id, data);
+            }
+
+            Page lastVisitedPage = default;
+            var oldEntryReader = IndexSearcher.GetReaderFor(Transaction, ref lastVisitedPage, entryId, out var rawSize);
+
+            if (oldEntryReader.Buffer.SequenceEqual(data))
+                return entryId; // no change, can skip all work here, joy!
+           
+            Span<byte> buf = stackalloc byte[10];
+            var idLen = ZigZagEncoding.Encode(buf, id.Size);
+            var newEntryReader = new IndexEntryReader(data);
+
+            // can fit in old size, have to remove anyway
+            if (rawSize < idLen + id.Size + data.Length)
+            {
+                RecordDeletion(entryId);
+                return Index(id, data);
+            }
+            var context = Transaction.Allocator;
+
+            // we can fit it in the old space, let's, great!
+            foreach (var binding in _fieldsMapping)
+            {
+                if (binding.IsIndexed == false)
+                    continue;
+
+                var oldType = oldEntryReader.GetFieldType(binding.FieldId, out var oldOffset);
+                var newType = newEntryReader.GetFieldType(binding.FieldId, out var newOffset);
+
+                if (oldType != newType)
+                {
+                    RemoveSingleTerm(binding, entryId, oldEntryReader, oldType);
+                    InsertToken(context, ref newEntryReader, entryId, binding);
+                    continue;
+                }
+
+                switch (oldType)
+                {
+                    case IndexEntryFieldType.Empty:
+                    case IndexEntryFieldType.Null:
+                        // nothing _can_ change here
+                        break;
+                    case IndexEntryFieldType.TupleListWithNulls:
+                    case IndexEntryFieldType.TupleList:
+                    case IndexEntryFieldType.ListWithNulls:
+                    case IndexEntryFieldType.List:
+                    {
+                        bool oldHasIterator = oldEntryReader.TryReadMany(binding.FieldId, out var oldIterator);
+                        bool newHasIterator = newEntryReader.TryReadMany(binding.FieldId, out var newIterator);
+                        bool areEqual = oldHasIterator == newHasIterator;
+                        while (areEqual)
+                        {
+                            oldHasIterator = oldIterator.ReadNext();
+                            newHasIterator = newIterator.ReadNext();
+
+                            if (oldHasIterator != newHasIterator)
+                            {
+                                areEqual = false;
+                                break;
+                            }
+
+                            if (oldHasIterator == false)
+                                break;
+
+                            if (oldIterator.Type != newIterator.Type)
+                            {
+                                areEqual = false;
+                                break;
+                            }
+
+                            if (oldIterator.Sequence.SequenceEqual(newIterator.Sequence) == false)
+                            {
+                                areEqual = false;
+                                break;
+                            }
+                        }
+
+                        if (areEqual == false)
+                        {
+                            RemoveSingleTerm(binding, entryId, oldEntryReader, oldType);
+                            InsertToken(context, ref newEntryReader, entryId, binding);
+                            continue;
+                        }
+                        break;
+                    }
+                    case IndexEntryFieldType.Tuple:
+                    case IndexEntryFieldType.SpatialPoint:
+                    case IndexEntryFieldType.Simple:
+                    {
+                        bool hasOld = oldEntryReader.Read(binding.FieldId, out var oldVal);
+                        bool hasNew = newEntryReader.Read(binding.FieldId, out var newVal);
+                        if (hasOld != hasNew || hasOld && oldVal.SequenceEqual(newVal) == false)
+                        {
+                            RemoveSingleTerm(binding, entryId, oldEntryReader, oldType);
+                            InsertToken(context, ref newEntryReader, entryId, binding);
+                        }
+                        break;
+                    }
+                    case IndexEntryFieldType.Raw:
+                    case IndexEntryFieldType.RawList:
+                    case IndexEntryFieldType.Invalid:
+                        break;
+
+                    case IndexEntryFieldType.SpatialPointList:
+                    {
+                        bool oldHasIterator = oldEntryReader.TryReadManySpatialPoint(binding.FieldId, out var oldIterator);
+                        bool newHasIterator = newEntryReader.TryReadManySpatialPoint(binding.FieldId, out var newIterator);
+                        bool areEqual = oldHasIterator == newHasIterator;
+                        while (areEqual)
+                        {
+                            oldHasIterator = oldIterator.ReadNext();
+                            newHasIterator = newIterator.ReadNext();
+
+                            if (oldHasIterator != newHasIterator)
+                            {
+                                areEqual = false;
+                                break;
+                            }
+
+                            if (oldHasIterator == false)
+                                break;
+
+                            if (oldIterator.Type != newIterator.Type)
+                            {
+                                areEqual = false;
+                                break;
+                            }
+
+                            if (oldIterator.Geohash.SequenceEqual(newIterator.Geohash) == false)
+                            {
+                                areEqual = false;
+                                break;
+                            }
+                        }
+
+                        if (areEqual == false)
+                        {
+                            RemoveSingleTerm(binding, entryId, oldEntryReader, oldType);
+                            InsertToken(context, ref newEntryReader, entryId, binding);
+                            continue;
+                        }
+
+                        break;
+                    }
+                }
+            }
+
+            return entryId;
+        }
         
         public long Index(Slice id, Span<byte> data)
         {
@@ -222,7 +382,7 @@ namespace Corax
         }
 
         [SkipLocalsInit]
-        private unsafe void InsertToken(ByteStringContext context, ref IndexEntryReader entryReader, long entryId,
+        private void InsertToken(ByteStringContext context, ref IndexEntryReader entryReader, long entryId,
             IndexFieldBinding binding)
         {
             var field = _buffer[binding.FieldId];
@@ -445,114 +605,135 @@ namespace Corax
 
         private void RecordTermsToDeleteFrom(long entryToDelete,  LowLevelTransaction llt, ref Page lastVisitedPage)
         {
-            var entryReader = IndexSearcher.GetReaderFor(Transaction, ref lastVisitedPage, entryToDelete);
+            var entryReader = IndexSearcher.GetReaderFor(Transaction, ref lastVisitedPage, entryToDelete, out _);
             foreach (var binding in _fieldsMapping) // todo maciej: this part needs to be rebuilt after implementing DynamicFields
             {
                 if (binding.IsIndexed == false)
                     continue;
 
                 var fieldType = entryReader.GetFieldType(binding.FieldId, out _);
-                switch (fieldType)
-                {
-                    case IndexEntryFieldType.Empty:
-                    case IndexEntryFieldType.Null:
-                        var termValue = fieldType == IndexEntryFieldType.Null ? Constants.NullValueSlice : Constants.EmptyStringSlice;
-                        RecordExactTermToDelete(termValue, binding);
-                        break;
-                    case IndexEntryFieldType.TupleListWithNulls:
-                    case IndexEntryFieldType.TupleList:
-                    {
-                        if (entryReader.TryReadMany(binding.FieldId, out var iterator) == false)
-                            break;
-
-                        while (iterator.ReadNext())
-                        {
-                            if (iterator.IsNull)
-                            {
-                                RecordTupleToDelete(binding, Constants.NullValueSlice, double.NaN, 0);
-                            }
-                            else if (iterator.IsEmpty)
-                            {
-                                throw new InvalidDataException("Tuple list cannot contain an empty string (otherwise, where did the numeric came from!)");
-                            }
-                            else
-                            {
-                                RecordTupleToDelete(binding, iterator.Sequence, iterator.Double, iterator.Long);
-                            }
-                        }
-                        break;
-                    }
-                    case IndexEntryFieldType.Tuple:
-                        if (entryReader.Read(binding.FieldId, out _, out long l, out double d, out Span<byte> valueInEntry) == false)
-                            break;
-                        RecordTupleToDelete(binding, valueInEntry, d, l);
-                        break;
-
-                    case IndexEntryFieldType.SpatialPointList:
-                        if (entryReader.TryReadManySpatialPoint(binding.FieldId, out var spatialIterator) == false)
-                            break;
-
-                        while (spatialIterator.ReadNext())
-                        {
-                            for (int i = 1; i <= spatialIterator.Geohash.Length; ++i)
-                            {
-                                var spatialTerm = spatialIterator.Geohash.Slice(0, i);
-                                RecordExactTermToDelete(spatialTerm, binding);
-                            }
-                        }
-
-                        break;
-                    case IndexEntryFieldType.Raw:
-                    case IndexEntryFieldType.RawList:
-                    case IndexEntryFieldType.Invalid:
-                        break;
-                    case IndexEntryFieldType.List:
-                    case IndexEntryFieldType.ListWithNulls:
-                    {
-                        if (entryReader.TryReadMany(binding.FieldId, out var iterator) == false)
-                            break;
-
-                        while (iterator.ReadNext())
-                        {
-                            if (iterator.IsNull)
-                            {
-                                RecordExactTermToDelete(Constants.NullValueSlice, binding);
-                            }
-                            else if (iterator.IsEmpty)
-                            {
-                                RecordExactTermToDelete(Constants.EmptyStringSlice, binding);
-                            }
-                            else
-                            {
-                                RecordTermToDelete(iterator.Sequence, binding); 
-                            }
-                        }
-                        break;
-                    }
-
-                    case IndexEntryFieldType.SpatialPoint:
-                        if (entryReader.Read(binding.FieldId, out valueInEntry) == false)
-                            break;
-
-                        for (int i = 1; i <= valueInEntry.Length; ++i)
-                        {
-                            var spatialTerm = valueInEntry.Slice(0, i);
-                            RecordExactTermToDelete(spatialTerm, binding);
-                        }
-                        break;
-                    default:
-                        if (entryReader.Read(binding.FieldId, out var value) == false)
-                            break;
-                        
-                        if(value.IsEmpty)
-                            goto case IndexEntryFieldType.Empty;
-
-                        RecordTermToDelete(value, binding);
-                        break;
-                }
+                RemoveSingleTerm(binding, entryToDelete, entryReader, fieldType);
             }
 
             Container.Delete(llt, _entriesContainerId, entryToDelete); // delete raw index entry
+        }
+
+        private void RemoveSingleTerm(IndexFieldBinding indexFieldBinding, long entryToDelete, IndexEntryReader entryReader, IndexEntryFieldType fieldType)
+        {
+            switch (fieldType)
+            {
+                case IndexEntryFieldType.Empty:
+                case IndexEntryFieldType.Null:
+                    var termValue = fieldType == IndexEntryFieldType.Null ? Constants.NullValueSlice : Constants.EmptyStringSlice;
+                    RecordExactTermToDelete(termValue, indexFieldBinding);
+                    break;
+                case IndexEntryFieldType.TupleListWithNulls:
+                case IndexEntryFieldType.TupleList:
+                {
+                    if (entryReader.TryReadMany(indexFieldBinding.FieldId, out var iterator) == false)
+                        break;
+
+                    while (iterator.ReadNext())
+                    {
+                        if (iterator.IsNull)
+                        {
+                            RecordTupleToDelete(indexFieldBinding, Constants.NullValueSlice, double.NaN, 0);
+                        }
+                        else if (iterator.IsEmpty)
+                        {
+                            throw new InvalidDataException("Tuple list cannot contain an empty string (otherwise, where did the numeric came from!)");
+                        }
+                        else
+                        {
+                            RecordTupleToDelete(indexFieldBinding, iterator.Sequence, iterator.Double, iterator.Long);
+                        }
+                    }
+
+                    break;
+                }
+                case IndexEntryFieldType.Tuple:
+                    if (entryReader.Read(indexFieldBinding.FieldId, out _, out long l, out double d, out Span<byte> valueInEntry) == false)
+                        break;
+                    RecordTupleToDelete(indexFieldBinding, valueInEntry, d, l);
+                    break;
+
+                case IndexEntryFieldType.SpatialPointList:
+                    if (entryReader.TryReadManySpatialPoint(indexFieldBinding.FieldId, out var spatialIterator) == false)
+                        break;
+
+                    while (spatialIterator.ReadNext())
+                    {
+                        for (int i = 1; i <= spatialIterator.Geohash.Length; ++i)
+                        {
+                            var spatialTerm = spatialIterator.Geohash.Slice(0, i);
+                            RecordExactTermToDelete(spatialTerm, indexFieldBinding);
+                        }
+                    }
+
+                    break;
+                case IndexEntryFieldType.Raw:
+                case IndexEntryFieldType.RawList:
+                case IndexEntryFieldType.Invalid:
+                    break;
+                case IndexEntryFieldType.List:
+                case IndexEntryFieldType.ListWithNulls:
+                {
+                    if (entryReader.TryReadMany(indexFieldBinding.FieldId, out var iterator) == false)
+                        break;
+
+                    while (iterator.ReadNext())
+                    {
+                        if (iterator.IsNull)
+                        {
+                            RecordExactTermToDelete(Constants.NullValueSlice, indexFieldBinding);
+                        }
+                        else if (iterator.IsEmpty)
+                        {
+                            RecordExactTermToDelete(Constants.EmptyStringSlice, indexFieldBinding);
+                        }
+                        else
+                        {
+                            RecordTermToDelete(iterator.Sequence, indexFieldBinding);
+                        }
+                    }
+
+                    break;
+                }
+
+                case IndexEntryFieldType.SpatialPoint:
+                    if (entryReader.Read(indexFieldBinding.FieldId, out valueInEntry) == false)
+                        break;
+
+                    for (int i = 1; i <= valueInEntry.Length; ++i)
+                    {
+                        var spatialTerm = valueInEntry.Slice(0, i);
+                        RecordExactTermToDelete(spatialTerm, indexFieldBinding);
+                    }
+
+                    break;
+                default:
+                    if (entryReader.Read(indexFieldBinding.FieldId, out var value) == false)
+                        break;
+
+                    if (value.IsEmpty)
+                        goto case IndexEntryFieldType.Empty;
+
+                    RecordTermToDelete(value, indexFieldBinding);
+                    break;
+            }
+            
+            void RecordExactTermToDelete(ReadOnlySpan<byte> termValue, IndexFieldBinding binding)
+            {
+                using var _ = CreateNormalizedTerm(Transaction.Allocator, termValue, out Slice termSlice);
+
+                if (_buffer[binding.FieldId].TryGetValue(termSlice, out var result) == false)
+                {
+                    _buffer[binding.FieldId][termSlice.Clone(Transaction.Allocator)] =
+                        result = new EntriesModifications { Additions = new List<long>(), Removals = new List<long>() };
+                }
+
+                AddMaybeAvoidDuplicate(result.Removals, entryToDelete);
+            }
 
             void RecordTupleToDelete(IndexFieldBinding binding, ReadOnlySpan<byte> termValue, double termDouble, long termLong)
             {
@@ -604,19 +785,7 @@ namespace Corax
                     RecordExactTermToDelete(term, binding);
                 }
             }
-            
-            void RecordExactTermToDelete( ReadOnlySpan<byte> termValue, IndexFieldBinding binding)
-            {
-                using var _ = CreateNormalizedTerm(Transaction.Allocator, termValue, out Slice termSlice);
 
-                if (_buffer[binding.FieldId].TryGetValue(termSlice, out var result) == false)
-                {
-                    _buffer[binding.FieldId][termSlice.Clone(Transaction.Allocator)] =
-                        result = new EntriesModifications { Additions = new List<long>(), Removals = new List<long>() };
-                }
-                
-                AddMaybeAvoidDuplicate(result.Removals, entryToDelete);
-            }
         }
 
         private void ProcessDeletes() 
@@ -631,20 +800,21 @@ namespace Corax
 
         public bool TryDeleteEntry(string key, string term)
         {
-            var fieldsTree = Transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
-            if (fieldsTree == null)
+            using var _ = Slice.From(Transaction.Allocator, term, ByteStringType.Immutable, out var termSlice);
+            return TryDeleteEntry(key, termSlice.AsSpan());
+        }
+
+        public bool TryDeleteEntry(string key, Span<byte> term)
+        {
+            if (!TryGetEntryTermId(key, term, out long idInTree)) 
                 return false;
 
-            var fieldTree = fieldsTree.CompactTreeFor(key);
+            RecordDeletion(idInTree);
+            return true;
+        }
 
-            // We need to normalize the term in case we have a term bigger than MaxTermLength.
-            using var _ = Slice.From(Transaction.Allocator, term, out var termSlice);
-            using var __ = CreateNormalizedTerm(Transaction.Allocator, termSlice.AsReadOnlySpan(), out termSlice);
-
-            var termValue = termSlice.AsReadOnlySpan();
-            if (fieldTree.TryGetValue(termValue, out long idInTree, out var _) == false)
-                return false;
-
+        private void RecordDeletion(long idInTree)
+        {
             if ((idInTree & (long)TermIdMask.Set) != 0)
             {
                 var id = idInTree & Constants.StorageMask.ContainerType;
@@ -679,8 +849,24 @@ namespace Corax
                 _deletedEntries.Add(idInTree);
                 _numberOfModifications--;
             }
+        }
 
-            return true;
+        private bool TryGetEntryTermId(string key, Span<byte> term, out long idInTree)
+        {
+            var fieldsTree = Transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
+            if (fieldsTree == null)
+            {
+                idInTree = -1;
+                return false;
+            }
+
+            var fieldTree = fieldsTree.CompactTreeFor(key);
+
+            // We need to normalize the term in case we have a term bigger than MaxTermLength.
+            using var __ = CreateNormalizedTerm(Transaction.Allocator, term, out var termSlice);
+
+            var termValue = termSlice.AsReadOnlySpan();
+            return fieldTree.TryGetValue(termValue, out idInTree, out var _);
         }
 
         private void UnlikelyGrowBuffer(int newBufferSize, int newTokenSize)

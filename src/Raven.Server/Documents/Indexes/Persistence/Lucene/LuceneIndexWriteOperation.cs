@@ -136,6 +136,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
+        public override void UpdateDocument(LazyStringValue key, LazyStringValue sourceDocumentId, object document, IndexingStatsScope stats, JsonOperationContext indexContext)
+        {
+            throw new NotSupportedException();
+        }
+
         public override void IndexDocument(LazyStringValue key, LazyStringValue sourceDocumentId, object document, IndexingStatsScope stats, JsonOperationContext indexContext)
         {
             EnsureValidStats(stats);

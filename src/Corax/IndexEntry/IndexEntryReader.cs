@@ -28,6 +28,8 @@ public unsafe ref struct IndexEntryReader
 
     public int Length => (int)MemoryMarshal.Read<uint>(_buffer);
 
+    public Span<byte> Buffer => _buffer;
+
     public IndexEntryReader(Span<byte> buffer)
     {
         _buffer = buffer;

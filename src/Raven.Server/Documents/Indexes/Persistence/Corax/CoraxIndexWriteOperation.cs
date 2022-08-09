@@ -9,6 +9,9 @@ using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server;
 using Voron.Impl;
+using Sparrow.Server.Compression;
+using Voron;
+using Voron.Data.Containers;
 using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax
@@ -59,14 +62,41 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             }
         }
 
-        public override void IndexDocument(LazyStringValue key, LazyStringValue sourceDocumentId, object document, IndexingStatsScope stats, JsonOperationContext indexContext)
+        public override void UpdateDocument(LazyStringValue key, LazyStringValue sourceDocumentId, object document, IndexingStatsScope stats, JsonOperationContext indexContext)
+        {
+            EnsureValidStats(stats);
+            
+            LazyStringValue lowerId;
+            ByteStringContext<ByteStringMemoryCache>.InternalScope scope = default;
+            ByteString data;
+            using (Stats.ConvertStats.Start())
+            {
+                scope = _converter.SetDocumentFields(key, sourceDocumentId, document, indexContext, out lowerId, out data);
+            }
+            
+            using(scope)
+            using (Stats.AddStats.Start())
+            {
+                _indexWriter.Update(Constants.Documents.Indexing.Fields.DocumentIdFieldName,
+                    key.AsSpan(), lowerId, data.ToSpan());
+            }
+        }
+
+        public override void IndexDocument(LazyStringValue key, LazyStringValue sourceDocumentId, object document, IndexingStatsScope stats,
+            JsonOperationContext indexContext)
         {
             EnsureValidStats(stats);
             _entriesCount++;
 
             LazyStringValue lowerId;
+            ByteString data;
+            ByteStringContext<ByteStringMemoryCache>.InternalScope scope = default;
             using (Stats.ConvertStats.Start())
-            using (var _ = _converter.SetDocumentFields(key, sourceDocumentId, document, indexContext, out lowerId, out var data))
+            {
+                scope = _converter.SetDocumentFields(key, sourceDocumentId, document, indexContext, out lowerId, out data);
+            }
+
+            using (scope)
             {
                 if (data.Length == 0)
                     return;
@@ -77,7 +107,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 }
 
                 stats.RecordIndexingOutput();
-            }
+            } 
         }
 
         public override long EntriesCount() => _entriesCount;
