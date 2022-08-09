@@ -11,7 +11,7 @@ namespace Raven.Client.ServerWide.Operations
 {
     public class CompactDatabaseOperation : IServerOperation<OperationIdResult>
     {
-        private readonly string _selectedNode;
+        private readonly string _nodeTag;
         private readonly CompactSettings _compactSettings;
 
         public CompactDatabaseOperation(CompactSettings compactSettings)
@@ -19,14 +19,14 @@ namespace Raven.Client.ServerWide.Operations
             _compactSettings = compactSettings ?? throw new ArgumentNullException(nameof(compactSettings));
         }
 
-        internal CompactDatabaseOperation(CompactSettings compactSettings, string selectedNode) : this(compactSettings)
+        internal CompactDatabaseOperation(CompactSettings compactSettings, string nodeTag) : this(compactSettings)
         {
-            _selectedNode = selectedNode;
+            _nodeTag = nodeTag;
         }
 
         public RavenCommand<OperationIdResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new CompactDatabaseCommand(conventions, context, _compactSettings, _selectedNode);
+            return new CompactDatabaseCommand(conventions, context, _compactSettings, _nodeTag);
         }
 
         private class CompactDatabaseCommand : RavenCommand<OperationIdResult>
