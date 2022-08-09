@@ -70,12 +70,14 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
     public IndexEntryReader GetReaderFor(long id)
     {
-        return GetReaderFor(_transaction, ref _lastPage, id);
+        return GetReaderFor(_transaction, ref _lastPage, id, out _);
     }
 
-    public static IndexEntryReader GetReaderFor(Transaction transaction, ref Page page, long id)
+    public static IndexEntryReader GetReaderFor(Transaction transaction, ref Page page, long id, out int rawSize)
     {
-        var data = Container.MaybeGetFromSamePage(transaction.LowLevelTransaction, ref page, id).ToSpan();
+        var item = Container.MaybeGetFromSamePage(transaction.LowLevelTransaction, ref page, id);
+        rawSize = item.Length;
+        var data = item.ToSpan();
         int size = ZigZagEncoding.Decode<int>(data, out var len);
         return new IndexEntryReader(data.Slice(size + len));
     }
