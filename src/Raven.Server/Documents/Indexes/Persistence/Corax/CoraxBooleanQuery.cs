@@ -309,7 +309,7 @@ public class CoraxBooleanQuery : IQueryMatch
                     fieldId: leftmostClause.FieldId),
                 (UnaryMatchOperation.GreaterThanOrEqual, string s) => _indexSearcher.GreatThanOrEqualsQuery(leftmostClause.Name, s, default(NullScoreFunction),
                     fieldId: leftmostClause.FieldId),
-            };
+                _ => throw new InvalidOperationException($"UnaryMatchOperation {leftmostClause.Operation} is not supported for type {leftmostClause.Term.GetType()}")            };
 
             baseMatch = baseMatch is null
                 ? nextQuery
@@ -388,7 +388,7 @@ public class CostCounter
     }
 
     // Main goal is to find smallest beginning set to perform operations on it.
-
+    // This class is not used for know.
 
     public void Optimize()
     {
@@ -410,7 +410,7 @@ public class CostCounter
                 var count = item.Materialize().Count;
             }
 
-            //This is interesting part because we don't know how many items do we hit. Maybe should we go trough tree and calculate the cost first? Having 
+            //This is interesting part because we don't know how many items do we hit. Maybe should we go trough tree and calculate the cost first? 
         }
     }
 
