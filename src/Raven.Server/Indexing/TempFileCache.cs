@@ -1,12 +1,14 @@
 using System;
 using System.Collections.Concurrent;
 using System.IO;
+using Raven.Server.Exceptions;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow.Global;
 using Sparrow.LowMemory;
 using Sparrow.Utils;
 using Voron;
+using Sparrow.Server.Exceptions;
 
 namespace Raven.Server.Indexing
 {
@@ -205,17 +207,31 @@ namespace Raven.Server.Indexing
 
         public override void SetLength(long value)
         {
-            if (InnerStream.Length < value)
-                InnerStream.SetLength(value);
+            try
+            {
+                if (InnerStream.Length < value)
+                    InnerStream.SetLength(value);
 
-            _length = value;
+                _length = value;
+            }
+            catch (IOException e) when (e.IsOutOfDiskSpaceException())
+            {
+                ExceptionHelper.ThrowDiskFullException(InnerStream.Name);
+            }
         }
 
         public override void Write(byte[] buffer, int offset, int count)
         {
             var pos = InnerStream.Position;
-            InnerStream.Write(buffer, offset, count);
-            _length = Math.Max(_length, pos + count);
+            try
+            {
+                InnerStream.Write(buffer, offset, count);
+                _length = Math.Max(_length, pos + count);
+            }
+            catch (IOException e) when(e.IsOutOfDiskSpaceException())
+            {
+                ExceptionHelper.ThrowDiskFullException(InnerStream.Name);
+            }
         }
 
         public override bool CanRead => InnerStream.CanRead;
