@@ -12,21 +12,15 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
-    public class QueryCommand : RavenCommand<QueryResult>
+    public abstract class AbstractQueryCommand<TParameters, TResult> : RavenCommand<TResult>
     {
         private static readonly TimeSpan AdditionalTimeToAddToTimeout = TimeSpan.FromSeconds(10);
 
-        private readonly DocumentConventions _conventions;
-        private readonly IndexQuery _indexQuery;
         private readonly bool _metadataOnly;
         private readonly bool _indexEntriesOnly;
-        private readonly InMemoryDocumentSessionOperations _session;
 
-        public QueryCommand(InMemoryDocumentSessionOperations session, IndexQuery indexQuery, bool metadataOnly = false, bool indexEntriesOnly = false)
+        protected AbstractQueryCommand(IndexQueryBase<TParameters> indexQuery, bool canCache, bool metadataOnly, bool indexEntriesOnly)
         {
-            _indexQuery = indexQuery ?? throw new ArgumentNullException(nameof(indexQuery));
-            _session = session ?? throw new ArgumentNullException(nameof(session));
-            _conventions = _session.Conventions ?? throw new ArgumentNullException(nameof(_session.Conventions));
             _metadataOnly = metadataOnly;
             _indexEntriesOnly = indexEntriesOnly;
 
@@ -41,15 +35,19 @@ namespace Raven.Client.Documents.Commands
 
                 Timeout = timeout;
             }
+
+            CanCache = canCache;
+
+            // we won't allow aggressive caching of queries with WaitForNonStaleResults
+            CanCacheAggressively = CanCache && indexQuery.WaitForNonStaleResults == false;
         }
+
+        public override bool IsReadRequest => true;
+
+        protected abstract ulong GetQueryHash(JsonOperationContext ctx);
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
-            CanCache = _indexQuery.DisableCaching == false;
-
-            // we won't allow aggressive caching of queries with WaitForNonStaleResults
-            CanCacheAggressively = CanCache && _indexQuery.WaitForNonStaleResults == false;
-
             var path = new StringBuilder(node.Url)
                 .Append("/databases/")
                 .Append(node.Database)
@@ -57,7 +55,7 @@ namespace Raven.Client.Documents.Commands
                 // we need to add a query hash because we are using POST queries
                 // so we need to unique parameter per query so the query cache will
                 // work properly
-                .Append(_indexQuery.GetQueryHash(ctx, _conventions, _session.JsonSerializer));
+                .Append(GetQueryHash(ctx));
 
             if (_metadataOnly)
                 path.Append("&metadataOnly=true");
@@ -70,20 +68,46 @@ namespace Raven.Client.Documents.Commands
             var request = new HttpRequestMessage
             {
                 Method = HttpMethod.Post,
-                Content = new BlittableJsonContent(async stream =>
-                    {
-                        // this is here to catch people closing the session before the ToListAsync() completes
-                        _session.AssertNotDisposed();
-                        await using (var writer = new AsyncBlittableJsonTextWriter(ctx, stream))
-                        {
-                            writer.WriteIndexQuery(_conventions, ctx, _indexQuery);
-                        }
-                    }
-                )
+                Content = GetContent(ctx)
             };
 
             url = path.ToString();
             return request;
+        }
+
+        protected abstract HttpContent GetContent(JsonOperationContext ctx);
+    }
+
+    public class QueryCommand : AbstractQueryCommand<Parameters, QueryResult>
+    {
+        private readonly DocumentConventions _conventions;
+        private readonly IndexQuery _indexQuery;
+        private readonly InMemoryDocumentSessionOperations _session;
+
+        public QueryCommand(InMemoryDocumentSessionOperations session, IndexQuery indexQuery, bool metadataOnly = false, bool indexEntriesOnly = false) : base(indexQuery, indexQuery.DisableCaching == false, metadataOnly, indexEntriesOnly)
+        {
+            _indexQuery = indexQuery ?? throw new ArgumentNullException(nameof(indexQuery));
+            _session = session ?? throw new ArgumentNullException(nameof(session));
+            _conventions = _session.Conventions ?? throw new ArgumentNullException(nameof(_session.Conventions));
+        }
+
+        protected override ulong GetQueryHash(JsonOperationContext ctx)
+        {
+            return _indexQuery.GetQueryHash(ctx, _conventions, _session.JsonSerializer);
+        }
+
+        protected override HttpContent GetContent(JsonOperationContext ctx)
+        {
+            return new BlittableJsonContent(async stream =>
+                {
+                    // this is here to catch people closing the session before the ToListAsync() completes
+                    _session.AssertNotDisposed();
+                    await using (var writer = new AsyncBlittableJsonTextWriter(ctx, stream))
+                    {
+                        writer.WriteIndexQuery(_conventions, ctx, _indexQuery);
+                    }
+                }
+            );
         }
 
         public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
@@ -112,7 +136,5 @@ namespace Raven.Client.Documents.Commands
                 }
             }
         }
-
-        public override bool IsReadRequest => true;
     }
 }

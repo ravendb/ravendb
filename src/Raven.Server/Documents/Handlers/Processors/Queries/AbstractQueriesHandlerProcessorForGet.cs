@@ -38,6 +38,7 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
     protected abstract ValueTask HandleSuggestQuery(IndexQueryServerSide query, TQueryContext queryContext, long? existingResultEtag, OperationCancelToken token);
 
     protected abstract ValueTask<QueryResultServerSide<TQueryResult>> GetQueryResults(IndexQueryServerSide query, TQueryContext queryContext, long? existingResultEtag,
+        bool metadataOnly,
         OperationCancelToken token);
 
     protected override HttpMethod QueryMethod { get; }
@@ -92,7 +93,7 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
                     QueryResultServerSide<TQueryResult> result;
                     try
                     {
-                        result = await GetQueryResults(indexQuery, queryContext, existingResultEtag, token);
+                        result = await GetQueryResults(indexQuery, queryContext, existingResultEtag, metadataOnly, token);
                     }
                     catch (IndexDoesNotExistException)
                     {

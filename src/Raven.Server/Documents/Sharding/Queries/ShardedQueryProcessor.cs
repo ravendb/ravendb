@@ -34,8 +34,11 @@ namespace Raven.Server.Documents.Sharding.Queries;
 public class ShardedQueryProcessor : IDisposable
 {
     protected readonly TransactionOperationContext _context;
-    protected readonly ShardedDatabaseRequestHandler _parent;
+    protected readonly ShardedDatabaseRequestHandler _requestHandler;
     private readonly IndexQueryServerSide _query;
+    private readonly bool _metadataOnly;
+    private readonly bool _indexEntriesOnly;
+    private readonly CancellationToken _token;
     private readonly bool _isMapReduceIndex;
     private readonly bool _isAutoMapReduceQuery;
     protected readonly Dictionary<int, ShardedQueryCommand> _commands;
@@ -50,15 +53,19 @@ public class ShardedQueryProcessor : IDisposable
     // want to run a query and knows what shards it is on. Such as:
     // from Orders where State = $state and User = $user where all the orders are on the same share as the user
 
-    public ShardedQueryProcessor(TransactionOperationContext context, ShardedDatabaseRequestHandler parent, IndexQueryServerSide query)
+    public ShardedQueryProcessor(TransactionOperationContext context, ShardedDatabaseRequestHandler requestHandler, IndexQueryServerSide query, bool metadataOnly, bool indexEntriesOnly,
+        CancellationToken token)
     {
         DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "RavenDB-19084 Etag handling");
 
         _context = context;
         _result = new ShardedQueryResult();
-        _parent = parent;
+        _requestHandler = requestHandler;
         _query = query;
-        _isMapReduceIndex = _query.Metadata.IndexName != null && (_parent.DatabaseContext.Indexes.GetIndex(_query.Metadata.IndexName)?.Type.IsMapReduce() ?? false);
+        _metadataOnly = metadataOnly;
+        _indexEntriesOnly = indexEntriesOnly;
+        _token = token;
+        _isMapReduceIndex = _query.Metadata.IndexName != null && (_requestHandler.DatabaseContext.Indexes.GetIndex(_query.Metadata.IndexName)?.Type.IsMapReduce() ?? false);
         _isAutoMapReduceQuery = _query.Metadata.IsDynamic && _query.Metadata.IsGroupBy;
         _commands = new Dictionary<int, ShardedQueryCommand>();
 
@@ -68,7 +75,7 @@ public class ShardedQueryProcessor : IDisposable
         //    _filteredShardIndexes = new HashSet<int>();
         //    foreach (object item in filter)
         //    {
-        //        _filteredShardIndexes.Add(_parent.ShardedDatabaseContext.GetShardIndex(_context, item.ToString()));
+        //        _filteredShardIndexes.Add(_requestHandler.ShardedDatabaseContext.GetShardIndex(_context, item.ToString()));
         //    }
         //}
         //else
@@ -91,7 +98,7 @@ public class ShardedQueryProcessor : IDisposable
             // * For collection queries that specify ids, we can turn that into a set of loads that 
             //   will hit the known servers
 
-            (List<Slice> ids, string _) = _query.ExtractIdsFromQuery(_parent.ServerStore, _context.Allocator, _parent.DatabaseContext.DatabaseName);
+            (List<Slice> ids, string _) = _query.ExtractIdsFromQuery(_requestHandler.ServerStore, _context.Allocator, _requestHandler.DatabaseContext.DatabaseName);
             if (ids != null)
             {
                 GenerateLoadByIdQueries(ids, out queryTemplates);
@@ -112,8 +119,8 @@ public class ShardedQueryProcessor : IDisposable
         //   in that case we must send the query without the projection
         RewriteQueryForProjection(ref queryTemplate);
 
-        queryTemplates = new(_parent.DatabaseContext.ShardCount);
-        for (int i = 0; i < _parent.DatabaseContext.ShardCount; i++)
+        queryTemplates = new(_requestHandler.DatabaseContext.ShardCount);
+        for (int i = 0; i < _requestHandler.DatabaseContext.ShardCount; i++)
         {
             queryTemplates.Add(i, queryTemplate);
         }
@@ -131,9 +138,7 @@ public class ShardedQueryProcessor : IDisposable
             //if (_filteredShardIndexes?.Contains(i) == false)
             //    continue;
 
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Use ShardedExecutor");
-
-            _commands.TryAdd(shard, new ShardedQueryCommand(_parent, HttpMethod.Post, queryTemplate, indexName));
+            _commands.TryAdd(shard, new ShardedQueryCommand(_requestHandler, _context.ReadObject(queryTemplate, "query"), _query, _metadataOnly, _indexEntriesOnly, _query.Metadata.IndexName));
         }
     }
 
@@ -173,7 +178,8 @@ public class ShardedQueryProcessor : IDisposable
             queryTemplate.Modifications[nameof(IndexQuery.QueryParameters)] = modifiedArgs = new DynamicJsonValue();
         }
 
-        var limit = ((_query.Limit ?? 0) + (_query.Offset ?? 0)) * (long)_parent.DatabaseContext.ShardCount;
+        var limit = ((_query.Limit ?? 0) + (_query.Offset ?? 0)) * (long)_requestHandler.DatabaseContext.ShardCount;
+
         if (limit > int.MaxValue) // overflow
             limit = int.MaxValue;
         modifiedArgs[limitToken] = limit;
@@ -214,7 +220,7 @@ public class ShardedQueryProcessor : IDisposable
     {
         const string listParameterName = "p0";
 
-        var shards = ShardLocator.GetDocumentIdsByShards(_context, _parent.DatabaseContext, ids);
+        var shards = ShardLocator.GetDocumentIdsByShards(_context, _requestHandler.DatabaseContext, ids);
 
         var documentQuery = new DocumentQuery<dynamic>(null, null, _query.Metadata.CollectionName, false);
         documentQuery.WhereIn(Constants.Documents.Indexing.Fields.DocumentIdFieldName, new List<object>());
@@ -242,7 +248,7 @@ public class ShardedQueryProcessor : IDisposable
                 },
                 [nameof(IndexQuery.Query)] = documentQuery.ToString()
             };
-            queryTemplates.Add(shardId, _context.ReadObject(q, "query"));
+            _commands[shardId] = new ShardedQueryCommand(_requestHandler, _context.ReadObject(q, "query"), _query, _metadataOnly, _indexEntriesOnly, _query.Metadata.IndexName);
 
             IEnumerable<string> GetIds()
             {
@@ -262,10 +268,8 @@ public class ShardedQueryProcessor : IDisposable
 
         foreach (var (shardNumber, cmd) in _commands)
         {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "RavenDB-19084 Use ShardedExecutor");
-
-            _disposables.Add(_parent.ContextPool.AllocateOperationContext(out TransactionOperationContext context));
-            var task = _parent.DatabaseContext.ShardExecutor.GetRequestExecutorAt(shardNumber).ExecuteAsync(cmd, context);
+            _disposables.Add(_requestHandler.ContextPool.AllocateOperationContext(out TransactionOperationContext context));
+            var task = _requestHandler.DatabaseContext.ShardExecutor.GetRequestExecutorAt(shardNumber).ExecuteAsync(cmd, context, token: _token);
             tasks.Add(task);
         }
         
@@ -285,7 +289,7 @@ public class ShardedQueryProcessor : IDisposable
 
         if (_query.Metadata.HasCmpXchgIncludes)
         {
-            _includeCompareExchangeValues = IncludeCompareExchangeValuesCommand.ExternalScope(_parent.DatabaseContext, _query.Metadata.CompareExchangeValueIncludes);
+            _includeCompareExchangeValues = IncludeCompareExchangeValuesCommand.ExternalScope(_requestHandler.DatabaseContext, _query.Metadata.CompareExchangeValueIncludes);
             _disposables.Add(_includeCompareExchangeValues);
 
             _result.AddCompareExchangeValueIncludes(_includeCompareExchangeValues);
@@ -295,7 +299,7 @@ public class ShardedQueryProcessor : IDisposable
         {
             // we are waiting here for all nodes, we should wait for all of the orchestrators at least to apply that
             // so further queries would not throw index does not exist in case of a failover
-            await _parent.DatabaseContext.Cluster.WaitForExecutionOnAllNodesAsync(index.Value);
+            await _requestHandler.DatabaseContext.Cluster.WaitForExecutionOnAllNodesAsync(index.Value);
         }
     }
 
@@ -335,7 +339,7 @@ public class ShardedQueryProcessor : IDisposable
     private async ValueTask HandleMissingIncludesAsync(HashSet<string> missing)
     {
         var getDocumentsCommands = new Dictionary<int, GetDocumentsCommand>();
-        var shards = ShardLocator.GetDocumentIdsByShards(_context, _parent.DatabaseContext, missing);
+        var shards = ShardLocator.GetDocumentIdsByShards(_context, _requestHandler.DatabaseContext, missing);
 
         foreach ((int shardId, ShardLocator.IdsByShard<string> documentIds) in shards)
         {
@@ -345,9 +349,8 @@ public class ShardedQueryProcessor : IDisposable
         var tasks = new List<Task>();
         foreach (var (shardNumber, cmd) in getDocumentsCommands)
         {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "RavenDB-19084 Use ShardedExecutor");
-            _disposables.Add(_parent.ContextPool.AllocateOperationContext(out TransactionOperationContext context));
-            tasks.Add(_parent.DatabaseContext.ShardExecutor.GetRequestExecutorAt(shardNumber).ExecuteAsync(cmd, context));
+            _disposables.Add(_requestHandler.ContextPool.AllocateOperationContext(out TransactionOperationContext context));
+            tasks.Add(_requestHandler.DatabaseContext.ShardExecutor.GetRequestExecutorAt(shardNumber).ExecuteAsync(cmd, context, token: _token));
         }
 
         await Task.WhenAll(tasks);
@@ -446,7 +449,7 @@ public class ShardedQueryProcessor : IDisposable
     {
         if (_isMapReduceIndex || _isAutoMapReduceQuery)
         {
-            var merger = new ShardedMapReduceQueryResultsMerger(_result.Results, _parent.DatabaseContext.Indexes, _result.IndexName, _isAutoMapReduceQuery, _context);
+            var merger = new ShardedMapReduceQueryResultsMerger(_result.Results, _requestHandler.DatabaseContext.Indexes, _result.IndexName, _isAutoMapReduceQuery, _context);
             _result.Results = merger.Merge();
 
             if (_query.Metadata.OrderBy?.Length > 0 && (_isMapReduceIndex || _isAutoMapReduceQuery))
@@ -465,8 +468,8 @@ public class ShardedQueryProcessor : IDisposable
             return;
 
         var fieldsToFetch = new FieldsToFetch(_query, null);
-        var retriever = new ShardedMapReduceResultRetriever(_parent.DatabaseContext.Indexes.ScriptRunnerCache, _query, null, SearchEngineType.Lucene, fieldsToFetch, null, _context, false, null, null, null,
-            _parent.DatabaseContext.IdentityPartsSeparator);
+        var retriever = new ShardedMapReduceResultRetriever(_requestHandler.DatabaseContext.Indexes.ScriptRunnerCache, _query, null, SearchEngineType.Lucene, fieldsToFetch, null, _context, false, null, null, null,
+            _requestHandler.DatabaseContext.IdentityPartsSeparator);
 
         var currentResults = _result.Results;
         _result.Results = new List<BlittableJsonReaderObject>();

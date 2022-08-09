@@ -80,7 +80,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
 
         private async ValueTask<(IEnumerator<BlittableJsonReaderObject>, StreamQueryStatistics)> ExecuteQueryAsync(TransactionOperationContext context, IndexQueryServerSide query, string debug, bool ignoreLimit, OperationCancelToken token)
         {
-            var queryProcessor = new ShardedQueryStreamProcessor(context, RequestHandler, query);
+            var queryProcessor = new ShardedQueryStreamProcessor(context, RequestHandler, query, token.Token);
             if (queryProcessor.IsMapReduce())
                 throw new NotSupportedInShardingException("MapReduce is not supported in sharded streaming queries");
 

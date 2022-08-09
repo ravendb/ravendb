@@ -108,7 +108,7 @@ internal class DatabaseQueriesHandlerProcessorForGet : AbstractQueriesHandlerPro
     }
 
     protected override async ValueTask<QueryResultServerSide<Document>> GetQueryResults(IndexQueryServerSide query, QueryOperationContext queryContext,
-        long? existingResultEtag, OperationCancelToken token)
+        long? existingResultEtag, bool metadataOnly, OperationCancelToken token)
     {
         return await RequestHandler.Database.QueryRunner.ExecuteQuery(query, queryContext, existingResultEtag, token).ConfigureAwait(false);
     }

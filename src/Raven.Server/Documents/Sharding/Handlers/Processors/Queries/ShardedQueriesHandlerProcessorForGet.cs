@@ -58,12 +58,13 @@ internal class ShardedQueriesHandlerProcessorForGet : AbstractQueriesHandlerProc
         throw new NotSupportedInShardingException("Suggestions are not supported");
     }
 
-    protected override async ValueTask<QueryResultServerSide<BlittableJsonReaderObject>> GetQueryResults(IndexQueryServerSide query, TransactionOperationContext queryContext, long? existingResultEtag, OperationCancelToken token)
+    protected override async ValueTask<QueryResultServerSide<BlittableJsonReaderObject>> GetQueryResults(IndexQueryServerSide query,
+        TransactionOperationContext queryContext, long? existingResultEtag, bool metadataOnly, OperationCancelToken token)
     {
         DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal,
             @"RavenDB-19071 what do we do with: var diagnostics = GetBoolValueQueryString(""diagnostics"", required: false) ?? false");
 
-        _queryProcessor = new ShardedQueryProcessor(queryContext, RequestHandler, query);
+        _queryProcessor = new ShardedQueryProcessor(queryContext, RequestHandler, query, metadataOnly, indexEntriesOnly: false, token: token.Token);
 
         _queryProcessor.Initialize(out _);
 

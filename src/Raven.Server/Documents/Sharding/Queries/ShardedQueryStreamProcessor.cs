@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Threading;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.ServerWide.Context;
@@ -8,7 +9,7 @@ namespace Raven.Server.Documents.Sharding.Queries
 {
     internal class ShardedQueryStreamProcessor : ShardedQueryProcessor
     {
-        public ShardedQueryStreamProcessor(TransactionOperationContext context, ShardedDatabaseRequestHandler parent, IndexQueryServerSide query) : base(context, parent, query)
+        public ShardedQueryStreamProcessor(TransactionOperationContext context, ShardedDatabaseRequestHandler requestHandler, IndexQueryServerSide query, CancellationToken token) : base(context, requestHandler, query, false, false, token)
         {
         }
 
