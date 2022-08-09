@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         private readonly IndexFieldsMapping _knownFields;
         private readonly IDisposable _bufferScope;
         private readonly ByteString _buffer;
-        private int _entriesCount = 0;
+        private long _entriesCount = 0;
 
         public CoraxIndexWriteOperation(Index index, Transaction writeTransaction, CoraxDocumentConverterBase converter, Logger logger) : base(index, logger)
         {
@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             try
             {
                 _indexWriter = new IndexWriter(writeTransaction, _knownFields);
-                _entriesCount = Convert.ToInt32(_indexWriter.GetNumberOfEntries());
+                _entriesCount = _indexWriter.GetNumberOfEntries();
             }
             catch (Exception e) when (e.IsOutOfMemory())
             {
@@ -81,7 +81,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             stats.RecordIndexingOutput();
         }
 
-        public override int EntriesCount() => _entriesCount;
+        public override long EntriesCount() => _entriesCount;
 
         public override (long RamSizeInBytes, long FilesAllocationsInBytes) GetAllocations()
         {

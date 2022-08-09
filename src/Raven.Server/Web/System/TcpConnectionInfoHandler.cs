@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features.Authentication;
@@ -49,7 +51,7 @@ namespace Raven.Server.Web.System
                     throw new InvalidOperationException($"The pull replication '{remoteTask}' is disabled.");
 
                 var topology = ServerStore.Cluster.ReadDatabaseTopology(context, database);
-                nodes = GetResponsibleNodes(topology, databaseGroupId, pullReplication.MentorNode);
+                nodes = GetResponsibleNodes(topology, databaseGroupId, pullReplication.MentorNode, pullReplication.PinToMentorNode);
             }
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -166,25 +168,31 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private List<string> GetResponsibleNodes(DatabaseTopology topology, string databaseGroupId, string mentorNode)
+        private List<string> GetResponsibleNodes(DatabaseTopology topology, string databaseGroupId, string mentorNode, bool pinToMentorNode)
         {
-            var list = new List<string>();
             // we distribute connections to have load balancing when many sinks are connected.
             // this is the hub cluster, so we make the decision which node will do the pull replication only once and only here,
             // for that we create a dummy IDatabaseTask.
             var mentorNodeTask = new PullNodeTask
             {
                 Mentor = mentorNode,
+                PinToMentorNode = pinToMentorNode,
                 DatabaseGroupId = databaseGroupId
             };
 
+            if (pinToMentorNode)
+            {
+                if (topology.AllNodes.Contains(mentorNode))
+                    return new List<string> {mentorNode};
+            }
+
+            var list = new List<string>();
             while (topology.Members.Count > 0)
             {
                 var next = topology.WhoseTaskIsIt(ServerStore.CurrentRachisState, mentorNodeTask, null);
                 list.Add(next);
                 topology.Members.Remove(next);
             }
-
             return list;
         }
 
@@ -192,6 +200,7 @@ namespace Raven.Server.Web.System
         {
             public string Mentor;
             public string DatabaseGroupId;
+            public bool PinToMentorNode;
 
             public ulong GetTaskKey()
             {
@@ -216,6 +225,11 @@ namespace Raven.Server.Web.System
             public bool IsResourceIntensive()
             {
                 return false;
+            }
+
+            public bool IsPinnedToMentorNode()
+            {
+                return PinToMentorNode;
             }
         }
     }

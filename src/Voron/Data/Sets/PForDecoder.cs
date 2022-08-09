@@ -64,14 +64,6 @@ namespace Voron.Data.Sets
             state.BufferSize = bufferLength;
         }
 
-        public static void Reset(DecoderState* state, int bufferLength)
-        {
-            state->_bitPos = 0;
-            state->_prevValue = 0;
-            state->NumberOfReads = 0;
-            state->BufferSize = bufferLength;
-        }
-
         public static DecoderState Initialize(Span<byte> inputBuffer)
         {
             return new DecoderState(inputBuffer.Length);
@@ -82,24 +74,24 @@ namespace Voron.Data.Sets
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         public static int Decode(ref DecoderState state, in ReadOnlySpan<byte> inputBuffer, in Span<int> outputBuffer)
         {
-            byte* inputBufferPtr = (byte*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(inputBuffer));
-            int* outputBufferPtr = (int*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(outputBuffer));
-            DecoderState* statePtr = (DecoderState*)Unsafe.AsPointer(ref state);
-
-            return Decode(statePtr, inputBufferPtr, inputBuffer.Length, outputBufferPtr, outputBuffer.Length);
+            fixed (byte* inputBufferPtr = inputBuffer)
+            fixed (int* outputBufferPtr = outputBuffer)
+            {
+                return Decode(ref state, inputBufferPtr, inputBuffer.Length, outputBufferPtr, outputBuffer.Length);
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-        public static int Decode(DecoderState* state, byte* inputBufferPtr, int inputBufferSize, int* outputBuffer, int outputBufferSize)
+        public static int Decode(ref DecoderState state, byte* inputBufferPtr, int inputBufferSize, int* outputBuffer, int outputBufferSize)
         {
-            Debug.Assert(inputBufferSize == state->BufferSize);
+            Debug.Assert(inputBufferSize == state.BufferSize);
 
-            var stateBitPos = state->_bitPos;
+            var stateBitPos = state._bitPos;
 
             var headerBits = Read2(stateBitPos, inputBufferPtr, out stateBitPos);
             if (headerBits == 0b11)
             {
-                state->_bitPos = stateBitPos;
+                state._bitPos = stateBitPos;
                 return 0;
             }
 
@@ -113,7 +105,7 @@ namespace Voron.Data.Sets
             if (numOfBits == 0)
                 return 0;
 
-            int statePrevValue = state->_prevValue;
+            int statePrevValue = state._prevValue;
             int numOfRepeatedValues = headerBits == 0b00 ? NumberOfValues[(int)(bits >> 5)] : (int)(bits >> 5);
             
             if (numOfRepeatedValues > outputBufferSize)
@@ -139,9 +131,9 @@ namespace Voron.Data.Sets
                 }
             }
 
-            state->_bitPos = stateBitPos;
-            state->_prevValue = statePrevValue;
-            state->NumberOfReads += numOfRepeatedValues;
+            state._bitPos = stateBitPos;
+            state._prevValue = statePrevValue;
+            state.NumberOfReads += numOfRepeatedValues;
             return numOfRepeatedValues;
         }
 
@@ -251,43 +243,46 @@ namespace Voron.Data.Sets
             ulong value = 0;
             outputStateBit = stateBitPos + bitsToRead;
 
-            byte* shiftTable = (byte*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(ShiftValue)) + shiftIndex;
-
-            while (bitsToRead >= 4)
+            fixed (byte* shiftTablePtr = ShiftValue)
             {
-                bitsToRead -= 4;
-                stateBitPos += 4;
+                byte* shiftTable = shiftTablePtr + shiftIndex;
 
-                var v4 = (ulong)((inputBufferPtr[(stateBitPos - 1) >> 3] >> shiftTable[3]) & 1);
-                var v3 = (ulong)((inputBufferPtr[(stateBitPos - 2) >> 3] >> shiftTable[2]) & 1) << 1;
-                var v2 = (ulong)((inputBufferPtr[(stateBitPos - 3) >> 3] >> shiftTable[1]) & 1) << 2;
-                var v1 = (ulong)((inputBufferPtr[(stateBitPos - 4) >> 3] >> shiftTable[0]) & 1) << 3;
+                while (bitsToRead >= 4)
+                {
+                    bitsToRead -= 4;
+                    stateBitPos += 4;
 
-                value = (value << 4) | v1 | v2 | v3 | v4;
+                    var v4 = (ulong)((inputBufferPtr[(stateBitPos - 1) >> 3] >> shiftTable[3]) & 1);
+                    var v3 = (ulong)((inputBufferPtr[(stateBitPos - 2) >> 3] >> shiftTable[2]) & 1) << 1;
+                    var v2 = (ulong)((inputBufferPtr[(stateBitPos - 3) >> 3] >> shiftTable[1]) & 1) << 2;
+                    var v1 = (ulong)((inputBufferPtr[(stateBitPos - 4) >> 3] >> shiftTable[0]) & 1) << 3;
 
-                shiftTable += 4;
+                    value = (value << 4) | v1 | v2 | v3 | v4;
+
+                    shiftTable += 4;
+                }
+
+                if (bitsToRead == 0)
+                    goto End;
+
+                shiftIndex += 3;
+
+                value <<= 1;
+                value |= (uint)((inputBufferPtr[(stateBitPos) >> 3] >> shiftTable[0]) & 1);
+                if (bitsToRead == 1)
+                    goto End;
+
+                value <<= 1;
+                value |= (uint)((inputBufferPtr[(stateBitPos + 1) >> 3] >> shiftTable[1]) & 1);
+                if (bitsToRead == 2)
+                    goto End;
+
+                value <<= 1;
+                value |= (uint)((inputBufferPtr[(stateBitPos + 2) >> 3] >> shiftTable[2]) & 1);
+
+                End:
+                return value;
             }
-
-            if (bitsToRead == 0)
-                goto End;
-
-            shiftIndex += 3;
-
-            value <<= 1;
-            value |= (uint)((inputBufferPtr[(stateBitPos) >> 3] >> shiftTable[0]) & 1);
-            if (bitsToRead == 1)
-                goto End;
-
-            value <<= 1;
-            value |= (uint)((inputBufferPtr[(stateBitPos + 1) >> 3] >> shiftTable[1]) & 1);
-            if (bitsToRead == 2)
-                goto End;
-
-            value <<= 1;
-            value |= (uint)((inputBufferPtr[(stateBitPos + 2) >> 3] >> shiftTable[2]) & 1);
-
-        End:
-            return value;
         }
 
 
@@ -295,14 +290,16 @@ namespace Voron.Data.Sets
         private unsafe static ulong Read2(in int stateBitPos, byte* inputBufferPtr, out int outputStateBit)
         {
             int shiftIndex = stateBitPos & 0x7;
+            fixed (byte* shiftTablePtr = ShiftValue)
+            {
+                byte* shiftTable = shiftTablePtr + shiftIndex;
 
-            byte* shiftTable = (byte*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(ShiftValue)) + shiftIndex;
+                ulong value = (ulong)(uint)((inputBufferPtr[(stateBitPos + 0) >> 3] >> shiftTable[0]) & 1) << 1 |
+                              (ulong)(uint)((inputBufferPtr[(stateBitPos + 1) >> 3] >> shiftTable[1]) & 1);
 
-            ulong value = (ulong)(uint)((inputBufferPtr[(stateBitPos + 0) >> 3] >> shiftTable[0]) & 1) << 1 |
-                          (ulong)(uint)((inputBufferPtr[(stateBitPos + 1) >> 3] >> shiftTable[1]) & 1);
-
-            outputStateBit = stateBitPos + 2;
-            return value;
+                outputStateBit = stateBitPos + 2;
+                return value;
+            }
         }
 
         public static List<int> GetDebugOutput(Span<byte> buf)

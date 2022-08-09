@@ -17,7 +17,7 @@ namespace Corax
         public readonly int DefaultOutputSize;
         public readonly int DefaultTokenSize;
         
-        private readonly delegate*<Analyzer, ReadOnlySpan<byte>, ref Span<byte>, ref Span<Token>, void> _funcUtf8;
+        private readonly delegate*<Analyzer, ReadOnlySpan<byte>, ref Span<byte>, ref Span<Token>, ref byte[], void> _funcUtf8;
         private readonly delegate*<Analyzer, ReadOnlySpan<char>, ref Span<char>, ref Span<Token>, void> _funcUtf16;
         private readonly Analyzer _inner;
         private readonly ITokenizer _tokenizer;
@@ -27,14 +27,14 @@ namespace Corax
         private bool _disposedValue;
 
         protected Analyzer(
-            delegate*<Analyzer, ReadOnlySpan<byte>, ref Span<byte>, ref Span<Token>, void> functionUtf8,
+            delegate*<Analyzer, ReadOnlySpan<byte>, ref Span<byte>, ref Span<Token>, ref byte[], void> functionUtf8,
             delegate*<Analyzer, ReadOnlySpan<char>, ref Span<char>, ref Span<Token>, void> functionUtf16,
             in ITokenizer tokenizer, ITransformer[] transformers) : this(null, functionUtf8, functionUtf16, tokenizer, transformers)
         {
         }
 
         protected Analyzer(Analyzer inner,
-            delegate*<Analyzer, ReadOnlySpan<byte>, ref Span<byte>, ref Span<Token>, void> functionUtf8,
+            delegate*<Analyzer, ReadOnlySpan<byte>, ref Span<byte>, ref Span<Token>, ref byte[], void> functionUtf8,
             delegate*<Analyzer, ReadOnlySpan<char>, ref Span<char>, ref Span<Token>, void> functionUtf16,
             in ITokenizer tokenizer, ITransformer[] transformers)
         {
@@ -196,7 +196,7 @@ namespace Corax
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void RunUtf8<TTokenizer, TTransform1, TTransform2, TTransform3>(Analyzer analyzer,
-                        ReadOnlySpan<byte> source, ref Span<byte> output, ref Span<Token> tokens)
+                        ReadOnlySpan<byte> source, ref Span<byte> output, ref Span<Token> tokens, ref byte[] buffer)
             where TTokenizer : ITokenizer
             where TTransform1 : ITransformer
             where TTransform2 : ITransformer
@@ -309,12 +309,18 @@ namespace Corax
             where TTransform2 : ITransformer
             where TTransform3 : ITransformer
         {
-            delegate*<Analyzer, ReadOnlySpan<byte>, ref Span<byte>, ref Span<Token>, void> funcUtf8 = &RunUtf8<TTokenizer, TTransform1, TTransform2, TTransform3>;
+            delegate*<Analyzer, ReadOnlySpan<byte>, ref Span<byte>, ref Span<Token>, ref byte[], void> funcUtf8 = &RunUtf8<TTokenizer, TTransform1, TTransform2, TTransform3>;
             delegate*<Analyzer, ReadOnlySpan<char>, ref Span<char>, ref Span<Token>, void> funcUtf16 = &RunUtf16<TTokenizer, TTransform1, TTransform2, TTransform3>;
 
-            static void RunUtf8WithConversion(Analyzer analyzer, ReadOnlySpan<byte> source, ref Span<byte> output, ref Span<Token> tokens)
+            static void RunUtf8WithConversion(Analyzer analyzer, ReadOnlySpan<byte> source, ref Span<byte> output, ref Span<Token> tokens, ref byte[] buffer)
             {
-                var buffer = BufferPool.Rent(source.Length * 10);
+                if (buffer.Length < source.Length * 10)
+                {
+                    if (buffer.Length > 0)
+                        BufferPool.Return(buffer);
+                    buffer = null;
+                    buffer = BufferPool.Rent(source.Length * 10);
+                }
                 
                 Span<char> charBuffer = MemoryMarshal.Cast<byte, char>(buffer.AsSpan());
                 int characters = Encoding.UTF8.GetChars(source, charBuffer);
@@ -325,82 +331,83 @@ namespace Corax
                 output = output.Slice(0, characters);
 
                 // Adjust the tokens considering that we may be changing from 4 bytes to less and from 2 to 1.
-                var outputPtr = (byte*) Unsafe.AsPointer(ref MemoryMarshal.GetReference(output));
-                var endPtr = outputPtr + output.Length;
-
-                uint excessBytes = 0;
-                uint totalExcessBytes = 0;
-                int currentToken = 0;
-                uint processedChars = 0;
-                while (outputPtr < endPtr)
+                fixed (byte* outputPtrImmutable = output)
                 {
-                    var @byte = *outputPtr;
-                    switch (@byte)
+                    var outputPtr = outputPtrImmutable;
+                    var endPtr = outputPtr + output.Length;
+
+                    uint excessBytes = 0;
+                    uint totalExcessBytes = 0;
+                    int currentToken = 0;
+                    uint processedChars = 0;
+                    while (outputPtr < endPtr)
                     {
-                        //http://www.unicode.org/versions/Unicode9.0.0/ch03.pdf#page=54
-                        case <= 0b0111_1111:
-                            /* 1 byte sequence: 0b0xxxxxxxx */
-                            // Nothing to do here. 
-                            break;
-                        case <= 0b1101_1111:
-                            /* 2 byte sequence: 0b110xxxxxx */
-                            outputPtr += 1;
-                            excessBytes += 1;
-                            break;
-                        case <= 0b1110_1111:
-                            /* 0b1110xxxx: 3 bytes sequence */
-                            outputPtr += 2;
-                            excessBytes += 2;
-                            break;
-                        case <= 0b1111_0111:
-                            /* 0b11110xxx: 4 bytes sequence */
-                            outputPtr += 3;
-                            excessBytes += 3;
-                            break;
-                    }
+                        var @byte = *outputPtr;
+                        switch (@byte)
+                        {
+                            //http://www.unicode.org/versions/Unicode9.0.0/ch03.pdf#page=54
+                            case <= 0b0111_1111:
+                                /* 1 byte sequence: 0b0xxxxxxxx */
+                                // Nothing to do here. 
+                                break;
+                            case <= 0b1101_1111:
+                                /* 2 byte sequence: 0b110xxxxxx */
+                                outputPtr += 1;
+                                excessBytes += 1;
+                                break;
+                            case <= 0b1110_1111:
+                                /* 0b1110xxxx: 3 bytes sequence */
+                                outputPtr += 2;
+                                excessBytes += 2;
+                                break;
+                            case <= 0b1111_0111:
+                                /* 0b11110xxx: 4 bytes sequence */
+                                outputPtr += 3;
+                                excessBytes += 3;
+                                break;
+                        }
                     
-                    // We have processed 1 char.
-                    processedChars++;
+                        // We have processed 1 char.
+                        processedChars++;
 
 
-                    ref var token = ref tokens[currentToken];
-                    if (token.Length == processedChars)
-                    {
-                        // We need to persist original end of word (without considering UTF8 length)
-                        var originalEndPtrOfWordWithoutUtf8Analysis = token.Length + token.Offset;
+                        ref var token = ref tokens[currentToken];
+                        if (token.Length == processedChars)
+                        {
+                            // We need to persist original end of word (without considering UTF8 length)
+                            var originalEndPtrOfWordWithoutUtf8Analysis = token.Length + token.Offset;
 
-                        // We update the length of the current token. 
-                        token.Length += excessBytes;
+                            // We update the length of the current token. 
+                            token.Length += excessBytes;
 
-                        // We also update the offset considering all the excess bytes we accumulated. 
-                        token.Offset += (int)totalExcessBytes;
+                            // We also update the offset considering all the excess bytes we accumulated. 
+                            token.Offset += (int)totalExcessBytes;
 
-                        // We update the total excess bytes for the next. 
-                        totalExcessBytes += excessBytes;
+                            // We update the total excess bytes for the next. 
+                            totalExcessBytes += excessBytes;
 
-                        //Moving to another word
-                        currentToken++;
+                            //Moving to another word
+                            currentToken++;
 
-                        //Clearing
-                        excessBytes = 0;
-                        processedChars = 0;
+                            //Clearing
+                            excessBytes = 0;
+                            processedChars = 0;
 
-                        // We've found right tokens in buffer.
-                        if (currentToken >= tokens.Length)
-                            break;
+                            // We've found right tokens in buffer.
+                            if (currentToken >= tokens.Length)
+                                break;
 
-                        // We need to escape the space between current word and the next one. Eg. spaces in WhitespaceTokenizer.
-                        var nextToken = tokens[currentToken];
-                        var charsToSkip = nextToken.Offset - originalEndPtrOfWordWithoutUtf8Analysis;
-                        if (originalEndPtrOfWordWithoutUtf8Analysis > 0)
-                            outputPtr += charsToSkip;
+                            // We need to escape the space between current word and the next one. Eg. spaces in WhitespaceTokenizer.
+                            var nextToken = tokens[currentToken];
+                            var charsToSkip = nextToken.Offset - originalEndPtrOfWordWithoutUtf8Analysis;
+                            if (originalEndPtrOfWordWithoutUtf8Analysis > 0)
+                                outputPtr += charsToSkip;
+                        }
+
+                        // We need to move our base ptr
+                        outputPtr++;
                     }
-
-                    // We need to move our base ptr
-                    outputPtr++;
                 }
-
-                BufferPool.Return(buffer);
             }
 
             bool canRunUtf8 = transform1.SupportUtf8 & transform2.SupportUtf8 & transform3.SupportUtf8 & tokenizer.SupportUtf8;
@@ -434,7 +441,7 @@ namespace Corax
         public Analyzer With<TTransform1>(in TTransform1 transform1 = default(TTransform1))
             where TTransform1 : ITransformer
         {
-            delegate*<Analyzer, ReadOnlySpan<byte>, ref Span<byte>, ref Span<Token>, void> funcUtf8 = &RunUtf8<NullTokenizer, TTransform1, NullTransformer, NullTransformer>;
+            delegate*<Analyzer, ReadOnlySpan<byte>, ref Span<byte>, ref Span<Token>, ref byte[], void> funcUtf8 = &RunUtf8<NullTokenizer, TTransform1, NullTransformer, NullTransformer>;
             delegate*<Analyzer, ReadOnlySpan<char>, ref Span<char>, ref Span<Token>, void> funcUtf16 = &RunUtf16<NullTokenizer, TTransform1, NullTransformer, NullTransformer>;
 
             return new Analyzer(this, funcUtf8, funcUtf16, default(NullTokenizer), new ITransformer[] { transform1 });
@@ -447,7 +454,7 @@ namespace Corax
             where TTransform1 : ITransformer
             where TTransform2 : ITransformer
         {
-            delegate*<Analyzer, ReadOnlySpan<byte>, ref Span<byte>, ref Span<Token>, void> funcUtf8 = &RunUtf8<NullTokenizer, TTransform1, TTransform2, NullTransformer>;
+            delegate*<Analyzer, ReadOnlySpan<byte>, ref Span<byte>, ref Span<Token>, ref byte[], void> funcUtf8 = &RunUtf8<NullTokenizer, TTransform1, TTransform2, NullTransformer>;
             delegate*<Analyzer, ReadOnlySpan<char>, ref Span<char>, ref Span<Token>, void> funcUtf16 = &RunUtf16<NullTokenizer, TTransform1, TTransform2, NullTransformer>;
 
             return new Analyzer(this, funcUtf8, funcUtf16, default(NullTokenizer), new ITransformer[] { transform1, transform2 });
@@ -461,14 +468,14 @@ namespace Corax
             where TTransform2 : ITransformer
             where TTransform3 : ITransformer
         {
-            delegate*<Analyzer, ReadOnlySpan<byte>, ref Span<byte>, ref Span<Token>, void> funcUtf8 = &RunUtf8<NullTokenizer, TTransform1, TTransform2, TTransform3>;
+            delegate*<Analyzer, ReadOnlySpan<byte>, ref Span<byte>, ref Span<Token>, ref byte[], void> funcUtf8 = &RunUtf8<NullTokenizer, TTransform1, TTransform2, TTransform3>;
             delegate*<Analyzer, ReadOnlySpan<char>, ref Span<char>, ref Span<Token>, void> funcUtf16 = &RunUtf16<NullTokenizer, TTransform1, TTransform2, TTransform3>;
 
             return new Analyzer(this, funcUtf8, funcUtf16, default(NullTokenizer), new ITransformer[] { transform1, transform2, transform3 });
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Execute(ReadOnlySpan<byte> source, ref Span<byte> output, ref Span<Token> tokens)
+        public void Execute(ReadOnlySpan<byte> source, ref Span<byte> output, ref Span<Token> tokens, ref byte[] utf8ConversionBuffer)
         {
             if (output.Length < (int)(_sourceBufferMultiplier * source.Length))
                 throw new ArgumentException("Buffer is too small");
@@ -476,7 +483,22 @@ namespace Corax
                 throw new ArgumentException("Buffer is too small");
 
                     
-            _funcUtf8(this, source, ref output, ref tokens);
+            _funcUtf8(this, source, ref output, ref tokens, ref utf8ConversionBuffer);
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Execute(ReadOnlySpan<byte> source, ref Span<byte> output, ref Span<Token> tokens)
+        {
+            if (output.Length < (int)(_sourceBufferMultiplier * source.Length))
+                throw new ArgumentException("Buffer is too small");
+            if (tokens.Length < (int)(_tokenBufferMultiplier * source.Length))
+                throw new ArgumentException("Buffer is too small");
+            
+            var emptyHandler = Array.Empty<byte>();
+            _funcUtf8(this, source, ref output, ref tokens, ref emptyHandler);
+            
+            if (emptyHandler.Length > 0)
+                BufferPool.Return(emptyHandler);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

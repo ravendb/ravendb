@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -218,7 +219,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public async Task QueriesShouldFailoverIfIndexIsCompactingClaster()
+        public async Task QueriesShouldFailoverIfIndexIsCompactingCluster()
         {
             var (nodes, leader) = await CreateRaftCluster(2);
             Assert.Equal(nodes.Count, 2);
@@ -243,22 +244,17 @@ namespace SlowTests.Issues
                     categoryId = c.Id;
                 }
 
-                // Wait for indexing in first node
+                // Wait for indexing in first node and second node
                 var index = new Categoroies_Details();
-                index.Execute(store);
-                Indexes.WaitForIndexing(store);
+                await Cluster.CreateIndexInClusterAsync(store, index);
 
-                // Wait for indexing in second node (if it's cluster test)
-                using (var storeReversedTopology = new DocumentStore()
-                       {
-                           Urls = (from node in nodes select node.WebUrl).Reverse().ToArray<string>(),
-                           Database = store.Database,
-                           Conventions = new DocumentConventions() {DisableTopologyUpdates = true}
-                       }.Initialize())
+                foreach (var n in nodes)
                 {
-                    var index2 = new Categoroies_Details();
-                    index2.Execute(storeReversedTopology);
-                    Indexes.WaitForIndexing(storeReversedTopology);
+                    // wait for indexing to finish on the current node
+                    Indexes.WaitForIndexing(store,
+                        databaseName: store.Database,
+                        timeout: TimeSpan.FromMinutes(2),
+                        nodeTag: n.ServerStore.NodeTag);
                 }
 
                 // Test

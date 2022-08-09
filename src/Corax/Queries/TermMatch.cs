@@ -8,6 +8,7 @@ using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
 using System.Collections.Generic;
+using Sparrow.Server;
 
 namespace Corax.Queries
 {
@@ -21,11 +22,13 @@ namespace Corax.Queries
 
         private readonly long _totalResults;
         private long _currentIdx;
+        private long _numOfReturnedItems;
         private long _baselineIdx;
         private long _current;
 
         private Container.Item _container;
         private Set.Iterator _set;
+        private ByteStringContext _ctx;
 
         public bool IsBoosting => _scoreFunc != null;
         public long Count => _totalResults;
@@ -37,6 +40,7 @@ namespace Corax.Queries
         public QueryCountConfidence Confidence => QueryCountConfidence.High;
 
         private TermMatch(
+            ByteStringContext ctx,
             long totalResults,
             delegate*<ref TermMatch, Span<long>, int> fillFunc,
             delegate*<ref TermMatch, Span<long>, int, int> andWithFunc,
@@ -51,7 +55,9 @@ namespace Corax.Queries
             _andWithFunc = andWithFunc;
             _scoreFunc = scoreFunc;
             _inspectFunc = inspectFunc;
+            _ctx = ctx;
 
+            _numOfReturnedItems = 0;
             _container = default;
             _set = default;
 #if DEBUG
@@ -59,7 +65,7 @@ namespace Corax.Queries
 #endif
         }
 
-        public static TermMatch CreateEmpty()
+        public static TermMatch CreateEmpty(ByteStringContext ctx)
         {
             static int FillFunc(ref TermMatch term, Span<long> matches)
             {
@@ -86,7 +92,7 @@ namespace Corax.Queries
                     });
             }
 
-            return new TermMatch(0, &FillFunc, &AndWithFunc, inspectFunc: &InspectFunc)
+            return new TermMatch(ctx, 0, &FillFunc, &AndWithFunc, inspectFunc: &InspectFunc)
             {
 #if DEBUG
                 Term = "<empty>"
@@ -94,7 +100,7 @@ namespace Corax.Queries
             };            
         }
 
-        public static TermMatch YieldOnce(long value)
+        public static TermMatch YieldOnce(ByteStringContext ctx, long value)
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             static int FillFunc(ref TermMatch term, Span<long> matches)
@@ -136,14 +142,14 @@ namespace Corax.Queries
                     });
             }
 
-            return new TermMatch(1, &FillFunc, &AndWithFunc, inspectFunc: &InspectFunc)
+            return new TermMatch(ctx, 1, &FillFunc, &AndWithFunc, inspectFunc: &InspectFunc)
             {
                 _current = value,
                 _currentIdx = QueryMatch.Start
             };
         }
 
-        public static TermMatch YieldSmall(Container.Item containerItem)
+        public static TermMatch YieldSmall(ByteStringContext ctx, Container.Item containerItem)
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             static int FillFunc(ref TermMatch term, Span<long> matches)
@@ -151,24 +157,19 @@ namespace Corax.Queries
                 // Fill needs to store resume capability.
 
                 var stream = term._container.ToSpan();
-                if (term._currentIdx == QueryMatch.Invalid || term._currentIdx >= stream.Length)
+                if (term._currentIdx == QueryMatch.Invalid)
                 {
                     term._currentIdx = QueryMatch.Invalid;
                     return 0;
                 }
 
                 int i = 0;
-                for (; i < matches.Length; i++)
+                for (; i < matches.Length && term._numOfReturnedItems < term._totalResults; i++)
                 {
                     term._current += ZigZagEncoding.Decode<long>(stream, out var len, (int)term._currentIdx);
                     term._currentIdx += len;
                     matches[i] = term._current;
-
-                    if (term._currentIdx >= stream.Length)
-                    {
-                        i++;
-                        break;
-                    }                        
+                    term._numOfReturnedItems++;
                 }
 
                 return i;
@@ -185,13 +186,15 @@ namespace Corax.Queries
                 // need to seek from start
                 long current = 0;
                 int currentIdx = (int)term._baselineIdx;
+                var itemsScanned = 0L;
 
                 int i = 0;
                 int matchedIdx = 0;
-                while (currentIdx < stream.Length && i < matches)
+                while (itemsScanned < term._totalResults && i < matches)
                 {
                     current += ZigZagEncoding.Decode<long>(stream, out var len, currentIdx);
                     currentIdx += len;
+                    itemsScanned++;
 
                     while (buffer[i] < current)
                     {                        
@@ -222,7 +225,7 @@ namespace Corax.Queries
             }
 
             var itemsCount = ZigZagEncoding.Decode<int>(containerItem.ToSpan(), out var len);
-            return new TermMatch(itemsCount, &FillFunc, &AndWithFunc, inspectFunc: &InspectFunc)
+            return new TermMatch(ctx, itemsCount, &FillFunc, &AndWithFunc, inspectFunc: &InspectFunc)
             {
                 _container = containerItem,
                 _currentIdx = len,
@@ -231,7 +234,7 @@ namespace Corax.Queries
             };
         }
 
-        public static TermMatch YieldSet(Set set, bool useAccelerated = true)
+        public static TermMatch YieldSet(ByteStringContext ctx, Set set, bool useAccelerated = true)
         {
             [SkipLocalsInit]
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -299,134 +302,135 @@ namespace Corax.Queries
                 term._set.MaybeSeek(buffer[0] - 1);
                 
                 // PERF: The AND operation can be performed in place, because we end up writing the same value that we already read. 
-                long* inputStartPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(buffer));
-                long* inputEndPtr = inputStartPtr + matches;
-
-                // The size of this array is fixed to improve cache locality.
-                var bufferHolder = QueryContext.MatchesPool.Rent(BlockSize);
-                var blockMatches = bufferHolder.AsSpan().Slice(0, BlockSize);
-                Debug.Assert(blockMatches.Length == BlockSize);
-
-                long* blockStartPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(blockMatches));                
-                
-                long* inputPtr = inputStartPtr;
-                long* dstPtr = inputStartPtr;
-                while (inputPtr < inputEndPtr)
+                fixed (long* inputStartPtr = buffer)
                 {
-                    var result = term._set.Fill(blockMatches, out int read, pruneGreaterThanOptimization: buffer[matches-1]);
-                    if (result == false)
-                        break;
+                    long* inputEndPtr = inputStartPtr + matches;
 
-                    Debug.Assert(read < BlockSize);
+                    // The size of this array is fixed to improve cache locality.
+                    using var _ = term._ctx.Allocate(BlockSize * sizeof(long), out var bufferHolder);
+                    var blockMatches = MemoryMarshal.Cast<byte, long>(bufferHolder.ToSpan());
+                    Debug.Assert(blockMatches.Length == BlockSize);
 
-                    if (read == 0)
-                        continue;
+                    long* blockStartPtr = (long*)bufferHolder.Ptr;
 
-                    long* smallerPtr, largerPtr;
-                    long* smallerEndPtr, largerEndPtr;
-
-                    bool applyVectorization;
-
-                    // See: MergeHelper.AndVectorized
-                    // read => leftLength
-                    // matches => rightLength
-                    bool isSmallerInput;
-                    if (read < (inputEndPtr - inputPtr))
+                    long* inputPtr = inputStartPtr;
+                    long* dstPtr = inputStartPtr;
+                    while (inputPtr < inputEndPtr)
                     {
-                        smallerPtr = blockStartPtr;
-                        smallerEndPtr = blockStartPtr + read;
-                        isSmallerInput = false;
-                        largerPtr = inputPtr;
-                        largerEndPtr = inputEndPtr;
-                        applyVectorization = matches > N && read > 0;
-                    }
-                    else
-                    {
-                        smallerPtr = inputPtr;
-                        smallerEndPtr = inputEndPtr;
-                        isSmallerInput = true;
-                        largerPtr = blockStartPtr;
-                        largerEndPtr = blockStartPtr + read;
-                        applyVectorization = read > N && matches > 0;
-                    }
-                    
-                    Debug.Assert( (ulong) (smallerEndPtr - smallerPtr) <= (ulong) (largerEndPtr - largerPtr));
+                        var result = term._set.Fill(blockMatches, out int read, pruneGreaterThanOptimization: buffer[matches - 1]);
+                        if (result == false)
+                            break;
 
-                    if (applyVectorization)
-                    {
-                        while (true)
+                        Debug.Assert(read < BlockSize);
+
+                        if (read == 0)
+                            continue;
+
+                        long* smallerPtr, largerPtr;
+                        long* smallerEndPtr, largerEndPtr;
+
+                        bool applyVectorization;
+
+                        // See: MergeHelper.AndVectorized
+                        // read => leftLength
+                        // matches => rightLength
+                        bool isSmallerInput;
+                        if (read < (inputEndPtr - inputPtr))
                         {
-                            // TODO: In here we can do SIMD galloping with gather operations. Therefore we will be able to do
-                            //       multiple checks at once and find the right amount of skipping using a table. 
-
-                            // If the value to compare is bigger than the biggest element in the block, we advance the block. 
-                            if ((ulong)*smallerPtr > (ulong)*(largerPtr + N - 1))
-                            {
-                                if (largerPtr + N >= largerEndPtr)
-                                    break;
-
-                                largerPtr += N;
-                                continue;
-                            }
-
-                            // If the value to compare is smaller than the smallest element in the block, we advance the scalar value.
-                            if ((ulong)*smallerPtr < (ulong)*largerPtr)
-                            {
-                                smallerPtr++;
-                                if (smallerPtr >= smallerEndPtr)
-                                    break;
-
-                                continue;
-                            }
-
-                            Vector256<ulong> value = Vector256.Create((ulong)*smallerPtr);
-                            Vector256<ulong> blockValues = Avx.LoadVector256((ulong*)largerPtr);
-
-                            // We are going to select which direction we are going to be moving forward. 
-                            if (!Avx2.CompareEqual(value, blockValues).Equals(Vector256<ulong>.Zero))
-                            {
-                                // We found the value, therefore we need to store this value in the destination.
-                                *dstPtr = *smallerPtr;
-                                dstPtr++;
-                            }
-
-                            smallerPtr++;
-                            if (smallerPtr >= smallerEndPtr)
-                                break;
-                        }
-                    }
-
-                    // The scalar version. This shouldnt cost much either way. 
-                    while (smallerPtr < smallerEndPtr && largerPtr < largerEndPtr)
-                    {
-                        ulong leftValue = (ulong)*smallerPtr;
-                        ulong rightValue = (ulong)*largerPtr;
-
-                        if (leftValue > rightValue)
-                        {
-                            largerPtr++;
-                        }
-                        else if (leftValue < rightValue)
-                        {
-                            smallerPtr++;
+                            smallerPtr = blockStartPtr;
+                            smallerEndPtr = blockStartPtr + read;
+                            isSmallerInput = false;
+                            largerPtr = inputPtr;
+                            largerEndPtr = inputEndPtr;
+                            applyVectorization = matches > N && read > 0;
                         }
                         else
                         {
-                            *dstPtr = (long)leftValue;
-                            dstPtr++;
-                            smallerPtr++;
-                            largerPtr++;
+                            smallerPtr = inputPtr;
+                            smallerEndPtr = inputEndPtr;
+                            isSmallerInput = true;
+                            largerPtr = blockStartPtr;
+                            largerEndPtr = blockStartPtr + read;
+                            applyVectorization = read > N && matches > 0;
                         }
+
+                        Debug.Assert((ulong)(smallerEndPtr - smallerPtr) <= (ulong)(largerEndPtr - largerPtr));
+
+                        if (applyVectorization)
+                        {
+                            while (true)
+                            {
+                                // TODO: In here we can do SIMD galloping with gather operations. Therefore we will be able to do
+                                //       multiple checks at once and find the right amount of skipping using a table. 
+
+                                // If the value to compare is bigger than the biggest element in the block, we advance the block. 
+                                if ((ulong)*smallerPtr > (ulong)*(largerPtr + N - 1))
+                                {
+                                    if (largerPtr + N >= largerEndPtr)
+                                        break;
+
+                                    largerPtr += N;
+                                    continue;
+                                }
+
+                                // If the value to compare is smaller than the smallest element in the block, we advance the scalar value.
+                                if ((ulong)*smallerPtr < (ulong)*largerPtr)
+                                {
+                                    smallerPtr++;
+                                    if (smallerPtr >= smallerEndPtr)
+                                        break;
+
+                                    continue;
+                                }
+
+                                Vector256<ulong> value = Vector256.Create((ulong)*smallerPtr);
+                                Vector256<ulong> blockValues = Avx.LoadVector256((ulong*)largerPtr);
+
+                                // We are going to select which direction we are going to be moving forward. 
+                                if (!Avx2.CompareEqual(value, blockValues).Equals(Vector256<ulong>.Zero))
+                                {
+                                    // We found the value, therefore we need to store this value in the destination.
+                                    *dstPtr = *smallerPtr;
+                                    dstPtr++;
+                                }
+
+                                smallerPtr++;
+                                if (smallerPtr >= smallerEndPtr)
+                                    break;
+                            }
+                        }
+
+                        // The scalar version. This shouldnt cost much either way. 
+                        while (smallerPtr < smallerEndPtr && largerPtr < largerEndPtr)
+                        {
+                            ulong leftValue = (ulong)*smallerPtr;
+                            ulong rightValue = (ulong)*largerPtr;
+
+                            if (leftValue > rightValue)
+                            {
+                                largerPtr++;
+                            }
+                            else if (leftValue < rightValue)
+                            {
+                                smallerPtr++;
+                            }
+                            else
+                            {
+                                *dstPtr = (long)leftValue;
+                                dstPtr++;
+                                smallerPtr++;
+                                largerPtr++;
+                            }
+                        }
+
+                        inputPtr = isSmallerInput ? smallerPtr : largerPtr;
+
+                        Debug.Assert(inputPtr >= dstPtr);
+                        Debug.Assert((isSmallerInput ? largerPtr : smallerPtr) - blockStartPtr <= BlockSize);
                     }
 
-                    inputPtr = isSmallerInput ? smallerPtr : largerPtr;
-
-                    Debug.Assert(inputPtr >= dstPtr);
-                    Debug.Assert((isSmallerInput ? largerPtr : smallerPtr) - blockStartPtr <= BlockSize);
+                    return (int)((ulong)dstPtr - (ulong)inputStartPtr) / sizeof(ulong);
                 }
-
-                QueryContext.MatchesPool.Return(bufferHolder);
-                return (int)((ulong)dstPtr - (ulong)inputStartPtr) / sizeof(ulong);
             }            
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -455,7 +459,7 @@ namespace Corax.Queries
                 useAccelerated = false;
 
             // We will select the AVX version if supported.             
-            return new TermMatch(set.State.NumberOfEntries, &FillFunc, useAccelerated ? &AndWithVectorizedFunc : &AndWithFunc, inspectFunc: &InspectFunc)
+            return new TermMatch(ctx, set.State.NumberOfEntries, &FillFunc, useAccelerated ? &AndWithVectorizedFunc : &AndWithFunc, inspectFunc: &InspectFunc)
             {
                 _set = set.Iterate(),
                 _current = long.MinValue

@@ -1712,7 +1712,8 @@ namespace Voron.Impl.Journal
                     pageHeader->Checksum = StorageEnvironment.CalculatePageChecksum(scratchPage, pageHeader->PageNumber, pageHeader->Flags, pageHeader->OverflowSize);
                 }
 
-                pagesInfo[pageSequentialNumber].PageNumber = pageHeader->PageNumber;
+                ref TransactionHeaderPageInfo transactionHeaderPageInfo = ref pagesInfo[pageSequentialNumber];
+                transactionHeaderPageInfo.PageNumber = pageHeader->PageNumber;
                 txPage.ScratchPageNumber = pageHeader->PageNumber;
 
                 *(long*)write = pageHeader->PageNumber;
@@ -1735,10 +1736,10 @@ namespace Voron.Impl.Journal
                     }
 
                     write += _diffPage.OutputSize;
-                    pagesInfo[pageSequentialNumber].Size = _diffPage.OutputSize == 0 ? 0 : diffPageSize;
-                    pagesInfo[pageSequentialNumber].IsNewDiff = txPage.PreviousVersion == null;
-                    pagesInfo[pageSequentialNumber].DiffSize = _diffPage.IsDiff ? _diffPage.OutputSize : 0;
-                    Debug.Assert(Math.Max(pagesInfo[pageSequentialNumber].Size, pagesInfo[pageSequentialNumber].DiffSize) <= diffPageSize);
+                    transactionHeaderPageInfo.Size = _diffPage.OutputSize == 0 ? 0 : diffPageSize;
+                    transactionHeaderPageInfo.IsNewDiff = txPage.PreviousVersion == null;
+                    transactionHeaderPageInfo.DiffSize = _diffPage.IsDiff ? _diffPage.OutputSize : 0;
+                    Debug.Assert(Math.Max(transactionHeaderPageInfo.Size, transactionHeaderPageInfo.DiffSize) <= diffPageSize);
                 }
                 else
                 {
@@ -1754,8 +1755,8 @@ namespace Voron.Impl.Journal
                     Memory.Copy(write, scratchPage, size);
 
                     write += size;
-                    pagesInfo[pageSequentialNumber].Size = size;
-                    pagesInfo[pageSequentialNumber].DiffSize = 0;
+                    transactionHeaderPageInfo.Size = size;
+                    transactionHeaderPageInfo.DiffSize = 0;
                 }
                 ++pageSequentialNumber;
             }

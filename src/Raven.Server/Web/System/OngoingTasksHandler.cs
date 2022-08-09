@@ -40,6 +40,7 @@ namespace Raven.Server.Web.System
                 DestinationDatabase = ex.Database,
                 DestinationUrl = connectionResult.Url,
                 MentorNode = ex.MentorNode,
+                PinToMentorNode = ex.PinToMentorNode,
                 TaskConnectionStatus = connectionResult.Status,
                 DelayReplicationFor = ex.DelayReplicationFor
             };

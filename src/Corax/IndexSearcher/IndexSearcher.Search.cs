@@ -45,12 +45,12 @@ public partial class IndexSearcher
         wildcardAnalyzer.GetOutputBuffersSize(term.Length, out var wildcardSize, out var wildcardTokenSize);
 
         var tokenStructSize = Unsafe.SizeOf<Token>();
-        var buffer = QueryContext.MatchesRawPool.Rent(outputSize + wildcardSize + tokenStructSize * (tokenSize + wildcardTokenSize));
-        Span<byte> encodeBufferOriginal = buffer.AsSpan().Slice(0, outputSize);
-        Span<Token> tokensBufferOriginal = MemoryMarshal.Cast<byte, Token>(buffer.AsSpan().Slice(outputSize, tokenSize * tokenStructSize));
+        using var __ = Allocator.Allocate(outputSize + wildcardSize + tokenStructSize * (tokenSize + wildcardTokenSize),  out var buffer);
+        Span<byte> encodeBufferOriginal = buffer.ToSpan().Slice(0, outputSize);
+        Span<Token> tokensBufferOriginal = MemoryMarshal.Cast<byte, Token>(buffer.ToSpan().Slice(outputSize, tokenSize * tokenStructSize));
 
-        var wildcardAnalyzerBuffer = buffer.AsSpan().Slice(outputSize + tokenSize * tokenStructSize, wildcardSize);
-        var wildcardTokenizerBuffer = MemoryMarshal.Cast<byte, Token>(buffer.AsSpan().Slice(outputSize + tokenSize * tokenStructSize + wildcardSize));
+        var wildcardAnalyzerBuffer = buffer.ToSpan().Slice(outputSize + tokenSize * tokenStructSize, wildcardSize);
+        var wildcardTokenizerBuffer = MemoryMarshal.Cast<byte, Token>(buffer.ToSpan().Slice(outputSize + tokenSize * tokenStructSize + wildcardSize));
 
         var encodedWildcard = wildcardAnalyzerBuffer;
         var tokensWildcard = wildcardTokenizerBuffer;
@@ -100,16 +100,14 @@ public partial class IndexSearcher
             }
 
             Slice.From(_transaction.Allocator, termForTree, ByteStringType.Immutable, out var encodedString);
-            BuildExpression(mode, encodedString);
+            BuildExpression(Allocator, mode, encodedString);
         }
-
-        QueryContext.MatchesRawPool.Return(buffer);
 
         return typeof(TScoreFunction) == typeof(NullScoreFunction)
             ? match
             : Boost(match, scoreFunction);
 
-        void BuildExpression(Constants.Search.SearchMatchOptions mode, Slice encodedString)
+        void BuildExpression(ByteStringContext ctx, Constants.Search.SearchMatchOptions mode, Slice encodedString)
         {
             switch (mode)
             {

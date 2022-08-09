@@ -18,7 +18,6 @@ import popoverUtils = require("common/popoverUtils");
 import prefixPathModel = require("models/database/tasks/prefixPathModel");
 import endpoints = require("endpoints");
 import getCertificatesCommand = require("commands/auth/getCertificatesCommand");
-import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 import accessManager = require("common/shell/accessManager");
 import shardViewModelBase from "viewmodels/shardViewModelBase";
 import database from "models/resources/database";
@@ -26,7 +25,9 @@ import database from "models/resources/database";
 class editReplicationSinkTask extends shardViewModelBase {
 
     view = require("views/database/tasks/editReplicationSinkTask.html");
-    connectionStringView = require("views/database/settings/connectionStringRaven.html")
+    connectionStringView = require("views/database/settings/connectionStringRaven.html");
+    pinResponsibleNodeButtonsScriptView = require("views/partial/pinResponsibleNodeButtonsScript.html");
+    pinResponsibleNodeTextScriptView = require("views/partial/pinResponsibleNodeTextScript.html");
 
     editedSinkTask = ko.observable<ongoingTaskReplicationSinkEditModel>();
     isAddingNewTask = ko.observable<boolean>(true);
@@ -160,6 +161,7 @@ class editReplicationSinkTask extends shardViewModelBase {
                 model.taskName,
                 model.taskState,
                 model.manualChooseMentor,
+                model.pinMentorNode,
                 model.mentorNode,
                 model.connectionStringName,
                 this.createNewConnectionString,
@@ -237,11 +239,6 @@ class editReplicationSinkTask extends shardViewModelBase {
                     "<li><small>Download the cluster's server certificate(s) as a *.pfx file.</small></li>" +
                     "<li><small>Only public keys are downloaded.</small></li>" +
                     "</ul>"
-            });
-
-        popoverUtils.longWithHover($(".responsible-node"),
-            {
-                content: tasksCommonContent.responsibleNodeInfo
             });
     }
 

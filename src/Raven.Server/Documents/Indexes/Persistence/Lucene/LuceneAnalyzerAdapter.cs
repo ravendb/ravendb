@@ -20,14 +20,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         private readonly LuceneAnalyzer _analyzer;
 
         private LuceneAnalyzerAdapter(LuceneAnalyzer analyzer,
-            delegate*<Analyzer, ReadOnlySpan<byte>, ref Span<byte>, ref Span<Token>, void> functionUtf8,
+            delegate*<Analyzer, ReadOnlySpan<byte>, ref Span<byte>, ref Span<Token>, ref byte[], void> functionUtf8,
             delegate*<Analyzer, ReadOnlySpan<char>, ref Span<char>, ref Span<Token>, void> functionUtf16) : 
             base(functionUtf8, functionUtf16, default(NullTokenizer), NoTransformers)
         {
             _analyzer = analyzer;
         }
 
-        internal static void Run(Analyzer adapter, ReadOnlySpan<byte> source, ref Span<byte> output, ref Span<Token> tokens)
+        internal static void Run(Analyzer adapter, ReadOnlySpan<byte> source, ref Span<byte> output, ref Span<Token> tokens, ref byte[] buffer)
         {
             var @this = (LuceneAnalyzerAdapter)adapter;
             var analyzer = @this._analyzer;
@@ -40,7 +40,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 int currentOutputIdx = 0;
                 var currentTokenIdx = 0;
 
-                var stream = analyzer.TokenStream(null, reader);
+                var stream = analyzer.ReusableTokenStream(null, reader);
                 do
                 {
                     var offset = stream.GetAttribute<IOffsetAttribute>();

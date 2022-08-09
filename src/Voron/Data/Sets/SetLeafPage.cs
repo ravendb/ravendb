@@ -185,15 +185,13 @@ namespace Voron.Data.Sets
                 }
             }
 
-            
+
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Fill(Span<long> matches, out int numberOfMatches, out bool hasPrunedResults, long pruneGreaterThanOptimization = long.MaxValue)
             {
                 var compressIndex = _compressIndex;
                 var compressLength = _compressLength;
-                var decoderState = (PForDecoder.DecoderState*)Unsafe.AsPointer(ref _decoderState);
-                var parent = (SetLeafPage*)Unsafe.AsPointer(ref _parent);
-                var parentRawValues = parent->RawValues;
+                var parentRawValues = _parent.RawValues;
                 fixed (int* scratchPtr = _pforBuffer)
                 {
                     var rawValuesIndex = _rawValuesIndex;
@@ -224,7 +222,7 @@ namespace Voron.Data.Sets
                         {
                             if (compressIndex >= compressLength)
                             {
-                                TryReadMoreCompressedValues(parent, decoderState, ref _compressedEntry, ref compressIndex, ref compressLength,
+                                TryReadMoreCompressedValues(ref _parent, ref _decoderState, ref _compressedEntry, ref compressIndex, ref compressLength,
                                     ref _compressedEntryIndex, ref _hasDecoder, scratchPtr, PForEncoder.BufferLen);
                             }
 
@@ -238,7 +236,7 @@ namespace Voron.Data.Sets
 
                         if (hasCompressedValue == false && hasRawValue == false)
                             break; // nothing more to read...
-                        
+
                         long value;
                         if (rawValueMasked <= compressedValue || hasCompressedValue == false)
                         {
@@ -250,7 +248,7 @@ namespace Voron.Data.Sets
 
                             if (compressedValue == (value & int.MaxValue))
                                 hasCompressedValue = false;
-                            
+
                             // This is a removed value, so we remove it. 
                             if (value < 0)
                             {
@@ -269,7 +267,7 @@ namespace Voron.Data.Sets
                         // The value is actually signaling that we are done for this range.                        
                         value |= baseline;
                         matches[numberOfMatches++] = value;
-                        
+
                         // we need to send the value to the user before we stop the interation
                         if (value > pruneGreaterThanOptimization)
                         {
@@ -289,8 +287,8 @@ namespace Voron.Data.Sets
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private static void TryReadMoreCompressedValues(SetLeafPage* parent, 
-                PForDecoder.DecoderState* decoderState, 
+            private static void TryReadMoreCompressedValues(ref SetLeafPage parent, 
+                ref PForDecoder.DecoderState decoderState, 
                 ref CompressedHeader compressedEntry, 
                 ref int compressIndex,
                 ref int compressLength,
@@ -299,14 +297,14 @@ namespace Voron.Data.Sets
                 int* scratch, 
                 int scratchSize)
             {
-                var parentPtr = parent->Ptr;
-                var parentHeader = parent->Header;
-                var parentPositions = parent->PositionsPtr;
+                var parentPtr = parent.Ptr;
+                var parentHeader = parent.Header;
+                var parentPositions = parent.PositionsPtr;
 
                 while (compressIndex == compressLength && hasDecoder)
                 {
                     compressIndex = 0;
-                    compressLength = PForDecoder.Decode(decoderState, parentPtr + compressedEntry.Position, compressedEntry.Length, scratch, scratchSize);
+                    compressLength = PForDecoder.Decode(ref decoderState, parentPtr + compressedEntry.Position, compressedEntry.Length, scratch, scratchSize);
                     if (compressLength != 0)
                         return;
 
@@ -317,7 +315,7 @@ namespace Voron.Data.Sets
                     }
 
                     compressedEntry = parentPositions[compressedEntryIndex];
-                    PForDecoder.Reset(decoderState, compressedEntry.Length);                    
+                    PForDecoder.Reset(ref decoderState, compressedEntry.Length);                    
                 }
             }
 

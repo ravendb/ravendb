@@ -62,12 +62,11 @@ namespace StressTests.Rachis.DatabaseCluster
                 int val;
                 using (new DisposableAction(() =>
                 {
-                    preferred.ServerStore.DatabasesLandlord.DatabasesCache.TryRemove(databaseName, out var t);
-                    if (t == tcs.Task)
+                    if (preferred.ServerStore.DatabasesLandlord.DatabasesCache.TryRemove(databaseName, tcs.Task))
                         tcs.SetCanceled();
                 }))
                 {
-                    var t = preferred.ServerStore.DatabasesLandlord.DatabasesCache.Replace(databaseName, tcs.Task);
+                    var t = preferred.ServerStore.DatabasesLandlord.DatabasesCache.ForTestingPurposesOnly().Replace(databaseName, tcs.Task);
                     t.Result.Dispose();
 
                     Assert.True(await WaitForValueAsync(async () =>
@@ -129,12 +128,11 @@ namespace StressTests.Rachis.DatabaseCluster
                 int val;
                 using (new DisposableAction(() =>
                 {
-                    preferred.ServerStore.DatabasesLandlord.DatabasesCache.TryRemove(databaseName, out var t);
-                    if (t == tcs.Task)
+                    if (preferred.ServerStore.DatabasesLandlord.DatabasesCache.TryRemove(databaseName, tcs.Task))
                         tcs.SetCanceled();
                 }))
                 {
-                    var t = preferred.ServerStore.DatabasesLandlord.DatabasesCache.Replace(databaseName, tcs.Task);
+                    var t = preferred.ServerStore.DatabasesLandlord.DatabasesCache.ForTestingPurposesOnly().Replace(databaseName, tcs.Task);
                     t.Result.Dispose();
 
                     Assert.True(await WaitForValueAsync(async () =>

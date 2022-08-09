@@ -53,10 +53,13 @@ namespace Raven.Server.Documents.Indexes
         {
             EnsureValidStats(stats);
 
-            bool mustDelete;
-            using (_stats.BloomStats.Start())
+            bool mustDelete = true;
+            if (SearchEngineType == SearchEngineType.Lucene)
             {
-                mustDelete = _filters.Add(indexItem.LowerId) == false;
+                using (_stats.BloomStats.Start())
+                {
+                    mustDelete = _filters.Add(indexItem.LowerId) == false;
+                }
             }
 
             if (indexItem.SkipLuceneDelete == false && mustDelete)
@@ -71,7 +74,8 @@ namespace Raven.Server.Documents.Indexes
             }
 
             HandleIndexOutputsPerDocument(indexItem.Id ?? indexItem.LowerId, numberOfOutputs, stats);
-
+            HandleSourceDocumentIncludedInMapOutput();
+            
             DocumentDatabase.Metrics.MapIndexes.IndexedPerSec.Mark(numberOfOutputs);
 
             return numberOfOutputs;

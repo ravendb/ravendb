@@ -338,6 +338,7 @@ interface storedQueryDto extends queryDto {
 interface replicationConflictListItemDto {
     Id: string;
     LastModified: string;
+    ConflictsPerDocument: number;
 }
 
 type databaseDisconnectionCause = "Error" | "DatabaseDeleted" | "DatabaseDisabled" | "ChangingDatabase" | "DatabaseIsNotRelevant";
@@ -679,7 +680,7 @@ interface timeSeriesColumnOpts<T> extends textColumnOpts<T> {
 }
 
 interface virtualColumnDto {
-    type: "flags" | "checkbox" | "text" | "hyperlink" | "custom" | "timeSeries" | "nodeTag" | "iconsPlusText";
+    type: "flags" | "checkbox" | "text" | "hyperlink" | "custom" | "timeSeries" | "nodeTag" | "multiNodeTags" | "iconsPlusText";
     width: string;
     header: string;
     serializedValue: string;
@@ -915,4 +916,17 @@ type ReactInKnockout<T> = KnockoutComputed<ReactInKnockoutOptions<T>>;
 interface Progress {
     processed: number;
     total: number;
+}
+
+interface rawTaskItem {
+    type: StudioTaskType;
+    dbName: string;
+    count: number;
+    node: string;
+}
+
+interface taskInfo {
+    nameForUI: string;
+    icon: string;
+    colorClass: string;
 }

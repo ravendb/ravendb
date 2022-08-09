@@ -35,10 +35,12 @@ namespace Corax.Utils
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal unsafe static int SortAndRemoveDuplicates(Span<long> buffer)
+        internal static unsafe int SortAndRemoveDuplicates(Span<long> buffer)
         {
-            var bufferBasePtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(buffer));
-            return SortAndRemoveDuplicates(bufferBasePtr, buffer.Length);
+            fixed (long* bufferBasePtr = buffer)
+            {
+                return SortAndRemoveDuplicates(bufferBasePtr, buffer.Length);
+            }
         }
     }
 }

@@ -192,7 +192,7 @@ namespace Voron.Data.CompactTrees
         public void Encode(ReadOnlySpan<byte> key, ref Span<byte> encodedKey)
         {
             if (key.Length == 0)
-                throw new ArgumentException();
+                throw new ArgumentException("Cannot encode an empty key!", nameof(key));
 
             if (key[^1] != 0)
             {

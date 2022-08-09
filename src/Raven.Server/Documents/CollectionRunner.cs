@@ -192,11 +192,11 @@ namespace Raven.Server.Documents
             if (isAllDocs)
             {
                 var allDocsCount = Database.DocumentsStorage.GetNumberOfDocuments(context);
-                Database.DocumentsStorage.GetNumberOfDocumentsToProcess(context, CollectionName.HiLoCollection, 0, out long hiloDocsCount);
+                Database.DocumentsStorage.GetNumberOfDocumentsToProcess(context, CollectionName.HiLoCollection, 0, out long hiloDocsCount, Stopwatch.StartNew());
                 return allDocsCount - hiloDocsCount;
             }
 
-            Database.DocumentsStorage.GetNumberOfDocumentsToProcess(context, collectionName, 0, out long totalCount);
+            Database.DocumentsStorage.GetNumberOfDocumentsToProcess(context, collectionName, 0, out long totalCount, Stopwatch.StartNew());
             return totalCount;
         }
 

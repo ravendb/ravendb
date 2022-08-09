@@ -2,7 +2,6 @@
   <PropertyGroup>
     <Version></Version>
     <LangVersion>preview</LangVersion>
-    <EnablePreviewFeatures>True</EnablePreviewFeatures>
 
     <DebugType>embedded</DebugType>
     <WarningsAsErrors>true</WarningsAsErrors>

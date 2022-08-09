@@ -36,6 +36,8 @@ namespace Raven.Client.Documents.Commands
             public string Id { get; set; }
 
             public DateTime LastModified { get; set; }
+
+            public long ConflictsPerDocument { get; set; }
         }
     }
 }

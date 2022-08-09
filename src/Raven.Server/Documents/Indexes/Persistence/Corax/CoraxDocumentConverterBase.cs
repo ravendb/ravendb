@@ -378,7 +378,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         if (field.Indexing is not FieldIndexing.No) 
             AssertOrAdjustIndexingOptionForComplexObject(field);
 
-        GetKnownFieldsForWriter().GetByFieldId(field.Id).Analyzer = null;
+        GetKnownFieldsForWriter().GetByFieldId(field.Id).SetAnalyzer(null);
         scope.Write(field.Id, val, ref entryWriter);
     }
 

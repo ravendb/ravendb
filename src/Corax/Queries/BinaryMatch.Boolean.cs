@@ -4,13 +4,14 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Corax.Utils;
+using Sparrow.Server;
 
 namespace Corax.Queries
 {
     unsafe partial struct BinaryMatch<TInner, TOuter>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static BinaryMatch<TInner, TOuter> YieldAnd(in TInner inner, in TOuter outer)
+        public static BinaryMatch<TInner, TOuter> YieldAnd(ByteStringContext ctx, in TInner inner, in TOuter outer)
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             static int FillFunc(ref BinaryMatch<TInner, TOuter> match, Span<long> matches)
@@ -91,10 +92,10 @@ namespace Corax.Queries
             else
                 confidence = inner.Confidence.Min(outer.Confidence);
 
-            return new BinaryMatch<TInner, TOuter>(in inner, in outer, &FillFunc, &AndWith, &InspectFunc, Math.Min(inner.Count, outer.Count), confidence);
+            return new BinaryMatch<TInner, TOuter>(ctx, in inner, in outer, &FillFunc, &AndWith, &InspectFunc, Math.Min(inner.Count, outer.Count), confidence);
         }
 
-        public static BinaryMatch<TInner, TOuter> YieldOr(in TInner inner, in TOuter outer)
+        public static BinaryMatch<TInner, TOuter> YieldOr(ByteStringContext ctx, in TInner inner, in TOuter outer)
         {
             [SkipLocalsInit]
             static int AndWith(ref BinaryMatch<TInner, TOuter> match, Span<long> buffer, int matches)
@@ -102,9 +103,9 @@ namespace Corax.Queries
                 ref var inner = ref match._inner;
                 ref var outer = ref match._outer;
 
-                var bufferHolder = QueryContext.MatchesPool.Rent(2 * matches);
+                using var _ = match._ctx.Allocate(2 * matches * sizeof(long), out var bufferHolder);
                 
-                Span<long> innerBuffer = bufferHolder;
+                Span<long> innerBuffer = MemoryMarshal.Cast<byte, long>(bufferHolder.ToSpan());
                 var innerMatches = innerBuffer.Slice(0, matches);
                 var outerMatches = innerBuffer.Slice(matches, matches);
                 Debug.Assert(innerMatches.Length == matches);
@@ -122,7 +123,6 @@ namespace Corax.Queries
                 
                 // Merge the hits from every side into the output buffer. 
                 var result = MergeHelper.Or(buffer, innerMatches.Slice(0, innerSize), outerMatches.Slice(0, outerSize));                
-                QueryContext.MatchesPool.Return(bufferHolder);
 
                 return result;
             }
@@ -147,8 +147,9 @@ namespace Corax.Queries
                     return count;
                 }
 
-                var bufferHolder = QueryContext.MatchesPool.Rent(matches.Length);
-                Span<long> buffer = bufferHolder[..matches.Length];
+                //var bufferHolder = QueryContext.MatchesPool.Rent(matches.Length);
+                using var _ = match._ctx.Allocate(sizeof(long) * matches.Length, out var bufferHolder);
+                Span<long> buffer = MemoryMarshal.Cast<byte, long>(bufferHolder.ToSpan());
 
                 // RavenDB-17750: The basic concept for this fill function is that we do not really care from which side the matches come
                 //                but we need somewhat ensure that we are conceptually getting as small amount of overlapping matches on 
@@ -258,7 +259,6 @@ namespace Corax.Queries
                 }
 
             END:
-                QueryContext.MatchesPool.Return(bufferHolder);
                 return totalLength;
             }      
 
@@ -282,7 +282,7 @@ namespace Corax.Queries
             else
                 confidence = inner.Confidence.Min(outer.Confidence);
 
-            return new BinaryMatch<TInner, TOuter>(in inner, in outer, &FillFunc, &AndWith, &InspectFunc, inner.Count + outer.Count, confidence);
+            return new BinaryMatch<TInner, TOuter>(ctx, in inner, in outer, &FillFunc, &AndWith, &InspectFunc, inner.Count + outer.Count, confidence);
         }
     }
 }

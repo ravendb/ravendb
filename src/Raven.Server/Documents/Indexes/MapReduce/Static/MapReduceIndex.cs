@@ -321,6 +321,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                 new SingleIndexConfiguration(definition.Configuration, database.Configuration),
                 database.Configuration.PerformanceHints);
 
+            var staticIndex = instance._compiled;
+            staticIndex.CheckDepthOfStackInOutputMap(definition, database);
+            
             return instance;
         }
 

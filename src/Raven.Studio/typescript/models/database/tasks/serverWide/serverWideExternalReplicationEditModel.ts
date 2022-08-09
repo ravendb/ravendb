@@ -15,7 +15,7 @@ class serverWideExternalReplicationEditModel extends serverWideConfigurationMode
     validationGroup: KnockoutValidationGroup;
 
     constructor(dto: Raven.Client.ServerWide.Operations.OngoingTasks.ServerWideExternalReplication) {
-        super(dto.TaskId, dto.Name, dto.Disabled, dto.MentorNode, dto.ExcludedDatabases);
+        super(dto.TaskId, dto.Name, dto.Disabled, dto.MentorNode, dto.PinToMentorNode, dto.ExcludedDatabases);
 
         const delayTime = generalUtils.timeSpanToSeconds(dto.DelayReplicationFor);
         this.showDelayTime(dto.DelayReplicationFor != null && delayTime !== 0);
@@ -47,6 +47,7 @@ class serverWideExternalReplicationEditModel extends serverWideConfigurationMode
             this.showDelayTime,
             this.manualChooseMentor,
             this.mentorNode,
+            this.pinMentorNode,
             this.excludeInfo().dirtyFlag().isDirty,
             this.connectionString().dirtyFlag().isDirty
         ], false, jsonUtil.newLineNormalizingHashFunction);
@@ -79,6 +80,7 @@ class serverWideExternalReplicationEditModel extends serverWideConfigurationMode
             TopologyDiscoveryUrls: this.connectionString().topologyDiscoveryUrls().map(x => x.discoveryUrlName()),
             ExcludedDatabases: this.excludeInfo().toDto(),
             MentorNode: this.manualChooseMentor() ? this.mentorNode() : undefined,
+            PinToMentorNode: this.pinMentorNode(),
             Disabled: this.disabled()
         };
     }
@@ -91,6 +93,7 @@ class serverWideExternalReplicationEditModel extends serverWideConfigurationMode
             TopologyDiscoveryUrls: [],
             ExcludedDatabases: [],
             MentorNode: null,
+            PinToMentorNode: false,
             Disabled: false,
         });
     }

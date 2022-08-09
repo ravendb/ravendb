@@ -565,7 +565,7 @@ class editDocument extends shardViewModelBase {
         });
         
         this.canViewRelated = ko.pureComputed(() => {
-            return !this.isDeleteRevision();
+            return !this.isDeleteRevision() && (this.isClone() || !this.isCreatingNewDocument());
         });
 
         this.canViewCSharpClass = ko.pureComputed(() => {
@@ -628,6 +628,7 @@ class editDocument extends shardViewModelBase {
     editNewDocument(collectionForNewDocument: string): JQueryPromise<document> {
         this.isCreatingNewDocument(true);
         this.collectionForNewDocument(collectionForNewDocument);
+        this.connectedDocuments.activateRecent();
         
         const documentTask = $.Deferred<document>();
 

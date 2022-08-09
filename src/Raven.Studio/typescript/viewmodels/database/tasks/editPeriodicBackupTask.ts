@@ -24,7 +24,9 @@ class editPeriodicBackupTask extends shardViewModelBase {
     setupEncryptionKeyView = require("views/resources/setupEncryptionKey.html");
     backupDestinationsView = require("views/partial/backupDestinations.html");
     backupConfigurationView = require("views/partial/backupConfigurationScript.html");
-    
+    backupDestinationTestCredentialsView = require("views/partial/backupDestinationTestCredentialsResults.html");
+    pinResponsibleNodeButtonsScriptView = require("views/partial/pinResponsibleNodeButtonsScript.html");
+    pinResponsibleNodeTextScriptView = require("views/partial/pinResponsibleNodeTextScript.html");
 
     titleForView: KnockoutComputed<string>;
     configuration = ko.observable<backupConfigurationClass>();
@@ -144,11 +146,6 @@ class editPeriodicBackupTask extends shardViewModelBase {
         popoverUtils.longWithHover($(".backup-age-info"),
             {
                 content: tasksCommonContent.backupAgeInfo
-            });
-
-        popoverUtils.longWithHover($(".responsible-node"),
-            {
-                content: tasksCommonContent.responsibleNodeInfo
             });
     }
 

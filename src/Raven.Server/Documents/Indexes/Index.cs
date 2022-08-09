@@ -16,8 +16,10 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Exceptions.Corax;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Indexes;
+using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config;
@@ -258,6 +260,9 @@ namespace Raven.Server.Documents.Indexes
         private readonly double _txAllocationsRatio;
 
         private readonly string _itemType;
+        
+        internal bool SourceDocumentIncludedInOutput;
+        private bool _alreadyNotifiedAboutIncludingDocumentInOutput;
 
         protected Index(IndexType type, IndexSourceType sourceType, IndexDefinitionBaseServerSide definition)
         {
@@ -553,7 +558,7 @@ namespace Raven.Server.Documents.Indexes
 
         public IndexType Type { get; }
         
-        public SearchEngineType SearchEngineType { get; private set; }
+        public SearchEngineType SearchEngineType;
 
         public IndexSourceType SourceType { get; }
 
@@ -2114,6 +2119,11 @@ namespace Raven.Server.Documents.Indexes
                 // index was deleted or database was shutdown
                 return;
             }
+            catch (AggregateException ae) when (ae.ExtractSingleInnerException() is OperationCanceledException)
+            {
+                // index was deleted or database was shutdown
+                return;
+            }
 
             storageEnvironment.Cleanup(tryCleanupRecycledJournals);
         }
@@ -2263,7 +2273,7 @@ namespace Raven.Server.Documents.Indexes
 
                     try
                     {
-                        int? entriesCount = null;
+                        long? entriesCount = null;
 
                         using (InitializeIndexingWork(indexContext))
                         {
@@ -2681,7 +2691,7 @@ namespace Raven.Server.Documents.Indexes
             _indexStorage.Rename(name);
         }
 
-        internal virtual IndexProgress GetProgress(QueryOperationContext queryContext, bool? isStale = null)
+        internal virtual IndexProgress GetProgress(QueryOperationContext queryContext, Stopwatch overallDuration, bool? isStale = null)
         {
             using (CurrentlyInUse(out var valid))
             {
@@ -2702,7 +2712,7 @@ namespace Raven.Server.Documents.Indexes
                     if (disposed)
                         return progress;
 
-                    UpdateIndexProgress(queryContext, progress, null);
+                    UpdateIndexProgress(queryContext, progress, null, overallDuration);
                     return progress;
                 }
 
@@ -2724,14 +2734,14 @@ namespace Raven.Server.Documents.Indexes
 
                     var stats = _indexStorage.ReadStats(tx);
 
-                    UpdateIndexProgress(queryContext, progress, stats);
+                    UpdateIndexProgress(queryContext, progress, stats, overallDuration);
 
                     return progress;
                 }
             }
         }
 
-        private void UpdateIndexProgress(QueryOperationContext queryContext, IndexProgress progress, IndexStats stats)
+        private void UpdateIndexProgress(QueryOperationContext queryContext, IndexProgress progress, IndexStats stats, Stopwatch overallDuration)
         {
             if (DeployedOnAllNodes == false)
             {
@@ -2765,7 +2775,7 @@ namespace Raven.Server.Documents.Indexes
                     };
                 }
 
-                UpdateProgressStats(queryContext, progressStats, collection);
+                UpdateProgressStats(queryContext, progressStats, collection, overallDuration);
             }
 
             var referencedCollections = GetReferencedCollections();
@@ -2795,23 +2805,24 @@ namespace Raven.Server.Documents.Indexes
                                 LastProcessedTombstoneEtag = lastEtags.LastProcessedTombstoneEtag
                             };
 
-                            UpdateProgressStats(queryContext, progressStats, value.Name);
+                            UpdateProgressStats(queryContext, progressStats, value.Name, overallDuration);
                         }
                     }
                 }
             }
         }
 
-        internal virtual void UpdateProgressStats(QueryOperationContext queryContext, IndexProgress.CollectionStats progressStats, string collectionName)
+        internal virtual void UpdateProgressStats(QueryOperationContext queryContext, IndexProgress.CollectionStats progressStats, string collectionName,
+            Stopwatch overallDuration)
         {
             progressStats.NumberOfItemsToProcess +=
                 DocumentDatabase.DocumentsStorage.GetNumberOfDocumentsToProcess(
-                    queryContext.Documents, collectionName, progressStats.LastProcessedItemEtag, out var totalCount);
+                    queryContext.Documents, collectionName, progressStats.LastProcessedItemEtag, out var totalCount, overallDuration);
             progressStats.TotalNumberOfItems += totalCount;
 
             progressStats.NumberOfTombstonesToProcess +=
                 DocumentDatabase.DocumentsStorage.GetNumberOfTombstonesToProcess(
-                    queryContext.Documents, collectionName, progressStats.LastProcessedTombstoneEtag, out totalCount);
+                    queryContext.Documents, collectionName, progressStats.LastProcessedTombstoneEtag, out totalCount, overallDuration);
             progressStats.TotalNumberOfTombstones += totalCount;
         }
 
@@ -4110,7 +4121,23 @@ namespace Raven.Server.Documents.Indexes
             IncludeDocumentsCommand includeDocumentsCommand, IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, IncludeRevisionsCommand includeRevisionsCommand);
 
         public abstract void SaveLastState();
-
+        
+        protected void HandleSourceDocumentIncludedInMapOutput()
+        {
+            if (_alreadyNotifiedAboutIncludingDocumentInOutput || SourceDocumentIncludedInOutput == false || PerformanceHintsConfig.AlertWhenSourceDocumentIncludedInOutput == false)
+                return;
+            
+            DocumentDatabase.NotificationCenter.Add(PerformanceHint.Create(
+                DocumentDatabase.Name,
+                $"Index '{Name}' is including the origin document in output.",
+                $"Putting the whole document as one of the fields of the index entry isn't usually intentional. Especially when it is a fanout index because the document is included multiple times. Please verify your index definition for better indexing performance.",
+                PerformanceHintType.Indexing,
+                NotificationSeverity.Warning,
+                nameof(Index)));
+            
+            _alreadyNotifiedAboutIncludingDocumentInOutput = true;
+        }
+        
         protected void HandleIndexOutputsPerDocument(LazyStringValue documentId, int numberOfOutputs, IndexingStatsScope stats)
         {
             stats.RecordNumberOfProducedOutputs(numberOfOutputs);
@@ -4579,6 +4606,9 @@ namespace Raven.Server.Documents.Indexes
 
         public void Compact(Action<IOperationProgress> onProgress, CompactionResult result, CancellationToken token)
         {
+            if (IndexPersistence is CoraxIndexPersistence)
+                throw new NotImplementedInCoraxException($"{nameof(Compact)} is not implemented yet.");
+            
             if (_isCompactionInProgress)
                 throw new InvalidOperationException($"Index '{Name}' cannot be compacted because compaction is already in progress.");
 

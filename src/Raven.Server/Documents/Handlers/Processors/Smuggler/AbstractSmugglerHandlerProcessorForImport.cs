@@ -9,8 +9,10 @@ using Microsoft.Net.Http.Headers;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.Properties;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Json;
+using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.Smuggler;
 using Raven.Server.Smuggler.Documents.Data;
@@ -110,6 +112,8 @@ namespace Raven.Server.Documents.Handlers.Processors.Smuggler
                                         blittableJson = await context.ReadForMemoryAsync(section.Body, Constants.Smuggler.ImportOptions);
                                     }
 
+                                    IgnoreDatabaseItemTypesIfCurrentVersionIsOlderThenClientVersion(context, ref blittableJson);
+
                                     options = JsonDeserializationServer.DatabaseSmugglerOptions(blittableJson);
                                     continue;
                                 }
@@ -137,6 +141,73 @@ namespace Raven.Server.Documents.Handlers.Processors.Smuggler
                 token: token).ConfigureAwait(false);
 
             await WriteSmugglerResultAsync(context, result, RequestHandler.ResponseBodyStream());
+        }
+
+        private void IgnoreDatabaseItemTypesIfCurrentVersionIsOlderThenClientVersion(JsonOperationContext context, ref BlittableJsonReaderObject blittableJson)
+        {
+            DynamicJsonValue djv = null;
+
+            if (blittableJson.TryGet(nameof(DatabaseSmugglerOptions.OperateOnTypes), out string operateOnTypes) &&
+                operateOnTypes != null && 
+                Enum.TryParse(typeof(DatabaseItemType), operateOnTypes, out _) == false)
+            {
+                CheckClientVersion(operateOnTypes, nameof(DatabaseSmugglerOptions.OperateOnTypes));
+
+                var itemsTypes = DatabaseItemType.None;
+                var types = operateOnTypes.Split(", ");
+
+                foreach (var type in types)
+                {
+                    if (Enum.TryParse(typeof(DatabaseItemType), type, true, out var result) == false || result is DatabaseItemType existing == false)
+                        continue;
+
+                    itemsTypes |= existing;
+                }
+
+                djv = new DynamicJsonValue(blittableJson)
+                {
+                    [nameof(DatabaseSmugglerOptions.OperateOnTypes)] = itemsTypes
+                };
+            }
+
+            if (blittableJson.TryGet(nameof(DatabaseSmugglerOptions.OperateOnDatabaseRecordTypes), out string operateOnDatabaseRecordTypes) &&
+                operateOnDatabaseRecordTypes != null && 
+                Enum.TryParse(typeof(DatabaseRecordItemType), operateOnDatabaseRecordTypes, out _) == false)
+            {
+                CheckClientVersion(operateOnDatabaseRecordTypes, nameof(DatabaseSmugglerOptions.OperateOnDatabaseRecordTypes));
+
+                var databaseRecordItemsTypes = DatabaseRecordItemType.None;
+                var types = operateOnDatabaseRecordTypes.Split(", ");
+
+                foreach (var type in types)
+                {
+                    if (Enum.TryParse(typeof(DatabaseRecordItemType), type, true, out var result) == false || result is DatabaseRecordItemType existing == false)
+                        continue;
+
+                    databaseRecordItemsTypes |= existing;
+                }
+
+                if (djv == null)
+                    djv = new DynamicJsonValue(blittableJson);
+
+                djv[nameof(DatabaseSmugglerOptions.OperateOnDatabaseRecordTypes)] = databaseRecordItemsTypes;
+            }
+
+            if (djv == null)
+                return;
+
+            blittableJson.Modifications = djv;
+            using (var old = blittableJson)
+            {
+                blittableJson = context.ReadObject(blittableJson, "item-types");
+            }
+        }
+
+        private void CheckClientVersion(string value, string propertyName)
+        {
+            if (RequestRouter.TryGetClientVersion(HttpContext, out var version) == false ||
+                (Version.TryParse(RavenVersionAttribute.Instance.AssemblyVersion, out var existingVersion) && version.CompareTo(existingVersion) <= 0))
+                throw new InvalidDataException($"The value '{value}' supplied in '{propertyName}' is not parsable");
         }
     }
 }

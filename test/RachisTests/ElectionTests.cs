@@ -80,6 +80,89 @@ namespace RachisTests
         }
 
         [Fact]
+        public async Task CanElectOnDivergence4()
+        {
+            var firstLeader = await CreateNetworkAndGetLeader(3);
+            var followers = GetFollowers();
+
+            var follower1 = followers[0];
+            var follower2 = followers[1];
+
+            DisconnectBiDirectionalFromNode(follower1);
+
+            var lastIndex = -1L;
+            var leaderTerm = firstLeader.CurrentTerm;
+            await IssueCommandsAndWaitForCommit(3, "foo", 123);
+
+            DisconnectBiDirectionalFromNode(firstLeader);
+
+            for (int i = 0; i < 6; i++)
+            {
+                firstLeader.AppendToLog(new TestCommand { Name = "bar", Value = 1 }, leaderTerm);
+            }
+            await firstLeader.WaitForState(RachisState.Candidate, CancellationToken.None);
+
+            long truncatedIndex;
+            using (firstLeader.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                RachisConsensus.GetLastTruncated(context, out truncatedIndex, out var truncatedTerm);
+            }
+
+            Reconnect(follower1.Url, follower2.Url);
+            Reconnect(follower2.Url, follower1.Url);
+            var newLeader = WaitForAnyToBecomeLeader(followers);
+
+            await IssueCommandsAndWaitForCommit(20, "baz", 123);
+
+            var nonLeader = followers.Single(x => x != newLeader);
+            DisconnectBiDirectionalFromNode(nonLeader);
+
+            using (newLeader.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
+            using (var tx = ctx.OpenWriteTransaction())
+            {
+                newLeader.TruncateLogBefore(ctx, truncatedIndex + 3);
+                tx.Commit();
+            }
+
+            Reconnect(firstLeader.Url, newLeader.Url);
+            Reconnect(newLeader.Url, firstLeader.Url);
+
+            using (newLeader.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                lastIndex = newLeader.GetLastCommitIndex(context);
+            }
+
+            var condition = await firstLeader.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, lastIndex)
+                    .WaitWithoutExceptionAsync(5000);
+
+            using (firstLeader.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var commitIndex = firstLeader.GetLastCommitIndex(context);
+                Assert.True(condition, $"Last commit is {commitIndex} wanted {lastIndex}");
+            }
+
+            ReconnectBiDirectionalFromNode(nonLeader);
+
+            lastIndex = await IssueCommandsAndWaitForCommit(10, "foo", 357);
+
+            foreach (var r in RachisConsensuses)
+            {
+                condition = await r.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, lastIndex)
+                    .WaitWithoutExceptionAsync(5000);
+               
+                using (r.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var commitIndex = r.GetLastCommitIndex(context);
+                    Assert.True(condition, $"Last commit is {commitIndex} wanted {lastIndex}");
+                }
+            }
+        }
+
+        [Fact]
         public async Task CanElectOnDivergence3()
         {
             var firstLeader = await CreateNetworkAndGetLeader(3);

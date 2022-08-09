@@ -14,11 +14,10 @@ namespace Corax.Queries
         /// </summary>
         public static int And(Span<long> dst, Span<long> left, Span<long> right)
         {
-            var dstPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(dst));
-            var leftPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(left));
-            var rightPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(right));
-
-            return And(dstPtr, dst.Length, leftPtr, left.Length, rightPtr, right.Length);
+            fixed (long* dstPtr = dst, leftPtr = left, rightPtr = right)
+            {
+                return And(dstPtr, dst.Length, leftPtr, left.Length, rightPtr, right.Length);
+            }
         }
 
         /// <summary>
@@ -138,11 +137,10 @@ namespace Corax.Queries
         /// </summary>
         internal static int AndVectorized(Span<long> dst, Span<long> left, Span<long> right)
         {
-            var dstPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(dst));
-            var leftPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(left));
-            var rightPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(right));
-
-            return AndVectorized(dstPtr, dst.Length, leftPtr, left.Length, rightPtr, right.Length);
+            fixed (long* dstPtr = dst, leftPtr = left, rightPtr = right)
+            {
+                return AndVectorized(dstPtr, dst.Length, leftPtr, left.Length, rightPtr, right.Length);
+            }
         }
 
         /// <summary>
@@ -150,11 +148,10 @@ namespace Corax.Queries
         /// </summary>
         internal static int AndScalar(Span<long> dst, Span<long> left, Span<long> right)
         {
-            var dstPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(dst));
-            var leftPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(left));
-            var rightPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(right));
-
-            return AndScalar(dstPtr, dst.Length, leftPtr, left.Length, rightPtr, right.Length);
+            fixed (long* dstPtr = dst, leftPtr = left, rightPtr = right)
+            {
+                return AndScalar(dstPtr, dst.Length, leftPtr, left.Length, rightPtr, right.Length);
+            }
         }
 
         /// <summary>
@@ -202,12 +199,11 @@ namespace Corax.Queries
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int Or(Span<long> dst, Span<long> left, Span<long> right)
         {
-            var dstPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(dst));
-            var leftPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(left));
-            var rightPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(right));
-
-            // TODO: Check there is no overlapping between dst and left and right.             
-            return Or(dstPtr, dst.Length, leftPtr, left.Length, rightPtr, right.Length);
+            fixed (long* dstPtr = dst, leftPtr = left, rightPtr = right)
+            {
+                // TODO: Check there is no overlapping between dst and left and right.             
+                return Or(dstPtr, dst.Length, leftPtr, left.Length, rightPtr, right.Length);
+            }
         }
 
 
@@ -342,12 +338,11 @@ namespace Corax.Queries
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int AndNot(Span<long> dst, Span<long> left, Span<long> right)
         {
-            var dstPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(dst));
-            var leftPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(left));
-            var rightPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(right));
-
-            // TODO: Check there is no overlapping between dst and left and right.             
-            return AndNot(dstPtr, dst.Length, leftPtr, left.Length, rightPtr, right.Length);
+            fixed (long* dstPtr = dst, leftPtr = left, rightPtr = right)
+            {
+                // TODO: Check there is no overlapping between dst and left and right.             
+                return AndNot(dstPtr, dst.Length, leftPtr, left.Length, rightPtr, right.Length);
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

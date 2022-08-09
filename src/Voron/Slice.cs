@@ -9,6 +9,7 @@ using Sparrow.Threading;
 
 namespace Voron
 {
+    [DebuggerDisplay("{ToString(),nq}")]
     [StructLayout(LayoutKind.Sequential)]
     public unsafe struct Slice
     {

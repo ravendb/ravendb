@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using FastTests.Voron;
 using FastTests.Voron.FixedSize;
 using Sparrow.Server;
@@ -75,7 +76,7 @@ namespace SlowTests.Issues
 
                 for (var i = 0; i < total; i++)
                 {
-                    var count = tree.GetNumberOfEntriesAfter(i, out long totalCount);
+                    var count = tree.GetNumberOfEntriesAfter(i, out long totalCount, Stopwatch.StartNew());
                     var expectedCount = Calculate(tree, i, out long expectedTotalCount);
 
                     Assert.Equal(inserted, expectedTotalCount);

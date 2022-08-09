@@ -87,6 +87,7 @@ abstract class ongoingTaskQueueEtlEditModel extends ongoingTaskEditModel {
                 this.taskName,
                 this.taskState,
                 this.mentorNode,
+                this.pinMentorNode,
                 this.manualChooseMentor,
                 this.connectionStringName,
                 this.allowEtlOnNonEncryptedChannel,
@@ -136,15 +137,18 @@ abstract class ongoingTaskQueueEtlEditModel extends ongoingTaskEditModel {
 
     update(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtlDetails) {
         super.update(dto);
-
-        if (dto.Configuration) {
-            this.connectionStringName(dto.Configuration.ConnectionStringName);
-            this.transformationScripts(dto.Configuration.Transforms.map(x => new ongoingTaskQueueEtlTransformationModel(x, false, false)));
-            this.manualChooseMentor(!!dto.Configuration.MentorNode);
-            this.skipAutomaticQueueDeclaration(dto.Configuration.SkipAutomaticQueueDeclaration);
+        const configuration = dto.Configuration;
+        
+        if (configuration) {
+            this.connectionStringName(configuration.ConnectionStringName);
+            this.transformationScripts(configuration.Transforms.map(x => new ongoingTaskQueueEtlTransformationModel(x, false, false)));
+            this.manualChooseMentor(!!configuration.MentorNode);
+            this.skipAutomaticQueueDeclaration(configuration.SkipAutomaticQueueDeclaration);
+            this.pinMentorNode(configuration.PinToMentorNode);
+            this.mentorNode(configuration.MentorNode);
             
-            if (dto.Configuration.Queues) {
-                dto.Configuration.Queues.forEach(x => {
+            if (configuration.Queues) {
+                configuration.Queues.forEach(x => {
                     const queueOptions = new queueOptionsModel(x.Name, x.DeleteProcessedDocuments);
                     this.optionsPerQueue.push(queueOptions);
                 });
@@ -161,6 +165,7 @@ abstract class ongoingTaskQueueEtlEditModel extends ongoingTaskEditModel {
             Transforms: this.transformationScripts().map(x => x.toDto()),
             EtlType: "Queue",
             MentorNode: this.manualChooseMentor() ? this.mentorNode() : undefined,
+            PinToMentorNode: this.pinMentorNode(),
             TaskId: this.taskId,
             BrokerType: broker,
             SkipAutomaticQueueDeclaration: this.skipAutomaticQueueDeclaration(),
@@ -202,6 +207,10 @@ abstract class ongoingTaskQueueEtlEditModel extends ongoingTaskEditModel {
     
     hasOptions() {
         return !!this.optionsPerQueue().length;
+    }
+
+    hasAdvancedOptionsDefined(): boolean {
+        return this.hasOptions();
     }
 }
 

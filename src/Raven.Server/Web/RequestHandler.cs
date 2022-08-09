@@ -103,6 +103,11 @@ namespace Raven.Server.Web
                 return _requestBodyStream;
             _requestBodyStream = new StreamWithTimeout(GetDecompressedStream(HttpContext.Request.Body, HttpContext.Request.Headers));
 
+            if (TrafficWatchManager.HasRegisteredClients)
+            {
+                HttpContext.Items["RequestStream"] = _requestBodyStream;
+            }
+
             _context.HttpContext.Response.RegisterForDispose(_requestBodyStream);
 
             return _requestBodyStream;
@@ -531,7 +536,7 @@ namespace Raven.Server.Web
 
             dataAsString = Uri.UnescapeDataString(dataAsString);
 
-            if (DateTime.TryParseExact(dataAsString, DefaultFormat.DateTimeOffsetFormatsToWrite, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTime result))
+            if (DateTime.TryParseExact(dataAsString, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTime result))
                 return result;
 
             ThrowInvalidDateTime(name, dataAsString);

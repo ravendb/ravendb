@@ -130,8 +130,10 @@ namespace Corax.Queries
                 if (iterations > 1)
                 {
                     // We need to sort and remove duplicates.
-                    var bufferBasePtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(matches));
-                    totalResults = Sorting.SortAndRemoveDuplicates(bufferBasePtr, totalResults);
+                    fixed (long* bufferBasePtr = matches)
+                    {
+                        totalResults = Sorting.SortAndRemoveDuplicates(bufferBasePtr, totalResults);
+                    }
                 }
 
                 // This is an early bailout, the only way this can happen is when Fill returns 0 and we dont have

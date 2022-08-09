@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
@@ -35,6 +36,8 @@ internal class IndexHandlerProcessorForProgress : AbstractIndexHandlerProcessorF
         using (var context = QueryOperationContext.Allocate(RequestHandler.Database, needsServerContext: true))
         using (context.OpenReadTransaction())
         {
+            var overallDuration = Stopwatch.StartNew();
+
             foreach (var index in RequestHandler.Database.IndexStore.GetIndexes())
             {
                 IndexProgress indexProgress = null;
@@ -43,7 +46,7 @@ internal class IndexHandlerProcessorForProgress : AbstractIndexHandlerProcessorF
                     if (index.DeployedOnAllNodes && index.IsStale(context) == false)
                         continue;
 
-                    indexProgress = index.GetProgress(context);
+                    indexProgress = index.GetProgress(context, overallDuration);
                 }
                 catch (ObjectDisposedException)
                 {

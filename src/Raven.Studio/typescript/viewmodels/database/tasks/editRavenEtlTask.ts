@@ -22,8 +22,6 @@ import documentMetadata = require("models/database/documents/documentMetadata");
 import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
 import document = require("models/database/documents/document");
 import testRavenEtlCommand = require("commands/database/tasks/testRavenEtlCommand");
-import popoverUtils = require("common/popoverUtils");
-import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 import discoveryUrl = require("models/database/settings/discoveryUrl");
 import { highlight, languages } from "prismjs";
 import shardViewModelBase from "viewmodels/shardViewModelBase";
@@ -176,6 +174,8 @@ class editRavenEtlTask extends shardViewModelBase {
     view = require("views/database/tasks/editRavenEtlTask.html");
     connectionStringView = require("views/database/settings/connectionStringRaven.html")
     certificateUploadInfoForOngoingTasks = require("views/partial/certificateUploadInfoForOngoingTasks.html");
+    pinResponsibleNodeButtonsScriptView = require("views/partial/pinResponsibleNodeButtonsScript.html");
+    pinResponsibleNodeTextScriptView = require("views/partial/pinResponsibleNodeTextScript.html");
     
     static readonly scriptNamePrefix = "Script_";
     static isApplyToAll = ongoingTaskRavenEtlTransformationModel.isApplyToAll;
@@ -261,11 +261,6 @@ class editRavenEtlTask extends shardViewModelBase {
         super.compositionComplete();
 
         $('.edit-raven-etl-task [data-toggle="tooltip"]').tooltip();
-
-        popoverUtils.longWithHover($(".responsible-node"),
-            {
-                content: tasksCommonContent.responsibleNodeInfo
-            });
     }
 
     private getAllConnectionStrings() {
@@ -278,6 +273,10 @@ class editRavenEtlTask extends shardViewModelBase {
     }
 
     private initObservables() {
+        const model = this.editedRavenEtl();
+        
+        this.showAdvancedOptions(model.hasAdvancedOptionsDefined());
+        
         this.shortErrorText = ko.pureComputed(() => {
             const result = this.testConnectionResult();
             if (!result || result.Success) {
@@ -289,7 +288,7 @@ class editRavenEtlTask extends shardViewModelBase {
         this.newConnectionString(connectionStringRavenEtlModel.empty());
         this.newConnectionString().setNameUniquenessValidator(name => !this.ravenEtlConnectionStringsDetails().find(x => x.Name.toLocaleLowerCase() === name.toLocaleLowerCase()));
         
-        const connectionStringName = this.editedRavenEtl().connectionStringName();
+        const connectionStringName = model.connectionStringName();
         const connectionStringIsMissing = connectionStringName && !this.ravenEtlConnectionStringsDetails()
             .find(x => x.Name.toLocaleLowerCase() === connectionStringName.toLocaleLowerCase());
 
@@ -300,7 +299,7 @@ class editRavenEtlTask extends shardViewModelBase {
         if (connectionStringIsMissing) {
             // looks like user imported data w/o connection strings, prefill form with desired name
             this.newConnectionString().connectionStringName(connectionStringName);
-            this.editedRavenEtl().connectionStringName(null);
+            model.connectionStringName(null);
         }
         
         // Discard test connection result when needed
@@ -313,10 +312,10 @@ class editRavenEtlTask extends shardViewModelBase {
         });
 
         const dtoProvider = () => {
-            const dto = this.editedRavenEtl().toDto();
+            const dto = model.toDto();
 
             // override transforms - use only current transformation
-            const transformationScriptDto = this.editedRavenEtl().editedTransformationScriptSandbox().toDto();
+            const transformationScriptDto = model.editedTransformationScriptSandbox().toDto();
             transformationScriptDto.Name = "Script_1"; // assign fake name
             dto.Transforms = [transformationScriptDto];
 
@@ -327,13 +326,14 @@ class editRavenEtlTask extends shardViewModelBase {
         };
         
         this.test = new ravenTaskTestMode(this.db, () => {
-            return this.isValid(this.editedRavenEtl().editedTransformationScriptSandbox().validationGroup);
+            return this.isValid(model.editedTransformationScriptSandbox().validationGroup);
+
         }, dtoProvider);
 
         this.dirtyFlag = new ko.DirtyFlag([
             this.createNewConnectionString,
             this.newConnectionString().dirtyFlag().isDirty,
-            this.editedRavenEtl().dirtyFlag().isDirty
+            model.dirtyFlag().isDirty
         ], false, jsonUtil.newLineNormalizingHashFunction);
         
         this.test.initObservables();
