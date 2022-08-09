@@ -1,10 +1,12 @@
 ﻿using System;
 using System.ComponentModel;
+using System.IO;
 using Raven.Server.Exceptions;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
 using Sparrow.Server.Exceptions;
 using Sparrow.Server.Platform.Posix;
+using Sparrow.Server.Utils;
 using Voron.Platform.Win32;
 
 namespace Raven.Server.Utils
@@ -44,6 +46,15 @@ namespace Raven.Server.Utils
         public static bool IsPageFileTooSmall(this Exception e)
         {
             return e is Win32Exception win32Exception && win32Exception.NativeErrorCode == ERROR_COMMITMENT_LIMIT;
+        }
+
+        public static void ThrowDiskFullException(string path) // Can be the folder path of the fole absolute path
+        {
+            var folderPath = Path.GetDirectoryName(path); // file Absolute Path
+            var driveInfo = DiskUtils.GetDiskSpaceInfo(folderPath);
+            var freeSpace = driveInfo != null ? driveInfo.TotalFreeSpace.ToString() : "N/A";
+            throw new DiskFullException($"There isn't enough space to flush the buffer in: {folderPath}. " +
+                                        $"Currently available space: {freeSpace}");
         }
     }
 }

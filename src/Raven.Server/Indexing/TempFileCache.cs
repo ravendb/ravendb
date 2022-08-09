@@ -8,7 +8,6 @@ using Sparrow.Global;
 using Sparrow.LowMemory;
 using Sparrow.Utils;
 using Voron;
-using Raven.Server.Utils;
 using Sparrow.Server.Exceptions;
 
 namespace Raven.Server.Indexing
@@ -215,12 +214,9 @@ namespace Raven.Server.Indexing
 
                 _length = value;
             }
-            catch (IOException e)
+            catch (IOException e) when (e.IsOutOfDiskSpaceException())
             {
-                if (e.IsOutOfDiskSpaceException())
-                {
-                    IndexingUtils.ThrowDiskFullException(InnerStream.Name);
-                }
+                ExceptionHelper.ThrowDiskFullException(InnerStream.Name);
             }
         }
 
@@ -234,7 +230,7 @@ namespace Raven.Server.Indexing
             }
             catch (IOException e) when(e.IsOutOfDiskSpaceException())
             {
-                IndexingUtils.ThrowDiskFullException(InnerStream.Name);
+                ExceptionHelper.ThrowDiskFullException(InnerStream.Name);
             }
         }
 

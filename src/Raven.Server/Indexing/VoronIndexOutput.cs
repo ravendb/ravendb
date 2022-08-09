@@ -62,7 +62,7 @@ namespace Raven.Server.Indexing
             }
             catch (IOException ioe) when (ioe.IsOutOfDiskSpaceException())
             {
-                IndexingUtils.ThrowDiskFullException(_fileCache.FullPath);
+                ExceptionHelper.ThrowDiskFullException(_fileCache.FullPath);
             }
         }
 
@@ -77,7 +77,7 @@ namespace Raven.Server.Indexing
             }
             catch (IOException ioe) when (ioe.IsOutOfDiskSpaceException())
             {
-                IndexingUtils.ThrowDiskFullException(_fileCache.FullPath);
+                ExceptionHelper.ThrowDiskFullException(_fileCache.FullPath);
             }
         }
 
@@ -97,7 +97,7 @@ namespace Raven.Server.Indexing
             }
             catch (IOException ioe) when (ioe.IsOutOfDiskSpaceException())
             {
-                IndexingUtils.ThrowDiskFullException(_fileCache.FullPath);
+                ExceptionHelper.ThrowDiskFullException(_fileCache.FullPath);
             }
         }
 
@@ -159,7 +159,7 @@ namespace Raven.Server.Indexing
                 if (e is IOException ioe && e.IsOutOfDiskSpaceException())
                 {
                     // can happen when trying to copy from the file stream
-                    IndexingUtils.ThrowDiskFullException(_fileCache.FullPath);
+                    ExceptionHelper.ThrowDiskFullException(_fileCache.FullPath);
                 }
 
                 throw;
