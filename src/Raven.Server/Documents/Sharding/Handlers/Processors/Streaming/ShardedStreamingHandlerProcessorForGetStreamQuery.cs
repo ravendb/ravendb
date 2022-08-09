@@ -84,9 +84,8 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
             if (queryProcessor.IsMapReduce())
                 throw new NotSupportedInShardingException("MapReduce is not supported in sharded streaming queries");
 
-            //TODO stav: should have this?
-            //if(queryProcessor.IsIncludes())
-            //    throw new NotSupportedInShardingException("Includes is not supported in sharded streaming queries");
+            if (query.Metadata.HasIncludeOrLoad)
+                throw new NotSupportedInShardingException("Includes and Loads are not supported in sharded streaming queries");
 
             queryProcessor.Initialize(out Dictionary<int, BlittableJsonReaderObject> queryTemplates);
 
@@ -97,8 +96,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
             }
 
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Stav, DevelopmentHelper.Severity.Normal, "Handle continuation token in streaming");
-            //var continuationToken = RequestHandler.ContinuationTokens.GetOrCreateContinuationToken(context, query.Offset ?? 0, query.Limit ?? Int32.MaxValue);
-
+            
             IComparer<BlittableJsonReaderObject> comparer = query.Metadata.OrderBy?.Length > 0
                 ? new ShardedDocumentsComparer(query.Metadata, isMapReduce: false)
                 : new DocumentBlittableLastModifiedComparer();

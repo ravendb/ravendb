@@ -157,7 +157,7 @@ namespace FastTests.Sharding
             }
         }
 
-        [RavenFact(RavenTestCategory.Patching | RavenTestCategory.Sharding)]
+        [RavenFact(RavenTestCategory.Patching | RavenTestCategory.Sharding, Skip = "Fix includes RavenDB-19125")]
         public void CanPatch()
         {
             using (var store = Sharding.GetDocumentStore())
@@ -196,8 +196,8 @@ namespace FastTests.Sharding
             }
         }
         
-        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Sharding, Skip = "Fix sharded includes RavenDB-18162")]
-        public void CanPutAndGetMultipleItemsWithIncludes()
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Sharding, Skip = "Fix includes RavenDB-19125")]
+        public async Task CanPutAndGetMultipleItemsWithIncludes()
         {
             using (var store = Sharding.GetDocumentStore())
             {
@@ -237,6 +237,11 @@ namespace FastTests.Sharding
                     ["Pet"] = "pets/3"
                 }, "users/3");
 
+                int shard1 = await Sharding.GetShardNumber(store, "pets/1");
+                int shard2 = await Sharding.GetShardNumber(store, "pets/2");
+                
+                Assert.NotEqual(shard1, shard2);
+                
                 using (var s = store.OpenSession())
                 {
                     var users = s.Load<User>(new[] { "users/1", "users/2", "users/3" }, b => b.IncludeDocuments(u => u.Pet));
