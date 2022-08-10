@@ -262,7 +262,7 @@ class genUtils {
         return asArray ? [newRes, sizes[i]] : newRes + " " + sizes[i];
     }
 
-    static getSizeInBytesAsUTF8(input: string) {
+    static getSizeInBytesAsUTF8(input: string): number {
         let result = 0;
         let isQuoted = false;
         let prevChar: any = 0;

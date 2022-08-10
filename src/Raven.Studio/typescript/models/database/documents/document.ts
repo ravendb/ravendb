@@ -1,6 +1,10 @@
 import documentMetadata = require("models/database/documents/documentMetadata");
+import genUtils = require("common/generalUtils");
 
 class document implements documentBase {
+    
+    static readonly hugeSizeInBytesDefault = 10_485_760; // 10 MB
+    static readonly hugeSizeFormatted = genUtils.formatBytesToSize(document.hugeSizeInBytesDefault);
     
     static readonly customColumnName = "@@x => x.getId()@@";
 
