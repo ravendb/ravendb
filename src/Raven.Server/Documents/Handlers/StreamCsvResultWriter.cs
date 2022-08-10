@@ -32,7 +32,8 @@ namespace Raven.Server.Documents.Handlers
             Constants.Documents.Metadata.Flags,
             Constants.Documents.Metadata.ChangeVector,
             Constants.Documents.Metadata.Id,
-            Constants.Documents.Metadata.LastModified
+            Constants.Documents.Metadata.LastModified,
+            Constants.Documents.Metadata.IndexScore,
         };
 
         protected StreamCsvResultWriter(HttpResponse response, Stream stream, string[] properties = null, string csvFileNamePrefix = "export")
