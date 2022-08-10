@@ -38,6 +38,11 @@ namespace Raven.Client.Util
                 if (_canBaseStreamTimeoutOnRead)
                 {
                     var streamReadTimeout = _stream.ReadTimeout;
+                    if (streamReadTimeout > 0)
+                    {
+                        _readTimeout = streamReadTimeout;
+                        return;
+                    }
 
                     try
                     {
@@ -45,7 +50,7 @@ namespace Raven.Client.Util
                     }
                     catch
                     {
-                        if (streamReadTimeout > 0 && streamReadTimeout <= _readTimeout)
+                        if (streamReadTimeout <= _readTimeout)
                             _readTimeout = streamReadTimeout;
                         else
                             _canBaseStreamTimeoutOnRead = false;
@@ -68,14 +73,18 @@ namespace Raven.Client.Util
                 if (_canBaseStreamTimeoutOnWrite)
                 {
                     var streamWriteTimeout = _stream.WriteTimeout;
-
+                    if (streamWriteTimeout > 0)
+                    {
+                        _writeTimeout = streamWriteTimeout;
+                        return;
+                    }
                     try
                     {
                         _stream.WriteTimeout = _writeTimeout;
                     }
                     catch
                     {
-                        if (streamWriteTimeout > 0 && streamWriteTimeout <= _writeTimeout)
+                        if (streamWriteTimeout <= _writeTimeout)
                             _writeTimeout = streamWriteTimeout;
                         else
                             _canBaseStreamTimeoutOnWrite = false;
@@ -137,23 +146,16 @@ namespace Raven.Client.Util
             return AsyncHelpers.RunSync(() => ReadAsyncWithTimeout(buffer, offset, count, CancellationToken.None));
         }
 
-        public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
-            if (_canBaseStreamTimeoutOnRead)
-            {
-                var read = await _stream.ReadAsync(buffer, offset, count, cancellationToken).ConfigureAwait(false);
-                _totalRead += read;
-                return read;
-            }
-
             // _totalRead is counted in ReadAsyncWithTimeout
-            return await ReadAsyncWithTimeout(buffer, offset, count, cancellationToken).ConfigureAwait(false);
+            return ReadAsyncWithTimeout(buffer, offset, count, cancellationToken);
         }
 
         private async Task<int> ReadAsyncWithTimeout(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
             _readCts?.Dispose();
-            _readCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            _readCts = _readCts == default ? new CancellationTokenSource() : CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             _readCts.CancelAfter(_readTimeout);
 
             var read = await _stream.ReadAsync(buffer, offset, count, _readCts.Token).ConfigureAwait(false);
@@ -188,18 +190,13 @@ namespace Raven.Client.Util
         {
             _totalWritten += count;
 
-            if (_canBaseStreamTimeoutOnWrite)
-            {
-                return _stream.WriteAsync(buffer, offset, count, cancellationToken);
-            }
-
             return WriteAsyncWithTimeout(buffer, offset, count, cancellationToken);
         }
 
         private Task WriteAsyncWithTimeout(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
             _writeCts?.Dispose();
-            _writeCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            _writeCts = _writeCts == default ? new CancellationTokenSource() : CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             _writeCts.CancelAfter(_writeTimeout);
 
             return _stream.WriteAsync(buffer, offset, count, _writeCts.Token);
