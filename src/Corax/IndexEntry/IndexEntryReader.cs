@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -18,7 +19,7 @@ namespace Corax;
  *  tuple<long, double, string>: <length:variable_size><string_table_ptr:sizeof(int)><long_ptr:variable_size><double[X]:sizeof(double)>
  *                               <strings[X]:sequence><string_length_table[X]:var_int>
  */
-public unsafe ref struct IndexEntryReader
+public ref struct IndexEntryReader
 {
     private const int Invalid = unchecked((int)0xFFFF_FFFF);
     private readonly Span<byte> _buffer;
@@ -509,8 +510,9 @@ public unsafe ref struct IndexEntryReader
         ushort knownFieldsCount = (ushort)(header.KnownFieldCount >> 2);
         IndexEntryTableEncoding encoding = (IndexEntryTableEncoding)(header.KnownFieldCount & 0b11);
 
-        int encodeSize = TableEncodingLookupTable[(int)encoding];    
-        int locationOffset = buffer.Length - (knownFieldsCount * encodeSize) + field * encodeSize;
+        int encodeSize = TableEncodingLookupTable[(int)encoding];
+        Debug.Assert(header.Length == (int)header.Length);
+        int locationOffset = (int)header.Length - (knownFieldsCount * encodeSize) + field * encodeSize;
 
         int offset;
         switch (encoding)

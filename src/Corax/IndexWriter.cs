@@ -147,7 +147,6 @@ namespace Corax
            
             Span<byte> buf = stackalloc byte[10];
             var idLen = ZigZagEncoding.Encode(buf, id.Size);
-            var newEntryReader = new IndexEntryReader(data);
 
             // can fit in old size, have to remove anyway
             if (rawSize < idLen + id.Size + data.Length)
@@ -158,141 +157,158 @@ namespace Corax
             var context = Transaction.Allocator;
 
             // we can fit it in the old space, let's, great!
-            foreach (var binding in _fieldsMapping)
+            foreach (var fieldBinding in _fieldsMapping)
             {
-                if (binding.IsIndexed == false)
+                if (fieldBinding.IsIndexed == false)
                     continue;
 
-                var oldType = oldEntryReader.GetFieldType(binding.FieldId, out var oldOffset);
-                var newType = newEntryReader.GetFieldType(binding.FieldId, out var newOffset);
-
-                if (oldType != newType)
-                {
-                    RemoveSingleTerm(binding, entryId, oldEntryReader, oldType);
-                    InsertToken(context, ref newEntryReader, entryId, binding);
-                    continue;
-                }
-
-                switch (oldType)
-                {
-                    case IndexEntryFieldType.Empty:
-                    case IndexEntryFieldType.Null:
-                        // nothing _can_ change here
-                        break;
-                    case IndexEntryFieldType.TupleListWithNulls:
-                    case IndexEntryFieldType.TupleList:
-                    case IndexEntryFieldType.ListWithNulls:
-                    case IndexEntryFieldType.List:
-                    {
-                        bool oldHasIterator = oldEntryReader.TryReadMany(binding.FieldId, out var oldIterator);
-                        bool newHasIterator = newEntryReader.TryReadMany(binding.FieldId, out var newIterator);
-                        bool areEqual = oldHasIterator == newHasIterator;
-                        while (areEqual)
-                        {
-                            oldHasIterator = oldIterator.ReadNext();
-                            newHasIterator = newIterator.ReadNext();
-
-                            if (oldHasIterator != newHasIterator)
-                            {
-                                areEqual = false;
-                                break;
-                            }
-
-                            if (oldHasIterator == false)
-                                break;
-
-                            if (oldIterator.Type != newIterator.Type)
-                            {
-                                areEqual = false;
-                                break;
-                            }
-
-                            if (oldIterator.Sequence.SequenceEqual(newIterator.Sequence) == false)
-                            {
-                                areEqual = false;
-                                break;
-                            }
-                        }
-
-                        if (areEqual == false)
-                        {
-                            RemoveSingleTerm(binding, entryId, oldEntryReader, oldType);
-                            InsertToken(context, ref newEntryReader, entryId, binding);
-                            continue;
-                        }
-                        break;
-                    }
-                    case IndexEntryFieldType.Tuple:
-                    case IndexEntryFieldType.SpatialPoint:
-                    case IndexEntryFieldType.Simple:
-                    {
-                        bool hasOld = oldEntryReader.Read(binding.FieldId, out var oldVal);
-                        bool hasNew = newEntryReader.Read(binding.FieldId, out var newVal);
-                        if (hasOld != hasNew || hasOld && oldVal.SequenceEqual(newVal) == false)
-                        {
-                            RemoveSingleTerm(binding, entryId, oldEntryReader, oldType);
-                            InsertToken(context, ref newEntryReader, entryId, binding);
-                        }
-                        break;
-                    }
-                    case IndexEntryFieldType.Raw:
-                    case IndexEntryFieldType.RawList:
-                    case IndexEntryFieldType.Invalid:
-                        break;
-
-                    case IndexEntryFieldType.SpatialPointList:
-                    {
-                        bool oldHasIterator = oldEntryReader.TryReadManySpatialPoint(binding.FieldId, out var oldIterator);
-                        bool newHasIterator = newEntryReader.TryReadManySpatialPoint(binding.FieldId, out var newIterator);
-                        bool areEqual = oldHasIterator == newHasIterator;
-                        while (areEqual)
-                        {
-                            oldHasIterator = oldIterator.ReadNext();
-                            newHasIterator = newIterator.ReadNext();
-
-                            if (oldHasIterator != newHasIterator)
-                            {
-                                areEqual = false;
-                                break;
-                            }
-
-                            if (oldHasIterator == false)
-                                break;
-
-                            if (oldIterator.Type != newIterator.Type)
-                            {
-                                areEqual = false;
-                                break;
-                            }
-
-                            if (oldIterator.Geohash.SequenceEqual(newIterator.Geohash) == false)
-                            {
-                                areEqual = false;
-                                break;
-                            }
-                        }
-
-                        if (areEqual == false)
-                        {
-                            RemoveSingleTerm(binding, entryId, oldEntryReader, oldType);
-                            InsertToken(context, ref newEntryReader, entryId, binding);
-                            continue;
-                        }
-
-                        break;
-                    }
-                }
+                UpdateModifiedTermsOnly(context, ref oldEntryReader, data, fieldBinding, entryId);
             }
 
+            // now we can update the actual details here...
+            var space = Container.GetMutable(Transaction.LowLevelTransaction, entryId);
+            buf.Slice(0, idLen).CopyTo(space);
+            space = space.Slice(idLen);
+            id.AsSpan().CopyTo(space);
+            space = space.Slice(id.Size);
+            data.CopyTo(space);
+
+            
             return entryId;
         }
-        
+
+        private void UpdateModifiedTermsOnly(ByteStringContext context, ref IndexEntryReader oldEntryReader, Span<byte> newEntryData,
+            IndexFieldBinding fieldBinding, long entryId)
+        {
+            var newEntryReader = new IndexEntryReader(newEntryData);
+
+            var oldType = oldEntryReader.GetFieldType(fieldBinding.FieldId, out var _);
+            var newType = newEntryReader.GetFieldType(fieldBinding.FieldId, out var _);
+
+            if (oldType != newType)
+            {
+                RemoveSingleTerm(fieldBinding, entryId, oldEntryReader, oldType);
+                InsertToken(context, ref newEntryReader, entryId, fieldBinding);
+                return;
+            }
+
+            switch (oldType)
+            {
+                case IndexEntryFieldType.Empty:
+                case IndexEntryFieldType.Null:
+                    // nothing _can_ change here
+                    break;
+                case IndexEntryFieldType.TupleListWithNulls:
+                case IndexEntryFieldType.TupleList:
+                case IndexEntryFieldType.ListWithNulls:
+                case IndexEntryFieldType.List:
+                {
+                    bool oldHasIterator = oldEntryReader.TryReadMany(fieldBinding.FieldId, out var oldIterator);
+                    bool newHasIterator = newEntryReader.TryReadMany(fieldBinding.FieldId, out var newIterator);
+                    bool areEqual = oldHasIterator == newHasIterator;
+                    while (areEqual)
+                    {
+                        oldHasIterator = oldIterator.ReadNext();
+                        newHasIterator = newIterator.ReadNext();
+
+                        if (oldHasIterator != newHasIterator)
+                        {
+                            areEqual = false;
+                            break;
+                        }
+
+                        if (oldHasIterator == false)
+                            break;
+
+                        if (oldIterator.Type != newIterator.Type)
+                        {
+                            areEqual = false;
+                            break;
+                        }
+
+                        if (oldIterator.Sequence.SequenceEqual(newIterator.Sequence) == false)
+                        {
+                            areEqual = false;
+                            break;
+                        }
+                    }
+
+                    if (areEqual == false)
+                    {
+                        RemoveSingleTerm(fieldBinding, entryId, oldEntryReader, oldType);
+                        InsertToken(context, ref newEntryReader, entryId, fieldBinding);
+                    }
+                    break;
+                }
+                case IndexEntryFieldType.Tuple:
+                case IndexEntryFieldType.SpatialPoint:
+                case IndexEntryFieldType.Simple:
+                {
+                    bool hasOld = oldEntryReader.Read(fieldBinding.FieldId, out var oldVal);
+                    bool hasNew = newEntryReader.Read(fieldBinding.FieldId, out var newVal);
+                    if (hasOld != hasNew || hasOld && oldVal.SequenceEqual(newVal) == false)
+                    {
+                        RemoveSingleTerm(fieldBinding, entryId, oldEntryReader, oldType);
+                        InsertToken(context, ref newEntryReader, entryId, fieldBinding);
+                    }
+                    break;
+                }
+                case IndexEntryFieldType.Raw:
+                case IndexEntryFieldType.RawList:
+                case IndexEntryFieldType.Invalid:
+                    break;
+
+                case IndexEntryFieldType.SpatialPointList:
+                {
+                    bool oldHasIterator = oldEntryReader.TryReadManySpatialPoint(fieldBinding.FieldId, out var oldIterator);
+                    bool newHasIterator = newEntryReader.TryReadManySpatialPoint(fieldBinding.FieldId, out var newIterator);
+                    bool areEqual = oldHasIterator == newHasIterator;
+                    while (areEqual)
+                    {
+                        oldHasIterator = oldIterator.ReadNext();
+                        newHasIterator = newIterator.ReadNext();
+
+                        if (oldHasIterator != newHasIterator)
+                        {
+                            areEqual = false;
+                            break;
+                        }
+
+                        if (oldHasIterator == false)
+                            break;
+
+                        if (oldIterator.Type != newIterator.Type)
+                        {
+                            areEqual = false;
+                            break;
+                        }
+
+                        if (oldIterator.Geohash.SequenceEqual(newIterator.Geohash) == false)
+                        {
+                            areEqual = false;
+                            break;
+                        }
+                    }
+
+                    if (areEqual == false)
+                    {
+                        RemoveSingleTerm(fieldBinding, entryId, oldEntryReader, oldType);
+                        InsertToken(context, ref newEntryReader, entryId, fieldBinding);
+                    }
+                    break;
+                }
+            }
+        }
+
         public long Index(Slice id, Span<byte> data)
         {
             _numberOfModifications++;
             Span<byte> buf = stackalloc byte[10];
             var idLen = ZigZagEncoding.Encode(buf, id.Size);
-            var entryId = Container.Allocate(Transaction.LowLevelTransaction, _entriesContainerId, idLen + id.Size + data.Length, out var space);
+            int requiredSize = idLen + id.Size + data.Length;
+            // align to 16 bytes boundary to ensure that we have some (small) space for updating in-place entries
+            requiredSize += 16 - (requiredSize % 16);
+            var entryId = Container.Allocate(Transaction.LowLevelTransaction, _entriesContainerId, requiredSize, out var space);
             buf.Slice(0, idLen).CopyTo(space);
             space = space.Slice(idLen);
             id.CopyTo(space);
