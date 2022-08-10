@@ -2,11 +2,13 @@
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Security;
 using Sparrow.Platform;
 
 namespace Sparrow.Utils
 {
 #if NETCOREAPP3_1_OR_GREATER
+    [SuppressUnmanagedCodeSecurity]
     public static unsafe class ZstdLib
     {
         private const string LIBZSTD = @"libzstd";

@@ -1685,7 +1685,8 @@ namespace Voron.Data.Fixed
                 System.Diagnostics.Debug.Assert(page.IsBranch);
                 page.LastSearchPosition++;
                 var depth = _cursor.Count + 1;
-                count += GetRemainingNumberOfEntriesFor(page, depth, maxDepth, ref state);
+                long recursivePageCount = GetRemainingNumberOfEntriesFor(page, depth, maxDepth, ref state);
+                count += recursivePageCount;
             }
 
             if (state.EstimatedAmount && count > NumberOfEntries)
@@ -1712,7 +1713,7 @@ namespace Voron.Data.Fixed
             {
                 int entries = page.NumberOfEntries - page.LastSearchPosition;
                 state.NumberOfLeafPagesScanned++;
-                state.NumberOfEntriesInLeafPagesScanned += entries;
+                state.NumberOfEntriesInLeafPagesScanned += page.NumberOfEntries;
                 state.NonEstimatedAmount += entries;
                 return entries;
             }
@@ -1720,7 +1721,7 @@ namespace Voron.Data.Fixed
             if (page.IsBranch == false) 
                 throw new InvalidOperationException("Should not happen!");
 
-            if (state.Start.Elapsed > TimeSpan.FromSeconds(10))
+            if (state.Start.Elapsed > TimeSpan.FromSeconds(1))
             {
                 state.EstimatedAmount = true;
                 return EstimateRemainingEntriesFor(page, depth, maxDepth, ref state);
@@ -1766,7 +1767,7 @@ namespace Voron.Data.Fixed
                 int entries = childPage.NumberOfEntries - childPage.LastSearchPosition;
                 count += entries;
                 state.NumberOfLeafPagesScanned++;
-                state.NumberOfEntriesInLeafPagesScanned = entries;
+                state.NumberOfEntriesInLeafPagesScanned += childPage.NumberOfEntries;
             }
             else
             {

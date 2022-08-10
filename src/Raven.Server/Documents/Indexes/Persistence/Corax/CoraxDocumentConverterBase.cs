@@ -24,7 +24,6 @@ using RavenConstants = Raven.Client.Constants;
 using CoraxConstants = Corax.Constants;
 using Encoding = System.Text.Encoding;
 using System.Diagnostics;
-using Raven.Server.NotificationCenter.Notifications;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
@@ -58,16 +57,21 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
     public List<double> DoublesListForEnumerableScope;
     public List<BlittableJsonReaderObject> BlittableJsonReaderObjectsListForEnumerableScope;
     public List<CoraxSpatialPointEntry> CoraxSpatialPointEntryListForEnumerableScope;
-    
-    
-    public abstract Span<byte> SetDocumentFields(LazyStringValue key, LazyStringValue sourceDocumentId, object doc, JsonOperationContext indexContext,
-        out LazyStringValue id, Span<byte> writerBuffer);
+
+    private IndexEntryWriter _indexEntryWriter;
+    private bool _indexEntryWriterInitialized;
+
+    public abstract ByteStringContext<ByteStringMemoryCache>.InternalScope SetDocumentFields(
+        LazyStringValue key, LazyStringValue sourceDocumentId,
+        object doc, JsonOperationContext indexContext, out LazyStringValue id,
+        out ByteString output);
 
     protected CoraxDocumentConverterBase(Index index, bool storeValue, bool indexImplicitNull, bool indexEmptyEntries, int numberOfBaseFields, string keyFieldName,
         string storeValueFieldName, ICollection<IndexField> fields = null) : base(index, storeValue, indexImplicitNull, indexEmptyEntries, numberOfBaseFields,
         keyFieldName, storeValueFieldName, fields)
     {
-        _allocator = new ByteStringContext(SharedMultipleUseFlag.None);
+        _allocator = new ByteStringContext(SharedMultipleUseFlag.None);       
+        
         Scope = new();
         _knownFieldsForReaders = new(() =>
         {
@@ -127,7 +131,18 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
 
         return _knownFieldsForWriter;
     }
-    
+
+    protected ref IndexEntryWriter GetEntriesWriter()
+    {
+        if (_indexEntryWriterInitialized == false)
+        {
+            _indexEntryWriter = new IndexEntryWriter(_allocator, GetKnownFieldsForWriter());
+            _indexEntryWriterInitialized = true;
+        }
+        
+        return ref _indexEntryWriter;
+    }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public IndexFieldsMapping GetKnownFieldsForWriter()
     {
@@ -423,6 +438,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
     
     public override void Dispose()
     {
+        _indexEntryWriter.Dispose();
         Scope?.Dispose();
     }
 }

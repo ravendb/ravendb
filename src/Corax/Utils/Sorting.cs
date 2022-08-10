@@ -1,16 +1,60 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Corax.Utils
 {
     internal static class Sorting
     {
-        internal unsafe static int SortAndRemoveDuplicates(long* bufferBasePtr, int count)
+        public static int SortAndRemoveDuplicates<T, W>(Span<T> values, Span<W> items)
+        {
+            MemoryExtensions.Sort(values, items);
+
+            // We need to fill in the gaps left by removing deduplication process.
+            // If there are no duplicated the writes at the architecture level will execute
+            // way faster than if there are.
+
+            int outputIdx = 0;
+            for (int i = 0; i < values.Length - 1; i++)
+            {
+                outputIdx += values[i + 1].Equals(values[i]) ? 0 : 1;
+                values[outputIdx] = values[i + 1];
+                items[outputIdx] = items[i + 1];
+            }
+
+            outputIdx++;
+            if (outputIdx != values.Length)
+            {
+                values[outputIdx] = values[values.Length - 1];
+                items[outputIdx] = items[items.Length - 1];
+            }
+
+            return outputIdx;
+        }
+
+        public static int SortAndRemoveDuplicates<T>(Span<T> values)
+        {
+            MemoryExtensions.Sort(values);
+
+            // We need to fill in the gaps left by removing deduplication process.
+            // If there are no duplicated the writes at the architecture level will execute
+            // way faster than if there are.
+
+            int outputIdx = 0;
+            for (int i = 0; i < values.Length - 1; i++)
+            {
+                outputIdx += values[i + 1].Equals(values[i]) ? 0 : 1;
+                values[outputIdx] = values[i + 1];
+            }
+
+            outputIdx++;
+            if (outputIdx != values.Length)
+            {
+                values[outputIdx] = values[values.Length - 1];               
+            }
+
+            return outputIdx;
+        }
+
+        public unsafe static int SortAndRemoveDuplicates(long* bufferBasePtr, int count)
         {
             MemoryExtensions.Sort(new Span<long>(bufferBasePtr, count));
 
@@ -32,15 +76,6 @@ namespace Corax.Utils
 
             count = (int)(outputBufferPtr - bufferBasePtr + 1);
             return count;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static unsafe int SortAndRemoveDuplicates(Span<long> buffer)
-        {
-            fixed (long* bufferBasePtr = buffer)
-            {
-                return SortAndRemoveDuplicates(bufferBasePtr, buffer.Length);
-            }
         }
     }
 }

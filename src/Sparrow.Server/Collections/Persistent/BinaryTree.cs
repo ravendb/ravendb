@@ -137,6 +137,53 @@ namespace Sparrow.Server.Collections.Persistent
             //Console.WriteLine($",{u.Value}");
         }
 
+        public void Add<KeyReader>(ref KeyReader key, T value)
+            where KeyReader : IBitReader
+        {
+            Span<Node> nodes = Nodes;
+
+            ref Node u = ref nodes[0];
+
+            while (key.Length != 0)
+            {
+                Bit b = key.Read();
+                if (b.IsSet)
+                {
+                    if (u.RightChild == Invalid)
+                    {
+                        ref Node newNode = ref nodes[FreeNodes];
+                        newNode._leftChild = Invalid;
+                        newNode._rightChild = Invalid;
+
+                        u.RightChild = FreeNodes;
+                        FreeNodes++;
+                    }
+                    //Console.Write("R");
+                    u = ref nodes[u.RightChild];
+                }
+                else
+                {
+                    if (u.LeftChild == Invalid)
+                    {
+                        ref Node newNode = ref nodes[FreeNodes];
+                        newNode._leftChild = Invalid;
+                        newNode._rightChild = Invalid;
+
+                        u.LeftChild = FreeNodes;
+                        FreeNodes++;
+                    }
+
+                    //Console.Write("L");
+                    u = ref nodes[u.LeftChild];
+                }
+            }
+
+            u.Value = value;
+            u.HasValue = true;
+
+            //Console.WriteLine($",{u.Value}");
+        }
+
         public bool Find(ref BitReader key, out T value)
         {
             Span<Node> nodes = Nodes;

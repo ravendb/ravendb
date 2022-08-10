@@ -602,7 +602,10 @@ namespace Voron.Data.Containers
             container.ValidatePage();
             
             ItemMetadata* metadata = (ItemMetadata*)(container._page.Pointer + offset);
-            Debug.Assert(metadata->Size != 0);
+            if (metadata->Size == 0)
+            {
+                throw new InvalidOperationException("Tried to read deleted entry: " + id);
+            }
             return new Item(page, metadata->Offset, metadata->Size);
         }
 

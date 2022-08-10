@@ -27,9 +27,6 @@ namespace Voron.Data.CompactTrees
 
         // TODO: Improve interactions with caller code. It is good enough for now but we can encapsulate behavior better to improve readability. 
         private IteratorCursorState _internalCursor = new() { _stk = new CursorState[8], _pos = -1, _len = 0 };
-
-        // TODO: We will never rewrite a dictionary, only create new ones. Therefore, we can effectively cache them until removing them. 
-        private readonly Dictionary<long, PersistentDictionary> _dictionaries = new(); 
         
         internal CompactTreeState State => _state;
         internal LowLevelTransaction Llt => _llt;
@@ -207,9 +204,23 @@ namespace Voron.Data.CompactTrees
             
             public Span<ushort> EntriesOffsets => new Span<ushort>(Page.Pointer+ PageHeader.SizeOf, Header->NumberOfEntries);
             public ushort* EntriesOffsetsPtr => (ushort*)(Page.Pointer + PageHeader.SizeOf);
+            
+            public int ComputeFreeSpace()
+            {
+                var usedSpace = PageHeader.SizeOf + sizeof(ushort) * Header->NumberOfEntries;
+                var sb = usedSpace + Environment.NewLine;
+                for (int i = 0; i < Header->NumberOfEntries; i++)
+                {
+                    GetEntryBuffer(Page, EntriesOffsets[i], out _, out var len);
+                    sb += len + Environment.NewLine;
+                    usedSpace += len;
+                }
+
+                return (Constants.Storage.PageSize - usedSpace);
+            }
             public string DumpPageDebug(CompactTree tree)
             {
-                var dictionary = tree._dictionaries[Header->DictionaryId];
+                var dictionary = tree.GetEncodingDictionary(Header->DictionaryId);
 
                 Span<byte> tempBuffer = stackalloc byte[2048];
 
@@ -415,8 +426,11 @@ namespace Voron.Data.CompactTrees
         {
             encodedKey = FindPageFor(key, ref _internalCursor);
 
-            ref var state = ref _internalCursor._stk[_internalCursor._pos];
+            return ReturnValue(encodedKey, ref _internalCursor._stk[_internalCursor._pos], out value);
+        }
 
+        private static bool ReturnValue(in EncodedKey encodedKey, ref CursorState state, out long value)
+        {
             // Ensure that the key has already been 'updated' this is internal and shouldn't check explicitly that.
             // It is the responsibility of the caller to ensure that is the case. 
             Debug.Assert(encodedKey.Dictionary == state.Header->DictionaryId);
@@ -426,9 +440,112 @@ namespace Voron.Data.CompactTrees
                 value = default;
                 return false;
             }
+
             value = GetValue(ref state, state.LastSearchPosition);
             return true;
         }
+
+        public void InitializeStateForTryGetNextValue()
+        {
+            _internalCursor._pos = -1;
+            _internalCursor._len = 0;
+            PushPage(_state.RootPage, ref _internalCursor);
+            ref var state = ref _internalCursor._stk[_internalCursor._pos];
+            state.LastSearchPosition = 0;
+        }
+        
+        public bool TryGetNextValue(ReadOnlySpan<byte> key, out long value, out EncodedKey encodedKey)
+        {
+            ref var state = ref _internalCursor._stk[_internalCursor._pos];
+            if (state.Header->PageFlags == CompactPageFlags.Branch)
+            {
+                // the *previous* search didn't find a value, we are on a branch page that may
+                // be correct or not, try first to search *down*
+                encodedKey = EncodedKey.Get(key, this, state.Header->DictionaryId);
+                encodedKey = FindPageFor(ref _internalCursor, ref state, encodedKey);
+                state = ref _internalCursor._stk[_internalCursor._pos];
+
+                if (state.LastMatch == 0) // found it
+                    return ReturnValue(encodedKey, ref state, out value);
+                // did *not* find it, but we are somewhere on the tree that is ensured
+                // to be at the key location *or before it*, so we can now start scanning *up*
+            }
+            Debug.Assert(state.Header->PageFlags == CompactPageFlags.Leaf, $"Got {state.Header->PageFlags} flag instead of {nameof(CompactPageFlags.Leaf)}");
+            
+            encodedKey = EncodedKey.Get(key, this, state.Header->DictionaryId);
+
+            SearchInCurrentPage(encodedKey, ref state);
+            if (state.LastSearchPosition  >= 0) // found it, yeah!
+            {
+                value = GetValue(ref state, state.LastSearchPosition);
+                return true;
+            }
+
+            var pos = ~state.LastSearchPosition;
+            var shouldBeInCurrentPage = pos < state.Header->NumberOfEntries;
+
+            if (shouldBeInCurrentPage)
+            {
+                var nextEntry = GetEncodedKey(state.Page, state.EntriesOffsets[pos]);
+                var match = encodedKey.Encoded.SequenceCompareTo(nextEntry);
+                shouldBeInCurrentPage = match < 0;
+            }
+
+            if (shouldBeInCurrentPage == false)
+            {
+                // if this isn't in this page, it may be in the _next_ one, but we 
+                // now need to check the parent page to see that
+                shouldBeInCurrentPage = true;
+                for (int i = _internalCursor._pos - 1; i >= 0; i--)
+                {
+                    ref var cur = ref _internalCursor._stk[i];
+                    if (cur.LastSearchPosition + 1 >= cur.Header->NumberOfEntries)
+                        continue;
+
+                    var nextEntry = GetEncodedKey(cur.Page, cur.EntriesOffsets[cur.LastSearchPosition + 1]);
+                    var currentKeyInPageDictionary = EncodedKey.Get(encodedKey, this, cur.Header->DictionaryId);
+                    var match = currentKeyInPageDictionary.Encoded.SequenceCompareTo(nextEntry);
+                    if (match < 0)
+                        continue;
+
+                    shouldBeInCurrentPage = false;
+                    break;
+                }
+            }
+
+            if (shouldBeInCurrentPage)
+            {
+                // we didn't find the key, but we found a _greater_ key in the page
+                // therefor, we don't have it (we know the previous key was in this page
+                // so if there is a greater key in this page, we didn't find it
+                value = default;
+                return false;
+            }
+
+            while (_internalCursor._pos > 0)
+            {
+                PopPage(ref _internalCursor);
+                state = ref _internalCursor._stk[_internalCursor._pos];
+                var previousSearchPosition = state.LastSearchPosition;
+
+                encodedKey = EncodedKey.Get(encodedKey, this, _internalCursor._stk[_internalCursor._pos].Header->DictionaryId);
+                SearchInCurrentPage(encodedKey, ref state);
+
+                if (state.LastSearchPosition < 0)
+                    state.LastSearchPosition = ~state.LastSearchPosition;
+        
+                // is this points to a different page, just search there normally
+                if (state.LastSearchPosition > previousSearchPosition && state.LastSearchPosition < state.Header->NumberOfEntries )
+                {
+                    encodedKey = FindPageFor(ref _internalCursor, ref state, encodedKey);
+                    return ReturnValue(encodedKey, ref _internalCursor._stk[_internalCursor._pos], out value);
+                }
+            }
+            
+            // if we go to here, we are at the root, so operate normally
+            return TryGetValue(key, out value, out encodedKey);
+        }
+
 
         public bool TryRemove(string key, out long oldValue)
         {
@@ -493,13 +610,15 @@ namespace Voron.Data.CompactTrees
                 if (state.Header->Upper - state.Header->Lower < state.Header->FreeSpace - Constants.Storage.PageSize / 8)
                     DefragPage(_llt, ref state);
 
-                MaybeMergeEntries(ref state);
+                if (MaybeMergeEntries(ref state))
+                    InitializeStateForTryGetNextValue(); // we change the structure of the tree, so we can't reuse 
             }
 
+            VerifySizeOf(ref state);
             return true;
         }                
 
-        private void MaybeMergeEntries(ref CursorState destinationState)
+        private bool MaybeMergeEntries(ref CursorState destinationState)
         {
             CursorState sourceState;
             ref var parent = ref _internalCursor._stk[_internalCursor._pos - 1];
@@ -518,9 +637,10 @@ namespace Voron.Data.CompactTrees
                         Page = _llt.GetPage(sibling)
                     };
                     FreePageFor(ref sourceState, ref destinationState);
-                    return;
+                    return true;
                 }
-                return;
+
+                return false;
             }
 
             var siblingPage = GetValue(ref parent, parent.LastSearchPosition + 1);
@@ -530,7 +650,7 @@ namespace Voron.Data.CompactTrees
             };
 
             if (sourceState.Header->PageFlags != destinationState.Header->PageFlags)
-                return; // cannot merge leaf & branch pages
+                return false; // cannot merge leaf & branch pages
 
             using var __ = _llt.Allocator.Allocate(4096, out var buffer);
             var decodeBuffer = new Span<byte>(buffer.Ptr, 2048);
@@ -563,7 +683,7 @@ namespace Voron.Data.CompactTrees
             }
 
             if (sourceKeysCopied == 0)
-                return;
+                return false;
 
             Memory.Move(sourcePage.Pointer + PageHeader.SizeOf,
                         sourcePage.Pointer + PageHeader.SizeOf + (sourceKeysCopied * sizeof(ushort)),
@@ -576,7 +696,7 @@ namespace Voron.Data.CompactTrees
             {
                 parent.LastSearchPosition++;
                 FreePageFor(ref destinationState, ref sourceState);
-                return;
+                return true;
             }
 
             sourceHeader->FreeSpace += (ushort)(sourceEncodedKeysLength + (sourceKeysCopied * sizeof(ushort)));
@@ -595,6 +715,7 @@ namespace Voron.Data.CompactTrees
             newKey = EncodedKey.Get(newKey, this, _internalCursor._stk[_internalCursor._pos].Header->DictionaryId);
             SearchInCurrentPage(newKey, ref _internalCursor._stk[_internalCursor._pos]); // positions changed, re-search
             AddToPage(newKey, siblingPage);
+            return true;
             
             bool MoveEntryWithReEncoding(Span<byte> decodeBuffer, Span<byte> encodeBuffer, ref CursorState destinationState, Span<ushort> entries)
             {
@@ -741,6 +862,10 @@ namespace Voron.Data.CompactTrees
         public void Add(ReadOnlySpan<byte> key, long value, EncodedKey encodedKey)
         {
             AssertValueAndKeySize(key, value);
+            // this overload assumes that a previous call to TryGetValue (where you go the encodedKey
+            // already placed us in the right place for the value)
+            Debug.Assert(_internalCursor._stk[_internalCursor._pos].Header->PageFlags == CompactPageFlags.Leaf,
+                $"Got {_internalCursor._stk[_internalCursor._pos].Header->PageFlags} flag instead of {nameof(CompactPageFlags.Leaf)}");
 
             AddToPage(encodedKey, value);
         }
@@ -771,13 +896,14 @@ namespace Voron.Data.CompactTrees
                 // remove the entry, we'll need to add it as new
                 int entriesCount = state.Header->NumberOfEntries;
                 ushort* stateEntriesOffsetsPtr = state.EntriesOffsetsPtr;
+                GetEntryBuffer(state.Page, state.EntriesOffsets[state.LastSearchPosition], out _, out var totalEntrySize);
                 for (int i = state.LastSearchPosition; i < entriesCount - 1; i++)
                 {
                     stateEntriesOffsetsPtr[i] = stateEntriesOffsetsPtr[i + 1];
                 }
 
                 state.Header->Lower -= sizeof(short);
-                state.Header->FreeSpace += sizeof(short);
+                state.Header->FreeSpace += (ushort)(sizeof(short) + totalEntrySize);
                 if (state.Header->PageFlags.HasFlag(CompactPageFlags.Leaf))
                     _state.NumberOfEntries--; // we aren't counting branch entries
             }
@@ -867,7 +993,7 @@ namespace Voron.Data.CompactTrees
             writePos += key.Encoded.Length;
             Memory.Copy(writePos, valueEncoder.Buffer, valueEncoder.Length);
             newEntriesOffsets[state.LastSearchPosition] = state.Header->Upper;
-
+            VerifySizeOf(ref state);
             return key;
         }
 
@@ -920,6 +1046,16 @@ namespace Voron.Data.CompactTrees
 
             SearchInCurrentPage(causeForSplit, ref _internalCursor._stk[_internalCursor._pos]);
             causeForSplit = AddToPage(causeForSplit, value);
+
+            if (_internalCursor._stk[_internalCursor._pos].Header->PageFlags == CompactPageFlags.Leaf)
+            {
+                // we change the structure of the tree, so we can't reuse the state
+                // but we can only do that as the _last_ part of the operation, otherwise
+                // recursive split page will give bad results
+                InitializeStateForTryGetNextValue(); 
+            }
+
+            VerifySizeOf(ref state);
             return causeForSplit;
         }
 
@@ -948,11 +1084,26 @@ namespace Voron.Data.CompactTrees
             }
             state.Header->Lower -= (ushort)(sizeof(ushort) * entriesCopied);
             state.Header->FreeSpace += (ushort)(sizeCopied);
+            
+            VerifySizeOf(ref state);
+            
             var pageEntries = new Span<ushort>(page.Pointer + PageHeader.SizeOf, header->NumberOfEntries);
             GetEncodedEntry(page, pageEntries[0], out var splitKey, out _);
 
             return EncodedKey.From(splitKey, this, ((CompactPageHeader*)page.Pointer)->DictionaryId);
         }
+
+        [Conditional("DEBUG")]
+        private void VerifySizeOf(ref CursorState p)
+        {
+            var actualFreeSpace = p.ComputeFreeSpace();
+            if (p.Header->FreeSpace != actualFreeSpace)
+            {
+                throw new InvalidOperationException("The sizes do not match! FreeSpace: " + p.Header->FreeSpace + " but actually was space: " + actualFreeSpace);
+            }
+        }
+
+        
 
         [Conditional("DEBUG")]
         public void Render()
@@ -962,7 +1113,7 @@ namespace Voron.Data.CompactTrees
 
         private bool TryRecompressPage(in CursorState state)
         {
-            var oldDictionary = _dictionaries[state.Header->DictionaryId];
+            var oldDictionary = GetEncodingDictionary(state.Header->DictionaryId);
             var newDictionary = GetEncodingDictionary(_state.TreeDictionaryId);                
 
             using var _ = _llt.Environment.GetTemporaryPage(_llt, out var tmp);
@@ -1027,7 +1178,7 @@ namespace Voron.Data.CompactTrees
             Debug.Assert(state.Header->FreeSpace == (state.Header->Upper - state.Header->Lower));
 
             state.Header->DictionaryId = newDictionary.PageNumber;
-            _dictionaries[newDictionary.PageNumber] = newDictionary;
+            _llt.PersistentDictionariesForCompactTrees[newDictionary.PageNumber] = newDictionary;
 
             return true;
 
@@ -1134,6 +1285,22 @@ namespace Voron.Data.CompactTrees
             }
         }
 
+        public List<(string, long)> AllEntriesIn(long p)
+        {
+            Page page = _llt.GetPage(p);
+            var state = new CursorState { Page = page, };
+
+            var results = new List<(string, long)>();
+            
+            for (ushort i = 0; i < state.Header->NumberOfEntries; i++)
+            {
+                GetEncodedEntry(page, state.EntriesOffsets[i], out var encodedKey, out var val);
+                EncodedKey key = EncodedKey.From(encodedKey, this, state.Header->DictionaryId);
+                results.Add((Encoding.UTF8.GetString(key.Key), val));
+            }
+            return results;
+        }
+
         public List<long> AllPages()
         {
             var results = new List<long>();
@@ -1166,17 +1333,21 @@ namespace Voron.Data.CompactTrees
             ref var state = ref cstate._stk[cstate._pos];
             var encodedKey = EncodedKey.Get(key, this, state.Header->DictionaryId);
 
+            return FindPageFor(ref cstate, ref state, encodedKey);
+        }
+
+        private EncodedKey FindPageFor(ref IteratorCursorState cstate, ref CursorState state, EncodedKey encodedKey)
+        {
             while (state.Header->PageFlags.HasFlag(CompactPageFlags.Branch))
             {
                 encodedKey = SearchPageAndPushNext(encodedKey, ref cstate);
                 state = ref cstate._stk[cstate._pos];
             }
-
-            SearchInCurrentPage(encodedKey, ref cstate._stk[cstate._pos]);
+            SearchInCurrentPage(encodedKey, ref state);
             return encodedKey;
         }
 
-        private EncodedKey SearchPageAndPushNext(in EncodedKey key, ref IteratorCursorState cstate)
+        private EncodedKey SearchPageAndPushNext(EncodedKey key, ref IteratorCursorState cstate)
         {
             SearchInCurrentPage(key, ref cstate._stk[cstate._pos]);
 
@@ -1211,30 +1382,18 @@ namespace Voron.Data.CompactTrees
             Page page = _llt.GetPage(nextPage);
             cstate._stk[++cstate._pos] = new CursorState { Page = page, };
             cstate._len++;
-            
-            // For the creation of the dictionary if it doesnt exist.
-            // TODO: I dont even think this is needed at all. 
-            CompactPageHeader* pageHeader = (CompactPageHeader*)page.Pointer;
-            var _ = GetEncodingDictionary(pageHeader->DictionaryId);
-        }
-
-        private PersistentDictionary CreateEncodingDictionary(long dictionaryId)
-        {
-            // TODO: Given that dictionaries are static when created, we can actually have a cache of them that could survive transactional work. 
-            return new PersistentDictionary(_llt.GetPage(dictionaryId));
         }
 
         private PersistentDictionary GetEncodingDictionary(long dictionaryId)
         {
-            if (!_dictionaries.TryGetValue(dictionaryId, out var dictionary))
-            {
-                dictionary = CreateEncodingDictionary(dictionaryId);
-                _dictionaries[dictionaryId] = dictionary;
-            }
-
+            _llt.PersistentDictionariesForCompactTrees ??= new Dictionary<long, PersistentDictionary>();
+            if (_llt.PersistentDictionariesForCompactTrees.TryGetValue(dictionaryId, out var dictionary))
+                return dictionary;
+            
+            dictionary = new PersistentDictionary(_llt.GetPage(dictionaryId));
+            _llt.PersistentDictionariesForCompactTrees[dictionaryId] = dictionary;
             return dictionary;
         }
-
 
         private static ReadOnlySpan<byte> GetEncodedKey(Page page, ushort entryOffset)
         {
@@ -1432,7 +1591,7 @@ namespace Voron.Data.CompactTrees
             state.LastSearchPosition = ~mid;
         }
 
-        private EncodedKey FuzzySearchPageAndPushNext(in EncodedKey key, ref IteratorCursorState cstate)
+        private EncodedKey FuzzySearchPageAndPushNext(EncodedKey key, ref IteratorCursorState cstate)
         {
             FuzzySearchInCurrentPage(key, ref cstate._stk[cstate._pos]);
 

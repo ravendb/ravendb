@@ -121,7 +121,6 @@ namespace Voron.Benchmark.Corax
             Slice.From(bsc, "Age", ByteStringType.Immutable, out var ageSlice);
             Slice.From(bsc, "Type", ByteStringType.Immutable, out var typeSlice);
 
-            Span<byte> buffer = new byte[256];
             var fields = new IndexFieldsMapping(bsc)
                 .AddBinding(0, nameSlice)
                 .AddBinding(1, familySlice)
@@ -131,38 +130,41 @@ namespace Voron.Benchmark.Corax
             using (var writer = new IndexWriter(env, fields))
             {
                 {
-                    var entryWriter = new IndexEntryWriter(buffer, fields);
+                    var entryWriter = new IndexEntryWriter(bsc, fields);
                     entryWriter.Write(0, Encoding.UTF8.GetBytes("Arava"));
                     entryWriter.Write(1, Encoding.UTF8.GetBytes("Eini"));
                     entryWriter.Write(2, Encoding.UTF8.GetBytes(12L.ToString()), 12L, 12D);
                     entryWriter.Write(3, Encoding.UTF8.GetBytes("Dog"));
-                    entryWriter.Finish(out var entry);
-
-                    writer.Index("dogs/arava", entry);
+                    using (var _ = entryWriter.Finish(out var entry))
+                    {
+                        writer.Index("dogs/arava", entry.ToSpan());
+                    }
                 }
 
                 {
-                    var entryWriter = new IndexEntryWriter(buffer, fields);
+                    var entryWriter = new IndexEntryWriter(bsc, fields);
                     entryWriter.Write(0, Encoding.UTF8.GetBytes("Phoebe"));
                     entryWriter.Write(1, Encoding.UTF8.GetBytes("Eini"));
                     entryWriter.Write(2, Encoding.UTF8.GetBytes(7.ToString()), 7L, 7D);
                     entryWriter.Write(3, Encoding.UTF8.GetBytes("Dog"));
-                    entryWriter.Finish(out var entry);
-
-                    writer.Index("dogs/phoebe", entry);
+                    using (var _ = entryWriter.Finish(out var entry))
+                    {
+                        writer.Index("dogs/phoebe", entry.ToSpan());
+                    }
                 }
 
                 for (int i = 0; i < 100_000; i++)
                 {
-                    var entryWriter = new IndexEntryWriter(buffer, fields);
+                    var entryWriter = new IndexEntryWriter(bsc, fields);
                     entryWriter.Write(0, Encoding.UTF8.GetBytes("Dog #" + i));
                     entryWriter.Write(1, Encoding.UTF8.GetBytes("families/" + (i % 1024)));
                     var age = i % 15;
                     entryWriter.Write(2, Encoding.UTF8.GetBytes(age.ToString()), age, age);
                     entryWriter.Write(3, Encoding.UTF8.GetBytes("Dog"));
-                    entryWriter.Finish(out var entry);
-
-                    writer.Index("dogs/" + i, entry);
+                    using (var _ = entryWriter.Finish(out var entry))
+                    {
+                        writer.Index("dogs/" + i, entry.ToSpan());
+                    }
                 }
 
                 writer.Commit();

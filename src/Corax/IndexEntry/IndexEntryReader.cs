@@ -1,12 +1,10 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Server.Compression;
-using Voron;
 
 namespace Corax;
 
@@ -20,18 +18,23 @@ namespace Corax;
  *  tuple<long, double, string>: <length:variable_size><string_table_ptr:sizeof(int)><long_ptr:variable_size><double[X]:sizeof(double)>
  *                               <strings[X]:sequence><string_length_table[X]:var_int>
  */
-public unsafe readonly ref struct IndexEntryReader
+public unsafe ref struct IndexEntryReader
 {
     private const int Invalid = unchecked((int)0xFFFF_FFFF);
     private readonly Span<byte> _buffer;
+    private int _lastFieldAccessed;
+    private int _lastFieldAccessedOffset;
+    private bool _lastFieldAccessedIsTyped;
 
     public int Length => (int)MemoryMarshal.Read<uint>(_buffer);
 
     public IndexEntryReader(Span<byte> buffer)
     {
         _buffer = buffer;
+        _lastFieldAccessed = -1;
+        Unsafe.SkipInit(out _lastFieldAccessedOffset);
+        Unsafe.SkipInit(out _lastFieldAccessedIsTyped);
     }
-
 
     /// <summary>
     /// Read unmanaged field entry from buffer.
@@ -42,7 +45,6 @@ public unsafe readonly ref struct IndexEntryReader
         var (intOffset, isTyped) = GetMetadataFieldLocation(_buffer, field);
         if (intOffset == Invalid || isTyped == false)
             goto Fail;
-
 
         type = Unsafe.ReadUnaligned<IndexEntryFieldType>(ref _buffer[intOffset]);
         if (type == IndexEntryFieldType.Null)
@@ -317,14 +319,11 @@ public unsafe readonly ref struct IndexEntryReader
 
             if (type.HasFlag(IndexEntryFieldType.HasNulls))
             {
-                fixed (byte* nullTablePtr = _buffer)
-                {
-                    if (PtrBitVector.GetBitInPointer(nullTablePtr + spanTableOffset, elementIdx) == true)
-                        goto HasNull;
+                if (PtrBitVector.GetBitInSpan(_buffer.Slice(spanTableOffset), elementIdx) == true)
+                    goto HasNull;
 
-                    int nullBitStreamSize = totalElements / (sizeof(byte) * 8) + (totalElements % (sizeof(byte) * 8) == 0 ? 0 : 1);
-                    spanTableOffset += nullBitStreamSize; // Point after the null table.
-                }
+                int nullBitStreamSize = totalElements / (sizeof(byte) * 8) + (totalElements % (sizeof(byte) * 8) == 0 ? 0 : 1);
+                spanTableOffset += nullBitStreamSize; // Point after the null table.                             
             }
 
             // Skip over the number of entries and jump to the string location.
@@ -342,11 +341,8 @@ public unsafe readonly ref struct IndexEntryReader
             if (type.HasFlag(IndexEntryFieldType.HasNulls))
             {
                 var spanTableOffset = Unsafe.ReadUnaligned<int>(ref _buffer[intOffset]);
-                fixed (byte* nullTablePtr = _buffer)
-                {
-                    if (PtrBitVector.GetBitInPointer(nullTablePtr + spanTableOffset, elementIdx))
-                        goto HasNull;
-                }
+                if (PtrBitVector.GetBitInSpan(_buffer.Slice(spanTableOffset), elementIdx) == true)
+                    goto HasNull;
             }
 
             stringLength = VariableSizeEncoding.Read<int>(_buffer, out int readOffset, intOffset);
@@ -358,11 +354,8 @@ public unsafe readonly ref struct IndexEntryReader
             if (type.HasFlag(IndexEntryFieldType.HasNulls))
             {
                 var spanTableOffset = Unsafe.ReadUnaligned<int>(ref _buffer[intOffset]);
-                fixed (byte* nullTablePtr = _buffer)
-                {
-                    if (PtrBitVector.GetBitInPointer(nullTablePtr + spanTableOffset, elementIdx))
-                        goto HasNull;
-                }
+                if (PtrBitVector.GetBitInSpan(_buffer.Slice(spanTableOffset), elementIdx) == true)
+                    goto HasNull;
             }
 
             VariableSizeEncoding.Read<long>(_buffer, out int length, intOffset); // Skip
@@ -435,8 +428,8 @@ public unsafe readonly ref struct IndexEntryReader
         // setup costs for handling multiple elements are usually much higher than to access the first element, where
         // data layout is optimized for. 
         if (type.HasFlag(IndexEntryFieldType.Tuple) == false)
-            goto Fail;        
-        
+            goto Fail;
+
         if (type.HasFlag(IndexEntryFieldType.HasNulls))
         {
             if (type.HasFlag(IndexEntryFieldType.List))
@@ -445,15 +438,15 @@ public unsafe readonly ref struct IndexEntryReader
                 type = IndexEntryFieldType.HasNulls;
             goto NullOrEmpty;
         }
-        
-        if( type.HasFlag(IndexEntryFieldType.Empty))
+
+        if (type.HasFlag(IndexEntryFieldType.Empty))
         {
             if (type.HasFlag(IndexEntryFieldType.List))
                 type = IndexEntryFieldType.Empty | IndexEntryFieldType.List;
             else
                 type = IndexEntryFieldType.Empty;
             goto NullOrEmpty;
-        }            
+        }
 
         longValue = VariableSizeEncoding.Read<long>(_buffer, out int length, intOffset); // Read
         intOffset += length;
@@ -480,62 +473,77 @@ public unsafe readonly ref struct IndexEntryReader
         Unsafe.SkipInit(out doubleValue);
         sequenceValue = Span<byte>.Empty;
         return true;
+    }   
+
+    private (int offset, bool isTyped) GetMetadataFieldLocation(Span<byte> buffer, int field)
+    {
+        if (field == _lastFieldAccessed)
+        {
+            return (_lastFieldAccessedOffset, _lastFieldAccessedIsTyped);
+        }
+        else
+        {
+            (_lastFieldAccessedOffset, _lastFieldAccessedIsTyped) = GetMetadataFieldLocationUnlikely(buffer, field);
+            _lastFieldAccessed = field;
+            return (_lastFieldAccessedOffset, _lastFieldAccessedIsTyped);
+        }
     }
 
+    private static ReadOnlySpan<byte> TableEncodingLookupTable => new byte[] { 0, 1, 2, 4 };
+
+    private static ReadOnlySpan<byte> ByteKnownFieldMaskShiftLookupTable => new byte[]
+    {
+        0,
+        (sizeof(byte) - 1) * 8,
+        (sizeof(short) - 1) * 8,
+        (sizeof(int) - 1) * 8,
+    };
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static (int offset, bool isTyped) GetMetadataFieldLocation(Span<byte> buffer, int field)
+    private static (int offset, bool isTyped) GetMetadataFieldLocationUnlikely(Span<byte> buffer, int field)
     {
         ref var header = ref MemoryMarshal.AsRef<IndexEntryHeader>(buffer);
 
         ushort knownFieldsCount = (ushort)(header.KnownFieldCount >> 2);
         IndexEntryTableEncoding encoding = (IndexEntryTableEncoding)(header.KnownFieldCount & 0b11);
-        int encodeSize = encoding switch
-        {
-            IndexEntryTableEncoding.OneByte => 1,
-            IndexEntryTableEncoding.TwoBytes => 2,
-            IndexEntryTableEncoding.FourBytes => 4,
-            _ => throw new InvalidOperationException()
-        };
 
+        int encodeSize = TableEncodingLookupTable[(int)encoding];    
         int locationOffset = buffer.Length - (knownFieldsCount * encodeSize) + field * encodeSize;
 
         int offset;
-        bool isTyped;
-
-        if (encoding == IndexEntryTableEncoding.OneByte)
+        switch (encoding)
         {
-            offset = Unsafe.ReadUnaligned<byte>(ref buffer[locationOffset]);
-            if (offset == 0xFF)
-                goto Fail;
-            isTyped = (offset & 0x80) != 0;
-            offset &= ~0x80;
-            goto End;
+            case IndexEntryTableEncoding.OneByte:
+            {
+                offset = Unsafe.ReadUnaligned<byte>(ref buffer[locationOffset]);
+                if (offset == 0xFF)
+                    goto Fail;
+                goto End;
+            }
+            case IndexEntryTableEncoding.TwoBytes:
+            {
+                offset = Unsafe.ReadUnaligned<ushort>(ref buffer[locationOffset]);
+                if (offset == 0xFFFF)
+                    goto Fail;
+                goto End;
+            }
+            case IndexEntryTableEncoding.FourBytes:
+            {
+                offset = (int)Unsafe.ReadUnaligned<uint>(ref buffer[locationOffset]);
+                if (offset == unchecked((int)0xFFFF_FFFF))
+                    goto Fail;
+                goto End;
+            }
         }
-
-        if (encoding == IndexEntryTableEncoding.TwoBytes)
-        {
-            offset = Unsafe.ReadUnaligned<ushort>(ref buffer[locationOffset]);
-            if (offset == 0xFFFF)
-                goto Fail;
-            isTyped = (offset & 0x8000) != 0;
-            offset &= ~0x8000;
-            goto End;
-        }
-
-        if (encoding == IndexEntryTableEncoding.FourBytes)
-        {
-            offset = (int)Unsafe.ReadUnaligned<uint>(ref buffer[locationOffset]);
-            if (offset == unchecked((int)0xFFFF_FFFF))
-                goto Fail;
-            isTyped = (offset & Constants.IndexWriter.IntKnownFieldMask) != 0;
-            offset &= ~Constants.IndexWriter.IntKnownFieldMask;
-            goto End;
-        }
-
-    Fail:
+        
+        Fail:
         return (Invalid, false);
 
-    End:
+        End:
+        int mask = 0x80 << ByteKnownFieldMaskShiftLookupTable[(int)encoding];
+        bool isTyped = (offset & mask) != 0;
+        offset &= ~mask;
+        
         return (offset, isTyped);
     }
 

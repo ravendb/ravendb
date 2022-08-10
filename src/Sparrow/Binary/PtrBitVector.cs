@@ -42,7 +42,15 @@ namespace Sparrow.Binary
         {
             uint word = ByteForBit(idx);
             byte mask = BitInByte(idx);
-            return (*((byte*)ptr + word) & mask) != 0 ;
+            return (*((byte*)ptr + word) & mask) != 0;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool GetBitInSpan(Span<byte> ptr, int idx)
+        {
+            uint word = ByteForBit(idx);
+            byte mask = BitInByte(idx);
+            return (ptr[(int)word]& mask) != 0;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -52,6 +60,17 @@ namespace Sparrow.Binary
             byte mask = BitInByte(idx);
 
             byte* bytePtr = (byte*)ptr;
+            bool currentValue = (bytePtr[word] & mask) != 0;
+            if (currentValue != value)
+                bytePtr[word] ^= mask;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SetBitInSpan(Span<byte> bytePtr, int idx, bool value)
+        {
+            int word = (int)ByteForBit(idx);
+            byte mask = BitInByte(idx);
+
             bool currentValue = (bytePtr[word] & mask) != 0;
             if (currentValue != value)
                 bytePtr[word] ^= mask;

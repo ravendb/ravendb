@@ -12,6 +12,7 @@ using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron.Data;
 using Voron.Data.BTrees;
+using Voron.Data.CompactTrees;
 using Voron.Data.Fixed;
 using Voron.Data.Tables;
 using Voron.Exceptions;
@@ -35,6 +36,8 @@ namespace Voron.Impl
         private bool _disposeAllocator;
         internal long DecompressedBufferBytes;
         internal TestingStuff _forTestingPurposes;
+        
+        internal Dictionary<long, PersistentDictionary> PersistentDictionariesForCompactTrees; 
 
         public object ImmutableExternalState;
 

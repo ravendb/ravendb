@@ -141,132 +141,89 @@ namespace Corax.Queries
             Debug.Assert(_take <= matches.Length);
 
             int totalMatches = _inner.Fill(matches);
-            if (totalMatches == 0)
-                return 0;
+            if (totalMatches <= 1)
+            {
+                // In those cases, no need to sort or anything. 
+                return totalMatches;
+            }
 
             int take = _take <= 0 ? matches.Length : Math.Min(matches.Length, _take);
 
-            int floatArraySize = 2 * sizeof(float) * matches.Length;
-            int matchesArraySize = sizeof(long) * matches.Length;
-            using var _ = _searcher.Allocator.Allocate(floatArraySize + matchesArraySize, out var bufferHolder);
-            var allScoresValues = MemoryMarshal.Cast<byte, float>(bufferHolder.ToSpan()[..floatArraySize]);
+            int arraySize = 4 * matches.Length;
+            using var _ = _searcher.Allocator.Allocate(arraySize * sizeof(float) + arraySize * sizeof(long), out var wholeBuffer);
 
-            // PERF: We want to avoid to share cache lines, that's why the second array will move toward the end of the array. 
-            var matchesScores = allScoresValues[..matches.Length];
-            var bScores = allScoresValues[^matches.Length..];           
+            // We need to work with spans from now on, to avoid the creation of new arrays by slicing. 
+            var matchesSpan = new Span<long>(wholeBuffer.Ptr, arraySize);
+            var scoresSpan = new Span<float>(wholeBuffer.Ptr + arraySize * sizeof(long), arraySize);
 
-            // TODO: Analyze if it makes sense to have an alternative version aimed at handling smalls sets where we gather
-            //       all the matches and then do the score work instead of doing it batch by batch. 
+            // We will copy the first batch to a temporary location which we will use to work.
+            // However, given that we already filled the scores, we are not going to copy those.
+            matches.CopyTo(matchesSpan);
 
-            // Initializing the scores and retrieve them.
-            matchesScores.Fill(1);  
-            _inner.Score(matches[0..totalMatches], matchesScores[0..totalMatches]);
+            var aScoresSpan = scoresSpan[0..totalMatches];
+            aScoresSpan.Fill(1);
+            _inner.Score(matchesSpan[0..totalMatches], aScoresSpan);
 
-            // We sort the first batch
             var sorter = new Sorter<float, long, NumericDescendingComparer>();
-            sorter.Sort(matchesScores[0..totalMatches], matches[0..totalMatches]);
 
-            Span<long> bValues = MemoryMarshal.Cast<byte, long>(bufferHolder.ToSpan().Slice(floatArraySize, matchesArraySize));
-            var searcher = _searcher;
+            bool isSorted = false;
+
+            // We are going to slowly and painstakenly moving one batch after another to score
+            // and select the appropriate boosted matches. For that we use a temporary buffer that
+            // it has enough space for us to work with without the risk of overworking. 
+            int temporaryTotalMatches;
             while (true)
             {
                 // We get a new batch
-                int bTotalMatches = _inner.Fill(bValues);
+                int bTotalMatches = _inner.Fill(matchesSpan[totalMatches..]);
+                temporaryTotalMatches = totalMatches + bTotalMatches;
 
                 // When we don't have any new batch, we are done.
                 if (bTotalMatches == 0)
                     break;
 
-                // Initialize the scores and retrieve scores from the new batch. 
-                bScores.Fill(1);
-                _inner.Score(bValues[0..bTotalMatches], bScores[0..bTotalMatches]);
+                isSorted = false;
 
-                int bIdx = 0;
-                int kIdx = 0;
+                // We will score the new batch
+                var bMatchesScores = scoresSpan[totalMatches..temporaryTotalMatches];
+                bMatchesScores.Fill(1);
+                _inner.Score(matchesSpan[totalMatches..temporaryTotalMatches], bMatchesScores);
 
-                // Get rid of all the elements that are bigger than the last one.
-                ref var lastElement = ref matchesScores[take - 1];
-                for (; bIdx < bTotalMatches; bIdx++)
+                if (temporaryTotalMatches > 3 * matches.Length && !isSorted)
                 {
-                    if (lastElement >= bScores[bIdx])
-                        bScores[kIdx++] = bScores[bIdx];
+                    // We need to first sort by match to remove the duplicates.
+                    temporaryTotalMatches = Sorting.SortAndRemoveDuplicates(
+                        matchesSpan[0..temporaryTotalMatches],
+                        scoresSpan[0..temporaryTotalMatches]);
+
+                    // Then sort again to select the appropriate matches.
+                    sorter.Sort(scoresSpan[0..temporaryTotalMatches], matchesSpan[0..temporaryTotalMatches]);
+                    totalMatches = Math.Min(matches.Length, temporaryTotalMatches);
+                    isSorted = true;
                 }
-
-                bTotalMatches = kIdx;
-                if (bTotalMatches == 0)
-                    continue;
-
-                // We sort the new batch
-                sorter.Sort(bScores[0..bTotalMatches], bValues);
-
-                // We merge both batches. 
-                int aTotalMatches = Math.Min(totalMatches, take);
-
-                int aIdx = aTotalMatches;
-                bIdx = 0;
-                while (aIdx > 0 && aIdx >= aTotalMatches / 8)
+                else
                 {
-                    // If the 'bigger' of what we had is 'bigger than'
-                    if (matchesScores[aIdx - 1] <= bScores[0])
-                        break;
-
-                    aIdx /= 2;
+                    totalMatches = temporaryTotalMatches;
                 }
-
-                // This is the new start location on the matches. 
-                kIdx = aIdx;
-
-                // If we bailed on the first check, nothing to do here. 
-                if (aIdx == aTotalMatches - 1 || kIdx >= take)
-                    goto End;
-
-                // PERF: This can be improved with TimSort like techniques (Galloping) but given the amount of registers and method calls
-                //       involved requires careful timing to understand if we are able to gain vs a more compact code and predictable
-                //       memory access patterns. 
-
-                while (aIdx < aTotalMatches && bIdx < bTotalMatches && kIdx < take)
-                {
-                    var result = matchesScores[aIdx] < bScores[bIdx];
-
-                    if (result)
-                    {
-                        matches[kIdx] = matches[aIdx];
-                        aIdx++;
-                    }
-                    else
-                    {
-                        matches[kIdx] = bValues[bIdx];
-                        matchesScores[kIdx] = bScores[bIdx];
-                        bIdx++;
-                    }
-                    kIdx++;
-                }
-
-                // If there is no more space in the buffer, discard everything else.
-                if (kIdx >= take)
-                    goto End;
-
-                // PERF: We could improve this with a CopyTo (won't do that for now). 
-
-                // Copy the rest, given that we have failed on one of the other 2 only a single one will execute.
-                while (aIdx < aTotalMatches && kIdx < take)
-                {
-                    matches[kIdx++] = matches[aIdx++];
-                }
-
-                while (bIdx < bTotalMatches && kIdx < take)
-                {
-                    matches[kIdx] = bValues[bIdx];
-                    matchesScores[kIdx] = bScores[bIdx]; // We are using a new key, therefore we have to update it. 
-                    kIdx++;
-                    bIdx++;
-                }
-
-                End:
-                totalMatches = kIdx;
             }
 
-            TotalResults += totalMatches;
+            if (!isSorted)
+            {
+                // We need to first sort by match to remove the duplicates.
+                temporaryTotalMatches = Sorting.SortAndRemoveDuplicates(
+                    matchesSpan[0..temporaryTotalMatches],
+                    scoresSpan[0..temporaryTotalMatches]);
+
+                // Then sort again to select the appropriate matches.
+                sorter.Sort(scoresSpan[0..temporaryTotalMatches], matchesSpan[0..temporaryTotalMatches]);
+            }
+
+            totalMatches = Math.Min(take, temporaryTotalMatches);
+
+            // Copy must happen before we return the backing arrays.
+            matchesSpan[..totalMatches].CopyTo(matches);
+            TotalResults = totalMatches;
+
             return totalMatches;
         }
 

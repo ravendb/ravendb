@@ -6,6 +6,7 @@ using Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Json;
 using Sparrow.Json;
+using Sparrow.Server;
 using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
@@ -23,15 +24,19 @@ public class CoraxDocumentConverter : CoraxDocumentConverterBase
     {
     }
 
-    public override Span<byte> SetDocumentFields(LazyStringValue key, LazyStringValue sourceDocumentId, object doc, JsonOperationContext indexContext,
-        out LazyStringValue id, Span<byte> writerBuffer)
+    public override ByteStringContext<ByteStringMemoryCache>.InternalScope SetDocumentFields(
+        LazyStringValue key, LazyStringValue sourceDocumentId,
+        object doc, JsonOperationContext indexContext, out LazyStringValue id,
+        out ByteString output)
     {
         var document = (Document)doc;
-        var entryWriter = new IndexEntryWriter(writerBuffer, GetKnownFieldsForWriter());
         id = document.LowerId ?? key;
 
         var scope = new SingleEntryWriterScope(_allocator);
-        
+
+        // We prepare for the next entry.
+        ref var entryWriter = ref GetEntriesWriter();
+
         object value;
         foreach (var indexField in _fields.Values)
         {
@@ -68,7 +73,6 @@ public class CoraxDocumentConverter : CoraxDocumentConverterBase
             }
         }
 
-
         if (key != null)
         {
             Debug.Assert(document.LowerId == null || (key == document.LowerId));
@@ -89,7 +93,6 @@ public class CoraxDocumentConverter : CoraxDocumentConverterBase
             }
         }
 
-        entryWriter.Finish(out var output);
-        return output;
+        return entryWriter.Finish(out output);
     }
 }

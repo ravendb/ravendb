@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -6,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Xml;
 using Corax.Pipeline;
 using Corax.Utils;
@@ -17,6 +19,7 @@ using Sparrow.Server.Compression;
 using Voron;
 using Voron.Data;
 using Voron.Data.BTrees;
+using Voron.Data.CompactTrees;
 using Voron.Data.Containers;
 using Voron.Data.Fixed;
 using Voron.Data.Sets;
@@ -706,12 +709,20 @@ namespace Corax
 
             ProcessDeletes();
 
+            Slice[] keys = Array.Empty<Slice>();
+            
             for (int fieldId = 0; fieldId < _fieldsMapping.Count; ++fieldId)
             {
-                InsertTextualField(fieldsTree, fieldId, workingBuffer);
+                if (_buffer[fieldId].Count == 0)
+                    continue; 
+
+                InsertTextualField(fieldsTree, fieldId, workingBuffer, ref keys);
                 InsertNumericFieldLongs(fieldsTree, fieldId, workingBuffer);
                 InsertNumericFieldDoubles(fieldsTree, fieldId, workingBuffer);
             }
+            
+            if(keys.Length>0)
+                ArrayPool<Slice>.Shared.Return(keys);
 
             // Check if we have suggestions to deal with. 
             if (_suggestionsAccumulator != null)
@@ -740,16 +751,32 @@ namespace Corax
             }
         }
 
-        private void InsertTextualField(Tree fieldsTree, int fieldId, Span<byte> tmpBuf)
+
+        private void InsertTextualField(Tree fieldsTree, int fieldId, Span<byte> tmpBuf, ref Slice[] sortedTermsBuffer)
         {
             var fieldTree = fieldsTree.CompactTreeFor(_fieldsMapping.GetByFieldId(fieldId).FieldName);
             var llt = Transaction.LowLevelTransaction;
-
-            foreach (var (term, entries) in _buffer[fieldId])
+            var currentFieldTerms = _buffer[fieldId];
+            int termsCount = currentFieldTerms.Count;
+            if (sortedTermsBuffer.Length < termsCount)
             {
+                if (sortedTermsBuffer.Length > 0)
+                    ArrayPool<Slice>.Shared.Return(sortedTermsBuffer);
+                sortedTermsBuffer = ArrayPool<Slice>.Shared.Rent(termsCount);
+            }
+            currentFieldTerms.Keys.CopyTo(sortedTermsBuffer, 0);
+            Array.Sort(sortedTermsBuffer,0, termsCount, SliceComparer.Instance);
+
+
+            fieldTree.InitializeStateForTryGetNextValue();
+            for (var index = 0; index < termsCount; index++)
+            {
+                var term = sortedTermsBuffer[index];
+                var entries = currentFieldTerms[term];
+
                 long termId;
                 ReadOnlySpan<byte> termsSpan = term.AsSpan();
-                if (fieldTree.TryGetValue(termsSpan, out var existing, out var encodedKey) == false)
+                if (fieldTree.TryGetNextValue(termsSpan, out var existing, out var encodedKey) == false)
                 {
                     Debug.Assert(entries.Removals.Count == 0);
                     AddNewTerm(entries.Additions, tmpBuf, out termId);
