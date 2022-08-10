@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using Microsoft.AspNetCore.Http;
+using Raven.Client;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide;
 using Sparrow.Json;
@@ -12,23 +13,21 @@ namespace Raven.Server.Utils
         private readonly ServerStore _serverStore;
         private bool _isFirst = true;
         private bool _isOnlyWrite;
-        private bool _skipDebug;
 
-        public AsyncBlittableJsonTextWriterForDebug(HttpRequest request, JsonOperationContext context, ServerStore serverStore, Stream stream) : base(context, stream)
+        public AsyncBlittableJsonTextWriterForDebug(JsonOperationContext context, ServerStore serverStore, Stream stream) : base(context, stream)
         {
             _serverStore = serverStore;
-            _skipDebug = request.IsFromClientApi() || request.IsFromStudio();
         }
         
         public override void WriteStartObject()
         {
             base.WriteStartObject();
 
-            if (_isFirst && _skipDebug == false)
+            if (_isFirst)
             {
                 _isFirst = false;
 
-                WritePropertyName("@Metadata");
+                WritePropertyName(Constants.Documents.Metadata.Key);
                 WriteStartObject();
                 WritePropertyName(nameof(DateTime));
                 WriteDateTime(DateTime.UtcNow, true);
@@ -49,7 +48,7 @@ namespace Raven.Server.Utils
         {
             base.EnsureBuffer(len);
 
-            if (_isOnlyWrite && _skipDebug == false)
+            if (_isOnlyWrite)
             {
                 _isOnlyWrite = false;
                 WriteComma();

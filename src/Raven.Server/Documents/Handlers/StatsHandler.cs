@@ -48,7 +48,7 @@ namespace Raven.Server.Documents.Handlers
 
                 FillDatabaseStatistics(stats, context);
 
-                await using (var writer = new AsyncBlittableJsonTextWriterForDebug(HttpContext.Request, context.Documents, ServerStore, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context.Documents, ServerStore, ResponseBodyStream()))
                     writer.WriteDatabaseStatistics(context.Documents, stats);
             }
         }
