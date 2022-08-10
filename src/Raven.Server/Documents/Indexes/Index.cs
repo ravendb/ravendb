@@ -659,6 +659,16 @@ namespace Raven.Server.Documents.Indexes
 
             var indexTempPath = configuration.TempPath?.Combine(name);
 
+            if (configuration.RunInMemory == false)
+            {
+                string disableMarkerPath = indexPath.Combine("disable.marker").FullPath;
+                if (File.Exists(disableMarkerPath))
+                {
+                    throw new IndexOpenException("Unable to open index: " + name + ", it has been manually disabled via the file: '" + disableMarkerPath +"'." +
+                                                 "To re-enable, remove the disable.marker file and enable indexing.");
+                }
+            }
+
             var options = configuration.RunInMemory
                 ? StorageEnvironmentOptions.CreateMemoryOnly(indexPath.FullPath, indexTempPath?.FullPath ?? Path.Combine(indexPath.FullPath, "Temp"),
                     documentDatabase.IoChanges, documentDatabase.CatastrophicFailureNotification)
