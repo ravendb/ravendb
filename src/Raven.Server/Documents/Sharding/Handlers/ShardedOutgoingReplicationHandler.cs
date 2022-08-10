@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Replication;
@@ -29,13 +28,14 @@ namespace Raven.Server.Documents.Sharding.Handlers
         private readonly byte[] _tempBuffer = new byte[32 * 1024];
         private long _lastEtag;
 
-        internal DateTime _lastDocumentSentTime;
-        internal long LastEtag => _lastEtag;
+        internal string _lastDatabaseChangeVector { get; set; }
+        internal string _lastSourceChangeVector { get; set; }
+        internal long _lastDocumentEtagFromSource { get; set; }
+
         public string MissingAttachmentMessage { get; set; }
         public bool MissingAttachmentsInLastBatch { get; set; }
-        public string LastDatabaseChangeVector { get; set; }
         public string SourceDatabaseId;
-        public long CurrentEtag { get; set; }
+        internal long CurrentEtag { get; set; }
 
         public ShardedOutgoingReplicationHandler(ShardedDatabaseContext.ShardedReplicationContext parent, ShardReplicationNode node, TcpConnectionInfo connectionInfo, string sourceDatabaseId) :
             base(connectionInfo, parent.Server, parent.Context.DatabaseName, node, parent.Context.DatabaseShutdown, parent.Server.ContextPool)
@@ -64,6 +64,12 @@ namespace Raven.Server.Documents.Sharding.Handlers
                         var stats = _lastStats = new OutgoingReplicationStatsAggregator(_parent.GetNextReplicationStatsId(), _lastStats);
                         AddReplicationPerformance(stats);
 
+                        _lastEtag = _lastSentDocumentEtag;
+       
+                        if (_lastDocumentEtagFromSource > _lastEtag)
+                            _lastEtag = _lastDocumentEtagFromSource;
+                        
+
                         using (var scope = stats.CreateScope())
                         {
                             EnsureValidStats(scope);
@@ -71,9 +77,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                             if (hasBatch == false)
                             {
                                 _lastSentDocumentEtag = _lastEtag;
-                                _lastDocumentSentTime = DateTime.UtcNow;
-
-                                SendHeartbeat(LastDatabaseChangeVector);
+                                SendHeartbeat(_lastSourceChangeVector);
                                 continue;
                             }
 
@@ -81,13 +85,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
                             using (_stats.Network.Start())
                             {
-                                if (batch.Items.Count > 0)
-                                {
-                                    _lastEtag = batch.Items.Last().Etag;
-                                }
-
-                                var didWork = SendDocumentsBatch(context, batch, _stats.Network);
-                                _tcpConnectionOptions._lastEtagSent = _lastEtag;
+                                SendDocumentsBatch(context, batch, _stats.Network);
                                 batch.BatchSent.TrySetResult();
                             }
                         }
@@ -110,7 +108,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
             }
         }
 
-        private bool SendDocumentsBatch(TransactionOperationContext context, ReplicationBatch batch, OutgoingReplicationStatsScope stats)
+        private void SendDocumentsBatch(TransactionOperationContext context, ReplicationBatch batch, OutgoingReplicationStatsScope stats)
         {
             try
             {
@@ -127,12 +125,16 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
                 WriteToServer(headerJson);
 
+                stats.RecordLastEtag(_lastEtag);
+
                 foreach (var item in batch.Items)
                 {
                     using (Slice.From(context.Allocator, item.ChangeVector, out var cv))
                     {
                         item.Write(cv, _stream, _tempBuffer, stats);
                     }
+
+                    _lastEtag = item.Etag;
                 }
 
                 if (batch.Attachments != null)
@@ -169,11 +171,10 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 {
                     MissingAttachmentsInLastBatch = true;
                     MissingAttachmentMessage = reply?.Exception;
-                    return false;
+                    return;
                 }
 
                 _lastSentDocumentEtag = _lastEtag;
-                _lastDocumentSentTime = DateTime.UtcNow;
             }
             finally
             {
@@ -182,8 +183,6 @@ namespace Raven.Server.Documents.Sharding.Handlers
                     item.Dispose();
                 }
             }
-
-            return true;
         }
 
         internal override ReplicationMessageReply HandleServerResponse(BlittableJsonReaderObject replicationBatchReplyMessage, bool allowNotify)
@@ -191,8 +190,8 @@ namespace Raven.Server.Documents.Sharding.Handlers
             var replicationBatchReply = base.HandleServerResponse(replicationBatchReplyMessage, allowNotify);
             if (replicationBatchReply != null)
             {
-                LastDatabaseChangeVector = replicationBatchReply.DatabaseChangeVector;
-                CurrentEtag = replicationBatchReply.CurrentEtag;
+                _lastDatabaseChangeVector = replicationBatchReply.DatabaseChangeVector;
+                CurrentEtag = replicationBatchReply.CurrentEtag; // TODO: check if needed
             }
 
             return replicationBatchReply;
@@ -234,8 +233,6 @@ namespace Raven.Server.Documents.Sharding.Handlers
             {
                 batch.BatchSent.TrySetCanceled();
             }
-
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "Handle this");
         }
 
         protected override void OnSuccessfulTwoWaysCommunication()
@@ -250,8 +247,6 @@ namespace Raven.Server.Documents.Sharding.Handlers
             {
                 batch.BatchSent.TrySetException(e);
             }
-       
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "Handle this");
         }
 
         protected override long GetLastHeartbeatTicks() => _parent.Context.Time.GetUtcNow().Ticks;
@@ -261,7 +256,6 @@ namespace Raven.Server.Documents.Sharding.Handlers
             batch.BatchSent = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             _batches.Add(batch);
             return batch.BatchSent.Task;
-
         }
     }
 }

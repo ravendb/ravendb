@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
+using NCrontab.Advanced.Extensions;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Exceptions.Sharding;
 using Raven.Client.Http;
@@ -81,13 +83,34 @@ namespace Raven.Server.Documents.Sharding.Handlers
         protected override void HandleHeartbeatMessage(TransactionOperationContext jsonOperationContext, BlittableJsonReaderObject blittableJsonReaderObject)
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "Find a way to implement change vector updates for tackling optimization issues");
+
+            if (blittableJsonReaderObject.TryGet(nameof(ReplicationMessageHeader.DatabaseChangeVector), out string changeVector))
+            {
+                foreach (var handler in _handlers)
+                {
+                    handler._lastSourceChangeVector = changeVector;
+                    handler._lastDocumentEtagFromSource = _lastDocumentEtag;
+                }
+            }
         }
 
         protected override DynamicJsonValue GetHeartbeatStatusMessage(TransactionOperationContext context, long lastDocumentEtag, string handledMessageType)
         {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "implement this");
-          
-            return base.GetHeartbeatStatusMessage(context, lastDocumentEtag, handledMessageType);
+            long currentEtag = 0;
+            var handlersChangeVector = new List<string>();
+            foreach (var handler in _handlers)
+            {
+                currentEtag = Math.Max(handler.CurrentEtag, currentEtag);
+
+                if (handler._lastDatabaseChangeVector.IsNullOrWhiteSpace() == false)
+                    handlersChangeVector.Add(handler._lastDatabaseChangeVector);
+            }
+            var mergedChangeVector = ChangeVectorUtils.MergeVectors(handlersChangeVector);
+
+            var heartbeat = base.GetHeartbeatStatusMessage(context, lastDocumentEtag, handledMessageType);
+            heartbeat[nameof(ReplicationMessageReply.DatabaseChangeVector)] = mergedChangeVector;
+            heartbeat[nameof(ReplicationMessageReply.CurrentEtag)] = currentEtag;
+            return heartbeat;
         }
 
         protected override void InvokeOnDocumentsReceived()
@@ -104,6 +127,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
             var tasks = new Task[batches.Length];
             for (int i = 0; i < batches.Length; i++)
             {
+                _handlers[i]._lastDocumentEtagFromSource = lastEtag;
                 tasks[i] = _handlers[i].SendBatch(batches[i]);
             }
 

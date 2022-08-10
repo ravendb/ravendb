@@ -1046,6 +1046,19 @@ namespace RachisTests.DatabaseCluster
                     }
 
                     Assert.True(WaitForDocument(dstStore, "users/2", 30_000));
+
+                    var db = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(srcDB);
+                    Assert.Equal(1, WaitForValue(() =>
+                    {
+
+                        return db.ReplicationLoader?.OutgoingHandlers.Where(o => o is OutgoingExternalReplicationHandler)?.Count() ?? 0;
+                    }, 1));
+
+                    var outgoingHandler = db.ReplicationLoader?.OutgoingHandlers.Where(o => o is OutgoingExternalReplicationHandler).ToList();
+                    Assert.NotNull(outgoingHandler);
+
+                    var stats = outgoingHandler[0].GetReplicationPerformance().Where(p => p.Network.DocumentOutputCount > 0)?.Single();
+                    Assert.Equal(1, stats.Network.DocumentOutputCount);
                 }
             }
         }
