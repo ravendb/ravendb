@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.ETL.Handlers
 
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                await using (var writer = new AsyncBlittableJsonTextWriterForDebug(HttpContext.Request, context, ServerStore, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
                     writer.WriteArray(context, "Results", etlStats, (w, c, stats) => w.WriteObject(context.ReadObject(stats.ToJson(), "etl/stats")));
@@ -124,7 +124,7 @@ namespace Raven.Server.Documents.ETL.Handlers
         public async Task Progress()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriterForDebug(HttpContext.Request, context, ServerStore, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
             using (context.OpenReadTransaction())
             {
                 var performance = GetProcessesToReportOn().Select(x => new EtlTaskProgress

@@ -129,7 +129,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             if (ServerStore.IsLeader())
             {
                 using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                await using (var writer = new AsyncBlittableJsonTextWriterForDebug(HttpContext.Request, context, ServerStore, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
                 {
                     var res = ServerStore.Observer.ReadDecisionsForDatabase();
                     var json = new DynamicJsonValue
@@ -152,7 +152,7 @@ namespace Raven.Server.Documents.Handlers.Admin
         public async Task GetLogs()
         {
             using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriterForDebug(HttpContext.Request, context, ServerStore, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
             {
                 context.OpenReadTransaction();
                 context.Write(writer, ServerStore.GetLogDetails(context));
@@ -163,7 +163,7 @@ namespace Raven.Server.Documents.Handlers.Admin
         public async Task GetHistoryLogs()
         {
             using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriterForDebug(HttpContext.Request, context, ServerStore, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
                 context.OpenReadTransaction();
@@ -222,7 +222,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
 
-                await using (var writer = new AsyncBlittableJsonTextWriterForDebug(HttpContext.Request, context, ServerStore, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
                 {
                     var loadLicenseLimits = ServerStore.LoadLicenseLimits();
                     var nodeLicenseDetails = loadLicenseLimits == null ?

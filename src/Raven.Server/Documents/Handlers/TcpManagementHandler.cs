@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.Handlers
                     .Skip(start)
                     .Take(pageSize);
 
-                await using (var writer = new AsyncBlittableJsonTextWriterForDebug(HttpContext.Request, context, ServerStore,  ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore,  ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
 

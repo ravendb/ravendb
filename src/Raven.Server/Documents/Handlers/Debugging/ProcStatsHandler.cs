@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             {
                 var djv = CpuStatsInternal();
 
-                await using (var write = new AsyncBlittableJsonTextWriterForDebug(HttpContext.Request, context, ServerStore, ResponseBodyStream()))
+                await using (var write = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
                 {
                     context.Write(write, djv);
                 }
@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             {
                 var djv = ProcStatsInternal();
 
-                await using (var write = new AsyncBlittableJsonTextWriterForDebug(HttpContext.Request, context, ServerStore, ResponseBodyStream()))
+                await using (var write = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
                 {
                     context.Write(write, djv);
                 }
