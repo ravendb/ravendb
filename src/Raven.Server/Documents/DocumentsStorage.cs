@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -8,6 +9,7 @@ using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents;
 using Raven.Server.Config;
 using Raven.Server.Documents.Expiration;
@@ -227,6 +229,17 @@ namespace Raven.Server.Documents
                 ("Starting to open document storage for " + (DocumentDatabase.Configuration.Core.RunInMemory
                      ? "<memory>"
                      : DocumentDatabase.Configuration.Core.DataDirectory.FullPath));
+            }
+
+            if (DocumentDatabase.Configuration.Core.RunInMemory == false)
+            {
+                string disableMarkerPath = DocumentDatabase.Configuration.Core.DataDirectory.Combine("disable.marker").FullPath;
+                if (File.Exists(disableMarkerPath))
+                {
+                    throw new DatabaseDisabledException("Unable to open database: " + _name + ", it has been manually disabled via the file: '" + disableMarkerPath +"'." +
+                                                 "To re-enable, remove the disable.marker and reload the database.");
+                }
+
             }
 
             var options = GetStorageEnvironmentOptionsFromConfiguration(DocumentDatabase.Configuration, DocumentDatabase.IoChanges, DocumentDatabase.CatastrophicFailureNotification);
