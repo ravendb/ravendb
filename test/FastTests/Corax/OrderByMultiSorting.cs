@@ -163,28 +163,28 @@ namespace FastTests.Corax
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
             var knownFields = CreateKnownFields(bsc);
 
-            const int bufferSize = 4096;
-            using var _ = bsc.Allocate(bufferSize, out ByteString buffer);
-
             {
                 using var indexWriter = new IndexWriter(Env, knownFields);
+                var entryWriter = new IndexEntryWriter(bsc, knownFields);
+
                 foreach (var entry in longList)
                 {
-                    var entryWriter = new IndexEntryWriter(buffer.ToSpan(), knownFields);
-                    var data = CreateIndexEntry(ref entryWriter, entry);
-                    indexWriter.Index(entry.Id, data);
+                    using (var _ = CreateIndexEntry(ref entryWriter, entry, out var data))
+                    {
+                        indexWriter.Index(entry.Id, data.ToSpan());
+                    }
                 }
                 indexWriter.Commit();
             }
         }
 
-        private Span<byte> CreateIndexEntry(ref IndexEntryWriter entryWriter, IndexSingleNumericalEntry<long, long> entry)
+        private ByteStringContext<ByteStringMemoryCache>.InternalScope CreateIndexEntry(
+            ref IndexEntryWriter entryWriter, IndexSingleNumericalEntry<long, long> entry, out ByteString output)
         {
             entryWriter.Write(IndexId, Encoding.UTF8.GetBytes(entry.Id));
             entryWriter.Write(Content1, Encoding.UTF8.GetBytes(entry.Content1.ToString()), entry.Content1, Convert.ToDouble(entry.Content1));
             entryWriter.Write(Content2, Encoding.UTF8.GetBytes(entry.Content2.ToString()), entry.Content2, Convert.ToDouble(entry.Content2));
-            entryWriter.Finish(out var output);
-            return output;
+            return entryWriter.Finish(out output);
         }
 
         private IndexFieldsMapping CreateKnownFields(ByteStringContext bsc)

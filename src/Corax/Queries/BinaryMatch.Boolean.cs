@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Xml.Linq;
 using Corax.Utils;
 using Sparrow.Server;
 
@@ -32,7 +33,7 @@ namespace Corax.Queries
                     var resultsSpan = matches;
                     while (resultsSpan.Length > 0)
                     {
-                        // RavenDB-17750: We have to fill everything possible UNTIL there are no more matches availables.
+                        // RavenDB-17750: We have to fill everything possible UNTIL there are no more matches available.
                         var results = inner.Fill(resultsSpan);
                         if (results == 0)
                             break;
@@ -203,7 +204,10 @@ namespace Corax.Queries
 
                 // Given that we are going to be calling Fill, which would try to fill the buffer as much as it can there is no
                 // reason why we are not going to try to fill it here but avoid going overboard for leftovers.
-                while (leftoverMatches.Length > 0)
+                // What this does is definining a minimum batch of work, if there is less than 16 elements to fill,
+                // it is not worth it to continue trying because the fill call would be higher than the probability of filling
+                // that block. Probably that number will increase in the future, so far 16 is just about right.
+                while (leftoverMatches.Length > 16)
                 {
                     int newIdx;
                     if (isOuterNext && outerCount != 0)

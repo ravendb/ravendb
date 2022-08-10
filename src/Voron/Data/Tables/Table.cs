@@ -260,6 +260,30 @@ namespace Voron.Data.Tables
             size = buffer.Length;
             return buffer.Ptr;
         }
+        
+        private static ReadOnlySpan<byte> LookupTable => new byte[] { 5, 6, 7, 9 };
+        private static int GetDecompressedSize(Span<byte> buffer)
+        {
+            byte marker = buffer[4];
+            int dicIdCode = marker & 3;
+            int sizeId = marker >> 6;
+            if (dicIdCode > 3)
+                throw new ArgumentOutOfRangeException("DicId was: +" + dicIdCode, nameof(dicIdCode));
+
+            var pos = (int)LookupTable[dicIdCode];
+       
+            ulong decompressedSize = sizeId switch
+            {
+                0 => buffer[pos],
+                1 => Unsafe.ReadUnaligned<ushort>(ref buffer[pos]) + 256UL,
+                2 => Unsafe.ReadUnaligned<uint>(ref buffer[pos]),
+                3 => Unsafe.ReadUnaligned<ulong>(ref buffer[pos]),
+                _ => throw new ArgumentOutOfRangeException(nameof(sizeId))
+            };
+            if (decompressedSize > int.MaxValue)
+                throw new ArgumentException("Decompress size cannot be " + decompressedSize, nameof(decompressedSize));
+            return (int)decompressedSize;
+        }
 
         internal static ByteStringContext<ByteStringMemoryCache>.InternalScope DecompressValue(
             Transaction tx,
@@ -270,7 +294,7 @@ namespace Voron.Data.Tables
             var dictionary = tx.LowLevelTransaction.Environment.CompressionDictionariesHolder
                 .GetCompressionDictionaryFor(tx, dicId);
 
-            int decompressedSize = ZstdLib.GetDecompressedSize(ptr, length);
+            int decompressedSize = GetDecompressedSize(new Span<byte>(ptr, length));
             var internalScope = tx.Allocator.Allocate(decompressedSize, out buffer);
             var actualSize = ZstdLib.Decompress(ptr, length, buffer.Ptr, buffer.Length, dictionary);
             if (actualSize != decompressedSize)

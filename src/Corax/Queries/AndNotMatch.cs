@@ -130,10 +130,7 @@ namespace Corax.Queries
                 if (iterations > 1)
                 {
                     // We need to sort and remove duplicates.
-                    fixed (long* bufferBasePtr = matches)
-                    {
-                        totalResults = Sorting.SortAndRemoveDuplicates(bufferBasePtr, totalResults);
-                    }
+                    totalResults = Sorting.SortAndRemoveDuplicates(matches.Slice(0, totalResults));
                 }
 
                 // This is an early bailout, the only way this can happen is when Fill returns 0 and we dont have

@@ -59,26 +59,25 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             }
         }
 
-        public override void IndexDocument(LazyStringValue key, LazyStringValue sourceDocumentId, object document, IndexingStatsScope stats,
-            JsonOperationContext indexContext)
+        public override void IndexDocument(LazyStringValue key, LazyStringValue sourceDocumentId, object document, IndexingStatsScope stats, JsonOperationContext indexContext)
         {
             EnsureValidStats(stats);
             _entriesCount++;
-            Span<byte> data;
+
             LazyStringValue lowerId;
-
             using (Stats.ConvertStats.Start())
-                data = _converter.SetDocumentFields(key, sourceDocumentId, document, indexContext, out lowerId, _buffer.ToSpan());
-
-            if (data.IsEmpty)
-                return;
-            
-            using (Stats.AddStats.Start())
+            using (var _ = _converter.SetDocumentFields(key, sourceDocumentId, document, indexContext, out lowerId, out var data))
             {
-                _indexWriter.Index(lowerId, data);
-            }
+                if (data.Length == 0)
+                    return;
 
-            stats.RecordIndexingOutput();
+                using (Stats.AddStats.Start())
+                {
+                    _indexWriter.Index(lowerId, data.ToSpan());
+                }
+
+                stats.RecordIndexingOutput();
+            }
         }
 
         public override long EntriesCount() => _entriesCount;

@@ -14,6 +14,7 @@ using Tests.Infrastructure;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
+using Sparrow.Threading;
 
 namespace FastTests.Corax;
 
@@ -53,15 +54,15 @@ public class SpatialTests : StorageTest
                 )
             .ToList();
 
+        using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
         using (var writer = new IndexWriter(Env, _fieldsMapping))
-        {
-            Span<byte> buffer = new byte[1024 * 16];
-            var entry = new IndexEntryWriter(buffer, _fieldsMapping);
+        {           
+            var entry = new IndexEntryWriter(bsc, _fieldsMapping);
             entry.Write(IdIndex, Encodings.Utf8.GetBytes(IdString));
             var spatialEntry = new CoraxSpatialPointEntry(latitude, longitude, geohash);
             entry.WriteSpatial(CoordinatesIndex, spatialEntry);
-            entry.Finish(out var preparedItem);
-            writer.Index(IdString, preparedItem);
+            using var _ = entry.Finish(out var preparedItem);
+            writer.Index(IdString, preparedItem.ToSpan());
             writer.Commit();
         }
 
@@ -103,17 +104,17 @@ public class SpatialTests : StorageTest
     [InlineData(4, new double[]{ -10.5, 12.4, -123D, 53}, new double[]{-52.123, 23.32123, 52.32423, -42.1235})]
     public unsafe void WriteAndReadSpatialList(int size, double[] lat, double[] lon)
     {
-        Span<byte> buffer = new byte[2048];
-        var entryBuilder = new IndexEntryWriter(buffer, _fieldsMapping);
+        using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+
+        var entryBuilder = new IndexEntryWriter(bsc, _fieldsMapping);
         entryBuilder.Write(IdIndex, Encodings.Utf8.GetBytes("item/1"));
         Span<CoraxSpatialPointEntry> _points = new CoraxSpatialPointEntry[size];
         for (int i = 0; i < size; ++i)
             _points[i] = new CoraxSpatialPointEntry(lat[i], lon[i], Spatial4n.Util.GeohashUtils.EncodeLatLon(lat[i], lon[i], 9));
         entryBuilder.WriteSpatial(CoordinatesIndex, _points);
+        using var _ = entryBuilder.Finish(out var buffer);
 
-        entryBuilder.Finish(out buffer);
-
-        var reader = new IndexEntryReader(buffer);
+        var reader = new IndexEntryReader(buffer.ToSpan());
 
         Assert.True(reader.GetFieldType(CoordinatesIndex, out var intOffset).HasFlag(IndexEntryFieldType.SpatialPointList));
         var iterator = reader.ReadManySpatialPoint(CoordinatesIndex);
@@ -122,8 +123,7 @@ public class SpatialTests : StorageTest
         while (iterator.ReadNext())
         {
             entriesInIndex.Add(iterator.CoraxSpatialPointEntry);
-        }
-        
+        }        
         
         Assert.Equal(size, entriesInIndex.Count);
 

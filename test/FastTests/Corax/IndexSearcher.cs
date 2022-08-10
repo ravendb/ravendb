@@ -65,7 +65,8 @@ namespace FastTests.Corax
             public ReadOnlySpan<byte> this[int i] => _values[i] != null ? Encoding.UTF8.GetBytes(_values[i]) : null;
         }
 
-        private static Span<byte> CreateIndexEntry(ref IndexEntryWriter entryWriter, IndexEntry value)
+        private static ByteStringContext<ByteStringMemoryCache>.InternalScope CreateIndexEntry(
+            ref IndexEntryWriter entryWriter, IndexEntry value, out ByteString output)
         {
             Span<byte> PrepareString(string value)
             {
@@ -77,8 +78,7 @@ namespace FastTests.Corax
             entryWriter.Write(IdIndex, PrepareString(value.Id));
             entryWriter.Write(ContentIndex, new StringArrayIterator(value.Content));
 
-            entryWriter.Finish(out var output);
-            return output;
+            return entryWriter.Finish(out output);
         }
 
         public const int IdIndex = 0,
@@ -102,20 +102,16 @@ namespace FastTests.Corax
 
         private void IndexEntries(ByteStringContext bsc, IEnumerable<IndexEntry> list, IndexFieldsMapping mapping)
         {
-            const int bufferSize = 4096;
-            using var _ = bsc.Allocate(bufferSize, out ByteString buffer);
+            using var indexWriter = new IndexWriter(Env, mapping);
+            var entryWriter = new IndexEntryWriter(bsc, mapping);
 
+            foreach (var entry in list)
             {
-                using var indexWriter = new IndexWriter(Env, mapping);
-                foreach (var entry in list)
-                {
-                    var entryWriter = new IndexEntryWriter(buffer.ToSpan(), mapping);
-                    var data = CreateIndexEntry(ref entryWriter, entry);
-                    entry.IndexEntryId = indexWriter.Index(entry.Id, data);
-                }
-
-                indexWriter.Commit();
+                using var __ = CreateIndexEntry(ref entryWriter, entry, out var data);
+                entry.IndexEntryId = indexWriter.Index(entry.Id, data.ToSpan());
             }
+
+            indexWriter.Commit();
         }
 
         [Fact]
@@ -564,7 +560,7 @@ namespace FastTests.Corax
                 // Because there is no guarantee that multiple Fill operations would return sequential non redundant document ids,
                 // we need to sort and remove duplicates before actually testing the final condition. 
                 var sortedActual = actual.ToArray();
-                Sorting.SortAndRemoveDuplicates(sortedActual);
+                Sorting.SortAndRemoveDuplicates(sortedActual.AsSpan());
                 for (int i = 0; i < count; i++)
                 {
                     Assert.Equal(matchesId[i], sortedActual[i]);
@@ -674,7 +670,7 @@ namespace FastTests.Corax
                 } while (read != 0);
 
                 var actualSorted = actual.ToArray();
-                var actualSize = Sorting.SortAndRemoveDuplicates(actualSorted);
+                var actualSize = Sorting.SortAndRemoveDuplicates(actualSorted.AsSpan());
 
                 for (int i = 0; i < actualSize; i++)
                 {
@@ -700,7 +696,7 @@ namespace FastTests.Corax
                     count += read;
                 } while (read != 0);
                 var actualSorted = actual.ToArray();
-                var actualSize = Sorting.SortAndRemoveDuplicates(actualSorted);
+                var actualSize = Sorting.SortAndRemoveDuplicates(actualSorted.AsSpan());
 
                 for (int i = 0; i < actualSize; i++)
                 {
@@ -801,7 +797,8 @@ namespace FastTests.Corax
             }
         }
 
-        private static Span<byte> CreateIndexEntry(ref IndexEntryWriter entryWriter, IndexSingleEntry value)
+        private static ByteStringContext<ByteStringMemoryCache>.InternalScope CreateIndexEntry(
+            ref IndexEntryWriter entryWriter, IndexSingleEntry value, out ByteString output)
         {
             Span<byte> PrepareString(string value)
             {
@@ -812,27 +809,21 @@ namespace FastTests.Corax
 
             entryWriter.Write(IdIndex, PrepareString(value.Id));
             entryWriter.Write(ContentIndex, PrepareString(value.Content));
-
-            entryWriter.Finish(out var output);
-            return output;
+            return entryWriter.Finish(out output);
         }
 
         private void IndexEntries(ByteStringContext bsc, IEnumerable<IndexSingleEntry> list, IndexFieldsMapping mapping)
         {
-            const int bufferSize = 4096;
-            using var _ = bsc.Allocate(bufferSize, out ByteString buffer);
+            using var indexWriter = new IndexWriter(Env, mapping);
+            var entryWriter = new IndexEntryWriter(bsc, mapping);
 
+            foreach (var entry in list)
             {
-                using var indexWriter = new IndexWriter(Env, mapping);
-                foreach (var entry in list)
-                {
-                    var entryWriter = new IndexEntryWriter(buffer.ToSpan(), mapping);
-                    var data = CreateIndexEntry(ref entryWriter, entry);
-                    indexWriter.Index(entry.Id, data);
-                }
-
-                indexWriter.Commit();
+                using var __ = CreateIndexEntry(ref entryWriter, entry, out var data);
+                indexWriter.Index(entry.Id, data.ToSpan());
             }
+
+            indexWriter.Commit();
         }
 
         [Fact]
@@ -957,23 +948,22 @@ namespace FastTests.Corax
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
             var knownFields = CreateKnownFields(bsc);
 
-            const int bufferSize = 4096;
-            using var _ = bsc.Allocate(bufferSize, out ByteString buffer);
-
             {
                 using var indexWriter = new IndexWriter(Env, knownFields);
+                var entryWriter = new IndexEntryWriter(bsc, knownFields);
+
                 foreach (var entry in list)
                 {
-                    var entryWriter = new IndexEntryWriter(buffer.ToSpan(), knownFields);
-                    var data = CreateIndexEntryDouble(ref entryWriter, entry);
-                    indexWriter.Index(entry.Id, data);
+                    using var __ = CreateIndexEntryDouble(ref entryWriter, entry, out var data);
+                    indexWriter.Index(entry.Id, data.ToSpan());
                 }
 
                 indexWriter.Commit();
             }
         }
 
-        private static Span<byte> CreateIndexEntryDouble(ref IndexEntryWriter entryWriter, IndexSingleEntryDouble value)
+        private static ByteStringContext<ByteStringMemoryCache>.InternalScope CreateIndexEntryDouble(
+            ref IndexEntryWriter entryWriter, IndexSingleEntryDouble value, out ByteString output)
         {
             Span<byte> PrepareString(string value)
             {
@@ -984,9 +974,7 @@ namespace FastTests.Corax
 
             entryWriter.Write(IdIndex, PrepareString(value.Id));
             entryWriter.Write(ContentIndex, PrepareString(value.Content.ToString()), Convert.ToInt64(value.Content), value.Content);
-
-            entryWriter.Finish(out var output);
-            return output;
+            return entryWriter.Finish(out output);
         }
 
         private class IndexSingleEntryDouble
@@ -1481,10 +1469,9 @@ namespace FastTests.Corax
                 } while (read != 0);
 
                 var actualSorted = actual.ToArray();
-                var actualSize = Sorting.SortAndRemoveDuplicates(actualSorted);
+                var actualSize = Sorting.SortAndRemoveDuplicates(actualSorted.AsSpan());
 
-                Assert.Equal((setSize / 3), actualSize);
-                
+                Assert.Equal((setSize / 3), actualSize);                
             }
 
             {
@@ -1504,7 +1491,7 @@ namespace FastTests.Corax
                 } while (read != 0);
 
                 var actualSorted = actual.ToArray();
-                var actualSize = Sorting.SortAndRemoveDuplicates(actualSorted);
+                var actualSize = Sorting.SortAndRemoveDuplicates(actualSorted.AsSpan());
 
                 Assert.Equal((setSize / 3), actualSize);
 
@@ -1567,7 +1554,7 @@ namespace FastTests.Corax
                 } while (read != 0);
 
                 var actualSorted = actual.ToArray();
-                var actualSize = Sorting.SortAndRemoveDuplicates(actualSorted);
+                var actualSize = Sorting.SortAndRemoveDuplicates(actualSorted.AsSpan());
 
                 Assert.Equal((setSize / 3), actualSize);
             }
@@ -1588,7 +1575,7 @@ namespace FastTests.Corax
                 } while (read != 0);
 
                 var actualSorted = actual.ToArray();
-                var actualSize = Sorting.SortAndRemoveDuplicates(actualSorted);
+                var actualSize = Sorting.SortAndRemoveDuplicates(actualSorted.AsSpan());
 
                 Assert.Equal((setSize / 3), actualSize);
             }

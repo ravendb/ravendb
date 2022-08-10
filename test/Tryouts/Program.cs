@@ -22,6 +22,7 @@ public static class Program
     public static async Task Main(string[] args)
     {
         Console.WriteLine(Process.GetCurrentProcess().Id);
+
         for (int i = 0; i < 100; i++)
         {
             Console.WriteLine($"Starting to run {i}");
