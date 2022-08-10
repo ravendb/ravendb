@@ -470,7 +470,7 @@ namespace Voron.Data.CompactTrees
                 // did *not* find it, but we are somewhere on the tree that is ensured
                 // to be at the key location *or before it*, so we can now start scanning *up*
             }
-            Debug.Assert(state.Header->PageFlags == CompactPageFlags.Leaf);
+            Debug.Assert(state.Header->PageFlags == CompactPageFlags.Leaf, $"Got {state.Header->PageFlags} flag instead of {nameof(CompactPageFlags.Leaf)}");
             
             encodedKey = EncodedKey.Get(key, this, state.Header->DictionaryId);
 
@@ -864,7 +864,9 @@ namespace Voron.Data.CompactTrees
             AssertValueAndKeySize(key, value);
             // this overload assumes that a previous call to TryGetValue (where you go the encodedKey
             // already placed us in the right place for the value)
-            Debug.Assert(_internalCursor._stk[_internalCursor._pos].Header->PageFlags == CompactPageFlags.Leaf);
+            Debug.Assert(_internalCursor._stk[_internalCursor._pos].Header->PageFlags == CompactPageFlags.Leaf,
+                $"Got {_internalCursor._stk[_internalCursor._pos].Header->PageFlags} flag instead of {nameof(CompactPageFlags.Leaf)}");
+
             AddToPage(encodedKey, value);
         }
 
