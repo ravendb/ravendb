@@ -2,12 +2,15 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Security.Policy;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Indexes;
+using Raven.Client.Json.Serialization;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Revisions;
 using Raven.Server.ServerWide.Context;
@@ -39,6 +42,8 @@ namespace Raven.Server.Documents
 
         internal static readonly TableSchema AttachmentsSchema = new TableSchema();
         public static readonly string AttachmentsTombstones = "Attachments.Tombstones";
+        
+        public HashSet<Slice> AttachmentStreamsToDeleteAtTheEndOfBatch = new(SliceComparer.Instance);
 
         private enum AttachmentsTable
         {
@@ -425,32 +430,20 @@ namespace Raven.Server.Documents
             }
         }
 
-        public void RevisionAttachments(DocumentsOperationContext context, Slice lowerId, Slice changeVector)
+        public void RevisionAttachments(DocumentsOperationContext context, BlittableJsonReaderObject document, Slice lowerId, Slice changeVector)
         {
-            using (GetAttachmentPrefix(context, lowerId.Content.Ptr, lowerId.Size, AttachmentType.Document, Slices.Empty, out Slice prefixSlice))
+            var attachmentsFromDocumentMetadata = GetAttachmentsFromDocumentMetadata(document)
+                .Select(attachment => JsonDeserializationClient.AttachmentName(attachment)).ToList();
+            foreach (var attachment in attachmentsFromDocumentMetadata)
             {
-                var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
-                var currentAttachments = new List<(LazyStringValue name, LazyStringValue contentType, Slice base64Hash)>();
-                foreach (var sr in table.SeekByPrimaryKeyPrefix(prefixSlice, Slices.Empty, 0))
-                {
-                    var tableValueHolder = sr.Value;
-                    var name = TableValueToId(context, (int)AttachmentsTable.Name, ref tableValueHolder.Reader);
-                    var contentType = TableValueToId(context, (int)AttachmentsTable.ContentType, ref tableValueHolder.Reader);
-
-                    var ptr = tableValueHolder.Reader.Read((int)AttachmentsTable.Hash, out int size);
-                    Slice.From(context.Allocator, ptr, size, out Slice base64Hash);
-
-                    currentAttachments.Add((name, contentType, base64Hash));
-                }
-                foreach (var attachment in currentAttachments)
-                {
-                    PutRevisionAttachment(context, lowerId.Content.Ptr, lowerId.Size, changeVector, attachment);
-                    attachment.name.Dispose();
-                    attachment.contentType.Dispose();
-                    attachment.base64Hash.Release(context.Allocator);
-                }
+                using var _ = Slice.From(context.Allocator, attachment.Hash, out Slice hashSlice);
+                var contentType = context.GetLazyString(attachment.ContentType);
+                var name = context.GetLazyString(attachment.Name);
+                
+                PutRevisionAttachment(context, lowerId.Content.Ptr, lowerId.Size, changeVector, (name, contentType, hashSlice));
             }
         }
+        
         public void PutAttachmentRevert(DocumentsOperationContext context, Document document, out bool hasAttachments)
         {
             hasAttachments = false;
@@ -519,9 +512,17 @@ namespace Raven.Server.Documents
             _documentDatabase.Metrics.Attachments.BytesPutsPerSec.MarkSingleThreaded(stream.Length);
         }
 
-        private void DeleteAttachmentStream(DocumentsOperationContext context, Slice hash, int expectedCount = 1)
+        internal void DeleteAttachmentStream(DocumentsOperationContext context, Slice hash, int expectedCount = 1, bool fromReplication = false)
         {
-            if (GetCountOfAttachmentsForHash(context, hash) == expectedCount)
+            if (fromReplication)
+            {
+                AttachmentStreamsToDeleteAtTheEndOfBatch.Add(hash.Clone(context.Allocator));
+                return;
+            }
+
+            var refCount = GetCountOfAttachmentsForHash(context, hash);
+            
+            if (refCount == expectedCount)
             {
                 var tree = context.Transaction.InnerTransaction.CreateTree(AttachmentsSlice);
                 tree.DeleteStream(hash);
@@ -628,6 +629,14 @@ namespace Raven.Server.Documents
                 }
             }
             return attachments;
+        }
+
+        public List<AttachmentDetails> GetAttachmentDetailsForDocument(DocumentsOperationContext context, string docId)
+        {
+            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, docId, out var lowerDocumentId, out _))
+            {
+                return GetAttachmentDetailsForDocument(context, lowerDocumentId);
+            }
         }
 
         public DynamicJsonArray GetAttachmentsMetadataForDocument(DocumentsOperationContext context, string docId)
@@ -741,6 +750,17 @@ namespace Raven.Server.Documents
                     return TableValueToAttachment(context, ref tvr);
                 }
             }
+        }
+
+        public ByteStringContext.InternalScope GetAttachmentKeyForDocumentType(DocumentsOperationContext context, string docId, string name, string hash, string contentType, out Slice key)
+        {
+            using (DocumentIdWorker.GetSliceFromId(context, docId, out Slice lowerId))
+            using (DocumentIdWorker.GetSliceFromId(context, name, out Slice lowerName))
+            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, contentType, out Slice lowerContentType, out Slice contentTypePtr))
+            using (Slice.From(context.Allocator, hash, out Slice base64Hash))
+                return GetAttachmentKey(context, lowerId.Content.Ptr, lowerId.Size, lowerName.Content.Ptr, lowerName.Size, base64Hash,
+                    lowerContentType.Content.Ptr,
+                    lowerContentType.Size, AttachmentType.Document, Slices.Empty, out key);
         }
 
         public Attachment GetAttachmentByKey(DocumentsOperationContext context, Slice key)
@@ -1196,7 +1216,7 @@ namespace Raven.Server.Documents
         }
 
         public void DeleteAttachmentDirect(DocumentsOperationContext context, Slice key, bool isPartialKey, string name,
-            string expectedChangeVector, string changeVector, long lastModifiedTicks)
+            string expectedChangeVector, string changeVector, long lastModifiedTicks, bool fromReplication = false)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
 
@@ -1247,20 +1267,20 @@ namespace Raven.Server.Documents
                     };
                 }
 
-                DeleteInternal(context, key, etag, hash, changeVector, lastModifiedTicks);
+                DeleteInternal(context, key, etag, hash, changeVector, lastModifiedTicks, fromReplication);
             }
 
             table.Delete(tvr.Id);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void DeleteInternal(DocumentsOperationContext context, Slice key, long etag, Slice hash, string changeVector, long lastModifiedTicks)
+        private void DeleteInternal(DocumentsOperationContext context, Slice key, long etag, Slice hash, string changeVector, long lastModifiedTicks, bool fromReplication = false)
         {
             CreateTombstone(context, key, etag, changeVector, lastModifiedTicks);
 
             // we are running just before the delete, so we may still have 1 entry there, the one just
             // about to be deleted
-            DeleteAttachmentStream(context, hash);
+            DeleteAttachmentStream(context, hash, expectedCount: 1, fromReplication);
         }
 
         private static void DeleteTombstoneIfNeeded(DocumentsOperationContext context, Slice keySlice)

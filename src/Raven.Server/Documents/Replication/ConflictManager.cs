@@ -88,9 +88,8 @@ namespace Raven.Server.Documents.Replication
                             conflicts.Add(local);
 
                         var resolved = _conflictResolver.ResolveToLatest(conflicts);
-                        _conflictResolver.PutResolvedDocument(documentsContext, resolved, resolvedToLatest: true, conflictedDoc);
-
-                        return;
+                        if(_conflictResolver.PutResolvedDocument(documentsContext, resolved, resolvedToLatest: true, conflictedDoc))
+                            return;
                     }
                 }
 
@@ -178,8 +177,7 @@ namespace Raven.Server.Documents.Replication
                 conflictedDocs,
                 documentsContext.GetLazyString(collection), out var resolved))
             {
-                _conflictResolver.PutResolvedDocument(documentsContext, resolved, resolvedToLatest: false, conflict);
-                return true;
+                return  _conflictResolver.PutResolvedDocument(documentsContext, resolved, resolvedToLatest: false, conflict);
             }
 
             return false;

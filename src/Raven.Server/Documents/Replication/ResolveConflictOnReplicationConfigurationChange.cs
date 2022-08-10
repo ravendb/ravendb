@@ -3,11 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Context;
@@ -173,7 +175,7 @@ namespace Raven.Server.Documents.Replication
         internal class PutResolvedConflictsCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             private readonly ConflictsStorage _conflictsStorage;
-            private readonly List<(DocumentConflict ResolvedConflict, long MaxConflictEtag, bool resovedToLatest)> _resolvedConflicts;
+            private readonly List<(DocumentConflict ResolvedConflict, long MaxConflictEtag, bool ResovedToLatest)> _resolvedConflicts;
             private readonly ResolveConflictOnReplicationConfigurationChange _resolver;
             public bool RequiresRetry;
 
@@ -202,7 +204,7 @@ namespace Raven.Server.Documents.Replication
                         RequiresRetry = true;
                     }
 
-                    _resolver.PutResolvedDocument(context, item.ResolvedConflict, item.resovedToLatest);
+                    _resolver.PutResolvedDocument(context, item.ResolvedConflict, item.ResovedToLatest);
                 }
 
                 return count;
@@ -284,7 +286,7 @@ namespace Raven.Server.Documents.Replication
             return true;
         }
 
-        public void PutResolvedDocument(
+        public bool PutResolvedDocument(
            DocumentsOperationContext context,
            DocumentConflict resolved,
            bool resolvedToLatest,
@@ -293,7 +295,7 @@ namespace Raven.Server.Documents.Replication
             resolved.Flags = resolved.Flags.Strip(DocumentFlags.FromClusterTransaction);
 
             SaveConflictedDocumentsAsRevisions(context, resolved.Id, incoming);
-
+            
             // Resolved document should generate a new change vector, since it was changed locally.
             // In a cluster this may cause a ping-pong replication which will be settled down by the fact that a conflict with identical content doesn't increase the local etag
             var changeVector = _database.DocumentsStorage.CreateNextDatabaseChangeVector(context, resolved.ChangeVector);
@@ -307,11 +309,12 @@ namespace Raven.Server.Documents.Replication
                 {
                     _database.DocumentsStorage.Delete(context, lowerId, resolved.Id, null, null, changeVector, new CollectionName(resolved.Collection),
                         documentFlags: resolved.Flags | DocumentFlags.Resolved | DocumentFlags.HasRevisions, nonPersistentFlags: NonPersistentDocumentFlags.FromResolver | NonPersistentDocumentFlags.Resolved);
-                    return;
+                    return true;
                 }
             }
 
-            ResolveAttachmentsConflicts(context, resolved, resolvedToLatest);
+            if (ResolveAttachmentsConflicts(context, resolved, resolvedToLatest) == false)
+                return false;
 
             if (ReferenceEquals(incoming?.Doc, resolved.Doc))
             {
@@ -335,8 +338,11 @@ namespace Raven.Server.Documents.Replication
                 // we always want to merge the counters and attachments, even if the user specified a script
                 var nonPersistentFlags = NonPersistentDocumentFlags.ResolveCountersConflict | NonPersistentDocumentFlags.ResolveAttachmentsConflict | NonPersistentDocumentFlags.ResolveTimeSeriesConflict |
                                          NonPersistentDocumentFlags.FromResolver | NonPersistentDocumentFlags.Resolved;
+               
                 _database.DocumentsStorage.Put(context, resolved.Id, null, clone, null, changeVector, null, resolved.Flags | DocumentFlags.Resolved, nonPersistentFlags: nonPersistentFlags);
             }
+
+            return true;
         }
 
         private void SaveConflictedDocumentsAsRevisions(DocumentsOperationContext context, string id, DocumentConflict incoming)
@@ -472,23 +478,72 @@ namespace Raven.Server.Documents.Replication
 
             return latestDoc;
         }
-
-        private void ResolveAttachmentsConflicts(DocumentsOperationContext context, DocumentConflict resolved, bool resolvedToLatest)
+        
+        private bool ResolveAttachmentsConflicts(DocumentsOperationContext context, DocumentConflict resolved, bool resolvedToLatest)
         {
-            using var scope = Slice.External(context.Allocator, resolved.LowerId, out var lowerId);
-            var storageAttachmentsDetails = _database.DocumentsStorage.AttachmentsStorage.GetAttachmentDetailsForDocument(context, lowerId);
-            List<AttachmentName> resolvedAttachmentsMetadata = null;
+            using var scope = Slice.External(context.Allocator, resolved.LowerId, out var lowerIdSlice);
+            var storageAttachmentsDetails = _database.DocumentsStorage.AttachmentsStorage.GetAttachmentDetailsForDocument(context, resolved.LowerId);
+            var resolvedAttachmentsMetadata = AttachmentsStorage.GetAttachmentsFromDocumentMetadata(resolved.Doc).Select(attachment => JsonDeserializationClient.AttachmentName(attachment)).ToList();
+            
+            //we only insert the resolved metadata if we resolve to latest. changing attachment metadata through script is not supported
+            if (resolvedToLatest)
+            {
+                //make sure all attachments metadata from doc exist in storage. if not, put them
+                foreach (var attachment in resolvedAttachmentsMetadata)
+                {
+                    if (storageAttachmentsDetails.Exists(x =>
+                            x.DocumentId.ToLower() == resolved.LowerId && x.Name == attachment.Name && x.Hash == attachment.Hash &&
+                            x.ContentType == attachment.ContentType) == false)
+                    {
+                        using var scope2 = _database.DocumentsStorage.AttachmentsStorage.GetAttachmentKeyForDocumentType(context, resolved.LowerId, attachment.Name,
+                            attachment.Hash,
+                            attachment.ContentType, out Slice key);
+                        using var _ = Slice.From(context.Allocator, attachment.Hash, out Slice hashSlice);
 
+                        if (_database.DocumentsStorage.AttachmentsStorage.AttachmentExists(context, hashSlice) == false)
+                        {
+                            var error =
+                                $"Trying to resolve attachment conflict for doc {resolved.Id} and attachment '{attachment.Name}' but its attachment stream {attachment.Hash} is missing from storage. Adding to unresolved conflicts.";
+                            
+                            _database.NotificationCenter.Add(AlertRaised.Create(
+                                _database.Name,
+                                "Attachment stream not found",
+                                error,
+                                AlertType.DeletionError,
+                                NotificationSeverity.Error));
+
+                            if (_log.IsInfoEnabled)
+                                _log.Info(error);
+
+                            return false;
+                        }
+
+                        //this attachment was deleted before but its document won the conflict, so now we need to put it in storage again
+
+                        using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.Name, out Slice _, out Slice attachmentName))
+                        using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.ContentType, out Slice _, out Slice contentType))
+
+                        //put attachment metadata with new change vector
+                        _database.DocumentsStorage.AttachmentsStorage.PutDirect(context, key, attachmentName, contentType, hashSlice);
+                    }
+                }
+            }
+
+            storageAttachmentsDetails = _database.DocumentsStorage.AttachmentsStorage.GetAttachmentDetailsForDocument(context, resolved.LowerId); //refresh storage state
+           
+            //goes over all name groups for existing attachments in storage for this doc id
             foreach (var group in storageAttachmentsDetails.GroupBy(x => x.Name))
             {
                 if (group.Count() == 1)
+                {
                     continue;
-
-                resolvedAttachmentsMetadata ??= AttachmentsStorage.GetAttachmentsFromDocumentMetadata(resolved.Doc).Select(attachment => JsonDeserializationClient.AttachmentName(attachment)).ToList();
+                }
+                
                 var found = false;
-
+                
                 foreach (var attachment in group)
                 {
+                    //if this attachment exists in the resolved document's metadata
                     if (found == false && resolvedAttachmentsMetadata.Any(x => x.Name == attachment.Name && x.Hash == attachment.Hash && x.ContentType == attachment.ContentType))
                     {
                         found = true;
@@ -510,12 +565,14 @@ namespace Raven.Server.Documents.Replication
                             continue;
                         }
                         // rename duplicates
-                        var newName = _database.DocumentsStorage.AttachmentsStorage.ResolveAttachmentName(context, lowerId, attachment.Name);
+                        var newName = _database.DocumentsStorage.AttachmentsStorage.ResolveAttachmentName(context, lowerIdSlice, attachment.Name);
                         _database.DocumentsStorage.AttachmentsStorage.MoveAttachment(context, resolved.LowerId, attachment.Name, resolved.LowerId, newName, changeVector: null,
                             attachment.Hash, attachment.ContentType, usePartialKey: false, updateDocument: false);
                     }
                 }
             }
+
+            return true;
         }
     }
 

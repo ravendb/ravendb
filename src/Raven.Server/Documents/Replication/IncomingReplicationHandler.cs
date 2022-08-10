@@ -1107,6 +1107,7 @@ namespace Raven.Server.Documents.Replication
                     HashSet<LazyStringValue> docCountersToRecreate = null;
                     var handledAttachmentStreams = new HashSet<Slice>(SliceComparer.Instance);
                     context.LastDatabaseChangeVector ??= DocumentsStorage.GetDatabaseChangeVector(context);
+                    database.DocumentsStorage.AttachmentsStorage.AttachmentStreamsToDeleteAtTheEndOfBatch.Clear();
 
                     foreach (var item in _replicationInfo.ReplicatedItems)
                     {
@@ -1154,13 +1155,30 @@ namespace Raven.Server.Documents.Replication
                                 toDispose.Add(DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.Name, out _, out Slice attachmentName));
                                 toDispose.Add(DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.ContentType, out _, out Slice contentType));
 
-                                if (localAttachment == null || ChangeVectorUtils.GetConflictStatus(attachment.ChangeVector, localAttachment.ChangeVector) !=
-                                    ConflictStatus.AlreadyMerged)
+                                if (localAttachment == null)
                                 {
                                     database.DocumentsStorage.AttachmentsStorage.PutDirect(context, attachment.Key, attachmentName,
                                         contentType, attachment.Base64Hash, attachment.ChangeVector);
+                                    break;
                                 }
 
+                                var mergedChangedVector = attachment.ChangeVector;
+                                var status = ChangeVectorUtils.GetConflictStatus(attachment.ChangeVector, localAttachment.ChangeVector);
+                                switch (status)
+                                {
+                                    case ConflictStatus.Update:
+                                        database.DocumentsStorage.AttachmentsStorage.PutDirect(context, attachment.Key, attachmentName,
+                                            contentType, attachment.Base64Hash, mergedChangedVector);
+                                        break;
+                                    case ConflictStatus.Conflict:
+                                        mergedChangedVector = ChangeVectorUtils.MergeVectors(attachment.ChangeVector, localAttachment.ChangeVector);
+                                        goto case ConflictStatus.Update;
+                                    case ConflictStatus.AlreadyMerged:
+                                        break;
+                                    default:
+                                        throw new ArgumentOutOfRangeException();
+                                }
+                                
                                 break;
 
                             case AttachmentTombstoneReplicationItem attachmentTombstone:
@@ -1170,8 +1188,8 @@ namespace Raven.Server.Documents.Replication
                                     continue;
 
                                 database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, attachmentTombstone.Key, false, "$fromReplication", null,
-                                    rcvdChangeVector,
-                                    attachmentTombstone.LastModifiedTicks);
+                                    rcvdChangeVector, attachmentTombstone.LastModifiedTicks, fromReplication: true);
+
                                 break;
 
                             case RevisionTombstoneReplicationItem revisionTombstone:
@@ -1397,6 +1415,11 @@ namespace Raven.Server.Documents.Replication
                         {
                             context.DocumentDatabase.DocumentsStorage.DocumentPut.Recreate<DocumentPutAction.RecreateCounters>(context, id);
                         }
+                    }
+
+                    foreach (var hashSlice in database.DocumentsStorage.AttachmentsStorage.AttachmentStreamsToDeleteAtTheEndOfBatch)
+                    {
+                        database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentStream(context, hashSlice, expectedCount: 0, fromReplication: false);
                     }
 
                     Debug.Assert(_replicationInfo.ReplicatedAttachmentStreams == null ||

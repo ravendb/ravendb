@@ -307,14 +307,14 @@ namespace Raven.Server.Documents.Revisions
                     return false;
             }
 
-            if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.Resolved))
-                return true;
-
             if (Configuration == null)
                 return false;
 
             if (configuration.Disabled)
                 return false;
+
+            if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.Resolved))
+                return true;
 
             if (configuration.MinimumRevisionsToKeep == 0)
             {
@@ -434,7 +434,7 @@ namespace Raven.Server.Documents.Revisions
                 if (flags.Contain(DocumentFlags.HasAttachments) &&
                     flags.Contain(DocumentFlags.Revision) == false)
                 {
-                    _documentsStorage.AttachmentsStorage.RevisionAttachments(context, lowerId, changeVectorSlice);
+                    _documentsStorage.AttachmentsStorage.RevisionAttachments(context, document, lowerId, changeVectorSlice);
                 }
 
                 document = AddCounterAndTimeSeriesSnapshotsIfNeeded(context, id, document);
