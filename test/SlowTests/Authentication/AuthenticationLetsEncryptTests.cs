@@ -89,6 +89,7 @@ namespace SlowTests.Authentication
                     ["A"] = new NodeInfo
                     {
                         Port = GetAvailablePort(),
+                        TcpPort = GetAvailablePort(),
                         Addresses = new List<string>
                         {
                             "127.0.0.1"
