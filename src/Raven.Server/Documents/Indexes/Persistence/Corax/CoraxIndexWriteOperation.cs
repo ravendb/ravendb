@@ -77,8 +77,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             using(scope)
             using (Stats.AddStats.Start())
             {
-                _indexWriter.Update(Constants.Documents.Indexing.Fields.DocumentIdFieldName,
-                    key.AsSpan(), lowerId, data.ToSpan());
+                const string id = Constants.Documents.Indexing.Fields.DocumentIdFieldName;
+                if (data.Length == 0)
+                {
+                    Delete(key, stats);
+                    return;
+                }
+                
+                _indexWriter.Update(id, key.AsSpan(), lowerId, data.ToSpan());
             }
         }
 
