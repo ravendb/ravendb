@@ -115,7 +115,7 @@ public class ShardedQueryProcessor : IDisposable
         queryTemplates = new(_parent.DatabaseContext.ShardCount);
         for (int i = 0; i < _parent.DatabaseContext.ShardCount; i++)
         {
-            queryTemplates.Add(i, queryTemplate.Clone(_context));
+            queryTemplates.Add(i, queryTemplate);
         }
 
         // * For collection queries that specify startsWith by id(), we need to send to all shards
