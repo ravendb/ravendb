@@ -107,7 +107,7 @@ namespace Raven.Client.Json
                 if (_metadata == null)
                     Initialize(_source);
                 Debug.Assert(_metadata != null);
-                if (_metadata.TryGetValue(key, out var currentValue) == false || currentValue.Equals(value) == false)
+                if (_metadata.TryGetValue(key, out var currentValue) == false || (currentValue != null && currentValue.Equals(value) == false) || (currentValue == null && value != null))
                 {
                     _metadata[key] = value;
                     _hasChanges = true;

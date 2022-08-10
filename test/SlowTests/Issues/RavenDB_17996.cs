@@ -33,7 +33,12 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
                 
-                GetValues(id, store);
+                AssertRequestCountEqual(metadataFor => {
+                    foreach (var keyValue in metadataFor)
+                    {
+
+                    }
+                });
                 AssertRequestCountEqual(metadataFor => metadataFor["@collection"] = "Users");
                 AssertRequestCountEqual(metadataFor => metadataFor.Remove(Constants.Documents.Metadata.Refresh));
                 AssertRequestCountEqual(metadataFor => metadataFor.Remove(new KeyValuePair<string, object>(Constants.Documents.Metadata.Refresh, "122123")));
@@ -73,8 +78,15 @@ namespace SlowTests.Issues
                 }
 
                 AssertRequestCountNotEqual(metadataFor => metadataFor.Remove(Constants.Documents.Metadata.LastModified));
-                AssertRequestCountNotEqual(metadataFor => metadataFor.Remove(new KeyValuePair<string, object>(Constants.Documents.Metadata.LastModified, metadataFor[Constants.Documents.Metadata.LastModified])));
+                AssertRequestCountNotEqual(metadataFor =>
+                    metadataFor.Remove(
+                        new KeyValuePair<string, object>(Constants.Documents.Metadata.LastModified, metadataFor[Constants.Documents.Metadata.LastModified])));
                 AssertRequestCountNotEqual(metadataFor => metadataFor["@last-modified"] = "Users");
+                AssertRequestCountNotEqual(metadataFor =>
+                {
+                    metadataFor["@last-modified"] = null;
+                    metadataFor["@last-modified"] = "Users";
+                } );
                 AssertRequestCountNotEqual(metadataFor => metadataFor["@1234"] = "Users");
                 AssertRequestCountNotEqual(metadataFor => metadataFor.Add(new KeyValuePair<string, object>("@sfddfdsf", "fgffffg")));
                 AssertRequestCountNotEqual(metadataFor => metadataFor.Add("@ewewrewr", "fdsfdgfdg"));
@@ -96,26 +108,6 @@ namespace SlowTests.Issues
                     }
                 }
             }
-        }
-        private void GetValues(string id, DocumentStore store)
-        {
-            using (var session = store.OpenSession())
-            {
-                var entity = session.Load<User>(id);
-                var metadataFor = session.Advanced.GetMetadataFor(entity);
-
-                var requestsBefore = session.Advanced.NumberOfRequests;
-
-                foreach (var keyValue in metadataFor)
-                {
-
-                }
-
-                session.SaveChanges();
-
-                Assert.Equal(requestsBefore, session.Advanced.NumberOfRequests);
-            }
-            
         }
     }
 }
