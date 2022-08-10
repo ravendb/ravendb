@@ -459,7 +459,7 @@ namespace Corax
 
                     while (iterator.ReadNext())
                     {
-                        Debug.Assert((fieldType & IndexEntryFieldType.Tuple) == 0);
+                        Debug.Assert((fieldType & IndexEntryFieldType.Tuple) == 0, "(fieldType & IndexEntryFieldType.Tuple) == 0");
                         
                         if ((fieldType & IndexEntryFieldType.HasNulls) != 0 && (iterator.IsEmpty || iterator.IsNull))
                         {
@@ -593,7 +593,7 @@ namespace Corax
                 Span<byte> localValue = stackalloc byte[Constants.Terms.MaxLength];
                 value.Slice(0, Constants.Terms.MaxLength).CopyTo(localValue);
                 int hexSize = Numbers.FillAsHex(localValue.Slice(hashStartingPoint), hash);
-                Debug.Assert(Constants.Terms.MaxLength == hashStartingPoint + hexSize);
+                Debug.Assert(Constants.Terms.MaxLength == hashStartingPoint + hexSize, "Constants.Terms.MaxLength == hashStartingPoint + hexSize");
 
                 return Slice.From(context, localValue, ByteStringType.Mutable, out slice);
             }
@@ -964,7 +964,7 @@ namespace Corax
                 ReadOnlySpan<byte> termsSpan = term.AsSpan();
                 if (fieldTree.TryGetNextValue(termsSpan, out var existing, out var encodedKey) == false)
                 {
-                    Debug.Assert(entries.Removals.Count == 0);
+                    Debug.Assert(entries.Removals.Count == 0, "entries.Removals.Count == 0");
                     AddNewTerm(entries.Additions, tmpBuf, out termId);
                     fieldTree.Add(termsSpan, termId, encodedKey);
                     continue;
@@ -1133,7 +1133,7 @@ namespace Corax
                 using var _ = fieldTree.Read(term, out var result);
                 if (result.HasValue == false)
                 {
-                    Debug.Assert(entries.Removals.Count == 0);
+                    Debug.Assert(entries.Removals.Count == 0, "entries.Removals.Count == 0");
                     AddNewTerm(entries.Additions, tmpBuf, out termId);
                     fieldTree.Add(term, termId);
                     continue;
@@ -1164,7 +1164,7 @@ namespace Corax
                 long termId;
                 if (result.Size == 0) // no existing value
                 {
-                    Debug.Assert(entries.Removals.Count == 0);
+                    Debug.Assert(entries.Removals.Count == 0, "entries.Removals.Count == 0");
                     AddNewTerm(entries.Additions, tmpBuf, out termId);
                     fieldTree.Add(term, termId);
                     continue;
@@ -1210,7 +1210,7 @@ namespace Corax
 
         private void AddNewTerm(List<long> additions, Span<byte> tmpBuf, out long termId, bool sortingNeeded = true)
         {
-            Debug.Assert(additions.Count > 0);
+            Debug.Assert(additions.Count > 0, "additions.Count > 0");
             // common for unique values (guid, date, etc)
             if (additions.Count == 1)
             {
