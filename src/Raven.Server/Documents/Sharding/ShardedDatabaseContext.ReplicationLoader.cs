@@ -1,17 +1,24 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using NCrontab.Advanced.Extensions;
 using Raven.Client.Documents.Operations.Replication;
+using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Exceptions.Sharding;
+using Raven.Client.Http;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.TcpHandlers;
+using Raven.Server.Json;
 using Raven.Server.ServerWide;
+using Raven.Server.Utils;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Voron;
 
 namespace Raven.Server.Documents.Sharding
@@ -89,7 +96,90 @@ namespace Raven.Server.Documents.Sharding
 
                 return new ShardedIncomingReplicationHandler(tcpConnectionOptions, this, buffer, getLatestEtagMessage);
             }
+
+            protected override DynamicJsonValue GetInitialRequestMessage(ReplicationLatestEtagRequest replicationLatestEtagRequest,
+                ReplicationLoader.PullReplicationParams replParams = null)
+            {
+                var (databaseChangeVector, lastReplicateEtag) = GetShardsLastReplicateInfo(replicationLatestEtagRequest.SourceDatabaseId);
+               
+                var request = base.GetInitialRequestMessage(replicationLatestEtagRequest, replParams);
+                request[nameof(ReplicationMessageReply.DatabaseChangeVector)] = databaseChangeVector;
+                request[nameof(ReplicationMessageReply.LastEtagAccepted)] = lastReplicateEtag;
+                return request;
+            }
+
+            private (string LastAcceptedChangeVector, long LastEtagFromSource) GetShardsLastReplicateInfo(string sourceDatabaseId)
+            {
+                var shardExecutor = _context.ShardExecutor;
+
+                var shardsChangeVector = new List<string>();
+                long lastEtagFromSource = 0;
+                using (_context.AllocateContext(out JsonOperationContext ctx))
+                {
+                    for (int i = 0; i < _context.ShardCount; i++)
+                    {
+                        var shardDatabaseName = ShardHelper.ToShardName(DatabaseName, i);
+
+                        var cmd = new GetShardDatabaseReplicationInfoCommand(sourceDatabaseId, shardDatabaseName);
+                        var requestExecutor = shardExecutor.GetRequestExecutorAt(i);
+                        requestExecutor.Execute(cmd, ctx);
+                        var replicationInfo = cmd.Result;
+
+                        var changeVector = replicationInfo.DatabaseChangeVector;
+                        if (changeVector.IsNullOrWhiteSpace() == false)
+                            shardsChangeVector.Add(changeVector);
+
+                        var lastReplicateEtag = replicationInfo.LastEtagFromSource;
+                        lastEtagFromSource = Math.Max(lastEtagFromSource, lastReplicateEtag);
+                    }
+                }
+                
+                var mergedChangeVector = ChangeVectorUtils.MergeVectors(shardsChangeVector);
+                return (mergedChangeVector, lastEtagFromSource);
+            }
         }
+    }
+
+    internal class GetShardDatabaseReplicationInfoCommand : RavenCommand<ReplicationInitialInfo>
+    {
+        private readonly string _sourceDatabaseId;
+        private readonly string _dbName;
+
+        public GetShardDatabaseReplicationInfoCommand(string sourceDatabaseId, string dbName)
+        {
+            _sourceDatabaseId = sourceDatabaseId;
+            _dbName = dbName;
+        }
+
+        public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
+        {
+            url = $"{node.Url}/databases/{_dbName}/replication/initialReplicationInfo?sourceId={_sourceDatabaseId}";
+
+            RequestedNode = node;
+            var request = new HttpRequestMessage
+            {
+                Method = HttpMethod.Get
+            };
+            return request;
+        }
+
+        public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
+        {
+            if (response == null)
+                ThrowInvalidResponse();
+
+            Result = JsonDeserializationServer.ReplicationInitialInfo(response);
+        }
+
+        public ServerNode RequestedNode { get; private set; }
+
+        public override bool IsReadRequest => true;
+    }
+
+    public class ReplicationInitialInfo
+    {
+        public string DatabaseChangeVector;
+        public long LastEtagFromSource;
     }
 
     public class ReplicationBatch
