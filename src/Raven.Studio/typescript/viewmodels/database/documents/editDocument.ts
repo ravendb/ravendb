@@ -42,7 +42,7 @@ import forceRevisionCreationCommand = require("commands/database/documents/force
 import getTimeSeriesStatsCommand = require("commands/database/documents/timeSeries/getTimeSeriesStatsCommand");
 import studioSettings = require("common/settings/studioSettings");
 import globalSettings = require("common/settings/globalSettings");
-import accessManager = require("common/shell/accessManager");
+import fileDownloader = require("common/fileDownloader");
 
 interface revisionToCompare {
     date: string;
@@ -55,6 +55,7 @@ class editDocument extends viewModelBase {
     static documentNameSelector = "#documentName";
     static docEditorSelector = "#docEditor";
     static docEditorSelectorRight = "#docEditorRight";
+    static readonly hugeSizeFormatted = document.hugeSizeFormatted;
 
     inReadOnlyMode = ko.observable<boolean>(false);
     inDiffMode = ko.observable<boolean>(false);
@@ -64,8 +65,12 @@ class editDocument extends viewModelBase {
     leftRevisionIsNewer: KnockoutComputed<boolean>;
     
     revisionChangeVector = ko.observable<string>();
+    
     document = ko.observable<document>();
+    documentItemType: KnockoutComputed<string>;
+    
     documentText = ko.observable("");
+    documentTextOrg = ko.observable("");
     documentTextRight = ko.observable("");
     
     documentTextStash = ko.observable<string>("");
@@ -137,8 +142,13 @@ class editDocument extends viewModelBase {
         this.isClone);
 
     isSaveEnabled: KnockoutComputed<boolean>;
-    
+
     computedDocumentSize: KnockoutComputed<string>;
+    hugeTextSize = ko.observable<number>(0);
+    isHugeDocument = ko.observable<boolean>(false);
+    ignoreHugeDocument = ko.observable<boolean>(false);
+    showHugeDocumentWarning: KnockoutComputed<boolean>;
+    
     sizeOnDiskActual = ko.observable<string>();
     sizeOnDiskAllocated = ko.observable<String>();
     documentSizeHtml: KnockoutComputed<string>;
@@ -170,6 +180,8 @@ class editDocument extends viewModelBase {
     }
 
     canActivate(args: any) {
+        this.ignoreHugeDocument(false);
+        
         return $.when<any>(super.canActivate(args))
             .then(() => {
                 if (args && args.revisionBinEntry && args.id) {
@@ -308,11 +320,16 @@ class editDocument extends viewModelBase {
         });
 
         this.documentText.extend({
-            required: true,
+            required: {
+                onlyIf: () => !this.isHugeDocument() && this.ignoreHugeDocument()
+            },
             aceValidation: true,
             validation: [
                 {
                     validator: (val: string) => {
+                        if ((this.isHugeDocument() && !this.ignoreHugeDocument()) || this.isBusy()) {
+                            return true;
+                        }
                         try {
                             const parsedJson = JSON.parse(val);
                             return _.isPlainObject(parsedJson);
@@ -408,13 +425,26 @@ class editDocument extends viewModelBase {
             if (doc) {
                 const docDto = doc.toDto(true);
                 const metaDto = docDto["@metadata"];
+                
                 if (metaDto) {
                     this.metaPropsToRestoreOnSave.length = 0;
                     documentMetadata.filterMetadata(metaDto, this.metaPropsToRestoreOnSave);
                 }
 
                 const docText = genUtils.stringify(docDto);
-                this.documentText(docText);
+                const textSizeInByes = genUtils.getSizeInBytesAsUTF8(docText);
+                
+                this.isHugeDocument(textSizeInByes > document.hugeSizeInBytesDefault);
+                
+                if (this.isHugeDocument() && !this.ignoreHugeDocument()) {
+                    this.documentTextOrg(docText);
+                    this.documentText(null);
+                    this.hugeTextSize(textSizeInByes);
+                } else {
+                    this.documentTextOrg(null);
+                    this.documentText(docText);
+                    this.hugeTextSize(0);
+                }
             }
         });
 
@@ -445,7 +475,10 @@ class editDocument extends viewModelBase {
 
         this.computedDocumentSize = ko.pureComputed(() => {
             try {
-                const textSize: number = genUtils.getSizeInBytesAsUTF8(this.documentText());
+                if (this.hugeTextSize()) {
+                    return genUtils.formatBytesToSize(this.hugeTextSize());
+                }
+                const textSize = genUtils.getSizeInBytesAsUTF8(this.documentText());
                 const metadataAsString = JSON.stringify(this.metadata().toDto());
                 const metadataSize = genUtils.getSizeInBytesAsUTF8(metadataAsString);
                 const metadataKey = genUtils.getSizeInBytesAsUTF8(", @metadata: ");
@@ -460,8 +493,15 @@ class editDocument extends viewModelBase {
                 return `Computed Size: ${this.computedDocumentSize()} KB`;
             }
             
-            return `<div><strong>Document Size on Disk</strong></div> Actual Size: ${this.sizeOnDiskActual()} <br/> Allocated Size: ${this.sizeOnDiskAllocated()}`;
+            const text = `<div class="margin-top-sm margin-bottom-sm"><strong>Document Size on Disk</strong></div> Actual Size: ${this.sizeOnDiskActual()} <br/> Allocated Size: ${this.sizeOnDiskAllocated()}`;
+            const hugeSizeText = this.isHugeDocument() ? `<br /><div class="text-warning bg-warning margin-top margin-bottom">Document is huge</div>` : "";
+            
+            return text + hugeSizeText;
         });
+        
+        this.documentItemType = ko.pureComputed(() => {
+            return this.inReadOnlyMode() ? 'Revision' : 'Document';
+        })
         
         this.metadata.subscribe((meta: documentMetadata) => {
             if (meta && meta.id) {
@@ -526,6 +566,14 @@ class editDocument extends viewModelBase {
 
         this.canViewCSharpClass = ko.pureComputed(() => {
             return !this.isCreatingNewDocument() && !this.inReadOnlyMode();
+        });
+        
+        this.showHugeDocumentWarning = ko.pureComputed(() => {
+            if (this.isBusy()) {
+                return this.isHugeDocument();
+            } else {
+                return this.isHugeDocument() && !this.ignoreHugeDocument();
+            }
         });
     }
 
@@ -618,6 +666,24 @@ class editDocument extends viewModelBase {
         return collectionForNewDocument + "/";
     }
 
+    reLoadDocument() {
+        this.ignoreHugeDocument(true);
+        
+        if (this.inReadOnlyMode()) {
+            this.loadRevision(this.revisionChangeVector());
+        } else {
+            this.loadDocument(this.document().getId());
+        }
+    }
+    
+    downloadDocument() {
+        fileDownloader.downloadAsJson(this.documentTextOrg(), this.document().getId());
+    }
+    
+    viewRaw() {
+        window.open(this.rawJsonUrl(), "_blank");
+    }
+    
     copyDocumentBodyToClipboard() {
         copyToClipboard.copy(this.documentText(), "Document has been copied to clipboard");
     }
@@ -1001,7 +1067,7 @@ class editDocument extends viewModelBase {
             .done((rightDoc: document) => {
                 const wasDirty = this.dirtyFlag().isDirty();
                 
-                this.documentTextStash(this.documentText());
+                this.documentTextStash(this.documentText() || this.documentTextOrg());
                 
                 const leftDoc = this.document();
                 const leftDocDto = leftDoc.toDiffDto();
@@ -1058,10 +1124,11 @@ class editDocument extends viewModelBase {
         return new getDocumentAtRevisionCommand(changeVector, this.activeDatabase())
             .execute()
             .done((doc: document) => {
+                this.inReadOnlyMode(true);
+                
                 this.document(doc);
                 this.displayDocumentChange(false);
 
-                this.inReadOnlyMode(true);
                 this.revisionChangeVector(changeVector);
 
                 this.dirtyFlag().reset();
