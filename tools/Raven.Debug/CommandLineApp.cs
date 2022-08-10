@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Threading;
 using McMaster.Extensions.CommandLineUtils;
 using Microsoft.Diagnostics.Tools.Dump;
 using Microsoft.Diagnostics.Tools.GCDump;
@@ -329,7 +328,7 @@ namespace Raven.Debug
                 var certPassArg = cmd.Option("--certificate-password", "Certificate password.", CommandOptionType.SingleOrNoValue);
                 var threadsArg = cmd.Option("--threads", $"Number of concurrent threads to run (default: {concurrentThreadsCount})", CommandOptionType.SingleValue);
                 
-                cmd.OnExecute(() =>
+                cmd.OnExecuteAsync(async (_) =>
                 {
                     var path = pathArg.Value();
                     if (string.IsNullOrWhiteSpace(path))
@@ -382,8 +381,7 @@ namespace Raven.Debug
 
                     Console.CancelKeyPress += (sender, args) => logTrafficWatchReply.Stop();
 
-                    using (logTrafficWatchReply)
-                        logTrafficWatchReply.Start().Wait();
+                    await logTrafficWatchReply.Start();
 
                     return 0;
                 });
