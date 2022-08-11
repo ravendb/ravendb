@@ -58,7 +58,7 @@ namespace Raven.Server.ServerWide
         }
         private static object CalculateMemInfo()
         {
-            if (PlatformDetails.RunningOnPosix == false)
+            if (PlatformDetails.RunningOnPosix == false || PlatformDetails.RunningOnMacOsx)
                 return MemInfo.Invalid;
 
             return MemInfoReader.Read();
