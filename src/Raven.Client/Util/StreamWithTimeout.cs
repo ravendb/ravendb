@@ -155,7 +155,7 @@ namespace Raven.Client.Util
         private async Task<int> ReadAsyncWithTimeout(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
             _readCts?.Dispose();
-            _readCts = _readCts == default ? new CancellationTokenSource() : CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            _readCts = cancellationToken == default ? new CancellationTokenSource() : CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             _readCts.CancelAfter(_readTimeout);
 
             var read = await _stream.ReadAsync(buffer, offset, count, _readCts.Token).ConfigureAwait(false);
@@ -196,7 +196,7 @@ namespace Raven.Client.Util
         private Task WriteAsyncWithTimeout(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
             _writeCts?.Dispose();
-            _writeCts = _writeCts == default ? new CancellationTokenSource() : CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            _writeCts = cancellationToken == default ? new CancellationTokenSource() : CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             _writeCts.CancelAfter(_writeTimeout);
 
             return _stream.WriteAsync(buffer, offset, count, _writeCts.Token);
