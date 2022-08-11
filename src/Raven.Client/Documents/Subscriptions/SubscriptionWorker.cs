@@ -226,7 +226,7 @@ namespace Raven.Client.Documents.Subscriptions
                     TcpConnectionHeaderMessage.OperationTypes.Subscription,
                     NegotiateProtocolVersionForSubscriptionAsync,
                     context,
-                    _options?.WorkerStreamTimeout, 
+                    _options?.ConnectionStreamTimeout, 
                     null
 #if TCP_CLIENT_CANCELLATIONTOKEN_SUPPORT
                     ,

@@ -96,7 +96,7 @@ namespace Raven.Client.Documents.Subscriptions
             Strategy = SubscriptionOpeningStrategy.OpenIfFree;
             MaxDocsPerBatch = 4096;
             TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5);
-            WorkerStreamTimeout = TimeSpan.FromSeconds(30);
+            ConnectionStreamTimeout = TimeSpan.FromSeconds(30);
             MaxErroneousPeriod = TimeSpan.FromMinutes(5);
             SendBufferSizeInBytes = DefaultSendBufferSizeInBytes;
             ReceiveBufferSizeInBytes = DefaultReceiveBufferSizeInBytes;
@@ -128,7 +128,7 @@ namespace Raven.Client.Documents.Subscriptions
         /// <summary>
         /// Timeout for writing or reading from worker stream. Default: 30 seconds
         /// </summary>
-        public TimeSpan WorkerStreamTimeout { get; set; }
+        public TimeSpan ConnectionStreamTimeout { get; set; }
 
         /// <summary>
         /// Whether subscriber error should halt the subscription processing or not. Default: false
