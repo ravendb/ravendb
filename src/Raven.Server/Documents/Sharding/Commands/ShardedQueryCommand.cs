@@ -1,12 +1,10 @@
 ﻿using System.Net.Http;
-using Raven.Client;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Json;
 using Raven.Client.Json.Serialization;
 using Raven.Server.Documents.Queries;
-using Raven.Server.Documents.Sharding.Handlers;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Commands;
@@ -16,21 +14,10 @@ public class ShardedQueryCommand : AbstractQueryCommand<BlittableJsonReaderObjec
     private readonly BlittableJsonReaderObject _query;
     private readonly string _indexName;
 
-    public ShardedQueryCommand(ShardedDatabaseRequestHandler handler, BlittableJsonReaderObject query, IndexQueryServerSide indexQuery, bool metadataOnly, bool indexEntriesOnly, string indexName) : base(indexQuery, false, metadataOnly, indexEntriesOnly)
+    public ShardedQueryCommand(BlittableJsonReaderObject query, IndexQueryServerSide indexQuery, bool metadataOnly, bool indexEntriesOnly, string indexName) : base(indexQuery, false, metadataOnly, indexEntriesOnly)
     {
         _query = query;
         _indexName = indexName;
-
-        ModifyRequest = r =>
-        {
-            // TODO arek - this is temporaty solution, we need to refactor that
-
-            r.Headers.TryAddWithoutValidation(Constants.Headers.Sharded, "true");
-
-            var lastKnownClusterTransactionIndex = handler.GetStringFromHeaders(Constants.Headers.LastKnownClusterTransactionIndex);
-            if (lastKnownClusterTransactionIndex != null)
-                r.Headers.TryAddWithoutValidation(Constants.Headers.LastKnownClusterTransactionIndex, lastKnownClusterTransactionIndex);
-        };
     }
 
     protected override ulong GetQueryHash(JsonOperationContext ctx)

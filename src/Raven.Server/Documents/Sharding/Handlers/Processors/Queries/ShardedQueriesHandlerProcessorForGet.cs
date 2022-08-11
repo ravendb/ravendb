@@ -64,43 +64,11 @@ internal class ShardedQueriesHandlerProcessorForGet : AbstractQueriesHandlerProc
         DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal,
             @"RavenDB-19071 what do we do with: var diagnostics = GetBoolValueQueryString(""diagnostics"", required: false) ?? false");
 
-        _queryProcessor = new ShardedQueryProcessor(queryContext, RequestHandler, query, metadataOnly, indexEntriesOnly: false, token: token.Token);
+        _queryProcessor = new ShardedQueryProcessor(queryContext, RequestHandler, query, existingResultEtag, metadataOnly, indexEntriesOnly: false, token: token.Token);
 
-        _queryProcessor.Initialize(out _);
+        _queryProcessor.Initialize();
 
-        await _queryProcessor.ExecuteShardedOperations();
-
-        if (existingResultEtag != null && query.Metadata.HasOrderByRandom == false)
-        {
-            if (existingResultEtag == _queryProcessor.ResultsEtag)
-                return new ShardedQueryResult { NotModified = true };
-        }
-
-        // * For includes, we send the includes to all shards, then we merge them together. We do explicitly
-        //   support including from another shard, so we'll need to do that again for missing includes
-        //   That means also recording the include() call from JS on missing values that we'll need to rerun on
-        //   other shards
-        var includeTask = _queryProcessor.HandleIncludes();
-        if (includeTask.IsCompletedSuccessfully == false)
-        {
-            await includeTask.AsTask();
-        }
-
-        _queryProcessor.MergeResults();
-
-        // * For map/reduce - we need to re-run the reduce portion of the index again on the results
-        _queryProcessor.ReduceResults();
-
-        _queryProcessor.ApplyPaging();
-
-        // * For map-reduce indexes we project the results after the reduce part 
-        _queryProcessor.ProjectAfterMapReduce();
-
-        var result = _queryProcessor.GetResult();
-
-        // * For JS projections and load clauses, we don't support calling load() on a
-        //   document that is not on the same shard
-        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "RavenDB-17889 Add a test for that");
+        var result = await _queryProcessor.ExecuteShardedOperations();
 
         return result;
     }
