@@ -236,8 +236,8 @@ namespace Raven.Server.Documents
                 string disableMarkerPath = DocumentDatabase.Configuration.Core.DataDirectory.Combine("disable.marker").FullPath;
                 if (File.Exists(disableMarkerPath))
                 {
-                    throw new DatabaseDisabledException("Unable to open database: " + _name + ", it has been manually disabled via the file: '" + disableMarkerPath +"'." +
-                                                 "To re-enable, remove the disable.marker and reload the database.");
+                    throw new DatabaseDisabledException(
+                        $"Unable to open database: '{_name}', it has been manually disabled via the file: '{disableMarkerPath}'. To re-enable, remove the disable.marker and reload the database.");
                 }
 
             }
