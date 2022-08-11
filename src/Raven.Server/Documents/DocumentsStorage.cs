@@ -730,6 +730,7 @@ namespace Raven.Server.Documents
             long start, long take, string collection, Reference<long> skippedResults, DocumentFields fields = DocumentFields.All)
         {
             var isAllDocs = collection == Constants.Documents.Collections.AllDocumentsCollection;
+            var isEmptyCollection = collection == Constants.Documents.Collections.EmptyCollection;
             var requestedDataField = fields.HasFlag(DocumentFields.Data);
             if (isAllDocs == false && requestedDataField == false)
                 fields |= DocumentFields.Data;
@@ -779,8 +780,16 @@ namespace Raven.Server.Documents
                 if (metadata.TryGet(Constants.Documents.Metadata.Collection, out LazyStringValue c) == false)
                     return false;
 
-                if (c == null || lzv.EqualsOrdinalIgnoreCase(c) == false)
-                    return false;
+                if (c != null)
+                {
+                    if (lzv.EqualsOrdinalIgnoreCase(c) == false)
+                        return false;
+                }
+                else
+                {
+                    if (isEmptyCollection == false)
+                        return false;
+                }
 
                 return true;
             }
