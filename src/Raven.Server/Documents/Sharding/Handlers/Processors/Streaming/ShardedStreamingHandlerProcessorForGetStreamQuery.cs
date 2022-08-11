@@ -80,34 +80,11 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
 
         private async ValueTask<(IEnumerator<BlittableJsonReaderObject>, StreamQueryStatistics)> ExecuteQueryAsync(TransactionOperationContext context, IndexQueryServerSide query, string debug, bool ignoreLimit, OperationCancelToken token)
         {
-            var queryProcessor = new ShardedQueryStreamProcessor(context, RequestHandler, query, token.Token);
-            if (queryProcessor.IsMapReduce())
-                throw new NotSupportedInShardingException("MapReduce is not supported in sharded streaming queries");
+            using var queryProcessor = new ShardedQueryStreamProcessor(context, RequestHandler, query, debug, ignoreLimit, token.Token);
 
-            if (query.Metadata.HasIncludeOrLoad)
-                throw new NotSupportedInShardingException("Includes and Loads are not supported in sharded streaming queries");
+            queryProcessor.Initialize();
 
-            queryProcessor.Initialize(out Dictionary<int, BlittableJsonReaderObject> queryTemplates);
-
-            var cmds = new Dictionary<int, PostQueryStreamCommand>(RequestHandler.DatabaseContext.ShardCount);
-            foreach(var (shard, queryTemplate) in queryTemplates)
-            {
-                cmds.Add(shard, new PostQueryStreamCommand(queryTemplate, debug, ignoreLimit));
-            }
-
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Stav, DevelopmentHelper.Severity.Normal, "Handle continuation token in streaming");
-            
-            IComparer<BlittableJsonReaderObject> comparer = query.Metadata.OrderBy?.Length > 0
-                ? new ShardedDocumentsComparer(query.Metadata, isMapReduce: false)
-                : new DocumentBlittableLastModifiedComparer();
-
-            var op = new ShardedStreamQueryOperation(HttpContext, () =>
-            {
-                IDisposable returnToContextPool = ContextPool.AllocateOperationContext(out JsonOperationContext ctx);
-                return (ctx, returnToContextPool);
-            }, comparer, cmds,  skip: query.Offset ?? 0, take: query.Limit ?? Int32.MaxValue, token.Token);
-
-            return await RequestHandler.ShardExecutor.ExecuteParallelForShardsAsync(cmds.Keys.ToArray() ,op, token.Token);
+            return await queryProcessor.ExecuteShardedOperations();
         }
 
         protected override async ValueTask ExecuteAndWriteQueryStreamAsync(TransactionOperationContext context, IndexQueryServerSide query, string format,

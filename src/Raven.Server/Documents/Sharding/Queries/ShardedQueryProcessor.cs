@@ -1,29 +1,21 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Net.Http;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client;
-using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
-using Raven.Client.Documents.Session;
-using Raven.Client.Exceptions.Sharding;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries;
-using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Results.Sharding;
 using Raven.Server.Documents.Queries.Sharding;
-using Raven.Server.Documents.Replication.Senders;
 using Raven.Server.Documents.Sharding.Commands;
 using Raven.Server.Documents.Sharding.Handlers;
+using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.ServerWide.Context;
-using Sparrow;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Sparrow.Utils;
-using Voron;
 
 namespace Raven.Server.Documents.Sharding.Queries;
 
@@ -31,19 +23,11 @@ namespace Raven.Server.Documents.Sharding.Queries;
 /// A struct that we use to hold state and break the process
 /// of handling a sharded query into distinct steps
 /// </summary>
-public class ShardedQueryProcessor : IDisposable
+public class ShardedQueryProcessor : AbstractShardedQueryProcessor<ShardedQueryCommand, QueryResult, ShardedQueryResult>
 {
-    protected readonly TransactionOperationContext _context;
-    protected readonly ShardedDatabaseRequestHandler _requestHandler;
-    private readonly IndexQueryServerSide _query;
-    private readonly bool _metadataOnly;
-    private readonly bool _indexEntriesOnly;
-    private readonly CancellationToken _token;
-    private readonly bool _isMapReduceIndex;
-    private readonly bool _isAutoMapReduceQuery;
-    protected readonly Dictionary<int, ShardedQueryCommand> _commands;
+    private readonly long? _existingResultEtag;
+
     //private readonly HashSet<int> _filteredShardIndexes;
-    protected readonly ShardedQueryResult _result;
     private readonly List<IDisposable> _disposables = new();
 
     private IncludeCompareExchangeValuesCommand _includeCompareExchangeValues;
@@ -53,23 +37,14 @@ public class ShardedQueryProcessor : IDisposable
     // want to run a query and knows what shards it is on. Such as:
     // from Orders where State = $state and User = $user where all the orders are on the same share as the user
 
-    public ShardedQueryProcessor(TransactionOperationContext context, ShardedDatabaseRequestHandler requestHandler, IndexQueryServerSide query, bool metadataOnly, bool indexEntriesOnly,
-        CancellationToken token)
+    public ShardedQueryProcessor(TransactionOperationContext context, ShardedDatabaseRequestHandler requestHandler, IndexQueryServerSide query, long? existingResultEtag, bool metadataOnly, bool indexEntriesOnly,
+        CancellationToken token) : base(context, requestHandler, query, metadataOnly, indexEntriesOnly, token)
     {
+        _existingResultEtag = existingResultEtag;
         DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "RavenDB-19084 Etag handling");
 
-        _context = context;
-        _result = new ShardedQueryResult();
-        _requestHandler = requestHandler;
-        _query = query;
-        _metadataOnly = metadataOnly;
-        _indexEntriesOnly = indexEntriesOnly;
-        _token = token;
-        _isMapReduceIndex = _query.Metadata.IndexName != null && (_requestHandler.DatabaseContext.Indexes.GetIndex(_query.Metadata.IndexName)?.Type.IsMapReduce() ?? false);
-        _isAutoMapReduceQuery = _query.Metadata.IsDynamic && _query.Metadata.IsGroupBy;
-        _commands = new Dictionary<int, ShardedQueryCommand>();
-
         DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "RavenDB-19084 Add an option to select the shards for query in the client");
+        
         //if (_query.QueryParameters != null && _query.QueryParameters.TryGet("@sharding-context", out BlittableJsonReaderArray filter))
         //{
         //    _filteredShardIndexes = new HashSet<int>();
@@ -84,388 +59,112 @@ public class ShardedQueryProcessor : IDisposable
         //}
     }
 
-    public long ResultsEtag => _result.ResultEtag;
-
-    public void Initialize(out Dictionary<int, BlittableJsonReaderObject> queryTemplates)
+    protected override ShardedQueryCommand CreateCommand(BlittableJsonReaderObject query)
     {
-        AssertUsingCustomSorters();
-
-        // now we have the index query, we need to process that and decide how to handle this.
-        // There are a few different modes to handle:
-        var queryTemplate = _query.ToJson(_context);
-        if (_query.Metadata.IsCollectionQuery)
-        {
-            // * For collection queries that specify ids, we can turn that into a set of loads that 
-            //   will hit the known servers
-
-            (List<Slice> ids, string _) = _query.ExtractIdsFromQuery(_requestHandler.ServerStore, _context.Allocator, _requestHandler.DatabaseContext.DatabaseName);
-            if (ids != null)
-            {
-                GenerateLoadByIdQueries(ids, out queryTemplates);
-                return;
-            }
-        }
-
-        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal,
-            "RavenDB-19084 Use a single rewrite method in order to avoid cloning the query twice");
-
-        // * For paging queries, we modify the limits on the query to include all the results from all
-        //   shards if there is an offset. But if there isn't an offset, we can just get the limit from
-        //   each node and then merge them
-        RewriteQueryForPaging(ref queryTemplate);
-
-        // * If we have a projection in a map-reduce index,
-        //   the shards will send the query result and the orchestrator will re-reduce and apply the projection
-        //   in that case we must send the query without the projection
-        RewriteQueryForProjection(ref queryTemplate);
-
-        queryTemplates = new(_requestHandler.DatabaseContext.ShardCount);
-        for (int i = 0; i < _requestHandler.DatabaseContext.ShardCount; i++)
-        {
-            queryTemplates.Add(i, queryTemplate);
-        }
-
-        // * For collection queries that specify startsWith by id(), we need to send to all shards
-        // * For collection queries without any where clause, we need to send to all shards
-        // * For indexes, we sent to all shards
-        CreateQueryCommands(queryTemplates, _query.Metadata.IndexName);
+        return new ShardedQueryCommand(_context.ReadObject(query, "query"), _query, _metadataOnly, _indexEntriesOnly, _query.Metadata.IndexName);
     }
 
-    public virtual void CreateQueryCommands(Dictionary<int, BlittableJsonReaderObject> queryTemplates, string indexName)
+    public override async Task<ShardedQueryResult> ExecuteShardedOperations()
     {
-        foreach (var (shard, queryTemplate) in queryTemplates)
-        {
-            //if (_filteredShardIndexes?.Contains(i) == false)
-            //    continue;
-
-            _commands.TryAdd(shard, new ShardedQueryCommand(_requestHandler, _context.ReadObject(queryTemplate, "query"), _query, _metadataOnly, _indexEntriesOnly, _query.Metadata.IndexName));
-        }
-    }
-
-    private void AssertUsingCustomSorters()
-    {
-        if (_query.Metadata.OrderBy == null)
-            return;
-
-        foreach (var field in _query.Metadata.OrderBy)
-        {
-            if (field.OrderingType == OrderByFieldType.Custom)
-                throw new NotSupportedInShardingException("Custom sorting is not supported in sharding as of yet");
-        }
-    }
-
-    private void RewriteQueryForPaging(ref BlittableJsonReaderObject queryTemplate)
-    {
-        if (_query.Offset is null or <= 0)
-            return;
-
-        const string limitToken = "__raven_limit";
-        var clone = _query.Metadata.Query.ShallowCopy();
-        clone.Offset = null; // sharded queries has to start from 0 on all nodes
-        clone.Limit = new ValueExpression(limitToken, ValueTokenType.Parameter);
-        queryTemplate.Modifications = new DynamicJsonValue(queryTemplate)
-        {
-            [nameof(IndexQuery.Query)] = clone.ToString()
-        };
-        DynamicJsonValue modifiedArgs;
-        if (queryTemplate.TryGet(nameof(IndexQuery.QueryParameters), out BlittableJsonReaderObject args))
-        {
-            modifiedArgs = new DynamicJsonValue(args);
-            args.Modifications = modifiedArgs;
-        }
-        else
-        {
-            queryTemplate.Modifications[nameof(IndexQuery.QueryParameters)] = modifiedArgs = new DynamicJsonValue();
-        }
-
-        var limit = ((_query.Limit ?? 0) + (_query.Offset ?? 0)) * (long)_requestHandler.DatabaseContext.ShardCount;
-
-        if (limit > int.MaxValue) // overflow
-            limit = int.MaxValue;
-
-        modifiedArgs[limitToken] = limit;
-
-        queryTemplate.Modifications.Remove(nameof(IndexQueryServerSide.Start));
-        queryTemplate.Modifications.Remove(nameof(IndexQueryServerSide.PageSize));
-
-        queryTemplate = _context.ReadObject(queryTemplate, "modified-query");
-    }
-
-    private void RewriteQueryForProjection(ref BlittableJsonReaderObject queryTemplate)
-    {
-        var query = _query.Metadata.Query;
-        if (query.Select?.Count > 0 == false &&
-            query.SelectFunctionBody.FunctionText == null)
-            return;
-
-        if (_query.Metadata.IndexName == null || _isMapReduceIndex == false)
-            return;
-
-        if (query.Load is { Count: > 0 })
-        {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "https://issues.hibernatingrhinos.com/issue/RavenDB-17887");
-            throw new NotSupportedInShardingException("Loading a document inside a projection from a map-reduce index isn't supported");
-        }
-
-        var clone = query.ShallowCopy();
-        clone.Select = null;
-        clone.SelectFunctionBody = default;
-        clone.DeclaredFunctions = null;
-
-        queryTemplate.Modifications = new DynamicJsonValue(queryTemplate)
-        {
-            [nameof(IndexQuery.Query)] = clone.ToString()
-        };
-
-        queryTemplate = _context.ReadObject(queryTemplate, "modified-query");
-    }
-
-    private void GenerateLoadByIdQueries(IEnumerable<Slice> ids, out Dictionary<int, BlittableJsonReaderObject> queryTemplates)
-    {
-        const string listParameterName = "p0";
-
-        var shards = ShardLocator.GetDocumentIdsByShards(_context, _requestHandler.DatabaseContext, ids);
-
-        var documentQuery = new DocumentQuery<dynamic>(null, null, _query.Metadata.CollectionName, false);
-        documentQuery.WhereIn(Constants.Documents.Indexing.Fields.DocumentIdFieldName, new List<object>());
-
-        if (_query.Metadata.Includes is {Length: > 0})
-        {
-            foreach (var include in _query.Metadata.Includes)
-            {
-                documentQuery.Include(include);
-            }
-        }
-
-        
-        queryTemplates = new ();
-
-        foreach ((int shardId, ShardLocator.IdsByShard<Slice> documentIds) in shards)
-        {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "RavenDB-19084 have a way to turn the _query into a json file and then we'll modify that, instead of building it manually");
-
-            var q = new DynamicJsonValue
-            {
-                [nameof(IndexQuery.QueryParameters)] = new DynamicJsonValue
-                {
-                    [listParameterName] = GetIds()
-                },
-                [nameof(IndexQuery.Query)] = documentQuery.ToString()
-            };
-            _commands[shardId] = new ShardedQueryCommand(_requestHandler, _context.ReadObject(q, "query"), _query, _metadataOnly, _indexEntriesOnly, _query.Metadata.IndexName);
-
-            IEnumerable<string> GetIds()
-            {
-                foreach (var idAsAlice in documentIds.Ids)
-                {
-                    yield return idAsAlice.ToString();
-                }
-            }
-        }
-
-        CreateQueryCommands(queryTemplates, indexName: null);
-    }
-
-    public async Task ExecuteShardedOperations()
-    {
-        var tasks = new List<Task>();
-
-        foreach (var (shardNumber, cmd) in _commands)
-        {
-            _disposables.Add(_requestHandler.ContextPool.AllocateOperationContext(out TransactionOperationContext context));
-            var task = _requestHandler.DatabaseContext.ShardExecutor.GetRequestExecutorAt(shardNumber).ExecuteAsync(cmd, context, token: _token);
-            tasks.Add(task);
-        }
-        
-        await Task.WhenAll(tasks);
-
-        long? index = null;
-        foreach (var (_, cmd) in _commands)
-        {
-            _result.ResultEtag = Hashing.Combine(_result.ResultEtag, cmd.Result.ResultEtag);
-
-            if (cmd.Result.RaftCommandIndex.HasValue)
-            {
-                if (index == null || cmd.Result.RaftCommandIndex > index)
-                    index = cmd.Result.RaftCommandIndex;
-            }
-        }
-
         if (_query.Metadata.HasCmpXchgIncludes)
         {
             _includeCompareExchangeValues = IncludeCompareExchangeValuesCommand.ExternalScope(_requestHandler.DatabaseContext, _query.Metadata.CompareExchangeValueIncludes);
             _disposables.Add(_includeCompareExchangeValues);
+        }
+        
+        ShardedDocumentsComparer documentsComparer = null;
 
-            _result.AddCompareExchangeValueIncludes(_includeCompareExchangeValues);
+        if (_query.Metadata.OrderBy?.Length > 0 && (_isMapReduceIndex || _isAutoMapReduceQuery) == false)
+        {
+            // sorting only if:
+            // 1. we have fields to sort
+            // 2. it isn't a map-reduce index/query (the sorting will be done after the re-reduce)
+            documentsComparer = new ShardedDocumentsComparer(_query.Metadata, _isMapReduceIndex || _isAutoMapReduceQuery);
         }
 
-        if (_isAutoMapReduceQuery && index.HasValue)
+        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "RavenDB-19084 TODO arek - ExpectedEtag");
+
+        var operation = new ShardedQueryOperation(_context, _requestHandler, _commands, _includeCompareExchangeValues, documentsComparer, null);
+
+        var result = (await _requestHandler.ShardExecutor.ExecuteParallelForShardsAsync(_commands.Keys.ToArray(), operation, _token)).Result;
+        
+        if (_isAutoMapReduceQuery && result.RaftCommandIndex.HasValue)
         {
             // we are waiting here for all nodes, we should wait for all of the orchestrators at least to apply that
             // so further queries would not throw index does not exist in case of a failover
-            await _requestHandler.DatabaseContext.Cluster.WaitForExecutionOnAllNodesAsync(index.Value);
+            await _requestHandler.DatabaseContext.Cluster.WaitForExecutionOnAllNodesAsync(result.RaftCommandIndex.Value);
         }
+
+        if (_existingResultEtag != null && _query.Metadata.HasOrderByRandom == false)
+        {
+            if (_existingResultEtag == result.ResultEtag)
+                return new ShardedQueryResult { NotModified = true };
+        }
+
+        if (operation.MissingIncludes is {Count: > 0})
+        {
+            await HandleMissingIncludes(operation.MissingIncludes, result);
+        }
+
+        // For map/reduce - we need to re-run the reduce portion of the index again on the results
+        ReduceResults(ref result);
+
+        ApplyPaging(ref result);
+
+        // For map-reduce indexes we project the results after the reduce part 
+        ProjectAfterMapReduce(ref result);
+
+        // * For JS projections and load clauses, we don't support calling load() on a
+        //   document that is not on the same shard
+        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "RavenDB-17889 Add a test for that");
+
+        return result;
     }
 
-    public ValueTask HandleIncludes()
+    private async Task HandleMissingIncludes(HashSet<string> missingIncludes, ShardedQueryResult result)
     {
-        HashSet<string> missing = null;
-        foreach (var (_, cmd) in _commands)
+        var missingIncludeIdsByShard = ShardLocator.GetDocumentIdsByShards(_context, _requestHandler.DatabaseContext, missingIncludes);
+        var missingIncludesOp = new FetchDocumentsFromShardsOperation(_context, _requestHandler, missingIncludeIdsByShard, null, null, null, _metadataOnly);
+        var missingResult = await _requestHandler.DatabaseContext.ShardExecutor.ExecuteParallelForShardsAsync(missingIncludeIdsByShard.Keys.ToArray(), missingIncludesOp, _token);
+
+        foreach (var (_, missing) in missingResult.Result.Documents)
         {
-            if (cmd.Result.Includes is { Count: > 0 })
-            {
-                _result.Includes ??= new List<BlittableJsonReaderObject>();
-                foreach (var id in cmd.Result.Includes.GetPropertyNames())
-                {
-                    if (cmd.Result.Includes.TryGet(id, out BlittableJsonReaderObject include) && include != null)
-                    {
-                        _result.Includes.Add(include);
-                    }
-                    else
-                    {
-                        (missing ??= new HashSet<string>()).Add(id);
-                    }
-                }
-            }
-
-            if (_includeCompareExchangeValues != null && cmd.Result.CompareExchangeValueIncludes != null)
-                _includeCompareExchangeValues.AddResults(cmd.Result.CompareExchangeValueIncludes);
-        }
-
-        if (missing == null || missing.Count == 0)
-        {
-            return ValueTask.CompletedTask;
-        }
-
-        return HandleMissingIncludesAsync(missing);
-    }
-
-    private async ValueTask HandleMissingIncludesAsync(HashSet<string> missing)
-    {
-        var getDocumentsCommands = new Dictionary<int, GetDocumentsCommand>();
-        var shards = ShardLocator.GetDocumentIdsByShards(_context, _requestHandler.DatabaseContext, missing);
-
-        foreach ((int shardId, ShardLocator.IdsByShard<string> documentIds) in shards)
-        {
-            getDocumentsCommands[shardId] = new GetDocumentsCommand(documentIds.Ids.ToArray(), includes: null, metadataOnly: false);
-        }
-
-        var tasks = new List<Task>();
-        foreach (var (shardNumber, cmd) in getDocumentsCommands)
-        {
-            _disposables.Add(_requestHandler.ContextPool.AllocateOperationContext(out TransactionOperationContext context));
-            tasks.Add(_requestHandler.DatabaseContext.ShardExecutor.GetRequestExecutorAt(shardNumber).ExecuteAsync(cmd, context, token: _token));
-        }
-
-        await Task.WhenAll(tasks);
-        foreach (var (_, cmd) in getDocumentsCommands)
-        {
-            if (cmd.Result == null)
+            if (missing == null)
                 continue;
 
-            foreach (BlittableJsonReaderObject result in cmd.Result.Results)
-            {
-                if (result == null)
-                    continue;
-
-                _result.Includes.Add(result);
-            }
+            result.Includes.Add(missing);
         }
     }
 
-    public void ApplyPaging()
+    private void ApplyPaging(ref ShardedQueryResult result)
     {
-        if (_query.Offset is > 0 && _result.Results.Count > _query.Offset)
+        if (_query.Offset is > 0 && result.Results.Count > _query.Offset)
         {
-            _result.Results.RemoveRange(0, _query.Offset ?? 0);
+            result.Results.RemoveRange(0, _query.Offset ?? 0);
         }
 
-        if (_query.Limit is > 0 && _result.Results.Count > _query.Limit)
+        if (_query.Limit is > 0 && result.Results.Count > _query.Limit)
         {
-            _result.Results.RemoveRange(_query.Limit.Value, _result.Results.Count - _query.Limit.Value);
-        }
-    }
-
-    public void MergeResults()
-    {
-        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "RavenDB-19084 Use IShardedOperation");
-
-        _result.Results = new List<BlittableJsonReaderObject>();
-
-        // sorting only if:
-        // 1. we have fields to sort
-        // 2. it isn't a map-reduce index/query (the sorting will be done after the re-reduce)
-        var sortResults = _query.Metadata.OrderBy?.Length > 0 && (_isMapReduceIndex || _isAutoMapReduceQuery) == false;
-
-        foreach (var (_, cmd) in _commands)
-        {
-            _result.TotalResults += cmd.Result.TotalResults;
-            _result.IsStale |= cmd.Result.IsStale;
-            _result.SkippedResults += cmd.Result.SkippedResults;
-            _result.IndexName = cmd.Result.IndexName;
-            _result.IncludedPaths = cmd.Result.IncludedPaths;
-            if (_result.IndexTimestamp < cmd.Result.IndexTimestamp)
-            {
-                _result.IndexTimestamp = cmd.Result.IndexTimestamp;
-            }
-
-            if (_result.LastQueryTime < cmd.Result.LastQueryTime)
-            {
-                _result.LastQueryTime = cmd.Result.LastQueryTime;
-            }
-
-            if (sortResults == false)
-            {
-                foreach (BlittableJsonReaderObject item in cmd.Result.Results)
-                {
-                    _result.Results.Add(item);
-                }
-            }
-        }
-
-        if (sortResults == false)
-            return;
-
-        // all the results from each command are already ordered
-        var documentsComparer = new ShardedDocumentsComparer(_query.Metadata, _isMapReduceIndex || _isAutoMapReduceQuery);
-        using (var mergedEnumerator = new MergedEnumerator<BlittableJsonReaderObject>(documentsComparer))
-        {
-            foreach (var command in _commands)
-            {
-                mergedEnumerator.AddEnumerator(GetEnumerator(command.Value.Result.Results));
-            }
-
-            static IEnumerator<BlittableJsonReaderObject> GetEnumerator(BlittableJsonReaderArray array)
-            {
-                foreach (BlittableJsonReaderObject item in array)
-                {
-                    yield return item;
-                }
-            }
-
-            while (mergedEnumerator.MoveNext())
-            {
-                _result.Results.Add(mergedEnumerator.Current);
-            }
+            result.Results.RemoveRange(_query.Limit.Value, result.Results.Count - _query.Limit.Value);
         }
     }
 
-    public void ReduceResults()
+    private void ReduceResults(ref ShardedQueryResult result)
     {
         if (_isMapReduceIndex || _isAutoMapReduceQuery)
         {
-            var merger = new ShardedMapReduceQueryResultsMerger(_result.Results, _requestHandler.DatabaseContext.Indexes, _result.IndexName, _isAutoMapReduceQuery, _context);
-            _result.Results = merger.Merge();
+            var merger = new ShardedMapReduceQueryResultsMerger(result.Results, _requestHandler.DatabaseContext.Indexes, result.IndexName, _isAutoMapReduceQuery, _context);
+            result.Results = merger.Merge();
 
             if (_query.Metadata.OrderBy?.Length > 0 && (_isMapReduceIndex || _isAutoMapReduceQuery))
             {
                 // apply ordering after the re-reduce of a map-reduce index
-                _result.Results.Sort(new ShardedDocumentsComparer(_query.Metadata, isMapReduce: true));
+                result.Results.Sort(new ShardedDocumentsComparer(_query.Metadata, isMapReduce: true));
             }
         }
     }
 
-    public void ProjectAfterMapReduce()
+    private void ProjectAfterMapReduce(ref ShardedQueryResult result)
     {
         if (_isMapReduceIndex == false && _isAutoMapReduceQuery == false
             || (_query.Metadata.Query.Select == null || _query.Metadata.Query.Select.Count == 0)
@@ -476,8 +175,8 @@ public class ShardedQueryProcessor : IDisposable
         var retriever = new ShardedMapReduceResultRetriever(_requestHandler.DatabaseContext.Indexes.ScriptRunnerCache, _query, null, SearchEngineType.Lucene, fieldsToFetch, null, _context, false, null, null, null,
             _requestHandler.DatabaseContext.IdentityPartsSeparator);
 
-        var currentResults = _result.Results;
-        _result.Results = new List<BlittableJsonReaderObject>();
+        var currentResults = result.Results;
+        result.Results = new List<BlittableJsonReaderObject>();
 
         foreach (var data in currentResults)
         {
@@ -486,6 +185,8 @@ public class ShardedQueryProcessor : IDisposable
             {
                 Data = data
             }, ref retrieverInput, fieldsToFetch, _context, CancellationToken.None);
+            
+            var results = result.Results;
 
             if (document != null)
             {
@@ -501,28 +202,13 @@ public class ShardedQueryProcessor : IDisposable
 
             void AddDocument(BlittableJsonReaderObject documentData)
             {
-                var result = _context.ReadObject(documentData, "modified-map-reduce-result");
-                _result.Results.Add(result);
+                var doc = _context.ReadObject(documentData, "modified-map-reduce-result");
+                results.Add(doc);
             }
         }
     }
 
-    public ShardedQueryResult GetResult()
-    {
-        return _result;
-    }
-
-    public bool IsMapReduce()
-    {
-        return _isAutoMapReduceQuery || _isMapReduceIndex;
-    }
-
-    public bool IsIncludes()
-    {
-        return _query.Metadata.Includes?.Length > 0;
-    }
-
-    public void Dispose()
+    public override void Dispose()
     {
         foreach (var toDispose in _disposables)
         {
