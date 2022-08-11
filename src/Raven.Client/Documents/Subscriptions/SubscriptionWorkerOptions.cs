@@ -126,7 +126,7 @@ namespace Raven.Client.Documents.Subscriptions
         public TimeSpan TimeToWaitBeforeConnectionRetry { get; set; }
 
         /// <summary>
-        /// Timeout for writing or reading from worker stream. Default: 2 minutes
+        /// Timeout for writing or reading from worker stream. Default: 30 seconds
         /// </summary>
         public TimeSpan WorkerStreamTimeout { get; set; }
 
