@@ -375,7 +375,12 @@ namespace FastTests
 
         protected static async Task WaitAndAssertForValueAsync<T>(Func<Task<T>> act, T expectedVal, int timeout = 15000, int interval = 100)
         {
-            var val = await WaitForPredicateAsync(t => t.Equals(expectedVal), act, timeout, interval);
+            var val = await WaitForPredicateAsync(t =>
+            {
+                if (t == null)
+                    return expectedVal == null;
+                return t.Equals(expectedVal);
+            }, act, timeout, interval);
             Assert.Equal(expectedVal, val);
         }
 
