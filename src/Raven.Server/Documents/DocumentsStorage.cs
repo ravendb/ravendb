@@ -739,52 +739,47 @@ namespace Raven.Server.Documents
             return lastEtag;
         }
 
-        public IEnumerable<Document> GetDocumentsStartingWith(DocumentsOperationContext context, string idPrefix,  string startAfterId,
+        public IEnumerable<Document> GetDocumentsStartingWith(DocumentsOperationContext context, string idPrefix, string startAfterId,
             long start, long take, string collection, Reference<long> skippedResults, DocumentFields fields = DocumentFields.All)
         {
-            int alreadyReturnedDocumentsCount = 0;
-            int lastLoadedDocumentsCount;
             var isAllDocs = collection == Constants.Documents.Collections.AllDocumentsCollection;
             var requestedDataField = fields.HasFlag(DocumentFields.Data);
             if (isAllDocs == false && requestedDataField == false)
                 fields |= DocumentFields.Data;
-            
-            do
+
+            // we request ALL documents that start with `idPrefix` and filter it here by the collection name
+            foreach (var doc in GetDocumentsStartingWith(context, idPrefix, null, null, startAfterId, start, take: long.MaxValue, fields: fields))
             {
-                lastLoadedDocumentsCount = 0;
-                foreach (var doc in GetDocumentsStartingWith(context, idPrefix, null, null, startAfterId, start, take, fields: fields))
+                if (isAllDocs)
                 {
-                    lastLoadedDocumentsCount++;
-                    if (isAllDocs)
-                    {
-                        yield return doc;
-                        continue;
-                    }
-
-                    if (IsCollectionMatch(doc, collection) == false)
-                    {
-                        skippedResults.Value++;
-                        doc.Dispose();
-                        continue;
-                    }
-
-                    if (requestedDataField == false)
-                    {
-                        doc.Data.Dispose();
-                        doc.Data = null;
-                    }
-
-                    alreadyReturnedDocumentsCount++;
-                    yield return doc;
-
-                    if (alreadyReturnedDocumentsCount >= take)
+                    if (take-- < 0)
                         break;
 
+                    yield return doc;
+                    continue;
                 }
 
-                start += take;
+                if (IsCollectionMatch(doc, collection) == false)
+                {
+                    skippedResults.Value++;
+                    doc.Dispose();
+                    continue;
+                }
+
+                if (requestedDataField == false)
+                {
+                    doc.Data.Dispose();
+                    doc.Data = null;
+                }
+
+                if (take-- <= 0)
+                {
+                    doc.Dispose();
+                    break;
+                }
+
+                yield return doc;
             }
-            while (alreadyReturnedDocumentsCount != take && lastLoadedDocumentsCount > 0);
 
             static bool IsCollectionMatch(Document doc, string collection)
             {
