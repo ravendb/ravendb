@@ -747,49 +747,52 @@ namespace Raven.Server.Documents
             if (isAllDocs == false && requestedDataField == false)
                 fields |= DocumentFields.Data;
 
-            // we request ALL documents that start with `idPrefix` and filter it here by the collection name
-            foreach (var doc in GetDocumentsStartingWith(context, idPrefix, null, null, startAfterId, start, take: long.MaxValue, fields: fields))
+            using (var lzv = context.GetLazyString(collection))
             {
-                if (isAllDocs)
+                // we request ALL documents that start with `idPrefix` and filter it here by the collection name
+                foreach (var doc in GetDocumentsStartingWith(context, idPrefix, null, null, startAfterId, start, take: long.MaxValue, fields: fields))
                 {
-                    if (take-- < 0)
+                    if (isAllDocs)
+                    {
+                        if (take-- < 0)
+                            break;
+
+                        yield return doc;
+                        continue;
+                    }
+
+                    if (IsCollectionMatch(doc, lzv) == false)
+                    {
+                        skippedResults.Value++;
+                        doc.Dispose();
+                        continue;
+                    }
+
+                    if (requestedDataField == false)
+                    {
+                        doc.Data.Dispose();
+                        doc.Data = null;
+                    }
+
+                    if (take-- <= 0)
+                    {
+                        doc.Dispose();
                         break;
+                    }
 
                     yield return doc;
-                    continue;
                 }
-
-                if (IsCollectionMatch(doc, collection) == false)
-                {
-                    skippedResults.Value++;
-                    doc.Dispose();
-                    continue;
-                }
-
-                if (requestedDataField == false)
-                {
-                    doc.Data.Dispose();
-                    doc.Data = null;
-                }
-
-                if (take-- <= 0)
-                {
-                    doc.Dispose();
-                    break;
-                }
-
-                yield return doc;
             }
 
-            static bool IsCollectionMatch(Document doc, string collection)
+            bool IsCollectionMatch(Document doc, LazyStringValue lzv)
             {
                 if (doc.TryGetMetadata(out var metadata) == false)
                     return false;
 
-                if (metadata.TryGet(Constants.Documents.Metadata.Collection, out string c) == false)
+                if (metadata.TryGet(Constants.Documents.Metadata.Collection, out LazyStringValue c) == false)
                     return false;
 
-                if (string.Equals(c, collection, StringComparison.OrdinalIgnoreCase) == false)
+                if (c == null || lzv.EqualsOrdinalIgnoreCase(c) == false)
                     return false;
 
                 return true;
