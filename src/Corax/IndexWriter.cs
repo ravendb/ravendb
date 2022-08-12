@@ -34,7 +34,7 @@ namespace Corax
     {
         Single = 0,
         
-        EnsureIsSingleMask = -4,
+        EnsureIsSingleMask = 0b11,
         
         Small = 1,
         Set = 2
