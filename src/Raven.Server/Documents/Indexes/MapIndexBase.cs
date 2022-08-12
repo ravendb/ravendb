@@ -86,7 +86,7 @@ namespace Raven.Server.Documents.Indexes
                 if (it.MoveNext() == false)
                 {
                     writer.Value.Delete(indexItem.LowerId, stats);
-                    return 0; // not results at all
+                    return 0; // no results at all
                 }
 
                 var first = it.Current;
