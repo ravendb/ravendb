@@ -1063,8 +1063,10 @@ namespace Corax
                 sortedTermsBuffer = ArrayPool<Slice>.Shared.Rent(termsCount);
             }
             currentFieldTerms.Keys.CopyTo(sortedTermsBuffer, 0);
-            Array.Sort(sortedTermsBuffer,0, termsCount, SliceComparer.Instance);
 
+            // Sorting the terms buffer.
+            Sorter<Slice, SliceStructComparer> sorter = default;
+            sorter.Sort(sortedTermsBuffer, 0, termsCount);
 
             fieldTree.InitializeStateForTryGetNextValue();
             for (var index = 0; index < termsCount; index++)
