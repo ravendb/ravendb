@@ -94,7 +94,8 @@ namespace Raven.Server.Documents.Indexes
                 if (it.MoveNext() == false)
                 {
                     // we have just _one_ entry for the map, can try to optimize
-                    writer.Value.UpdateDocument(indexItem.LowerId, indexItem.LowerSourceDocumentId, first, stats, indexContext);
+                    writer.Value.UpdateDocument(Raven.Client.Constants.Documents.Indexing.Fields.DocumentIdFieldName,
+                        indexItem.LowerId, indexItem.LowerSourceDocumentId, first, stats, indexContext);
                     return 1;
                 }
                 else

@@ -62,7 +62,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             }
         }
 
-        public override void UpdateDocument(LazyStringValue key, LazyStringValue sourceDocumentId, object document, IndexingStatsScope stats, JsonOperationContext indexContext)
+        public override void UpdateDocument(string keyFieldName, 
+            LazyStringValue key, LazyStringValue sourceDocumentId, object document, IndexingStatsScope stats, JsonOperationContext indexContext)
         {
             EnsureValidStats(stats);
             
@@ -77,14 +78,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             using(scope)
             using (Stats.AddStats.Start())
             {
-                const string id = Constants.Documents.Indexing.Fields.DocumentIdFieldName;
                 if (data.Length == 0)
                 {
-                    Delete(key, stats);
+                    DeleteByField(keyFieldName, key, stats);
                     return;
                 }
                 
-                _indexWriter.Update(id, key.AsSpan(), lowerId, data.ToSpan());
+                _indexWriter.Update(keyFieldName, key.AsSpan(), lowerId, data.ToSpan());
             }
         }
 
@@ -131,10 +131,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
         public override void Delete(LazyStringValue key, IndexingStatsScope stats)
         {
+            DeleteByField(Constants.Documents.Indexing.Fields.DocumentIdFieldName, key, stats);
+        }
+
+        private void DeleteByField(string fieldName, LazyStringValue key, IndexingStatsScope stats)
+        {
             EnsureValidStats(stats);
             using (Stats.DeleteStats.Start())
             {
-                if (_indexWriter.TryDeleteEntry(Constants.Documents.Indexing.Fields.DocumentIdFieldName, key.ToString(CultureInfo.InvariantCulture)))
+                if (_indexWriter.TryDeleteEntry(fieldName, key.ToString(CultureInfo.InvariantCulture)))
                 {
                     _entriesCount--;
                 }
@@ -148,15 +153,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
         public override void DeleteReduceResult(LazyStringValue reduceKeyHash, IndexingStatsScope stats)
         {
-            EnsureValidStats(stats);
-            using (Stats.DeleteStats.Start())
-            {
-                if (_indexWriter.TryDeleteEntry(Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName, reduceKeyHash.ToString(CultureInfo.InvariantCulture)))
-                {
-                    _entriesCount--;
-                }
-            }
-            
+            DeleteByField(Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName, reduceKeyHash, stats);
             if (_logger.IsInfoEnabled)
                 _logger.Info($"Deleted document for '{_indexName}'. Reduce key hash: {reduceKeyHash}.");
         }

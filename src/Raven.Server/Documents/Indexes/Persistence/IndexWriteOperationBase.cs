@@ -21,7 +21,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
 
         public abstract void Optimize();
 
-        public abstract void UpdateDocument(LazyStringValue key, LazyStringValue sourceDocumentId, object document, IndexingStatsScope stats,
+        public abstract void UpdateDocument(string keyFieldName, LazyStringValue key, LazyStringValue sourceDocumentId, object document, IndexingStatsScope stats,
             JsonOperationContext indexContext);
 
         public abstract void IndexDocument(LazyStringValue key, LazyStringValue sourceDocumentId, object document, IndexingStatsScope stats,
