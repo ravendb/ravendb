@@ -33,6 +33,9 @@ namespace Corax
     public enum TermIdMask : long
     {
         Single = 0,
+        
+        EnsureIsSingleMask = -4,
+        
         Small = 1,
         Set = 2
     }
@@ -133,7 +136,9 @@ namespace Corax
             {
                 return Index(id, data);
             }
-            if((entryId & ~0b00) == 0) 
+            // if there is more than a single entry for this key, delete & index from scratch
+            // this is checked by calling code, but cheap to do this here as well.
+            if((entryId & (long)TermIdMask.EnsureIsSingleMask) != 0)
             {
                 RecordDeletion(entryId);
                 return Index(id, data);
@@ -172,8 +177,6 @@ namespace Corax
             id.AsSpan().CopyTo(space);
             space = space.Slice(id.Size);
             data.CopyTo(space);
-
-            
             return entryId;
         }
 
@@ -206,7 +209,7 @@ namespace Corax
                     bool oldHasIterator = oldEntryReader.TryReadMany(fieldBinding.FieldId, out var oldIterator);
                     bool newHasIterator = newEntryReader.TryReadMany(fieldBinding.FieldId, out var newIterator);
                     bool areEqual = oldHasIterator == newHasIterator;
-                    while (areEqual)
+                    while (true)
                     {
                         oldHasIterator = oldIterator.ReadNext();
                         newHasIterator = newIterator.ReadNext();
@@ -263,7 +266,7 @@ namespace Corax
                     bool oldHasIterator = oldEntryReader.TryReadManySpatialPoint(fieldBinding.FieldId, out var oldIterator);
                     bool newHasIterator = newEntryReader.TryReadManySpatialPoint(fieldBinding.FieldId, out var newIterator);
                     bool areEqual = oldHasIterator == newHasIterator;
-                    while (areEqual)
+                    while (true)
                     {
                         oldHasIterator = oldIterator.ReadNext();
                         newHasIterator = newIterator.ReadNext();
