@@ -42,7 +42,7 @@ namespace SlowTests.Issues
                 AssertRequestCountEqual(metadataFor => metadataFor["@collection"] = "Users");
                 AssertRequestCountEqual(metadataFor => metadataFor.Remove(Constants.Documents.Metadata.Refresh));
                 AssertRequestCountEqual(metadataFor => metadataFor.Remove(new KeyValuePair<string, object>(Constants.Documents.Metadata.Refresh, "122123")));
-                AssertRequestCountEqual(metadataFor => metadataFor.CopyTo(new System.Collections.Generic.KeyValuePair<string, object>[metadataFor.Count], 0));
+                AssertRequestCountEqual(metadataFor => metadataFor.CopyTo(new KeyValuePair<string, object>[metadataFor.Count], 0));
 
                 void AssertRequestCountEqual(Action<IMetadataDictionary> action)
                 {
@@ -64,7 +64,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void Metadata_that_changed_cause_saveChanges()
+        public void Metadata_that_changed_caused_saveChanges()
         {
             using (var store = GetDocumentStore())
             {
@@ -106,6 +106,77 @@ namespace SlowTests.Issues
 
                         Assert.NotEqual(requestsBefore, session.Advanced.NumberOfRequests);
                     }
+                }
+            }
+        }
+
+        [Fact]
+        public void Metadata_clear_caused_saveChanges()
+        {
+            using (var store = GetDocumentStore())
+            {
+                string id;
+                using (var session = store.OpenSession())
+                {
+                    var user = new User();
+                    session.Store(user);
+                    id = user.Id;
+
+                    var metadataFor = session.Advanced.GetMetadataFor(user);
+                    metadataFor["test"] = "1";
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var entity = session.Load<User>(id);
+                    var metadataFor = session.Advanced.GetMetadataFor(entity);
+
+                    var requestsBefore = session.Advanced.NumberOfRequests;
+
+                    metadataFor.Clear();
+
+                    session.SaveChanges();
+
+                    Assert.NotEqual(requestsBefore, session.Advanced.NumberOfRequests);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<User>(id);
+                    var metadata = session.Advanced.GetMetadataFor(user);
+
+                    Assert.False(metadata.Keys.Contains("test"));
+                }
+            }
+        }
+
+        [Fact]
+        public void Metadata_clear_that_didnt_change_doesnt_cause_saveChanges()
+        {
+            using (var store = GetDocumentStore())
+            {
+                string id;
+                using (var session = store.OpenSession())
+                {
+                    var user = new User();
+                    session.Store(user);
+                    id = user.Id;
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var entity = session.Load<User>(id);
+                    var metadataFor = session.Advanced.GetMetadataFor(entity);
+
+                    var requestsBefore = session.Advanced.NumberOfRequests;
+
+                    metadataFor.Clear();
+
+                    session.SaveChanges();
+
+                    Assert.Equal(requestsBefore, session.Advanced.NumberOfRequests);
                 }
             }
         }
