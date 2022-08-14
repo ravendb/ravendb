@@ -8,6 +8,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
 using Microsoft.Extensions.Configuration;
+using Raven.Client.Documents.Changes;
 using Raven.Client.Extensions;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
@@ -204,8 +205,30 @@ namespace Raven.Server.Config.Categories
                             else if (property.Info.PropertyType == typeof(HashSet<string>))
                             {
                                 var hashSet = new HashSet<string>(SplitValue(value), StringComparer.OrdinalIgnoreCase);
-
+                                
                                 property.Info.SetValue(this, hashSet);
+                            }
+                            else if (property.Info.PropertyType == typeof(HashSet<int>))
+                            {
+                                var values = SplitValue(value).Select(int.Parse).ToArray();
+                                HashSet<int> hashSet = new(values);
+                                property.Info.SetValue(this, hashSet);
+                            }
+                            else if (property.Info.PropertyType == typeof(HashSet<TrafficWatchChangeType>))
+                            {
+                                try
+                                {
+                                    var values = SplitValue(value)
+                                        .Select(item => (TrafficWatchChangeType) Enum.Parse(typeof(TrafficWatchChangeType), item, ignoreCase: true))
+                                        .ToArray();
+
+                                    HashSet<TrafficWatchChangeType> hashSet = new(values);
+                                    property.Info.SetValue(this, hashSet);
+                                }
+                                catch (ArgumentException)
+                                {
+                                    throw new ConfigurationEnumValueException(value, property.Info.PropertyType);
+                                }
                             }
                             else if (property.Info.PropertyType == typeof(UriSetting[]))
                             {
@@ -340,6 +363,8 @@ namespace Raven.Server.Config.Categories
 
             Initialized = true;
         }
+
+
 
         protected virtual void ValidateProperty(PropertyInfo property)
         {

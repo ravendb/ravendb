@@ -51,11 +51,6 @@ public class GetTrafficWatchConfigurationResult
     public TrafficWatchMode TrafficWatchMode { get; set; }
 
     /// <summary>
-    /// Path to which logs will be written
-    /// </summary>
-    public string Path { get; set; }
-
-    /// <summary>
     /// Filter by Database names for which the operation should be logged
     /// </summary>
     public HashSet<string> Databases { get; set; }
@@ -89,24 +84,4 @@ public class GetTrafficWatchConfigurationResult
     /// Filter by type of traffic watch change for which the operation should be logged
     /// </summary>
     public HashSet<TrafficWatchChangeType> ChangeTypes { get; set; }
-
-    /// <summary>
-    /// The maximum size of the log after which the old files will be deleted
-    /// </summary>
-    public Size MaxFileSize { get; set; }
-
-    /// <summary>
-    /// Logs retention time
-    /// </summary>
-    public TimeSpan RetentionTime { get; set; }
-
-    /// <summary>
-    /// Logs retention size (null if RetentionSize is long.MaxValue)
-    /// </summary>
-    public Size RetentionSize { get; set; }
-    
-    /// <summary>
-    /// Are logs compressed
-    /// </summary>
-    public bool Compress { get; set; }
 }
