@@ -50,7 +50,6 @@ namespace Raven.Server.Documents.Replication.Incoming
             options.DocumentDatabase.DatabaseShutdown, options.DocumentDatabase.DocumentsStorage.ContextPool)
         {
             _database = options.DocumentDatabase;
-            _replicationFromAnotherSource = new AsyncManualResetEvent(_database.DatabaseShutdown);
             _parent = parent;
             _attachmentStreamsTempFile = _database.DocumentsStorage.AttachmentsStorage.GetTempFile("replication");
 

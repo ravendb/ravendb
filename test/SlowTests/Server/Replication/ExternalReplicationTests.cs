@@ -12,6 +12,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.Http;
 using Raven.Server.Documents.Commands.Replication;
 using Raven.Server.Documents.Handlers.Processors.Replication;
+using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
@@ -494,6 +495,44 @@ namespace SlowTests.Server.Replication
 
                 Assert.True(WaitForDocument<User>(store1, "users/1", predicate: u => u.Name == "Queeni", timeout: 30_000));
                 Assert.True(WaitForDocument<User>(store2, "users/1", predicate: u => u.Name == "Queeni", timeout: 30_000));
+            }
+        }
+
+        [Fact]
+        public async Task EnsureNoReplicationLoopInExternalReplicationFromNonShardedToSharded()
+        {
+            using (var store1 = GetDocumentStore())
+            using (var store2 = Sharding.GetDocumentStore())
+            {
+                using (var s1 = store1.OpenSession())
+                {
+                    s1.Store(new User() { Name = "Shiran" }, "users/1");
+                    s1.SaveChanges();
+                }
+
+                await SetupReplicationAsync(store1, store2);
+                await SetupReplicationAsync(store2, store1);
+                await EnsureReplicatingAsync(store2, store1);
+
+                Assert.True(WaitForDocument(store2, "users/1"));
+
+                var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database);
+
+                // we should get 3 incoming handlers (for each shard) 
+                var incomingReplicationHandlers = db.ReplicationLoader?.IncomingHandlers.ToList();
+                Assert.NotNull(incomingReplicationHandlers);
+                Assert.Equal(3, incomingReplicationHandlers.Count);
+
+                // we want to ensure we sent back from the sharded DBs to the non-sharded DB only one document (from `EnsureReplicatingAsync`)
+                foreach (var incoming in incomingReplicationHandlers)
+                {
+                    var haveStats = incoming.GetReplicationPerformance().Any(p => p.Network.InputCount > 0);
+                    if (haveStats)
+                    {
+                        var stats = incoming.GetReplicationPerformance().Where(p => p.Network.InputCount > 0)?.Single();
+                        Assert.Equal(1, stats.Network.InputCount);
+                    }
+                }
             }
         }
 
