@@ -63,24 +63,18 @@ namespace Raven.Server.Documents.Replication
                 return ReturnAndClearValue();
             }
 
-            if (interrupt != null)
+            if (_previousWait.TryGetValue(interrupt, out Task<Task> task) == false)
             {
-                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "check if we can avoid the above 'if' (fails only for sharding)");
+                _previousWait[interrupt] = task = Task.WhenAny(_prevCall, interrupt.WaitAsync());
+            }
 
-                if (_previousWait.TryGetValue(interrupt, out Task<Task> task) == false)
-                {
-                    _previousWait[interrupt] = task = Task.WhenAny(_prevCall, interrupt.WaitAsync());
-                }
+            if (task.Wait(timeout, token) == false)
+                return new Result { Timeout = true };
 
-                if (task.Wait(timeout, token) == false)
-                    return new Result { Timeout = true };
-
-                if (task.Result != _prevCall)
-                {
-                    _previousWait.Remove(interrupt);
-                    return new Result { Interrupted = true };
-                }
-
+            if (task.Result != _prevCall)
+            {
+                _previousWait.Remove(interrupt);
+                return new Result { Interrupted = true };
             }
 
             return ReturnAndClearValue();

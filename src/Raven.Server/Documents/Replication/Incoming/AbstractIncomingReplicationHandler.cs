@@ -54,7 +54,7 @@ namespace Raven.Server.Documents.Replication.Incoming
         protected readonly CancellationTokenSource _cts;
         protected StreamsTempFile _attachmentStreamsTempFile;
         protected long _lastDocumentEtag;
-        protected AsyncManualResetEvent _replicationFromAnotherSource;
+        protected readonly AsyncManualResetEvent _replicationFromAnotherSource;
         protected Logger Logger;
 
         public long LastDocumentEtag => _lastDocumentEtag;
@@ -74,6 +74,7 @@ namespace Raven.Server.Documents.Replication.Incoming
             _disposeOnce = new DisposeOnce<SingleAttempt>(DisposeInternal);
             _tcpConnectionOptions = tcpConnectionOptions;
             _copiedBuffer = buffer.Clone(_tcpConnectionOptions.ContextPool);
+            _replicationFromAnotherSource = new AsyncManualResetEvent(token);
 
             _tcpClient = tcpConnectionOptions.TcpClient;
             _stream = tcpConnectionOptions.Stream;
