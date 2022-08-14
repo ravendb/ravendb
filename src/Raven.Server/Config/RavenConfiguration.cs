@@ -59,7 +59,6 @@ namespace Raven.Server.Config
 
         public StorageConfiguration Storage { get; }
 
-
         public BackupConfiguration Backup { get; }
 
         public IndexingConfiguration Indexing { get; set; }
@@ -98,8 +97,10 @@ namespace Raven.Server.Config
 
         internal IConfigurationRoot Settings { get; set; }
 
+        public TrafficWatchConfiguration TrafficWatch { get; }
+
         internal string ConfigPath => _customConfigPath
-                       ?? Path.Combine(AppContext.BaseDirectory, "settings.json");
+                                      ?? Path.Combine(AppContext.BaseDirectory, "settings.json");
 
         internal CommandLineConfigurationSource CommandLineSettings =>
             _configBuilder.Sources.OfType<CommandLineConfigurationSource>().FirstOrDefault();
@@ -146,6 +147,7 @@ namespace Raven.Server.Config
             Notifications = new NotificationsConfiguration();
             Updates = new UpdatesConfiguration();
             Migration = new MigrationConfiguration();
+            TrafficWatch = new TrafficWatchConfiguration();
         }
 
         private void AddJsonConfigurationVariables(string customConfigPath = null)
@@ -205,6 +207,7 @@ namespace Raven.Server.Config
             Notifications.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
             Updates.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
             Migration.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
+            TrafficWatch.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
 
             PostInit();
 

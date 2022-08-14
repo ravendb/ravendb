@@ -248,5 +248,7 @@ namespace Raven.Client.Json.Serialization
         internal static readonly Func<BlittableJsonReaderObject, GetRevisionsCountOperation.DocumentRevisionsCount> DocumentRevisionsCount = GenerateJsonDeserializationRoutine<GetRevisionsCountOperation.DocumentRevisionsCount>();
 
         internal static readonly Func<BlittableJsonReaderObject, DatabaseSettings> DatabaseSettings = GenerateJsonDeserializationRoutine<DatabaseSettings>();
+
+        internal static readonly Func<BlittableJsonReaderObject, GetTrafficWatchConfigurationResult> GetTrafficWatchesConfigurationResult = GenerateJsonDeserializationRoutine<GetTrafficWatchConfigurationResult>();
     }
 }

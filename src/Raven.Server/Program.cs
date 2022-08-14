@@ -16,6 +16,7 @@ using Raven.Server.Documents.Indexes.Static.NuGet;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.BackgroundTasks;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.TrafficWatch;
 using Raven.Server.Utils;
 using Raven.Server.Utils.Cli;
 using Sparrow;
@@ -102,6 +103,8 @@ namespace Raven.Server
                 configuration.Logs.Compress
                 );
 
+            TrafficWatchToLog.Instance.UpdateConfiguration(configuration.TrafficWatch);
+            
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Logging to {configuration.Logs.Path} set to {configuration.Logs.Mode} level.");
 
