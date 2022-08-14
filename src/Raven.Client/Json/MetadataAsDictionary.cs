@@ -172,12 +172,22 @@ namespace Raven.Client.Json
             if (_metadata == null)
                 Initialize(_source);
             Debug.Assert(_metadata != null);
-            if (_metadata.Count > 0)
+            foreach (var item in _metadata)
             {
-                _metadata.Clear();
+                switch (item.Key)
+                {
+                    // skipping reserved properties
+                    case Constants.Documents.Metadata.Collection:
+                    case Constants.Documents.Metadata.Id:
+                    case Constants.Documents.Metadata.ChangeVector:
+                    case Constants.Documents.Metadata.LastModified:
+                    case Constants.Documents.Metadata.RavenClrType:
+                        continue;
+                }
+
+                _metadata.Remove(item);
                 _hasChanges = true;
             }
-
         }
 
         public bool Contains(KeyValuePair<string, object> item)
