@@ -126,9 +126,21 @@ namespace Raven.Client.Documents.Subscriptions
         public TimeSpan TimeToWaitBeforeConnectionRetry { get; set; }
 
         /// <summary>
-        /// Timeout for writing or reading from worker stream. Default: 30 seconds
+        /// Timeout for writing or reading from worker stream. Default: 30 seconds.
+        /// Minimum value allowed: 15 seconds
         /// </summary>
-        public TimeSpan ConnectionStreamTimeout { get; set; }
+        public TimeSpan ConnectionStreamTimeout
+        {
+            get { return _connectionStreamTimeout; }
+            set
+            {
+                if (value < TimeSpan.FromSeconds(15))
+                    throw new ArgumentException("Value can't be smaller than 15 seconds.", nameof(ConnectionStreamTimeout));
+                _connectionStreamTimeout = value;
+            }
+        }
+
+        private TimeSpan _connectionStreamTimeout;
 
         /// <summary>
         /// Whether subscriber error should halt the subscription processing or not. Default: false
