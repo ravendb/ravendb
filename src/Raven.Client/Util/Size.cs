@@ -4,41 +4,25 @@ namespace Raven.Client.Util
 {
     public class Size
     {
-        private static readonly string ZeroHumaneSize = Humane(0);
-
         public Size()
         {
-            HumaneSize = ZeroHumaneSize;
+            SizeInBytes = 0;
         }
-
+        
         public Size(long sizeInBytes)
         {
             SizeInBytes = sizeInBytes;
         }
 
-        private long _sizeInBytes;
+        public long SizeInBytes { get; set; }
 
-        public long SizeInBytes
-        {
-            get
-            {
-                return _sizeInBytes;
-            }
-
-            set
-            {
-                _sizeInBytes = value;
-                HumaneSize = Humane(value);
-            }
-        }
-
-        public string HumaneSize { get; private set; }
+        public string HumaneSize => Humane(SizeInBytes);
 
         public static string Humane(long? size)
         {
             if (size == null)
                 return null;
-
+            
             var absSize = Math.Abs(size.Value);
             const double GB = 1024 * 1024 * 1024;
             const double MB = 1024 * 1024;
