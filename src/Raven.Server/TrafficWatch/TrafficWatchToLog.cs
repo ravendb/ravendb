@@ -12,9 +12,9 @@ internal class TrafficWatchToLog
 {
     private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RavenServerStartup>("TrafficWatchManager");
 
-    private TrafficWatchConfiguration _configuration = new();
+    public TrafficWatchConfiguration Configuration { get; private set; } = new();
 
-    public bool LogToFile => _configuration.TrafficWatchMode == TrafficWatchMode.ToLogFile || Logger.IsOperationsEnabled;
+    public bool LogToFile => Configuration.TrafficWatchMode == TrafficWatchMode.ToLogFile || Logger.IsOperationsEnabled;
 
     private TrafficWatchToLog() { }
 
@@ -22,51 +22,44 @@ internal class TrafficWatchToLog
 
     public void Log(TrafficWatchChangeBase trafficWatchData)
     {
-        UpdateConfiguration(new TrafficWatchConfiguration
-        {
-            TrafficWatchMode = TrafficWatchMode.ToLogFile,
-            Databases = new HashSet<string> { "test" },
-            StatusCodes = new HashSet<int?> { 202 },
-            MinimumResponseSize = new Size(10, SizeUnit.Bytes),
-            MinimumRequestSize = new Size(2, SizeUnit.Bytes),
-            MinimumDuration = 5,
-            HttpMethods = new HashSet<string> { "POST" },
-            ChangeTypes = new HashSet<TrafficWatchChangeType> { TrafficWatchChangeType.Queries }
-        });
-
+        
         if (Logger.IsOperationsEnabled == false)
             return;
 
-        if (_configuration.TrafficWatchMode == TrafficWatchMode.Off)
+        if (Configuration.TrafficWatchMode == TrafficWatchMode.Off)
             return;
 
         try
         {
             if (trafficWatchData is TrafficWatchHttpChange twhc)
             {
-                if (_configuration.Databases != null &&
-                    _configuration.Databases.Contains(twhc.DatabaseName) == false)
+                if(Configuration.Databases != null)
+                    if (Configuration.Databases.Count > 0 && 
+                        Configuration.Databases.Contains(twhc.DatabaseName) == false)
+                        return;
+
+                if (Configuration.HttpMethods != null)
+                    if (Configuration.HttpMethods.Count > 0 &&
+                        Configuration.HttpMethods.Contains(twhc.HttpMethod) == false)
+                        return;
+
+                if (Configuration.ChangeTypes != null)
+                    if (Configuration.ChangeTypes.Count > 0 &&
+                        Configuration.ChangeTypes.Contains(twhc.Type) == false)
+                        return;
+
+                if (Configuration.StatusCodes != null)
+                    if (Configuration.StatusCodes.Count > 0 &&
+                        Configuration.StatusCodes.Contains(twhc.ResponseStatusCode) == false)
+                        return;
+
+                if (Configuration.MinimumResponseSize.GetValue(SizeUnit.Bytes) > twhc.ResponseSizeInBytes)
                     return;
 
-                if (_configuration.MinimumResponseSize.GetValue(SizeUnit.Bytes) > twhc.ResponseSizeInBytes)
+                if (Configuration.MinimumRequestSize.GetValue(SizeUnit.Bytes) > twhc.RequestSizeInBytes)
                     return;
 
-                if (_configuration.MinimumRequestSize.GetValue(SizeUnit.Bytes) > twhc.RequestSizeInBytes)
-                    return;
-
-                if (_configuration.HttpMethods != null &&
-                    _configuration.HttpMethods.Contains(twhc.HttpMethod) == false)
-                    return;
-
-                if (_configuration.MinimumDuration > twhc.ElapsedMilliseconds)
-                    return;
-
-                if (_configuration.ChangeTypes != null &&
-                    _configuration.ChangeTypes.Contains(twhc.Type) == false)
-                    return;
-
-                if (_configuration.StatusCodes != null &&
-                    _configuration.StatusCodes.Contains(twhc.ResponseStatusCode) == false)
+                if (Configuration.MinimumDuration > twhc.ElapsedMilliseconds)
                     return;
 
                 var requestSize = new Size(twhc.RequestSizeInBytes, SizeUnit.Bytes);
@@ -80,7 +73,7 @@ internal class TrafficWatchToLog
                              $"response: {responseSize}, {twhc.Type}, {twhc.ElapsedMilliseconds}ms, " +
                              $"custom info: [{customInfo}]";
 
-                if (_configuration.TrafficWatchMode == TrafficWatchMode.ToLogFile)
+                if (Configuration.TrafficWatchMode == TrafficWatchMode.ToLogFile)
                     Logger.Operations(msg);
             }
             else if (trafficWatchData is TrafficWatchTcpChange twtc)
@@ -89,7 +82,7 @@ internal class TrafficWatchToLog
                              $"{twtc.OperationVersion}, {twtc.DatabaseName}, {twtc.Source}, " +
                              $"{twtc.CustomInfo}, {twtc.ClientIP}, {twtc.CertificateThumbprint}";
 
-                if (_configuration.TrafficWatchMode == TrafficWatchMode.ToLogFile)
+                if (Configuration.TrafficWatchMode == TrafficWatchMode.ToLogFile)
                     Logger.Info(msg);
             }
         }
@@ -103,6 +96,6 @@ internal class TrafficWatchToLog
 
     public void UpdateConfiguration(TrafficWatchConfiguration configuration)
     {
-        _configuration = configuration;
+        Configuration = configuration;
     }
 }
