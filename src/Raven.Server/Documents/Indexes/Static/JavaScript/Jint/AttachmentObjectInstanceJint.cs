@@ -12,7 +12,7 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript.Jint
 {
     public class AttachmentObjectInstanceJint : ObjectInstanceBaseJint
     {
-        private const string GetContentAsStringMethodName = "getContentAsString";
+        public const string GetContentAsStringMethodName = "getContentAsString";
 
         private readonly Dictionary<JsValue, PropertyDescriptor> _properties = new Dictionary<JsValue, PropertyDescriptor>();
 

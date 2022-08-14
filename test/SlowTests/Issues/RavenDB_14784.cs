@@ -510,9 +510,6 @@ return attachments.map(attachment => ({
             }
         }
 
-        // [shlomo] jint version is going to work after upgrading jint-ravendb
-
-        //TODO: egor this test passes when using previous "Jint" Version="3.0.30-ravendb" 
         [Theory]
         [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void Can_Index_Attachments_JavaScript(Options options)
@@ -551,30 +548,20 @@ return attachments.map(attachment => ({
                 Assert.Equal(1, terms.Length);
                 Assert.Equal("hr", terms[0]);
 
-                var termsCount = options.JavascriptEngineMode.ToString() == "Jint" ? 0 : 1;
-                
                 terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, nameof(Companies_With_Attachments.Result.AttachmentName), fromValue: null));
-                Assert.Equal(termsCount, terms.Length);
+                Assert.Equal(0, terms.Length);
 
                 terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, nameof(Companies_With_Attachments.Result.AttachmentContentType), fromValue: null));
-                Assert.Equal(termsCount, terms.Length);
-                if (termsCount > 0)
-                    Assert.Equal(IndexingFields.NullValue, terms[0]);
+                Assert.Equal(0, terms.Length);
 
                 terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, nameof(Companies_With_Attachments.Result.AttachmentHash), fromValue: null));
-                Assert.Equal(termsCount, terms.Length);
-                if (termsCount > 0)
-                    Assert.Equal(IndexingFields.NullValue, terms[0]);
+                Assert.Equal(0, terms.Length);
 
                 terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, nameof(Companies_With_Attachments.Result.AttachmentSize), fromValue: null));
-                Assert.Equal(termsCount, terms.Length);
-                if (termsCount > 0)
-                    Assert.Equal(IndexingFields.NullValue, terms[0]);
+                Assert.Equal(0, terms.Length);
 
                 terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, nameof(Companies_With_Attachments.Result.AttachmentContent), fromValue: null));
-                Assert.Equal(termsCount, terms.Length);
-                if (termsCount > 0)
-                    Assert.Equal(IndexingFields.NullValue, terms[0]);
+                Assert.Equal(0, terms.Length);
 
                 terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, nameof(Companies_With_Attachments.Result.AttachmentContentStream), fromValue: null));
                 Assert.Equal(0, terms.Length); // as there is no this field at all
