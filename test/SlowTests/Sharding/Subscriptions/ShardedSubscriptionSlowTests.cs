@@ -175,8 +175,8 @@ namespace SlowTests.Sharding.Subscriptions
 
         private async Task CheckSubscriptionNewQuery(IDocumentStore store, SubscriptionState state, string newQuery)
         {
-            var shards = await Sharding.GetShardsDocumentDatabaseInstancesFor(store);
-            foreach (var db in shards)
+            var shards = Sharding.GetShardsDocumentDatabaseInstancesFor(store);
+            await foreach (var db in shards)
             {
                 using (db.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                 using (ctx.OpenReadTransaction())
@@ -412,8 +412,7 @@ namespace SlowTests.Sharding.Subscriptions
 
                     var firstItemchangeVector = cvFirst.ToChangeVector();
                     var cvNew = new List<ChangeVectorEntry>();
-                    var shards = (await Sharding.GetShardsDocumentDatabaseInstancesFor(store)).ToList();
-                    foreach (var db in shards)
+                    await foreach (var db in Sharding.GetShardsDocumentDatabaseInstancesFor(store))
                     {
                         cvNew.Add(new ChangeVectorEntry()
                         {
@@ -436,7 +435,7 @@ namespace SlowTests.Sharding.Subscriptions
                     {
                         subscriptionState = Server.ServerStore.Cluster.Subscriptions.ReadSubscriptionStateByName(context, store.Database, subscriptionId);
                     }
-                    foreach (var db in shards)
+                    await foreach (var db in Sharding.GetShardsDocumentDatabaseInstancesFor(store))
                     {
                         var connectionState = db.SubscriptionStorage.PutSubscription(new SubscriptionCreationOptions()
                         {
@@ -683,8 +682,8 @@ namespace SlowTests.Sharding.Subscriptions
 
         private async Task AssertNoLeftovers(IDocumentStore store, string id)
         {
-            var shards = await Sharding.GetShardsDocumentDatabaseInstancesFor(store);
-            foreach (var db in shards)
+            var shards = Sharding.GetShardsDocumentDatabaseInstancesFor(store);
+            await foreach (var db in shards)
             {
                 await AssertWaitForValueAsync(() =>
                 {

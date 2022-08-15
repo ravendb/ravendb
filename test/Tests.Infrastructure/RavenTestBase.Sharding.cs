@@ -72,6 +72,44 @@ public partial class RavenTestBase
             return _parent.GetDocumentStore(shardedOptions, caller);
         }
 
+        public Options GetOptionsForCluster(RavenServer leader, int shards, int shardReplicationFactor, int orchestratorReplicationFactor)
+        {
+            var options = new Options
+            {
+                ModifyDatabaseRecord = r =>
+                {
+                    r.Sharding = new ShardingConfiguration
+                    {
+                        Shards = new DatabaseTopology[shards],
+                        Orchestrator = new OrchestratorConfiguration
+                        {
+                            Topology = new OrchestratorTopology
+                            {
+                                ReplicationFactor = orchestratorReplicationFactor
+                            }
+                        }
+                    };
+
+                    for (int i = 0; i < r.Sharding.Shards.Length; i++)
+                    {
+                        r.Sharding.Shards[i] = new DatabaseTopology
+                        {
+                            ReplicationFactor = shardReplicationFactor
+                        };
+                    }
+                },
+                Server = leader
+            };
+
+            return options;
+        }
+
+        public async Task<ShardingConfiguration> GetShardingConfigurationAsync(IDocumentStore store)
+        {
+            var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+            return record.Sharding;
+        }
+
         public async Task<int> GetShardNumber(IDocumentStore store, string id)
         {
             var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
@@ -79,15 +117,21 @@ public partial class RavenTestBase
             return ShardHelper.GetShardNumber(record.Sharding.BucketRanges, bucket);
         }
 
-        public async Task<IEnumerable<DocumentDatabase>> GetShardsDocumentDatabaseInstancesFor(IDocumentStore store, string database = null)
+        public IAsyncEnumerable<DocumentDatabase> GetShardsDocumentDatabaseInstancesFor(IDocumentStore store, List<RavenServer> servers = null)
         {
-            var dbs = new List<DocumentDatabase>();
-            foreach (var task in _parent.Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(database ?? store.Database))
-            {
-                dbs.Add(await task);
-            }
+            return GetShardsDocumentDatabaseInstancesFor(store.Database, servers);
+        }
 
-            return dbs;
+        public async IAsyncEnumerable<DocumentDatabase> GetShardsDocumentDatabaseInstancesFor(string database, List<RavenServer> servers = null)
+        {
+            servers ??= _parent.GetServers();
+            foreach (var server in servers)
+            {
+                foreach (var task in server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(database))
+                {
+                    yield return await task;
+                }
+            }
         }
 
         public bool AllShardHaveDocs(IDictionary<string, List<DocumentDatabase>> servers, long count = 1L)
@@ -207,10 +251,8 @@ public partial class RavenTestBase
                 database ??= store.Database;
                 if (dbMode == RavenDatabaseMode.Sharded)
                 {
-                    var dbs = _parent.Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(database);
-                    foreach (var task in dbs)
+                    await foreach (var shard in _parent.Sharding.GetShardsDocumentDatabaseInstancesFor(store))
                     {
-                        var shard = await task;
                         var storage = shard.DocumentsStorage;
 
                         docsCount += storage.GetNumberOfDocuments();
@@ -343,16 +385,13 @@ public partial class RavenTestBase
             public async Task<WaitHandle[]> WaitForBackupsToComplete(IEnumerable<IDocumentStore> stores)
             {
                 var waitHandles = new List<WaitHandle>();
-
                 foreach (var store in stores)
                 {
-                    var dbs = _parent.Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store.Database).ToList();
-                    foreach (var task in dbs)
+                    await foreach (var db in _parent.Sharding.GetShardsDocumentDatabaseInstancesFor(store))
                     {
                         var mre = new ManualResetEventSlim();
                         waitHandles.Add(mre.WaitHandle);
 
-                        var db = await task;
                         db.PeriodicBackupRunner._forTestingPurposes ??= new PeriodicBackupRunner.TestingStuff();
                         db.PeriodicBackupRunner._forTestingPurposes.AfterBackupBatchCompleted = () => mre.Set();
                     }
@@ -361,22 +400,17 @@ public partial class RavenTestBase
                 return waitHandles.ToArray();
             }
 
-            public async Task<WaitHandle[]> WaitForBackupsToComplete(IEnumerable<RavenServer> nodes, string database)
+            public async Task<WaitHandle[]> WaitForBackupsToComplete(List<RavenServer> nodes, string database)
             {
                 var waitHandles = new List<WaitHandle>();
 
-                foreach (var node in nodes)
+                await foreach (var db in _parent.Sharding.GetShardsDocumentDatabaseInstancesFor(database, nodes))
                 {
-                    var dbs = node.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(database).ToList();
-                    foreach (var task in dbs)
-                    {
-                        var mre = new ManualResetEventSlim();
-                        waitHandles.Add(mre.WaitHandle);
+                    var mre = new ManualResetEventSlim();
+                    waitHandles.Add(mre.WaitHandle);
 
-                        var db = await task;
-                        db.PeriodicBackupRunner._forTestingPurposes ??= new PeriodicBackupRunner.TestingStuff();
-                        db.PeriodicBackupRunner._forTestingPurposes.AfterBackupBatchCompleted = () => mre.Set();
-                    }
+                    db.PeriodicBackupRunner._forTestingPurposes ??= new PeriodicBackupRunner.TestingStuff();
+                    db.PeriodicBackupRunner._forTestingPurposes.AfterBackupBatchCompleted = () => mre.Set();
                 }
 
                 return waitHandles.ToArray();
@@ -392,17 +426,13 @@ public partial class RavenTestBase
             {
                 var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
 
-                foreach (var server in servers)
+                await foreach (var documentDatabase in _parent.Sharding.GetShardsDocumentDatabaseInstancesFor(store.Database, servers))
                 {
-                    var shards = server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store.Database);
-                    foreach (var shard in shards)
-                    {
-                        var documentDatabase = await shard;
-                        var periodicBackupRunner = documentDatabase.PeriodicBackupRunner;
-                        periodicBackupRunner.StartBackupTask(result.TaskId, isFullBackup);
-                    }
+                    var periodicBackupRunner = documentDatabase.PeriodicBackupRunner;
+                    periodicBackupRunner.StartBackupTask(result.TaskId, isFullBackup);
                 }
             }
+
             private static async Task<long> SetupRevisionsAsync(
                 IDocumentStore store,
                 RevisionsConfiguration configuration)
@@ -448,14 +478,7 @@ public partial class RavenTestBase
 
             public async Task MoveShardForId(IDocumentStore store, string id, List<RavenServer> servers = null)
             {
-                if (_parent.Servers.Count > 0)
-                {
-                    servers ??= _parent.Servers;
-                }
-                else
-                {
-                    servers ??= new List<RavenServer> { _parent.Server };
-                }
+                servers ??= _parent.GetServers();
 
                 var server = servers[0].ServerStore;
 
