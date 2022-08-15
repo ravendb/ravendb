@@ -222,14 +222,17 @@ namespace Raven.Server.ServerWide.Context
         public ChangeVector GetChangeVector(string version, string order)
         {
             ChangeVector allocatedChangeVector;
+            var versionChangeVector = GetChangeVector(version, throwOnRecursion: true);
+            var orderChangeVector = GetChangeVector(order, throwOnRecursion: true);
+
             if (_numberOfAllocatedChangeVectors < _allocatedChangeVectors.Count)
             {
                 allocatedChangeVector = _allocatedChangeVectors[_numberOfAllocatedChangeVectors++];
-                allocatedChangeVector.Renew(GetChangeVector(version), GetChangeVector(order));
+                allocatedChangeVector.Renew(versionChangeVector, orderChangeVector);
                 return allocatedChangeVector;
             }
 
-            allocatedChangeVector = new ChangeVector(new ChangeVector(version, this), new ChangeVector(order, this));
+            allocatedChangeVector = new ChangeVector(versionChangeVector, orderChangeVector);
             if (_numberOfAllocatedChangeVectors < _maxOfAllocatedChangeVectors)
             {
                 _allocatedChangeVectors.Add(allocatedChangeVector);
