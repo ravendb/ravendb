@@ -40,8 +40,11 @@ namespace Raven.Server.Documents.Replication.Incoming
 
             protected override ChangeVector PreProcessItem(DocumentsOperationContext context, ReplicationBatchItem item)
             {
-                var changeVector = context.GetChangeVector(item.ChangeVector);
                 var order = context.DocumentDatabase.DocumentsStorage.GetNewChangeVector(context).ChangeVector;
+                var changeVector = context.GetChangeVector(item.ChangeVector);
+                if (changeVector.Order.Contains(_shardedDatabase.ShardedDatabaseId))
+                    return order;
+
                 var migratedChangeVector = context.GetChangeVector(changeVector.Version, order);
                 migratedChangeVector = migratedChangeVector.UpdateOrder(MigrationTag, _shardedDatabase.ShardedDatabaseId, _movingBucket.MigrationIndex, context);
                 item.ChangeVector = migratedChangeVector.AsString();
