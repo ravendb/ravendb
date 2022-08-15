@@ -444,7 +444,7 @@ namespace Raven.Server.Web.System
             {
                 databaseRecord.Sharding.Orchestrator ??= new OrchestratorConfiguration();
                 databaseRecord.Sharding.Orchestrator.Topology ??= new OrchestratorTopology();
-                databaseRecord.Sharding.Orchestrator.Topology.ReplicationFactor = Math.Min(replicationFactor, clusterTopology.AllNodes.Count);
+                SetReplicationFactor(databaseRecord.Sharding.Orchestrator.Topology, clusterTopology, replicationFactor);
 
                 foreach (var databaseTopology in databaseRecord.Sharding.Shards)
                     UpdateDatabaseTopology(databaseTopology, clusterTopology, replicationFactor, clusterTransactionId);
@@ -454,6 +454,12 @@ namespace Raven.Server.Web.System
                 databaseRecord.Topology ??= new DatabaseTopology();
                 UpdateDatabaseTopology(databaseRecord.Topology, clusterTopology, replicationFactor, clusterTransactionId);
             }
+        }
+
+        private static void SetReplicationFactor(DatabaseTopology databaseTopology, ClusterTopology clusterTopology, int replicationFactor)
+        {
+            databaseTopology.ReplicationFactor = Math.Max(databaseTopology.ReplicationFactor, replicationFactor);
+            databaseTopology.ReplicationFactor = Math.Min(databaseTopology.ReplicationFactor, clusterTopology.AllNodes.Count);
         }
 
         private static void UpdateDatabaseTopology(DatabaseTopology databaseTopology, ClusterTopology clusterTopology, int replicationFactor, string clusterTransactionId)
@@ -469,7 +475,7 @@ namespace Raven.Server.Web.System
                 replicationFactor = databaseTopology.Count;
             }
 
-            databaseTopology.ReplicationFactor = Math.Min(replicationFactor, clusterTopology.AllNodes.Count);
+            SetReplicationFactor(databaseTopology, clusterTopology, replicationFactor);
 
             databaseTopology.ClusterTransactionIdBase64 ??= clusterTransactionId;
             databaseTopology.DatabaseTopologyIdBase64 ??= Guid.NewGuid().ToBase64Unpadded();
