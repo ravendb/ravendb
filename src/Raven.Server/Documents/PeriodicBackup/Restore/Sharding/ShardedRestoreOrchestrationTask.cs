@@ -13,6 +13,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Server.Documents.Sharding;
+using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -46,7 +47,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore.Sharding
 
             // we are currently restoring, shouldn't try to access it
             databaseRecord.DatabaseState = DatabaseStateStatus.RestoreInProgress;
-            await SaveDatabaseRecordAsync(DatabaseName, databaseRecord, RestoreSettings.DatabaseValues, Result, Progress);
+            var index = await SaveDatabaseRecordAsync(DatabaseName, databaseRecord, RestoreSettings.DatabaseValues, Result, Progress);
+
+            var dbSearchResult = ServerStore.DatabasesLandlord.TryGetOrCreateDatabase(DatabaseName);
+            var shardedDbContext = dbSearchResult.DatabaseContext;
+
+            var op = new WaitForIndexNotificationOnServerOperation(index);
+            await shardedDbContext.AllNodesExecutor.ExecuteParallelForAllAsync(op);
         }
 
         protected override async Task RestoreAsync()
@@ -101,12 +108,15 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore.Sharding
                     Members = new List<string>
                     {
                         shardRestoreSetting.NodeTag
-                    }
+                    },
+                    ReplicationFactor = 1
                 };
 
                 if (nodes.Add(shardRestoreSetting.NodeTag))
                     databaseRecord.Sharding.Orchestrator.Topology.Members.Add(shardRestoreSetting.NodeTag);
             }
+
+            databaseRecord.Sharding.Orchestrator.Topology.ReplicationFactor = databaseRecord.Sharding.Orchestrator.Topology.Members.Count;
         }
 
         private async Task<IOperationResult> RestoreOnAllShardsAsync(Action<IOperationProgress> onProgress, RestoreBackupConfigurationBase configuration,

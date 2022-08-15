@@ -79,12 +79,12 @@ namespace SlowTests.Sharding.Subscriptions
         {
             int rf = 1;
             int clusterSize = 3;
-            var db = GetDatabaseName();
             var (nodes, leader) = await CreateRaftCluster(clusterSize, shouldRunInMemory: false);
 
-            await ShardingCluster.CreateShardedDatabaseInCluster(db, rf, (nodes, leader));
+            var options = Sharding.GetOptionsForCluster(leader, shards: 3, shardReplicationFactor: 1, orchestratorReplicationFactor: clusterSize);
+            options.RunInMemory = false;
 
-            using (var store = new DocumentStore { Database = db, Urls = new[] { leader.WebUrl } }.Initialize())
+            using (var store = Sharding.GetDocumentStore(options))
             {
                 var id = store.Subscriptions.Create<User>();
                 var subscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
@@ -106,7 +106,7 @@ namespace SlowTests.Sharding.Subscriptions
                 }
 
                 // Wait for documents to replicate
-                Assert.True(ShardingCluster.WaitForShardedChangeVectorInCluster(nodes, store.Database, rf));
+                Assert.True(await ShardingCluster.WaitForShardedChangeVectorInClusterAsync(nodes, store.Database, rf));
 
                 var disposed = new List<string>();
                 var hashset = new HashSet<string>();
@@ -133,7 +133,7 @@ namespace SlowTests.Sharding.Subscriptions
                     nodesWithIds.Add(kvp.Key, internalDic);
                 }
 
-                Assert.True(tagsToDispose.Count == 3, "tagsToDispose.Count == 3");
+                Assert.True(tagsToDispose.Count == 3, $"{tagsToDispose.Count} != 3");
 
                 var c1 = rf;
                 while (c1-- != 0)
@@ -193,7 +193,7 @@ namespace SlowTests.Sharding.Subscriptions
                             mre2.Set();
                     });
 
-                    Assert.True(await mre.WaitAsync(_reasonableWaitTime));
+                    Assert.True(await mre.WaitAsync(_reasonableWaitTime),$"error: {t.Exception}");
 
                     Assert.All(expectedIds, s => Assert.Contains(s, results));
                     results.Clear();
@@ -201,26 +201,10 @@ namespace SlowTests.Sharding.Subscriptions
                     var dispsoedNode = nodes.FirstOrDefault(x => x.ServerStore.NodeTag == disposed.First());
                     Assert.NotNull(dispsoedNode);
 
-                    var settings = new Dictionary<string, string>(DefaultClusterSettings)
-                    {
-                        [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = dispsoedNode.WebUrl,
-                        [RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] = $"{dispsoedNode.Configuration.Cluster.ElectionTimeout.GetValue(TimeUnit.Milliseconds)}",
-                    };
-
-                    var dataDirectory = dispsoedNode.Configuration.Core.DataDirectory.FullPath;
-
-                    var node = base.GetNewServer(new ServerCreationOptions()
-                    {
-                        DeletePrevious = false,
-                        RunInMemory = false,
-                        CustomSettings = settings,
-                        DataDirectory = dataDirectory
-                    });
-
-                    Assert.True(node.ServerStore.Engine.CurrentState != RachisState.Passive, "node.ServerStore.Engine.CurrentState != RachisState.Passive");
+                    await ReviveNodeAsync((dispsoedNode.Configuration.Core.DataDirectory.FullPath, dispsoedNode.WebUrl, dispsoedNode.ServerStore.NodeTag));
 
                     // disposed node should reconnect and send docs
-                    Assert.True(await mre2.WaitAsync(_reasonableWaitTime));
+                    Assert.True(await mre2.WaitAsync(_reasonableWaitTime), $"error: {t.Exception}");
                     Assert.All(expectedIds2, s => Assert.Contains(s, results));
                 }
             }

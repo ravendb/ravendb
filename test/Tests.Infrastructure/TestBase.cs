@@ -276,6 +276,16 @@ namespace FastTests
             }
         }
 
+        public List<RavenServer> GetServers()
+        {
+            if (Servers.Count > 0)
+            {
+                return Servers;
+            }
+
+            return new List<RavenServer> { Server };
+        }
+
         private static void CheckServerLeak()
         {
             foreach (var leakedServer in LeakedServers)

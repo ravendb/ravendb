@@ -454,7 +454,7 @@ namespace SlowTests.Sharding.Backup
             {
                 var backupPath = NewDataPath(suffix: "BackupFolder");
 
-                using (var store1 = GetDocumentStore(new Options { ModifyDatabaseName = s => $"{s}_1" }))
+                using (var store1 = GetDocumentStore())
                 using (var store2 = Sharding.GetDocumentStore())
                 using (var store3 = GetDocumentStore())
                 {
@@ -488,14 +488,19 @@ namespace SlowTests.Sharding.Backup
                         Shards = new SingleShardRestoreSetting[dirs.Length]
                     };
 
-                    for (var i = 0; i < dirs.Length; i++)
+                    var sharding = await Sharding.GetShardingConfigurationAsync(store2);
+
+                    for (int i = 0; i < dirs.Length; i++)
                     {
                         var dir = dirs[i];
-                        settings.Shards[i] = new SingleShardRestoreSetting
+                        var shardIndexPosition = dir.LastIndexOf('$') + 1;
+                        var shardNumber = int.Parse(dir[shardIndexPosition].ToString());
+
+                        settings.Shards[shardNumber] = new SingleShardRestoreSetting
                         {
-                            ShardNumber = i, 
-                            BackupPath = dir, 
-                            NodeTag = "A"
+                            ShardNumber = shardNumber,
+                            BackupPath = dir,
+                            NodeTag = sharding.Shards[shardNumber].Members[0]
                         };
                     }
 

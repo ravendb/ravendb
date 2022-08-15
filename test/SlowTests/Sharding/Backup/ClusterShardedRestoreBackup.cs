@@ -26,16 +26,10 @@ namespace SlowTests.Sharding.Backup
         public async Task CanBackupAndRestoreShardedDatabaseInCluster()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            var cluster = await CreateRaftCluster(3);
-            var dbName = GetDatabaseName();
+            var cluster = await CreateRaftCluster(3, watcherCluster: true);
 
-            await ShardingCluster.CreateShardedDatabaseInCluster(dbName, replicationFactor: 1, cluster, certificate: null);
-
-            using (var store = new DocumentStore
-            {
-                Urls = cluster.Nodes.Select(s => s.WebUrl).ToArray(), 
-                Database = dbName,
-            }.Initialize())
+            var options = Sharding.GetOptionsForCluster(cluster.Leader, shards: 3, shardReplicationFactor: 1, orchestratorReplicationFactor: 3);
+            using (var store = Sharding.GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -47,7 +41,7 @@ namespace SlowTests.Sharding.Backup
                     session.SaveChanges();
                 }
 
-                var waitHandles = await Sharding.Backup.WaitForBackupsToComplete(cluster.Nodes, dbName);
+                var waitHandles = await Sharding.Backup.WaitForBackupsToComplete(cluster.Nodes, store.Database);
 
                 var config = Backup.CreateBackupConfiguration(backupPath);
                 await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(cluster.Nodes, store, config);
@@ -61,15 +55,19 @@ namespace SlowTests.Sharding.Backup
                 {
                     Shards = new SingleShardRestoreSetting[dirs.Length]
                 };
+                var sharding = await Sharding.GetShardingConfigurationAsync(store);
 
-                for (var i = 0; i < dirs.Length; i++)
+                for (int i = 0; i < dirs.Length; i++)
                 {
                     var dir = dirs[i];
-                    settings.Shards[i] = new SingleShardRestoreSetting
+                    var shardIndexPosition = dir.LastIndexOf('$') + 1;
+                    var shardNumber = int.Parse(dir[shardIndexPosition].ToString());
+
+                    settings.Shards[shardNumber] = new SingleShardRestoreSetting
                     {
-                        ShardNumber = i,
+                        ShardNumber = shardNumber,
                         BackupPath = dir,
-                        NodeTag = cluster.Nodes[i].ServerStore.NodeTag
+                        NodeTag = sharding.Shards[shardNumber].Members[0]
                     };
                 }
 
@@ -87,9 +85,11 @@ namespace SlowTests.Sharding.Backup
                     Assert.Equal(3, dbRec.Sharding.Shards.Length);
 
                     var shardNodes = new HashSet<string>();
-                    foreach (var shardTopology in dbRec.Sharding.Shards)
+                    for (var index = 0; index < dbRec.Sharding.Shards.Length; index++)
                     {
+                        var shardTopology = dbRec.Sharding.Shards[index];
                         Assert.Equal(1, shardTopology.Members.Count);
+                        Assert.Equal(sharding.Shards[index].Members[0], shardTopology.Members[0]);
                         Assert.True(shardNodes.Add(shardTopology.Members[0]));
                     }
 
