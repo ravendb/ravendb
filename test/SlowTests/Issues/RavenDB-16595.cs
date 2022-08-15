@@ -73,8 +73,7 @@ namespace SlowTests.Issues
                 new RestoreBackupConfiguration { 
                     BackupLocation = Directory.GetDirectories(backupPath).First(), 
                     DatabaseName = databaseCopyName,
-                    NodeTag = dbServer.ServerStore.NodeTag
-                });
+                }, nodeTag: dbServer.ServerStore.NodeTag );
 
             // add second node to databaseCopy
             var notDbServer = nodes.Single(s => record.Topology.AllNodes.Contains(s.ServerStore.NodeTag) == false);

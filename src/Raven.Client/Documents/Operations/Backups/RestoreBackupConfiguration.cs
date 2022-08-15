@@ -40,8 +40,6 @@ namespace Raven.Client.Documents.Operations.Backups
     {
         public string BackupLocation { get; set; }
 
-        public string NodeTag { get; set; }
-
         protected override RestoreType Type => RestoreType.Local;
 
         public override DynamicJsonValue ToJson()
