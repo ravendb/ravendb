@@ -226,11 +226,11 @@ namespace FastTests
                 Assert.Equal(opStatus, value);
             }
 
-            public IDisposable RestoreDatabase(IDocumentStore store, RestoreBackupConfiguration config, TimeSpan? timeout = null)
+            public IDisposable RestoreDatabase(IDocumentStore store, RestoreBackupConfiguration config, TimeSpan? timeout = null, string nodeTag = null)
             {
                 RestoreBackupOperation restoreOperation;
-                if (config.NodeTag != null)
-                    restoreOperation = new RestoreBackupOperation(config, config.NodeTag);
+                if (nodeTag != null)
+                    restoreOperation = new RestoreBackupOperation(config, nodeTag);
                 else
                     restoreOperation = new RestoreBackupOperation(config);
 
