@@ -3,6 +3,7 @@ using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.Contracts;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -17,7 +18,6 @@ using Sparrow.Json;
 using Sparrow.Server;
 using Sparrow.Server.Compression;
 using Voron;
-using Voron.Data;
 using Voron.Data.BTrees;
 using Voron.Data.CompactTrees;
 using Voron.Data.Containers;
@@ -61,16 +61,111 @@ namespace Corax
         // private readonly ConcurrentDictionary<Slice, Dictionary<Slice, ConcurrentQueue<long>>> _bufferConcurrent =
         //     new ConcurrentDictionary<Slice, ConcurrentDictionary<Slice, ConcurrentQueue<long>>>(SliceComparer.Instance);
 
-        private struct EntriesModifications
+        private unsafe struct EntriesModifications : IDisposable
         {
-            public List<long> Additions;
-            public List<long> Removals;
+            private readonly ByteStringContext _context;
+            private ByteStringContext<ByteStringMemoryCache>.InternalScope _disposable;
+
+            private long* _start;
+            private long* _end;
+            private int _additions;
+            private int _removals;
+            private bool _sortingNeeded;
+
+            public int TotalAdditions => _additions;
+            public int TotalRemovals => _removals;
+
+            public long TotalSpace => _end - _start;
+            public long FreeSpace => TotalSpace - (_additions + _removals);
+
+            private const int InitialSize = 16;
+
+            public EntriesModifications([NotNull] ByteStringContext context)
+            {
+                _context = context;
+                _disposable = _context.Allocate(InitialSize * sizeof(long), out var output);
+                _start = (long*)output.Ptr;
+                _end = _start + InitialSize;
+                _additions = 0;
+                _removals = 0;
+                _sortingNeeded = false;
+            }
+
+            public void Addition(long entryId)
+            {
+                if (_additions > 0 && *(_start + _additions - 1) == entryId)
+                    return;
+
+                if (FreeSpace == 0)
+                    GrowBuffer();
+
+                *(_start + _additions) = entryId;
+                _additions++;
+
+                _sortingNeeded = true;
+            }
+
+            public void Removal(long entryId)
+            {
+                if (_removals > 0 && *(_end - _removals + 1) == entryId)
+                    return;
+
+                if (FreeSpace == 0)
+                    GrowBuffer();
+
+                *(_end - _removals) = entryId;
+                _removals++;
+
+                _sortingNeeded = true;
+            }
+
+            private void GrowBuffer()
+            {
+                int totalSpace = (int)TotalSpace;
+                int newTotalSpace = totalSpace * 2;
+
+                var scope = _context.Allocate(newTotalSpace * sizeof(long), out var output);
+                long* start = (long*)output.Ptr;
+                long* end = start + newTotalSpace;
+
+                // Copy the contents that we already have.
+                Unsafe.CopyBlockUnaligned(start, _start, (uint)_additions * sizeof(long));
+                Unsafe.CopyBlockUnaligned(end - _removals + 1, _end - _removals + 1, (uint)_removals * sizeof(long));
+
+                // Return the memory
+                _disposable.Dispose();
+
+                _start = start;
+                _end = end;
+                _disposable = scope;
+            }
+
+            public void Sort()
+            {
+                if (_removals + _additions <= 1)
+                    _sortingNeeded = false;
+
+                if (_sortingNeeded)
+                {
+                    MemoryExtensions.Sort(new Span<long>(_start, _additions));
+                    MemoryExtensions.Sort(new Span<long>(_end - _removals + 1, _removals));
+                    _sortingNeeded = false;
+                }
+            }
+
+            public ReadOnlySpan<long> Additions => new(_start, _additions);
+            public ReadOnlySpan<long> Removals => new(_end - _removals + 1, _removals);
+            
+            public void Dispose()
+            {
+                _disposable.Dispose();
+            }
         }
         
         private readonly Dictionary<Slice, EntriesModifications>[] _buffer;
         private readonly Dictionary<long, EntriesModifications>[] _bufferLongs;
         private readonly Dictionary<double, EntriesModifications>[] _bufferDoubles;
-        private HashSet<long> _deletedEntries = new();
+        private readonly HashSet<long> _deletedEntries = new();
 
         private readonly long _postingListContainerId, _entriesContainerId;
 
@@ -334,7 +429,7 @@ namespace Corax
 
         public long GetNumberOfEntries() => (_indexMetadata.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0) + _numberOfModifications;
 
-        private unsafe void AddSuggestions(IndexFieldBinding binding, Slice slice)
+        private void AddSuggestions(IndexFieldBinding binding, Slice slice)
         {
             _suggestionsAccumulator ??= new Dictionary<int, Dictionary<Slice, int>>();
 
@@ -389,15 +484,6 @@ namespace Corax
                 suggestionsToAdd[key] = counter;
                 idx++;
             }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void AddMaybeAvoidDuplicate(List<long> term, long entryId)
-        {
-            if (term.Count > 0 && term[^1] == entryId)
-                return;
-
-            term.Add(entryId);
         }
 
         [SkipLocalsInit]
@@ -546,7 +632,7 @@ namespace Corax
                         $"{Environment.NewLine}Total amount of tokens: {tokens.Length}" +
                         $"{Environment.NewLine}Buffer contains '{Encodings.Utf8.GetString(wordsBuffer)}' and total length is {wordsBuffer.Length}" +
                         $"{Environment.NewLine}Buffer from ArrayPool: {Environment.NewLine}\tbyte buffer is {_encodingBufferHandler.Length} {Environment.NewLine}\ttokens buffer is {_tokensBufferHandler.Length}" +
-                        $"{Environment.NewLine}Original span cointains '{Encodings.Utf8.GetString(value)}' with total length {value.Length}" +
+                        $"{Environment.NewLine}Original span contains '{Encodings.Utf8.GetString(value)}' with total length {value.Length}" +
                         $"{Environment.NewLine}Field " +
                         $"{Environment.NewLine}\tid: {binding.FieldId}" +
                         $"{Environment.NewLine}\tname: {binding.FieldName}");
@@ -555,18 +641,17 @@ namespace Corax
 
             void NumericInsert(long lVal, double dVal)
             {
-                if (fieldDoubles.TryGetValue(dVal, out var doublesTerms) == false)
-                {
-                    fieldDoubles[dVal] = doublesTerms = new EntriesModifications { Additions = new List<long>(), Removals = new List<long>() };
-                }
+                // We make sure we get a reference because we want the struct to be modified directly from the dictionary.
+                ref var doublesTerms = ref CollectionsMarshal.GetValueRefOrAddDefault(fieldDoubles, dVal, out bool fieldDoublesExist);
+                if (fieldDoublesExist == false)
+                    doublesTerms = new EntriesModifications(Transaction.Allocator);
+                doublesTerms.Addition(entryId);
 
-                if (fieldLongs.TryGetValue(lVal, out var longsTerms) == false)
-                {
-                    fieldLongs[lVal] = longsTerms = new EntriesModifications { Additions = new List<long>(), Removals = new List<long>() };
-                }
-
-                AddMaybeAvoidDuplicate(doublesTerms.Additions, entryId);
-                AddMaybeAvoidDuplicate(longsTerms.Additions, entryId);
+                // We make sure we get a reference because we want the struct to be modified directly from the dictionary.
+                ref var longsTerms = ref CollectionsMarshal.GetValueRefOrAddDefault(fieldLongs, lVal, out bool fieldLongExist);
+                if (fieldLongExist == false)
+                    longsTerms = new EntriesModifications(Transaction.Allocator);
+                longsTerms.Addition(entryId);
             }
             
             void ExactInsert(ReadOnlySpan<byte> value)
@@ -584,13 +669,16 @@ namespace Corax
                     scope = CreateNormalizedTerm(context, value, out slice);
                 }
 
-                if (field.TryGetValue(slice, out var term) == false)
+                // We are gonna try to get the reference if it exists, but we wont try to do the addition here, because to store in the
+                // dictionary we need to close the slice as we are disposing it afterwards. 
+                ref var term = ref CollectionsMarshal.GetValueRefOrAddDefault(field, slice, out var exists);
+                if (exists == false)
                 {
-                    var fieldName = slice.Clone(context);
-                    field[fieldName] = term = new EntriesModifications { Additions = new List<long>(), Removals = new List<long>() };
+                    term = new EntriesModifications(context);
+                    scope = null; // We don't want the fieldname (slice) to be returned.
                 }
 
-                AddMaybeAvoidDuplicate(term.Additions, entryId);
+                term.Addition(entryId);
 
                 if (binding.HasSuggestions)
                     AddSuggestions(binding, slice);
@@ -624,7 +712,7 @@ namespace Corax
 
         private void RecordTermsToDeleteFrom(long entryToDelete,  LowLevelTransaction llt, ref Page lastVisitedPage)
         {
-            var entryReader = IndexSearcher.GetReaderFor(Transaction, ref lastVisitedPage, entryToDelete, out _);
+            var entryReader = IndexSearcher.GetReaderFor(Transaction, ref lastVisitedPage, entryToDelete, out var _);
             foreach (var binding in _fieldsMapping) // todo maciej: this part needs to be rebuilt after implementing DynamicFields
             {
                 if (binding.IsIndexed == false)
@@ -639,6 +727,8 @@ namespace Corax
 
         private void RemoveSingleTerm(IndexFieldBinding indexFieldBinding, long entryToDelete, IndexEntryReader entryReader, IndexEntryFieldType fieldType)
         {
+            var context = Transaction.Allocator;
+
             switch (fieldType)
             {
                 case IndexEntryFieldType.Empty:
@@ -740,37 +830,23 @@ namespace Corax
                     RecordTermToDelete(value, indexFieldBinding);
                     break;
             }
-            
-            void RecordExactTermToDelete(ReadOnlySpan<byte> termValue, IndexFieldBinding binding)
-            {
-                using var _ = CreateNormalizedTerm(Transaction.Allocator, termValue, out Slice termSlice);
-
-                if (_buffer[binding.FieldId].TryGetValue(termSlice, out var result) == false)
-                {
-                    _buffer[binding.FieldId][termSlice.Clone(Transaction.Allocator)] =
-                        result = new EntriesModifications { Additions = new List<long>(), Removals = new List<long>() };
-                }
-
-                AddMaybeAvoidDuplicate(result.Removals, entryToDelete);
-            }
 
             void RecordTupleToDelete(IndexFieldBinding binding, ReadOnlySpan<byte> termValue, double termDouble, long termLong)
             {
                 // Is there any reason to analyze string of number?
                 RecordExactTermToDelete(termValue, binding);
 
-                if (_bufferDoubles[binding.FieldId].TryGetValue(termDouble, out var result) == false)
-                {
-                    _bufferDoubles[binding.FieldId][termDouble] = result = new EntriesModifications { Additions = new List<long>(), Removals = new List<long>() };
-                }
+                // We make sure we get a reference because we want the struct to be modified directly from the dictionary.
+                ref var doublesTerms = ref CollectionsMarshal.GetValueRefOrAddDefault(_bufferDoubles[binding.FieldId], termDouble, out bool fieldDoublesExist);
+                if (fieldDoublesExist == false)
+                    doublesTerms = new EntriesModifications(context);
+                doublesTerms.Removal(entryToDelete);
 
-                AddMaybeAvoidDuplicate(result.Removals, entryToDelete);
-
-                if (_bufferLongs[binding.FieldId].TryGetValue(termLong, out result) == false)
-                {
-                    _bufferLongs[binding.FieldId][termLong] = result = new EntriesModifications { Additions = new List<long>(), Removals = new List<long>() };
-                }
-                AddMaybeAvoidDuplicate(result.Removals, entryToDelete);
+                // We make sure we get a reference because we want the struct to be modified directly from the dictionary.
+                ref var longsTerms = ref CollectionsMarshal.GetValueRefOrAddDefault(_bufferLongs[binding.FieldId], termLong, out bool fieldLongExist);
+                if (fieldLongExist == false)
+                    longsTerms = new EntriesModifications(context);
+                longsTerms.Removal(entryToDelete);
             }
 
             void RecordTermToDelete(ReadOnlySpan<byte> termValue, IndexFieldBinding binding)
@@ -804,7 +880,24 @@ namespace Corax
                     RecordExactTermToDelete(term, binding);
                 }
             }
+            
+            void RecordExactTermToDelete(ReadOnlySpan<byte> termValue, IndexFieldBinding binding)
+            {
+                ByteStringContext<ByteStringMemoryCache>.InternalScope? scope = CreateNormalizedTerm(context, termValue, out Slice termSlice);
 
+                // We are gonna try to get the reference if it exists, but we wont try to do the addition here, because to store in the
+                // dictionary we need to close the slice as we are disposing it afterwards. 
+                ref var term = ref CollectionsMarshal.GetValueRefOrAddDefault(_buffer[binding.FieldId], termSlice, out var exists);
+                if (exists == false)
+                {
+                    term = new EntriesModifications(context);
+                    scope = null; // We dont want to reclaim the term name
+                }
+
+                term.Removal(entryToDelete);
+
+                scope?.Dispose();
+            }
         }
 
         private void ProcessDeletes() 
@@ -960,7 +1053,7 @@ namespace Corax
         private void InsertTextualField(Tree fieldsTree, int fieldId, Span<byte> tmpBuf, ref Slice[] sortedTermsBuffer)
         {
             var fieldTree = fieldsTree.CompactTreeFor(_fieldsMapping.GetByFieldId(fieldId).FieldName);
-            var llt = Transaction.LowLevelTransaction;
+
             var currentFieldTerms = _buffer[fieldId];
             int termsCount = currentFieldTerms.Count;
             if (sortedTermsBuffer.Length < termsCount)
@@ -977,19 +1070,21 @@ namespace Corax
             for (var index = 0; index < termsCount; index++)
             {
                 var term = sortedTermsBuffer[index];
-                var entries = currentFieldTerms[term];
+
+                ref var entries = ref CollectionsMarshal.GetValueRefOrNullRef(currentFieldTerms, term);
+                Debug.Assert(Unsafe.IsNullRef(ref entries) == false);
 
                 long termId;
                 ReadOnlySpan<byte> termsSpan = term.AsSpan();
                 if (fieldTree.TryGetNextValue(termsSpan, out var existing, out var encodedKey) == false)
-                {
-                    Debug.Assert(entries.Removals.Count == 0, "entries.Removals.Count == 0");
-                    AddNewTerm(entries.Additions, tmpBuf, out termId);
+                {                    
+                    Debug.Assert(entries.TotalRemovals == 0, "entries.TotalRemovals == 0");
+                    AddNewTerm(entries, tmpBuf, out termId);
                     fieldTree.Add(termsSpan, termId, encodedKey);
                     continue;
                 }
 
-                switch (AddEntriesToTerm(tmpBuf, existing, llt, entries, out termId))
+                switch (AddEntriesToTerm(tmpBuf, existing, ref entries, out termId))
                 {
                     case AddEntriesToTermResult.UpdateTermId:
                         fieldTree.Add(termsSpan, termId, encodedKey);
@@ -1008,25 +1103,27 @@ namespace Corax
             RemoveTermId
         }
 
-        private AddEntriesToTermResult AddEntriesToTerm(Span<byte> tmpBuf, long existing, LowLevelTransaction llt, in EntriesModifications entries, out long termId)
+        private AddEntriesToTermResult AddEntriesToTerm(Span<byte> tmpBuf, long existing, ref EntriesModifications entries, out long termId)
         {
             if ((existing & (long)TermIdMask.Set) != 0)
             {
-                return AddEntriesToTermResultViaLargeSet(llt, entries, out termId, existing & Constants.StorageMask.ContainerType);
+                return AddEntriesToTermResultViaLargeSet(ref entries, out termId, existing & Constants.StorageMask.ContainerType);
             }
             if ((existing & (long)TermIdMask.Small) != 0)
             {
-                return AddEntriesToTermResultViaSmallSet(tmpBuf, llt, entries, out termId, existing & Constants.StorageMask.ContainerType);
+                return AddEntriesToTermResultViaSmallSet(tmpBuf, ref entries, out termId, existing & Constants.StorageMask.ContainerType);
             }
-            return AddEntriesToTermResultSingleValue(tmpBuf, existing, entries, out termId);
+            return AddEntriesToTermResultSingleValue(tmpBuf, existing, ref entries, out termId);
         }
 
-        private AddEntriesToTermResult AddEntriesToTermResultViaSmallSet(Span<byte> tmpBuf, LowLevelTransaction llt, EntriesModifications entries, out long termId, long id)
+        private AddEntriesToTermResult AddEntriesToTermResultViaSmallSet(Span<byte> tmpBuf, ref EntriesModifications entries, out long termId, long id)
         {
+            var llt = Transaction.LowLevelTransaction;
+
             var smallSet = Container.GetMutable(llt, id);
-            Debug.Assert(entries.Removals.Distinct().Count() == entries.Removals.Count, $"Removals list is not distinct.");
+            Debug.Assert(entries.Removals.ToArray().Distinct().Count() == entries.TotalRemovals, $"Removals list is not distinct.");
             
-            entries.Removals.Sort();
+            entries.Sort();
           
             int removalIndex = 0;
             
@@ -1034,39 +1131,54 @@ namespace Corax
             var currentId = 0L;
             var count = ZigZagEncoding.Decode<int>(smallSet, out var positionInEncodedBuffer);
 
+            var removals = entries.Removals;
+            long freeSpace = entries.FreeSpace;
             for (int idX = 0; idX < count; ++idX)
             {
                 var value = ZigZagEncoding.Decode<long>(smallSet, out var lengthOfDelta, positionInEncodedBuffer);
                 positionInEncodedBuffer += lengthOfDelta;
                 currentId += value;
                 
-                if (removalIndex < entries.Removals.Count)
+                if (removalIndex < removals.Length)
                 {
-                    if (currentId == entries.Removals[removalIndex])
+                    if (currentId == removals[removalIndex])
                     {
                         removalIndex++;
                         continue;
                     }
 
-                    if (currentId > entries.Removals[removalIndex])
-                        throw new InvalidDataException("Attempt to remove value " + entries.Removals[removalIndex] + ", but got " + currentId);
+                    if (currentId > removals[removalIndex])
+                        throw new InvalidDataException("Attempt to remove value " + removals[removalIndex] + ", but got " + currentId);
                 }
-                
-                AddMaybeAvoidDuplicate(entries.Additions, currentId);
+
+                entries.Addition(currentId);
+
+                // PERF: Check if we have free space, in order to avoid copying the removals list in case
+                // an addition requires an invalidation of the removals, we check if the conditions 
+                // for a buffer growth are met. 
+                if (freeSpace == 0)
+                {
+                    removals = entries.Removals;
+                    freeSpace = entries.FreeSpace;
+                }
+                else
+                {
+                    freeSpace--;
+                }
             }
 
-            if (entries.Additions.Count == 0)
+            if (entries.TotalAdditions == 0)
             {
                 Container.Delete(llt, _postingListContainerId, id);
                 termId = -1;
                 return AddEntriesToTermResult.RemoveTermId;
             }
 
-            entries.Additions.Sort();
+            entries.Sort();
 
             if (TryDeltaEncodingToBuffer(entries.Additions, tmpBuf, out var encoded) == false)
             {
-                AddNewTermToSet(entries.Additions, out termId);;
+                AddNewTermToSet(entries.Additions, out termId);
                 return AddEntriesToTermResult.UpdateTermId;
             }
 
@@ -1087,22 +1199,22 @@ namespace Corax
             return AddEntriesToTermResult.UpdateTermId;
         }
 
-        private AddEntriesToTermResult AddEntriesToTermResultSingleValue(Span<byte> tmpBuf, long existing, EntriesModifications entries, out long termId)
+        private AddEntriesToTermResult AddEntriesToTermResultSingleValue(Span<byte> tmpBuf, long existing, ref EntriesModifications entries, out long termId)
         {
             // single
-            if (entries.Additions.Count == 1 && entries.Additions[0] == existing && entries.Removals.Count == 0)
+            if (entries.TotalAdditions == 1 && entries.Additions[0] == existing && entries.TotalRemovals == 0)
             {
                 // Same element to add, nothing to do here.
                 termId = -1;
                 return AddEntriesToTermResult.NothingToDo;
             }
 
-            if (entries.Removals.Count != 0)
+            if (entries.TotalRemovals != 0)
             {
-                if (entries.Removals[0] != existing || entries.Removals.Count != 1)
-                    throw new InvalidDataException($"Attempt to delete id {string.Join(", ", entries.Removals)} that does not exists, only value is: {existing}");
+                if (entries.Removals[0] != existing || entries.TotalRemovals != 1)
+                    throw new InvalidDataException($"Attempt to delete id {string.Join(", ", entries.Removals.ToArray())} that does not exists, only value is: {existing}");
 
-                if (entries.Additions.Count == 0)
+                if (entries.TotalAdditions == 0)
                 {
                     termId = -1;
                     return AddEntriesToTermResult.RemoveTermId;
@@ -1110,20 +1222,22 @@ namespace Corax
             }
             else
             {
-                AddMaybeAvoidDuplicate(entries.Additions, existing);
+                entries.Addition(existing);
             }
             
-            AddNewTerm(entries.Additions, tmpBuf, out termId);
+            AddNewTerm(entries, tmpBuf, out termId);
             return AddEntriesToTermResult.UpdateTermId;
         }
 
-        private AddEntriesToTermResult AddEntriesToTermResultViaLargeSet(LowLevelTransaction llt, EntriesModifications entries, out long termId, long id)
+        private AddEntriesToTermResult AddEntriesToTermResultViaLargeSet(ref EntriesModifications entries, out long termId, long id)
         {
+            var llt = Transaction.LowLevelTransaction;
+
             var setSpace = Container.GetMutable(llt, id);
             ref var setState = ref MemoryMarshal.AsRef<SetState>(setSpace);
             var set = new Set(llt, Slices.Empty, setState);
-            entries.Additions.Sort();
-            entries.Removals.Sort();
+            entries.Sort();
+
             set.Remove(entries.Removals);
             set.Add(entries.Additions);
 
@@ -1143,23 +1257,27 @@ namespace Corax
         private unsafe void InsertNumericFieldLongs(Tree fieldsTree, int fieldId, Span<byte> tmpBuf)
         {
             FixedSizeTree fieldTree = fieldsTree.FixedTreeFor(_fieldsMapping.GetByFieldId(fieldId).FieldNameLong, sizeof(long));
-            var llt = Transaction.LowLevelTransaction;
           
             foreach (var (term, entries) in _bufferLongs[fieldId])
             {
+                // We are not going to be using these entries anymore after this. 
+                // Therefore, we can copy and we dont need to get a reference to the entry in the dictionary.
+                // IMPORTANT: No modification to the dictionary can happen from this point onwards. 
+                var localEntry = entries;
+
                 long termId;
 
                 using var _ = fieldTree.Read(term, out var result);
                 if (result.HasValue == false)
                 {
-                    Debug.Assert(entries.Removals.Count == 0, "entries.Removals.Count == 0");
-                    AddNewTerm(entries.Additions, tmpBuf, out termId);
+                    Debug.Assert(localEntry.TotalRemovals == 0, "entries.TotalRemovals == 0");
+                    AddNewTerm(localEntry, tmpBuf, out termId);
                     fieldTree.Add(term, termId);
                     continue;
                 }
 
                 var existing = *((long*)result.Content.Ptr);
-                switch (AddEntriesToTerm(tmpBuf, existing, llt, entries, out termId))
+                switch (AddEntriesToTerm(tmpBuf, existing, ref localEntry, out termId))
                 {
                     case AddEntriesToTermResult.UpdateTermId:
                         fieldTree.Add(term, termId);
@@ -1174,23 +1292,27 @@ namespace Corax
         private unsafe void InsertNumericFieldDoubles(Tree fieldsTree, int fieldId, Span<byte> tmpBuf)
         {
             var fieldTree = fieldsTree.FixedTreeForDouble(_fieldsMapping.GetByFieldId(fieldId).FieldNameDouble, sizeof(long));
-            var llt = Transaction.LowLevelTransaction;
 
             foreach (var (term, entries) in _bufferDoubles[fieldId])
             {
+                // We are not going to be using these entries anymore after this. 
+                // Therefore, we can copy and we dont need to get a reference to the entry in the dictionary.
+                // IMPORTANT: No modification to the dictionary can happen from this point onwards. 
+                var localEntry = entries;
+
                 using var _ = fieldTree.Read(term, out var result);
 
                 long termId;
                 if (result.Size == 0) // no existing value
                 {
-                    Debug.Assert(entries.Removals.Count == 0, "entries.Removals.Count == 0");
-                    AddNewTerm(entries.Additions, tmpBuf, out termId);
+                    Debug.Assert(localEntry.TotalRemovals == 0, "entries.TotalRemovals == 0");
+                    AddNewTerm(localEntry, tmpBuf, out termId);
                     fieldTree.Add(term, termId);
                     continue;
                 }
 
                 var existing = *((long*)result.Content.Ptr);
-                switch (AddEntriesToTerm(tmpBuf, existing, llt, entries, out termId))
+                switch (AddEntriesToTerm(tmpBuf, existing, ref localEntry, out termId))
                 {
                     case AddEntriesToTermResult.UpdateTermId:
                         fieldTree.Add(term, termId);
@@ -1202,13 +1324,13 @@ namespace Corax
             }
         }
         
-        private bool TryDeltaEncodingToBuffer(List<long> additions, Span<byte> tmpBuf, out Span<byte> encoded)
+        private bool TryDeltaEncodingToBuffer(ReadOnlySpan<long> additions, Span<byte> tmpBuf, out Span<byte> encoded)
         {
             // try to insert to container value
             //TODO: using simplest delta encoding, need to do better here
-            int pos = ZigZagEncoding.Encode(tmpBuf, additions.Count);
+            int pos = ZigZagEncoding.Encode(tmpBuf, additions.Length);
             pos += ZigZagEncoding.Encode(tmpBuf, additions[0], pos);
-            for (int i = 1; i < additions.Count; i++)
+            for (int i = 1; i < additions.Length; i++)
             {
                 if (pos + ZigZagEncoding.MaxEncodedSize >= tmpBuf.Length)
                 {
@@ -1227,18 +1349,21 @@ namespace Corax
             return true;
         }
 
-        private void AddNewTerm(List<long> additions, Span<byte> tmpBuf, out long termId, bool sortingNeeded = true)
+        private void AddNewTerm(in EntriesModifications entries, Span<byte> tmpBuf, out long termId, bool sortingNeeded = true)
         {
-            Debug.Assert(additions.Count > 0, "additions.Count > 0");
+            var additions = entries.Additions;
+
+            Debug.Assert(entries.TotalAdditions > 0, "entries.TotalAdditions > 0");
             // common for unique values (guid, date, etc)
-            if (additions.Count == 1)
+            if (entries.TotalAdditions == 1)
             {
                 termId = additions[0] | (long)TermIdMask.Single;                
                 return;
             }
 
+            // Because the sorting would not change the struct itself, it is safe to use an 'in' modifier to avoid the copying. 
             if(sortingNeeded)
-                additions.Sort();
+                entries.Sort();
 
             if (TryDeltaEncodingToBuffer(additions, tmpBuf, out var encoded) == false)
             {
@@ -1255,7 +1380,7 @@ namespace Corax
             termId = containerId | (long)TermIdMask.Small;
         }
 
-        private unsafe void AddNewTermToSet(List<long> additions, out long termId)
+        private unsafe void AddNewTermToSet(ReadOnlySpan<long> additions, out long termId)
         {
             long setId = Container.Allocate(Transaction.LowLevelTransaction, _postingListContainerId, sizeof(SetState), out var setSpace);
             ref var setState = ref MemoryMarshal.AsRef<SetState>(setSpace);
