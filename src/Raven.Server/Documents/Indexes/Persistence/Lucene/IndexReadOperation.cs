@@ -861,7 +861,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _releaseSearcher?.Dispose();
             _releaseReadTransaction?.Dispose();
 
-            if (_memoryInfo != null && _memoryInfo.ManagedThreadId == NativeMemory.CurrentThreadStats.ManagedThreadId)
+            if (_logger.IsInfoEnabled && _memoryInfo != null && _memoryInfo.ManagedThreadId == NativeMemory.CurrentThreadStats.ManagedThreadId)
             {
                 var diff = GC.GetAllocatedBytesForCurrentThread() - _memoryInfo.AllocatedBefore;
                 if (diff > 0)
