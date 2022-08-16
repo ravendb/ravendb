@@ -191,10 +191,10 @@ namespace Voron.Data.Sets
         /// <summary>
         /// We do a bulk removal of the values in the tree. The values are *assumed to already exists* in the tree.
         /// </summary>
-        public void Remove(List<long> values)
+        public void Remove(ReadOnlySpan<long> values)
         {
             int index = 0;
-            while (index < values.Count)
+            while (index < values.Length)
             {
                 FindPageFor(values[index]);
                 ref var state = ref _stk[_pos];
@@ -202,7 +202,7 @@ namespace Voron.Data.Sets
                 var leafPage = new SetLeafPage(state.Page);
                 long nextPageStart = NextParentLimit();
 
-                for (; index < values.Count && values[index] < nextPageStart; index++)
+                for (; index < values.Length && values[index] < nextPageStart; index++)
                 {
                     if (leafPage.Remove(_llt, values[index]) == false)
                     {
@@ -222,7 +222,7 @@ namespace Voron.Data.Sets
             }
         }
 
-        public void Add(List<long> values)
+        public void Add(ReadOnlySpan<long> values)
         {
             // NOTE: We assume that values is sorted
             
@@ -230,7 +230,7 @@ namespace Voron.Data.Sets
 #if DEBUG
             var prev = long.MinValue;
 #endif
-            while (index < values.Count)
+            while (index < values.Length)
             {               
                 FindPageFor(values[index]);
                 ref var state = ref _stk[_pos];
@@ -252,7 +252,7 @@ namespace Voron.Data.Sets
                     }
                 }
 
-                for (; index < values.Count && values[index] < last; index++)
+                for (; index < values.Length && values[index] < last; index++)
                 {
 #if DEBUG
                     if(prev > values[index])
