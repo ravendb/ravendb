@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using FastTests.Voron;
+using SharpCompress.Compressors;
+using SharpCompress.Compressors.Deflate;
 using Voron;
 using Voron.Debugging;
 using Xunit;
@@ -14,6 +16,29 @@ public class SetAddRemoval : StorageTest
 {
     public SetAddRemoval(ITestOutputHelper output) : base(output)
     {
+    }
+    
+    [Fact]
+    public void AdditionsAndRemovalWorkInBulk()
+    {
+        var ops = ReadOperationsFrom("3-2015-10.txt.gz");
+        using (var wtx = Env.WriteTransaction())
+        {
+            var set = wtx.OpenSet("test");
+            foreach (var op in ops)
+            {
+                if (op.Add)
+                {
+                    set.Add(op.Ids);
+                }
+                else
+                {
+                    set.Remove(op.Ids);
+                }
+            }
+
+            set.DumpAllValues();
+        }
     }
 
     [Fact]
@@ -66,8 +91,6 @@ public class SetAddRemoval : StorageTest
                 Assert.Equal(items[i], matches[i]);
             }
         }
-
-
     }
 
     private static List<long> ReadNumbersFromResource(string file)
@@ -78,6 +101,21 @@ public class SetAddRemoval : StorageTest
         while ((line = reader.ReadLine()) != null)
         {
             adds.Add(long.Parse(line));
+        }
+
+        return adds;
+    }
+    
+    private static List<(bool Add, List<long> Ids)> ReadOperationsFrom(string file)
+    {
+        var reader = new StreamReader(new GZipStream(typeof(SetAddRemoval).Assembly.GetManifestResourceStream("FastTests.Corax.Bugs." + file), CompressionMode.Decompress));
+        var adds = new List<(bool Add, List<long> Ids)>();
+        string line = null;
+        while ((line = reader.ReadLine()) != null)
+        {
+            bool add = line[0] == '+';
+            var ids = line.Substring(1).Split(',').Select(long.Parse).ToList();
+            adds.Add((add, ids));
         }
 
         return adds;
