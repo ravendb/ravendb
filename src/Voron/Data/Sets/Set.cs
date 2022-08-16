@@ -188,6 +188,19 @@ namespace Voron.Data.Sets
             return parent.LastSearchPosition == 0 ? 1 : parent.LastSearchPosition - 1;
         }
 
+        public List<long> DumpAllValues()
+        {
+            var iterator = Iterate();
+            Span<long> buffer = stackalloc long[1024];
+            var results = new List<long>();
+            while (iterator.Fill(buffer, out var read) && read != 0)
+            {
+                results.AddRange(buffer[0..read].ToArray());
+            }
+
+            return results;
+        }
+
         /// <summary>
         /// We do a bulk removal of the values in the tree. The values are *assumed to already exists* in the tree.
         /// </summary>
@@ -200,9 +213,14 @@ namespace Voron.Data.Sets
                 ref var state = ref _stk[_pos];
                 state.Page = _llt.ModifyPage(state.Page.PageNumber);
                 var leafPage = new SetLeafPage(state.Page);
-                long nextPageStart = NextParentLimit();
+                if (leafPage.Header->Baseline != (values[index] & ~int.MaxValue))
+                {
+                    throw new InvalidOperationException($"Attempted to remove a value {values[index]} that is no located in page {state.Page.PageNumber} (baseline: {leafPage.Header->Baseline})");
+                }
 
-                for (; index < values.Length && values[index] < nextPageStart; index++)
+                long limit = Math.Min(NextParentLimit(), leafPage.Header->Baseline + int.MaxValue + 1);
+
+                for (; index < values.Count && values[index] < limit; index++)
                 {
                     if (leafPage.Remove(_llt, values[index]) == false)
                     {
