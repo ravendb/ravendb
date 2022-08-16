@@ -110,13 +110,13 @@ namespace Raven.Server.Documents.Queries.AST
             }
         }
 
-        public override void VisitDeclaredFunction(string func, DeclaredFunction.FunctionType type)
+        public override void VisitDeclaredFunction(string func)
         {
             EnsureLine();
             _sb.Append("DECLARE");
             if (func.StartsWith(' ') == false)
             {
-                _sb.Append(" ");
+                _sb.Append(' ');
             }
             _sb.AppendLine(func).AppendLine();
         }

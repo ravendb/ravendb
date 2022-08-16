@@ -43,20 +43,6 @@ namespace SlowTests.Issues
             var s = query.ToString();
             Assert.False(s.Contains("function output function output(o)"), "duplicate of \'function output\' in query.ToString()");
 
-            using var store = GetDocumentStore();
-            using (var session = store.OpenSession())
-            {
-                for (int i = 0; i < 10; i++)
-                {
-                    session.Store(new Item
-                    {
-                        Content = $"Item{i}"
-                    });
-                    session.SaveChanges();
-                }
-            }
-
-            WaitForUserToContinueTheTest(store);
         }
 
         private class Item

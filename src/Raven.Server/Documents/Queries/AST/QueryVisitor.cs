@@ -169,7 +169,7 @@ namespace Raven.Server.Documents.Queries.AST
         {
             foreach (var kvp in declaredFunctions)
             {
-                VisitDeclaredFunction(kvp.Value.FunctionText, kvp.Value.Type);
+                VisitDeclaredFunction(kvp.Value.FunctionText);
             }
         }
 
@@ -305,7 +305,7 @@ namespace Raven.Server.Documents.Queries.AST
             
         }
 
-        public virtual void VisitDeclaredFunction(string func, DeclaredFunction.FunctionType type)
+        public virtual void VisitDeclaredFunction(string func)
         {
             
         }
