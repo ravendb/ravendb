@@ -735,7 +735,7 @@ namespace Raven.Server.Documents
             if (isAllDocs == false && requestedDataField == false)
                 fields |= DocumentFields.Data;
 
-            using (var lzv = context.GetLazyString(collection))
+            using (var collectionAsLazyString = context.GetLazyString(collection))
             {
                 // we request ALL documents that start with `idPrefix` and filter it here by the collection name
                 foreach (var doc in GetDocumentsStartingWith(context, idPrefix, null, null, startAfterId, start, take: long.MaxValue, fields: fields))
@@ -749,7 +749,7 @@ namespace Raven.Server.Documents
                         continue;
                     }
 
-                    if (IsCollectionMatch(doc, lzv) == false)
+                    if (IsCollectionMatch(doc) == false)
                     {
                         skippedResults.Value++;
                         doc.Dispose();
@@ -770,28 +770,28 @@ namespace Raven.Server.Documents
 
                     yield return doc;
                 }
-            }
 
-            bool IsCollectionMatch(Document doc, LazyStringValue lzv)
-            {
-                if (doc.TryGetMetadata(out var metadata) == false)
-                    return false;
-
-                if (metadata.TryGet(Constants.Documents.Metadata.Collection, out LazyStringValue c) == false)
-                    return false;
-
-                if (c != null)
+                bool IsCollectionMatch(Document doc)
                 {
-                    if (lzv.EqualsOrdinalIgnoreCase(c) == false)
+                    if (doc.TryGetMetadata(out var metadata) == false)
                         return false;
-                }
-                else
-                {
-                    if (isEmptyCollection == false)
-                        return false;
-                }
 
-                return true;
+                    if (metadata.TryGet(Constants.Documents.Metadata.Collection, out LazyStringValue c) == false)
+                        return false;
+
+                    if (c != null)
+                    {
+                        if (collectionAsLazyString.EqualsOrdinalIgnoreCase(c) == false)
+                            return false;
+                    }
+                    else
+                    {
+                        if (isEmptyCollection == false)
+                            return false;
+                    }
+
+                    return true;
+                }
             }
         }
 
