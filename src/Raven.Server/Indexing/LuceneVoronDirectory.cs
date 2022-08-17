@@ -181,7 +181,7 @@ namespace Raven.Server.Indexing
             if (state == null)
                 throw new ArgumentNullException(nameof(s));
 
-            return new VoronIndexInput(this, name, state.Transaction, _name);
+            return new VoronBufferedInput(this, name, state.Transaction, _name);
         }
 
         public override IndexOutput CreateOutput(string name, IState s)
@@ -192,7 +192,7 @@ namespace Raven.Server.Indexing
             var state = s as VoronState;
             if (state == null)
                 throw new ArgumentNullException(nameof(s));
-
+            
             return new VoronIndexOutput(_tempFileCache, name, state.Transaction, _name, _indexOutputFilesSummary);
         }
 
