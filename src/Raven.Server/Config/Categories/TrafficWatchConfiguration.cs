@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using Raven.Client.Documents.Changes;
-using Raven.Client.ServerWide.Operations.Logs;
+using Raven.Client.ServerWide.Operations.TrafficWatch;
 using Raven.Server.Config.Attributes;
 using Sparrow;
 using Size = Sparrow.Size;

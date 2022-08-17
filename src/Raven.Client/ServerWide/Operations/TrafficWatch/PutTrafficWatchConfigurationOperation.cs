@@ -7,7 +7,7 @@ using Raven.Client.Http;
 using Raven.Client.Json;
 using Sparrow.Json;
 
-namespace Raven.Client.ServerWide.Operations.Logs
+namespace Raven.Client.ServerWide.Operations.TrafficWatch
 {
     internal class PutTrafficWatchConfigurationOperation : IServerOperation
     {

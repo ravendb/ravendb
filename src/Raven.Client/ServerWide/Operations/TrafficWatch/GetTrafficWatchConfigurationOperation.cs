@@ -8,7 +8,7 @@ using Raven.Client.Json.Serialization;
 using Sparrow.Json;
 using Size = Sparrow.Size;
 
-namespace Raven.Client.ServerWide.Operations.Logs;
+namespace Raven.Client.ServerWide.Operations.TrafficWatch;
 
 public class GetTrafficWatchConfigurationOperation : IServerOperation<TrafficWatchConfigurationResult>
 {

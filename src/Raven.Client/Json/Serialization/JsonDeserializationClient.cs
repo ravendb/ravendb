@@ -33,6 +33,7 @@ using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Operations.DocumentsCompression;
 using Raven.Client.ServerWide.Operations.Logs;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
+using Raven.Client.ServerWide.Operations.TrafficWatch;
 using Raven.Client.ServerWide.Tcp;
 using Sparrow.Json;
 
