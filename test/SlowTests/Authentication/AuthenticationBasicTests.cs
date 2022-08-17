@@ -755,6 +755,8 @@ namespace SlowTests.Authentication
                     ("GET", "/setup/ips"),                              // only available in setup mode
                     ("POST", "/setup/hosts"),                           // only available in setup mode
                     ("POST", "/setup/unsecured"),                       // only available in setup mode
+                    ("POST", "/setup/unsecured/package"),               // only available in setup mode
+                    ("POST", "/setup/continue/unsecured"),              // only available in setup mode
                     ("POST", "/setup/secured"),                         // only available in setup mode
                     ("GET", "/setup/letsencrypt/agreement"),            // only available in setup mode
                     ("POST", "/setup/letsencrypt"),                     // only available in setup mode
@@ -865,6 +867,8 @@ namespace SlowTests.Authentication
                     ("GET", "/setup/ips"),                              // only available in setup mode
                     ("POST", "/setup/hosts"),                           // only available in setup mode
                     ("POST", "/setup/unsecured"),                       // only available in setup mode
+                    ("POST", "/setup/unsecured/package"),               // only available in setup mode
+                    ("POST", "/setup/continue/unsecured"),              // only available in setup mode
                     ("POST", "/setup/secured"),                         // only available in setup mode
                     ("GET", "/setup/letsencrypt/agreement"),            // only available in setup mode
                     ("POST", "/setup/letsencrypt"),                     // only available in setup mode
@@ -969,6 +973,8 @@ namespace SlowTests.Authentication
                     ("GET", "/setup/ips"),                              // only available in setup mode
                     ("POST", "/setup/hosts"),                           // only available in setup mode
                     ("POST", "/setup/unsecured"),                       // only available in setup mode
+                    ("POST", "/setup/unsecured/package"),               // only available in setup mode
+                    ("POST", "/setup/continue/unsecured"),              // only available in setup mode
                     ("POST", "/setup/secured"),                         // only available in setup mode
                     ("GET", "/setup/letsencrypt/agreement"),            // only available in setup mode
                     ("POST", "/setup/letsencrypt"),                     // only available in setup mode

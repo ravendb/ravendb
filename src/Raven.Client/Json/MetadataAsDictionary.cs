@@ -16,6 +16,7 @@ namespace Raven.Client.Json
 
         private IDictionary<string, object> _metadata;
         private readonly BlittableJsonReaderObject _source;
+        private bool _hasChanges;
 
         internal MetadataAsDictionary(BlittableJsonReaderObject metadata, IMetadataDictionary parent, string parentKey)
             : this(metadata)
@@ -106,7 +107,11 @@ namespace Raven.Client.Json
                 if (_metadata == null)
                     Initialize(_source);
                 Debug.Assert(_metadata != null);
-                _metadata[key] = value;
+                if (_metadata.TryGetValue(key, out var currentValue) == false || (currentValue != null && currentValue.Equals(value) == false) || (currentValue == null && value != null))
+                {
+                    _metadata[key] = value;
+                    _hasChanges = true;
+                }
             }
         }
 
@@ -118,7 +123,7 @@ namespace Raven.Client.Json
             return result;
         }
 
-        public bool Changed => _metadata != null;
+        public bool Changed => _metadata != null && _hasChanges;
 
         public int Count => _metadata?.Count ?? _source.Count;
 
@@ -149,6 +154,7 @@ namespace Raven.Client.Json
                 Initialize(_source);
             Debug.Assert(_metadata != null);
             _metadata.Add(item.Key, item.Value);
+            _hasChanges = true;
         }
 
         public void Add(string key, object value)
@@ -158,6 +164,7 @@ namespace Raven.Client.Json
 
             Debug.Assert(_metadata != null);
             _metadata.Add(key, value);
+            _hasChanges = true;
         }
 
         public void Clear()
@@ -165,7 +172,22 @@ namespace Raven.Client.Json
             if (_metadata == null)
                 Initialize(_source);
             Debug.Assert(_metadata != null);
-            _metadata.Clear();
+            foreach (var item in _metadata)
+            {
+                switch (item.Key)
+                {
+                    // skipping reserved properties
+                    case Constants.Documents.Metadata.Collection:
+                    case Constants.Documents.Metadata.Id:
+                    case Constants.Documents.Metadata.ChangeVector:
+                    case Constants.Documents.Metadata.LastModified:
+                    case Constants.Documents.Metadata.RavenClrType:
+                        continue;
+                }
+
+                _metadata.Remove(item);
+                _hasChanges = true;
+            }
         }
 
         public bool Contains(KeyValuePair<string, object> item)
@@ -205,7 +227,9 @@ namespace Raven.Client.Json
             if (_metadata == null)
                 Initialize(_source);
             Debug.Assert(_metadata != null);
-            return _metadata.Remove(item);
+            var result = _metadata.Remove(item);
+            _hasChanges |= result;
+            return result;
         }
 
         public bool Remove(string key)
@@ -213,7 +237,9 @@ namespace Raven.Client.Json
             if (_metadata == null)
                 Initialize(_source);
             Debug.Assert(_metadata != null);
-            return _metadata.Remove(key);
+            var result = _metadata.Remove(key);
+            _hasChanges |= result;
+            return result;
         }
 
         public bool TryGetValue(string key, out object value)

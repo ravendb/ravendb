@@ -1336,13 +1336,13 @@ namespace Raven.Server
             {
                 Domain = domain,
                 RootDomain = usedRootDomain,
-                ModifyLocalServer = false, // N/A here
+                ZipOnly = false, // N/A here
                 RegisterClientCert = false, // N/A here
                 Password = null,
                 Certificate = null,
                 License = license,
                 Email = Configuration.Security.CertificateLetsEncryptEmail,
-                NodeSetupInfos = new Dictionary<string, SetupInfo.NodeInfo>()
+                NodeSetupInfos = new Dictionary<string, NodeInfo>()
             };
 
             var fullDomainPortion = domain + "." + usedRootDomain;
@@ -1350,7 +1350,7 @@ namespace Raven.Server
             foreach (var host in hosts) // we just need the keys here
             {
                 var key = host.Substring(0, host.Length - fullDomainPortion.Length - 1);
-                setupInfo.NodeSetupInfos[key] = new SetupInfo.NodeInfo();
+                setupInfo.NodeSetupInfos[key] = new NodeInfo();
             }
 
             var cert = await SetupManager.RefreshLetsEncryptTask(setupInfo, ServerStore, ServerStore.ServerShutdown);

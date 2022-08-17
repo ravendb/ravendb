@@ -11,6 +11,7 @@ namespace Raven.Client.ServerWide.Operations
 {
     public class CompactDatabaseOperation : IServerOperation<OperationIdResult>
     {
+        private readonly string _nodeTag;
         private readonly CompactSettings _compactSettings;
 
         public CompactDatabaseOperation(CompactSettings compactSettings)
@@ -18,16 +19,21 @@ namespace Raven.Client.ServerWide.Operations
             _compactSettings = compactSettings ?? throw new ArgumentNullException(nameof(compactSettings));
         }
 
+        internal CompactDatabaseOperation(CompactSettings compactSettings, string nodeTag) : this(compactSettings)
+        {
+            _nodeTag = nodeTag;
+        }
+
         public RavenCommand<OperationIdResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new CompactDatabaseCommand(conventions, context, _compactSettings);
+            return new CompactDatabaseCommand(conventions, context, _compactSettings, _nodeTag);
         }
 
         private class CompactDatabaseCommand : RavenCommand<OperationIdResult>
         {
             private readonly BlittableJsonReaderObject _compactSettings;
 
-            public CompactDatabaseCommand(DocumentConventions conventions, JsonOperationContext context, CompactSettings compactSettings)
+            public CompactDatabaseCommand(DocumentConventions conventions, JsonOperationContext context, CompactSettings compactSettings, string selectedNode)
             {
                 if (conventions == null)
                     throw new ArgumentNullException(nameof(conventions));
@@ -37,6 +43,8 @@ namespace Raven.Client.ServerWide.Operations
                     throw new ArgumentNullException(nameof(context));
 
                 _compactSettings = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(compactSettings, context);
+
+                SelectedNodeTag = selectedNode;
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)

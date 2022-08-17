@@ -20,7 +20,7 @@ public class OwnCertificateSetupUtils
 
             try
             {
-                var completeClusterConfigurationResult = await SetupWizardUtils.CompleteClusterConfiguration(new CompleteClusterConfigurationParameters
+                var completeClusterConfigurationResult = await SetupWizardUtils.CompleteClusterConfigurationSecuredSetup(new CompleteClusterConfigurationParameters
                 {
                     Progress = progress,
                     SetupInfo = setupInfo,
@@ -30,7 +30,7 @@ public class OwnCertificateSetupUtils
                     CertificateValidationKeyUsages = true
                 });
 
-                var zipFile = await SettingsZipFileHelper.GetSetupZipFile(new GetSetupZipFileParameters
+                var zipFile = await SettingsZipFileHelper.GetSetupZipFileSecuredSetup(new GetSetupZipFileParameters
                 {
                     CompleteClusterConfigurationResult = completeClusterConfigurationResult,
                     Progress = progress,

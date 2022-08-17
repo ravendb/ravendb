@@ -21,6 +21,10 @@ class continueConfiguration extends setupStep {
     }
     
     save() {
+        if (!this.model.continueSetup().isZipSecure()) {
+            this.model.registerClientCertificate(false);
+        }
+            
         if (this.isValid(this.model.continueSetup().validationGroup)) {
             router.navigate("#finish");
         }

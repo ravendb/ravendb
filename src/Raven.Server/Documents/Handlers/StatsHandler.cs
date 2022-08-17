@@ -6,6 +6,7 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -47,7 +48,7 @@ namespace Raven.Server.Documents.Handlers
 
                 FillDatabaseStatistics(stats, context);
 
-                await using (var writer = new AsyncBlittableJsonTextWriter(context.Documents, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context.Documents, ServerStore, ResponseBodyStream()))
                     writer.WriteDatabaseStatistics(context.Documents, stats);
             }
         }

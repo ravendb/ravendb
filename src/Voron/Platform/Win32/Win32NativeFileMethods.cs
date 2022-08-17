@@ -144,7 +144,8 @@ namespace Voron.Platform.Win32
     {
         ERROR_FILE_NOT_FOUND = 0x2,
         ERROR_DISK_FULL = 0x70,
-        ERROR_NOT_READY = 0x15
+        ERROR_NOT_READY = 0x15,
+        ERROR_HANDLE_DISK_FULL = 0x27
     }
 
     public enum Win32NativeFileMoveMethod : uint
