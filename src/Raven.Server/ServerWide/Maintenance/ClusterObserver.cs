@@ -1349,29 +1349,22 @@ namespace Raven.Server.ServerWide.Maintenance
                 return (false, null);
             }
 
-            var mentorLastDbEtag = mentorPrevDbStats.LastEtag;
-            if (mentorCurrDbStats.LastSentEtag.TryGetValue(promotable, out var mentorLastDocsEtag) == false)
+            var mentorsEtag = mentorPrevDbStats.LastEtag;
+            if (mentorCurrDbStats.LastSentEtag.TryGetValue(promotable, out var lastSentEtag) == false)
             {
-                LogMessage($"Can't find last sent documents etag of mentor {mentorNode} for {promotable}", database: dbName);
-                return (false, null);
-            }
-
-            var promotableLastDbEtag = promotablePrevDbStats.LastEtag;
-            if (promotablePrevDbStats.LastSentEtag.TryGetValue(promotable, out var promotableLastDocsEtag) == false)
-            {
-                LogMessage($"Can't find last sent documents etag of promotable {promotable}", database: dbName);
+                LogMessage($"Can't find last sent etag of mentor {mentorNode} for {promotable}", database: dbName);
                 return (false, null);
             }
 
             var timeDiff = mentorCurrClusterStats.LastSuccessfulUpdateDateTime - mentorPrevClusterStats.LastSuccessfulUpdateDateTime > 3 * _supervisorSamplePeriod;
 
-            if (promotableLastDbEtag < mentorLastDbEtag || promotableLastDocsEtag < mentorLastDocsEtag || timeDiff)
+            if (lastSentEtag < mentorsEtag || timeDiff)
             {
                 var msg = $"The database '{dbName}' on {promotable} not ready to be promoted, because the mentor hasn't sent all of the documents yet." + Environment.NewLine +
-                          $"Last sent Etag: {mentorLastDocsEtag:#,#;;0}" + Environment.NewLine +
-                          $"Mentor's Etag: {mentorLastDbEtag:#,#;;0}";
+                          $"Last sent Etag: {lastSentEtag:#,#;;0}" + Environment.NewLine +
+                          $"Mentor's Etag: {mentorsEtag:#,#;;0}";
 
-                LogMessage($"Mentor {mentorNode} hasn't sent all of the documents yet to {promotable} (time diff: {timeDiff}, sent etag: {mentorLastDocsEtag:#,#;;0}/{mentorLastDbEtag:#,#;;0})", database: dbName);
+                LogMessage($"Mentor {mentorNode} hasn't sent all of the documents yet to {promotable} (time diff: {timeDiff}, sent etag: {lastSentEtag:#,#;;0}/{mentorsEtag:#,#;;0})", database: dbName);
 
                 if (topology.DemotionReasons.TryGetValue(promotable, out var demotionReason) == false ||
                     msg.Equals(demotionReason) == false)
