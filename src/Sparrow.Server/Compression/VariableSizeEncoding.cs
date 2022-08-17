@@ -162,6 +162,120 @@ namespace Sparrow.Server.Compression
             throw new ArgumentException("Not enough output space.");
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        public static unsafe T Read<T>(byte* input, out int offset, int pos = 0) //where T : unmanaged
+        {
+            if (typeof(T) == typeof(sbyte) || typeof(T) == typeof(byte) || typeof(T) == typeof(bool))
+            {
+                offset = 1;
+                byte b = input[pos + 0];
+
+                if (typeof(T) == typeof(bool))
+                    return (T)(object)(b == 1);
+                return (T)(object)b;
+            }
+
+            offset = 0;
+
+            if (typeof(T) == typeof(long) || typeof(T) == typeof(ulong) ||
+                typeof(T) == typeof(int) || typeof(T) == typeof(uint) ||
+                typeof(T) == typeof(short) || typeof(T) == typeof(ushort))
+            {
+                var buffer = input;
+
+                long ul = 0;
+
+                byte b = buffer[pos + 0];
+                ul |= (long)(b & 0x7F);
+                offset++;
+                if ((b & 0x80) == 0)
+                    goto End;
+
+                b = buffer[pos + 1];
+                ul |= (long)(b & 0x7F) << 7;
+                offset++;
+                if ((b & 0x80) == 0)
+                    goto End;
+
+                b = buffer[pos + 2];
+                ul |= (long)(b & 0x7F) << 14;
+                offset++;
+
+                // This is of type size 2 bytes, therefore we will cut it short here. 
+                if (typeof(T) == typeof(short) || typeof(T) == typeof(ushort))
+                {
+                    if ((b & 0x80) != 0)
+                        goto Fail;
+
+                    // PERF: This unconditional jump force the JIT to remove all the dead code. 
+                    goto End;
+                }
+
+                if ((b & 0x80) == 0)
+                    goto End;
+
+                b = buffer[pos + 3];
+                ul |= (long)(b & 0x7F) << 21;
+                offset++;
+                if ((b & 0x80) == 0)
+                    goto End;
+
+                b = buffer[pos + 4];
+                ul |= (long)(b & 0x7F) << 28;
+                offset++;
+
+                // This is of type size 4 bytes, therefore we will cut it short here.  
+                if (typeof(T) == typeof(int) || typeof(T) == typeof(uint))
+                {
+                    if ((b & 0x80) != 0)
+                        goto Fail;
+
+                    // PERF: This unconditional jump force the JIT to remove all the dead code. 
+                    goto End;
+                }
+
+                if ((b & 0x80) == 0)
+                    goto End;
+
+                // PERF: We need this for the JIT to understand that this can be profitable. 
+                buffer += 5;
+                int shift = 35;
+                for (int i = 0; i < 5; i++)
+                {
+                    b = buffer[pos + i];
+                    ul |= (long)(b & 0x7F) << shift;
+                    offset++;
+                    if ((b & 0x80) == 0)
+                        goto End;
+                    shift += 7;
+                }
+
+                if (shift > 63)
+                    goto Fail;
+
+                End:
+
+                if (typeof(T) == typeof(short))
+                    return (T)(object)(short)ul;
+                if (typeof(T) == typeof(ushort))
+                    return (T)(object)(ushort)ul;
+                if (typeof(T) == typeof(int))
+                    return (T)(object)(int)ul;
+                if (typeof(T) == typeof(uint))
+                    return (T)(object)(uint)ul;
+                if (typeof(T) == typeof(ulong))
+                    return (T)(object)(ulong)ul;
+                return (T)(object)ul;
+                
+            }
+
+            ThrowNotSupportedException<T>();
+
+        Fail:
+            ThrowInvalidShift();
+            return (T)(object)-1;
+        }
+
 
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public static unsafe T Read<T>(ReadOnlySpan<byte> input, out int offset, int pos = 0) //where T : unmanaged
@@ -241,7 +355,7 @@ namespace Sparrow.Server.Compression
                         goto End;
 
                     // PERF: We need this for the JIT to understand that this can be profitable. 
-                    buffer = buffer + 5;
+                    buffer += 5;
                     int shift = 35;
                     for (int i = 0; i < 5; i++)
                     {

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.CompilerServices;
 using Sparrow;
 using Sparrow.Server;
@@ -10,6 +11,7 @@ using Voron.Debugging;
 using Voron.Global;
 using Voron.Impl;
 using Voron.Exceptions;
+using Sparrow.Server.Compression;
 
 namespace Voron.Data.CompactTrees
 {
@@ -30,60 +32,6 @@ namespace Voron.Data.CompactTrees
         
         internal CompactTreeState State => _state;
         internal LowLevelTransaction Llt => _llt;
-
-        private struct TreePageList : IReadOnlySpanEnumerator
-        {
-            private int _currentIdx = 0;
-            private readonly CompactTree _tree;
-            private readonly CursorState _state;
-            private readonly PersistentDictionary _dictionary;
-
-            public TreePageList(CompactTree tree, CursorState state, PersistentDictionary dictionary)
-            {
-                _tree = tree;
-                _state = state;
-                _dictionary = dictionary;
-            }
-
-            public int Length => _state.Header->NumberOfEntries;
-
-            public bool IsNull(int i)
-            {
-                if (i < 0 || i >= Length)
-                    throw new IndexOutOfRangeException();
-                return false;
-            }
-
-            private unsafe ReadOnlySpan<byte> this[int i]
-            {
-                get
-                {
-                    var encodedKey = GetEncodedKey(_state.Page, _state.EntriesOffsets[i]);
-                    _tree.Llt.Allocator.Allocate(_dictionary.GetMaxDecodingBytes(encodedKey), out var tempBuffer);
-
-                    var key = tempBuffer.ToSpan();
-                    _dictionary.Decode(encodedKey, ref key);
-                    return key;
-                }
-            }
-
-            public void Reset()
-            {
-                _currentIdx = 0;
-            }
-
-            public bool MoveNext(out ReadOnlySpan<byte> result)
-            {
-                if (_currentIdx >= _state.Header->NumberOfEntries)
-                {
-                    result = default;
-                    return false;
-                }
-
-                result = this[_currentIdx++];
-                return true;
-            }
-        }
 
         public readonly ref struct EncodedKey
         {
@@ -883,16 +831,18 @@ namespace Voron.Data.CompactTrees
             
             state.Page = _llt.ModifyPage(state.Page.PageNumber);
 
-            var valueEncoder = new Encoder();
-            valueEncoder.ZigZagEncode(value);
+            var valueBufferPtr = stackalloc byte[10];
+            var valueBuffer = new Span<byte>(valueBufferPtr, 10);
+            int valueBufferLength = ZigZagEncoding.Encode(valueBuffer, value);
+
             if (state.LastSearchPosition >= 0) // update
             {
                 GetValuePointer(ref state, state.LastSearchPosition, out var b);
                 Encoder.ZigZagDecode(b, out var len);
-                if (len == valueEncoder.Length)
+                if (len == valueBufferLength)
                 {
-                    Debug.Assert(valueEncoder.Length <= sizeof(long));
-                    Unsafe.CopyBlockUnaligned(b, valueEncoder.Buffer, (uint)valueEncoder.Length);
+                    Debug.Assert(valueBufferLength <= sizeof(long));
+                    Unsafe.CopyBlockUnaligned(b, valueBufferPtr, (uint)valueBufferLength);
                     return key;
                 }
 
@@ -915,9 +865,11 @@ namespace Voron.Data.CompactTrees
                 state.LastSearchPosition = ~state.LastSearchPosition;
             }
 
-            var keySizeEncoder = new Encoder();
-            keySizeEncoder.Encode7Bits((ulong)key.Encoded.Length);
-            var requiredSize = key.Encoded.Length + keySizeEncoder.Length + valueEncoder.Length;
+            var keySizeBufferPtr = stackalloc byte[10];
+            var keySizeBuffer = new Span<byte>(keySizeBufferPtr, 10);
+            int keySizeLength = VariableSizeEncoding.Write(keySizeBuffer, key.Encoded.Length);
+
+            var requiredSize = key.Encoded.Length + keySizeLength + valueBufferLength;
             Debug.Assert(state.Header->FreeSpace >= (state.Header->Upper - state.Header->Lower));
             if (state.Header->Upper - state.Header->Lower < requiredSize + sizeof(short))
             {
@@ -939,9 +891,8 @@ namespace Voron.Data.CompactTrees
                         key = EncodedKey.Get(key, this, state.Header->DictionaryId);
 
                         // We need to recompute this because it will change.
-                        keySizeEncoder = new Encoder();
-                        keySizeEncoder.Encode7Bits((ulong)key.Encoded.Length);
-                        requiredSize = key.Encoded.Length + keySizeEncoder.Length + valueEncoder.Length;
+                        keySizeLength = VariableSizeEncoding.Write(keySizeBuffer, key.Encoded.Length);
+                        requiredSize = key.Encoded.Length + keySizeLength + valueBufferLength;
                         
                         // It may happen that between the more effective dictionary and the reclaimed space we have enough
                         // to avoid the split. 
@@ -977,24 +928,26 @@ namespace Voron.Data.CompactTrees
 
             state.Header->Lower += sizeof(short);
             var newEntriesOffsets = state.EntriesOffsets;
-            // entriesOffsets[state.LastSearchPosition..].CopyTo(newEntriesOffsets[(state.LastSearchPosition + 1)..]);
             var newNumberOfEntries = state.Header->NumberOfEntries;
+
             ushort* newEntriesOffsetsPtr = state.EntriesOffsetsPtr;
             for (int i =  newNumberOfEntries- 1; i >= state.LastSearchPosition; i--)
-            {
                 newEntriesOffsetsPtr[i] = newEntriesOffsetsPtr[i - 1];
-            }
+
             if (state.Header->PageFlags.HasFlag(CompactPageFlags.Leaf))
                 _state.NumberOfEntries++; // we aren't counting branch entries
+
             Debug.Assert(state.Header->FreeSpace >= requiredSize + sizeof(ushort));
+
             state.Header->FreeSpace -= (ushort)(requiredSize + sizeof(ushort));
             state.Header->Upper -= (ushort)requiredSize;
+
             byte* writePos = state.Page.Pointer + state.Header->Upper;
-            Memory.Copy(writePos, keySizeEncoder.Buffer, keySizeEncoder.Length);
-            writePos += keySizeEncoder.Length;
+            Unsafe.CopyBlockUnaligned(writePos, keySizeBufferPtr, (uint)keySizeLength);
+            writePos += keySizeLength;
             key.Encoded.CopyTo(new Span<byte>(writePos, key.Encoded.Length));
             writePos += key.Encoded.Length;
-            Memory.Copy(writePos, valueEncoder.Buffer, valueEncoder.Length);
+            Unsafe.CopyBlockUnaligned(writePos, valueBufferPtr, (uint)valueBufferLength);
             newEntriesOffsets[state.LastSearchPosition] = state.Header->Upper;
             VerifySizeOf(ref state);
             return key;
@@ -1424,7 +1377,7 @@ namespace Voron.Data.CompactTrees
         private static ReadOnlySpan<byte> GetEncodedKey(Page page, ushort entryOffset)
         {
             var entryPos = page.Pointer + entryOffset;
-            var keyLen = Encoder.Decode7Bits(entryPos, out var lenOfKeyLen);
+            var keyLen = VariableSizeEncoding.Read<ushort>(entryPos, out var lenOfKeyLen);
             return new ReadOnlySpan<byte>(page.Pointer + entryOffset + lenOfKeyLen,  (int)keyLen);
         }
 
@@ -1438,7 +1391,7 @@ namespace Voron.Data.CompactTrees
         {
             ushort entryOffset = state.EntriesOffsets[pos];
             p = state.Page.Pointer + entryOffset;
-            var keyLen = (int)Encoder.Decode7Bits(p, out var lenKeyLen);
+            var keyLen = VariableSizeEncoding.Read<int> (p, out var lenKeyLen);
             p += keyLen + lenKeyLen;
         }
 
