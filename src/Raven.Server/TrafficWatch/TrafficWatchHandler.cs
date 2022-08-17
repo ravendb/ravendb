@@ -10,9 +10,8 @@ using System.IO;
 using System.Linq;
 using System.Net.WebSockets;
 using System.Threading.Tasks;
-using NuGet.Protocol;
-using Raven.Client.ServerWide.Operations.Logs;
 using Raven.Server.Config.Categories;
+using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.Web;
 using Sparrow;
@@ -85,24 +84,39 @@ namespace Raven.Server.TrafficWatch
                     var djv = new DynamicJsonValue
                     {
                         [nameof(TrafficWatchConfiguration.TrafficWatchMode)] = TrafficWatchToLog.Instance.Configuration.TrafficWatchMode,
-                        [nameof(TrafficWatchConfiguration.Databases)] =
-                            new DynamicJsonArray(TrafficWatchToLog.Instance.Configuration.Databases ?? new HashSet<string>()),
-                        [nameof(TrafficWatchConfiguration.StatusCodes)] =
-                            new DynamicJsonArray(TrafficWatchToLog.Instance.Configuration.StatusCodes ?? new HashSet<int>()),
+                        [nameof(TrafficWatchConfiguration.Databases)] = TrafficWatchToLog.Instance.Configuration.Databases == null ? null :
+                            new DynamicJsonArray(TrafficWatchToLog.Instance.Configuration.Databases),
+                        [nameof(TrafficWatchConfiguration.StatusCodes)] = TrafficWatchToLog.Instance.Configuration.StatusCodes == null ? null :
+                            new DynamicJsonArray(TrafficWatchToLog.Instance.Configuration.StatusCodes),
                         [nameof(TrafficWatchConfiguration.MinimumResponseSize)] =
                             TrafficWatchToLog.Instance.Configuration.MinimumResponseSize.GetValue(SizeUnit.Bytes),
                         [nameof(TrafficWatchConfiguration.MinimumRequestSize)] = TrafficWatchToLog.Instance.Configuration.MinimumRequestSize.GetValue(SizeUnit.Bytes),
                         [nameof(TrafficWatchConfiguration.MinimumDuration)] = TrafficWatchToLog.Instance.Configuration.MinimumDuration,
-                        [nameof(TrafficWatchConfiguration.HttpMethods)] =
-                            new DynamicJsonArray(TrafficWatchToLog.Instance.Configuration.HttpMethods ?? new HashSet<string>()),
-                        [nameof(TrafficWatchConfiguration.ChangeTypes)] =
-                            new DynamicJsonArray(TrafficWatchToLog.Instance.Configuration.ChangeTypes?.Select(x => x.ToString()) ?? new string[]{})
+                        [nameof(TrafficWatchConfiguration.HttpMethods)] = TrafficWatchToLog.Instance.Configuration.HttpMethods == null ? null :
+                            new DynamicJsonArray(TrafficWatchToLog.Instance.Configuration.HttpMethods),
+                        [nameof(TrafficWatchConfiguration.ChangeTypes)] = TrafficWatchToLog.Instance.Configuration.ChangeTypes == null ? null :
+                            new DynamicJsonArray(TrafficWatchToLog.Instance.Configuration.ChangeTypes.Select(x => x.ToString()))
                     };
 
                     var json = context.ReadObject(djv, "traffic-watch/configuration");
                     writer.WriteObject(json);
                 }
             }
+        }
+
+        [RavenAction("/admin/traffic-watch/configuration", "POST", AuthorizationStatus.Operator)]
+        public async Task SetConfiguration()
+        {
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {
+                var json = await context.ReadForMemoryAsync(RequestBodyStream(), "traffic-watch/configuration");
+
+                var configuration = JsonDeserializationServer.Parameters.PutTrafficWatchConfigurationParameters(json);
+                
+                TrafficWatchToLog.Instance.UpdateConfiguration(configuration);
+            }
+
+            NoContentStatus();
         }
     }
 }

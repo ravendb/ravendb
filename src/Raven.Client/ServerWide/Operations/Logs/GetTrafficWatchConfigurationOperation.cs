@@ -5,20 +5,19 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
-using Raven.Client.Util;
 using Sparrow.Json;
-using Sparrow.Logging;
+using Size = Sparrow.Size;
 
 namespace Raven.Client.ServerWide.Operations.Logs;
 
-public class GetTrafficWatchConfiguration : IServerOperation<GetTrafficWatchConfigurationResult>
+public class GetTrafficWatchConfigurationOperation : IServerOperation<TrafficWatchConfigurationResult>
 {
-    public RavenCommand<GetTrafficWatchConfigurationResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+    public RavenCommand<TrafficWatchConfigurationResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
     {
         return new GetTrafficWatchConfigurationCommand();
     }
 
-    public class GetTrafficWatchConfigurationCommand : RavenCommand<GetTrafficWatchConfigurationResult>
+    public class GetTrafficWatchConfigurationCommand : RavenCommand<TrafficWatchConfigurationResult>
     {
         public override bool IsReadRequest => true;
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
@@ -33,55 +32,57 @@ public class GetTrafficWatchConfiguration : IServerOperation<GetTrafficWatchConf
             if (response == null)
                 ThrowInvalidResponse();
 
-            Result = JsonDeserializationClient.GetTrafficWatchesConfigurationResult(response);
+            Result = JsonDeserializationClient.GetTrafficWatchConfigurationResult(response);
         }
     }
 }
 
-public class GetTrafficWatchConfigurationResult
+public class TrafficWatchConfigurationResult
 {
     /// <summary>
-    /// Current mode that is active
-    /// </summary>
-    public LogMode CurrentMode { get; set; }
-
-    /// <summary>
-    /// Mode that is written in the configuration file and which will be used after server restart
+    /// Traffic Watch logging mode.
     /// </summary>
     public TrafficWatchMode TrafficWatchMode { get; set; }
 
     /// <summary>
-    /// Filter by Database names for which the operation should be logged
+    /// Database names by which the Traffic Watch logging entities will be filtered.
     /// </summary>
     public HashSet<string> Databases { get; set; }
-    
-    /// <summary>
-    /// Filter by HTTP response status codes for which the operation should be logged
-    /// </summary>
-    public HashSet<int?> StatusCodes { get; set; }
 
     /// <summary>
-    /// Filter by minimum response size for which the operation should be logged
+    /// Response status codes by which the Traffic Watch logging entities will be filtered.
+    /// </summary>
+    public HashSet<int> StatusCodes { get; set; }
+
+    /// <summary>
+    /// Minimum response size by which the Traffic Watch logging entities will be filtered.
     /// </summary>
     public Size MinimumResponseSize { get; set; }
 
     /// <summary>
-    /// Filter by minimum request size for which the operation should be logged
+    /// Minimum request size by which the Traffic Watch logging entities will be filtered.
     /// </summary>
     public Size MinimumRequestSize { get; set; }
 
-  /// <summary>
-    /// Filter by minimum duration for which the operation should be logged
+    /// <summary>
+    /// Minimum duration by which the Traffic Watch logging entities will be filtered.
     /// </summary>
     public long MinimumDuration { get; set; }
 
     /// <summary>
-    /// Filter by HTTP request method for which the operation should be logged
+    /// Request HTTP methods by which the Traffic Watch logging entities will be filtered.
     /// </summary>
     public HashSet<string> HttpMethods { get; set; }
 
     /// <summary>
-    /// Filter by type of traffic watch change for which the operation should be logged
+    /// Traffic Watch change types by which the Traffic Watch logging entities will be filtered.
     /// </summary>
     public HashSet<TrafficWatchChangeType> ChangeTypes { get; set; }
+}
+
+[Flags]
+public enum TrafficWatchMode
+{
+    Off,
+    ToLogFile
 }
