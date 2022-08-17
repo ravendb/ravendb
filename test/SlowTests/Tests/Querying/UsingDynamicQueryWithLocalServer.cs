@@ -462,7 +462,7 @@ namespace SlowTests.Tests.Querying
                         Fields = new Dictionary<string, IndexFieldOptions>
                         {
                             {"Title", new IndexFieldOptions { Storage = FieldStorage.Yes, Indexing = FieldIndexing.Search, TermVector = FieldTermVector.WithPositionsAndOffsets} },
-                            {"Category", new IndexFieldOptions { Storage = FieldStorage.Yes, Indexing = FieldIndexing.Search, TermVector = FieldTermVector.WithPositionsAndOffsets} }
+                            {"Category", new IndexFieldOptions { Storage = FieldStorage.Yes } }
                         }
                     }}));
 
@@ -509,6 +509,7 @@ namespace SlowTests.Tests.Querying
 
                     Assert.Equal(1, results.Length);
                     Assert.NotEmpty(highlightings.GetFragments(results.First().Category));
+                    Assert.Equal(@"<b style=""background:yellow"">Lorem</b> ipsum dolor",highlightings.GetFragments(results.First().Category).First());
                 }
             }
         }

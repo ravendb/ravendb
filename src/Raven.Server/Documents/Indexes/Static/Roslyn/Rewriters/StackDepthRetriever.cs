@@ -11,17 +11,7 @@ public class StackDepthRetriever : CSharpSyntaxRewriter
 
     private int _selectDepth;
 
-    public int StackSize
-    {
-        get
-        {
-            //Skip last select {}
-            if (_selectDepth > 0)
-                _selectDepth--;
-            
-            return _letCounter + _selectDepth;
-        }
-    }
+    public int StackSize => _letCounter + _selectDepth;
 
     public void Clear()
     {
@@ -29,25 +19,24 @@ public class StackDepthRetriever : CSharpSyntaxRewriter
         _selectDepth = 0;
     }
 
-    public override SyntaxNode VisitInvocationExpression(InvocationExpressionSyntax node)
+    public void VisitMethodQuery(string cSharpCode)
     {
-        var memberAccess = node.Expression as MemberAccessExpressionSyntax;
-        if (memberAccess == null || node.ArgumentList.Arguments.Count < 1)
-            return base.VisitInvocationExpression(node);
-
-        switch (memberAccess.Name.Identifier.ValueText)
+        string origin = string.Empty;
+        for (int stackDepth = 0; stackDepth < 100; ++stackDepth)
         {
-            case "Select":
-            case "SelectMany":
+            var temp = $"this{stackDepth}." + origin;
+            if (cSharpCode.Contains(temp))
+            {
+                origin = temp;
                 _selectDepth++;
-            break;
-            default:
+            }
+            else
+            {
                 break;
+            }
         }
-
-        return base.VisitInvocationExpression(node);
     }
-
+    
     public override SyntaxNode VisitLetClause(LetClauseSyntax queryLetClause)
     {
         _letCounter++;

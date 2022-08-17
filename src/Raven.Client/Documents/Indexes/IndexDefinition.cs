@@ -125,7 +125,7 @@ namespace Raven.Client.Documents.Indexes
                     result |= IndexDefinitionCompareDifferences.Reduce;
             }
 
-            if (DictionaryExtensions.ContentEquals(other.Fields, Fields) == false)
+            if (DictionaryExtensions.ContentEquals(other.Fields, Fields) == false) //compareNullValues is false because CopyTo doesnt copy kvp's with null values.
                 result |= IndexDefinitionCompareDifferences.Fields;
 
             bool configurationEquals;
@@ -523,6 +523,7 @@ namespace Raven.Client.Documents.Indexes
             definition.Reduce = Reduce;
             definition.Maps = new HashSet<string>(Maps);
             definition.Configuration = new IndexConfiguration();
+            definition.State = State;
 #if FEATURE_TEST_INDEX
                 definition.IsTestIndex = IsTestIndex;
 #endif

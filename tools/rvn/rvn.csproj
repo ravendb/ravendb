@@ -15,26 +15,14 @@
     <EnablePreviewFeatures>True</EnablePreviewFeatures>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="..\..\src\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
-    <Compile Include="..\..\src\Raven.Client\Exceptions\UnsuccessfulFileAccessException.cs" Link="Client\Exceptions\UnsuccessfulFileAccessException.cs" />
-    <Compile Include="..\..\src\Raven.Client\Extensions\ExpressionExtensions.cs" Link="Client\Extensions\ExpressionExtensions.cs" />
     <Compile Include="..\..\src\Raven.Client\Extensions\MemberInfoExtensions.cs" Link="Client\Extensions\MemberInfoExtensions.cs" />
-    <Compile Include="..\..\src\Raven.Client\Extensions\WhoIsLocking.cs" Link="Client\Extensions\WhoIsLocking.cs" />
-    <Compile Include="..\..\src\Raven.Client\Documents\Operations\Configuration\StudioConfiguration.cs" Link="Client\Documents\Operations\Configuration\StudioConfiguration.cs" />
-    <Compile Include="..\..\src\Raven.Client\Documents\Operations\OperationState.cs" Link="Client\Documents\Operations\OperationState.cs" />
-    <Compile Include="..\..\src\Raven.Client\Documents\Operations\IOperationProgress.cs" Link="Client\Documents\Operations\IOperationProgress.cs" />
-    <Compile Include="..\..\src\Raven.Client\Util\SystemTime.cs" Link="Client\Util\SystemTime.cs" />
-    <Compile Include="..\..\src\Raven.Client\Constants.cs" Link="Client\Constants.cs" />
-    <Compile Include="..\..\src\Raven.Client\Properties\VersionInfo.cs" Link="Client\Properties\VersionInfo.cs" />
-    <Compile Include="..\..\src\Raven.Client\Exceptions\Security\SecurityException.cs" Link="Client\Exceptions\Security\SecurityException.cs" />
-    <Compile Include="..\..\src\Raven.Client\Exceptions\RavenException.cs" Link="Client\Exceptions\RavenException.cs" />
-    <Compile Include="..\..\src\Raven.Client\ServerWide\Operations\Certificates\CertificateDefinition.cs" Link="Client\ServerWide\Operations\Certificates\CertificateDefinition.cs" />
     <Compile Include="..\..\src\Raven.Client\Extensions\StringExtensions.cs" Link="Client\Extensions\StringExtensions.cs" />
     <Compile Include="..\..\src\Raven.Server\Commercial\CompleteClusterConfigurationResult.cs" Link="Server\Commercial\CompleteClusterConfigurationResult.cs" />
     <Compile Include="..\..\src\Raven.Server\Commercial\GetSetupZipFileParameters.cs" Link="Server\Commercial\GetSetupZipFileParameters.cs" />
     <Compile Include="..\..\src\Raven.Server\Commercial\SetupMode.cs" Link="Server\Commercial\SetupMode.cs" />
     <Compile Include="..\..\src\Raven.Server\Commercial\SetupWizard\CompleteAuthorizationAndGetCertificateParameters.cs" Link="Server\Commercial\SetupWizard\CompleteAuthorizationAndGetCertificateParameters.cs" />
     <Compile Include="..\..\src\Raven.Server\Commercial\SetupWizard\LetsEncryptSetupUtils.cs" Link="Server\Commercial\SetupWizard\LetsEncryptSetupUtils.cs" />
+    <Compile Include="..\..\src\Raven.Server\Commercial\SetupWizard\UnsecuredSetupUtils.cs" Link="Server\Commercial\SetupWizard\UnsecuredSetupUtils.cs" />
     <Compile Include="..\..\src\Raven.Server\Config\Attributes\ConfigurationEntryAttribute.cs" Link="Server\Config\Attributes\ConfigurationEntryAttribute.cs" />
     <Compile Include="..\..\src\Raven.Server\Config\Attributes\MinValueAttribute.cs" Link="Server\Config\Attributes\MinValueAttribute.cs" />
     <Compile Include="..\..\src\Raven.Server\Config\Attributes\SizeUnitAttribute.cs" Link="Server\Config\Attributes\SizeUnitAttribute.cs" />
@@ -45,6 +33,7 @@
     <Compile Include="..\..\src\Raven.Server\Config\Categories\CoreConfiguration.cs" Link="Server\Config\Categories\CoreConfiguration.cs" />
     <Compile Include="..\..\src\Raven.Server\Config\Categories\SecurityConfiguration.cs" Link="Server\Config\Categories\SecurityConfiguration.cs" />
     <Compile Include="..\..\src\Raven.Server\Config\ConfigurationEnumValueException.cs" Link="Server\Config\ConfigurationEnumValueException.cs" />
+    <Compile Include="..\..\src\Raven.Server\Config\Categories\LicenseConfiguration.cs" Link="Server\Config\Categories\LicenseConfiguration.cs" />
     <Compile Include="..\..\src\Raven.Server\Config\RavenConfiguration.cs" Link="Server\Config\RavenConfiguration.cs" />
     <Compile Include="..\..\src\Raven.Server\Config\Settings\PathSetting.cs" Link="Server\Config\Settings\PathSetting.cs" />
     <Compile Include="..\..\src\Raven.Server\Config\Settings\TimeSetting.cs" Link="Server\Config\Settings\TimeSetting.cs" />
@@ -70,12 +59,28 @@
     <Compile Include="..\..\src\Raven.Server\Commercial\SetupWizard\OwnCertificateSetupUtils.cs" Link="Server\Commercial\SetupWizard\OwnCertificateSetupUtils.cs" />
     <Compile Include="..\..\src\Raven.Server\Commercial\SetupWizard\SetupWizardUtils.cs" Link="Server\Commercial\SetupWizard\SetupWizardUtils.cs" />
     <Compile Include="..\..\src\Raven.Server\Commercial\SetupInfo.cs" Link="Server\Commercial\SetupInfo.cs" />
+    <Compile Include="..\..\src\Raven.Server\Commercial\SetupInfoBase.cs" Link="Server\Commercial\SetupInfoBase.cs" />
+    <Compile Include="..\..\src\Raven.Server\Commercial\CreateSetupPackageParameters.cs" Link="Server\Commercial\CreateSetupPackageParameters.cs" />
     <Compile Include="..\..\src\Raven.Server\Commercial\License.cs" Link="Server\Commercial\License.cs" />
     <Compile Include="..\..\src\Raven.Server\Commercial\LicenseType.cs" Link="Server\Commercial\LicenseType.cs" />
     <Compile Include="..\..\src\Raven.Server\Commercial\LetsEncryptClient.cs" Link="Server\Commercial\LetsEncryptClient.cs" />
     <Compile Include="..\..\src\Raven.Server\Commercial\EmailValidator.cs" Link="Server\Commercial\EmailValidator.cs" />
     <Compile Include="..\..\src\Raven.Server\Commercial\ApiHttpClient.cs" Link="Server\Commercial\ApiHttpClient.cs" />
     <Compile Include="..\..\src\Raven.Server\Smuggler\Documents\Processors\BuildVersion.cs" Link="Server\Smuggler\Documents\Processors\BuildVersion.cs" />
+    <Compile Include="..\..\src\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
+    <Compile Include="..\..\src\Raven.Client\Exceptions\UnsuccessfulFileAccessException.cs" Link="Client\Exceptions\UnsuccessfulFileAccessException.cs" />
+    <Compile Include="..\..\src\Raven.Client\Extensions\ExpressionExtensions.cs" Link="Client\Extensions\ExpressionExtensions.cs" />
+    <Compile Include="..\..\src\Raven.Client\Extensions\WhoIsLocking.cs" Link="Client\Extensions\WhoIsLocking.cs" />
+    <Compile Include="..\..\src\Raven.Client\Documents\Operations\Configuration\StudioConfiguration.cs" Link="Client\Documents\Operations\Configuration\StudioConfiguration.cs" />
+    <Compile Include="..\..\src\Raven.Client\Documents\Operations\OperationState.cs" Link="Client\Documents\Operations\OperationState.cs" />
+    <Compile Include="..\..\src\Raven.Client\Documents\Operations\IOperationProgress.cs" Link="Client\Documents\Operations\IOperationProgress.cs" />
+    <Compile Include="..\..\src\Raven.Client\Util\SystemTime.cs" Link="Client\Util\SystemTime.cs" />
+    <Compile Include="..\..\src\Raven.Client\Constants.cs" Link="Client\Constants.cs" />
+   <Compile Include="..\..\src\Raven.Client\Properties\VersionInfo.cs" Link="Client\Properties\VersionInfo.cs" />
+    <Compile Include="..\..\src\Raven.Client\Exceptions\Security\SecurityException.cs" Link="Client\Exceptions\Security\SecurityException.cs" />
+    <Compile Include="..\..\src\Raven.Client\Exceptions\RavenException.cs" Link="Client\Exceptions\RavenException.cs" />
+    <Compile Include="..\..\src\Raven.Client\ServerWide\Operations\Certificates\CertificateDefinition.cs" Link="Client\ServerWide\Operations\Certificates\CertificateDefinition.cs" />
+    <Compile Include="..\..\src\Raven.Client\Extensions\CharExtensions.cs" Link="Client\Extensions\CharExtensions.cs" />
   </ItemGroup>
   <ItemGroup Condition="'$(IsAnyOS)' == 'true' OR '$(IsWindows64)' == 'true'">
     <None Include="..\..\libs\libsodium\libsodium.win.x64.dll" Link="libsodium.win.x64.dll">

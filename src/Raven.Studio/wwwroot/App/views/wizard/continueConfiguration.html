@@ -1,18 +1,16 @@
 <h2 class="margin-bottom margin-top">
-    <strong class="margin-right">2.</strong> Complete Existing Cluster Setup
+    <strong class="margin-right">2.</strong> Complete Cluster Setup
 </h2>
-
-
 <form class="flex-form" data-bind="with: model.continueSetup, submit: save">
     <div class="panel padding padding-lg">
         <div class="margin-bottom">
             <div class="form-group" data-bind="validationElement: importedFileName">
-                <label for="importedFileName" class="control-label">Configuration package<i class="required"></i></label>
+                <label for="importedFileName" class="control-label">Setup package<i class="required"></i></label>
                 <div class="flex-grow input-group file-input" data-bind="validationElement: importedFileName">
                     <input type="file" tabindex="-1" name="importFile" id="importedFileName" accept=""
                            data-bind="event: { change: _.partial(fileSelected, $element) }">
                     <span class="static-name form-control"
-                          data-bind="text: importedFileName() || 'Select configuration file (*.zip)'"></span>                          
+                          data-bind="text: importedFileName() || 'Select Setup Package file (*.zip)'"></span>                          
                     <span class="input-group-btn">
                         <label for="importedFileName" class="btn btn-default">
                             <i class="icon-document"></i>
@@ -22,7 +20,6 @@
                     <p class="help-block" data-bind="validationMessage: importedFileName"></p>
                 </div>
             </div>
-            
             <div class="form-group" data-bind="validationElement: nodeTag, visible: hasFileSelected">
                 <label class="control-label">Node Tag</label>
                 <div class="flex-grow" data-bind="attr: { 'title': 'Select node tag' }">
@@ -31,20 +28,23 @@
                         <span class="caret"></span>
                     </button>
                     <ul class="dropdown-menu" data-bind="foreach: nodesInfo">
-                        <li><a href="#"
-                               data-bind="text: Tag + ' (' + PublicServerUrl + ')', click: _.partial($parent.onConfigEntrySelected, $data)"></a></li>
+                        <li>
+                            <a href="#" data-bind="text: tag + ' (' + (publicServerUrl || serverUrl) + ')', click: _.partial($parent.onConfigEntrySelected, $data)"></a>
+                        </li>
                     </ul>
                     <span class="help-block" data-bind="validationMessage: nodeTag"></span>
                 </div>
             </div>
-            
-            <hr />
-            
-            <div class="checkbox">
-                <input id="installClientCertificate" type="checkbox" data-bind="checked: $root.model.registerClientCertificate()">
-                <label for="installClientCertificate">Automatically register the admin client certificate in this (local) OS</label>
+            <div data-bind="visible: isZipSecure()">
+                <hr />
+                <div class="checkbox" >
+                    <input id="installClientCertificate" type="checkbox" data-bind="checked: $root.model.registerClientCertificate" />
+                    <label for="installClientCertificate">Automatically register the admin client certificate in this (local) OS</label>
+                </div>
             </div>
-            
+            <div data-bind="validationElement: isZipValid">
+                <span class="help-block" data-bind="validationMessage: isZipValid"></span>
+            </div>
         </div>
     </div>
     <div class="navigation padding padding-lg flex-horizontal">

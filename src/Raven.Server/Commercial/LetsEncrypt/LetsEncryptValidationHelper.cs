@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
+using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,10 +17,18 @@ namespace Raven.Server.Commercial.LetsEncrypt;
 
 public class LetsEncryptValidationHelper
 {
-    private static async Task AssertLocalNodeCanListenToEndpoints(SetupInfo setupInfo, ServerStore serverStore)
+    private static async Task AssertLocalNodeCanListenToEndpoints(SetupInfoBase setupInfoBase, ServerStore serverStore)
     {
-        var localNode = setupInfo.NodeSetupInfos[setupInfo.LocalNodeTag];
+        NodeInfo localNode;
         var localIps = new List<IPEndPoint>();
+        if (setupInfoBase is SetupInfo setupInfo)
+        {
+            localNode = setupInfo.NodeSetupInfos[setupInfo.LocalNodeTag];
+        }
+        else
+        {
+            localNode = setupInfoBase.NodeSetupInfos.FirstOrDefault().Value;
+        }
 
         // Because we can get from user either an ip or a hostname, we resolve the hostname and get the actual ips it is mapped to
         foreach (var hostnameOrIp in localNode.Addresses)
@@ -120,9 +129,21 @@ public class LetsEncryptValidationHelper
                 await RavenDnsRecordHelper.AssertDnsUpdatedSuccessfully(publicServerUrl, ips, token);
             }
 
-            // Here we send the actual ips we will bind to in the local machine.
-            await LetsEncryptSimulationHelper.SimulateRunningServer(serverStore, cert, publicServerUrl, nodeTag, localIps.ToArray(), port, serverStore.Configuration.ConfigPath, setupMode,
-                token);
+            // Url's availability check
+            if (cert != null) //Secured
+            {
+                // Here we send the actual ips we will bind to in the local machine.
+                await LetsEncryptSimulationHelper.SimulateRunningServer(serverStore, cert, publicServerUrl, nodeTag, localIps.ToArray(), port, serverStore.Configuration.ConfigPath, setupMode, token);
+            }
+            else //Unsecured
+            {
+                foreach (var ipEndPoint in localIps)
+                {
+                    var l = new TcpListener(ipEndPoint);
+                    l.Start();
+                    l.Stop();
+                }
+            }
         }
         catch (Exception e)
         {
@@ -154,7 +175,7 @@ public class LetsEncryptValidationHelper
                 throw new ArgumentException($"{nameof(setupInfo.Certificate)} is a mandatory property for a secured setup");
         }
 
-        foreach ((string key, SetupInfo.NodeInfo value) in setupInfo.NodeSetupInfos)
+        foreach ((string key, NodeInfo value) in setupInfo.NodeSetupInfos)
         {
             RachisConsensus.ValidateNodeTag(key);
 

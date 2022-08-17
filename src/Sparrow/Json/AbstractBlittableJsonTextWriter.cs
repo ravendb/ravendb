@@ -462,7 +462,7 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WriteStartObject()
+        public virtual void WriteStartObject()
         {
             EnsureBuffer(1);
             _buffer[_pos++] = StartObject;
@@ -483,14 +483,14 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WriteEndObject()
+        public virtual void WriteEndObject()
         {
             EnsureBuffer(1);
             _buffer[_pos++] = EndObject;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void EnsureBuffer(int len)
+        protected virtual void EnsureBuffer(int len)
         {
             if (len >= JsonOperationContext.MemoryBuffer.DefaultSize)
                 ThrowValueTooBigForBuffer(len);
