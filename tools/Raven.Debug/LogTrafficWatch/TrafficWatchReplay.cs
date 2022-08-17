@@ -16,7 +16,7 @@ using Raven.Client.Documents.Changes;
 
 namespace Raven.Debug.LogTrafficWatch
 {
-    public class TrafficWatchReplay
+    public class TrafficWatchReplay : IDisposable
     {
         private readonly string[] _trafficFiles;
         private readonly string _schema;
@@ -24,8 +24,8 @@ namespace Raven.Debug.LogTrafficWatch
         private readonly int _port;
         private readonly int _threads;
         
-        public static HttpClient HttpClient;
-        private static readonly Channel<TrafficWatchHttpChange> TrafficChannel = Channel.CreateBounded<TrafficWatchHttpChange>(1024);
+        public HttpClient HttpClient;
+        private readonly Channel<TrafficWatchHttpChange> _trafficChannel = Channel.CreateBounded<TrafficWatchHttpChange>(1024);
 
         public TrafficWatchReplay(string path, string certPath, string certPass, string host, int port, int threads = 8)
         {
@@ -54,14 +54,14 @@ namespace Raven.Debug.LogTrafficWatch
             for (var index = 0; index < _trafficFiles.Length; index++)
             {
                 var trafficFile = _trafficFiles[index];
-                producers[index] = new TrafficParser(trafficFile).Execute();
+                producers[index] = new TrafficParser(trafficFile, _trafficChannel).Execute();
                 
             }
 
             var consumers = new Task[_threads];
             for (var i = 0; i < _threads; i++)
             {
-                consumers[i] = new TrafficReplay(_schema, _host, _port).Execute();
+                consumers[i] = new TrafficReplay(_trafficChannel, HttpClient, _schema, _host, _port).Execute();
             }
 
             var whenAllProducersTask = Task.WhenAll(producers);
@@ -70,7 +70,7 @@ namespace Raven.Debug.LogTrafficWatch
                 Console.WriteLine($"[{DateTime.UtcNow:O}] Processed {TrafficReplay.RequestsCount:#,#;;0}");
             }
 
-            TrafficChannel.Writer.Complete();
+            _trafficChannel.Writer.Complete();
 
             await Task.WhenAll(consumers);
 
@@ -90,17 +90,19 @@ namespace Raven.Debug.LogTrafficWatch
             };
 
             private readonly string _file;
+            private readonly Channel<TrafficWatchHttpChange> _trafficChannel;
 
-            public TrafficParser(string file)
+            internal TrafficParser(string file, Channel<TrafficWatchHttpChange> trafficChannel)
             {
                 _file = file;
+                _trafficChannel = trafficChannel;
             }
 
             public async Task Execute()
             {
                 await foreach (var item in GetItemsList<TrafficWatchHttpChange>(_file))
                 {
-                    await TrafficChannel.Writer.WriteAsync(item);
+                    await _trafficChannel.Writer.WriteAsync(item);
                     Interlocked.Increment(ref LoadedRequestCount);
                 }
             }
@@ -123,14 +125,19 @@ namespace Raven.Debug.LogTrafficWatch
             private readonly string _schema;
             private readonly string _host;
             private readonly int _port;
+            private readonly Channel<TrafficWatchHttpChange> _trafficChannel;
+            private readonly HttpClient _httpClient;
 
             public static int RequestsCount;
 
-            public TrafficReplay(string schema = "http", string host = "127.0.0.1", int port = 8080)
+            internal TrafficReplay(Channel<TrafficWatchHttpChange> trafficChannel, HttpClient httpClient, string schema = "http", string host = "127.0.0.1",
+                int port = 8080)
             {
                 _schema = schema;
                 _host = host;
                 _port = port;
+                _trafficChannel = trafficChannel;
+                _httpClient = httpClient;
             }
 
             public async Task Execute()
@@ -142,7 +149,7 @@ namespace Raven.Debug.LogTrafficWatch
                     TrafficWatchHttpChange item;
                     try
                     {
-                        item = await TrafficChannel.Reader.ReadAsync();
+                        item = await _trafficChannel.Reader.ReadAsync();
                         Interlocked.Increment(ref RequestsCount);
                     }
                     catch (ChannelClosedException)
@@ -164,7 +171,7 @@ namespace Raven.Debug.LogTrafficWatch
                             {
                                 // use the uri as is
                                 using var getRequest = new HttpRequestMessage(HttpMethod.Get, uri);
-                                using var response = await HttpClient.SendAsync(getRequest);
+                                using var response = await _httpClient.SendAsync(getRequest);
                                 await ConsumeResponse(response, responseBuffer);
                                 break;
                             }
@@ -191,7 +198,7 @@ namespace Raven.Debug.LogTrafficWatch
                                 }
 
                                 using var postRequest = new HttpRequestMessage(HttpMethod.Post, uri) { Content = new StringContent(body) };
-                                using var response = await HttpClient.SendAsync(postRequest);
+                                using var response = await _httpClient.SendAsync(postRequest);
                                 await ConsumeResponse(response, responseBuffer);
                                 break;
                             }
@@ -252,7 +259,7 @@ namespace Raven.Debug.LogTrafficWatch
         }
 
 
-        private static void InitializeHttpClient(string certPath, string certPass)
+        private void InitializeHttpClient(string certPath, string certPass)
         {
             if (string.IsNullOrEmpty(certPath) == false)
             {
@@ -286,8 +293,13 @@ namespace Raven.Debug.LogTrafficWatch
         public void Stop()
         {
             Console.WriteLine("Stop collection traffic watch. Exiting...");
+            Dispose();
             Environment.Exit(0);
         }
-        
+
+        public void Dispose()
+        {
+            HttpClient?.Dispose();
+        }
     }
 }
