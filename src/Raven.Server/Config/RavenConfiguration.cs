@@ -42,6 +42,7 @@ namespace Raven.Server.Config
 
         public bool Initialized { get; private set; }
 #endif
+        public LicenseConfiguration Licensing { get; }
 
         public CoreConfiguration Core { get; }
 
@@ -80,8 +81,6 @@ namespace Raven.Server.Config
         public DatabaseConfiguration Databases { get; }
 
         public PerformanceHintsConfiguration PerformanceHints { get; }
-
-        public LicenseConfiguration Licensing { get; }
 
         public TombstoneConfiguration Tombstones { get; }
 

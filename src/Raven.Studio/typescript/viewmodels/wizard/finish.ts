@@ -5,9 +5,9 @@ import messagePublisher = require("common/messagePublisher");
 import endpoints = require("endpoints");
 import router = require("plugins/router");
 import app = require("durandal/app");
-import saveUnsecuredSetupCommand = require("commands/wizard/saveUnsecuredSetupCommand");
 import serverNotificationCenterClient = require("common/serverNotificationCenterClient");
-import continueClusterConfigurationCommand = require("commands/wizard/continueClusterConfigurationCommand");
+import continueSecureClusterConfigurationCommand = require("commands/wizard/continueSecureClusterConfigurationCommand");
+import continueUnsecureClusterConfigurationCommand = require("commands/wizard/continueUnsecureClusterConfigurationCommand");
 import secureInstructions = require("viewmodels/wizard/secureInstructions");
 
 type messageItem = {
@@ -39,15 +39,21 @@ class finish extends setupStep {
     readme = ko.observable<string>();
     configurationState = ko.observable<Raven.Client.Documents.Operations.OperationStatus>();
     
+    isRestartServerNeeded: KnockoutComputed<boolean>;
+    showSetupPackageInfo: KnockoutComputed<boolean>;
+    
     constructor() {
         super();
         
-        this.showConfigurationLogToggle = ko.pureComputed(() => {
-            const isAnySecureOption = this.model.mode() !== "Unsecured";
-            const completed = this.completedWithSuccess();
-            
-            return isAnySecureOption && completed;
-        });
+        this.initObservables();
+    }
+    
+    private initObservables() {
+        this.showConfigurationLogToggle = ko.pureComputed(() => this.completedWithSuccess());
+
+        this.isRestartServerNeeded = ko.pureComputed(() => !this.spinners.finishing() &&
+                                                            this.completedWithSuccess() &&
+                                                           !this.model.onlyCreateZipFile());
     }
     
     canActivate(): JQueryPromise<canActivateResultDto> {
@@ -65,13 +71,13 @@ class finish extends setupStep {
 
         switch (this.model.mode()) {
             case "Unsecured":
-                this.currentStep = 3;
+                this.currentStep = 4;
                 break;
             case "LetsEncrypt":
-                this.currentStep = 5;
+                this.currentStep = 6;
                 break;
             case "Secured":
-                this.currentStep = 4;
+                this.currentStep = 5;
                 break;
             case "Continue":
                 this.currentStep = 3;
@@ -97,13 +103,13 @@ class finish extends setupStep {
                 this.continueClusterConfiguration(this.model.toContinueSetupDto());
                 break;
             case "Unsecured":
-                this.saveUnsecuredConfiguration();
+                this.saveConfigurationAndCreatePackage(endpoints.global.setup.setupUnsecuredPackage, this.model.toUnsecuredDto());
                 break;
             case "LetsEncrypt":
-                this.saveSecuredConfiguration(endpoints.global.setup.setupLetsencrypt, this.model.toSecuredDto());
+                this.saveConfigurationAndCreatePackage(endpoints.global.setup.setupLetsencrypt, this.model.toSecuredDto());
                 break;
-            case "Secured":
-                this.saveSecuredConfiguration(endpoints.global.setup.setupSecured, this.model.toSecuredDto());
+            case "Secured": // own-cert
+                this.saveConfigurationAndCreatePackage(endpoints.global.setup.setupSecured, this.model.toSecuredDto());
                 break;
         }
 
@@ -133,22 +139,18 @@ class finish extends setupStep {
             .done((operationId: number) => {
                 this.websocket.watchOperation(operationId, e => this.onChange(e));
 
-                new continueClusterConfigurationCommand(operationId, dto)
-                    .execute();
+                if (this.model.continueSetup().isZipSecure()) {
+                    new continueSecureClusterConfigurationCommand(operationId, dto)
+                        .execute();
+                } else {
+                    new continueUnsecureClusterConfigurationCommand(operationId, dto)
+                        .execute();
+                }
             });
     }
-    
-    private saveUnsecuredConfiguration() {
-        new saveUnsecuredSetupCommand(this.model.toUnsecuredDto())
-            .execute()
-            .done(() => {
-                this.configurationTask.resolve();
-            })
-            .fail(() => this.configurationTask.reject());
-    }
 
-    private saveSecuredConfiguration(url: string, dto: Raven.Server.Commercial.SetupInfo) {
-        const $form = $("#secureSetupForm");
+    private saveConfigurationAndCreatePackage(url: string, dto: Raven.Server.Commercial.SetupInfoBase) {
+        const $form = $("#setupForm");
         const $downloadOptions = $("[name=Options]", $form);
 
         this.getNextOperationId()

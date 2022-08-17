@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.Queries.AST
             throw new NotSupportedException();
         }
 
-        public override void VisitDeclaredFunction(StringSegment name, string func, DeclaredFunction.FunctionType type)
+        public override void VisitDeclaredFunction(string func)
         {
             throw new NotSupportedException();
         }

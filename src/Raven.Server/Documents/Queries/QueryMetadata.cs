@@ -637,10 +637,16 @@ function execute(doc, args){
                 switch (queryExpression)
                 {
                     case FieldExpression fe:
-                        if (Query.From.Alias != null)
-                            throw new InvalidOperationException($"Alias is not supported `include revisions(..)`.");
-
-                        revisionIncludes.AddRevision(fe.FieldValue);
+                        var fieldPath = fe.FieldValue;
+                        if (fe.Compound.Count > 1)
+                        {
+                            var alias = fe.Compound[0].Value;
+                            if (Query.From.Alias?.Value == alias)
+                            {
+                                fieldPath = fe.FieldValueWithoutAlias;
+                            }
+                        }
+                        revisionIncludes.AddRevision(fieldPath);
                         break;
 
                     case ValueExpression ve:
@@ -650,8 +656,15 @@ function execute(doc, args){
                             if (string.IsNullOrEmpty(path))
                                 return;
 
-                            if (Query.From.Alias != null)
-                                throw new InvalidOperationException($"Alias is not supported `include revisions(..)`.");
+                            int dotIndex = path.IndexOf('.');
+                            if (dotIndex > -1)
+                            {
+                                var alias = path.Substring(0, dotIndex);
+                                if (Query.From.Alias?.Value == alias)
+                                {
+                                    path = path.Substring(dotIndex + 1);
+                                }
+                            }
 
                             if (ParquetTransformedItems.TryParseDate(path, out var dateTimeOffset))
                                 revisionIncludes.AddRevision(dateTimeOffset.DateTime);
