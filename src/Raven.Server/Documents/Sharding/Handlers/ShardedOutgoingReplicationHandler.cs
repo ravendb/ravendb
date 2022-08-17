@@ -35,7 +35,6 @@ namespace Raven.Server.Documents.Sharding.Handlers
         public string MissingAttachmentMessage { get; set; }
         public bool MissingAttachmentsInLastBatch { get; set; }
         public string SourceDatabaseId;
-        internal long CurrentEtag { get; set; }
 
         public ShardedOutgoingReplicationHandler(ShardedDatabaseContext.ShardedReplicationContext parent, ShardReplicationNode node, TcpConnectionInfo connectionInfo, string sourceDatabaseId) :
             base(connectionInfo, parent.Server, parent.Context.DatabaseName, node, parent.Context.DatabaseShutdown, parent.Server.ContextPool)
@@ -68,7 +67,6 @@ namespace Raven.Server.Documents.Sharding.Handlers
        
                         if (_lastDocumentEtagFromSource > _lastEtag)
                             _lastEtag = _lastDocumentEtagFromSource;
-                        
 
                         using (var scope = stats.CreateScope())
                         {
@@ -191,7 +189,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
             if (replicationBatchReply != null)
             {
                 _lastDatabaseChangeVector = replicationBatchReply.DatabaseChangeVector;
-                CurrentEtag = replicationBatchReply.CurrentEtag; // TODO: check if needed
+                _lastDocumentEtagFromSource = replicationBatchReply.LastEtagAccepted;
             }
 
             return replicationBatchReply;

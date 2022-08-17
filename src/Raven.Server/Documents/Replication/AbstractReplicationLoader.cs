@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.Replication
         private readonly string _databaseName;
 
         internal readonly ServerStore _server;
-        
+
         protected readonly Logger _logger;
         protected readonly ConcurrentDictionary<string, IAbstractIncomingReplicationHandler> _incoming = new ConcurrentDictionary<string, IAbstractIncomingReplicationHandler>();
 
@@ -129,14 +129,45 @@ namespace Raven.Server.Documents.Replication
 
         protected ReplicationLatestEtagRequest IncomingInitialHandshake(TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.MemoryBuffer buffer, ReplicationLoader.PullReplicationParams replParams = null)
         {
+            var getLatestEtagMessage = GetLatestEtagMessage(tcpConnectionOptions, buffer);
+
+            try
+            {
+                using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (var writer = new BlittableJsonTextWriter(context, tcpConnectionOptions.Stream))
+                {
+                    DynamicJsonValue response = GetInitialRequestMessage(getLatestEtagMessage, replParams);
+                    context.Write(writer, response);
+                    writer.Flush();
+                }
+            }
+            catch (Exception)
+            {
+                try
+                {
+                    tcpConnectionOptions.Dispose();
+                }
+                catch (Exception)
+                {
+                    // do nothing
+                }
+
+                throw;
+            }
+
+            return getLatestEtagMessage;
+        }
+
+        protected ReplicationLatestEtagRequest GetLatestEtagMessage(TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.MemoryBuffer buffer)
+        {
             ReplicationLatestEtagRequest getLatestEtagMessage;
 
             using (tcpConnectionOptions.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var readerObject = context.Sync.ParseToMemory(
-                tcpConnectionOptions.Stream,
-                "IncomingReplication/get-last-etag-message read",
-                BlittableJsonDocumentBuilder.UsageMode.None,
-                buffer))
+                       tcpConnectionOptions.Stream,
+                       "IncomingReplication/get-last-etag-message read",
+                       BlittableJsonDocumentBuilder.UsageMode.None,
+                       buffer))
             {
                 var exceptionSchema = JsonDeserializationClient.ExceptionSchema(readerObject);
                 if (exceptionSchema.Type.Equals("Error"))
@@ -159,30 +190,6 @@ namespace Raven.Server.Documents.Replication
             {
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Connection from [{connectionInfo}] is rejected.", e);
-
-                throw;
-            }
-
-            try
-            {
-                using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                using (var writer = new BlittableJsonTextWriter(context, tcpConnectionOptions.Stream))
-                {
-                    DynamicJsonValue response = GetInitialRequestMessage(getLatestEtagMessage, replParams);
-                    context.Write(writer, response);
-                    writer.Flush();
-                }
-            }
-            catch (Exception)
-            {
-                try
-                {
-                    tcpConnectionOptions.Dispose();
-                }
-                catch (Exception)
-                {
-                    // do nothing
-                }
 
                 throw;
             }
@@ -302,7 +309,7 @@ namespace Raven.Server.Documents.Replication
                         // ignored
                     }
                 }
-         
+
                 _incoming.Clear();
             }
             finally
