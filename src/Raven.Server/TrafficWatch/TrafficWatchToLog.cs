@@ -1,5 +1,5 @@
 ﻿using Raven.Client.Documents.Changes;
-using Raven.Client.ServerWide.Operations.Logs;
+using Raven.Client.ServerWide.Operations.TrafficWatch;
 using Raven.Client.Util;
 using Raven.Server.Config.Categories;
 using Sparrow;

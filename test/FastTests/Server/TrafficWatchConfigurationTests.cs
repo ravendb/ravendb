@@ -4,26 +4,25 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
 using Raven.Client.ServerWide.Operations.Logs;
+using Raven.Client.ServerWide.Operations.TrafficWatch;
 using Sparrow;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace FastTests.Server;
-
-public class TrafficWatchConfigurationTests : RavenTestBase
+namespace FastTests.Server
 {
-    public TrafficWatchConfigurationTests(ITestOutputHelper output) : base(output)
+    public class TrafficWatchConfigurationTests : RavenTestBase
     {
-    }
-
-    [Fact]
-    public async Task CheckDefaultsAndCanSetAndGetTrafficWatchConfiguration()
-    {
-        using (var store = GetDocumentStore())
+        public TrafficWatchConfigurationTests(ITestOutputHelper output) : base(output)
         {
-            using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15)))
+        }
+
+        [Fact]
+        public async Task CheckDefaultsAndCanSetAndGetTrafficWatchConfiguration()
+        {
+            using (var store = GetDocumentStore())
             {
-                var defaultConfiguration = await store.Maintenance.Server.SendAsync(new GetTrafficWatchConfigurationOperation(), cts.Token);
+                var defaultConfiguration = await store.Maintenance.Server.SendAsync(new GetTrafficWatchConfigurationOperation());
 
                 Assert.Equal(defaultConfiguration.TrafficWatchMode, TrafficWatchMode.Off);
                 Assert.Equal(defaultConfiguration.Databases, new HashSet<string>());
@@ -34,7 +33,7 @@ public class TrafficWatchConfigurationTests : RavenTestBase
                 Assert.Equal(defaultConfiguration.HttpMethods, new HashSet<string>());
                 Assert.Equal(defaultConfiguration.ChangeTypes, new HashSet<TrafficWatchChangeType>());
 
-                var configuration1 = new PutTrafficWatchConfigurationOperation.Parameters
+                var configuration1 = new TrafficWatchConfigurationResult()
                 {
                     TrafficWatchMode = TrafficWatchMode.Off,
                     Databases = new HashSet<string> { "test1", "test2" },
@@ -44,16 +43,14 @@ public class TrafficWatchConfigurationTests : RavenTestBase
                     MinimumDuration = 33,
                     HttpMethods = new HashSet<string> { "POST", "GET" },
                     ChangeTypes = new HashSet<TrafficWatchChangeType>
-                        {
-                            TrafficWatchChangeType.Queries,
-                            TrafficWatchChangeType.Counters,
-                            TrafficWatchChangeType.BulkDocs
-                        }
+                    {
+                        TrafficWatchChangeType.Queries, TrafficWatchChangeType.Counters, TrafficWatchChangeType.BulkDocs
+                    }
                 };
 
-                await store.Maintenance.Server.SendAsync(new PutTrafficWatchConfigurationOperation(configuration1), cts.Token);
+                await store.Maintenance.Server.SendAsync(new PutTrafficWatchConfigurationOperation(configuration1));
 
-                var configuration2 = await store.Maintenance.Server.SendAsync(new GetTrafficWatchConfigurationOperation(), cts.Token);
+                var configuration2 = await store.Maintenance.Server.SendAsync(new GetTrafficWatchConfigurationOperation());
 
                 Assert.Equal(configuration1.TrafficWatchMode, configuration2.TrafficWatchMode);
                 Assert.Equal(configuration1.Databases, configuration2.Databases);
