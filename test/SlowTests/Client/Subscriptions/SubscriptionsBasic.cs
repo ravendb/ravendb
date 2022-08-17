@@ -1459,7 +1459,7 @@ namespace SlowTests.Client.Subscriptions
             await store.Subscriptions.DeleteAsync(name);
 
             var db = await Databases.GetDocumentDatabaseInstanceFor(server, store);
-            await AssertWaitForExceptionAsync<KeyNotFoundException>(async () => db.SubscriptionStorage.GetSubscriptionStateById(state.SubscriptionId), interval: 1000);
+            await AssertWaitForExceptionAsync<KeyNotFoundException>(async () => await Task.Run(() => db.SubscriptionStorage.GetSubscriptionStateById(state.SubscriptionId)), interval: 1000);
         }
 
         private class IdleDatabaseStatistics
