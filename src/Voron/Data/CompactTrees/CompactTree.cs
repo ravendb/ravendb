@@ -1395,15 +1395,30 @@ namespace Voron.Data.CompactTrees
             cstate._len++;
         }
 
+        private PersistentDictionary _lastDictionary;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private PersistentDictionary GetEncodingDictionary(long dictionaryId)
         {
-            _llt.PersistentDictionariesForCompactTrees ??= new Dictionary<long, PersistentDictionary>();
-            if (_llt.PersistentDictionariesForCompactTrees.TryGetValue(dictionaryId, out var dictionary))
+            PersistentDictionary GetEncodingDictionaryUnlikely()
+            {
+                _llt.PersistentDictionariesForCompactTrees ??= new Dictionary<long, PersistentDictionary>();
+                if (_llt.PersistentDictionariesForCompactTrees.TryGetValue(dictionaryId, out var dictionary))
+                {
+                    _lastDictionary = dictionary;
+                    return dictionary;
+                }
+
+                dictionary = new PersistentDictionary(_llt.GetPage(dictionaryId));
+                _llt.PersistentDictionariesForCompactTrees[dictionaryId] = dictionary;
+                _lastDictionary = dictionary;
                 return dictionary;
-            
-            dictionary = new PersistentDictionary(_llt.GetPage(dictionaryId));
-            _llt.PersistentDictionariesForCompactTrees[dictionaryId] = dictionary;
-            return dictionary;
+            }
+
+            if (_lastDictionary is not null && _lastDictionary.PageNumber == dictionaryId)
+                return _lastDictionary;
+
+            return GetEncodingDictionaryUnlikely();
         }
 
         private static ReadOnlySpan<byte> GetEncodedKey(Page page, ushort entryOffset)
