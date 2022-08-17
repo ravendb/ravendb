@@ -8,7 +8,6 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
 using Microsoft.Extensions.Configuration;
-using Raven.Client.Documents.Changes;
 using Raven.Client.Extensions;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
@@ -214,15 +213,28 @@ namespace Raven.Server.Config.Categories
                                 HashSet<int> hashSet = new(values);
                                 property.Info.SetValue(this, hashSet);
                             }
-                            else if (property.Info.PropertyType == typeof(HashSet<TrafficWatchChangeType>))
+                            else if (property.Info.PropertyType.IsGenericType &&
+                                     property.Info.PropertyType.GenericTypeArguments[0].BaseType == typeof(Enum))
                             {
                                 try
                                 {
-                                    var values = SplitValue(value)
-                                        .Select(item => (TrafficWatchChangeType) Enum.Parse(typeof(TrafficWatchChangeType), item, ignoreCase: true))
-                                        .ToArray();
+                                    var enumType = property.Info.PropertyType.GenericTypeArguments[0];
 
-                                    HashSet<TrafficWatchChangeType> hashSet = new(values);
+                                    var hashSet = Activator.CreateInstance(
+                                        typeof(HashSet<>).MakeGenericType(enumType));
+
+                                    foreach (string item in SplitValue(value))
+                                    {
+                                        var parsedItem = Enum.Parse(enumType, item, ignoreCase: true);
+                                        Expression.Lambda<Action>(
+                                            Expression.Call(
+                                                Expression.Constant(hashSet, property.Info.PropertyType),
+                                                "Add",
+                                                Type.EmptyTypes,
+                                                Expression.Constant(parsedItem, enumType))
+                                        ).Compile()();
+                                    }
+
                                     property.Info.SetValue(this, hashSet);
                                 }
                                 catch (ArgumentException)

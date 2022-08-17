@@ -1,9 +1,10 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using Raven.Client.Documents.Changes;
+using Raven.Client.ServerWide.Operations.Logs;
 using Raven.Server.Config.Attributes;
 using Sparrow;
-using Sparrow.Logging;
+using Size = Sparrow.Size;
 
 namespace Raven.Server.Config.Categories;
 
