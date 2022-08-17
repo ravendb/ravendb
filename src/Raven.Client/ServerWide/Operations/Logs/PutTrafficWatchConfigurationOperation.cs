@@ -6,42 +6,14 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Sparrow.Json;
-using Size = Sparrow.Size;
 
 namespace Raven.Client.ServerWide.Operations.Logs
 {
     internal class PutTrafficWatchConfigurationOperation : IServerOperation
     {
-        private readonly Parameters _parameters;
+        private readonly TrafficWatchConfigurationResult _parameters;
 
-        public class Parameters
-        {
-            public TrafficWatchMode TrafficWatchMode { get; set; }
-            public HashSet<string> Databases { get; set; }
-            public HashSet<int> StatusCodes { get; set; }
-            public Size MinimumResponseSize { get; set; }
-            public Size MinimumRequestSize { get; set; }
-            public long MinimumDuration { get; set; }
-            public HashSet<string> HttpMethods { get; set; }
-            public HashSet<TrafficWatchChangeType> ChangeTypes { get; set; }
-
-            public Parameters()
-            { }
-
-            public Parameters(TrafficWatchConfigurationResult currentTrafficWatchConfiguration)
-            {
-                TrafficWatchMode = currentTrafficWatchConfiguration.TrafficWatchMode;
-                Databases = currentTrafficWatchConfiguration.Databases;
-                StatusCodes = currentTrafficWatchConfiguration.StatusCodes;
-                MinimumResponseSize = currentTrafficWatchConfiguration.MinimumResponseSize;
-                MinimumRequestSize = currentTrafficWatchConfiguration.MinimumRequestSize;
-                MinimumDuration = currentTrafficWatchConfiguration.MinimumDuration;
-                HttpMethods = currentTrafficWatchConfiguration.HttpMethods;
-                ChangeTypes = currentTrafficWatchConfiguration.ChangeTypes;
-            }
-        }
-
-        public PutTrafficWatchConfigurationOperation(Parameters parameters)
+        public PutTrafficWatchConfigurationOperation(TrafficWatchConfigurationResult parameters)
         {
             _parameters = parameters ?? throw new ArgumentNullException(nameof(parameters));
         }
@@ -53,9 +25,9 @@ namespace Raven.Client.ServerWide.Operations.Logs
 
         private class SetTrafficWatchConfigurationCommand : RavenCommand
         {
-            private readonly Parameters _parameters;
+            private readonly TrafficWatchConfigurationResult _parameters;
 
-            public SetTrafficWatchConfigurationCommand(Parameters parameters)
+            public SetTrafficWatchConfigurationCommand(TrafficWatchConfigurationResult parameters)
             {
                 _parameters = parameters ?? throw new ArgumentNullException(nameof(parameters));
             }
