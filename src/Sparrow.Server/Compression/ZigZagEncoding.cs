@@ -72,6 +72,13 @@ namespace Sparrow.Server.Compression
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        public static unsafe T Decode<T>(byte* buffer, out int len, int pos = 0) where T : unmanaged
+        {
+            T value = VariableSizeEncoding.Read<T>(buffer, out len, pos);
+            return UnZag(value);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public static T Decode<T>(ReadOnlySpan<byte> buffer, out int len, int pos = 0) where T : unmanaged
         {
             T value = VariableSizeEncoding.Read<T>(buffer, out len, pos);
