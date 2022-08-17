@@ -86,29 +86,5 @@ namespace Raven.Server.Documents.Handlers
             using (var processor = new ReplicationHandlerProcessorForGetConflictSolver(this))
                 await processor.ExecuteAsync();
         }
-
-        [RavenAction("/databases/*/replication/initialReplicationInfo", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
-        public async Task GetLastReplicationInfo()
-        {
-            var sourceDatabaseId = GetStringQueryString("sourceId", required: true);
-
-            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                using (context.OpenReadTransaction())
-                {
-                    var changeVector = DocumentsStorage.GetFullDatabaseChangeVector(context);
-
-                    var lastEtagFromSrc = DocumentsStorage.GetLastReplicatedEtagFrom(
-                        context, sourceDatabaseId);
-
-                    context.Write(writer, new DynamicJsonValue
-                    {
-                        ["DatabaseChangeVector"] = changeVector,
-                        ["LastEtagFromSource"] = lastEtagFromSrc
-                    });
-                }
-            }
-        }
     }
 }

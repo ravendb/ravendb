@@ -1,24 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using NCrontab.Advanced.Extensions;
 using Raven.Client.Documents.Operations.Replication;
-using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Exceptions.Sharding;
-using Raven.Client.Http;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.TcpHandlers;
-using Raven.Server.Json;
 using Raven.Server.ServerWide;
-using Raven.Server.Utils;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
+using Sparrow.Json.Sync;
 using Voron;
 
 namespace Raven.Server.Documents.Sharding
@@ -46,7 +41,8 @@ namespace Raven.Server.Documents.Sharding
 
                 AssertCanExecute(header);
 
-                CreateIncomingInstance(tcpConnectionOptions, buffer);
+                var shardedIncomingHandler = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer);
+                AddAndStartIncomingInstance(shardedIncomingHandler);
             }
 
             private void AssertCanExecute(TcpConnectionHeaderMessage header)
@@ -68,10 +64,8 @@ namespace Raven.Server.Documents.Sharding
 
             protected override CancellationToken GetCancellationToken() => _context.DatabaseShutdown;
 
-            private void CreateIncomingInstance(TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.MemoryBuffer buffer)
+            private void AddAndStartIncomingInstance(ShardedIncomingReplicationHandler newIncoming)
             {
-                ShardedIncomingReplicationHandler newIncoming = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer);
-
                 var current = _incoming.AddOrUpdate(newIncoming.ConnectionInfo.SourceDatabaseId, newIncoming,
                     (_, val) => val.IsDisposed ? newIncoming : val);
 
@@ -89,97 +83,44 @@ namespace Raven.Server.Documents.Sharding
                 }
             }
 
-            protected ShardedIncomingReplicationHandler CreateIncomingReplicationHandler(TcpConnectionOptions tcpConnectionOptions,
+            private ShardedIncomingReplicationHandler CreateIncomingReplicationHandler(TcpConnectionOptions tcpConnectionOptions,
                 JsonOperationContext.MemoryBuffer buffer)
             {
-                var getLatestEtagMessage = IncomingInitialHandshake(tcpConnectionOptions, buffer);
-
-                return new ShardedIncomingReplicationHandler(tcpConnectionOptions, this, buffer, getLatestEtagMessage);
-            }
-
-            protected override DynamicJsonValue GetInitialRequestMessage(ReplicationLatestEtagRequest replicationLatestEtagRequest,
-                ReplicationLoader.PullReplicationParams replParams = null)
-            {
-                var (databaseChangeVector, lastReplicateEtag) = GetShardsLastReplicateInfo(replicationLatestEtagRequest.SourceDatabaseId);
+                var getLatestEtagMessage = GetLatestEtagMessage(tcpConnectionOptions, buffer);
+                var shardedIncomingHandler = new ShardedIncomingReplicationHandler(tcpConnectionOptions, this, buffer, getLatestEtagMessage);
                
-                var request = base.GetInitialRequestMessage(replicationLatestEtagRequest, replParams);
-                request[nameof(ReplicationMessageReply.DatabaseChangeVector)] = databaseChangeVector;
-                request[nameof(ReplicationMessageReply.LastEtagAccepted)] = lastReplicateEtag;
-                return request;
-            }
-
-            private (string LastAcceptedChangeVector, long LastEtagFromSource) GetShardsLastReplicateInfo(string sourceDatabaseId)
-            {
-                var shardExecutor = _context.ShardExecutor;
-
-                var shardsChangeVector = new List<string>();
-                long lastEtagFromSource = 0;
-                using (_context.AllocateContext(out JsonOperationContext ctx))
+                try
                 {
-                    for (int i = 0; i < _context.ShardCount; i++)
+                    using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (var writer = new BlittableJsonTextWriter(context, tcpConnectionOptions.Stream))
                     {
-                        var shardDatabaseName = ShardHelper.ToShardName(DatabaseName, i);
+                        var (databaseChangeVector, lastReplicateEtag) = shardedIncomingHandler.GetInitialHandshakeResponseFromShards();
 
-                        var cmd = new GetShardDatabaseReplicationInfoCommand(sourceDatabaseId, shardDatabaseName);
-                        var requestExecutor = shardExecutor.GetRequestExecutorAt(i);
-                        requestExecutor.Execute(cmd, ctx);
-                        var replicationInfo = cmd.Result;
+                        var request = base.GetInitialRequestMessage(getLatestEtagMessage);
+                        request[nameof(ReplicationMessageReply.DatabaseChangeVector)] = databaseChangeVector;
+                        request[nameof(ReplicationMessageReply.LastEtagAccepted)] = lastReplicateEtag;
 
-                        var changeVector = replicationInfo.DatabaseChangeVector;
-                        if (changeVector.IsNullOrWhiteSpace() == false)
-                            shardsChangeVector.Add(changeVector);
-
-                        var lastReplicateEtag = replicationInfo.LastEtagFromSource;
-                        lastEtagFromSource = Math.Max(lastEtagFromSource, lastReplicateEtag);
+                        context.Write(writer, request);
+                        writer.Flush();
                     }
                 }
-                
-                var mergedChangeVector = ChangeVectorUtils.MergeVectors(shardsChangeVector);
-                return (mergedChangeVector, lastEtagFromSource);
+                catch (Exception)
+                {
+                    try
+                    {
+                        tcpConnectionOptions.Dispose();
+                    }
+                    catch (Exception)
+                    {
+                        // do nothing
+                    }
+
+                    throw;
+                }
+
+                return shardedIncomingHandler;
             }
         }
-    }
-
-    internal class GetShardDatabaseReplicationInfoCommand : RavenCommand<ReplicationInitialInfo>
-    {
-        private readonly string _sourceDatabaseId;
-        private readonly string _dbName;
-
-        public GetShardDatabaseReplicationInfoCommand(string sourceDatabaseId, string dbName)
-        {
-            _sourceDatabaseId = sourceDatabaseId;
-            _dbName = dbName;
-        }
-
-        public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
-        {
-            url = $"{node.Url}/databases/{_dbName}/replication/initialReplicationInfo?sourceId={_sourceDatabaseId}";
-
-            RequestedNode = node;
-            var request = new HttpRequestMessage
-            {
-                Method = HttpMethod.Get
-            };
-            return request;
-        }
-
-        public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
-        {
-            if (response == null)
-                ThrowInvalidResponse();
-
-            Result = JsonDeserializationServer.ReplicationInitialInfo(response);
-        }
-
-        public ServerNode RequestedNode { get; private set; }
-
-        public override bool IsReadRequest => true;
-    }
-
-    public class ReplicationInitialInfo
-    {
-        public string DatabaseChangeVector;
-        public long LastEtagFromSource;
     }
 
     public class ReplicationBatch

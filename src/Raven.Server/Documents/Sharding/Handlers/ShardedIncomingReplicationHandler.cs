@@ -29,24 +29,20 @@ namespace Raven.Server.Documents.Sharding.Handlers
         private readonly ShardedDatabaseContext.ShardedReplicationContext _parent;
         private readonly ShardedOutgoingReplicationHandler[] _handlers;
 
-        public long LastEtag { get; set; }
-        public string LastReplicateChangeVector { get; set; }
-
         public ShardedIncomingReplicationHandler(TcpConnectionOptions tcpConnectionOptions, ShardedDatabaseContext.ShardedReplicationContext parent,
             JsonOperationContext.MemoryBuffer buffer, ReplicationLatestEtagRequest replicatedLastEtag)
             : base(tcpConnectionOptions, buffer, parent.Server, parent.DatabaseName, replicatedLastEtag, parent.Context.DatabaseShutdown, parent.Server.ContextPool)
         {
             _parent = parent;
             _attachmentStreamsTempFile = new StreamsTempFile("ShardedReplication" + Guid.NewGuid(), false);
-            var connectionInfo = IncomingConnectionInfo.FromGetLatestEtag(replicatedLastEtag);
-
             _handlers = new ShardedOutgoingReplicationHandler[_parent.Context.ShardCount];
+
             for (int i = 0; i < _handlers.Length; i++)
             {
                 var node = new ShardReplicationNode { Shard = i, Database = ShardHelper.ToShardName(_parent.DatabaseName, i) };
                 var info = GetConnectionInfo(node);
           
-                _handlers[i] = new ShardedOutgoingReplicationHandler(parent, node, info, connectionInfo.SourceDatabaseId);
+                _handlers[i] = new ShardedOutgoingReplicationHandler(parent, node, info, replicatedLastEtag.SourceDatabaseId);
                 _handlers[i].Start();
             }
         }
@@ -82,8 +78,6 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
         protected override void HandleHeartbeatMessage(TransactionOperationContext jsonOperationContext, BlittableJsonReaderObject blittableJsonReaderObject)
         {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "Find a way to implement change vector updates for tackling optimization issues");
-
             if (blittableJsonReaderObject.TryGet(nameof(ReplicationMessageHeader.DatabaseChangeVector), out string changeVector))
             {
                 foreach (var handler in _handlers)
@@ -96,12 +90,9 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
         protected override DynamicJsonValue GetHeartbeatStatusMessage(TransactionOperationContext context, long lastDocumentEtag, string handledMessageType)
         {
-            long currentEtag = 0;
             var handlersChangeVector = new List<string>();
             foreach (var handler in _handlers)
             {
-                currentEtag = Math.Max(handler.CurrentEtag, currentEtag);
-
                 if (handler._lastDatabaseChangeVector.IsNullOrWhiteSpace() == false)
                     handlersChangeVector.Add(handler._lastDatabaseChangeVector);
             }
@@ -109,8 +100,27 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
             var heartbeat = base.GetHeartbeatStatusMessage(context, lastDocumentEtag, handledMessageType);
             heartbeat[nameof(ReplicationMessageReply.DatabaseChangeVector)] = mergedChangeVector;
-            heartbeat[nameof(ReplicationMessageReply.CurrentEtag)] = currentEtag;
             return heartbeat;
+        }
+
+        internal (string LastAcceptedChangeVector, long LastEtagFromSource) GetInitialHandshakeResponseFromShards()
+        {
+            // this is an optimization for replication failovers.
+            // in case of failover, send back to the source the last change vector & Etag received on shards
+            // so the replication won't start from scratch
+
+            long lastEtagFromSource = 0;
+            var handlersChangeVector = new List<string>();
+            foreach (var handler in _handlers)
+            {
+                var lastReplicateEtag = handler._lastDocumentEtagFromSource;
+                lastEtagFromSource = Math.Max(lastEtagFromSource, lastReplicateEtag);
+
+                if (handler._lastDatabaseChangeVector.IsNullOrWhiteSpace() == false)
+                    handlersChangeVector.Add(handler._lastDatabaseChangeVector);
+            }
+            var mergedChangeVector = ChangeVectorUtils.MergeVectors(handlersChangeVector);
+            return (mergedChangeVector, lastEtagFromSource);
         }
 
         protected override void InvokeOnDocumentsReceived()
