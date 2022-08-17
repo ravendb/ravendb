@@ -28,6 +28,7 @@ namespace SlowTests.Issues
                 {
                     var user = new User { Name = "Foo/Bar" };
                     session.Store(user, "foo");
+                    session.Store(user, "Foo");
                     Assert.Throws<InvalidOperationException>(() => session.Store(user, "bar"));
                     session.SaveChanges();
 
