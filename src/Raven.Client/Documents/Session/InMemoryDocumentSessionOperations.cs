@@ -688,6 +688,9 @@ more responsive application.
 
             if (DocumentsByEntity.TryGetValue(entity, out var value))
             {
+                if (id != null && value.Id.Equals(id) == false)
+                    throw new InvalidOperationException($"Cannot store the same entity (id: {value.Id}) with a different id ({id})"); 
+
                 value.ChangeVector = changeVector ?? value.ChangeVector;
                 value.ConcurrencyCheckMode = forceConcurrencyCheck;
                 return;
