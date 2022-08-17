@@ -2,6 +2,8 @@ import setupStep = require("viewmodels/wizard/setupStep");
 import router = require("plugins/router");
 
 class security extends setupStep {
+
+    view = require("views/wizard/security.html");
     
     compositionComplete() {
         super.compositionComplete();
