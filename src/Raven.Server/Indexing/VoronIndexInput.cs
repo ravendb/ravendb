@@ -114,17 +114,19 @@ namespace Raven.Server.Indexing
                 return;
 
             GC.SuppressFinalize(this);
-
+            
+            if (buffer != null)
+            {
+                ArrayPool<byte>.Shared.Return(buffer);
+            }
+            
             if (_isOriginal == false)
                 return;
 
             _cts.Cancel();
             _cts.Dispose();
 
-            if (buffer != null)
-            {
-                ArrayPool<byte>.Shared.Return(buffer);
-            }
+            
 
             _isDisposed = true;
         }
