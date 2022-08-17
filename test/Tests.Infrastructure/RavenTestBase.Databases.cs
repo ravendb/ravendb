@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
+using Raven.Server;
 using Raven.Server.Documents;
 using Voron;
 
@@ -25,6 +26,11 @@ public partial class RavenTestBase
         public Task<DocumentDatabase> GetDocumentDatabaseInstanceFor(IDocumentStore store, string database = null)
         {
             return _parent.Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database ?? store.Database);
+        }
+
+        public Task<DocumentDatabase> GetDocumentDatabaseInstanceFor(RavenServer server, IDocumentStore store, string database = null)
+        {
+            return server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database ?? store.Database);
         }
 
         public async Task SetDatabaseId(DocumentStore store, Guid dbId)
