@@ -232,6 +232,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     if (RestoreConfiguration.SkipIndexes)
                         return;
 
+                    databaseRecord.AutoIndexes ??= new Dictionary<string, AutoIndexDefinition>();
+                    databaseRecord.Indexes ??= new Dictionary<string, IndexDefinition>();
+
                     switch (indexAndType.Type)
                     {
                         case IndexType.AutoMap:
@@ -380,10 +383,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 return;
 
             var databaseRecord = RestoreSettings.DatabaseRecord;
-
-            // we do have at least one smuggler backup, we'll take the indexes from the last file
-            databaseRecord.AutoIndexes ??= new Dictionary<string, AutoIndexDefinition>();
-            databaseRecord.Indexes ??= new Dictionary<string, IndexDefinition>();
 
             // restore the smuggler backup
             var options = new DatabaseSmugglerOptionsServerSide { AuthorizationStatus = AuthorizationStatus.DatabaseAdmin, SkipRevisionCreation = true };

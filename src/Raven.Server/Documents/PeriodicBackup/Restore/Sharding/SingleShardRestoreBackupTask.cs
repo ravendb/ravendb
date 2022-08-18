@@ -70,7 +70,41 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore.Sharding
             if (_shardNumber > 0)
                 options.OperateOnTypes &= ~DatabaseItemType.Subscriptions;
 
-            await ImportSingleBackupFileAsync(database, Progress, Result, lastFilePath, context, destination, options, isLastFile: true);
+            await ImportSingleBackupFileAsync(database, Progress, Result, lastFilePath, context, destination, options, isLastFile: true, 
+            onDatabaseRecordAction: smugglerDatabaseRecord =>
+            {
+                databaseRecord.ConflictSolverConfig = smugglerDatabaseRecord.ConflictSolverConfig;
+                foreach (var setting in smugglerDatabaseRecord.Settings)
+                {
+                    databaseRecord.Settings[setting.Key] = setting.Value;
+                }
+
+                databaseRecord.SqlEtls = smugglerDatabaseRecord.SqlEtls;
+                databaseRecord.RavenEtls = smugglerDatabaseRecord.RavenEtls;
+                databaseRecord.PeriodicBackups = smugglerDatabaseRecord.PeriodicBackups;
+                databaseRecord.ExternalReplications = smugglerDatabaseRecord.ExternalReplications;
+                databaseRecord.Sorters = smugglerDatabaseRecord.Sorters;
+                databaseRecord.Analyzers = smugglerDatabaseRecord.Analyzers;
+                databaseRecord.SinkPullReplications = smugglerDatabaseRecord.SinkPullReplications;
+                databaseRecord.HubPullReplications = smugglerDatabaseRecord.HubPullReplications;
+                databaseRecord.Revisions = smugglerDatabaseRecord.Revisions;
+                databaseRecord.Expiration = smugglerDatabaseRecord.Expiration;
+                databaseRecord.RavenConnectionStrings = smugglerDatabaseRecord.RavenConnectionStrings;
+                databaseRecord.SqlConnectionStrings = smugglerDatabaseRecord.SqlConnectionStrings;
+                databaseRecord.Client = smugglerDatabaseRecord.Client;
+                databaseRecord.TimeSeries = smugglerDatabaseRecord.TimeSeries;
+                databaseRecord.DocumentsCompression = smugglerDatabaseRecord.DocumentsCompression;
+                databaseRecord.LockMode = smugglerDatabaseRecord.LockMode;
+                databaseRecord.OlapConnectionStrings = smugglerDatabaseRecord.OlapConnectionStrings;
+                databaseRecord.OlapEtls = smugglerDatabaseRecord.OlapEtls;
+                databaseRecord.ElasticSearchEtls = smugglerDatabaseRecord.ElasticSearchEtls;
+                databaseRecord.ElasticSearchConnectionStrings = smugglerDatabaseRecord.ElasticSearchConnectionStrings;
+                databaseRecord.QueueEtls = smugglerDatabaseRecord.QueueEtls;
+                databaseRecord.QueueConnectionStrings = smugglerDatabaseRecord.QueueConnectionStrings;
+
+                // need to enable revisions before import
+                database.DocumentsStorage.RevisionsStorage.InitializeFromDatabaseRecord(smugglerDatabaseRecord);
+            });
         }
     }
 }
