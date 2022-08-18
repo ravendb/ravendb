@@ -41,7 +41,7 @@ public class ShardedDocumentDatabase : DocumentDatabase
         return new ShardedDocumentsStorage(this, addToInitLog);
     }
 
-    protected override void SetIds(DatabaseTopology topology, string shardedDatabaseId)
+    internal override void SetIds(DatabaseTopology topology, string shardedDatabaseId)
     {
         base.SetIds(topology, shardedDatabaseId);
         ShardedDatabaseId = shardedDatabaseId;

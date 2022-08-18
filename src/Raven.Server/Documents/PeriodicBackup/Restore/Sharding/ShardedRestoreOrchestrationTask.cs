@@ -18,6 +18,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
+using Sparrow.Server;
 using Sparrow.Utils;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore.Sharding
@@ -64,22 +65,23 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore.Sharding
             _result = await RestoreOnAllShardsAsync(Progress, RestoreConfiguration, shardedDbContext);
         }
 
-        protected override void OnAfterRestore()
+        protected override async Task OnAfterRestoreAsync()
         {
             DisableOngoingTasksIfNeeded(RestoreSettings.DatabaseRecord);
 
             Progress.Invoke(Result.Progress);
 
             // after the db for restore is done, we can safely set the db state to normal and write the DatabaseRecord
+            DatabaseRecord databaseRecord;
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
             using (serverContext.OpenReadTransaction())
             {
-                var databaseRecord = ServerStore.Cluster.ReadDatabase(serverContext, DatabaseName);
+                databaseRecord = ServerStore.Cluster.ReadDatabase(serverContext, DatabaseName);
                 databaseRecord.DatabaseState = DatabaseStateStatus.Normal;
-
-                RestoreSettings.DatabaseRecord = databaseRecord;
             }
-        }
+
+            await SaveDatabaseRecordAsync(DatabaseName, databaseRecord, null, Result, Progress);
+            }
 
         protected override IOperationResult OperationResult() => _result;
 
@@ -99,6 +101,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore.Sharding
                 }
             };
 
+            var clusterTransactionIdBase64 = Guid.NewGuid().ToBase64Unpadded();
             var nodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             for (var i = 0; i < RestoreConfiguration.ShardRestoreSettings.Shards.Length; i++)
             {
@@ -109,6 +112,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore.Sharding
                     {
                         shardRestoreSetting.NodeTag
                     },
+
+                    ClusterTransactionIdBase64 = clusterTransactionIdBase64,
                     ReplicationFactor = 1
                 };
 
@@ -139,6 +144,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore.Sharding
 
                     var serverOp = new ServerWideOperation(executor, DocumentConventions.DefaultForServer, operationIdResult.OperationId, nodeTag);
                     tasks[i] = serverOp.WaitForCompletionAsync();
+
+                    // todo remove later
+                    await tasks[i];
                 }
             }
 

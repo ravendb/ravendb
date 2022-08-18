@@ -16,9 +16,9 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Sharding.Backup
 {
-    public class ClusterShardedRestoreBackup : ClusterTestBase
+    public class ClusterWideShardedRestoreTests : ClusterTestBase
     {
-        public ClusterShardedRestoreBackup(ITestOutputHelper output) : base(output)
+        public ClusterWideShardedRestoreTests(ITestOutputHelper output) : base(output)
         {
         }
 
@@ -73,7 +73,7 @@ namespace SlowTests.Sharding.Backup
 
                 // restore the database with a different name
                 var newDbName = $"restored_database-{Guid.NewGuid()}";
-                using (ShardedPeriodicBackupTests.ReadOnly(backupPath))
+                using (Sharding.Backup.ReadOnly(backupPath))
                 using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
                 {
                     DatabaseName = newDbName,

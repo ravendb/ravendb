@@ -92,9 +92,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             FilesToRestore.RemoveAt(0);
         }
 
-        protected override void OnAfterRestore()
+        protected override async Task OnAfterRestoreAsync()
         {
-            base.OnAfterRestore();
+            await base.OnAfterRestoreAsync();
             RegenerateDatabaseIdInIndexes(Database);
         }
 
