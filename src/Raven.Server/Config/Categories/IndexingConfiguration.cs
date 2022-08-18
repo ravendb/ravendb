@@ -429,6 +429,12 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.OrderByScoreAutomaticallyWhenBoostingIsInvolved", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public bool OrderByScoreAutomaticallyWhenBoostingIsInvolved { get; set; }
         
+        [Description("EXPERT: Use compound file in merging")]
+        [DefaultValue(true)]
+        [IndexUpdateType(IndexUpdateType.None)]
+        [ConfigurationEntry("Indexing.UseCompoundFileInMerging", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        public bool UseCompoundFileInMerging { get; set; }
+        
         protected override void ValidateProperty(PropertyInfo property)
         {
             base.ValidateProperty(property);

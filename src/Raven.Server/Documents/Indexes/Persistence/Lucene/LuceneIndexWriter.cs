@@ -157,7 +157,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 MergeFactor = _index.Configuration.MergeFactor,
                 LargeSegmentSizeMB = _index.Configuration.LargeSegmentSizeToMerge.GetValue(SizeUnit.Megabytes),
                 NumberOfLargeSegmentsToMergeInSingleBatch = _index.Configuration.NumberOfLargeSegmentsToMergeInSingleBatch
-            });
+            };
+            
+            mergePolicy.SetUseCompoundFile(_index.Configuration.UseCompoundFileInMerging);
+            _indexWriter.SetMergePolicy(mergePolicy);
 
             if (_indexReaderWarmer != null)
             {

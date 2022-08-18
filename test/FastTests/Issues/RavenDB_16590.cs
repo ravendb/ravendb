@@ -73,7 +73,9 @@ namespace FastTests.Issues
                 "Indexing.TimeSinceLastQueryAfterWhichDeepCleanupCanBeExecutedInMin",
                 "Indexing.Throttling.TimeIntervalInMs",
                 "Indexing.TransactionSizeLimitInMb",
-                
+                "Indexing.OrderByScoreAutomaticallyWhenBoostingIsInvolved",
+                "Indexing.Lucene.UseCompoundFileInMerging",
+
                 
                 //Obsolete studio keys:
                 "Indexing.Static.SearchEngineType",
@@ -84,6 +86,7 @@ namespace FastTests.Issues
                 "Indexing.MaxTimeForMergesToKeepRunningInSec",
                 "Indexing.MergeFactor",
                 "Indexing.NumberOfLargeSegmentsToMergeInSingleBatch",
+                "Indexing.UseCompoundFileInMerging"
             };
 
             var sortedStudioList = propertiesDeclaredInStudio.OrderBy(x => x).ToList();
