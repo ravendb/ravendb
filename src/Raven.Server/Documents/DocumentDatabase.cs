@@ -199,7 +199,7 @@ namespace Raven.Server.Documents
         public void SetIds(RawDatabaseRecord record) => SetIds(record.Topology, record.Sharding?.ShardedDatabaseId);
         public void SetIds(DatabaseRecord record) => SetIds(record.Topology, record.Sharding?.DatabaseId);
 
-        protected virtual void SetIds(DatabaseTopology topology, string shardedDatabaseId)
+        internal virtual void SetIds(DatabaseTopology topology, string shardedDatabaseId)
         {
             DatabaseGroupId = topology.DatabaseTopologyIdBase64;
             ClusterTransactionId = topology.ClusterTransactionIdBase64;

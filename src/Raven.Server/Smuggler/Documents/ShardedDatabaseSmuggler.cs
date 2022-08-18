@@ -40,7 +40,21 @@ namespace Raven.Server.Smuggler.Documents
             long operationId,
             Action<IOperationProgress> onProgress = null, 
             CancellationToken token = default) : 
-            base(source, new MultiShardedDestination(source, databaseContext, handler, operationId), server.Server.Time, jsonOperationContext, options, result, onProgress, token)
+            this(source, new MultiShardedDestination(source, databaseContext, handler, operationId), jsonOperationContext, databaseRecord, server, options, result, onProgress, token)
+        {
+        }
+
+        internal ShardedDatabaseSmuggler(
+            ISmugglerSource source,
+            ISmugglerDestination destination,
+            JsonOperationContext jsonOperationContext,
+            DatabaseRecord databaseRecord,
+            ServerStore server,
+            DatabaseSmugglerOptionsServerSide options,
+            SmugglerResult result,
+            Action<IOperationProgress> onProgress = null,
+            CancellationToken token = default) :
+            base(source, destination, server.Server.Time, jsonOperationContext, options, result, onProgress, token)
         {
             _databaseRecord = databaseRecord;
             _server = server;
@@ -229,7 +243,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     try
                     {
-                        if (ClusterTransactionCommand.IsAtomicGuardKey(kvp.Key.Key, out var docId))
+                        if (ClusterTransactionCommand.IsAtomicGuardKey(kvp.Key.Key, out _))
                         {
                             await destinationActions.WriteKeyValueAsync(kvp.Key.Key, kvp.Value);
                         }
@@ -248,6 +262,7 @@ namespace Raven.Server.Smuggler.Documents
                 }
 
             }
+
             return result.CompareExchange;
         }
 

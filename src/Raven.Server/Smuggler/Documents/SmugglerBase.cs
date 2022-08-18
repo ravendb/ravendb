@@ -12,8 +12,10 @@ using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.Sharding;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Documents.Processors;
+using Raven.Server.Utils;
 using Sparrow.Json;
 
 namespace Raven.Server.Smuggler.Documents
@@ -28,6 +30,7 @@ namespace Raven.Server.Smuggler.Documents
         internal readonly CancellationToken _token;
         protected readonly JsonOperationContext _context;
         public Action<DatabaseRecord> OnDatabaseRecordAction;
+        public Action<IndexDefinitionAndType> OnIndexAction;
         internal readonly ISmugglerDestination _destination;
         private SmugglerPatcher _patcher;
 
@@ -1014,6 +1017,14 @@ namespace Raven.Server.Smuggler.Documents
         {
             return database is ShardedDocumentDatabase ?
                 new SingleShardDatabaseSmuggler(database, source, destination, time, context, options, result, onProgress, token) :
+                new DatabaseSmuggler(database, source, destination, time, context, options, result, onProgress, token);
+        }
+
+        public static SmugglerBase GetDatabaseSmugglerForRestore(DocumentDatabase database, DatabaseRecord databaseRecord, ISmugglerSource source, ISmugglerDestination destination, SystemTime time, JsonOperationContext context,
+            DatabaseSmugglerOptionsServerSide options = null, SmugglerResult result = null, Action<IOperationProgress> onProgress = null, CancellationToken token = default)
+        {
+            return database is ShardedDocumentDatabase ?
+                new ShardedDatabaseSmuggler(source, destination, context, databaseRecord, database.ServerStore, options, result, onProgress, token) :
                 new DatabaseSmuggler(database, source, destination, time, context, options, result, onProgress, token);
         }
 

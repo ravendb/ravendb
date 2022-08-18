@@ -19,6 +19,7 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Sharding;
+using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Documents;
 using Raven.Server.Documents.PeriodicBackup;
@@ -162,7 +163,7 @@ public partial class RavenTestBase
                 _parent = parent ?? throw new ArgumentNullException(nameof(parent));
             }
 
-            public async Task InsertData(IDocumentStore store, IReadOnlyList<string> names)
+            public async Task InsertData(IDocumentStore store)
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -188,6 +189,12 @@ public partial class RavenTestBase
                     //counters
                     session.CountersFor("users/2").Increment("Downloads", 100);
                     //Attachments
+                    var names = new[]
+                    {
+                        "background-photo.jpg",
+                        "fileNAME_#$1^%_בעברית.txt",
+                        "profile.png",
+                    };
                     await using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
                     await using (var backgroundStream = new MemoryStream(new byte[] { 10, 20, 30, 40, 50 }))
                     await using (var fileStream = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }))
@@ -245,7 +252,7 @@ public partial class RavenTestBase
                 await new Index().ExecuteAsync(store);
             }
 
-            public async Task CheckData(IDocumentStore store, IReadOnlyList<string> attachmentNames, RavenDatabaseMode dbMode = RavenDatabaseMode.Single, string database = null)
+            public async Task CheckData(IDocumentStore store, RavenDatabaseMode dbMode = RavenDatabaseMode.Single, long expectedRevisionsCount = 14, string database = null)
             {
                 long docsCount = default, tombstonesCount = default, revisionsCount = default;
                 database ??= store.Database;
@@ -294,7 +301,7 @@ public partial class RavenTestBase
                 Assert.Equal(1, tombstonesCount);
 
                 //revisions
-                Assert.Equal(28, revisionsCount);
+                Assert.Equal(expectedRevisionsCount, revisionsCount);
 
                 //Subscriptions
                 var subscriptionDocuments = await store.Subscriptions.GetSubscriptionsAsync(0, 10, database);
@@ -320,7 +327,14 @@ public partial class RavenTestBase
 
                 using (var session = store.OpenAsyncSession(database))
                 {
-                    for (var i = 0; i < attachmentNames.Count; i++)
+                    var attachmentNames = new[]
+                    {
+                        "background-photo.jpg",
+                        "fileNAME_#$1^%_בעברית.txt",
+                        "profile.png",
+                    };
+
+                    for (var i = 0; i < attachmentNames.Length; i++)
                     {
                         var user = await session.LoadAsync<User>("users/" + (i + 1));
                         var metadata = session.Advanced.GetMetadataFor(user);
@@ -421,7 +435,6 @@ public partial class RavenTestBase
                 return UpdateConfigurationAndRunBackupAsync(new List<RavenServer>{server}, store, config, isFullBackup);
             }
 
-
             public async Task UpdateConfigurationAndRunBackupAsync(List<RavenServer> servers, IDocumentStore store, PeriodicBackupConfiguration config, bool isFullBackup = false)
             {
                 var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
@@ -431,6 +444,36 @@ public partial class RavenTestBase
                     var periodicBackupRunner = documentDatabase.PeriodicBackupRunner;
                     periodicBackupRunner.StartBackupTask(result.TaskId, isFullBackup);
                 }
+            }
+
+
+            public IDisposable ReadOnly(string path)
+            {
+                var allFiles = new List<string>();
+                var dirs = Directory.GetDirectories(path);
+                FileAttributes attributes = default;
+                foreach (string dir in dirs)
+                {
+                    var files = Directory.GetFiles(dir);
+                    if (attributes != default)
+                        attributes = new FileInfo(files[0]).Attributes;
+
+                    foreach (string file in files)
+                    {
+                        File.SetAttributes(file, FileAttributes.ReadOnly);
+                    }
+
+                    allFiles.AddRange(files);
+                }
+
+
+                return new DisposableAction(() =>
+                {
+                    foreach (string file in allFiles)
+                    {
+                        File.SetAttributes(file, attributes);
+                    }
+                });
             }
 
             private static async Task<long> SetupRevisionsAsync(

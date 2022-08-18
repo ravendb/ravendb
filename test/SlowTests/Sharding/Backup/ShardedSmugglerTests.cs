@@ -100,17 +100,11 @@ namespace SlowTests.Sharding.Backup
         {
             var file = GetTempFileName();
             var file2 = Path.GetTempFileName();
-            var names = new[]
-            {
-                "background-photo.jpg",
-                "fileNAME_#$1^%_בעברית.txt",
-                "profile.png",
-            };
             try
             {
                 using (var store1 = GetDocumentStore(new Options { ModifyDatabaseName = s => $"{s}_2" }))
                 {
-                    await Sharding.Backup.InsertData(store1, names);
+                    await Sharding.Backup.InsertData(store1);
                     var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions()
                     {
                         OperateOnTypes = DatabaseItemType.Documents
@@ -177,7 +171,7 @@ namespace SlowTests.Sharding.Backup
                         }, file2);
                         await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
-                        using (var store3 = GetDocumentStore())
+                        /*using (var store3 = GetDocumentStore())
                         {
                             operation = await store3.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions()
                             {
@@ -200,8 +194,8 @@ namespace SlowTests.Sharding.Backup
 
                             }, file2);
                             await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(20));
-                            await Sharding.Backup.CheckData(store3, names);
-                        }
+                            await Sharding.Backup.CheckData(store3, expectedRevisionsCount: 28);
+                        }*/
                     }
                 }
             }
@@ -230,12 +224,18 @@ namespace SlowTests.Sharding.Backup
                 var operation = await store.Smuggler.ImportAsync(options, fs);
                 await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
-                operation = await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions() { OperateOnTypes = DatabaseItemType.Documents | DatabaseItemType.CounterGroups }, file);
+                operation = await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions()
+                {
+                    OperateOnTypes = DatabaseItemType.Documents | DatabaseItemType.CounterGroups
+                }, file);
                 await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
                 using (var store2 = GetDocumentStore())
                 {
-                    operation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions() { OperateOnTypes = DatabaseItemType.Documents | DatabaseItemType.CounterGroups }, file);
+                    operation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions()
+                    {
+                        OperateOnTypes = DatabaseItemType.Documents | DatabaseItemType.CounterGroups
+                    }, file);
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
                     var stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
@@ -263,18 +263,11 @@ namespace SlowTests.Sharding.Backup
         public async Task RegularToRegular()
         {
             var file = GetTempFileName();
-
-            var names = new[]
-            {
-                "background-photo.jpg",
-                "fileNAME_#$1^%_בעברית.txt",
-                "profile.png",
-            };
             try
             {
                 using (var store1 = GetDocumentStore(new Options { ModifyDatabaseName = s => $"{s}_2" }))
                 {
-                    await Sharding.Backup.InsertData(store1, names);
+                    await Sharding.Backup.InsertData(store1);
                     WaitForUserToContinueTheTest(store1);
                     var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions()
                     {
@@ -314,7 +307,7 @@ namespace SlowTests.Sharding.Backup
                         }, file);
                         await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
                         WaitForUserToContinueTheTest(store2);
-                        await Sharding.Backup.CheckData(store2, names);
+                        await Sharding.Backup.CheckData(store2, expectedRevisionsCount: 28);
                     }
                 }
             }
@@ -662,17 +655,11 @@ namespace SlowTests.Sharding.Backup
 
             var file = GetTempFileName();
             var file2 = Path.GetTempFileName();
-            var names = new[]
-            {
-                "background-photo.jpg",
-                "fileNAME_#$1^%_בעברית.txt",
-                "profile.png",
-            };
             try
             {
                 using (var store1 = GetDocumentStore(new Options { ModifyDatabaseName = s => $"{s}_2" }))
                 {
-                    await Sharding.Backup.InsertData(store1, names);
+                    await Sharding.Backup.InsertData(store1);
                     //WaitForUserToContinueTheTest(store1);
                     var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions()
                     {
@@ -748,7 +735,7 @@ namespace SlowTests.Sharding.Backup
                             }, file2);
                             await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
                             WaitForUserToContinueTheTest(store3);
-                            await Sharding.Backup.CheckData(store3, names);
+                            await Sharding.Backup.CheckData(store3);
                         }
                     }
                 }
@@ -765,12 +752,6 @@ namespace SlowTests.Sharding.Backup
         {
             var file = GetTempFileName();
             var file2 = Path.GetTempFileName();
-            var names = new[]
-            {
-                "background-photo.jpg",
-                "fileNAME_#$1^%_בעברית.txt",
-                "profile.png",
-            };
             try
             {
                 using (var store1 = GetDocumentStore(new Options
@@ -778,7 +759,7 @@ namespace SlowTests.Sharding.Backup
                     ModifyDatabaseName = s => $"{s}_2",
                 }))
                 {
-                    await Sharding.Backup.InsertData(store1, names);
+                    await Sharding.Backup.InsertData(store1);
                     var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions()
                     {
                         OperateOnTypes = DatabaseItemType.Documents
