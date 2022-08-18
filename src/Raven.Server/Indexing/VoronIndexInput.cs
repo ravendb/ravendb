@@ -23,6 +23,44 @@ namespace Raven.Server.Indexing
 
         private bool _isOriginal = true;
 
+        /// <summary>Reads an int stored in variable-length format.  Reads between one and
+        /// five bytes.  Smaller values take fewer bytes.  Negative numbers are not
+        /// supported.
+        /// </summary>
+        /// <seealso cref="IndexOutput.WriteVInt(int)">
+        /// </seealso>
+        public override int ReadVInt(IState state)
+        {
+            Optimized:
+            //Perf shortcut
+            if (bufferPosition + 5 < bufferLength)
+            {
+                byte b = buffer[bufferPosition++];
+                int i = b & 0x7F;
+                for (int shift = 7; (b & 0x80) != 0; shift += 7)
+                {
+                    b = buffer[bufferPosition++];
+                    i |= (b & 0x7F) << shift;
+                }
+
+                return i;
+            }
+            
+            //We want to refill only when we're out of cache. Calling this before can lead to data loss. 
+            if (bufferPosition >= bufferLength)
+            {
+                Refill(state);
+                
+                // If we got at least 5 elements that means we can go to shortcut.
+                if (bufferPosition + 5 < bufferLength)
+                    goto Optimized;
+            }
+            
+            //We don't have 5 elements (what is max here) in buffer. To avoid copy pasting of code: go to standard implementation
+            
+            return base.ReadVInt(state);
+        }
+
         public VoronBufferedInput(LuceneVoronDirectory directory, string name, Transaction transaction, string tree) : base(DefaultBufferSize)
         {
             _directory = directory;
@@ -30,7 +68,7 @@ namespace Raven.Server.Indexing
             _tree = tree;
 
             OpenInternal(transaction);
-            
+
             //We don't want to get buffer instantly. Only when needed.
             //buffer = ArrayPool<byte>.Shared.Rent(DefaultBufferSize);
         }
@@ -44,7 +82,7 @@ namespace Raven.Server.Indexing
         {
             if (buffer == null)
                 return;
-            
+
             if (newSize <= buffer.Length)
                 return;
 
@@ -107,26 +145,25 @@ namespace Raven.Server.Indexing
 
             return clone;
         }
-        
+
         protected override void Dispose(bool disposing)
         {
             if (_isDisposed)
                 return;
 
             GC.SuppressFinalize(this);
-            
+
             if (buffer != null)
             {
                 ArrayPool<byte>.Shared.Return(buffer);
             }
-            
+
             if (_isOriginal == false)
                 return;
 
             _cts.Cancel();
             _cts.Dispose();
 
-            
 
             _isDisposed = true;
         }

@@ -76,10 +76,21 @@ namespace Voron.Data
             }
             set
             {
+                if (value >= Length)
+                {
+                    //Out of stream
+                    _index = _chunksDetails.Length - 1;
+                    _position = Length;
+                    return;
+                }
+
                 var search = Array.BinarySearch(_chunksOffsets, value);
+                
                 if (search >= 0)
                 {
                     //The index of the specified value in the specified array, if value is found; otherwise, a negative number
+                 
+                    //Ideally hit the 0th element of chunk.
                     _position = value;
                     _index = search;
                 }
@@ -89,9 +100,13 @@ namespace Voron.Data
                     //If value is not found and value is greater than all elements in array, the negative number returned is the bitwise complement of (the index of the last element plus 1). If this method is called with a non-sorted array, the return value can be incorrect and a negative number could be returned, even if value is present in array.
                     search = ~search;
                     
-                    //TODO what to do when value is out of total length of chunks?
+                    //LessOrEqualZero should not be here. 0 means it should be handled above (it is a 0th element of first chunk
+                    //If it is negative then offset from Seek() is invalid (because it should move ptr to right, not to left)
+                    if (search <= 0)
+                        ThrowWhenValueIsEqualOrLessZero(value);
+
                     _position = value;
-                    _index = search <= 0 ? 0 : search - 1;
+                    _index = search - 1;
                 }
             }
         }
@@ -196,6 +211,11 @@ namespace Voron.Data
         public override void Write(byte[] buffer, int offset, int count)
         {
             throw new NotSupportedException("The method or operation is not supported by VoronStream.");
+        }
+
+        private static void ThrowWhenValueIsEqualOrLessZero(long position)
+        {
+            throw new ArgumentException($"Position {position} is not possible inside {nameof(VoronStream)}.");
         }
     }
 }
