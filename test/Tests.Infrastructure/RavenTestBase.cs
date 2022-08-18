@@ -3,6 +3,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Net;
+using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography.X509Certificates;
@@ -376,7 +378,12 @@ namespace FastTests
 
         protected static async Task WaitAndAssertForValueAsync<T>(Func<Task<T>> act, T expectedVal, int timeout = 15000, int interval = 100)
         {
-            var val = await WaitForPredicateAsync(t => t.Equals(expectedVal), act, timeout, interval);
+            var val = await WaitForPredicateAsync(t =>
+            {
+                if (t == null)
+                    return expectedVal == null;
+                return t.Equals(expectedVal);
+            }, act, timeout, interval);
             Assert.Equal(expectedVal, val);
         }
 
@@ -854,6 +861,16 @@ namespace FastTests
                     _descriptionBuilder = new StringBuilder(_descriptionBuilder.ToString())
                 };
             }
+        }
+
+        public int GetAvailablePort()
+        {
+            var tcpListener = new TcpListener(IPAddress.Loopback, 0);
+            tcpListener.Start();
+            var port = ((IPEndPoint)tcpListener.LocalEndpoint).Port;
+            tcpListener.Stop();
+
+            return port;
         }
     }
 }

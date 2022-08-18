@@ -7,6 +7,8 @@ using FastTests.Utils;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Session.Loaders;
 using Raven.Client.Exceptions;
 using Tests.Infrastructure;
 using Xunit;
@@ -21,8 +23,11 @@ namespace SlowTests.Tests.Linq
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        public async Task Query_IncludeAllQueryFunctionality(Options options)
+        [RavenData(false, false, SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(false, true, SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(true, false, SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(true, true, SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public async Task Query_IncludeAllQueryFunctionality(Options options, bool includeCounters, bool includeTimeSeries)
         {
             using (var store = GetDocumentStore(options))
             {
@@ -76,24 +81,168 @@ namespace SlowTests.Tests.Linq
                     session.SaveChanges();
                 }
 
+                if (includeCounters)
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        var documentCounters = session.CountersFor(id);
+                        documentCounters.Increment("Likes", 15);
+                        session.SaveChanges();
+                    }
+                }
+                if (includeTimeSeries)
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        session.TimeSeriesFor(id, "Hearthrate").Append(DateTime.Now, 15d);
+                        session.SaveChanges();
+                    }
+                }
+
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<User>()
-                        .Include(builder => builder
-                            .IncludeRevisions(x => x.ChangeVectors)
-                            .IncludeRevisions(x => x.FirstRevision)
-                            .IncludeRevisions(x => x.SecondRevision)).Customize(c => c.WaitForNonStaleResults());
+                        .Include(builder =>
+                        {
+                            builder
+                                .IncludeRevisions(x => x.ChangeVectors)
+                                .IncludeRevisions(x => x.FirstRevision)
+                                .IncludeRevisions(x => x.SecondRevision);
 
+                            if (includeCounters)
+                                builder.IncludeAllCounters();
 
-                    var r = query.ToList();
+                            if (includeTimeSeries)
+                                builder.IncludeTimeSeries("Hearthrate");
+                        });
+
+                    query.Customize(c => c.WaitForNonStaleResults()).ToList();
 
                     var revision1 = session.Advanced.Revisions.Get<User>(cvList[0]);
                     var revision2 = session.Advanced.Revisions.Get<User>(cvList[1]);
                     var revision3 = session.Advanced.Revisions.Get<User>(cvList[2]);
-
                     Assert.NotNull(revision1);
                     Assert.NotNull(revision2);
                     Assert.NotNull(revision3);
+
+                    if (includeCounters)
+                    {
+                        Assert.Equal(session.CountersFor(id).Get("Likes").Value, 15);
+                    }
+                    if (includeTimeSeries)
+                    {
+                        var tf = session.TimeSeriesFor(id, "Hearthrate").Get();
+                        Assert.Equal(tf.Length, 1);
+                        Assert.Equal(tf[0].Value, 15d);
+                    }
+
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                }
+            }
+        }
+
+
+        [Theory]
+        [InlineData(false, false)]
+        [InlineData(false, true)]
+        [InlineData(true, false)]
+        [InlineData(true, true)]
+        public async Task Query_IncludeAllQueryFunctionality_NestedField(bool includeCounters, bool includeTimeSeries)
+        {
+            using (var store = GetDocumentStore())
+            {
+                var cvList = new List<string>();
+
+                const string id = "users/rhino";
+
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new UserNested { Name = "Omer", Revisions = new Revisions()},  id);
+
+                    session.SaveChanges();
+                }
+
+                string changeVector;
+                var beforeDateTime = DateTime.UtcNow;
+                using (var session = store.OpenSession())
+                {
+                    var metadatas = session.Advanced.Revisions.GetMetadataFor(id);
+                    Assert.Equal(1, metadatas.Count);
+
+                    changeVector = metadatas.First().GetString(Constants.Documents.Metadata.ChangeVector);
+
+                    session.Advanced.Patch<UserNested, string>(id, x => x.Revisions.FirstRevision, changeVector);
+
+                    session.SaveChanges();
+
+                    cvList.Add(changeVector);
+
+                    metadatas = session.Advanced.Revisions.GetMetadataFor(id);
+
+                    changeVector = metadatas[0].GetString(Constants.Documents.Metadata.ChangeVector);
+
+                    cvList.Add(changeVector);
+
+                    session.Advanced.Patch<UserNested, string>(id, x => x.SecondRevision, changeVector);
+
+                    session.SaveChanges();
+                }
+
+                if (includeCounters)
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        var documentCounters = session.CountersFor(id);
+                        documentCounters.Increment("Likes", 15);
+                        session.SaveChanges();
+                    }
+                }
+                if (includeTimeSeries)
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        session.TimeSeriesFor(id, "Hearthrate").Append(DateTime.Now, 15d);
+                        session.SaveChanges();
+                    }
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<UserNested>()
+                        .Include(builder =>
+                        {
+                            builder
+                                .IncludeRevisions(x => x.Revisions.FirstRevision)
+                                .IncludeRevisions(x => x.SecondRevision);
+
+                            if (includeCounters)
+                                builder.IncludeAllCounters();
+
+                            if (includeTimeSeries)
+                                builder.IncludeTimeSeries("Hearthrate");
+                        });
+
+                    query.Customize(c => c.WaitForNonStaleResults()).ToList();
+
+                    var revision1 = session.Advanced.Revisions.Get<UserNested>(cvList[0]);
+                    var revision2 = session.Advanced.Revisions.Get<UserNested>(cvList[1]);
+                    Assert.NotNull(revision1);
+                    Assert.NotNull(revision2);
+
+                    if (includeCounters)
+                    {
+                        Assert.Equal(session.CountersFor(id).Get("Likes").Value, 15);
+                    }
+
+                    if (includeTimeSeries)
+                    {
+                        var tf = session.TimeSeriesFor(id, "Hearthrate").Get();
+                        Assert.Equal(tf.Length, 1);
+                        Assert.Equal(tf[0].Value, 15d);
+                    }
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
                 }
@@ -1748,7 +1897,7 @@ select Foo(u)"
                         .RawQuery<User>("from Users as u include revisions(u.FirstRevision, x.SecondRevision)")
                         .ToList());
 
-                    Assert.Contains("System.InvalidOperationException: Alias is not supported `include revisions(..)`."
+                    Assert.Contains("Field `x.SecondRevision` inside `include revisions(..)` is invalid."
                         , error.Message);
                 }
 
@@ -1761,7 +1910,7 @@ select Foo(u)"
                         .AddParameter("p2", "x.ThirdRevision")
                         .ToList());
 
-                    Assert.Contains("System.InvalidOperationException: Alias is not supported `include revisions(..)`."
+                    Assert.Contains("Field `x.ThirdRevision` inside `include revisions(..)` is invalid."
                         , error.Message);
                 }
             }
@@ -1793,7 +1942,7 @@ select Foo(u)"
                         .RawQuery<User>("from Users as u include revisions(u.FirstRevision, x.SecondRevision)")
                         .ToList());
 
-                    Assert.Contains("System.InvalidOperationException: Alias is not supported `include revisions(..)`."
+                    Assert.Contains("Field `x.SecondRevision` inside `include revisions(..)` is invalid."
                         , error.Message);
                 }
 
@@ -1806,7 +1955,7 @@ select Foo(u)"
                         .AddParameter("p2", "x.ThirdRevision")
                         .ToListAsync());
 
-                    Assert.Contains("System.InvalidOperationException: Alias is not supported `include revisions(..)`."
+                    Assert.Contains("Field `x.ThirdRevision` inside `include revisions(..)` is invalid."
                         , error.Message);
                 }
             }
@@ -1820,6 +1969,20 @@ select Foo(u)"
             public string SecondRevision { get; set; }
             public string ThirdRevision { get; set; }
             public List<string> ChangeVectors { get; set; }
+        }
+
+        private class UserNested
+        {
+            public string Name { get; set; }
+            public string SecondRevision { get; set; }
+            public string ThirdRevision { get; set; }
+
+            public Revisions Revisions { get; set; }
+        }
+
+        private class Revisions
+        {
+            public string FirstRevision { get; set; }
         }
 
         private class NameIndex : AbstractIndexCreationTask<User>

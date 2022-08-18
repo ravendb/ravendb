@@ -53,7 +53,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
                 using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 {
-                    await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                    await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
                     {
                         context.Write(writer, DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(result, context));
                     }
@@ -76,7 +76,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
                 {
                     try
                     {

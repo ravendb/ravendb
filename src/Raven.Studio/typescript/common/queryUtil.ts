@@ -48,7 +48,20 @@ class queryUtil {
         const escapedFieldName = queryUtil.escapeName(fieldName);
         const escapedIndexName = queryUtil.escapeName(indexName);
         const escapedValueName = queryUtil.escapeName(value);
-        return `from index ${escapedIndexName} where ${escapedFieldName} == ${escapedValueName}`;
+        
+        const fromPart = `from index ${escapedIndexName}`;
+        let wherePart = `where ${escapedFieldName} == ${escapedValueName}`;
+        
+        if (indexName.startsWith("Auto") &&
+            ((value.startsWith("{") && (queryUtil.hasUpperCase(value))) || value === "NULL_VALUE")) {
+            wherePart = `where exact(${escapedFieldName} == ${escapedValueName})`;
+        }
+        
+        return `${fromPart} ${wherePart}`;
+    }
+    
+    static hasUpperCase(value: string): boolean {
+        return value.toLocaleLowerCase() !== value;
     }
     
     static wrapWithSingleQuotes(input: string) {

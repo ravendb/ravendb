@@ -25,6 +25,9 @@ class nodeStatsItem {
     startTime = ko.observable<string>();
     formattedUpTime = ko.observable<string>();
     formattedStartTime: KnockoutComputed<string>;
+    
+    serverVersion = ko.observable<string>();
+    osName = ko.observable<string>();
 
     disconnected = ko.observable<boolean>(true);
     noData: boolean = true;
@@ -49,6 +52,8 @@ class nodeStatsItem {
                 this.nodeUrl(null);
                 this.startTime(null);
                 this.formattedUpTime(null);
+                this.serverVersion(null);
+                this.osName(null);
             }
         })
     }
@@ -62,6 +67,9 @@ class nodeStatsItem {
         
         this.startTime(data.StartTime);
         this.formattedUpTime(this.getUpTime(data.StartTime));
+        
+        this.serverVersion(data.ServerVersion);
+        this.osName(data.OsName);
     }
 
     private getUpTime(startTime: string) {
@@ -106,8 +114,15 @@ class clusterOverviewWidget extends websocketBasedWidget<Raven.Server.Dashboard.
 
         this.columnPreview.install(".cluster-overview-grid", ".js-cluster-overview-preview",
             (nodeItem: nodeStatsItem, column: virtualColumn, e: JQueryEventObject, onValue: (context: any, valueToCopy?: string) => void) => {
-                if (column instanceof textColumn && column.header === "Start time") {
-                    onValue(moment.utc(nodeItem.startTime()), nodeItem.startTime());
+                if (column instanceof textColumn) {
+                    if (column.header === "Start time") {
+                        onValue(moment.utc(nodeItem.startTime()), nodeItem.startTime());
+                    } else if (column.header === "Version" || column.header === "OS") {
+                        const value = column.getCellValue(nodeItem);
+                        if (value) {
+                            onValue(generalUtils.escapeHtml(value), value);
+                        }   
+                    }
                 }
             });
         
@@ -133,18 +148,26 @@ class clusterOverviewWidget extends websocketBasedWidget<Raven.Server.Dashboard.
         return [
             new nodeTagColumn<nodeStatsItem>(grid, item => this.prepareUrl(item, "Cluster Dashboard")),
 
-            new iconsPlusTextColumn<nodeStatsItem>(grid, item => item.nodeType() ? this.nodeTypeDataForHtml(item.nodeType()) : "-", "Type", "15%"),
+            new iconsPlusTextColumn<nodeStatsItem>(grid, item => item.nodeType() ? this.nodeTypeDataForHtml(item.nodeType()) : "-", "Type", "12%"),
 
-            new iconsPlusTextColumn<nodeStatsItem>(grid, item => item.nodeState() ? this.nodeStateDataForHtml(item.nodeState()) : "-", "State", "15%"),
+            new iconsPlusTextColumn<nodeStatsItem>(grid, item => item.nodeState() ? this.nodeStateDataForHtml(item.nodeState()) : "-", "State", "12%"),
 
-            new textColumn<nodeStatsItem>(grid, item => item.formattedUpTime() ?? "-", "Up time", "15%"),
+            new textColumn<nodeStatsItem>(grid, item => item.formattedUpTime() ?? "-", "Up time", "10%"),
 
-            new textColumn<nodeStatsItem>(grid, item => item.formattedStartTime() ?? "-", "Start time", "20%"),
+            new textColumn<nodeStatsItem>(grid, item => item.formattedStartTime() ?? "-", "Start time", "10%"),
             
-            new actionColumn<nodeStatsItem>(grid, item => router.navigate(item.nodeUrl()), "URL", item => item.nodeUrl() ?? "-" , "20px",
+            new actionColumn<nodeStatsItem>(grid, item => router.navigate(item.nodeUrl()), "URL", item => item.nodeUrl() ?? "-" , "20%",
                 {
                     title: () => 'Go to URL'
                 }),
+
+            new textColumn<nodeStatsItem>(grid, item => item.serverVersion() ?? "-", "Version", "15%", {
+                headerTitle: "Server Version"
+            }),
+            
+            new textColumn<nodeStatsItem>(grid, item => item.osName() ?? "-", "OS", "10%", {
+                headerTitle: "Operating system"
+            }),
         ];
     }
     

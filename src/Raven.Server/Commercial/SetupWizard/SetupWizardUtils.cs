@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Commercial.LetsEncrypt;
@@ -11,8 +12,8 @@ using Raven.Server.Utils;
 namespace Raven.Server.Commercial.SetupWizard;
 
 public static class SetupWizardUtils
-{ 
-    public static async Task<CompleteClusterConfigurationResult> CompleteClusterConfiguration(CompleteClusterConfigurationParameters parameters)
+{
+    public static async Task<CompleteClusterConfigurationResult> CompleteClusterConfigurationSecuredSetup(CompleteClusterConfigurationParameters parameters)
     {
         try
         {
@@ -30,13 +31,13 @@ public static class SetupWizardUtils
                 var base64 = parameters.SetupInfo.Certificate;
                 serverCertBytes = Convert.FromBase64String(base64);
                 serverCert = new X509Certificate2(serverCertBytes, parameters.SetupInfo.Password, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
-    
+
                 var localNodeTag = parameters.SetupInfo.LocalNodeTag ?? parameters.SetupInfo.NodeSetupInfos.Keys.FirstOrDefault();
                 if (localNodeTag is null)
                 {
                     throw new InvalidOperationException($"Could not determine {nameof(localNodeTag)}");
                 }
-                
+
                 publicServerUrl = CertificateUtils.GetServerUrlFromCertificate(serverCert,
                     parameters.SetupInfo,
                     localNodeTag,
@@ -45,28 +46,36 @@ public static class SetupWizardUtils
                     out _,
                     out domainFromCert);
 
-                if (parameters.OnBeforeAddingNodesToCluster != null)
-                    await parameters.OnBeforeAddingNodesToCluster(publicServerUrl, localNodeTag);
-        
-                serverCertificateHolder = SecretProtection.ValidateCertificateAndCreateCertificateHolder("Setup", serverCert, serverCertBytes,
-                    parameters.SetupInfo.Password, parameters.LicenseType, parameters.CertificateValidationKeyUsages, parameters.Progress);
-                
-                foreach (var node in parameters.SetupInfo.NodeSetupInfos)
+                if (parameters.OnBeforeAddingNodesToCluster != null && parameters.SetupInfo.ZipOnly == false)
+                        await parameters.OnBeforeAddingNodesToCluster(publicServerUrl, localNodeTag);
+
+                serverCertificateHolder = SecretProtection.ValidateCertificateAndCreateCertificateHolder("Setup",
+                    serverCert,
+                    serverCertBytes,
+                    parameters.SetupInfo.Password,
+                    parameters.LicenseType,
+                    parameters.CertificateValidationKeyUsages,
+                    parameters.Progress);
+
+                if(parameters.SetupInfo.ZipOnly == false)
                 {
-                    if (node.Key == parameters.SetupInfo.LocalNodeTag)
-                        continue;
+                    foreach (var node in parameters.SetupInfo.NodeSetupInfos)
+                    {
+                        if (node.Key == parameters.SetupInfo.LocalNodeTag)
+                            continue;
 
-                    parameters.Progress?.AddInfo($"Adding node '{node.Key}' to the cluster.");
-                    parameters.OnProgress?.Invoke(parameters.Progress);
+                        parameters.Progress?.AddInfo($"Adding node '{node.Key}' to the cluster.");
+                        parameters.OnProgress?.Invoke(parameters.Progress);
 
 
-                    parameters.SetupInfo.NodeSetupInfos[node.Key].PublicServerUrl = CertificateUtils.GetServerUrlFromCertificate(serverCert,
-                        parameters.SetupInfo, node.Key,
-                        node.Value.Port,
-                        node.Value.TcpPort, out _, out _);
+                        parameters.SetupInfo.NodeSetupInfos[node.Key].PublicServerUrl = CertificateUtils.GetServerUrlFromCertificate(serverCert,
+                            parameters.SetupInfo, node.Key,
+                            node.Value.Port,
+                            node.Value.TcpPort, out _, out _);
 
-                    if (parameters.AddNodeToCluster != null)
-                        await parameters.AddNodeToCluster(node.Key);
+                        if (parameters.AddNodeToCluster != null)
+                            await parameters.AddNodeToCluster(node.Key);
+                    }
                 }
             }
             catch (Exception e)
@@ -90,20 +99,22 @@ public static class SetupWizardUtils
             {
                 // requires server certificate to be loaded
                 var clientCertificateName = $"{domain}.client.certificate";
-                (certBytes, certificateDefinition, selfSignedCertificate) = LetsEncryptCertificateUtil.GenerateClientCertificateTask(serverCertificateHolder, clientCertificateName, parameters.SetupInfo);
-                
-                Debug.Assert(selfSignedCertificate != null);
-                
-                if (parameters.PutCertificateInCluster != null && parameters.SetupInfo.RegisterClientCert)
-                    await parameters.PutCertificateInCluster(selfSignedCertificate,certificateDefinition);
+                (certBytes, certificateDefinition, selfSignedCertificate) =
+                    LetsEncryptCertificateUtil.GenerateClientCertificateTask(serverCertificateHolder, clientCertificateName, parameters.SetupInfo);
 
-                clientCert = new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.MachineKeySet);
+                Debug.Assert(selfSignedCertificate != null);
+
+                if (parameters.PutCertificateInCluster != null && parameters.SetupInfo.RegisterClientCert && parameters.SetupInfo.ZipOnly == false)
+                    await parameters.PutCertificateInCluster(selfSignedCertificate, certificateDefinition);
+
+                clientCert = new X509Certificate2(certBytes, (string)null,
+                    X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.MachineKeySet);
             }
             catch (Exception e)
             {
                 throw new InvalidOperationException($"Failed to generate a client certificate for '{domain}'.", e);
             }
-            
+
             parameters.RegisterClientCertInOs?.Invoke(parameters.OnProgress, parameters.Progress, clientCert);
 
             return new CompleteClusterConfigurationResult
@@ -115,12 +126,60 @@ public static class SetupWizardUtils
                 PublicServerUrl = publicServerUrl,
                 ClientCert = clientCert,
                 CertificateDefinition = certificateDefinition
-                
             };
         }
         catch (Exception e)
         {
             throw new InvalidOperationException("Failed to create settings file(s).", e);
         }
+    }
+
+    public static async Task<CompleteClusterConfigurationResult> CompleteClusterConfigurationUnsecuredSetup(CompleteClusterConfigurationParameters parameters)
+    {
+        var zipOnly = parameters.UnsecuredSetupInfo.ZipOnly;
+        var nodeSetupInfos = parameters.UnsecuredSetupInfo.NodeSetupInfos;
+
+        parameters.Progress?.AddInfo("Completing cluster configuration.");
+        parameters.OnProgress?.Invoke(parameters.Progress);
+
+        foreach ((_, NodeInfo node) in parameters.UnsecuredSetupInfo.NodeSetupInfos)
+            node.PublicServerUrl = string.Join(";", node.Addresses.Select(ip => SettingsZipFileHelper.IpAddressToUrl(ip, node.Port, scheme: "http")));
+        
+        (string localNodeTag, NodeInfo nodeInfo) = nodeSetupInfos.First();
+
+        try
+        {
+                if (parameters.OnBeforeAddingNodesToCluster != null && zipOnly == false )
+                    await parameters.OnBeforeAddingNodesToCluster(nodeInfo.PublicServerUrl, localNodeTag);
+                
+                if (zipOnly == false)
+                {
+                    foreach (var node in nodeSetupInfos)
+                    {
+                        if (node.Key == localNodeTag)
+                            continue;
+
+                        parameters.Progress?.AddInfo($"Adding node '{node.Key}' to the cluster.");
+                        parameters.OnProgress?.Invoke(parameters.Progress);
+                        
+                        if (parameters.AddNodeToCluster != null)
+                            await parameters.AddNodeToCluster(node.Key);
+                    }
+                }
+        }
+        catch (Exception e)
+        {
+            throw new InvalidOperationException("Failed complete cluster configuration: ", e);
+        }
+
+        return new CompleteClusterConfigurationResult
+        {
+            PublicServerUrl = nodeInfo.PublicServerUrl
+        };
+    }
+
+    public static bool IsValidNodeTag(string str)
+    {
+        return Regex.IsMatch(str, @"^[A-Z]{1,4}$");
     }
 }

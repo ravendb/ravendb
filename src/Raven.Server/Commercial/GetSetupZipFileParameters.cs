@@ -10,10 +10,11 @@ public class GetSetupZipFileParameters
 {
     public CompleteClusterConfigurationResult CompleteClusterConfigurationResult; 
     public SetupProgressAndResult Progress;
-    public bool ModifyLocalServer;
+    public bool ZipOnly;
     public Action<IOperationProgress> OnProgress;
     public Func<string> OnSettingsPath;
     public SetupInfo SetupInfo;
+    public UnsecuredSetupInfo UnsecuredSetupInfo;
     public SetupMode SetupMode;
     public Func<string, string> OnGetCertificatePath;
     public CancellationToken Token;

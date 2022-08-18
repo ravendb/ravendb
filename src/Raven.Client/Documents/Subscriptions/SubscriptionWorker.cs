@@ -232,7 +232,7 @@ namespace Raven.Client.Documents.Subscriptions
                     TcpConnectionHeaderMessage.OperationTypes.Subscription,
                     NegotiateProtocolVersionForSubscriptionAsync,
                     context,
-                    requestExecutor.DefaultTimeout,
+                    _options?.ConnectionStreamTimeout, 
                     null
 #if TCP_CLIENT_CANCELLATIONTOKEN_SUPPORT
                     ,
@@ -241,7 +241,7 @@ namespace Raven.Client.Documents.Subscriptions
                     ).ConfigureAwait(false);
 
                 _tcpClient = result.TcpClient;
-                _stream = result.Stream;
+                _stream = new StreamWithTimeout(result.Stream);
                 _supportedFeatures = result.SupportedFeatures;
 
                 _tcpClient.NoDelay = true;
