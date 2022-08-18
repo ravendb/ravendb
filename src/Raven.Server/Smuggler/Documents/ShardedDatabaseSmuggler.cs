@@ -20,6 +20,7 @@ using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Documents.Processors;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Utils;
 
 namespace Raven.Server.Smuggler.Documents
 {
@@ -268,11 +269,37 @@ namespace Raven.Server.Smuggler.Documents
 
         protected override async Task<SmugglerProgressBase.Counts> ProcessCompareExchangeTombstonesAsync(SmugglerResult result)
         {
-            await using (var destinationActions = _destination.CompareExchange(_context))
+            await using (var destinationActions = _destination.CompareExchangeTombstones(_context))
+            await using (var actions = new DatabaseCompareExchangeActions(_server, _databaseRecord, _context, new CancellationToken()))
             {
                 await foreach (var kvp in _source.GetCompareExchangeTombstonesAsync())
                 {
-                    await destinationActions.WriteTombstoneKeyAsync(kvp.Key.Key);
+                    _token.ThrowIfCancellationRequested();
+                    result.CompareExchangeTombstones.ReadCount++;
+
+                    if (kvp.Equals(default))
+                    {
+                        result.CompareExchangeTombstones.ErroredCount++;
+                        continue;
+                    }
+
+                    try
+                    {
+                        if (ClusterTransactionCommand.IsAtomicGuardKey(kvp.Key.Key, out _))
+                        {
+                            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Normal, "handle atomic guard tombstones import");
+                            await destinationActions.WriteTombstoneKeyAsync(kvp.Key.Key);
+                        }
+                        else
+                        {
+                            await actions.WriteTombstoneKeyAsync(kvp.Key.Key);
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        result.CompareExchangeTombstones.ErroredCount++;
+                        result.AddError($"Could not write compare exchange tombstone '{kvp.Key.Key}': {e.Message}");
+                    }
                 }
             }
 
