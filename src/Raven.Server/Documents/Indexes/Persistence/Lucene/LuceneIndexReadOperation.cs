@@ -591,7 +591,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             if (orderByFields == null)
             {
-                if (query.Metadata.HasBoost == false && index.HasBoostedFields == false)
+                if (index.Configuration.OrderByScoreAutomaticallyWhenBoostingIsInvolved == false || query.Metadata.HasBoost == false && index.HasBoostedFields == false)
                     return null;
 
                 sort = SortByFieldScore;

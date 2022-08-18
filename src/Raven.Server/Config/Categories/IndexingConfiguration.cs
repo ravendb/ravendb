@@ -422,7 +422,13 @@ namespace Raven.Server.Config.Categories
         [IndexUpdateType(IndexUpdateType.None)]
         [ConfigurationEntry("Indexing.Static.RequireAdminToDeployJavaScriptIndexes", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public bool RequireAdminToDeployJavaScriptIndexes { get; set; }
-
+        
+        [Description("Order by score automatically when boosting is inside index definition or query.")]
+        [DefaultValue(true)]
+        [IndexUpdateType(IndexUpdateType.Refresh)]
+        [ConfigurationEntry("Indexing.OrderByScoreAutomaticallyWhenBoostingIsInvolved", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        public bool OrderByScoreAutomaticallyWhenBoostingIsInvolved { get; set; }
+        
         protected override void ValidateProperty(PropertyInfo property)
         {
             base.ValidateProperty(property);
