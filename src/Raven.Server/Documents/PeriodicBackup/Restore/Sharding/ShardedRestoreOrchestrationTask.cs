@@ -81,7 +81,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore.Sharding
             }
 
             await SaveDatabaseRecordAsync(DatabaseName, databaseRecord, null, Result, Progress);
-            }
+        }
 
         protected override IOperationResult OperationResult() => _result;
 
@@ -112,7 +112,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore.Sharding
                     {
                         shardRestoreSetting.NodeTag
                     },
-
                     ClusterTransactionIdBase64 = clusterTransactionIdBase64,
                     ReplicationFactor = 1
                 };
@@ -144,9 +143,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore.Sharding
 
                     var serverOp = new ServerWideOperation(executor, DocumentConventions.DefaultForServer, operationIdResult.OperationId, nodeTag);
                     tasks[i] = serverOp.WaitForCompletionAsync();
-
-                    // todo remove later
-                    await tasks[i];
                 }
             }
 

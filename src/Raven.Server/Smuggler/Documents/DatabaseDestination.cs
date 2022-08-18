@@ -22,7 +22,6 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Handlers.Batches;
 using Raven.Server.Documents.Indexes;
-using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.TransactionCommands;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
@@ -36,7 +35,6 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Server.Utils;
-using Sparrow.Utils;
 using Voron;
 using Voron.Global;
 using Size = Sparrow.Size;
@@ -802,14 +800,7 @@ namespace Raven.Server.Smuggler.Documents
             private async ValueTask SendIdentitiesAsync()
             {
                 //fire and forget, do not hold-up smuggler operations waiting for Raft command
-                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Normal, "try to find a better way to handle restoring identities on sharded database");
-                var databaseName = _database.Name;
-                if (_database is ShardedDocumentDatabase shardedDocumentDatabase)
-                {
-                    databaseName = shardedDocumentDatabase.ShardedDatabaseName;
-                }
-
-                await _database.ServerStore.SendToLeaderAsync(new UpdateClusterIdentityCommand(databaseName, _identities, false, RaftIdGenerator.NewId()));
+                await _database.ServerStore.SendToLeaderAsync(new UpdateClusterIdentityCommand(_database.Name, _identities, false, RaftIdGenerator.NewId()));
 
                 _identities.Clear();
             }

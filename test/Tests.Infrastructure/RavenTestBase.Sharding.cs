@@ -252,13 +252,13 @@ public partial class RavenTestBase
                 await new Index().ExecuteAsync(store);
             }
 
-            public async Task CheckData(IDocumentStore store, RavenDatabaseMode dbMode = RavenDatabaseMode.Single, long expectedRevisionsCount = 14, string database = null)
+            public async Task CheckData(IDocumentStore store, RavenDatabaseMode dbMode = RavenDatabaseMode.Single, long expectedRevisionsCount = 28, string database = null)
             {
                 long docsCount = default, tombstonesCount = default, revisionsCount = default;
                 database ??= store.Database;
                 if (dbMode == RavenDatabaseMode.Sharded)
                 {
-                    await foreach (var shard in _parent.Sharding.GetShardsDocumentDatabaseInstancesFor(store))
+                    await foreach (var shard in _parent.Sharding.GetShardsDocumentDatabaseInstancesFor(database))
                     {
                         var storage = shard.DocumentsStorage;
 
@@ -295,7 +295,7 @@ public partial class RavenTestBase
                 //doc
                 Assert.Equal(5, docsCount);
 
-                //Assert.Equal(1, detailedStats.CountOfCompareExchangeTombstones); //TODO - Not working for 4.2
+                //Assert.Equal(1, detailedStats.CountOfCompareExchangeTombstones); //TODO - test number of processed compare exchange tombstones  
 
                 //tombstone
                 Assert.Equal(1, tombstonesCount);
