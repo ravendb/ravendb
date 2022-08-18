@@ -101,7 +101,7 @@ namespace Raven.Server.Smuggler.Documents
             new ShardedCompareExchangeActions(_databaseContext, _destinations.Select(d => d.CompareExchange(context)).ToArray(), _options);
 
         public ICompareExchangeActions CompareExchangeTombstones(JsonOperationContext context) =>
-            new ShardedCompareExchangeActions(_databaseContext, _destinations.Select(d => d.CompareExchange(context)).ToArray(), _options);
+            new ShardedCompareExchangeActions(_databaseContext, _destinations.Select(d => d.CompareExchangeTombstones(context)).ToArray(), _options);
 
         public IDocumentActions Documents(bool throwOnCollectionMismatchError = true) =>
             new SharededDocumentActions(_databaseContext, _destinations.Select(d => d.Documents(throwOnDuplicateCollection: false)).ToArray(), _options);
