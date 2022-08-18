@@ -8,6 +8,7 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Backups.Sharding;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Sparrow.Utils;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -25,72 +26,58 @@ namespace SlowTests.Sharding.Backup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Sharding)]
         public async Task CanBackupAndRestoreSharded_Local()
         {
-            var file = GetTempFileName();
-            try
+            using (var store1 = Sharding.GetDocumentStore())
+            using (var store2 = GetDocumentStore())
             {
+                await Sharding.Backup.InsertData(store1);
+                var waitHandles = await Sharding.Backup.WaitForBackupToComplete(store1);
 
-                using (var store1 = Sharding.GetDocumentStore())
-                using (var store2 = GetDocumentStore())
+                var backupPath = NewDataPath(suffix: "BackupFolder");
+                
+                var config = Backup.CreateBackupConfiguration(backupPath);
+                await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(Server, store1, config);
+
+                Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
+
+                var dirs = Directory.GetDirectories(backupPath);
+                Assert.Equal(3, dirs.Length);
+                
+                var settings = new ShardedRestoreSettings
                 {
-                    await Sharding.Backup.InsertData(store1);
-                    var waitHandles = await Sharding.Backup.WaitForBackupToComplete(store1);
-                    //await Sharding.Backup.CheckData(store1, RavenDatabaseMode.Sharded);
+                    Shards = new SingleShardRestoreSetting[dirs.Length]
+                };
 
-                    var backupPath = NewDataPath(suffix: "BackupFolder");
-                    
-                    var config = Backup.CreateBackupConfiguration(backupPath);
-                    await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(Server, store1, config);
-
-                    Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
-
-                    var dirs = Directory.GetDirectories(backupPath);
-                    Assert.Equal(3, dirs.Length);
-                    
-                    var settings = new ShardedRestoreSettings
+                for (var i = 0; i < dirs.Length; i++)
+                {
+                    var dir = dirs[i];
+                    settings.Shards[i] = new SingleShardRestoreSetting
                     {
-                        Shards = new SingleShardRestoreSetting[dirs.Length]
+                        ShardNumber = i, 
+                        BackupPath = dir, 
+                        NodeTag = "A"
                     };
-
-                    for (var i = 0; i < dirs.Length; i++)
-                    {
-                        var dir = dirs[i];
-                        settings.Shards[i] = new SingleShardRestoreSetting
-                        {
-                            ShardNumber = i, 
-                            BackupPath = dir, 
-                            NodeTag = "A"
-                        };
-                    }
-
-                    // restore the database with a different name
-                    var databaseName = $"restored_database-{Guid.NewGuid()}";
-                    using (Sharding.Backup.ReadOnly(backupPath))
-                    using (Backup.RestoreDatabase(store2, new RestoreBackupConfiguration
-                    {
-                        DatabaseName = databaseName,
-                        ShardRestoreSettings = settings
-
-                    }, timeout: TimeSpan.FromSeconds(6000))) //todo fix timeouts
-                    {
-                        var dbRec = await store2.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
-                        Assert.Equal(DatabaseStateStatus.Normal, dbRec.DatabaseState);
-                        Assert.Equal(3, dbRec.Sharding.Shards.Length);
-
-                        //WaitForUserToContinueTheTest(store2, database: databaseName);
-
-                        await Sharding.Backup.CheckData(store2, RavenDatabaseMode.Sharded, database: databaseName);
-                        //await CheckData(Server.ServerStore, store3, names, databaseName);
-                    }
                 }
-            }
-            finally
-            {
-                File.Delete(file);
+
+                // restore the database with a different name
+                var databaseName = $"restored_database-{Guid.NewGuid()}";
+                using (Sharding.Backup.ReadOnly(backupPath))
+                using (Backup.RestoreDatabase(store2, new RestoreBackupConfiguration
+                {
+                    DatabaseName = databaseName,
+                    ShardRestoreSettings = settings
+
+                }, timeout: TimeSpan.FromSeconds(60)))
+                {
+                    var dbRec = await store2.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
+                    Assert.Equal(DatabaseStateStatus.Normal, dbRec.DatabaseState);
+                    Assert.Equal(3, dbRec.Sharding.Shards.Length);
+
+                    await Sharding.Backup.CheckData(store2, RavenDatabaseMode.Sharded, expectedRevisionsCount : 16, database: databaseName);
+                }
             }
         }
 
-        [AmazonS3Fact(Skip = "not implemented")]
-        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Sharding)]
+        [AmazonS3Fact(Skip = "not yet implemented")]
         public async Task CanBackupAndRestoreSharded_S3()
         {
             var s3Settings = GetS3Settings();
@@ -102,7 +89,6 @@ namespace SlowTests.Sharding.Backup
                 using (var store2 = GetDocumentStore())
                 {
                     await Sharding.Backup.InsertData(store1);
-                    //await InsertData(store1, names);
 
                     var waitHandles = await Sharding.Backup.WaitForBackupToComplete(store1);
 
@@ -133,28 +119,25 @@ namespace SlowTests.Sharding.Backup
                     // restore the database with a different name
                     var databaseName = $"restored_database-{Guid.NewGuid()}";
                     using (Sharding.Backup.ReadOnly(backupPath))
-                    using (Backup.RestoreDatabase(store2, new RestoreBackupConfiguration
+                    using (Backup.RestoreDatabaseFromCloud(store2, new RestoreFromS3Configuration
                     {
                         DatabaseName = databaseName,
-                        ShardRestoreSettings = settings
-
-                    }, timeout: TimeSpan.FromSeconds(6000))) //todo fix timeouts
+                        ShardRestoreSettings = settings,
+                        Settings = s3Settings
+                    }, timeout: TimeSpan.FromSeconds(60)))
                     {
                         var dbRec = await store2.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
 
                         Assert.Equal(DatabaseStateStatus.Normal, dbRec.DatabaseState);
                         Assert.Equal(3, dbRec.Sharding.Shards.Length);
 
-                        WaitForUserToContinueTheTest(store2, database: databaseName);
-
-                        await Sharding.Backup.CheckData(store2, RavenDatabaseMode.Sharded);
-                        //await CheckData(Server.ServerStore, store3, names, databaseName);
+                        await Sharding.Backup.CheckData(store2, RavenDatabaseMode.Sharded, database: databaseName);
                     }
                 }
             }
             finally
             {
-                // todo 
+                // todo delete backup files from s3 
             }
         }
 
@@ -181,6 +164,5 @@ namespace SlowTests.Sharding.Backup
                 AwsRegionName = s3Settings.AwsRegionName
             };
         }
-
     }
 }

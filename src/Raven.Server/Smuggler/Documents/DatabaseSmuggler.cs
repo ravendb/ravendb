@@ -20,7 +20,6 @@ namespace Raven.Server.Smuggler.Documents
     public class DatabaseSmuggler : SmugglerBase
     {
         private readonly DocumentDatabase _database;
-        public Action<IndexDefinitionAndType> OnIndexAction;
 
         public const string PreV4RevisionsDocumentId = "/revisions/";
 

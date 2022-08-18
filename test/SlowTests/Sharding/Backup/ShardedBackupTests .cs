@@ -41,22 +41,9 @@ namespace SlowTests.Sharding.Backup
                 {
                     await Sharding.Backup.InsertData(store1);
 
-                    /*var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions()
-                    {
-                        OperateOnTypes = DefaultOperateOnTypes
-                    }, file);
-                    await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(20));
-
-                    operation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions()
-                    {
-                        OperateOnTypes = DefaultOperateOnTypes
-
-                    }, file);
-                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));*/
-
                     var waitHandles = await Sharding.Backup.WaitForBackupToComplete(store1);
 
-                    var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* * * * *");
+                    var config = Backup.CreateBackupConfiguration(backupPath);
                     await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(Server, store1, config);
 
                     Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
@@ -74,7 +61,7 @@ namespace SlowTests.Sharding.Backup
                         importOptions.OperateOnTypes &= ~DatabaseSmugglerOptions.OperateOnFirstShardOnly;
                     }
 
-                    await Sharding.Backup.CheckData(store2, options.DatabaseMode);
+                    await Sharding.Backup.CheckData(store2, options.DatabaseMode, expectedRevisionsCount: 21);
                 }
             }
             finally
@@ -302,7 +289,7 @@ namespace SlowTests.Sharding.Backup
 
                 var operation = await store.Maintenance.SendAsync(new BackupOperation(config));
 
-                var result = await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(95));
+                var result = await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(60));
                 var backupResult = (ShardedBackupResult)result;
                 Assert.NotNull(backupResult);
                 Assert.Equal(100, backupResult.Results.Sum(x => x.Result.Documents.ReadCount));
