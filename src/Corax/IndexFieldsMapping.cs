@@ -53,6 +53,12 @@ public class IndexFieldsMapping : IEnumerable<IndexFieldBinding>
         return scope;
     }
 
+    public IndexFieldsMapping AddBinding(int fieldId, string fieldName)
+    {
+        Slice.From(_context, fieldName, ByteStringType.Immutable, out var str);
+        return AddBinding(fieldId, str);
+    }
+
     public IndexFieldsMapping AddBinding(int fieldId, Slice fieldName, Analyzer analyzer = null, bool hasSuggestion = false, FieldIndexingMode fieldIndexingMode = FieldIndexingMode.Normal, bool hasSpatial = false)
     {
         if (!_fieldsById.TryGetValue(fieldId, out var storedAnalyzer))
