@@ -4,6 +4,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.Documents.Queries;
 using Raven.Server.Indexing;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -52,7 +53,7 @@ public class CoraxIndexPersistence : IndexPersistenceBase
         _converter ??= new CoraxDocumentConverter(index, storeValue: storeValue);
     }
     
-    public override IndexReadOperationBase OpenIndexReader(Transaction readTransaction) => new CoraxIndexReadOperation(_index, _logger, readTransaction, _index._queryBuilderFactories, _converter.GetKnownFieldsForQuerying());
+    public override IndexReadOperationBase OpenIndexReader(Transaction readTransaction, IndexQueryServerSide query = null) => new CoraxIndexReadOperation(_index, _logger, readTransaction, _index._queryBuilderFactories, _converter.GetKnownFieldsForQuerying(), query);
 
     public override bool ContainsField(string field)
     {

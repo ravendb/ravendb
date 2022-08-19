@@ -1076,6 +1076,8 @@ namespace SlowTests.Authentication
                     ("GET", "/setup/ips"),                              // only available in setup mode
                     ("POST", "/setup/hosts"),                           // only available in setup mode
                     ("POST", "/setup/unsecured"),                       // only available in setup mode
+                    ("POST", "/setup/unsecured/package"),               // only available in setup mode
+                    ("POST", "/setup/continue/unsecured"),               // only available in setup mode
                     ("POST", "/setup/secured"),                         // only available in setup mode
                     ("GET", "/setup/letsencrypt/agreement"),            // only available in setup mode
                     ("POST", "/setup/letsencrypt"),                     // only available in setup mode
@@ -1136,7 +1138,7 @@ namespace SlowTests.Authentication
             }
         }
 
-        [NightlyBuildMultiplatformFact(RavenArchitecture.AllX64)]
+        [MultiplatformFact(RavenArchitecture.AllX64)]
         public void Routes_ClusterAdmin()
         {
             var certificates = Certificates.SetupServerAuthentication();
@@ -1172,6 +1174,8 @@ namespace SlowTests.Authentication
                     ("GET", "/setup/ips"),                              // only available in setup mode
                     ("POST", "/setup/hosts"),                           // only available in setup mode
                     ("POST", "/setup/unsecured"),                       // only available in setup mode
+                    ("POST", "/setup/unsecured/package"),               // only available in setup mode
+                    ("POST", "/setup/continue/unsecured"),               // only available in setup mode
                     ("POST", "/setup/secured"),                         // only available in setup mode
                     ("GET", "/setup/letsencrypt/agreement"),            // only available in setup mode
                     ("POST", "/setup/letsencrypt"),                     // only available in setup mode

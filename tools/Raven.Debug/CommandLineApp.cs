@@ -5,11 +5,11 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Threading;
 using McMaster.Extensions.CommandLineUtils;
 using Microsoft.Diagnostics.Tools.Dump;
 using Microsoft.Diagnostics.Tools.GCDump;
 using Raven.Client.Documents.Changes;
+using Raven.Debug.LogTrafficWatch;
 using Raven.Debug.StackTrace;
 using Raven.Debug.Utils;
 
@@ -207,6 +207,7 @@ namespace Raven.Debug
             });
 
             ConfigureTrafficWatchCommand();
+            ConfigureTrafficWatchReplayCommand();
 
             _app.OnExecute(() =>
             {
@@ -304,6 +305,83 @@ namespace Raven.Debug
 
                     using (logTrafficWatch)
                         logTrafficWatch.Connect().Wait();
+
+                    return 0;
+                });
+            });
+        }
+
+        private static void ConfigureTrafficWatchReplayCommand()
+        {
+            
+            _app.Command("replay-traffic", cmd =>
+            {
+                cmd.ExtendedHelpText = cmd.Description = "Replay log traffic watch entries.";
+                cmd.HelpOption(HelpOptionString);
+
+                const int concurrentThreadsCount = 8;
+
+                var pathArg = cmd.Option("--path", "Path to folder with traffic watch files.", CommandOptionType.SingleValue);
+                var hostArg = cmd.Option("--host", "RavenDB server host", CommandOptionType.SingleValue);
+                var portArg = cmd.Option("--port", "Server port", CommandOptionType.SingleValue);
+                var certArg = cmd.Option("--certificate-path", "Path to pfx certificate file.", CommandOptionType.SingleOrNoValue);
+                var certPassArg = cmd.Option("--certificate-password", "Certificate password.", CommandOptionType.SingleOrNoValue);
+                var threadsArg = cmd.Option("--threads", $"Number of concurrent threads to run (default: {concurrentThreadsCount})", CommandOptionType.SingleValue);
+                
+                cmd.OnExecuteAsync(async (_) =>
+                {
+                    var path = pathArg.Value();
+                    if (string.IsNullOrWhiteSpace(path))
+                    {
+                        cmd.ExitWithError("No path was specified");
+                        return -1;
+                    }
+
+                    var host = hostArg.Value();
+                    if (string.IsNullOrWhiteSpace(host))
+                    {
+                        cmd.ExitWithError("No host address was specified");
+                        return -1;
+                    }
+
+                    int port;
+                    try
+                    {
+                        port = Convert.ToInt32(portArg.Value());
+                    }
+                    catch (Exception)
+                    {
+                        cmd.ExitWithError("Port argument is invalid.");
+                        return -1;
+                    }
+
+                    var threads = concurrentThreadsCount;
+                    if (threadsArg.HasValue())
+                    {
+                        try
+                        {
+                            threads = Convert.ToInt32(threadsArg.Value());
+                        }
+                        catch (Exception)
+                        {
+                            cmd.ExitWithError($"Threads argument is invalid, {threadsArg.Value()}");
+                            return -1;
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine($"[{DateTime.UtcNow:O}] number of threads wasn't specified, so we will use '{concurrentThreadsCount}' threads");
+                    }
+
+
+                    var cert = certArg.HasValue() ? certArg.Value() : null;
+                    var certPass = certPassArg.HasValue() ? certPassArg.Value() : null;
+
+                    var logTrafficWatchReply = new TrafficWatchReplay(path, cert, certPass, host, port, threads );
+
+                    Console.CancelKeyPress += (sender, args) => logTrafficWatchReply.Stop();
+
+                    await logTrafficWatchReply.Start();
 
                     return 0;
                 });
