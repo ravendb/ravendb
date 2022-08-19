@@ -492,7 +492,7 @@ public ref struct IndexEntryReader
         }
     }
 
-    private static ReadOnlySpan<byte> TableEncodingLookupTable => new byte[] { 0, 1, 2, 4 };
+    public static ReadOnlySpan<byte> TableEncodingLookupTable => new byte[] { 0, 1, 2, 4 };
 
     private static ReadOnlySpan<byte> ByteKnownFieldMaskShiftLookupTable => new byte[]
     {
