@@ -35,8 +35,10 @@ using Raven.Server.Indexing;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Utils;
 using Spatial4n.Core.Shapes;
 using Voron.Impl;
 using Query = Lucene.Net.Search.Query;
@@ -56,13 +58,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private readonly IDisposable _releaseSearcher;
         private readonly IDisposable _releaseReadTransaction;
         private readonly int _maxNumberOfOutputsPerDocument;
+        private readonly MemoryInfo _memoryInfo;
 
         private readonly IState _state;
 
         private FastVectorHighlighter _highlighter;
         private FieldQuery _highlighterQuery;
 
-        public IndexReadOperation(Index index, LuceneVoronDirectory directory, IndexSearcherHolder searcherHolder, QueryBuilderFactories queryBuilderFactories, Transaction readTransaction)
+        public IndexReadOperation(Index index, LuceneVoronDirectory directory, IndexSearcherHolder searcherHolder, QueryBuilderFactories queryBuilderFactories, Transaction readTransaction, IndexQueryServerSide query)
             : base(index, LoggingSource.Instance.GetLogger<IndexReadOperation>(index._indexStorage.DocumentDatabase.Name))
         {
             try
@@ -80,6 +83,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _indexHasBoostedFields = index.HasBoostedFields;
             _releaseReadTransaction = directory.SetTransaction(readTransaction, out _state);
             _releaseSearcher = searcherHolder.GetSearcher(readTransaction, _state, out _searcher);
+
+            if (_logger.IsInfoEnabled && query != null)
+            {
+                _memoryInfo = new MemoryInfo
+                {
+                    AllocatedBefore = GC.GetAllocatedBytesForCurrentThread(), 
+                    ManagedThreadId = NativeMemory.CurrentThreadStats.ManagedThreadId,
+                    Query = query.Metadata.Query
+                };
+            }
         }
 
         public int EntriesCount()
@@ -950,6 +963,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _analyzer?.Dispose();
             _releaseSearcher?.Dispose();
             _releaseReadTransaction?.Dispose();
+
+            if (_logger.IsInfoEnabled && _memoryInfo != null && _memoryInfo.ManagedThreadId == NativeMemory.CurrentThreadStats.ManagedThreadId)
+            {
+                var diff = GC.GetAllocatedBytesForCurrentThread() - _memoryInfo.AllocatedBefore;
+                if (diff > 0)
+                {
+                    _logger.Info($"Query for index `{_indexName}` for query: `{_memoryInfo.Query}`, allocated: {new Size(diff, SizeUnit.Bytes)}");
+                }
+            }
         }
 
         internal static unsafe BlittableJsonReaderObject ParseJsonStringIntoBlittable(string json, JsonOperationContext context)
@@ -961,6 +983,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 blittableJson.BlittableValidation(); //precaution, needed because this is user input..
                 return blittableJson;
             }
+        }
+
+        private class MemoryInfo
+        {
+            public long AllocatedBefore { get; init; }
+            public int ManagedThreadId { get; init; }
+            public Queries.AST.Query Query { get; init; }
         }
     }
 }

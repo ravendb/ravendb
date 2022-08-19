@@ -320,6 +320,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
                                 result.AddInfo($"Successfully restored {result.SnapshotRestore.ReadCount} files during snapshot restore, took: {sw.ElapsedMilliseconds:#,#;;0}ms");
                                 onProgress.Invoke(result.Progress);
+
+                                using (var tx = context.OpenWriteTransaction())
+                                {
+                                    var changeVector = database.DocumentsStorage.GetNewChangeVector(context);
+                                    database.DocumentsStorage.SetDatabaseChangeVector(context, changeVector.ChangeVector);
+                                    tx.Commit();
+                                }
                             }
                             else
                             {
