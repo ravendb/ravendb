@@ -557,7 +557,7 @@ public ref struct IndexEntryReader
         foreach (var (name, field) in knownFields.Select(x => (x.FieldName, x.FieldId)))
         {
             var type = GetFieldType(field, out _);
-            if (type.HasFlag(IndexEntryFieldType.Simple))
+            if (type is IndexEntryFieldType.Simple or IndexEntryFieldType.Tuple)
             {
                 Read(field, out var value);
                 result += $"{name}: {Encodings.Utf8.GetString(value)}{Environment.NewLine}";
@@ -566,7 +566,7 @@ public ref struct IndexEntryReader
             {
                 result += $"{name}: null{Environment.NewLine}";
             }
-            else if (type.HasFlag(IndexEntryFieldType.List))
+            else if (type is IndexEntryFieldType.List or IndexEntryFieldType.TupleList)
             {
                 var iterator = this.ReadMany(field);
 
