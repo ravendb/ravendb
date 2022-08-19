@@ -1359,8 +1359,8 @@ namespace Corax
         {
             // try to insert to container value
             //TODO: using simplest delta encoding, need to do better here
-            int pos = ZigZagEncoding.Encode(tmpBuf, additions.Length);
-            pos += ZigZagEncoding.Encode(tmpBuf, additions[0], pos);
+            int pos = ZigZagEncoding.Encode(tmpBuf, additions.Length, forceInline: true);
+            pos += ZigZagEncoding.Encode(tmpBuf, additions[0], pos, forceInline: true);
             for (int i = 1; i < additions.Length; i++)
             {
                 if (pos + ZigZagEncoding.MaxEncodedSize >= tmpBuf.Length)
@@ -1373,7 +1373,7 @@ namespace Corax
                 if (entry == 0)
                     continue; // we don't need to store duplicates
 
-                pos += ZigZagEncoding.Encode(tmpBuf, entry, pos);
+                pos += ZigZagEncoding.Encode(tmpBuf, entry, pos, forceInline: true);
             }
 
             encoded = tmpBuf[..pos];
