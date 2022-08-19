@@ -28,8 +28,8 @@ namespace Tests.Infrastructure.TestMetrics
         private object CalculateMemoryInfoExtended()
             => MemoryInformation.GetMemoryInfo(_smapsReader, extended: true);
 
-        public (double MachineCpuUsage, double ProcessCpuUsage, double? MachineIoWait) GetCpuUsage()
-            => GetValue<(double MachineCpuUsage, double ProcessCpuUsage, double? MachineIoWait)>(Keys.Server.CpuUsage);
+        public CpuUsageStats GetCpuUsage()
+            => GetValue<CpuUsageStats>(Keys.Server.CpuUsage);
 
         public MemoryInfoResult GetMemoryInfoExtended()
             => GetValue<MemoryInfoResult>(Keys.Server.MemoryInfoExtended.RefreshRate15Seconds);
