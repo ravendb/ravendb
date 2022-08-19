@@ -3119,7 +3119,7 @@ namespace Raven.Server.Documents.Indexes
 
                         FillQueryResult(resultToFill, isStale, query.Metadata, queryContext, indexContext);
 
-                        using (var reader = IndexPersistence.OpenIndexReader(indexTx.InnerTransaction))
+                        using (var reader = IndexPersistence.OpenIndexReader(indexTx.InnerTransaction, query))
                         {
                             using (var queryScope = query.Timings?.For(nameof(QueryTimingsScope.Names.Query)))
                             {

@@ -223,7 +223,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                         using (ctx.OpenReadTransaction())
                         {
                             var databaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(ctx);
-                            Assert.Equal($"A:4-{originalDatabase.DbBase64Id}", databaseChangeVector);
+
+                            var expected1 = $"A:5-{restoredDatabase.DbBase64Id}, A:4-{originalDatabase.DbBase64Id}";
+                            var expected2 = $"A:4-{originalDatabase.DbBase64Id}, A:5-{restoredDatabase.DbBase64Id}";
+                            Assert.True(databaseChangeVector == expected1 || databaseChangeVector == expected2, $"Expected:\t\"{databaseChangeVector}\"\nActual:\t\"{expected1}\" or \"{expected2}\"\n");
                         }
                     }
                 }
