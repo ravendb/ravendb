@@ -220,7 +220,7 @@ namespace Voron.Data.Sets
 
                 long limit = Math.Min(NextParentLimit(), leafPage.Header->Baseline + int.MaxValue + 1);
 
-                for (; index < values.Count && values[index] < limit; index++)
+                for (; index < values.Length && values[index] < limit; index++)
                 {
                     if (leafPage.Remove(_llt, values[index]) == false)
                     {

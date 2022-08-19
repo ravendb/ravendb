@@ -426,9 +426,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                         using (var result = AggregateBranchPage(page, table, indexContext, branchesToAggregate, compressedEmptyLeafs, failedAggregatedLeafs, tree, token))
                         {
-                            if (parentPage == -1)
+                            if (parentPage == -1 )
                             {
-                                IndexReducedResult(indexContext, stats, writer, reduceKeyHash, result.GetOutputs(), false);
+                                if (branchesToAggregate.Count > 0)
+                                {
+                                    IndexReducedResult(indexContext, stats, writer, reduceKeyHash, result.GetOutputs(), false);
+                                }
                             }
                             else
                             {

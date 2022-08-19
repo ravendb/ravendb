@@ -29,11 +29,11 @@ public class SetAddRemoval : StorageTest
             {
                 if (op.Add)
                 {
-                    set.Add(op.Ids);
+                    set.Add(op.Ids.ToArray());
                 }
                 else
                 {
-                    set.Remove(op.Ids);
+                    set.Remove(op.Ids.ToArray());
                 }
             }
 

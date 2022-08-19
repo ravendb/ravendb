@@ -593,6 +593,10 @@ namespace Voron.Data.CompactTrees
             var totalEntrySize = lenOfKeyLen + keyLen + valLen;
             state.Header->FreeSpace += (ushort)(sizeof(ushort) + totalEntrySize);
             state.Header->Lower -= sizeof(short); // the upper will be fixed on defrag
+            
+            Debug.Assert(state.Header->Upper - state.Header->Lower >= 0);
+            Debug.Assert(state.Header->FreeSpace <= Constants.Storage.PageSize - PageHeader.SizeOf);
+
             entriesOffsets[(state.LastSearchPosition + 1)..].CopyTo(entriesOffsets[state.LastSearchPosition..]);
             
             if (state.Header->PageFlags.HasFlag(CompactPageFlags.Leaf))
@@ -1260,7 +1264,7 @@ namespace Voron.Data.CompactTrees
                 *tmpHeader = *(CompactPageHeader*)state.Page.Pointer;
                                 
                 Debug.Assert(tmpHeader->Upper - tmpHeader->Lower >= 0);
-                Debug.Assert(tmpHeader->FreeSpace < Constants.Storage.PageSize - PageHeader.SizeOf);
+                Debug.Assert(tmpHeader->FreeSpace <= Constants.Storage.PageSize - PageHeader.SizeOf);
                 
                 // We reset the data pointer                
                 tmpHeader->Upper = Constants.Storage.PageSize;
