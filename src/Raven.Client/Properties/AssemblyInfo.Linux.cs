@@ -2,3 +2,4 @@
 
 [assembly: InternalsVisibleTo("Raven.Server")]
 [assembly: InternalsVisibleTo("Raven.Traffic")]
+[assembly: InternalsVisibleTo("Raven.Debug")]
