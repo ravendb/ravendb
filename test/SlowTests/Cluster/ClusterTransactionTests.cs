@@ -1044,7 +1044,7 @@ namespace SlowTests.Cluster
                     Assert.Equal(leader.WebUrl, session.Advanced.RequestExecutor.Url);
                     session.Advanced.ClusterTransaction.CreateCompareExchangeValue("usernames/ayende", user1);
                     await session.StoreAsync(user3, "foo/bar");
-                    await session.StoreAsync(user3, "foo/bar/2");
+                    await session.StoreAsync(user1, "foo/bar/2");
                     await session.SaveChangesAsync();
 
                     var user = (await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<User>("usernames/ayende")).Value;
