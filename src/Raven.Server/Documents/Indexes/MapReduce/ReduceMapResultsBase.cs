@@ -428,7 +428,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                         {
                             if (parentPage == -1 )
                             {
-                                if (branchesToAggregate.Count > 0)
+                                if (branchesToAggregate.Count == 0 || // no more branches
+                                    branchesToAggregate.Count == 1 && branchesToAggregate.Contains(pageNumber)) // just this one, which we'll shortly remove
                                 {
                                     IndexReducedResult(indexContext, stats, writer, reduceKeyHash, result.GetOutputs(), false);
                                 }
