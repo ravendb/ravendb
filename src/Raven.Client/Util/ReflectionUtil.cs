@@ -18,6 +18,11 @@ namespace Raven.Client.Util
     /// </summary>
     internal static class ReflectionUtil
     {
+        internal static class BindingFlagsConstants
+        {
+            internal const BindingFlags QueryingFields = BindingFlags.Instance | BindingFlags.Public;
+        }
+
         private static Dictionary<Type, string> _fullNameCache = new Dictionary<Type, string>();
 
         /// <summary>

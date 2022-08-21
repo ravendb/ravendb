@@ -1,5 +1,3 @@
-using System.Reflection;
-
 namespace Raven.Client
 {
     public static class Constants
@@ -378,7 +376,6 @@ namespace Raven.Client
                 internal class Fields
                 {
                     internal const string PowerBIJsonFieldName = "json()";
-                    internal const BindingFlags FieldsReflectionBindingFlags = BindingFlags.Instance | BindingFlags.Public;
                 }
             }
 
