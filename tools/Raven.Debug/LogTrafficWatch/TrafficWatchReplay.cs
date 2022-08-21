@@ -158,8 +158,11 @@ namespace Raven.Debug.LogTrafficWatch
                         return;
                     }
 
+                    if (item.RequestUri == null) 
+                        continue;
+                    
                     var uri = UriReplace(item.RequestUri);
-                   
+                    
                     try
                     {
                         if (item.Type != TrafficWatchChangeType.Queries)
