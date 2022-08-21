@@ -50,7 +50,7 @@ public class TrafficWatchConfiguration : ConfigurationCategory
     [ConfigurationEntry("TrafficWatch.HttpMethods", ConfigurationEntryScope.ServerWideOnly)]
     public HashSet<string> HttpMethods { get; set; }
 
-    [Description("A semicolon-separated list of Traffic Watch change types by which the Traffic Watch logging entities will be filtered. If not specified, Traffic Watch entities with any change type will be included. Example list: \"GET;POST\".")]
+    [Description("A semicolon-separated list of Traffic Watch change types by which the Traffic Watch logging entities will be filtered. If not specified, Traffic Watch entities with any change type will be included. Example list: \"Queries;Documents\".")]
     [DefaultValue(null)]
     [ConfigurationEntry("TrafficWatch.ChangeTypes", ConfigurationEntryScope.ServerWideOnly)]
     public HashSet<TrafficWatchChangeType> ChangeTypes { get; set; }

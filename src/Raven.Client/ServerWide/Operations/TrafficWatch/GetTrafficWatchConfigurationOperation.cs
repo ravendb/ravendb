@@ -80,7 +80,6 @@ public class TrafficWatchConfigurationResult
     public HashSet<TrafficWatchChangeType> ChangeTypes { get; set; }
 }
 
-[Flags]
 public enum TrafficWatchMode
 {
     Off,
