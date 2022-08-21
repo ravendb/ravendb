@@ -7,6 +7,7 @@ import { overrideComposition } from "./overrides/composition";
 import { overrideSystem } from "./overrides/system";
 
 import "bootstrap/dist/js/bootstrap";
+import 'Content/css/bs5.scss';
 import "jquery-fullscreen-plugin/jquery.fullscreen";
 import "bootstrap-select";
 
