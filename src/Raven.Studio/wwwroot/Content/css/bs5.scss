@@ -1,0 +1,11 @@
+﻿.bs5 {
+    //TODO: put bootstrap 5 theme customization here
+    $primary: #d7325a;
+    
+    @import "../../../node_modules/boostrap5/scss/bootstrap";
+    
+    // fix for bs3 and bs5 interoperability:
+    .fade {
+        opacity: 1;
+    }
+}

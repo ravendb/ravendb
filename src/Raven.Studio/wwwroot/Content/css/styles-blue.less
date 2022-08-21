@@ -9,4 +9,8 @@
 
 @import "themes/blue-theme-variables-override.less";
 
-@import "styles-common.less";
+@import "root.less";
+
+:not(.bs5) {
+    @import "styles-common.less";
+}

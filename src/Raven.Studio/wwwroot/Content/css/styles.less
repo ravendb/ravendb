@@ -5,4 +5,8 @@
 
 @import "./bootstrap/variables-body.less";
 
-@import "styles-common.less";
+@import "root.less";
+
+:not(.bs5) {
+    @import "styles-common.less";
+}
