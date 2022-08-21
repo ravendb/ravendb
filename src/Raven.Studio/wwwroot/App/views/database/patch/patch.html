@@ -93,7 +93,8 @@
                         </ul>
                         <span class="input-group-btn" style="vertical-align:top">
                             <button class="btn" type="button" title="Show document preview"
-                                    data-bind="click: previewDocument, css: { 'btn-spinner': spinners.preview }, disable: spinners.preview() || !documentId() || spinners.testing()">
+                                    data-bind="click: previewDocument, css: { 'btn-spinner': spinners.autocomplete() || spinners.preview() },
+                                               disable: spinners.preview() || !documentId() || spinners.testing() || spinners.autocomplete()">
                                 <i class="icon-preview"></i>
                             </button>
                         </span>
