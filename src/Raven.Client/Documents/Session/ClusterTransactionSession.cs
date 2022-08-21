@@ -472,20 +472,26 @@ namespace Raven.Client.Documents.Session
 
             internal bool MetadataHasChanged(IMetadataDictionary oldMetadata, IMetadataDictionary newMetadata)
             {
-                if (newMetadata == null && oldMetadata == null)
+                if (newMetadata == null)
                 {
-                    return false;
+                    if (oldMetadata == null) // newMetadata == null && oldMetadata == null
+                    {
+                        return false;
+                    }
+                    else                    // newMetadata == null && oldMetadata != null
+                    {
+                        return true;
+                    }
                 }
-
-                if (newMetadata != null)
+                else
                 {
-                    if (oldMetadata == null)
+                    if (oldMetadata == null) // newMetadata != null && oldMetadata == null
                     {
                         return true;
                     }
                     else
                     {
-                        foreach (var key in newMetadata.Keys)
+                        foreach (var key in newMetadata.Keys) // newMetadata != null && oldMetadata != null
                         {
                             newMetadata.TryGetValue(key, out string newVal);
                             oldMetadata.TryGetValue(key, out string oldVal);
@@ -494,9 +500,9 @@ namespace Raven.Client.Documents.Session
                                 return true;
                             }
                         }
+                        return false;
                     }
                 }
-                return false;
             }
 
             public enum CompareExchangeValueState
