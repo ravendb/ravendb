@@ -472,26 +472,29 @@ namespace Raven.Client.Documents.Session
 
             internal bool MetadataHasChanged(IMetadataDictionary oldMetadata, IMetadataDictionary newMetadata)
             {
-                if (newMetadata == null)
+                bool oldMetadataNullOrEmpty = oldMetadata == null || oldMetadata.Count == 0;
+                bool newMetadataNullOrEmpty = newMetadata == null || newMetadata.Count == 0;
+
+                if (newMetadataNullOrEmpty)
                 {
-                    if (oldMetadata == null) // newMetadata == null && oldMetadata == null
+                    if (oldMetadataNullOrEmpty) // newMetadataNullOrEmpty == true && oldMetadataNullOrEmpty == true
                     {
                         return false;
                     }
-                    else                    // newMetadata == null && oldMetadata != null
+                    else                    // newMetadataNullOrEmpty == true && oldMetadataNullOrEmpty == false
                     {
                         return true;
                     }
                 }
                 else
                 {
-                    if (oldMetadata == null) // newMetadata != null && oldMetadata == null
+                    if (oldMetadataNullOrEmpty) // newMetadataNullOrEmpty == false && oldMetadataNullOrEmpty == true
                     {
                         return true;
                     }
                     else
                     {
-                        foreach (var key in newMetadata.Keys) // newMetadata != null && oldMetadata != null
+                        foreach (var key in newMetadata.Keys) // newMetadataNullOrEmpty == false && oldMetadataNullOrEmpty == false
                         {
                             newMetadata.TryGetValue(key, out string newVal);
                             oldMetadata.TryGetValue(key, out string oldVal);

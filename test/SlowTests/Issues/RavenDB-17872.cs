@@ -27,7 +27,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public async Task TestCase()
+        public async Task CompareExchangeMetadata_Create_WithoutPropChange()
         {
             using var store = GetDocumentStore();
 
@@ -35,6 +35,7 @@ namespace SlowTests.Issues
             const string metadataPropName = "RandomProp";
             const string metadataValue = "RandomValue";
 
+            // CompareExchangeSessionValue.MetadataHasChanged:  newMetadataNullOrEmpty == true && oldMetadataNullOrEmpty == true
             using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
             {
                 var entity = new TestObj();
@@ -42,6 +43,7 @@ namespace SlowTests.Issues
                 await session.SaveChangesAsync();
             }
 
+            // * CompareExchangeSessionValue.MetadataHasChanged: case newMetadataNullOrEmpty == false && oldMetadataNullOrEmpty == true
             using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
             {
                 var entity = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<TestObj>(id);
@@ -61,7 +63,121 @@ namespace SlowTests.Issues
             }
         }
 
-        class TestObj
+        [Fact]
+        public async Task CompareExchangeMetadata_CreateAndTryToChangeToSameVal()
+        {
+            using var store = GetDocumentStore();
+
+            const string id = "testObjs/0";
+            const string metadataPropName = "RandomProp";
+            const string metadataValue = "RandomValue";
+
+            // CompareExchangeSessionValue.MetadataHasChanged:  newMetadataNullOrEmpty == true && oldMetadataNullOrEmpty == true
+            using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+            {
+                var entity = new TestObj();
+                session.Advanced.ClusterTransaction.CreateCompareExchangeValue(id, entity);
+                await session.SaveChangesAsync();
+            }
+
+            // CompareExchangeSessionValue.MetadataHasChanged: case newMetadataNullOrEmpty == false && oldMetadataNullOrEmpty == true
+            using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+            {
+                var entity = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<TestObj>(id);
+                entity.Metadata[metadataPropName] = metadataValue;
+                await session.SaveChangesAsync();
+            }
+
+            // * CompareExchangeSessionValue.MetadataHasChanged: newMetadataNullOrEmpty == false && oldMetadataNullOrEmpty == false, and return false (same kvp's).
+            using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+            {
+                var entity = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<TestObj>(id);
+                entity.Metadata[metadataPropName] = metadataValue;
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+            {
+                var entity = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<TestObj>(id);
+                Assert.Contains(metadataPropName, entity.Metadata.Keys);
+                Assert.Equal(metadataValue, entity.Metadata[metadataPropName]);
+            }
+        }
+
+        [Fact]
+        public async Task CompareExchangeMetadata_CreateAndTryToChangeToDifferentVal()
+        {
+            using var store = GetDocumentStore();
+
+            const string id = "testObjs/0";
+            const string metadataPropName = "RandomProp";
+            const string metadataValue = "RandomValue";
+
+            // CompareExchangeSessionValue.MetadataHasChanged:  newMetadataNullOrEmpty == true && oldMetadataNullOrEmpty == true
+            using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+            {
+                var entity = new TestObj();
+                session.Advanced.ClusterTransaction.CreateCompareExchangeValue(id, entity);
+                await session.SaveChangesAsync();
+            }
+
+            // CompareExchangeSessionValue.MetadataHasChanged: case newMetadataNullOrEmpty == false && oldMetadataNullOrEmpty == true
+            using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+            {
+                var entity = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<TestObj>(id);
+                // entity.Value.Prop = "Changed"; //without this line the session doesn't send an update to the compare exchange
+                entity.Metadata[metadataPropName] = metadataValue;
+                await session.SaveChangesAsync();
+            }
+
+            // * CompareExchangeSessionValue.MetadataHasChanged: case newMetadataNullOrEmpty == false && oldMetadataNullOrEmpty == false, and return true (different kvp's).
+            using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+            {
+                var entity = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<TestObj>(id);
+                entity.Metadata[metadataPropName] = metadataValue+"1";
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+             {
+                 var entity = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<TestObj>(id);
+                 Assert.Contains(metadataPropName, entity.Metadata.Keys);
+                 Assert.Equal(metadataValue+"1", entity.Metadata[metadataPropName]);
+             }
+        }
+
+        [Fact]
+        public async Task CompareExchangeMetadata_DontDoAnything()
+        {
+            using var store = GetDocumentStore();
+
+            const string id = "testObjs/0";
+
+            // CompareExchangeSessionValue.MetadataHasChanged:  newMetadataNullOrEmpty == true && oldMetadataNullOrEmpty == true
+            using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+            {
+                var entity = new TestObj();
+                session.Advanced.ClusterTransaction.CreateCompareExchangeValue(id, entity);
+                await session.SaveChangesAsync();
+            }
+
+            // * CompareExchangeSessionValue.MetadataHasChanged:  newMetadataNullOrEmpty == true && oldMetadataNullOrEmpty == true
+            using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+            {
+                var entity = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<TestObj>(id);
+                entity.Value.Prop = "Changed";
+                await session.SaveChangesAsync();
+            }
+            
+            using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+            {
+                var entity = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<TestObj>(id);
+                Assert.True(entity.Metadata == null || entity.Metadata.Count == 0, $"There's a metatada for the compare-exchange \"{id}\", when it shouldn't have a metadata!");
+                Assert.Contains("Changed", entity.Value.Prop);
+            }
+        }
+
+        private class TestObj
         {
             public string Id { get; set; }
             public string Prop { get; set; }
