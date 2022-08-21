@@ -8,6 +8,7 @@ using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Session.Operations.Lazy;
+using Raven.Client.Json;
 using Raven.Client.Json.Serialization;
 using Raven.Client.Util;
 using Sparrow.Json;
@@ -320,16 +321,31 @@ namespace Raven.Client.Documents.Session
                                 throw new InvalidOperationException("Value cannot be null.");
 
                             T entity = default;
-                            if (_originalValue != null && _originalValue.Value != null)
+                            IMetadataDictionary metadata = null;
+                            if (_originalValue != null)
                             {
-                                var type = typeof(T);
-                                if (type.IsPrimitive || type == typeof(string))
-                                    _originalValue.Value.TryGet(Constants.CompareExchange.ObjectFieldName, out entity);
-                                else
-                                    entity = conventions.Serialization.DefaultConverter.FromBlittable<T>(_originalValue.Value, _key);
+                                if (_originalValue.Value != null)
+                                {
+                                    var type = typeof(T);
+                                    if (type.IsPrimitive || type == typeof(string))
+                                        _originalValue.Value.TryGet(Constants.CompareExchange.ObjectFieldName, out entity);
+                                    else
+                                        entity = conventions.Serialization.DefaultConverter.FromBlittable<T>(_originalValue.Value, _key);
+                                }
+
+                                if (_originalValue.Metadata != null)
+                                {
+                                    metadata = new MetadataAsDictionary();
+                                    foreach (var kvp in _originalValue.Metadata)
+                                    {
+                                        var key = kvp.Key;
+                                        var val = kvp.Value;
+                                        metadata[key] = val;
+                                    }
+                                }
                             }
 
-                            var value = new CompareExchangeValue<T>(_key, _index, entity);
+                            var value = new CompareExchangeValue<T>(_key, _index, entity, metadata);
                             _value = value;
 
                             return value;
@@ -395,14 +411,16 @@ namespace Raven.Client.Documents.Session
                             metadata = PrepareMetadataForPut(_key, _value.Metadata, conventions, context);
                         }
 
+                        var metadataHasChanged = MetadataHasChanged(_originalValue?.Metadata, _value?.Metadata);
+
                         BlittableJsonReaderObject entityToInsert = null;
 
-                        if (entityJson == null)
+                        if (entityJson == null || metadataHasChanged)
                             entityJson = entityToInsert = ConvertEntity(_key, entity, metadata);
 
                         var newValue = new CompareExchangeValue<BlittableJsonReaderObject>(_key, _index, entityJson);
 
-                        var hasChanged = _originalValue == null || HasChanged(_originalValue, newValue);
+                        var hasChanged = _originalValue == null || metadataHasChanged || HasChanged(_originalValue, newValue);
                         _originalValue = newValue;
 
                         if (hasChanged == false)
@@ -450,6 +468,35 @@ namespace Raven.Client.Documents.Session
                     return true;
 
                 return originalValue.Value.Equals(newValue.Value) == false;
+            }
+
+            internal bool MetadataHasChanged(IMetadataDictionary oldMetadata, IMetadataDictionary newMetadata)
+            {
+                if (newMetadata == null && oldMetadata == null)
+                {
+                    return false;
+                }
+
+                if (newMetadata != null)
+                {
+                    if (oldMetadata == null)
+                    {
+                        return true;
+                    }
+                    else
+                    {
+                        foreach (var key in newMetadata.Keys)
+                        {
+                            newMetadata.TryGetValue(key, out string newVal);
+                            oldMetadata.TryGetValue(key, out string oldVal);
+                            if (oldVal != newVal)
+                            {
+                                return true;
+                            }
+                        }
+                    }
+                }
+                return false;
             }
 
             public enum CompareExchangeValueState
