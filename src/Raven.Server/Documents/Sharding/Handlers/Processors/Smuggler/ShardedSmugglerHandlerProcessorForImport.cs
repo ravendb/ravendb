@@ -44,7 +44,8 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Smuggler
                     record = ServerStore.Cluster.ReadDatabase(ctx, RequestHandler.DatabaseContext.DatabaseName);
                 }
 
-                var smuggler = new ShardedDatabaseSmuggler(source, jsonOperationContext, record, ServerStore, RequestHandler.DatabaseContext, RequestHandler, options, result, operationId, onProgress, token: token.Token);
+                var smuggler = new ShardedDatabaseSmuggler(source, new MultiShardedDestination(source, RequestHandler.DatabaseContext, RequestHandler, operationId),
+                    jsonOperationContext, record, ServerStore, options, result, onProgress, token: token.Token);
 
                 await smuggler.ExecuteAsync();
             }

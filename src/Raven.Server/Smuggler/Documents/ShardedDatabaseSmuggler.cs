@@ -31,22 +31,6 @@ namespace Raven.Server.Smuggler.Documents
 
         public ShardedDatabaseSmuggler(
             ISmugglerSource source,
-            JsonOperationContext jsonOperationContext,
-            DatabaseRecord databaseRecord,
-            ServerStore server,
-            ShardedDatabaseContext databaseContext,
-            ShardedDatabaseRequestHandler handler,
-            DatabaseSmugglerOptionsServerSide options,
-            SmugglerResult result, 
-            long operationId,
-            Action<IOperationProgress> onProgress = null, 
-            CancellationToken token = default) : 
-            this(source, new MultiShardedDestination(source, databaseContext, handler, operationId), jsonOperationContext, databaseRecord, server, options, result, onProgress, token)
-        {
-        }
-
-        internal ShardedDatabaseSmuggler(
-            ISmugglerSource source,
             ISmugglerDestination destination,
             JsonOperationContext jsonOperationContext,
             DatabaseRecord databaseRecord,
@@ -287,7 +271,8 @@ namespace Raven.Server.Smuggler.Documents
                     {
                         if (ClusterTransactionCommand.IsAtomicGuardKey(kvp.Key.Key, out _))
                         {
-                            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Normal, "handle atomic guard tombstones import");
+                            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Normal, 
+                                "RavenDB-19201 : handle atomic guard tombstones import");
                             await destinationActions.WriteTombstoneKeyAsync(kvp.Key.Key);
                         }
                         else

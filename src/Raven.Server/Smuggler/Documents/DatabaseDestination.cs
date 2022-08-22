@@ -799,8 +799,7 @@ namespace Raven.Server.Smuggler.Documents
 
             private async ValueTask SendIdentitiesAsync()
             {
-                //fire and forget, do not hold-up smuggler operations waiting for Raft command
-                await _database.ServerStore.SendToLeaderAsync(new UpdateClusterIdentityCommand(_database.Name, _identities, false, RaftIdGenerator.NewId()));
+                await _database.ServerStore.SendToLeaderAsync(new UpdateClusterIdentityCommand(_database.Name, _identities, force: false, RaftIdGenerator.NewId()));
 
                 _identities.Clear();
             }
