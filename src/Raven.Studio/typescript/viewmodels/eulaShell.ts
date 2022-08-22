@@ -12,7 +12,6 @@ import autoCompleteBindingHandler = require("common/bindingHelpers/autoCompleteB
 import requestExecution = require("common/notifications/requestExecution");
 import protractedCommandsDetector = require("common/notifications/protractedCommandsDetector");
 import buildInfo = require("models/resources/buildInfo");
-import constants = require("common/constants/constants");
 
 class eulaShell extends viewModelBase {
 
@@ -56,12 +55,9 @@ class eulaShell extends viewModelBase {
         new getServerBuildVersionCommand()
             .execute()
             .done((serverBuildResult: serverBuildVersionDto) => {
-                buildInfo.serverBuildVersion(serverBuildResult);
+                buildInfo.onServerBuildVersion(serverBuildResult);
 
-                const currentBuildVersion = serverBuildResult.BuildVersion;
-                if (currentBuildVersion !== constants.DEV_BUILD_NUMBER) {
-                    buildInfo.serverMainVersion(Math.floor(currentBuildVersion / 10000));
-                }
+              
             });
     }
 
