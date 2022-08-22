@@ -70,6 +70,7 @@ class editDocument extends viewModelBase {
     documentItemType: KnockoutComputed<string>;
     
     documentText = ko.observable("");
+    documentTextOrg = ko.observable("");
     documentTextRight = ko.observable("");
     
     documentTextStash = ko.observable<string>("");
@@ -431,12 +432,19 @@ class editDocument extends viewModelBase {
                 }
 
                 const docText = genUtils.stringify(docDto);
-                this.documentText(docText);
-                
                 const textSizeInByes = genUtils.getSizeInBytesAsUTF8(docText);
+
                 this.isHugeDocument(textSizeInByes > document.hugeSizeInBytesDefault);
                 
-                this.hugeTextSize(this.isHugeDocument() && !this.ignoreHugeDocument() ? textSizeInByes : 0);
+                if (this.isHugeDocument() && !this.ignoreHugeDocument()) {
+                    this.documentTextOrg(docText);
+                    this.documentText(null);
+                    this.hugeTextSize(textSizeInByes);
+                } else {
+                    this.documentTextOrg(null);
+                    this.documentText(docText);
+                    this.hugeTextSize(0);
+                }
             }
         });
 
@@ -669,7 +677,7 @@ class editDocument extends viewModelBase {
     }
     
     downloadDocument() {
-        fileDownloader.downloadAsJson(this.documentText(), this.document().getId());
+        fileDownloader.downloadAsJson(this.documentTextOrg(), this.document().getId());
     }
     
     viewRaw() {
@@ -735,7 +743,7 @@ class editDocument extends viewModelBase {
     foldAll() {
         const AceRange = ace.require("ace/range").Range;
         this.docEditor.getSession().foldAll();
-        const folds = <any[]> this.docEditor.getSession().getFoldsInRange(new AceRange(0, 0, this.docEditor.getSession().getLength(), 0));
+        const folds = <any[]>this.docEditor.getSession().getFoldsInRange(new AceRange(0, 0, this.docEditor.getSession().getLength(), 0));
         folds.map(f => this.docEditor.getSession().expandFold(f));
     }
 
@@ -1059,7 +1067,7 @@ class editDocument extends viewModelBase {
             .done((rightDoc: document) => {
                 const wasDirty = this.dirtyFlag().isDirty();
                 
-                this.documentTextStash(this.documentText());
+                this.documentTextStash(this.documentText() || this.documentTextOrg());
                 
                 const leftDoc = this.document();
                 const leftDocDto = leftDoc.toDiffDto();
