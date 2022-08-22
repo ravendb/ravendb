@@ -70,7 +70,6 @@ class editDocument extends viewModelBase {
     documentItemType: KnockoutComputed<string>;
     
     documentText = ko.observable("");
-    documentTextOrg = ko.observable("");
     documentTextRight = ko.observable("");
     
     documentTextStash = ko.observable<string>("");
@@ -432,19 +431,12 @@ class editDocument extends viewModelBase {
                 }
 
                 const docText = genUtils.stringify(docDto);
-                const textSizeInByes = genUtils.getSizeInBytesAsUTF8(docText);
+                this.documentText(docText);
                 
+                const textSizeInByes = genUtils.getSizeInBytesAsUTF8(docText);
                 this.isHugeDocument(textSizeInByes > document.hugeSizeInBytesDefault);
                 
-                if (this.isHugeDocument() && !this.ignoreHugeDocument()) {
-                    this.documentTextOrg(docText);
-                    this.documentText(null);
-                    this.hugeTextSize(textSizeInByes);
-                } else {
-                    this.documentTextOrg(null);
-                    this.documentText(docText);
-                    this.hugeTextSize(0);
-                }
+                this.hugeTextSize(this.isHugeDocument() && !this.ignoreHugeDocument() ? textSizeInByes : 0);
             }
         });
 
@@ -677,7 +669,7 @@ class editDocument extends viewModelBase {
     }
     
     downloadDocument() {
-        fileDownloader.downloadAsJson(this.documentTextOrg(), this.document().getId());
+        fileDownloader.downloadAsJson(this.documentText(), this.document().getId());
     }
     
     viewRaw() {
@@ -1067,7 +1059,7 @@ class editDocument extends viewModelBase {
             .done((rightDoc: document) => {
                 const wasDirty = this.dirtyFlag().isDirty();
                 
-                this.documentTextStash(this.documentText() || this.documentTextOrg());
+                this.documentTextStash(this.documentText());
                 
                 const leftDoc = this.document();
                 const leftDocDto = leftDoc.toDiffDto();
