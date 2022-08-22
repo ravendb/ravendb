@@ -41,7 +41,8 @@ namespace Raven.Server.Documents
                 [nameof(Etag)] = Etag,
                 [nameof(DeletedEtag)] = DeletedEtag,
                 [nameof(Type)] = Type.ToString(),
-                [nameof(ChangeVector)] = ChangeVector
+                [nameof(ChangeVector)] = ChangeVector,
+                [nameof(LastModified)] = LastModified
             };
 
             if (Type != TombstoneType.Attachment)
@@ -50,6 +51,38 @@ namespace Raven.Server.Documents
             }
 
             return json;
+        }
+
+        public static Tombstone FromJson(JsonOperationContext ctx, BlittableJsonReaderObject json)
+        {
+            if (json == null)
+                return null;
+
+            json.TryGet(nameof(ChangeVector), out string changeVector);
+            json.TryGet("Id", out string lowerId);
+            json.TryGet(nameof(Etag), out long etag);
+            json.TryGet(nameof(DeletedEtag), out long deletedEtag);
+            json.TryGet(nameof(LastModified), out DateTime lastModified);
+            json.TryGet(nameof(Type), out string typeStr);
+            Enum.TryParse(typeStr, out TombstoneType type);
+           
+            var tombstone =  new Tombstone
+            {
+                ChangeVector = changeVector,
+                LowerId = ctx.GetLazyStringForFieldWithCaching(lowerId),
+                Etag = etag,
+                DeletedEtag = deletedEtag,
+                LastModified = lastModified,
+                Type = type
+            };
+
+            if (type != TombstoneType.Attachment)
+            {
+                json.TryGet(nameof(Collection), out string collection);
+                tombstone.Collection = ctx.GetLazyStringForFieldWithCaching(collection);
+            }
+
+            return tombstone;
         }
 
         public void Dispose()
