@@ -69,7 +69,7 @@ abstract class viewModelBase {
     constructor() {
         this.appUrls = appUrl.forCurrentDatabase();
 
-        eventsCollector.default.reportViewModel(this);
+        eventsCollector.default.reportViewModel();
     }
 
     protected bindToCurrentInstance(...methods: Array<keyof this & string>) {
