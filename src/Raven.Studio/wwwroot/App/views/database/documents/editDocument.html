@@ -159,17 +159,17 @@
                     <div class="absolute-center padding padding-lg bg-info">
                         <div class="padding">
                             <span data-bind="text: documentItemType"></span> size is <strong data-bind="text: computedDocumentSize"></strong>.<br /><br />
-                            Having huge documents may impact indexing, querying and other database tasks.<br />
-                            Documents greater than <strong data-bind="text: constructor.hugeSizeFormatted"></strong> may not perform well in the browser.
+                            Having huge documents impacts indexing, querying and other database tasks.<br />
+                            Your browser may not perfrom well if you open the <span data-bind="text: documentItemType"></span> in this view.
                         </div>
                         <div class="padding text-left">
                             Select how to continue: <br />
                         </div>
                         <div class="padding text-center">
                             <button class="btn btn-warning" 
-                                    data-bind="click: reLoadDocument, attr: { title: 'Click to continue & load the ' + documentItemType().toLowerCase() + ' in this edit view' }, css: { 'btn-spinner': isBusy }">
-                                <i class="icon-upload"></i>
-                                <span><span data-bind="text: isBusy() ? 'Loading... ' : 'Load '"></span><span data-bind="text: documentItemType().toLowerCase(), visible: !isBusy()"></span></span>
+                                    data-bind="click: reLoadDocument, attr: { title: 'Click to open the ' + documentItemType().toLowerCase() + ' in this edit view' }, css: { 'btn-spinner': isBusy }">
+                                <i class="icon-preview"></i>
+                                <span><span data-bind="text: isBusy() ? 'Loading... ' : 'Open '"></span><span data-bind="text: documentItemType().toLowerCase(), visible: !isBusy()"></span></span>
                             </button>
                             <button class="btn btn-success"
                                     data-bind="click: viewRaw, attr: { title: 'Click to view the raw content for the ' + documentItemType().toLowerCase() }, disable: isBusy">
