@@ -13,9 +13,11 @@ using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents;
 using Raven.Server.Config;
 using Raven.Server.Documents.Expiration;
+using Raven.Server.Documents.Handlers.Processors.Replication;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Revisions;
+using Raven.Server.Documents.Sharding.Handlers.Processors.Replication;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Storage.Layout;
@@ -33,9 +35,9 @@ using Voron.Data.Fixed;
 using Voron.Data.Tables;
 using Voron.Exceptions;
 using Voron.Impl;
+using static Raven.Server.Documents.Schemas.Collections;
 using static Raven.Server.Documents.Schemas.Documents;
 using static Raven.Server.Documents.Schemas.Tombstones;
-using static Raven.Server.Documents.Schemas.Collections;
 
 namespace Raven.Server.Documents
 {
@@ -1153,6 +1155,28 @@ namespace Raven.Server.Documents
 
                 yield return TableValueToTombstone(context, ref result.Reader);
             }
+        }
+
+        public GetTombstonesPreviewResult GetTombstonesPreviewResult(DocumentsOperationContext context, long etag, long start, long take)
+        {
+            var table = new Table(TombstonesSchema, context.Transaction.InnerTransaction);
+
+            var tombstones = new List<Tombstone>();
+            foreach (var result in table.SeekForwardFrom(TombstonesSchema.FixedSizeIndexes[AllTombstonesEtagsSlice], etag, start))
+            {
+                if (take-- <= 0)
+                    break;
+
+                var tombstone = TableValueToTombstone(context, ref result.Reader);
+                tombstones.Add(tombstone);
+            }
+
+            tombstones.Sort(ShardedReplicationHandlerProcessorForGetTombstones.TombstonesPreviewComparer.Instance);
+
+            return new GetTombstonesPreviewResult
+            {
+                Tombstones = tombstones
+            };
         }
 
         public IEnumerable<Tombstone> GetTombstonesInReverseEtagOrderFrom(DocumentsOperationContext context, long etag, long start, long take)

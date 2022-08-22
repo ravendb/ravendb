@@ -20,24 +20,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/replication/tombstones", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetAllTombstones()
         {
-            var start = GetStart();
-            var pageSize = GetPageSize();
-
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-            using (context.OpenReadTransaction())
-            {
-                var array = new DynamicJsonArray();
-                var tombstones = context.DocumentDatabase.DocumentsStorage.GetTombstonesFrom(context, 0, start, pageSize);
-                foreach (var tombstone in tombstones)
-                {
-                    array.Add(tombstone.ToJson());
-                }
-                context.Write(writer, new DynamicJsonValue
-                {
-                    ["Results"] = array
-                });
-            }
+            using (var processor = new ReplicationHandlerProcessorForGetTombstones(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/replication/conflicts", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]

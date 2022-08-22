@@ -19,4 +19,11 @@ public class ShardedReplicationHandler : ShardedDatabaseRequestHandler
         using (var processor = new ShardedReplicationHandlerProcessorForGetConflicts(this))
             await processor.ExecuteAsync();
     }
+
+    [RavenShardedAction("/databases/*/replication/tombstones", "GET")]
+    public async Task GetAllTombstones()
+    {
+        using (var processor = new ShardedReplicationHandlerProcessorForGetTombstones(this))
+            await processor.ExecuteAsync();
+    }
 }
