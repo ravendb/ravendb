@@ -549,8 +549,8 @@ public struct MultiUnaryMatch<TInner> : IQueryMatch
 
     public void Score(Span<long> matches, Span<float> scores)
     {
-        //TODO Federico: Can you handle that thing? I'm not sure how internally boosting flow works.
-        throw new NotImplementedException();
+        if (_inner.IsBoosting)
+            _inner.Score(matches, scores);
     }
 
     public QueryInspectionNode Inspect()
