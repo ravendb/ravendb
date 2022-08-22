@@ -80,7 +80,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore.Sharding
                 databaseRecord.DatabaseState = DatabaseStateStatus.Normal;
             }
 
-            await SaveDatabaseRecordAsync(DatabaseName, databaseRecord, null, Result, Progress);
+            await SaveDatabaseRecordAsync(DatabaseName, databaseRecord, databaseValues: null, Result, Progress);
         }
 
         protected override IOperationResult OperationResult() => _result;
@@ -117,7 +117,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore.Sharding
                 };
 
                 if (nodes.Add(shardRestoreSetting.NodeTag))
+                {
                     databaseRecord.Sharding.Orchestrator.Topology.Members.Add(shardRestoreSetting.NodeTag);
+                    databaseRecord.Sharding.Orchestrator.Topology.ClusterTransactionIdBase64 = clusterTransactionIdBase64;
+                }
             }
 
             databaseRecord.Sharding.Orchestrator.Topology.ReplicationFactor = databaseRecord.Sharding.Orchestrator.Topology.Members.Count;

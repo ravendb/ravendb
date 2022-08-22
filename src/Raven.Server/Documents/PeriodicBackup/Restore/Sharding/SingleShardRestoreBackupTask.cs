@@ -67,6 +67,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore.Sharding
         protected override async Task ImportLastBackupFileAsync(DocumentDatabase database, DatabaseDestination destination, JsonOperationContext context,
             DatabaseSmugglerOptionsServerSide options, DatabaseRecord databaseRecord, string lastFilePath)
         {
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Normal, 
+                "RavenDB-19202 : consider using the most up-to-date database record");
             if (_shardNumber > 0)
                 options.OperateOnTypes &= ~DatabaseItemType.Subscriptions;
 

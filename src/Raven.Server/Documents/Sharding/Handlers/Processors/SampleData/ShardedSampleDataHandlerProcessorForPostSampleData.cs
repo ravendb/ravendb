@@ -24,16 +24,16 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.SampleData
 
             var smuggler = new ShardedDatabaseSmuggler(
                 source,
+                new MultiShardedDestination(source, RequestHandler.DatabaseContext, RequestHandler, operationId),
                 context,
                 record,
-                RequestHandler.Server.ServerStore, RequestHandler.DatabaseContext, RequestHandler,
+                RequestHandler.ServerStore,
                 options: new DatabaseSmugglerOptionsServerSide
                 {
                     OperateOnTypes = operateOnTypes,
                     SkipRevisionCreation = true
                 },
-                null,
-                operationId);
+                result: null);
 
             await smuggler.ExecuteAsync();
         }
