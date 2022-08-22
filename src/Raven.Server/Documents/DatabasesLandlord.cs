@@ -677,6 +677,17 @@ namespace Raven.Server.Documents
             }
         }
 
+        public ShardedDatabaseContext GetShardedDatabaseContext(StringSegment databaseName)
+        {
+            if (ShardedDatabasesCache.TryGetValue(databaseName, out var task) == false)
+                return null;
+
+            if (task.IsCompleted == false)
+                return null;
+
+            return task.Result;
+        }
+
         private ShardedDatabaseContext GetOrAddShardedDatabaseContext(StringSegment databaseName, RawDatabaseRecord databaseRecord)
         {
             var newTask = new Task<ShardedDatabaseContext>(() => new ShardedDatabaseContext(_serverStore, databaseRecord));
@@ -700,7 +711,7 @@ namespace Raven.Server.Documents
             return databaseContext;
         }
 
-        public IEnumerable<Task<DocumentDatabase>> TryGetOrCreateShardedResourcesStore(StringSegment databaseName, DateTime? wakeup = null, bool ignoreDisabledDatabase = false, bool ignoreBeenDeleted = false, bool ignoreNotRelevant = false)
+        public IEnumerable<Task<ShardedDocumentDatabase>> TryGetOrCreateShardedResourcesStore(StringSegment databaseName, DateTime? wakeup = null, bool ignoreDisabledDatabase = false, bool ignoreBeenDeleted = false, bool ignoreNotRelevant = false)
         {
             // create all database shards on this node
             List<string> relevantDatabases;
@@ -711,7 +722,7 @@ namespace Raven.Server.Documents
                 relevantDatabases = databaseRecord.Topologies.Where(x => x.Topology.RelevantFor(_serverStore.NodeTag)).Select(x => x.Name).ToList();
             }
 
-            return relevantDatabases.Select(db => TryGetOrCreateResourceStore(db, wakeup, ignoreDisabledDatabase, ignoreBeenDeleted, ignoreNotRelevant));
+            return relevantDatabases.Select(db => TryGetOrCreateResourceStore(db, wakeup, ignoreDisabledDatabase, ignoreBeenDeleted, ignoreNotRelevant).ContinueWith(t=> t.Result as ShardedDocumentDatabase));
         }
 
         public Task<DocumentDatabase> TryGetOrCreateResourceStore(StringSegment databaseName, DateTime? wakeup = null, bool ignoreDisabledDatabase = false, bool ignoreBeenDeleted = false, bool ignoreNotRelevant = false, [CallerMemberName] string caller = null)

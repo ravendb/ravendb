@@ -12,6 +12,7 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Server.Documents.Handlers.Processors.TimeSeries;
 using Raven.Server.Documents.Replication.ReplicationItems;
+using Raven.Server.Documents.Sharding;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
@@ -2247,7 +2248,7 @@ namespace Raven.Server.Documents.TimeSeries
         {
             var table = new Table(TimeSeriesSchema, context.Transaction.InnerTransaction);
 
-            foreach (var result in DocumentsStorage.GetItemsByBucket(context.Allocator, table, TimeSeriesSchema.DynamicKeyIndexes[TimeSeriesBucketAndEtagSlice], bucket, etag))
+            foreach (var result in ShardedDocumentsStorage.GetItemsByBucket(context.Allocator, table, TimeSeriesSchema.DynamicKeyIndexes[TimeSeriesBucketAndEtagSlice], bucket, etag))
             {
                 yield return CreateTimeSeriesSegmentItem(context, ref result.Result.Reader);
             }
@@ -2325,7 +2326,7 @@ namespace Raven.Server.Documents.TimeSeries
         {
             var table = new Table(DeleteRangesSchema, context.Transaction.InnerTransaction);
 
-            foreach (var result in DocumentsStorage.GetItemsByBucket(context.Allocator, table, DeleteRangesSchema.DynamicKeyIndexes[DeletedRangesBucketAndEtagSlice], bucket, etag))
+            foreach (var result in ShardedDocumentsStorage.GetItemsByBucket(context.Allocator, table, DeleteRangesSchema.DynamicKeyIndexes[DeletedRangesBucketAndEtagSlice], bucket, etag))
             {
                 yield return CreateDeletedRangeItem(context, ref result.Result.Reader);
             }

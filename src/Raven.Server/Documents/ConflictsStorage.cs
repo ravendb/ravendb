@@ -10,6 +10,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
 using Raven.Server.Documents.Handlers.Processors.Replication;
 using Raven.Server.Documents.Replication;
+using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -142,7 +143,7 @@ namespace Raven.Server.Documents
         {
             var table = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, ConflictsSlice);
 
-            foreach (var result in GetItemsByBucket(context.Allocator, table, ConflictsSchema.DynamicKeyIndexes[ConflictsBucketAndEtagSlice], bucket, etag))
+            foreach (var result in ShardedDocumentsStorage.GetItemsByBucket(context.Allocator, table, ConflictsSchema.DynamicKeyIndexes[ConflictsBucketAndEtagSlice], bucket, etag))
             {
                 yield return TableValueToConflictDocument(context, ref result.Result.Reader);
             }

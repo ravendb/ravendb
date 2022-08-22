@@ -97,6 +97,11 @@ namespace Raven.Server.Documents
             }
         }
 
+        protected virtual void ValidateId(Slice lowerId)
+        {
+
+        }
+
         public PutOperationResults PutDocument(DocumentsOperationContext context, string id,
             string expectedChangeVector,
             BlittableJsonReaderObject document,
@@ -127,6 +132,8 @@ namespace Raven.Server.Documents
             id = BuildDocumentId(id, newEtag, out bool knownNewId);
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idPtr))
             {
+                ValidateId(lowerId);
+
                 var collectionName = _documentsStorage.ExtractCollectionName(context, document);
                 var table = context.Transaction.InnerTransaction.OpenTable(GetDocsSchemaForCollection(collectionName), collectionName.GetTableName(CollectionTableType.Documents));
 
@@ -453,47 +460,47 @@ namespace Raven.Server.Documents
                     var idLength = id.Length;
                     var idSuffixLength = 0;
 
-                if (lastChar == _documentDatabase.IdentityPartsSeparator)
+                    if (lastChar == _documentDatabase.IdentityPartsSeparator)
                     {
                         CalculateSuffixForIdentityPartsSeparator(id, ref idSuffixPtr, ref idSuffixLength, ref idLength);
 
-                    string nodeTag = _documentDatabase.ServerStore.NodeTag;
+                        string nodeTag = _documentDatabase.ServerStore.NodeTag;
 
-                    // PERF: we are creating an string and mutating it for performance reasons.
-                    //       while nasty this shouldn't have any side effects because value didn't
-                    //       escape yet the function, so while not pretty it works (and it's safe).      
+                        // PERF: we are creating an string and mutating it for performance reasons.
+                        //       while nasty this shouldn't have any side effects because value didn't
+                        //       escape yet the function, so while not pretty it works (and it's safe).      
                         //       
                         int valueLength = idLength + 1 + 19 + nodeTag.Length + idSuffixLength;
                         string value = new('0', valueLength);
-                    fixed (char* valuePtr = value)
-                    {
+                        fixed (char* valuePtr = value)
+                        {
                             char* valueWritePosition = valuePtr + value.Length;
 
                             WriteSuffixForIdentityPartsSeparator(ref valueWritePosition, idSuffixPtr, idSuffixLength);
 
                             valueWritePosition -= nodeTag.Length;
-                        for (int j = 0; j < nodeTag.Length; j++)
+                            for (int j = 0; j < nodeTag.Length; j++)
                                 valueWritePosition[j] = nodeTag[j];
 
-                        int i;
+                            int i;
                             for (i = 0; i < idLength; i++)
-                            valuePtr[i] = id[i];
+                                valuePtr[i] = id[i];
 
-                        i += 19;
-                        valuePtr[i] = '-';
+                            i += 19;
+                            valuePtr[i] = '-';
 
-                        Format.Backwards.WriteNumber(valuePtr + i - 1, (ulong)newEtag);
+                            Format.Backwards.WriteNumber(valuePtr + i - 1, (ulong)newEtag);
+                        }
+
+                        id = value;
+
+                        knownNewId = true;
                     }
-
-                    id = value;
-
-                    knownNewId = true;
+                    else
+                    {
+                        knownNewId = false;
+                    }
                 }
-                else
-                {
-                    knownNewId = false;
-                }
-            }
             }
 
             // Intentionally have just one return statement here for better inlining

@@ -1,11 +1,18 @@
 ﻿using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Server.Config;
+using Raven.Server.Documents.Handlers.Batches.Commands;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow.Json;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding;
 
@@ -16,6 +23,10 @@ public class ShardedDocumentDatabase : DocumentDatabase
     public readonly string ShardedDatabaseName;
 
     public string ShardedDatabaseId { get; private set; }
+
+    public ShardedDocumentsStorage ShardedDocumentsStorage;
+
+    public ShardedDatabaseContext DatabaseContext => ServerStore.DatabasesLandlord.GetShardedDatabaseContext(ShardedDatabaseName);
 
     public ShardedDocumentDatabase(string name, RavenConfiguration configuration, ServerStore serverStore, Action<string> addToInitLog) : 
         base(name, configuration, serverStore, addToInitLog)
@@ -38,13 +49,29 @@ public class ShardedDocumentDatabase : DocumentDatabase
 
     protected override DocumentsStorage CreateDocumentsStorage(Action<string> addToInitLog)
     {
-        return new ShardedDocumentsStorage(this, addToInitLog);
+        return ShardedDocumentsStorage = new ShardedDocumentsStorage(this, addToInitLog);
     }
 
     internal override void SetIds(DatabaseTopology topology, string shardedDatabaseId)
     {
         base.SetIds(topology, shardedDatabaseId);
         ShardedDatabaseId = shardedDatabaseId;
+    }
+
+    protected override void OnDatabaseRecordChanged(DatabaseRecord record)
+    {
+        // this called under lock
+        base.OnDatabaseRecordChanged(record);
+        var finishedMigrations = record.Sharding.BucketMigrations.Where(m => m.Value.Status == MigrationStatus.OwnershipTransferred);
+        foreach (var finishedMigration in finishedMigrations)
+        {
+            var migration = finishedMigration.Value;
+            if (migration.SourceShard == ShardNumber && migration.ConfirmedSourceCleanup.Contains(ServerStore.NodeTag) == false)
+            {
+                // cleanup values
+                _ = DeleteBucket(migration.Bucket, migration.MigrationIndex, migration.LastSourceChangeVector);
+            }
+        }
     }
 
     public ShardingConfiguration ReadShardingState()
@@ -96,6 +123,46 @@ public class ShardedDocumentDatabase : DocumentDatabase
                     _database._nextClusterCommand = MaxCommandCount;
                 }
             }
+        }
+    }
+
+    public async Task DeleteBucket(int bucket, long migrationIndex, string uptoChangeVector)
+    {
+        var cmd = new DeleteBucketCommand(bucket, uptoChangeVector);
+        while (cmd.HasMore)
+        {
+            await TxMerger.Enqueue(cmd);
+        }
+
+        await ServerStore.Sharding.SourceMigrationCleanup(ShardedDatabaseName, bucket, migrationIndex,
+            $"{bucket}@{migrationIndex}-Cleaned-{ServerStore.NodeTag}");
+    }
+
+    private class DeleteBucketCommand : TransactionOperationsMerger.MergedTransactionCommand
+    {
+        private readonly int _bucket;
+        private readonly string _uptoChangeVector;
+        public bool HasMore = true;
+
+        public DeleteBucketCommand(int bucket, string uptoChangeVector)
+        {
+            _bucket = bucket;
+            _uptoChangeVector = uptoChangeVector;
+        }
+        protected override long ExecuteCmd(DocumentsOperationContext context)
+        {
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Critical, "We need to create here proper tombstones so backup can pick it up RavenDB-19197");
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "Delete revision/attachments/ etc.. RavenDB-19197");
+
+            var database = context.DocumentDatabase as ShardedDocumentDatabase;
+            var result = database.ShardedDocumentsStorage.DeleteBucket(context, _bucket, context.GetChangeVector(_uptoChangeVector));
+            HasMore = result > 0;
+            return result;
+        }
+
+        public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+        {
+            throw new NotImplementedException();
         }
     }
 }

@@ -1,11 +1,28 @@
-﻿using Raven.Server.Utils;
+﻿using System;
+using Raven.Client.Exceptions;
+using Raven.Server.Utils;
+using Sparrow.Utils;
+using Voron;
 
 namespace Raven.Server.Documents.Sharding;
 
 public class ShardedDocumentPutAction : DocumentPutAction
 {
-    public ShardedDocumentPutAction(DocumentsStorage documentsStorage, DocumentDatabase documentDatabase) : base(documentsStorage, documentDatabase)
+    private readonly ShardedDocumentDatabase _documentDatabase;
+
+    public ShardedDocumentPutAction(ShardedDocumentsStorage documentsStorage, ShardedDocumentDatabase documentDatabase) : base(documentsStorage, documentDatabase)
     {
+        _documentDatabase = documentDatabase;
+    }
+
+    // TODO need to make sure we check that for counters/TS/etc...
+    protected override void ValidateId(Slice lowerId)
+    {
+        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "Handle write documents to the wrong shard");
+        var bucket = ShardHelper.GetBucketFromSlice(lowerId);
+        // throw if I'm not the owner of the bucket?
+        // throw if bucket moved, I'm the destination but still didn't confirm
+        // OR mark this document for migration
     }
 
     protected override unsafe void CalculateSuffixForIdentityPartsSeparator(string id, ref char* idSuffixPtr, ref int idSuffixLength, ref int idLength)
@@ -35,5 +52,23 @@ public class ShardedDocumentPutAction : DocumentPutAction
         valueWritePosition[0] = '$';
         for (var j = 0; j < idSuffixLength - 1; j++)
             valueWritePosition[j + 1] = idSuffixPtr[j];
+    }
+}
+
+public class BucketUnderMoveException : ConcurrencyException
+{
+    public BucketUnderMoveException()
+    {
+
+    }
+
+    public BucketUnderMoveException(string message) : base(message)
+    {
+
+    }
+
+    public BucketUnderMoveException(string message, Exception inner) : base(message, inner)
+    {
+
     }
 }

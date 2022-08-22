@@ -1573,7 +1573,7 @@ namespace Raven.Server.Documents
             yield return TxMerger.TransactionPerformanceMetrics;
         }
 
-        private void OnDatabaseRecordChanged(DatabaseRecord record)
+        protected virtual void OnDatabaseRecordChanged(DatabaseRecord record)
         {
             DatabaseRecordChanged?.Invoke(record);
         }

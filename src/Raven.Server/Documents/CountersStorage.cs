@@ -9,6 +9,7 @@ using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Exceptions.Documents.Counters;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.ReplicationItems;
+using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
@@ -128,7 +129,7 @@ namespace Raven.Server.Documents
         {
             var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
 
-            foreach (var result in GetItemsByBucket(context.Allocator, table, CountersSchema.DynamicKeyIndexes[CountersBucketAndEtagSlice], bucket, etag))
+            foreach (var result in ShardedDocumentsStorage.GetItemsByBucket(context.Allocator, table, CountersSchema.DynamicKeyIndexes[CountersBucketAndEtagSlice], bucket, etag))
             {
                 yield return CreateReplicationBatchItem(context, ref result.Result.Reader);
             }

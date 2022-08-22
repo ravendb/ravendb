@@ -85,7 +85,7 @@ namespace Raven.Server.Utils
         }
 
         //do not use this directly, we might mutate the slice buffer here.
-        private static unsafe int GetBucketFromSlice(Slice lowerId)
+        public static unsafe int GetBucketFromSlice(Slice lowerId)
         {
             byte* buffer = lowerId.Content.Ptr;
             int size = lowerId.Size;
