@@ -66,6 +66,12 @@ namespace SlowTests.Issues
 
                 Assert.True(WaitForDocument<User>(dest, "users/2", u => u.Name == "John Doe", 30_000));
 
+                await WaitAndAssertForValueAsync(async () =>
+                {
+                    var record = await src.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(src.Database));
+                    return record.DeletionInProgress.Count;
+                }, 0);
+
                 var addResult = await src.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(src.Database, node: mentor));
                 await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(addResult.RaftCommandIndex, TimeSpan.FromSeconds(30));
 
