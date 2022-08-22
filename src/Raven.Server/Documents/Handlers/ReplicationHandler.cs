@@ -34,51 +34,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/replication/performance", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Performance()
         {
-            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                writer.WriteStartObject();
-
-                writer.WriteArray(context, nameof(ReplicationPerformance.Incoming), Database.ReplicationLoader.IncomingHandlers, (w, c, handler) =>
-                {
-                    w.WriteStartObject();
-
-                    w.WritePropertyName(nameof(ReplicationPerformance.IncomingStats.Source));
-                    w.WriteString(handler.SourceFormatted);
-                    w.WriteComma();
-
-                    w.WriteArray(c, nameof(ReplicationPerformance.IncomingStats.Performance), handler.GetReplicationPerformance(), (innerWriter, innerContext, performance) =>
-                    {
-                        var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(performance);
-                        innerWriter.WriteObject(context.ReadObject(djv, "replication/performance"));
-                    });
-
-                    w.WriteEndObject();
-                });
-                writer.WriteComma();
-
-                var reporters = Database.ReplicationLoader.OutgoingHandlers.Concat<IReportOutgoingReplicationPerformance>(Database.ReplicationLoader
-                        .OutgoingConnectionsLastFailureToConnect.Values);
-
-                writer.WriteArray(context, nameof(ReplicationPerformance.Outgoing), reporters, (w, c, handler) =>
-                {
-                    w.WriteStartObject();
-
-                    w.WritePropertyName(nameof(ReplicationPerformance.OutgoingStats.Destination));
-                    w.WriteString(handler.DestinationFormatted);
-                    w.WriteComma();
-
-                    w.WriteArray(c, nameof(ReplicationPerformance.OutgoingStats.Performance), handler.GetReplicationPerformance(), (innerWriter, innerContext, performance) =>
-                    {
-                        var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(performance);
-                        innerWriter.WriteObject(context.ReadObject(djv, "replication/performance"));
-                    });
-
-                    w.WriteEndObject();
-                });
-
-                writer.WriteEndObject();
-            }
+            using (var processor = new ReplicationHandlerProcessorForGetPerformance(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/replication/performance/live", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, SkipUsagesCount = true)]
