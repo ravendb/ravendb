@@ -26,6 +26,7 @@ using Raven.Server.Documents.Replication.Incoming;
 using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Replication.Stats;
+using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Extensions;
 using Raven.Server.NotificationCenter.Notifications;
@@ -616,7 +617,8 @@ namespace Raven.Server.Documents.Replication
                     getLatestEtagMessage,
                     this,
                     buffer,
-                    getLatestEtagMessage.ReplicationsType);
+                    getLatestEtagMessage.ReplicationsType,
+                    getLatestEtagMessage.MigrationIndex);
             }
             else if (incomingPullParams == null)
             {
@@ -828,11 +830,15 @@ namespace Raven.Server.Documents.Replication
                     continue;
                 }
 
-                var source = newRecord.Topology.WhoseTaskIsIt(RachisState.Follower, migration, getLastResponsibleNode: null);
 
                 var destTopology = GetTopologyForShard(migration.DestinationShard);
                 var destNode = destTopology.WhoseTaskIsIt(RachisState.Follower, migration, getLastResponsibleNode: null);
 
+                // can happened if all nodes are in Rehab
+                if (destNode == null)
+                    continue;
+
+                var source = newRecord.Topology.WhoseTaskIsIt(RachisState.Follower, migration, getLastResponsibleNode: null);
                 if (_server.NodeTag != source || migrationHandler.Destination.Url != _clusterTopology.GetUrlFromTag(destNode))
                 {
                     toRemove.Add(migrationHandler.BucketMigrationNode);
@@ -1487,7 +1493,7 @@ namespace Raven.Server.Documents.Replication
                     outgoingReplication = new OutgoingExternalReplicationHandler(this, Database, externalNode, info);
                     break;
                 case BucketMigrationReplication migrationNode:
-                    outgoingReplication = new OutgoingMigrationReplicationHandler(this, Database, migrationNode, info);
+                    outgoingReplication = new OutgoingMigrationReplicationHandler(this, Database as ShardedDocumentDatabase, migrationNode, info);
                     break;
                 default:
                     throw new ArgumentException($"Unknown node type {node.GetType().FullName}");

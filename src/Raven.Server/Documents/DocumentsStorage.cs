@@ -18,6 +18,7 @@ using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Revisions;
 using Raven.Server.Documents.Sharding.Handlers.Processors.Replication;
+using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Storage.Layout;
@@ -65,7 +66,7 @@ namespace Raven.Server.Documents
         private static readonly Slice GlobalTreeSlice;
         private static readonly Slice GlobalChangeVectorSlice;
         private static readonly Slice GlobalFullChangeVectorSlice;
-        private Dictionary<string, CollectionName> _collectionsCache;
+        protected Dictionary<string, CollectionName> _collectionsCache;
         private readonly Logger _logger;
         private readonly string _name;
 
@@ -368,34 +369,6 @@ namespace Raven.Server.Documents
 
             return true;
         }
-
-        /*public bool TryRemoveUnusedIds(ChangeVector changeVector)
-        {
-            if (string.IsNullOrEmpty(changeVector))
-                return false;
-
-            var list = UnusedDatabaseIds;
-            if (list == null || list.Count == 0)
-                return false;
-
-            var parsed = changeVector.ToChangeVectorList();
-            var removed = false;
-            for (var i = parsed.Count - 1; i >= 0; i--)
-            {
-                var entry = parsed[i];
-                if (list.Contains(entry.DbId))
-                {
-                    parsed.RemoveAt(i);
-                    removed = true;
-                }
-            }
-
-            if (removed == false)
-                return false;
-
-            changeVector = parsed.SerializeVector();
-            return true;
-        }*/
 
         public string CreateNextDatabaseChangeVector(DocumentsOperationContext context, string changeVector)
         {
@@ -1223,16 +1196,6 @@ namespace Raven.Server.Documents
             foreach (var result in table.SeekForwardFrom(TombstonesSchema.FixedSizeIndexes[AllTombstonesEtagsSlice], etag, 0))
             {
                 yield return TombstoneReplicationItem.From(context, TableValueToTombstone(context, ref result.Reader));
-            }
-        }
-
-        public IEnumerable<ReplicationBatchItem> GetTombstonesByBucketFrom(DocumentsOperationContext context, int bucket, long etag)
-        {
-            var table = new Table(TombstonesSchema, context.Transaction.InnerTransaction);
-
-            foreach (var result in GetItemsByBucket(context.Allocator, table, TombstonesSchema.DynamicKeyIndexes[TombstonesBucketAndEtagSlice], bucket, etag))
-            {
-                yield return TombstoneReplicationItem.From(context, TableValueToTombstone(context, ref result.Result.Reader));
             }
         }
 
@@ -2507,41 +2470,6 @@ namespace Raven.Server.Documents
             }
 
             return result;
-        }
-
-        public IEnumerable<Document> GetDocumentsByBucketFrom(DocumentsOperationContext context, int bucket, long etag)
-        {
-            var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
-
-            foreach (var result in GetItemsByBucket(context.Allocator, table, DocsSchema.DynamicKeyIndexes[DocsBucketAndEtagSlice], bucket, etag))
-            {
-                yield return TableValueToDocument(context, ref result.Result.Reader);
-            }
-        }
-
-        public static IEnumerable<Table.SeekResult> GetItemsByBucket(ByteStringContext allocator, Table table,
-            TableSchema.DynamicKeyIndexDef dynamicIndex, int bucket, long etag)
-        {
-            using (GetBucketAndEtagByteString(allocator, bucket, etag, out var buffer))
-            using (Slice.External(allocator, buffer, buffer.Length, out var keySlice))
-            using (Slice.External(allocator, buffer, buffer.Length - sizeof(long), out var prefix))
-            {
-                foreach (var result in table.SeekForwardFromPrefix(dynamicIndex, keySlice, prefix, 0))
-                {
-                    yield return result;
-                }
-            }
-        }
-
-        public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetBucketAndEtagByteString(
-            ByteStringContext allocator, int bucket, long etag,
-            out ByteString buffer)
-        {
-            var scope = allocator.Allocate(sizeof(int) + sizeof(long), out buffer);
-            *(int*)buffer.Ptr = Bits.SwapBytes(bucket);
-            *(long*)(buffer.Ptr + sizeof(int)) = Bits.SwapBytes(etag);
-
-            return scope;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

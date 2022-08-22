@@ -16,6 +16,8 @@ namespace Raven.Client.Documents.Replication.Messages
 
         public ReplicationType ReplicationsType { get; set; }
 
+        public long MigrationIndex { get; set; }
+
         public enum ReplicationType
         {
             // External here as the default value to handle older servers, which aren't sending this field.
