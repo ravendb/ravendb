@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using Raven.Server.Documents.Replication.Outgoing;
@@ -17,27 +16,33 @@ namespace Raven.Server.Documents.Replication.Senders
     {
         public readonly BucketMigrationReplication Destination;
         public readonly ShardedDocumentDatabase Database;
+        public OutgoingMigrationReplicationHandler Parent;
+        private ChangeVector _lastBatchChangeVector;
+
         public MigrationReplicationDocumentSender(Stream stream, OutgoingMigrationReplicationHandler parent, Logger log) : base(stream, parent, log)
         {
             Destination = parent.BucketMigrationNode;
             Database = (ShardedDocumentDatabase)parent._parent.Database;
+            Parent = parent;
         }
 
         protected override IEnumerable<ReplicationBatchItem> GetReplicationItems(DocumentsOperationContext ctx, long etag, ReplicationStats stats, bool caseInsensitiveCounters)
         {
-            var database = ctx.DocumentDatabase;
-            var bucket = Destination.Bucket;
-            var migrationId = Database.ShardedDatabaseId;
+            var database = ctx.DocumentDatabase as ShardedDocumentDatabase;
+            var documentsStorage = database.DocumentsStorage as ShardedDocumentsStorage;
 
-            var docs = database.DocumentsStorage.GetDocumentsByBucketFrom(ctx, bucket, etag + 1).Select(DocumentReplicationItem.From);
-            var tombs = database.DocumentsStorage.GetTombstonesByBucketFrom(ctx, bucket, etag + 1);
-            var conflicts = database.DocumentsStorage.ConflictsStorage.GetConflictsByBucketFrom(ctx, bucket, etag + 1).Select(DocumentReplicationItem.From);
-            var revisionsStorage = database.DocumentsStorage.RevisionsStorage;
+            var bucket = Destination.Bucket;
+            _lastBatchChangeVector = ctx.GetChangeVector(string.Empty);
+
+            var docs = documentsStorage.GetDocumentsByBucketFrom(ctx, bucket, etag + 1).Select(DocumentReplicationItem.From);
+            var tombs = documentsStorage.GetTombstonesByBucketFrom(ctx, bucket, etag + 1);
+            var conflicts = documentsStorage.ConflictsStorage.GetConflictsByBucketFrom(ctx, bucket, etag + 1).Select(DocumentReplicationItem.From);
+            var revisionsStorage = documentsStorage.RevisionsStorage;
             var revisions = revisionsStorage.GetRevisionsByBucketFrom(ctx, bucket, etag + 1).Select(DocumentReplicationItem.From);
-            var attachments = database.DocumentsStorage.AttachmentsStorage.GetAttachmentsByBucketFrom(ctx, bucket, etag + 1);
-            var counters = database.DocumentsStorage.CountersStorage.GetCountersByBucketFrom(ctx, bucket, etag + 1);
-            var timeSeries = database.DocumentsStorage.TimeSeriesStorage.GetSegmentsByBucketFrom(ctx, bucket, etag + 1);
-            var deletedTimeSeriesRanges = database.DocumentsStorage.TimeSeriesStorage.GetDeletedRangesByBucketFrom(ctx, bucket, etag + 1);
+            var attachments = documentsStorage.AttachmentsStorage.GetAttachmentsByBucketFrom(ctx, bucket, etag + 1);
+            var counters = documentsStorage.CountersStorage.GetCountersByBucketFrom(ctx, bucket, etag + 1);
+            var timeSeries = documentsStorage.TimeSeriesStorage.GetSegmentsByBucketFrom(ctx, bucket, etag + 1);
+            var deletedTimeSeriesRanges = documentsStorage.TimeSeriesStorage.GetDeletedRangesByBucketFrom(ctx, bucket, etag + 1);
 
             using (var docsIt = docs.GetEnumerator())
             using (var tombsIt = tombs.GetEnumerator())
@@ -61,14 +66,12 @@ namespace Raven.Server.Documents.Replication.Senders
                 while (mergedInEnumerator.MoveNext())
                 {
                     yield return mergedInEnumerator.Current;
-                    /*var item = mergedInEnumerator.Current;
-                    var result = ChangeVectorUtils.TryUpdateChangeVector(MigrationTag, migrationId, Destination.MigrationIndex, item.ChangeVector);
-                    Debug.Assert(result.IsValid,$"Failed to update the change vector {item.ChangeVector} with '{MigrationTag}:{Destination.MigrationIndex}-{migrationId}'");
-
-                    item.ChangeVector = result.ChangeVector;
-                    yield return item;*/
                 }
+
+                if (_lastBatchChangeVector.IsNullOrEmpty == false)
+                    Parent.LastChangeVectorInBucket = _lastBatchChangeVector;
             }
+
         }
 
         protected override bool ShouldSkip(DocumentsOperationContext context, ReplicationBatchItem item, OutgoingReplicationStatsScope stats, SkippedReplicationItemsInfo skippedReplicationItemsInfo)
@@ -82,10 +85,10 @@ namespace Raven.Server.Documents.Replication.Senders
                         skippedReplicationItemsInfo.Update(item, isArtificial: true);
                         return true;
                     }
-
                     break;
             }
 
+            _lastBatchChangeVector = _lastBatchChangeVector.MergeWith(item.ChangeVector, context);
             return false;
         }
     }

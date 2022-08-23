@@ -30,6 +30,7 @@ using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
+using Raven.Client.ServerWide.Sharding;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Commercial;
@@ -3420,6 +3421,15 @@ namespace Raven.Server.ServerWide
                         break;
                     yield return def;
                 }
+            }
+        }
+
+        public ShardingConfiguration ReadShardingConfiguration<TTransaction>(TransactionOperationContext<TTransaction> context, string name)
+            where TTransaction : RavenTransaction
+        {
+            using (var raw = ReadRawDatabaseRecord(context, name))
+            {
+                return raw.Sharding.Value;
             }
         }
 

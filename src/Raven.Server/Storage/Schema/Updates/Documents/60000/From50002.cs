@@ -29,7 +29,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
 
         public bool Update(UpdateStep step)
         {
-            InsertIndexValuesFor(step, DocsSchemaBase60, DocsBucketAndEtagSlice,
+            InsertIndexValuesFor(step, DocsSchemaBase60, AllDocsBucketAndEtagSlice,
                 fixedSizeIndex: DocsSchemaBase60.FixedSizeIndexes[AllDocsEtagsSlice],
                 etagPosition: (int)DocumentsTable.Etag);
 
