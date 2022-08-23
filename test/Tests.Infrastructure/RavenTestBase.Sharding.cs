@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -26,6 +27,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks;
+using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Web;
@@ -122,12 +124,27 @@ public partial class RavenTestBase
             return ShardHelper.GetShardNumber(record.Sharding.BucketRanges, bucket);
         }
 
-        public IAsyncEnumerable<DocumentDatabase> GetShardsDocumentDatabaseInstancesFor(IDocumentStore store, List<RavenServer> servers = null)
+        public async Task<ShardedDocumentDatabase> GetShardedDocumentDatabaseForBucketAsync(string database, int bucket)
+        {
+            using (_parent.Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var config = _parent.Server.ServerStore.Cluster.ReadShardingConfiguration(context, database);
+                var shardNumber = ShardHelper.GetShardNumber(config.BucketRanges, bucket);
+                var shardedName = ShardHelper.ToShardName(database, shardNumber);
+                var shardedDatabase = (await _parent.Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(shardedName)) as ShardedDocumentDatabase;
+                Assert.NotNull(shardedDatabase);
+                return shardedDatabase;
+
+            }
+        }
+
+        public IAsyncEnumerable<ShardedDocumentDatabase> GetShardsDocumentDatabaseInstancesFor(IDocumentStore store, List<RavenServer> servers = null)
         {
             return GetShardsDocumentDatabaseInstancesFor(store.Database, servers);
         }
 
-        public async IAsyncEnumerable<DocumentDatabase> GetShardsDocumentDatabaseInstancesFor(string database, List<RavenServer> servers = null)
+        public async IAsyncEnumerable<ShardedDocumentDatabase> GetShardsDocumentDatabaseInstancesFor(string database, List<RavenServer> servers = null)
         {
             servers ??= _parent.GetServers();
             foreach (var server in servers)
@@ -545,7 +562,7 @@ public partial class RavenTestBase
                 _parent = parent;
             }
 
-            public async Task MoveShardForId(IDocumentStore store, string id, List<RavenServer> servers = null)
+            public async Task StartMovingShardForId(IDocumentStore store, string id, List<RavenServer> servers = null)
             {
                 servers ??= _parent.GetServers();
 
@@ -556,47 +573,36 @@ public partial class RavenTestBase
                 var location = ShardHelper.GetShardNumber(record.Sharding.BucketRanges, bucket);
                 var newLocation = (location + 1) % record.Sharding.Shards.Length;
 
-                var destination = record.Sharding.Shards[newLocation];
-                var source = record.Sharding.Shards[location];
-
                 using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, location)))
                 {
                     var user = await session.Advanced.ExistsAsync(id);
                     Assert.NotNull(user);
                 }
 
-                var result = await server.Sharding.StartBucketMigration(store.Database, bucket, location, newLocation);
-                var migrationIndex = result.Index;
+                await server.Sharding.StartBucketMigration(store.Database, bucket, location, newLocation);
 
                 var exists = _parent.WaitForDocument<dynamic>(store, id, predicate: null, database: ShardHelper.ToShardName(store.Database, newLocation));
                 Assert.True(exists, $"{id} wasn't found at shard {newLocation}");
+            }
 
-                using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, newLocation)))
+            public async Task WaitForMigrationComplete(IDocumentStore store, string id)
+            {
+                using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15)))
                 {
-                    var user = await session.LoadAsync<dynamic>(id);
-                    var changeVector = session.Advanced.GetChangeVectorFor(user);
-
-                    result = await server.Sharding.SourceMigrationCompleted(store.Database, bucket, migrationIndex, changeVector);
-                    await _parent.Cluster.WaitForRaftIndexToBeAppliedOnClusterNodesAsync(result.Index, servers);
+                    var bucket = ShardHelper.GetBucket(id);
+                    var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database), cts.Token);
+                    while (record.Sharding.BucketMigrations.ContainsKey(bucket))
+                    {
+                        await Task.Delay(250, cts.Token);
+                        record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database), cts.Token);
+                    }
                 }
+            }
 
-                foreach (var s in servers)
-                {
-                    if (destination.AllNodes.Contains(s.ServerStore.NodeTag) == false)
-                        continue;
-
-                    result = await s.ServerStore.Sharding.DestinationMigrationConfirm(store.Database, bucket, migrationIndex);
-                }
-                await _parent.Cluster.WaitForRaftIndexToBeAppliedOnClusterNodesAsync(result.Index, servers);
-
-                foreach (var s in servers)
-                {
-                    if (source.AllNodes.Contains(s.ServerStore.NodeTag) == false)
-                        continue;
-
-                    result = await s.ServerStore.Sharding.SourceMigrationCleanup(store.Database, bucket, migrationIndex);
-                }
-                await _parent.Cluster.WaitForRaftIndexToBeAppliedOnClusterNodesAsync(result.Index, servers);
+            public async Task MoveShardForId(IDocumentStore store, string id, List<RavenServer> servers = null)
+            {
+                await StartMovingShardForId(store, id, servers);
+                await WaitForMigrationComplete(store, id);
             }
         }
     }

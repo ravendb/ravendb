@@ -71,7 +71,7 @@ namespace SlowTests.Sharding.Client.Operations
                 await session.SaveChangesAsync();
             }
 
-            var db = await GetShardedDocumentDatabase(store.Database, bucket);
+            var db = await Sharding.GetShardedDocumentDatabaseForBucketAsync(store.Database, bucket);
 
             using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
@@ -102,29 +102,6 @@ namespace SlowTests.Sharding.Client.Operations
 
                 context.Transaction.Commit();
             }
-        }
-
-        private async Task<DocumentDatabase> GetShardedDocumentDatabase(string databaseName, int bucket)
-        {
-            DocumentDatabase db = null;
-            var dbs = await Task.WhenAll(Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(databaseName));
-            foreach (var shard in dbs)
-            {
-                using (shard.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                using (context.OpenReadTransaction())
-                {
-                    var docs = shard.DocumentsStorage.GetDocumentsByBucketFrom(context, bucket, etag: 0).ToList();
-                    if (docs.Count == 0)
-                        continue;
-
-                    db = shard;
-                    break;
-                }
-            }
-
-            Assert.NotNull(db);
-
-            return db;
         }
     }
 }
