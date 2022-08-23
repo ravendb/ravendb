@@ -32,7 +32,8 @@ class configurationItem {
         "Indexing.TimeSinceLastQueryAfterWhichDeepCleanupCanBeExecutedInMin",
         "Indexing.TransactionSizeLimitInMb",
         "Indexing.OrderByScoreAutomaticallyWhenBoostingIsInvolved",
-        "Indexing.UseCompoundFileInMerging"
+        "Indexing.UseCompoundFileInMerging",
+        "Indexing.Lucene.IndexInputType"
         // "Indexing.Static.SearchEngineType" - ignoring as we have dedicated widget to set that
         /*
             Obsolete keys:

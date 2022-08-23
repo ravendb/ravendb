@@ -435,6 +435,12 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.UseCompoundFileInMerging", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public bool UseCompoundFileInMerging { get; set; }
         
+        [Description("Lucene index input")]
+        [DefaultValue(LuceneIndexInputType.Buffered)]
+        [IndexUpdateType(IndexUpdateType.None)]
+        [ConfigurationEntry("Indexing.Lucene.IndexInputType", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        public LuceneIndexInputType LuceneIndexInput { get; set; }
+        
         protected override void ValidateProperty(PropertyInfo property)
         {
             base.ValidateProperty(property);
