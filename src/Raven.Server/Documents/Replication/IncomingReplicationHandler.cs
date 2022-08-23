@@ -1360,18 +1360,8 @@ namespace Raven.Server.Documents.Replication
                                             // in two _different clusters_, so we will treat it as a "normal" conflict
 
                                             IsIncomingReplication = false;
-                                            try
-                                            {
-                                                _replicationInfo.ConflictManager.HandleConflictForDocument(context, doc.Id, doc.Collection, doc.LastModifiedTicks,
-                                                    document, rcvdChangeVector, doc.Flags);
-                                            }
-                                            catch (Exception e)
-                                            {
-                                                if (_replicationInfo.Logger.IsInfoEnabled)
-                                                    _replicationInfo.Logger.Info(
-                                                        $"Exception was raised in conflict resolver (doc = {doc.Id}, with change vector = {doc.ChangeVector}), Exception = {e.Message}, {e}");
-                                            }
-
+                                            _replicationInfo.ConflictManager.HandleConflictForDocument(context, doc.Id, doc.Collection, doc.LastModifiedTicks,
+                                                document, rcvdChangeVector, doc.Flags);
                                             continue;
                                         }
 

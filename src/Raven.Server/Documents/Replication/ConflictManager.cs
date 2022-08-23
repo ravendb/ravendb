@@ -5,6 +5,8 @@ using System.Linq;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.Handlers;
+using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -67,20 +69,12 @@ namespace Raven.Server.Documents.Replication
                     Flags = flags
                 };
 
-                Exception err = null;
                 if (IsSameCollection(documentsContext, id, conflictedDoc.Collection))
                 {
-                    try
-                    {
-                        if (TryResolveConflictByScript(
-                                documentsContext,
-                                conflictedDoc))
+                    if (TryResolveConflictByScript(
+                            documentsContext,
+                            conflictedDoc))
                             return;
-                    }
-                    catch (Exception e) // Exception when trying to resolve the conflict - in this case this colnfliced need to be resovled manually
-                    {
-                        err = e;
-                    }
 
                     if (_database.ReplicationLoader.ConflictSolverConfig?.ResolveToLatest ?? true)
                     {
@@ -103,8 +97,6 @@ namespace Raven.Server.Documents.Replication
                 }
 
                 _database.DocumentsStorage.ConflictsStorage.AddConflict(documentsContext, id, lastModifiedTicks, doc, changeVector, collection, flags);
-                if(err != null)
-                    throw err;
             }
         }
 
@@ -181,15 +173,33 @@ namespace Raven.Server.Documents.Replication
 
             conflictedDocs.Add(conflict.Clone());
             conflictedDocs.Sort((x, y) => string.Compare(x.ChangeVector, y.ChangeVector, StringComparison.Ordinal));
-
-            if (_conflictResolver.TryResolveConflictByScriptInternal(
-                documentsContext,
-                scriptResolver,
-                conflictedDocs,
-                documentsContext.GetLazyString(collection), out var resolved))
+            try
             {
-                _conflictResolver.PutResolvedDocument(documentsContext, resolved, resolvedToLatest: false, conflict);
-                return true;
+                if (_conflictResolver.TryResolveConflictByScriptInternal(
+                        documentsContext,
+                        scriptResolver,
+                        conflictedDocs,
+                        documentsContext.GetLazyString(collection), out var resolved))
+                {
+                    _conflictResolver.PutResolvedDocument(documentsContext, resolved, resolvedToLatest: false, conflict);
+                    return true;
+                }
+            }
+            catch (Exception e)
+            {
+                var msg = $"Script failed to resolve the conflict in doc: {conflict.Id} because exception was raised in it.";
+                if (_log.IsInfoEnabled)
+                    _log.Info(msg, e);
+
+                var alert = AlertRaised.Create(
+                    _database.Name,
+                    "Conflict didn't resolved",
+                    msg,
+                    0,
+                    NotificationSeverity.Error,
+                    details: new ExceptionDetails(e));
+
+                _database.NotificationCenter.Add(alert);
             }
 
             return false;

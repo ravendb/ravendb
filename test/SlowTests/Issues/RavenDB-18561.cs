@@ -35,6 +35,8 @@ namespace SlowTests.Issues
 
             await SetupReplicationAsync(storeSrc, storeDst);
 
+            WaitUntilHasConflict(storeDst, "users/0", count: 1);
+
             using (var s1 = storeSrc.OpenSession())
             {
                 s1.Store(new User { Name = "test" }, "users/1");
