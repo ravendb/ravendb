@@ -67,12 +67,20 @@ namespace Raven.Server.Documents.Replication
                     Flags = flags
                 };
 
+                Exception err = null;
                 if (IsSameCollection(documentsContext, id, conflictedDoc.Collection))
                 {
-                    if (TryResolveConflictByScript(
-                        documentsContext,
-                        conflictedDoc))
-                        return;
+                    try
+                    {
+                        if (TryResolveConflictByScript(
+                                documentsContext,
+                                conflictedDoc))
+                            return;
+                    }
+                    catch (Exception e) // Exception when trying to resolve the conflict - in this case this colnfliced need to be resovled manually
+                    {
+                        err = e;
+                    }
 
                     if (_database.ReplicationLoader.ConflictSolverConfig?.ResolveToLatest ?? true)
                     {
@@ -95,6 +103,8 @@ namespace Raven.Server.Documents.Replication
                 }
 
                 _database.DocumentsStorage.ConflictsStorage.AddConflict(documentsContext, id, lastModifiedTicks, doc, changeVector, collection, flags);
+                if(err != null)
+                    throw err;
             }
         }
 
