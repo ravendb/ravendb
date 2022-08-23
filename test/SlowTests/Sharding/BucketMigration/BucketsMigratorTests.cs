@@ -67,7 +67,7 @@ namespace SlowTests.Sharding.BucketMigration
                 shards[shardNumber] ??= new ShardReport
                 {
                     Shard = shardNumber,
-                    ReportPerBucket = new Dictionary<BucketNumber, BucketReport>()
+                    ReportPerBucket = new Dictionary<int, BucketReport>()
                 };
 
                 shards[shardNumber].ReportPerBucket[bucket] = new BucketReport

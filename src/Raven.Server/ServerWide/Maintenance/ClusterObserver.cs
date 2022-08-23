@@ -14,6 +14,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Sharding;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
@@ -23,7 +24,9 @@ using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.Indexes;
+using Raven.Server.ServerWide.Commands.Sharding;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.ServerWide.Maintenance.Sharding;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
@@ -197,7 +200,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
             Dictionary<string, long> cleanUpState = null;
             List<DeleteDatabaseCommand> deletions = null;
-
+            List<DestinationMigrationConfirmCommand> confirmCommands = null;
             List<string> databases;
 
             using (_contextPool.AllocateOperationContext(out ClusterOperationContext context))
@@ -246,6 +249,8 @@ namespace Raven.Server.ServerWide.Maintenance
 
                                 updateCommands.Add((cmd, updateReason));
                             }
+
+                            UpdateReshardingStatus(context, rawRecord, newStats, ref confirmCommands);
                         }
 
                         var mergedState = new MergedDatabaseObservationState(rawRecord);
@@ -411,6 +416,45 @@ namespace Raven.Server.ServerWide.Maintenance
                     }
 
                     await _engine.PutAsync(cmd);
+                }
+            }
+
+            if (confirmCommands != null)
+            {
+                foreach (var confirmCommand in confirmCommands)
+                {
+                    await _engine.PutAsync(confirmCommand);
+                }
+            }
+        }
+
+        private void UpdateReshardingStatus(ClusterOperationContext context, RawDatabaseRecord rawRecord, Dictionary<string, ClusterNodeStatusReport> newStats, ref List<DestinationMigrationConfirmCommand> confirmCommands)
+        {
+            var databaseName = rawRecord.DatabaseName;
+            var sharding = rawRecord.Sharding;
+            var currentMigration = sharding.BucketMigrations.SingleOrDefault(pair => pair.Value.Status < MigrationStatus.OwnershipTransferred).Value;
+            if (currentMigration?.LastSourceChangeVector == null)
+                return;
+            
+            var destination = ShardHelper.ToShardName(databaseName, currentMigration.DestinationShard);
+            foreach (var node in newStats)
+            {
+                var tag = node.Key;
+                var nodeReport = node.Value;
+                if (nodeReport.Report.TryGetValue(destination, out var destinationReport))
+                {
+                    if (destinationReport.ReportPerBucket.TryGetValue(currentMigration.Bucket, out var bucketReport))
+                    {
+                        var lastFromSrc = context.GetChangeVector(currentMigration.LastSourceChangeVector);
+                        var currentFromDest = context.GetChangeVector(bucketReport.LastChangeVector);
+                        var status = ChangeVectorUtils.GetConflictStatus(lastFromSrc.Version, currentFromDest.Version);
+                        if (status == ConflictStatus.AlreadyMerged)
+                        {
+                            confirmCommands ??= new List<DestinationMigrationConfirmCommand>();
+                            confirmCommands.Add(new DestinationMigrationConfirmCommand(currentMigration.Bucket,
+                                currentMigration.MigrationIndex, tag, databaseName, $"Confirm-{currentMigration.Bucket}@{currentMigration.MigrationIndex}/{tag}"));
+                        }
+                    }
                 }
             }
         }

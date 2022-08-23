@@ -61,7 +61,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
         public Dictionary<string, ObservedIndexStatus> LastIndexStats = new Dictionary<string, ObservedIndexStatus>();
         public Dictionary<string, long> LastSentEtag = new Dictionary<string, long>();
-        public Dictionary<BucketNumber, BucketReport> ReportPerBucket;
+        public Dictionary<int, BucketReport> ReportPerBucket = new Dictionary<int, BucketReport>();
 
         public class ObservedIndexStatus
         {
@@ -102,6 +102,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 [nameof(DatabaseChangeVector)] = DatabaseChangeVector,
                 [nameof(LastCompletedClusterTransaction)] = LastCompletedClusterTransaction,
                 [nameof(LastSentEtag)] = DynamicJsonValue.Convert(LastSentEtag),
+                [nameof(ReportPerBucket)] = DynamicJsonValue.Convert(ReportPerBucket),
                 [nameof(Error)] = Error,
                 [nameof(UpTime)] = UpTime
             };

@@ -4,6 +4,7 @@ using System.Linq;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Server.Utils;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Maintenance.Sharding
 {
@@ -190,15 +191,27 @@ namespace Raven.Server.ServerWide.Maintenance.Sharding
     public class ShardReport
     {
         public ShardNumber Shard;
-        public Dictionary<BucketNumber, BucketReport> ReportPerBucket;
+        public Dictionary<int, BucketReport> ReportPerBucket;
         public long TotalSize => ReportPerBucket.Sum(r => r.Value.Size);
     }
 
-    public class BucketReport
+    public class BucketReport : IDynamicJson
     {
         public long Size;
         public long NumberOfDocuments;
         public DateTime LastAccess;
+        public string LastChangeVector;
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(Size)] = Size,
+                [nameof(NumberOfDocuments)] = NumberOfDocuments,
+                [nameof(LastAccess)] = LastAccess,
+                [nameof(LastChangeVector)] = LastChangeVector,
+            };
+        }
     }
 
     public class MigrationPolicy
@@ -229,21 +242,5 @@ namespace Raven.Server.ServerWide.Maintenance.Sharding
         public static implicit operator int(ShardNumber value) => value._value;
         public override string ToString() => _value.ToString();
 
-    }
-
-    public struct BucketNumber
-    {
-        private int _value = 0;
-
-        public BucketNumber(int value)
-        {
-            _value = value;
-        }
-
-        public static implicit operator BucketNumber(int value) => new BucketNumber(value: value);
-
-        public static implicit operator int(BucketNumber value) => value._value;
-
-        public override string ToString() => _value.ToString();
     }
 }
