@@ -66,7 +66,7 @@ internal class TrafficWatchToLog
             var responseSize = new Size(twhc.ResponseSizeInBytes, SizeUnit.Bytes);
             var customInfo = twhc.CustomInfo?.ReplaceLineEndings("") ?? "N/A";
 
-            msg = $"HTTP, {twhc.TimeStamp:MM/dd/yyyy HH:mm:ss}, {twhc.DatabaseName}, " +
+            msg = $"HTTP, {twhc.DatabaseName}, " +
                   $"{twhc.ClientIP}, {twhc.CertificateThumbprint ?? "N/A"}, " +
                   $"request ID: {twhc.RequestId}, {twhc.HttpMethod}, {twhc.ResponseStatusCode}, " +
                   $"{twhc.RequestUri}, {twhc.AbsoluteUri}, request: {requestSize}, " +
@@ -75,7 +75,7 @@ internal class TrafficWatchToLog
         }
         else if (trafficWatchData is TrafficWatchTcpChange twtc)
         {
-            msg = $"TCP, {twtc.TimeStamp:MM/dd/yyyy HH:mm:ss}, {twtc.Operation}, " +
+            msg = $"TCP, {twtc.Operation}, " +
                   $"{twtc.OperationVersion}, {twtc.DatabaseName}, {twtc.Source}, " +
                   $"{twtc.CustomInfo}, {twtc.ClientIP}, {twtc.CertificateThumbprint}";
         }
