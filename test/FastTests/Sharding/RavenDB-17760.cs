@@ -8,6 +8,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication.ReplicationItems;
+using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
@@ -59,7 +60,7 @@ namespace FastTests.Sharding
                     using (shardedDb.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     using (context.OpenReadTransaction())
                     {
-                        var docs = shardedDb.DocumentsStorage.GetDocumentsByBucketFrom(context, buckets[i], etag: 0).ToList();
+                        var docs = shardedDb.ShardedDocumentsStorage.GetDocumentsByBucketFrom(context, buckets[i], etag: 0).ToList();
                         if (docs.Count == 0)
                             continue;
 
@@ -68,7 +69,7 @@ namespace FastTests.Sharding
                         Assert.True(docs.Select(d => d.Id).All(s => s.EndsWith($"suffix{i}")));
 
                         var fromEtag = docs[70].Etag;
-                        docs = shardedDb.DocumentsStorage.GetDocumentsByBucketFrom(context, buckets[i], etag: fromEtag).ToList();
+                        docs = shardedDb.ShardedDocumentsStorage.GetDocumentsByBucketFrom(context, buckets[i], etag: fromEtag).ToList();
                         Assert.Equal(30, docs.Count);
                         break;
                     }
@@ -102,7 +103,7 @@ namespace FastTests.Sharding
                 using (shard.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    var docs = shard.DocumentsStorage.GetDocumentsByBucketFrom(context, bucket, etag: 0).ToList();
+                    var docs = shard.ShardedDocumentsStorage.GetDocumentsByBucketFrom(context, bucket, etag: 0).ToList();
                     if (docs.Count == 0)
                         continue;
 
@@ -163,14 +164,14 @@ namespace FastTests.Sharding
                 await session.SaveChangesAsync();
             }
 
-            DocumentDatabase db = null;
+            ShardedDocumentDatabase db = null;
             var dbs = await Task.WhenAll(Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store.Database));
             foreach (var shard in dbs)
             {
                 using (shard.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    var docs = shard.DocumentsStorage.GetDocumentsByBucketFrom(context, bucket, etag: 0).ToList();
+                    var docs = shard.ShardedDocumentsStorage.GetDocumentsByBucketFrom(context, bucket, etag: 0).ToList();
                     if (docs.Count == 0)
                         continue;
 
@@ -197,7 +198,7 @@ namespace FastTests.Sharding
 
                 using (context.OpenReadTransaction())
                 {
-                    var tombstones = db.DocumentsStorage.GetTombstonesByBucketFrom(context, bucket, etag: 0).ToList();
+                    var tombstones = db.ShardedDocumentsStorage.GetTombstonesByBucketFrom(context, bucket, etag: 0).ToList();
                     var expected = 20; 
                     Assert.Equal(expected, tombstones.Count);
 
@@ -215,7 +216,7 @@ namespace FastTests.Sharding
 
 
                     var fromEtag = tombstones[12].Etag;
-                    tombstones = db.DocumentsStorage.GetTombstonesByBucketFrom(context, bucket, etag: fromEtag).ToList();
+                    tombstones = db.ShardedDocumentsStorage.GetTombstonesByBucketFrom(context, bucket, etag: fromEtag).ToList();
                     expected = 8;
                     Assert.Equal(expected, tombstones.Count);
                 }
@@ -261,7 +262,7 @@ namespace FastTests.Sharding
                 using (shard.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    var docs = shard.DocumentsStorage.GetDocumentsByBucketFrom(context, bucket, etag: 0).ToList();
+                    var docs = shard.ShardedDocumentsStorage.GetDocumentsByBucketFrom(context, bucket, etag: 0).ToList();
                     if (docs.Count == 0)
                         continue;
 
@@ -344,7 +345,7 @@ namespace FastTests.Sharding
                 using (shard.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    var docs = shard.DocumentsStorage.GetDocumentsByBucketFrom(context, bucket, etag: 0).ToList();
+                    var docs = shard.ShardedDocumentsStorage.GetDocumentsByBucketFrom(context, bucket, etag: 0).ToList();
                     if (docs.Count == 0)
                         continue;
 
@@ -423,7 +424,7 @@ namespace FastTests.Sharding
                 using (shard.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    var docs = shard.DocumentsStorage.GetDocumentsByBucketFrom(context, bucket, etag: 0).ToList();
+                    var docs = shard.ShardedDocumentsStorage.GetDocumentsByBucketFrom(context, bucket, etag: 0).ToList();
                     if (docs.Count == 0)
                         continue;
 
@@ -511,7 +512,7 @@ namespace FastTests.Sharding
                 using (shard.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    var docs = shard.DocumentsStorage.GetDocumentsByBucketFrom(context, bucket, etag: 0).ToList();
+                    var docs = shard.ShardedDocumentsStorage.GetDocumentsByBucketFrom(context, bucket, etag: 0).ToList();
                     if (docs.Count == 0)
                         continue;
 
@@ -603,7 +604,7 @@ namespace FastTests.Sharding
                 using (shard.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    var docs = shard.DocumentsStorage.GetDocumentsByBucketFrom(context, bucket, etag: 0).ToList();
+                    var docs = shard.ShardedDocumentsStorage.GetDocumentsByBucketFrom(context, bucket, etag: 0).ToList();
                     if (docs.Count == 0)
                         continue;
 
