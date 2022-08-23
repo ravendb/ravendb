@@ -244,7 +244,7 @@ public class VoronBufferedInput : BufferedIndexInput
 
     private static void ThrowCancelled()
     {
-        throw new OperationCanceledException("VoronIndexInput");
+        throw new OperationCanceledException($"{nameof(VoronBufferedInput)}");
     }
 
     private static void ThrowStateNullException()
