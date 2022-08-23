@@ -1,25 +1,23 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using Raven.Client;
-using Raven.Client.Extensions;
-using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Sharding;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Documents;
-using Raven.Server.Documents.Handlers.Debugging;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.ServerWide.Maintenance.Sharding;
 using Raven.Server.Utils;
-using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Json.Sync;
 using Sparrow.Logging;
 using Index = Raven.Server.Documents.Indexes.Index;
 using Sparrow.LowMemory;
-using Sparrow.Server.Json.Sync;
-using Sparrow.Server.LowMemory;
 
 namespace Raven.Server.ServerWide.Maintenance
 {
@@ -171,16 +169,15 @@ namespace Raven.Server.ServerWide.Maintenance
                         continue; // Database does not exists in this server
                     }
 
+                    var sharding = rawRecord.Sharding;
+                    var currentMigration = sharding?.BucketMigrations.SingleOrDefault(pair => pair.Value.Status < MigrationStatus.OwnershipTransferred).Value;
+
                     foreach (var tuple in rawRecord.Topologies)
                     {
                         var dbName = tuple.Name;
                         var topology = tuple.Topology;
 
-                        var report = new DatabaseStatusReport
-                        {
-                            Name = dbName,
-                            NodeName = _server.NodeTag
-                        };
+                        var report = new DatabaseStatusReport { Name = dbName, NodeName = _server.NodeTag };
 
                         if (topology == null)
                         {
@@ -203,7 +200,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
                         if (dbTask.IsFaulted)
                         {
-                    if (DatabasesLandlord.IsLockedDatabase(dbTask.Exception))
+                            if (DatabasesLandlord.IsLockedDatabase(dbTask.Exception))
                             {
                                 report.Status = DatabaseStatus.Unloaded;
                                 result[dbName] = report;
@@ -246,6 +243,27 @@ namespace Raven.Server.ServerWide.Maintenance
                             var now = dbInstance.Time.GetUtcNow();
                             FillReplicationInfo(dbInstance, report);
 
+                            if (rawRecord.IsSharded)
+                            {
+
+                                if (currentMigration != null)
+                                {
+                                    if (report.ReportPerBucket.TryGetValue(currentMigration.Bucket, out var bucketReport) == false)
+                                    {
+                                        bucketReport = new BucketReport();
+                                    }
+
+                                    var shardedInstance = dbInstance as ShardedDocumentDatabase;
+                                    using (shardedInstance.ShardedDocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                                    using (context.OpenReadTransaction())
+                                    {
+                                        bucketReport.LastChangeVector = shardedInstance.ShardedDocumentsStorage.GetMergedChangeVectorInBucket(context, currentMigration.Bucket);
+                                    }
+                                
+                                    report.ReportPerBucket[currentMigration.Bucket] = bucketReport;
+                                }
+                            }
+
                             prevReport.TryGetValue(dbName, out var prevDatabaseReport);
                             if (SupportedFeatures.Heartbeats.SendChangesOnly &&
                                 prevDatabaseReport != null && prevDatabaseReport.EnvironmentsHash == currentHash)
@@ -285,6 +303,7 @@ namespace Raven.Server.ServerWide.Maintenance
                             report.EnvironmentsHash = 0; // on error we should do the complete report collaction path
                             report.Error = e.ToString();
                         }
+
                         result[dbName] = report;
                     }
                 }

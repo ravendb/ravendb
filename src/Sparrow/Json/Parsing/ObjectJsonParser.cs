@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using Sparrow.Collections;
 using Sparrow.Extensions;
 using Sparrow.Utils;
@@ -122,6 +123,27 @@ namespace Sparrow.Json.Parsing
             {
                 var json = kvp.Value as IDynamicJson;
                 djv[kvp.Key] = json == null ? (object)kvp.Value : json.ToJson();
+            }
+            return djv;
+        }
+
+        public static DynamicJsonValue Convert<TK, TV>(IDictionary<TK, TV> dictionary)
+        {
+            if (dictionary == null)
+                return null;
+
+            // if (typeof(TK).IsPrimitive == false)
+            {
+                var mi = typeof(TK).GetMethod(nameof(ToString), types: Type.EmptyTypes);
+                if (mi.GetBaseDefinition().DeclaringType == mi.DeclaringType)
+                    throw new InvalidOperationException($"{typeof(TK).FullName} must override 'ToString'");
+            }
+
+            var djv = new DynamicJsonValue();
+            foreach (var kvp in dictionary)
+            {
+                var json = kvp.Value as IDynamicJson;
+                djv[kvp.Key.ToString()] = json == null ? (object)kvp.Value : json.ToJson();
             }
             return djv;
         }
