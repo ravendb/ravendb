@@ -58,9 +58,9 @@ namespace Raven.Server.Utils
 
         private readonly ConcurrentDictionary<string, MetricValue> _metrics = new(StringComparer.OrdinalIgnoreCase);
 
-        public void Register(string key, TimeSpan refreshRate, Func<object> factory)
+        public void Register(string key, TimeSpan refreshRate, Func<object> factory, bool asyncRefresh = true)
         {
-            if (_metrics.TryAdd(key, new MetricValue(refreshRate, key, factory)) == false)
+            if (_metrics.TryAdd(key, new MetricValue(refreshRate, key, factory, asyncRefresh)) == false)
                 throw new InvalidOperationException($"Cannot cache '{key}' metric, because it already exists.");
         }
 
@@ -79,16 +79,18 @@ namespace Raven.Server.Utils
         {
             private readonly TimeSpan _refreshRate;
             private readonly Func<object> _factory;
+            private readonly bool _asyncRefresh;
             private Task<DateTime> _task;
             private object _value;
             private long _observedFailureTicks;
             private readonly Logger _logger;
 
-            public MetricValue(TimeSpan refreshRate, string key, Func<object> factory)
+            public MetricValue(TimeSpan refreshRate, string key, Func<object> factory, bool asyncRefresh = true)
             {
                 _logger = LoggingSource.Instance.GetLogger<MetricValue>(key);
                 _refreshRate = refreshRate;
                 _factory = factory;
+                _asyncRefresh = asyncRefresh;
                 _task = Task.FromResult(SystemTime.UtcNow + _refreshRate);
                 try
                 {
@@ -108,7 +110,17 @@ namespace Raven.Server.Utils
             {
                 var currentTask = _task;
                 if (currentTask.IsCompleted == false)
+                {
+                    if (_asyncRefresh == false)
+                    {
+                        // don't want to return stale value
+                        // let's wait until current value calculation is done
+
+                        currentTask.Wait();
+                    }
+
                     return _value; // return current value, while it is being computed
+                }
 
                 if (currentTask.IsFaulted)
                 {
@@ -129,10 +141,23 @@ namespace Raven.Server.Utils
                     return _value;// no need to refresh yet...
 
                 TryStartingRefreshTask();
-                
-                // we may have started the task (or another thread did), but we don't know if we got a new value or not
-                // we don't care, we are okay with getting the "old" value here, since it will update
-                // soon, and this is likely called many times over, so as long as we get it to some point, we are good
+
+                if (_asyncRefresh)
+                {
+                    // we may have started the task (or another thread did), but we don't know if we got a new value or not
+                    // we don't care, we are okay with getting the "old" value here, since it will update
+                    // soon, and this is likely called many times over, so as long as we get it to some point, we are good
+                    return _value;
+                }
+
+                // if we don't want to return "old" value we have the option to force waiting
+                // for the new value calculated by just started task
+
+                currentTask = _task;
+
+                if (currentTask.IsCompleted == false)
+                    currentTask.Wait();
+
                 return _value;
 
                 void TryStartingRefreshTask()
