@@ -1,6 +1,7 @@
 ﻿using System;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Sharding;
+using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.Sharding
@@ -30,6 +31,13 @@ namespace Raven.Server.ServerWide.Commands.Sharding
 
             if (migration.MigrationIndex != MigrationIndex)
                 throw new InvalidOperationException($"Wrong migration index. Expected: '{MigrationIndex}', Actual: '{migration.MigrationIndex}'");
+
+            if (migration.Status == MigrationStatus.Moved)
+            {
+                // we got a write after we already moved
+                migration.LastSourceChangeVector = LastSentChangeVector;
+                return;
+            }
 
             if (migration.Status != MigrationStatus.Moving)
                 throw new InvalidOperationException($"Expected status is '{MigrationStatus.Moving}', Actual '{migration.Status}'");

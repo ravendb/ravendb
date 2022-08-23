@@ -9,11 +9,11 @@ namespace Raven.Server.Documents.Schemas
         public static TableSchema Current => DocsSchemaBase60;
         public static TableSchema CurrentCompressed => CompressedDocsSchemaBase60;
 
-
         internal static readonly Slice DocsSlice;
         public static readonly Slice CollectionEtagsSlice;
         internal static readonly Slice AllDocsEtagsSlice;
-        internal static readonly Slice DocsBucketAndEtagSlice;
+        internal static readonly Slice AllDocsBucketAndEtagSlice;
+        internal static readonly Slice CollectionDocsBucketAndEtagSlice;
 
         internal static readonly TableSchema DocsSchemaBase60 = new TableSchema
         {
@@ -55,7 +55,8 @@ namespace Raven.Server.Documents.Schemas
                 Slice.From(ctx, "Docs", ByteStringType.Immutable, out DocsSlice);
                 Slice.From(ctx, "CollectionEtags", ByteStringType.Immutable, out CollectionEtagsSlice);
                 Slice.From(ctx, "AllDocsEtags", ByteStringType.Immutable, out AllDocsEtagsSlice);
-                Slice.From(ctx, "DocsBucketAndEtag", ByteStringType.Immutable, out DocsBucketAndEtagSlice);
+                Slice.From(ctx, "DocsBucketAndEtag", ByteStringType.Immutable, out AllDocsBucketAndEtagSlice);
+                Slice.From(ctx, "CollectionDocsBucketAndEtag", ByteStringType.Immutable, out CollectionDocsBucketAndEtagSlice);
             }
 
             DefineIndexesForDocsSchemaBase(DocsSchemaBase);
@@ -100,7 +101,13 @@ namespace Raven.Server.Documents.Schemas
                 {
                     GenerateKey = DocumentsStorage.GenerateBucketAndEtagIndexKeyForDocuments,
                     IsGlobal = true,
-                    Name = DocsBucketAndEtagSlice
+                    Name = AllDocsBucketAndEtagSlice
+                });
+
+                docsSchema.DefineIndex(new TableSchema.DynamicKeyIndexDef
+                {
+                    GenerateKey = DocumentsStorage.GenerateBucketAndEtagIndexKeyForDocuments,
+                    Name = CollectionDocsBucketAndEtagSlice
                 });
             }
         }
