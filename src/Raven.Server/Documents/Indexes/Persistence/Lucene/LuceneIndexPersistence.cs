@@ -386,7 +386,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 if (!field.Value.HasSuggestions)
                     continue;
 
-                var directory = new LuceneVoronDirectory(tx, environment, TempFileCache, $"Suggestions-{field.Key}");
+                var directory = new LuceneVoronDirectory(tx, environment, TempFileCache, $"Suggestions-{field.Key}", _index.Configuration.LuceneIndexInput);
                 _suggestionsDirectories[field.Key] = directory;
 
                 using (directory.SetTransaction(tx, out IState state))
@@ -400,7 +400,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private void InitializeMainIndexStorage(Transaction tx, StorageEnvironment environment)
         {
-            _directory = new LuceneVoronDirectory(tx, environment, TempFileCache);
+            _directory = new LuceneVoronDirectory(tx, environment, TempFileCache, _index.Configuration.LuceneIndexInput);
 
             using (_directory.SetTransaction(tx, out IState state))
             {
