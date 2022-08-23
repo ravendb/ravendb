@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using McMaster.Extensions.CommandLineUtils;
 using Microsoft.Diagnostics.Tools.Dump;
 using Microsoft.Diagnostics.Tools.GCDump;
@@ -370,16 +371,25 @@ namespace Raven.Debug
                     }
                     else
                     {
-                        Console.WriteLine($"[{DateTime.UtcNow:O}] number of threads wasn't specified, so we will use '{concurrentThreadsCount}' threads");
+                        Console.WriteLine($"[{DateTime.UtcNow:O}] Number of threads wasn't specified, so we will use '{concurrentThreadsCount}' threads");
                     }
 
 
                     var cert = certArg.HasValue() ? certArg.Value() : null;
                     var certPass = certPassArg.HasValue() ? certPassArg.Value() : null;
+                    
+                    var cts = new CancellationTokenSource();
+                    var logTrafficWatchReply = new TrafficWatchReplay(path, cert, certPass, host, port, cts, threads);
 
-                    var logTrafficWatchReply = new TrafficWatchReplay(path, cert, certPass, host, port, threads );
-
-                    Console.CancelKeyPress += (sender, args) => logTrafficWatchReply.Stop();
+                    Console.CancelKeyPress += (sender, args) =>
+                    {
+                        using (cts)
+                        {
+                            Console.WriteLine("Stop collection traffic watch. Exiting...");
+                            cts.Cancel();
+                            logTrafficWatchReply.Stop().Wait();
+                        }
+                    };
 
                     await logTrafficWatchReply.Start();
 
