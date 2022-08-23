@@ -10,6 +10,7 @@ using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.ETL.Providers.Raven;
+using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.System.Processors.OngoingTasks;
@@ -22,6 +23,8 @@ internal abstract class ShardedOngoingTasksHandlerProcessorForGetOngoingTasksInf
     protected ShardedOngoingTasksHandlerProcessorForGetOngoingTasksInfo([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {
     }
+
+    protected override DatabaseTopology GetTopology(DatabaseRecord record) => record.Sharding.Orchestrator?.Topology;
 
     protected override IEnumerable<OngoingTaskSubscription> CollectSubscriptionTasks(TransactionOperationContext context, ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
     {
@@ -129,21 +132,6 @@ internal abstract class ShardedOngoingTasksHandlerProcessorForGetOngoingTasksInf
         }
     }
 
-    protected override IEnumerable<OngoingTaskReplication> CollectExternalReplicationTasks(TransactionOperationContext context, ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
-    {
-        if (databaseRecord.ExternalReplications != null)
-        {
-            foreach (var replication in databaseRecord.ExternalReplications)
-            {
-                yield return new OngoingTaskReplication()
-                {
-                    TaskId = replication.TaskId,
-                    TaskName = replication.Name,
-                };
-            }
-        }
-    }
-
     protected override IEnumerable<OngoingTaskPullReplicationAsSink> CollectPullReplicationAsSinkTasks(TransactionOperationContext context, ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
     {
         if (databaseRecord.SinkPullReplications != null)
@@ -187,19 +175,43 @@ internal abstract class ShardedOngoingTasksHandlerProcessorForGetOngoingTasksInf
         ClusterTopology clusterTopology, T replication, Dictionary<string, RavenConnectionString> connectionStrings,
         out string tag, out RavenConnectionString connection)
     {
-        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "RavenDB-19069 implement for sharding - https://issues.hibernatingrhinos.com/issue/RavenDB-13110");
+        connectionStrings.TryGetValue(replication.ConnectionStringName, out connection);
+        replication.Database = connection?.Database;
+        replication.ConnectionString = connection;
+
+        var taskStatus = ReplicationLoader.GetExternalReplicationState(ServerStore, RequestHandler.DatabaseName, replication.TaskId);
+        tag = ServerStore.WhoseTaskIsIt(databaseTopology, replication, taskStatus);
 
         (string Url, OngoingTaskConnectionStatus Status) res = (null, OngoingTaskConnectionStatus.None);
+
+        if (replication is ExternalReplication externalReplication)
+        {
+            if (tag == ServerStore.NodeTag)
+                res = GetExternalReplicationResultAsync(externalReplication).Result;
+            else
+                res.Status = OngoingTaskConnectionStatus.NotOnThisNode;
+        }
 
         if (replication is PullReplicationAsSink)
         {
             res.Status = OngoingTaskConnectionStatus.NotActive;
         }
 
-        tag = null;
-        connection = null;
-
         return ValueTask.FromResult(res);
+    }
+
+    private async ValueTask<(string Url, OngoingTaskConnectionStatus Status)> GetExternalReplicationResultAsync(ExternalReplication replication)
+    {
+        var shardDb = ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(RequestHandler.DatabaseName);
+        foreach (var task in shardDb)
+        {
+            var db = await task;
+            var res = db.ReplicationLoader.GetExternalReplicationDestination(replication.TaskId);
+
+            if (res.Status == OngoingTaskConnectionStatus.Active)
+                return res;
+        }
+        return (null, OngoingTaskConnectionStatus.None);
     }
 
     protected override ValueTask<PeriodicBackupStatus> GetBackupStatusAsync(long taskId, DatabaseRecord databaseRecord, PeriodicBackupConfiguration backupConfiguration, out string responsibleNodeTag,

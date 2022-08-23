@@ -55,6 +55,16 @@ namespace Raven.Server.Documents.Sharding.Handlers
             return ShardExecutor.ExecuteSingleShardAsync(context, command, shardNumber, token);
         }
 
+        public async Task<TResult> ExecuteRemoteAsync<TResult>(RavenCommand<TResult> command, CancellationToken token = default)
+        {
+            var requestExecutor = DatabaseContext.AllNodesExecutor.GetRequestExecutorForNode(command.SelectedNodeTag);
+            using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
+            {
+                await requestExecutor.ExecuteAsync(command, ctx, token: token);
+                return command.Result;
+            }
+        }
+
         public void InitForOfflineOperation(RequestHandlerContext context)
         {
             base.Init(context);
