@@ -492,17 +492,23 @@ namespace Raven.Client.Documents.Session
                     {
                         return true;
                     }
-                    else
+                    else // newMetadataNullOrEmpty == false && oldMetadataNullOrEmpty == false
                     {
-                        foreach (var key in newMetadata.Keys) // newMetadataNullOrEmpty == false && oldMetadataNullOrEmpty == false
+                        if(oldMetadata.Count != newMetadata.Count)
+                            return true;
+
+                        var keys = newMetadata.Keys.Union(oldMetadata.Keys);
+
+                        foreach (var key in keys) 
                         {
-                            newMetadata.TryGetValue(key, out string newVal);
-                            oldMetadata.TryGetValue(key, out string oldVal);
-                            if (oldVal != newVal)
+                            if (oldMetadata.TryGetValue(key, out string oldVal) == false ||
+                                newMetadata.TryGetValue(key, out string newVal) == false ||
+                                oldVal != newVal)
                             {
                                 return true;
                             }
                         }
+
                         return false;
                     }
                 }
