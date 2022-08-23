@@ -20,8 +20,6 @@ using Raven.Server.Documents.Replication.Incoming;
 using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
-using NotImplementedException = System.NotImplementedException;
 
 namespace Raven.Server.Web.System.Processors.OngoingTasks;
 
@@ -36,6 +34,8 @@ internal abstract class OngoingTasksHandlerProcessorForGetOngoingTasksInfo : Abs
         _database = requestHandler.Database;
         _server = requestHandler.ServerStore;
     }
+
+    protected override DatabaseTopology GetTopology(DatabaseRecord record) => record.Topology;
 
     protected override IEnumerable<OngoingTaskBackup> CollectBackupTasks(TransactionOperationContext context, ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
     {
@@ -281,17 +281,6 @@ internal abstract class OngoingTasksHandlerProcessorForGetOngoingTasksInfo : Abs
         foreach (var edgeReplication in databaseRecord.SinkPullReplications)
         {
             yield return GetPullReplicationAsSinkInfo(databaseRecord.Topology, clusterTopology, databaseRecord, edgeReplication);
-        }
-    }
-
-    protected override IEnumerable<OngoingTaskReplication> CollectExternalReplicationTasks(TransactionOperationContext context, ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
-    {
-        if (databaseRecord.Topology == null)
-            yield break;
-
-        foreach (var externalReplication in databaseRecord.ExternalReplications)
-        {
-            yield return GetExternalReplicationInfo(databaseRecord.Topology, clusterTopology, externalReplication, databaseRecord.RavenConnectionStrings);
         }
     }
 
