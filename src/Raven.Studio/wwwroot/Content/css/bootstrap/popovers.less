@@ -3,7 +3,7 @@
 // --------------------------------------------------
 
 
-.popover {
+&.popover {
   position: absolute;
   top: 0;
   left: 0;
@@ -47,7 +47,7 @@
 //
 // .arrow is outer, .arrow:after is inner
 
-.popover > .arrow {
+&.popover > .arrow {
   &,
   &:after {
     position: absolute;
@@ -58,15 +58,15 @@
     border-style: solid;
   }
 }
-.popover > .arrow {
+&.popover > .arrow {
   border-width: @popover-arrow-outer-width;
 }
-.popover > .arrow:after {
+&.popover > .arrow:after {
   border-width: @popover-arrow-width;
   content: "";
 }
 
-.popover {
+&.popover {
   &.top > .arrow {
     left: 50%;
     margin-left: -@popover-arrow-outer-width;

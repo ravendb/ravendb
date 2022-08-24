@@ -1,11 +1,17 @@
-﻿.bs5 {
+﻿$primary: #d7325a;
+$body-bg: #22252b;
+$body-color: #98a7b7;
+
+.bs5 {
     //TODO: put bootstrap 5 theme customization here
-    $primary: #d7325a;
     
     @import "../../../node_modules/boostrap5/scss/bootstrap";
-    
-    // fix for bs3 and bs5 interoperability:
-    .fade {
-        opacity: 1;
-    }
 }
+
+@import "../../../node_modules/boostrap5/scss/functions";
+@import "../../../node_modules/boostrap5/scss/variables";
+@import "../../../node_modules/boostrap5/scss/maps";
+@import "../../../node_modules/boostrap5/scss/mixins";
+@import "../../../node_modules/boostrap5/scss/utilities";
+
+@import "../../../node_modules/boostrap5/scss/root";

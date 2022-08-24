@@ -32,7 +32,7 @@ dialog.addContext('bootstrapModal', {
                 }
             }
             
-            const host = $('<div class="modal" id="bootstrapModal" tabindex="-1" role="dialog" aria-labelledby="bootstrapModal" aria-hidden="true"></div>')
+            const host = $('<div class="modal bs3" id="bootstrapModal" tabindex="-1" role="dialog" aria-labelledby="bootstrapModal" aria-hidden="true"></div>')
                 .appendTo(modalContainer);
             (theDialog as any).host = host.get(0);
             closeCalled = false;
