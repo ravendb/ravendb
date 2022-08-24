@@ -11,11 +11,11 @@ namespace Raven.Server.Dashboard
             var options = new ServerDashboardOptions();
 
             var machineResourcesNotificationSender = 
-                new MachineResourcesNotificationSender(nameof(ServerStore), serverStore.Server, Watchers, options.MachineResourcesThrottle, shutdown);
+                new MachineResourcesNotificationSender(serverStore.Server, Watchers, options.MachineResourcesThrottle, shutdown);
             BackgroundWorkers.Add(machineResourcesNotificationSender);
 
             var databasesInfoNotificationSender = 
-                new DatabasesInfoNotificationSender(nameof(ServerStore), serverStore, Watchers, options.DatabasesInfoThrottle, shutdown);
+                new DatabasesInfoNotificationSender(serverStore, Watchers, options.DatabasesInfoThrottle, shutdown);
             BackgroundWorkers.Add(databasesInfoNotificationSender);
         }
     }

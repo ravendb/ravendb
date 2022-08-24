@@ -14,7 +14,8 @@ namespace Raven.Server.Documents.Queries
         private readonly HashSet<string> _dbNames;
 
         public LiveRunningQueriesCollector(ServerStore serverStore, HashSet<string> dbNames)
-            : base(serverStore.ServerShutdown, "Server")
+            : base(serverStore.ServerShutdown, 
+                serverStore.Server.Logger)
         {
             _dbNames = dbNames;
             _serverStore = serverStore;

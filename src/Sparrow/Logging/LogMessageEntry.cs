@@ -10,6 +10,7 @@ namespace Sparrow.Logging
         public LogMode Type;
         public MemoryStream Data;
         public TaskCompletionSource<object> Task;
+        public LogMode? OverrideWriteMode;
 
         public readonly List<WebSocket> WebSocketsList = new List<WebSocket>();
 

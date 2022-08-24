@@ -31,7 +31,7 @@ namespace Raven.Server
 {
     public class Program
     {
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<Program>("Server");
+        private static readonly Logger Logger = LoggingSource.Instance.LoggersHolder.Generic.GetLogger<Program>();
 
         public static unsafe int Main(string[] args)
         {

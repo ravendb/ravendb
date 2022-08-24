@@ -13,7 +13,7 @@ namespace Raven.Server.Utils
     public class AffinityHelper
     {
         private static readonly ConcurrentSet<PoolOfThreads.PooledThread> _customAffinityThreads = new ConcurrentSet<PoolOfThreads.PooledThread>();
-        private static readonly Logger _logger = LoggingSource.Instance.GetLogger<AffinityHelper>("Server");
+        private static readonly Logger Logger = LoggingSource.Instance.LoggersHolder.Generic.GetLogger<AffinityHelper>();
 
         public static void SetProcessAffinity(Process process, int cores, long? processAffinityMask, out long currentlyAssignedCores)
         {
@@ -123,8 +123,8 @@ namespace Raven.Server.Utils
                 {
                     if (retries-- == 0)
                     {
-                        if (_logger.IsOperationsEnabled)
-                            _logger.Operations("Failed to set thread affinity", e);
+                        if (Logger.IsOperationsEnabled)
+                            Logger.Operations("Failed to set thread affinity", e);
                         return false;
                     }
 

@@ -32,7 +32,7 @@ namespace Raven.Server.ServerWide
     {
         public static readonly byte[] EncryptionContext = Encoding.UTF8.GetBytes("Secrets!");
 
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<SecretProtection>("Server");
+        private static readonly Logger Logger = LoggingSource.Instance.LoggersHolder.Generic.GetLogger<SecretProtection>();
         private readonly Lazy<byte[]> _serverMasterKey;
         private readonly SecurityConfiguration _config;
         private const int MaxDeveloperCertificateValidityDurationInMonths = 4;

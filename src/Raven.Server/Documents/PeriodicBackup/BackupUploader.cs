@@ -121,7 +121,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 if (_retentionPolicyParameters == null)
                     return;
 
-                var runner = new S3RetentionPolicyRunner(_retentionPolicyParameters, client);
+                var runner = new S3RetentionPolicyRunner(_retentionPolicyParameters, client, _logger);
                 runner.Execute();
             }
         }
@@ -138,7 +138,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 if (_retentionPolicyParameters == null)
                     return;
 
-                var runner = new GlacierRetentionPolicyRunner(_retentionPolicyParameters, client);
+                var runner = new GlacierRetentionPolicyRunner(_retentionPolicyParameters, client, _logger);
                 runner.Execute();
             }
         }
@@ -155,7 +155,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 if (_retentionPolicyParameters == null)
                     return;
 
-                var runner = new FtpRetentionPolicyRunner(_retentionPolicyParameters, client);
+                var runner = new FtpRetentionPolicyRunner(_retentionPolicyParameters, client, _logger);
                 runner.Execute();
             }
         }
@@ -176,7 +176,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 if (_retentionPolicyParameters == null)
                     return;
 
-                var runner = new AzureRetentionPolicyRunner(_retentionPolicyParameters, client);
+                var runner = new AzureRetentionPolicyRunner(_retentionPolicyParameters, client, _logger);
                 runner.Execute();
             }
         }
@@ -197,7 +197,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 if (_retentionPolicyParameters == null)
                     return;
 
-                var runner = new GoogleCloudRetentionPolicyRunner(_retentionPolicyParameters, client);
+                var runner = new GoogleCloudRetentionPolicyRunner(_retentionPolicyParameters, client, _logger);
                 runner.Execute();
             }
         }

@@ -23,7 +23,7 @@ namespace Voron.Impl
         private readonly object _locker = new object();
 
         public static EncryptionBuffersPool Instance = new EncryptionBuffersPool();
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<EncryptionBuffersPool>("Memory");
+        private static readonly Logger Logger = LoggingSource.Instance.LoggersHolder.Memory.GetLogger<EncryptionBuffersPool>();
         private const int MaxNumberOfPagesToCache = 128; // 128 * 8K = 1 MB, beyond that, we'll not both
         private readonly MultipleUseFlag _isLowMemory = new MultipleUseFlag();
         private readonly MultipleUseFlag _isExtremelyLowMemory = new MultipleUseFlag();

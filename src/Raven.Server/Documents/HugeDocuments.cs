@@ -30,14 +30,14 @@ namespace Raven.Server.Documents
 
         private Timer _timer;
 
-        public HugeDocuments(NotificationCenter.NotificationCenter notificationCenter, NotificationsStorage notificationsStorage, string database, int maxCollectionSize, long maxWarnSize)
+        public HugeDocuments(NotificationCenter.NotificationCenter notificationCenter, NotificationsStorage notificationsStorage, string database, int maxCollectionSize, long maxWarnSize, Logger logger)
         {
             _notificationCenter = notificationCenter;
             _notificationsStorage = notificationsStorage;
             _database = database;
             _maxWarnSize = maxWarnSize;
             _hugeDocs = new SizeLimitedConcurrentDictionary<Tuple<string, DateTime>, long>(maxCollectionSize);
-            _logger = LoggingSource.Instance.GetLogger(database, GetType().FullName);
+            _logger = logger;
         }
 
         public void AddIfDocIsHuge(Document doc)

@@ -86,7 +86,7 @@ namespace Raven.Server.Documents.TimeSeries
         public TimeSeriesRollups(DocumentDatabase database)
         {
             _database = database;
-            _logger = LoggingSource.Instance.GetLogger<TimeSeriesPolicyRunner>(database.Name);
+            _logger = database.Logger;
         }
 
         public unsafe void MarkForPolicy(DocumentsOperationContext context, TimeSeriesSliceHolder slicerHolder, TimeSeriesPolicy nextPolicy, DateTime timestamp)
@@ -252,7 +252,6 @@ namespace Raven.Server.Documents.TimeSeries
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
-                var logger = LoggingSource.Instance.GetLogger<TimeSeriesPolicyRunner>(context.DocumentDatabase.Name);
                 var request = new TimeSeriesStorage.DeletionRangeRequest
                 {
                     From = DateTime.MinValue,
@@ -272,6 +271,7 @@ namespace Raven.Server.Documents.TimeSeries
                     if (done)
                         retained++;
 
+                    var logger = context.DocumentDatabase.Logger;
                     if (logger.IsInfoEnabled)
                         logger.Info($"{request} was executed (successfully: {done})");
                 }
@@ -394,7 +394,6 @@ namespace Raven.Server.Documents.TimeSeries
             private readonly DateTime _now;
             private readonly List<RollupState> _states;
             private readonly bool _isFirstInTopology;
-            private readonly Logger _logger;
 
             public long RolledUp;
 
@@ -404,7 +403,6 @@ namespace Raven.Server.Documents.TimeSeries
                 _now = now;
                 _states = states;
                 _isFirstInTopology = isFirstInTopology;
-                _logger = LoggingSource.Instance.GetLogger<TimeSeriesRollups>(nameof(RollupTimeSeriesCommand));
             }
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
@@ -442,8 +440,9 @@ namespace Raven.Server.Documents.TimeSeries
                     }
                     catch (NanValueException e)
                     {
-                        if (_logger.IsInfoEnabled)
-                            _logger.Info($"{item} failed", e);
+                        var logger = context.DocumentDatabase.Logger;
+                        if (logger.IsInfoEnabled)
+                            logger.Info($"{item} failed", e);
 
                         if (table.VerifyKeyExists(item.Key) == false)
                         {
@@ -480,8 +479,9 @@ namespace Raven.Server.Documents.TimeSeries
                         }
 
                         var msg = $"Rollup '{item.RollupPolicy}' for time-series '{name}' in document '{docId}' failed.";
-                        if (_logger.IsInfoEnabled)
-                            _logger.Info(msg, e);
+                        var logger = context.DocumentDatabase.Logger;
+                        if (logger.IsInfoEnabled)
+                            logger.Info(msg, e);
 
                         var alert = AlertRaised.Create(context.DocumentDatabase.Name, "Failed to perform rollup because the time-series has more than 5 values", msg,
                             AlertType.RollupExceedNumberOfValues, NotificationSeverity.Warning, $"{item.Collection}/{item.Name}", new ExceptionDetails(e));

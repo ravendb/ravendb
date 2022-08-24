@@ -6,18 +6,25 @@ namespace Sparrow.Logging
 {
     public class Logger
     {
-        private readonly LoggingSource _parent;
-        private readonly string _source;
-        private readonly string _logger;
+        protected readonly LoggingSource LoggingSource;
+        public readonly string Source;
+        public readonly string Name;
+        protected readonly SwitchLogger Parent;
 
         [ThreadStatic]
         private static LogEntry _logEntry;
 
-        public Logger(LoggingSource parent, string source, string logger)
+        public Logger(SwitchLogger parent, string source, string name)
+            : this(parent.LoggingSource, source, name)
         {
-            _parent = parent;
-            _source = source;
-            _logger = logger;
+            Parent = parent;
+        }
+
+        public Logger(LoggingSource loggingSource, string source, string name)
+        {
+            LoggingSource = loggingSource;
+            Source = source;
+            Name = name;
         }
 
         public void Info(FormattableString msg, Exception e = null)
@@ -50,25 +57,28 @@ namespace Sparrow.Logging
         {
             _logEntry.At = GetLogDate();
             _logEntry.Exception = ex;
-            _logEntry.Logger = _logger;
+            _logEntry.Logger = Name;
             _logEntry.Message = msg;
-            _logEntry.Source = _source;
+            _logEntry.Source = Source;
             _logEntry.Type = LogMode.Information;
-            _parent.Log(ref _logEntry);
+            _logEntry.OverrideWriteMode = GetOverrideWriteMode();
+            
+            LoggingSource.Log(ref _logEntry);
         }
 
         public Task InfoWithWait(string msg, Exception ex = null)
         {
             _logEntry.At = GetLogDate();
             _logEntry.Exception = ex;
-            _logEntry.Logger = _logger;
+            _logEntry.Logger = Name;
             _logEntry.Message = msg;
-            _logEntry.Source = _source;
+            _logEntry.Source = Source;
             _logEntry.Type = LogMode.Information;
-
+            _logEntry.OverrideWriteMode = GetOverrideWriteMode();
+            
             var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-            _parent.Log(ref _logEntry, tcs);
+            LoggingSource.Log(ref _logEntry, tcs);
 
             return tcs.Task;
         }
@@ -77,39 +87,41 @@ namespace Sparrow.Logging
         {
             _logEntry.At = GetLogDate();
             _logEntry.Exception = ex;
-            _logEntry.Logger = _logger;
+            _logEntry.Logger = Name;
             _logEntry.Message = msg;
-            _logEntry.Source = _source;
+            _logEntry.Source = Source;
             _logEntry.Type = LogMode.Operations;
-            _parent.Log(ref _logEntry);
+            _logEntry.OverrideWriteMode = GetOverrideWriteMode();
+            LoggingSource.Log(ref _logEntry);
         }
 
         public Task OperationsWithWait(string msg, Exception ex = null)
         {
             _logEntry.At = GetLogDate();
             _logEntry.Exception = ex;
-            _logEntry.Logger = _logger;
+            _logEntry.Logger = Name;
             _logEntry.Message = msg;
-            _logEntry.Source = _source;
+            _logEntry.Source = Source;
             _logEntry.Type = LogMode.Operations;
+            _logEntry.OverrideWriteMode = GetOverrideWriteMode();
 
             var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-            _parent.Log(ref _logEntry, tcs);
+            LoggingSource.Log(ref _logEntry, tcs);
 
             return tcs.Task;
         }
 
-        public bool IsInfoEnabled
+        public virtual bool IsInfoEnabled
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return _parent.IsInfoEnabled; }
+            get { return Parent?.IsInfoEnabled ?? LoggingSource.IsInfoEnabled; }
         }
 
-        public bool IsOperationsEnabled
+        public virtual bool IsOperationsEnabled
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return _parent.IsOperationsEnabled; }
+            get { return Parent?.IsOperationsEnabled ?? LoggingSource.IsOperationsEnabled; }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -120,6 +132,11 @@ namespace Sparrow.Logging
                 now = new DateTime(now.Ticks + LoggingSource.LocalToUtcOffsetInTicks);
 
             return now;
+        }
+
+        protected virtual LogMode? GetOverrideWriteMode()
+        {
+            return Parent != null && Parent.IsReset() ? Parent.GetLogMode() : null;
         }
     }
 }

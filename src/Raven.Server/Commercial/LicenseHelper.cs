@@ -21,7 +21,7 @@ namespace Raven.Server.Commercial
 {
     public class LicenseHelper
     {
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<LicenseHelper>("Server");
+        private static readonly Logger Logger = LoggingSource.Instance.LoggersHolder.Generic.GetLogger<LicenseHelper>();
         public static readonly string LicenseStringConfigurationName = RavenConfiguration.GetKey(x => x.Licensing.License);
 
         private readonly ServerStore _serverStore;

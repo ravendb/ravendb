@@ -18,7 +18,7 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
         private Stats _latest;
 
         public DatabaseStatsSender(DocumentDatabase database, NotificationCenter notificationCenter)
-            : base(database.Name, database.DatabaseShutdown)
+            : base(database.Logger, database.DatabaseShutdown)
         {
             _database = database;
             _notificationCenter = notificationCenter;

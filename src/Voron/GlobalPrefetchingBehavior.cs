@@ -29,8 +29,8 @@ namespace Voron.Impl
             return prefetcher;
         });
 
-        private readonly Logger _log = LoggingSource.Instance.GetLogger<GlobalPrefetchingBehavior>("Global Prefetcher");
-         
+        private static readonly Logger Logger = LoggingSource.Instance.LoggersHolder.Generic.GetLogger<GlobalPrefetchingBehavior>();
+
         public readonly BlockingCollection<PrefetchRanges> CommandQueue = new BlockingCollection<PrefetchRanges>(128);
 
         private unsafe void VoronPrefetcher()
@@ -80,9 +80,9 @@ namespace Voron.Impl
             }
             catch (Exception e)
             {
-                if (_log.IsOperationsEnabled)
+                if (Logger.IsOperationsEnabled)
                 {
-                    _log.Operations("Catastrophic failure in Voron prefetcher ", e);
+                    Logger.Operations("Catastrophic failure in Voron prefetcher ", e);
                 }
 
                 // Note that we intentionally don't have error handling here.

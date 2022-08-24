@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Sparrow.Logging;
 
 namespace Raven.Server.Documents.PeriodicBackup.Retention
 {
@@ -7,10 +8,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
     {
         private readonly RavenFtpClient _client;
 
-        protected override string Name => "Glacier";
+        protected override string Name => "Ftp";
 
-        public FtpRetentionPolicyRunner(RetentionPolicyBaseParameters parameters, RavenFtpClient client)
-            : base(parameters)
+        public FtpRetentionPolicyRunner(RetentionPolicyBaseParameters parameters, RavenFtpClient client, Logger logger)
+            : base(parameters, logger)
         {
             _client = client;
         }

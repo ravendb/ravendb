@@ -12,8 +12,7 @@ namespace Raven.Server.Documents
 {
     public class DatabaseInfoCache
     {
-
-        protected readonly Logger Logger;
+        protected Logger Logger;
 
         private StorageEnvironment _environment;
 
@@ -23,7 +22,6 @@ namespace Raven.Server.Documents
 
         public DatabaseInfoCache()
         {
-            Logger = LoggingSource.Instance.GetLogger<DatabaseInfoCache>("Server");
             _databaseInfoSchema.DefineKey(new TableSchema.SchemaIndexDef
             {
                 StartIndex = 0,
@@ -33,6 +31,8 @@ namespace Raven.Server.Documents
 
         public void Initialize(StorageEnvironment environment, TransactionContextPool contextPool)
         {
+            Logger = environment.Logger;
+
             _environment = environment;
             _contextPool = contextPool;
 

@@ -45,7 +45,7 @@ namespace Raven.Server.ServerWide.Maintenance
             _cts = CancellationTokenSource.CreateLinkedTokenSource(externalToken);
             _token = _cts.Token;
             _server = serverStore;
-            _logger = LoggingSource.Instance.GetLogger<ClusterMaintenanceWorker>(serverStore.NodeTag);
+            _logger = serverStore.Server.ClusterLogger;
             _name = $"Heartbeats worker connection to leader {leader} in term {term}";
             _temporaryDirtyMemoryAllowedPercentage = _server.Server.ServerStore.Configuration.Memory.TemporaryDirtyMemoryAllowedPercentage;
 
@@ -74,7 +74,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 {
                     if (_logger.IsInfoEnabled)
                     {
-                        _logger.Info($"Exception occurred while collecting info from {_server.NodeTag}. Task is closed.", e);
+                        _logger.Info($"{_server.NodeTag}: Exception occurred while collecting info from {_server.NodeTag}. Task is closed.", e);
                     }
                     // we don't want to crash the process so we don't propagate this exception.
                 }
@@ -117,13 +117,13 @@ namespace Raven.Server.ServerWide.Maintenance
                     {
                         if (_logger.IsInfoEnabled)
                         {
-                            _logger.Info("The tcp connection was closed, so we exit the maintenance work.");
+                            _logger.Info($"{_server.NodeTag}: The tcp connection was closed, so we exit the maintenance work.");
                         }
                         return;
                     }
                     if (_logger.IsInfoEnabled)
                     {
-                        _logger.Info($"Exception occurred while collecting info from {_server.NodeTag}", e);
+                        _logger.Info($"{_server.NodeTag}: Exception occurred while collecting info from {_server.NodeTag}", e);
                     }
                 }
                 finally

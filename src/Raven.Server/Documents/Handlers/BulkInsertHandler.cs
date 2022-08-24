@@ -42,7 +42,7 @@ namespace Raven.Server.Documents.Handlers
             var progress = new BulkInsertProgress();
             try
             {
-                var logger = LoggingSource.Instance.GetLogger<MergedInsertBulkCommand>(Database.Name);
+                var logger = Database.Logger;
                 IDisposable currentCtxReset = null, previousCtxReset = null;
 
                 try
@@ -511,7 +511,7 @@ namespace Raven.Server.Documents.Handlers
                 TotalSize = Commands.Sum(c => c.Document.Size),
                 Commands = Commands,
                 Database = database,
-                Logger = LoggingSource.Instance.GetLogger<DatabaseDestination>(database.Name)
+                Logger = database.Logger
             };
         }
     }

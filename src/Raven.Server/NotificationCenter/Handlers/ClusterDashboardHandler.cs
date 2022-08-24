@@ -25,8 +25,6 @@ namespace Raven.Server.NotificationCenter.Handlers
 {
     public class ClusterDashboardHandler : ServerNotificationHandlerBase
     {
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<ClusterDashboardHandler>("Server");
-
         [RavenAction("/cluster-dashboard/watch", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, SkipUsagesCount = true)]
         public async Task Watch()
         {

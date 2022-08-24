@@ -124,8 +124,8 @@ namespace Raven.Server.Documents.TimeSeries
             tx.CreateTree(DeletedRangesKey);
 
             Stats = new TimeSeriesStats(this, tx);
+            _logger = documentDatabase.Logger;
             Rollups = new TimeSeriesRollups(_documentDatabase);
-            _logger = LoggingSource.Instance.GetLogger<TimeSeriesStorage>(documentDatabase.Name);
         }
 
         public static DateTime ExtractDateTimeFromKey(Slice key)

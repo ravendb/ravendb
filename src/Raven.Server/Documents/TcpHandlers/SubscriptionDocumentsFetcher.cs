@@ -40,7 +40,7 @@ namespace Raven.Server.Documents.TcpHandlers
             SubscriptionPatchDocument patch)
         {
             _db = db;
-            _logger = LoggingSource.Instance.GetLogger<SubscriptionDocumentsFetcher>(db.Name);
+            _logger = db.Logger;
             _maxBatchSize = maxBatchSize;
             _subscriptionId = subscriptionId;
             _remoteEndpoint = remoteEndpoint;

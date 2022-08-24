@@ -7,7 +7,7 @@ namespace Raven.Server.ServerWide
 {
     public class RavenTransaction : IDisposable
     {
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RavenTransaction>("Server");
+        private static readonly Logger Logger = LoggingSource.Instance.LoggersHolder.Generic.GetLogger<RavenTransaction>();
 
         public Transaction InnerTransaction;
 

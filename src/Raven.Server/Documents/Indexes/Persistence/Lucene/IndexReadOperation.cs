@@ -64,7 +64,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private FieldQuery _highlighterQuery;
 
         public IndexReadOperation(Index index, LuceneVoronDirectory directory, IndexSearcherHolder searcherHolder, QueryBuilderFactories queryBuilderFactories, Transaction readTransaction, IndexQueryServerSide query)
-            : base(index, LoggingSource.Instance.GetLogger<IndexReadOperation>(index._indexStorage.DocumentDatabase.Name))
+            : base(index, index.Logger)
         {
             try
             {

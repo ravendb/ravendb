@@ -577,7 +577,7 @@ namespace SlowTests.SparrowTests
 
             var logger = new Logger(loggingSource, "Source" + name, "Logger" + name);
             var tcs = new TaskCompletionSource<WebSocketReceiveResult>(TaskCreationOptions.RunContinuationsAsynchronously);
-            var socket = new MyDummyWebSocket();
+            var socket = new LogTestsHelper.DummyWebSocket();
             socket.ReceiveAsyncFunc = () => tcs.Task;
             var context = new LoggingSource.WebSocketContext();
 
@@ -721,7 +721,7 @@ namespace SlowTests.SparrowTests
 
             var logger = new Logger(loggingSource, "Source" + name, "Logger" + name);
             var tcs = new TaskCompletionSource<WebSocketReceiveResult>(TaskCreationOptions.RunContinuationsAsynchronously);
-            var socket = new MyDummyWebSocket();
+            var socket = new LogTestsHelper.DummyWebSocket();
             socket.ReceiveAsyncFunc = () => tcs.Task;
             var context = new LoggingSource.WebSocketContext();
 
@@ -745,45 +745,6 @@ namespace SlowTests.SparrowTests
             var logContent = await File.ReadAllTextAsync(logFile);
             Assert.DoesNotContain(uniqForOperation, logContent);
             Assert.DoesNotContain(uniqForInformation, logContent);
-        }
-
-        private class MyDummyWebSocket : WebSocket
-        {
-            private bool _close;
-            public string LogsReceived { get; private set; } = "";
-
-            public void Close() => _close = true;
-
-            public Func<Task<WebSocketReceiveResult>> ReceiveAsyncFunc { get; set; } = () => Task.FromResult(new WebSocketReceiveResult(1, WebSocketMessageType.Text, true));
-
-            public override void Abort()
-            {
-            }
-
-            public override Task CloseAsync(WebSocketCloseStatus closeStatus, string statusDescription, CancellationToken cancellationToken)
-                => Task.CompletedTask;
-
-            public override Task CloseOutputAsync(WebSocketCloseStatus closeStatus, string statusDescription, CancellationToken cancellationToken)
-                => Task.CompletedTask;
-
-            public override void Dispose()
-            {
-            }
-
-            public override Task<WebSocketReceiveResult> ReceiveAsync(ArraySegment<byte> buffer, CancellationToken cancellationToken) => ReceiveAsyncFunc();
-
-            public override Task SendAsync(ArraySegment<byte> buffer, WebSocketMessageType messageType, bool endOfMessage, CancellationToken cancellationToken)
-            {
-                if (_close)
-                    throw new Exception("Closed");
-                LogsReceived += Encodings.Utf8.GetString(buffer.ToArray());
-                return Task.CompletedTask;
-            }
-
-            public override WebSocketCloseStatus? CloseStatus { get; }
-            public override string CloseStatusDescription { get; }
-            public override WebSocketState State { get; }
-            public override string SubProtocol { get; }
         }
 
         private static string GetTestName([CallerMemberName] string memberName = "") => memberName;

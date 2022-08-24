@@ -29,7 +29,7 @@ namespace Raven.Server.NotificationCenter
             _notificationsStorage = notificationsStorage;
             _database = database;
             _slowWrites = new ConcurrentDictionary<string, SlowWritesDetails.SlowWriteInfo>();
-            _logger = LoggingSource.Instance.GetLogger(database, GetType().FullName);
+            _logger = notificationCenter.Logger;
         }
 
         public void Add(string path, double dataSizeInMb, double durationInSec)

@@ -33,7 +33,7 @@ namespace Raven.Server.NotificationCenter
             _notificationCenter = notificationCenter;
             _notificationsStorage = notificationsStorage;
             _database = database;
-            _logger = LoggingSource.Instance.GetLogger(database, GetType().FullName);
+            _logger = notificationCenter.Logger;
         }
 
         public void Add(PagingOperationType operation, string action, string details, long numberOfResults, int pageSize, long duration, long totalDocumentsSizeInBytes)

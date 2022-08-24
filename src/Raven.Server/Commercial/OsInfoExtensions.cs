@@ -14,7 +14,7 @@ namespace Raven.Server.Commercial
 {
     public static class OsInfoExtensions
     {
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<LicenseManager>("OsInfo");
+        private static readonly Logger Logger = LoggingSource.Instance.LoggersHolder.Generic.GetLogger<LicenseManager>();
 
         public static OsInfo GetOsInfo()
         {

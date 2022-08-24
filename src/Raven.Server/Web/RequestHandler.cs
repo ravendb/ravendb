@@ -30,6 +30,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.TrafficWatch;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Logging;
 
 namespace Raven.Server.Web
 {
@@ -40,6 +41,8 @@ namespace Raven.Server.Web
         public const string PageSizeParameter = "pageSize";
 
         private RequestHandlerContext _context;
+
+        protected Logger Logger;
 
         protected HttpContext HttpContext
         {

@@ -34,7 +34,7 @@ namespace Raven.Server.Utils
 
     internal class RavenWin32Service : IWin32Service
     {
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RavenWin32Service>("Server");
+        private static readonly Logger Logger = LoggingSource.Instance.LoggersHolder.Generic.GetLogger<RavenWin32Service>();
 
         private RavenServer _ravenServer;
 

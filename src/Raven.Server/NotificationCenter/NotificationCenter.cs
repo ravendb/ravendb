@@ -18,24 +18,23 @@ namespace Raven.Server.NotificationCenter
 {
     public class NotificationCenter : NotificationsBase, IDisposable
     {
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<NotificationCenter>("Server");
+        public readonly Logger Logger;
         private readonly NotificationsStorage _notificationsStorage;
-        private readonly string _database;
         private readonly CancellationToken _shutdown;
         private PostponedNotificationsSender _postponedNotificationSender;
 
-        public NotificationCenter(NotificationsStorage notificationsStorage, string database, CancellationToken shutdown, RavenConfiguration config)
+        public NotificationCenter(NotificationsStorage notificationsStorage, string database, CancellationToken shutdown, RavenConfiguration config, Logger logger)
         {
+            Logger = logger;
             _notificationsStorage = notificationsStorage;
-            _database = database;
             _shutdown = shutdown;
             _config = config;
             Options = new NotificationCenterOptions();
             Paging = new Paging(this, _notificationsStorage, database);
             Indexing = new Indexing(this, _notificationsStorage, database);
             RequestLatency = new RequestLatency(this, _notificationsStorage, database);
-            EtlNotifications = new EtlNotifications(this, _notificationsStorage, _database);
-            SlowWrites = new SlowWriteNotifications(this, _notificationsStorage, _database);
+            EtlNotifications = new EtlNotifications(this, _notificationsStorage, database);
+            SlowWrites = new SlowWriteNotifications(this, _notificationsStorage, database);
             OutOfMemory = new OutOfMemoryNotifications(this);
         }
 
@@ -43,7 +42,7 @@ namespace Raven.Server.NotificationCenter
 
         public void Initialize(DocumentDatabase database = null)
         {
-            _postponedNotificationSender = new PostponedNotificationsSender(_database, _notificationsStorage, Watchers, _shutdown);
+            _postponedNotificationSender = new PostponedNotificationsSender(_notificationsStorage, Watchers, database?.Logger, _shutdown);
             BackgroundWorkers.Add(_postponedNotificationSender);
 
             if (database != null)

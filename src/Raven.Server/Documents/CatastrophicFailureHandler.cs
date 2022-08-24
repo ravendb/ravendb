@@ -18,13 +18,12 @@ namespace Raven.Server.Documents
 
         private readonly DatabasesLandlord _databasesLandlord;
         private readonly ServerStore _serverStore;
-        private readonly Logger _logger;
+        private static readonly Logger Logger = LoggingSource.Instance.LoggersHolder.Generic.GetLogger<CatastrophicFailureHandler>();
         
         public CatastrophicFailureHandler(DatabasesLandlord databasesLandlord, ServerStore serverStore)
         {
             _databasesLandlord = databasesLandlord;
             _serverStore = serverStore;
-            _logger = LoggingSource.Instance.GetLogger<CatastrophicFailureHandler>("Server");
         }
 
         public bool TryGetStats(Guid environmentId, out FailureStats stats)
@@ -75,8 +74,8 @@ namespace Raven.Server.Documents
                     // exception in raising an alert can't prevent us from unloading a database
                 }
 
-                if (_logger.IsOperationsEnabled)
-                    _logger.Operations($"{title}. {message} (StackTrace='{stacktrace}')", e);
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations($"{title}. {message} (StackTrace='{stacktrace}')", e);
 
                 // let it propagate the exception to the client first and do
                 // the internal failure handling e.g. Index.HandleIndexCorruption

@@ -31,7 +31,7 @@ namespace Raven.Client.Http
         public HttpCache(long maxSize)
         {
             _maxSize = maxSize;
-            _unmanagedBuffersPool = new UnmanagedBuffersPool(nameof(HttpCache), "Client");
+            _unmanagedBuffersPool = new UnmanagedBuffersPool(nameof(HttpCache));
             LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
         }
 

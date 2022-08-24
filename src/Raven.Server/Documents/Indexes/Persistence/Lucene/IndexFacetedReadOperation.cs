@@ -40,7 +40,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             QueryBuilderFactories queryBuilderFactories,
             Transaction readTransaction,
             DocumentDatabase documentDatabase)
-            : base(index, LoggingSource.Instance.GetLogger<IndexFacetedReadOperation>(documentDatabase.Name))
+            : base(index, index.Logger)
         {
             try
             {

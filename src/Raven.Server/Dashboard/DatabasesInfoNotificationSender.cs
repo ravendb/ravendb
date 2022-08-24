@@ -17,9 +17,9 @@ namespace Raven.Server.Dashboard
         private readonly TimeSpan _notificationsThrottle;
         private DateTime _lastSentNotification = DateTime.MinValue;
 
-        public DatabasesInfoNotificationSender(string resourceName, ServerStore serverStore,
+        public DatabasesInfoNotificationSender(ServerStore serverStore,
             ConcurrentSet<ConnectedWatcher> watchers, TimeSpan notificationsThrottle, CancellationToken shutdown)
-            : base(resourceName, shutdown)
+            : base(null, shutdown)
         {
             _serverStore = serverStore;
             _watchers = watchers;

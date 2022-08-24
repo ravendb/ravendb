@@ -79,7 +79,7 @@ namespace Raven.Server.Documents.TcpHandlers
         public readonly TcpConnectionOptions TcpConnection;
         public readonly string ClientUri;
         private readonly MemoryStream _buffer = new MemoryStream();
-        private readonly Logger _logger;
+        private Logger _logger;
         public readonly SubscriptionConnectionStats Stats;
 
         private SubscriptionConnectionStatsScope _connectionScope;
@@ -146,7 +146,7 @@ namespace Raven.Server.Documents.TcpHandlers
             TcpConnection = connectionOptions;
             _tcpConnectionDisposable = tcpConnectionDisposable;
             ClientUri = connectionOptions.TcpClient.Client.RemoteEndPoint.ToString();
-            _logger = LoggingSource.Instance.GetLogger<SubscriptionConnection>(connectionOptions.DocumentDatabase.Name);
+            _logger = TcpConnection.DocumentDatabase.Logger;
             CancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(TcpConnection.DocumentDatabase.DatabaseShutdown);
             _supportedFeatures = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(TcpConnectionHeaderMessage.OperationTypes.Subscription, connectionOptions.ProtocolVersion);
             _waitForMoreDocuments = new AsyncManualResetEvent(CancellationTokenSource.Token);
@@ -377,9 +377,10 @@ namespace Raven.Server.Documents.TcpHandlers
 
                                 var errorMessage = $"Failed to process subscription {connection.SubscriptionId} / from client {remoteEndPoint}";
                                 connection.AddToStatusDescription($"{errorMessage}. Sending response to client");
-                                if (connection._logger.IsInfoEnabled)
+                                var logger = tcpConnectionOptions.DocumentDatabase.Logger;
+                                if (logger.IsInfoEnabled)
                                 {
-                                    connection._logger.Info(errorMessage, e);
+                                    logger.Info(errorMessage, e);
                                 }
 
                                 try
@@ -394,9 +395,10 @@ namespace Raven.Server.Documents.TcpHandlers
                             finally
                             {
                                 connection.AddToStatusDescription("Finished processing subscription");
-                                if (connection._logger.IsInfoEnabled)
+                                var logger = tcpConnectionOptions.DocumentDatabase.Logger;
+                                if (logger.IsInfoEnabled)
                                 {
-                                    connection._logger.Info(
+                                    logger.Info(
                                         $"Finished processing subscription {connection.SubscriptionId} / from client {remoteEndPoint}");
                                 }
                             }

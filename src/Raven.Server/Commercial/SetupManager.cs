@@ -37,7 +37,7 @@ namespace Raven.Server.Commercial
 {
     public static class SetupManager
     {
-        internal static readonly Logger Logger = LoggingSource.Instance.GetLogger<LicenseManager>("Server");
+        internal static readonly Logger Logger = LoggingSource.Instance.LoggersHolder.Generic.GetLogger<LicenseManager>();
         
         private static string BuildHostName(string nodeTag, string userDomain, string rootDomain)
         {

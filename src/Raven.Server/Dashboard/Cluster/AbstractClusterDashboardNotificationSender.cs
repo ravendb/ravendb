@@ -21,7 +21,8 @@ namespace Raven.Server.Dashboard.Cluster
         
         private DateTime _lastSentNotification = DateTime.MinValue;
 
-        protected AbstractClusterDashboardNotificationSender(int widgetId, ConnectedWatcher watcher, CancellationToken shutdown) : base(nameof(AbstractClusterDashboardNotificationSender), shutdown)
+        protected AbstractClusterDashboardNotificationSender(int widgetId, ConnectedWatcher watcher, CancellationToken shutdown) 
+            : base(null, shutdown)
         {
             _widgetId = widgetId;
             _watcher = watcher;

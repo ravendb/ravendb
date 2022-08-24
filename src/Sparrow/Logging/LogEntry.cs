@@ -10,5 +10,7 @@ namespace Sparrow.Logging
         public string Logger;
         public string Message;
         public Exception Exception;
+        
+        public LogMode? OverrideWriteMode { get; set; }
     }
 }

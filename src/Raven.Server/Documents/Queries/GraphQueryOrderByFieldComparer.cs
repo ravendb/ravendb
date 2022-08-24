@@ -12,14 +12,14 @@ namespace Raven.Server.Documents.Queries
         private string _alias;
         private BlittablePath _path;
         private int _order;
-        public readonly Logger Log = LoggingSource.Instance.GetLogger<GraphQueryOrderByFieldComparer>("GraphQueryOrderByFieldComparer");
+        private readonly Logger _logger;
         private readonly string _databaseName;
         private readonly string _query;
         private string _xId = Unknown;
         private string _yId = Unknown;
         private const string Unknown = "Unknown";
 
-        public GraphQueryOrderByFieldComparer(OrderByField field, string databaseName, string query)
+        public GraphQueryOrderByFieldComparer(OrderByField field, string databaseName, string query, Logger logger)
         {
             _databaseName = databaseName;
             _query = query;
@@ -30,6 +30,7 @@ namespace Raven.Server.Documents.Queries
             _alias = fieldName.Substring(0, indexOfDot);
             _path = new BlittablePath(fieldName.Substring(indexOfDot + 1, fieldName.Length - indexOfDot - 1));
             _field = field;
+            _logger = logger;
         }
 
 
@@ -266,9 +267,9 @@ namespace Raven.Server.Documents.Queries
 
         private int LogMissmatchTypesReturnOrder(object xResult, object yResult)
         {
-            if (Log.IsInfoEnabled)
+            if (_logger.IsInfoEnabled)
             {
-                Log.Info($"Database: {_databaseName} Graph Query: {_query} Document Ids:({_xId},{_yId}), Got unexpected types to compare: {xResult} of type {xResult.GetType().Name} and {yResult} of type {yResult.GetType().Name}, this may yield unexpected query ordering.");
+                _logger.Info($"Database: {_databaseName} Graph Query: {_query} Document Ids:({_xId},{_yId}), Got unexpected types to compare: {xResult} of type {xResult.GetType().Name} and {yResult} of type {yResult.GetType().Name}, this may yield unexpected query ordering.");
             }
 
             return _order;
@@ -279,12 +280,12 @@ namespace Raven.Server.Documents.Queries
     {
         private List<GraphQueryOrderByFieldComparer> _comparers;
 
-        public GraphQueryMultipleFieldsComparer(IEnumerable<OrderByField> fields, string databaseName, string query)
+        public GraphQueryMultipleFieldsComparer(IEnumerable<OrderByField> fields, string databaseName, string query, Logger logger)
         {
             _comparers = new List<GraphQueryOrderByFieldComparer>();
             foreach (var field in fields)
             {
-                _comparers.Add(new GraphQueryOrderByFieldComparer(field, databaseName, query));
+                _comparers.Add(new GraphQueryOrderByFieldComparer(field, databaseName, query, logger));
             }
         }
 

@@ -24,12 +24,11 @@ namespace Raven.Server.Dashboard
         private DateTime _lastSentNotification = DateTime.MinValue;
 
         public MachineResourcesNotificationSender(
-            string resourceName,
             RavenServer server,
             ConcurrentSet<ConnectedWatcher> watchers,
             TimeSpan notificationsThrottle,
             CancellationToken shutdown)
-            : base(resourceName, shutdown)
+            : base(null, shutdown)
         {
             _server = server;
             _watchers = watchers;

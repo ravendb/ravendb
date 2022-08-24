@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
     public abstract class RestoreBackupTaskBase
     {
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RestoreBackupTaskBase>("Server");
+        private readonly Logger _logger;
 
         private readonly ServerStore _serverStore;
         private readonly string _nodeTag;
@@ -59,6 +59,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             OperationCancelToken operationCancelToken)
         {
             _serverStore = serverStore;
+            _logger = serverStore.Server.DatabasesLogger.GetSubSwitchLogger(restoreFromConfiguration.DatabaseName);
             RestoreFromConfiguration = restoreFromConfiguration;
             _nodeTag = nodeTag;
             _operationCancelToken = operationCancelToken;
@@ -272,8 +273,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     var addToInitLog = new Action<string>(txt => // init log is not save in mem during RestoreBackup
                     {
                         var msg = $"[RestoreBackup] {DateTime.UtcNow} :: Database '{databaseName}' : {txt}";
-                        if (Logger.IsInfoEnabled)
-                            Logger.Info(msg);
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info(msg);
                     });
 
                     var configuration = _serverStore
@@ -370,8 +371,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             }
             catch (Exception e)
             {
-                if (Logger.IsOperationsEnabled)
-                    Logger.Operations("Failed to restore database", e);
+                if (_logger.IsOperationsEnabled)
+                    _logger.Operations("Failed to restore database", e);
 
                 var alert = AlertRaised.Create(
                     RestoreFromConfiguration.DatabaseName,
@@ -544,7 +545,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
                 // validate free space
                 var snapshotSize = zip.Entries.Sum(entry => entry.Length);
-                BackupHelper.AssertFreeSpaceForSnapshot(restorePath.FullPath, snapshotSize, "restore a backup", Logger);
+                BackupHelper.AssertFreeSpaceForSnapshot(restorePath.FullPath, snapshotSize, "restore a backup", _logger);
 
                 foreach (var zipEntries in zip.Entries.GroupBy(x => x.FullName.Substring(0, x.FullName.Length - x.Name.Length)))
                 {

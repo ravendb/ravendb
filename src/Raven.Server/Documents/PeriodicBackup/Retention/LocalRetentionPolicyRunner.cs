@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using Raven.Client.Documents.Smuggler;
 using Raven.Server.Utils;
+using Sparrow.Logging;
 using Voron.Util.Settings;
 
 namespace Raven.Server.Documents.PeriodicBackup.Retention
@@ -14,8 +15,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
 
         protected override string Name => "Local";
 
-        public LocalRetentionPolicyRunner(RetentionPolicyBaseParameters parameters, string folderPath)
-            : base(parameters)
+        public LocalRetentionPolicyRunner(RetentionPolicyBaseParameters parameters, string folderPath, Logger logger)
+            : base(parameters, logger)
         {
             _folderPath = PathUtil.ToFullPath(folderPath);
         }
