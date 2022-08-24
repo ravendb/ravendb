@@ -82,6 +82,7 @@ public class TrafficWatchConfigurationResult
 
 public enum TrafficWatchMode
 {
+    None = 0,
     Off,
     ToLogFile
 }
