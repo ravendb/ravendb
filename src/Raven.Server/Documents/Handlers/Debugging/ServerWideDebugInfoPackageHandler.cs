@@ -146,7 +146,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             //note : theoretically GetDebugInfoFromNodeAsync() can throw, error handling is done at the level of WriteDebugInfoPackageForNodeAsync() calls
             using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(url, certificate))
             {
-                var timeout = TimeSpan.FromMinutes(1);
+                var timeout = TimeSpan.FromMinutes(10);
                 if (ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan > timeout)
                     timeout = ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan;
 
