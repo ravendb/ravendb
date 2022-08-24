@@ -148,14 +148,14 @@ class revisionsConfigurationEntry {
         this.limitRevisionsByAge.subscribe(() => {
             this.minimumRevisionAgeToKeep.clearError();
         });
-        
-        this.name = ko.pureComputed(() => {
-            if (this.isDefault()) {
-                return "Document Defaults";
 
         this.setMaxRevisionsToDelete.subscribe(() => {
             this.maxRevisionsToDeleteUponUpdate.clearError();
         });
+        
+        this.name = ko.pureComputed(() => {
+            if (this.isDefault()) {
+                return "Document Defaults";
             } 
             if (this.isConflicts()) {
                 return "Conflicting Document Defaults";
