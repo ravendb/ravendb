@@ -32,7 +32,7 @@ namespace Raven.Server.Documents
 
             Database = context.Database;
             ContextPool = Database.DocumentsStorage.ContextPool;
-            Logger = Database.Logger.GetLogger(GetType().Name);
+            Logger = Database.Logger;
 
             context.HttpContext.Response.OnStarting(() => CheckForChanges(context));
         }

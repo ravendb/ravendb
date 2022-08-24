@@ -8,7 +8,6 @@ namespace Raven.Server.Web
         public override void Init(RequestHandlerContext context)
         {
             base.Init(context);
-            Logger = Server.Logger.GetLogger(GetType().Name);
 
             context.HttpContext.Response.OnStarting(() => CheckForTopologyChanges(context));
         }

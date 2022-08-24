@@ -63,7 +63,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             OperationCancelToken operationCancelToken)
         {
             _serverStore = serverStore;
-            _logger = serverStore.Server.DatabasesLogger.GetSubSwitchLogger(restoreFromConfiguration.DatabaseName);
+                
             RestoreFromConfiguration = restoreFromConfiguration;
             _nodeTag = nodeTag;
             _operationCancelToken = operationCancelToken;
@@ -75,6 +75,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             if (ResourceNameValidator.IsValidResourceName(RestoreFromConfiguration.DatabaseName, dataDirectoryThatWillBeUsed, out string errorMessage) == false)
                 throw new InvalidOperationException(errorMessage);
 
+            _logger = serverStore.Server.DatabasesLogger.GetSubSwitchLogger(restoreFromConfiguration.DatabaseName);
+            
             _serverStore.EnsureNotPassiveAsync().Wait(_operationCancelToken.Token);
 
             ClusterTopology clusterTopology;
