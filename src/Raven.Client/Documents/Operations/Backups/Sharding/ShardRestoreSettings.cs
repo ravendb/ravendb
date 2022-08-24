@@ -38,7 +38,7 @@ namespace Raven.Client.Documents.Operations.Backups.Sharding
     {
         public int ShardNumber { get; set; }
         public string NodeTag { get; set; }
-        public string BackupPath { get; set; }
+        public string FolderName { get; set; }
 
         public SingleShardRestoreSetting()
         {
@@ -48,7 +48,7 @@ namespace Raven.Client.Documents.Operations.Backups.Sharding
         {
             ShardNumber = other.ShardNumber;
             NodeTag = other.NodeTag;
-            BackupPath = other.BackupPath;
+            FolderName = other.FolderName;
         }
 
         public DynamicJsonValue ToJson()
@@ -57,7 +57,7 @@ namespace Raven.Client.Documents.Operations.Backups.Sharding
             {
                 [nameof(ShardNumber)] = ShardNumber,
                 [nameof(NodeTag)] = NodeTag,
-                [nameof(BackupPath)] = BackupPath
+                [nameof(FolderName)] = FolderName
             };
         }
     }
