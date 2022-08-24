@@ -75,6 +75,7 @@ namespace Raven.Server.Web
         public virtual void Init(RequestHandlerContext context)
         {
             _context = context;
+            Logger = Server.Logger;
         }
 
         protected Stream TryGetRequestFromStream(string itemName)
