@@ -22,14 +22,10 @@ namespace Raven.Server.Documents.Expiration
         private const string DocumentsByRefresh = "DocumentsByRefresh";
 
         private readonly DocumentDatabase _database;
-        private readonly DocumentsStorage _documentsStorage;
-        private readonly Logger _logger;
 
         public ExpirationStorage(DocumentDatabase database, Transaction tx)
         {
             _database = database;
-            _documentsStorage = _database.DocumentsStorage;
-            _logger = LoggingSource.Instance.GetLogger<ExpirationStorage>(database.Name);
 
             tx.CreateTree(DocumentsByExpiration);
             tx.CreateTree(DocumentsByRefresh);

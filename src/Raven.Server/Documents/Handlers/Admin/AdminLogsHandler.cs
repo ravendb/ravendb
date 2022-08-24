@@ -1,19 +1,24 @@
 ﻿using System;
 using System.IO;
 using System.IO.Compression;
+using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
+using System.Transactions;
 using Raven.Client.ServerWide.Operations.Logs;
 using Raven.Server.Utils.MicrosoftLogging;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
-using Sparrow.Server.Platform.Posix;
 using Sparrow.Utils;
+using Sparrow.Server.Platform.Posix;
+using Voron.Util;
 
 namespace Raven.Server.Documents.Handlers.Admin
 {
@@ -32,7 +37,8 @@ namespace Raven.Server.Documents.Handlers.Admin
                     [nameof(GetLogsConfigurationResult.Path)] = ServerStore.Configuration.Logs.Path.FullPath,
                     [nameof(GetLogsConfigurationResult.UseUtcTime)] = ServerStore.Configuration.Logs.UseUtcTime,
                     [nameof(GetLogsConfigurationResult.RetentionTime)] = LoggingSource.Instance.RetentionTime,
-                    [nameof(GetLogsConfigurationResult.RetentionSize)] = LoggingSource.Instance.RetentionSize == long.MaxValue ? null : (object)LoggingSource.Instance.RetentionSize,
+                    [nameof(GetLogsConfigurationResult.RetentionSize)] =
+                        LoggingSource.Instance.RetentionSize == long.MaxValue ? null : (object)LoggingSource.Instance.RetentionSize,
                     [nameof(GetLogsConfigurationResult.Compress)] = LoggingSource.Instance.Compressing
                 };
 
@@ -76,6 +82,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 {
                     context.Filter.Add(filter, true);
                 }
+
                 foreach (var filter in HttpContext.Request.Query["except"])
                 {
                     context.Filter.Add(filter, false);
@@ -119,7 +126,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                             if (to != null && logDateTime > to)
                                 continue;
                         }
-                        
+
                         try
                         {
                             var entry = archive.CreateEntry(fileName);
@@ -160,11 +167,12 @@ namespace Raven.Server.Documents.Handlers.Admin
                 {
                     djv[name] = minLogLevel;
                 }
+
                 var json = context.ReadObject(djv, "logs/configuration");
                 writer.WriteObject(json);
             }
         }
-        
+
         [RavenAction("/admin/logs/microsoft/configuration", "GET", AuthorizationStatus.Operator)]
         public async Task GetMicrosoftConfiguration()
         {
@@ -177,11 +185,12 @@ namespace Raven.Server.Documents.Handlers.Admin
                 {
                     djv[category] = logLevel;
                 }
+
                 var json = context.ReadObject(djv, "logs/configuration");
                 writer.WriteObject(json);
             }
         }
-        
+
         [RavenAction("/admin/logs/microsoft/state", "GET", AuthorizationStatus.Operator)]
         public async Task GetMicrosoftLoggersState()
         {
@@ -190,15 +199,12 @@ namespace Raven.Server.Documents.Handlers.Admin
             {
                 var provider = Server.GetService<MicrosoftLoggingProvider>();
                 var minLogLevelPerLogger = new DynamicJsonValue();
-                var respondBody = new DynamicJsonValue
-                {
-                    ["IsActive"] = provider.IsActive,
-                    ["Loggers"] = minLogLevelPerLogger
-                };
+                var respondBody = new DynamicJsonValue {["IsActive"] = provider.IsActive, ["Loggers"] = minLogLevelPerLogger};
                 foreach (var (category, logger) in provider.Loggers)
                 {
                     minLogLevelPerLogger[category] = logger.MinLogLevel;
                 }
+
                 var json = context.ReadObject(respondBody, "logs/configuration");
                 writer.WriteObject(json);
             }
@@ -217,7 +223,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
             NoContentStatus();
         }
-        
+
         [RavenAction("/admin/logs/microsoft/enable", "POST", AuthorizationStatus.Operator)]
         public Task EnableMicrosoftLog()
         {
@@ -227,7 +233,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             NoContentStatus();
             return Task.CompletedTask;
         }
-        
+
         [RavenAction("/admin/logs/microsoft/disable", "POST", AuthorizationStatus.Operator)]
         public Task DisableMicrosoftLog()
         {
@@ -237,5 +243,103 @@ namespace Raven.Server.Documents.Handlers.Admin
             NoContentStatus();
             return Task.CompletedTask;
         }
+
+        private IDisposable AcquireLockAndGetLoggers(out SwitchLogger generic, out SwitchLogger server)
+        {
+            var genericLogger = LoggingSource.Instance.LoggersHolder.Generic;
+            var serverLogger = Server.Logger;
+            Monitor.Enter(genericLogger);
+            Monitor.Enter(serverLogger);
+
+            generic = genericLogger;
+            server = serverLogger;
+            return new DisposableAction(() =>
+            {
+                Monitor.Exit(genericLogger);
+                Monitor.Exit(serverLogger);
+            });
+        }
+
+        [RavenAction("/admin/loggers", "GET", AuthorizationStatus.Operator)]
+        public async Task GetAllLoggers()
+        {
+            using (AcquireLockAndGetLoggers(out var generic, out var server))
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {
+                await using var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream());
+
+                lock (generic)
+                lock (server)
+                {
+                    var djv = new DynamicJsonValue
+                    {
+                        ["IsInfoEnabled"] = LoggingSource.Instance.IsInfoEnabled,
+                        ["IsOperationsEnabled"] = LoggingSource.Instance.IsOperationsEnabled,
+                        ["Loggers"] = new DynamicJsonValue {[generic.Name] = generic.ToJson(), [server.Name] = server.ToJson()}
+                    };
+                    var json = context.ReadObject(djv, "logs/loggers");
+                    writer.WriteObject(json);
+                }
+            }
+        }
+
+        [RavenAction("/admin/loggers/reset/all", "GET", AuthorizationStatus.Operator)]
+        public Task ResetAllLoggers()
+        {
+            using (AcquireLockAndGetLoggers(out var generic, out var server))
+            {
+                generic.Reset(true);
+                server.Reset(true);
+                return Task.CompletedTask;
+            }
+        }
+
+        [RavenAction("/admin/loggers/set", "POST", AuthorizationStatus.Operator)]
+        public async Task SetLoggerMode()
+        {
+            using (AcquireLockAndGetLoggers(out var generic, out var server))
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            {
+                var input = await ctx.ReadForMemoryAsync(RequestBodyStream(), "SwitchLoggerConfiguration");
+                if (input.TryGet("Configuration", out BlittableJsonReaderObject json) == false)
+                    ThrowRequiredPropertyNameInRequest("Configuration");
+
+                var configuration = JsonDeserializationServer.SwitchLoggerConfiguration(json);
+                if (configuration.Loggers.TryGetValue(generic.Name, out var genericBlittable))
+                {
+                    var genericConfiguration = JsonDeserializationServer.SwitchLoggerConfiguration(genericBlittable);
+                    genericConfiguration.Apply(generic);
+                }
+
+                if (configuration.Loggers.TryGetValue(server.Name, out var serverBlittable))
+                {
+                    var serverConfiguration = JsonDeserializationServer.SwitchLoggerConfiguration(serverBlittable);
+                    serverConfiguration.Apply(server);
+                }
+            }
+        }
+
+        internal class SwitchLoggerConfiguration
+        {
+            public LogMode? LogMode { get; set; }
+            public Dictionary<string, BlittableJsonReaderObject> Loggers { get; set; }
+
+            public void Apply(SwitchLogger switchLogger)
+            {
+                if (LogMode.HasValue)
+                    switchLogger.SetLoggerMode(LogMode.Value);
+
+                if (Loggers != null)
+                {
+                    foreach ((string name, BlittableJsonReaderObject blittable) in Loggers)
+                    {
+                        var configuration = JsonDeserializationServer.SwitchLoggerConfiguration(blittable);
+                        if (switchLogger.Loggers.TryGet(name, out var descendant))
+                            configuration.Apply(descendant);
+                    }
+                }
+            }
+        }
     }
 }
+

@@ -17,11 +17,11 @@ namespace Raven.Server.Utils.Stats
         private readonly CancellationTokenSource _cts;
         private Task _task;
 
-        protected readonly Logger Logger;
+        private readonly Logger _logger;
 
-        protected LivePerformanceCollector(CancellationToken parentCts, string loggingSource)
+        protected LivePerformanceCollector(CancellationToken parentCts, Logger logger)
         {
-            Logger = LoggingSource.Instance.GetLogger(loggingSource, GetType().FullName);
+            _logger = logger;
 
             _cts = CancellationTokenSource.CreateLinkedTokenSource(parentCts);
         }
@@ -100,7 +100,7 @@ namespace Raven.Server.Utils.Stats
 
             _cts.Cancel();
 
-            var exceptionAggregator = new ExceptionAggregator(Logger, $"Could not dispose {GetType().Name}");
+            var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {GetType().Name}");
 
             exceptionAggregator.Execute(() =>
             {

@@ -33,7 +33,7 @@ namespace Raven.Server.NotificationCenter
             _notificationsStorage = notificationsStorage;
             _database = database;
             _slowWrites = new ConcurrentDictionary<string, SlowIoDetails.SlowWriteInfo>();
-            _logger = LoggingSource.Instance.GetLogger(database, GetType().FullName);
+            _logger = notificationCenter.Logger;
         }
 
         public void Add(IoChange ioChange)

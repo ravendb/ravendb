@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Server.Documents.PeriodicBackup.Azure;
 using Raven.Server.Documents.PeriodicBackup.Restore;
+using Sparrow.Logging;
 
 namespace Raven.Server.Documents.PeriodicBackup.Retention
 {
@@ -16,8 +17,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
 
         private string _continuationToken = null;
 
-        public AzureRetentionPolicyRunner(RetentionPolicyBaseParameters parameters, IRavenAzureClient client)
-            : base(parameters)
+        public AzureRetentionPolicyRunner(RetentionPolicyBaseParameters parameters, IRavenAzureClient client, Logger logger)
+            : base(parameters, logger)
         {
             _client = client;
         }

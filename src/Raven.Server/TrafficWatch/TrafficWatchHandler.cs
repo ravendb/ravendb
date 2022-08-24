@@ -19,8 +19,6 @@ namespace Raven.Server.TrafficWatch
 {
     public class TrafficWatchHandler : RequestHandler
     {
-        private static readonly Logger _logger = LoggingSource.Instance.GetLogger<TrafficWatchHandler>("Server");
-
         [RavenAction("/admin/traffic-watch", "GET", AuthorizationStatus.Operator)]
         public async Task TrafficWatchWebsockets()
         {
@@ -41,8 +39,8 @@ namespace Raven.Server.TrafficWatch
                     }
                     catch (Exception ex)
                     {
-                        if (_logger.IsInfoEnabled)
-                            _logger.Info("Error encountered in TrafficWatch handler", ex);
+                        if (Logger.IsInfoEnabled)
+                            Logger.Info("Error encountered in TrafficWatch handler", ex);
 
                         try
                         {
@@ -62,8 +60,8 @@ namespace Raven.Server.TrafficWatch
                         }
                         catch (Exception)
                         {
-                            if (_logger.IsInfoEnabled)
-                                _logger.Info("Failed to send the error in TrafficWatch handler to the client", ex);
+                            if (Logger.IsInfoEnabled)
+                                Logger.Info("Failed to send the error in TrafficWatch handler to the client", ex);
                         }
                     }
                 }

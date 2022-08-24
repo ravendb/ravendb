@@ -68,7 +68,7 @@ namespace Raven.Server.ServerWide.Maintenance
             _engine = engine;
             _term = term;
             _contextPool = contextPool;
-            _logger = LoggingSource.Instance.GetLogger<ClusterObserver>(_nodeTag);
+            _logger = server.Server.ClusterLogger;
             _cts = CancellationTokenSource.CreateLinkedTokenSource(token);
 
             var config = server.Configuration.Cluster;
@@ -175,7 +175,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
             if (_logger.IsInfoEnabled)
             {
-                _logger.Info(message, e);
+                _logger.Info($"{_nodeTag}: {message}", e);
             }
         }
 

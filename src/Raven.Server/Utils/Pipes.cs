@@ -15,7 +15,7 @@ namespace Raven.Server.Utils
     public class Pipes
     {
 #if !RVN
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<Pipes>("Server");
+        private static readonly Logger Logger = LoggingSource.Instance.LoggersHolder.Generic.GetLogger<Pipes>();
 #endif
 
         public const string AdminConsolePipePrefix = "raven-control-pipe-";

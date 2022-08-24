@@ -1123,7 +1123,7 @@ namespace Raven.Server.Documents.Handlers
                         writer.WriteEndArray();
                         if (indexDefinition.Reduce != null)
                         {
-                            using (var bufferPool = new UnmanagedBuffersPoolWithLowMemoryHandling("JavaScriptIndexTest", Database.Name))
+                            using (var bufferPool = new UnmanagedBuffersPoolWithLowMemoryHandling("JavaScriptIndexTest", Database.Logger))
                             {
                                 compiledIndex.SetBufferPoolForTestingPurposes(bufferPool);
                                 compiledIndex.SetAllocatorForTestingPurposes(context.Allocator);

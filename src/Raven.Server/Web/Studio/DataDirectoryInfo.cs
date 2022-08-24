@@ -23,7 +23,7 @@ namespace Raven.Server.Web.Studio
 {
     public class DataDirectoryInfo
     {
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<DataDirectoryInfo>("DataDirectoryInfo");
+        private static readonly Logger Logger = LoggingSource.Instance.LoggersHolder.Generic.GetLogger<DataDirectoryInfo>();
 
         private readonly ServerStore _serverStore;
         private readonly string _path;

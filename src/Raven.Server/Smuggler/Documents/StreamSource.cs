@@ -72,7 +72,7 @@ namespace Raven.Server.Smuggler.Documents
             _peepingTomStream = new PeepingTomStream(stream, context);
             _context = context;
             _database = database;
-            _log = LoggingSource.Instance.GetLogger<StreamSource>(database.Name);
+            _log = database.Logger;
         }
 
         public async Task<SmugglerInitializeResult> InitializeAsync(DatabaseSmugglerOptionsServerSide options, SmugglerResult result)

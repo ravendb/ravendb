@@ -13,7 +13,7 @@ namespace Raven.Client.Http
 {
     internal static class DatabaseTopologyLocalCache
     {
-        private static readonly Logger _logger = LoggingSource.Instance.GetLogger("Client", typeof(DatabaseTopologyLocalCache).FullName);
+        private static readonly Logger Logger = LoggingSource.Instance.LoggersHolder.Generic.GetLogger(nameof(DatabaseTopologyLocalCache));
 
         private static void Clear(string path)
         {
@@ -26,8 +26,8 @@ namespace Raven.Client.Http
             }
             catch (Exception e)
             {
-                if (_logger.IsInfoEnabled)
-                    _logger.Info("Could not clear the persisted database topology", e);
+                if (Logger.IsInfoEnabled)
+                    Logger.Info("Could not clear the persisted database topology", e);
             }
         }
 
@@ -60,8 +60,8 @@ namespace Raven.Client.Http
             }
             catch (Exception e)
             {
-                if (_logger.IsInfoEnabled)
-                    _logger.Info("Could not understand the persisted database topology", e);
+                if (Logger.IsInfoEnabled)
+                    Logger.Info("Could not understand the persisted database topology", e);
                 return null;
             }
         }
@@ -83,8 +83,8 @@ namespace Raven.Client.Http
                 var existingTopology = await TryLoadAsync(path, context).ConfigureAwait(false);
                 if (existingTopology?.Etag >= topology.Etag)
                 {
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info($"Skipping save topology with etag {topology.Etag} to cache " +
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info($"Skipping save topology with etag {topology.Etag} to cache " +
                                      $"as the cache already have a topology with etag: {existingTopology.Etag}");
                     return;
                 }
@@ -118,8 +118,8 @@ namespace Raven.Client.Http
             }
             catch (Exception e)
             {
-                if (_logger.IsInfoEnabled)
-                    _logger.Info("Could not persist the database topology", e);
+                if (Logger.IsInfoEnabled)
+                    Logger.Info("Could not persist the database topology", e);
             }
         }
 

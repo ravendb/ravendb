@@ -15,7 +15,7 @@ namespace Raven.Server.TrafficWatch
 
     internal class TrafficWatchConnection
     {
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<TrafficWatchConnection>("Server");
+        private static readonly Logger Logger = LoggingSource.Instance.LoggersHolder.Generic.GetLogger<TrafficWatchConnection>();
 
         private readonly WebSocket _webSocket;
         private readonly JsonOperationContext _context;

@@ -72,7 +72,7 @@ namespace Voron.Impl.Journal
         {
             _env = env;
             _is32Bit = env.Options.ForceUsing32BitsPager || PlatformDetails.Is32Bits;
-            _logger = LoggingSource.Instance.GetLogger<WriteAheadJournal>(Path.GetFileName(env.ToString()));
+            _logger = env.Logger;
             _dataPager = _env.Options.DataPager;
             _currentJournalFileSize = env.Options.InitialLogFileSize;
             _headerAccessor = env.HeaderAccessor;
@@ -767,7 +767,7 @@ namespace Voron.Impl.Journal
                     {
                         if (_waj._logger.IsOperationsEnabled)
                         {
-                            _waj._logger.Operations("Could not allocate enough space to apply pages to data file", e);
+                            _waj._logger.Operations($"Could not allocate enough space to apply pages to data file. Environment {_waj._env}", e);
                         }
                         // on 32 bits systems, we likely run out of address space, nothing that we can do, this should
                         // be handled by the 32 bits pager.
@@ -777,7 +777,7 @@ namespace Voron.Impl.Journal
                     {
                         if (_waj._logger.IsOperationsEnabled)
                         {
-                            _waj._logger.Operations("The disk is full!", diskFullEx);
+                            _waj._logger.Operations($"The disk is full!. Environment {_waj._env}", diskFullEx);
                         }
                         _waj._env.HandleDataDiskFullException(diskFullEx);
                         return;
@@ -827,12 +827,12 @@ namespace Voron.Impl.Journal
                             UpdateJournalStateUnderWriteTransactionLock(txw, journalSnapshots, lastProcessedJournal, lastFlushedTransactionId);
 
                             if (_waj._logger.IsInfoEnabled)
-                                _waj._logger.Info($"Updated journal state under write tx lock (txId: {txw.Id}) after waiting for {sp.Elapsed}");
+                                _waj._logger.Info($"Updated journal state under write tx lock (txId: {txw.Id}) after waiting for {sp.Elapsed}. Environment {_waj._env}");
                         }
                         catch (Exception e)
                         {
                             if (_waj._logger.IsOperationsEnabled)
-                                _waj._logger.Operations($"Failed to update journal state under write tx lock (waited - {sp.Elapsed})", e);
+                                _waj._logger.Operations($"Failed to update journal state under write tx lock (waited - {sp.Elapsed}). Environment {_waj._env}", e);
 
                             edi = ExceptionDispatchInfo.Capture(e);
                             throw;
@@ -965,7 +965,7 @@ namespace Voron.Impl.Journal
                     if (_waj._logger.IsInfoEnabled)
                     {
                         _waj._logger.Info($"Detected {unusedJournals.Count} unused journals after flush ({nameof(lastFlushedTransactionId)} - {lastFlushedTransactionId}, {nameof(lastFlushedTransactionIdThatWontReadFromJournal)} - {lastFlushedTransactionIdThatWontReadFromJournal}). " +
-                                          $"Journals to delete: {string.Join(',' , unusedJournals.Select(x => x.Number.ToString()))}");
+                                          $"Journals to delete: {string.Join(',' , unusedJournals.Select(x => x.Number.ToString()))}. Environment {_waj._env}");
                     }
 
                     foreach (var unused in unusedJournals)
@@ -1218,7 +1218,7 @@ namespace Voron.Impl.Journal
                         if (_parent._waj._logger.IsInfoEnabled)
                         {
                             var sizeInKb = (_parent._waj._dataPager.NumberOfAllocatedPages * Constants.Storage.PageSize) / Constants.Size.Kilobyte;
-                            _parent._waj._logger.Info($"Sync of {sizeInKb:#,#0} kb file with {_currentTotalWrittenBytes / Constants.Size.Kilobyte:#,#0} kb dirty in {sp.Elapsed}");
+                            _parent._waj._logger.Info($"Sync of {sizeInKb:#,#0} kb file with {_currentTotalWrittenBytes / Constants.Size.Kilobyte:#,#0} kb dirty in {sp.Elapsed}. Environment {_parent._waj._env}");
                         }
                     }
                 }
@@ -1449,9 +1449,9 @@ namespace Voron.Impl.Journal
                     }
 
                     if (_waj._logger.IsInfoEnabled)
-                        _waj._logger.Info($"Flushed {pagesToWrite.Count:#,#} pages to { _waj._dataPager.FileName} with {new Size(written, SizeUnit.Bytes)} in {sp.Elapsed}.");
+                        _waj._logger.Info($"Flushed {pagesToWrite.Count:#,#} pages to { _waj._dataPager.FileName} with {new Size(written, SizeUnit.Bytes)} in {sp.Elapsed}. Environment {_waj._env}");
                     else if (_waj._logger.IsOperationsEnabled && sp.Elapsed > _waj._dataPager.Options.LongRunningFlushingWarning)
-                        _waj._logger.Operations($"Very long data flushing. It took {sp.Elapsed} to flush {pagesToWrite.Count:#,#} pages to { _waj._dataPager.FileName} with {new Size(written, SizeUnit.Bytes)}.");
+                        _waj._logger.Operations($"Very long data flushing. It took {sp.Elapsed} to flush {pagesToWrite.Count:#,#} pages to { _waj._dataPager.FileName} with {new Size(written, SizeUnit.Bytes)}. Environment {_waj._env}");
 
                     Interlocked.Add(ref _totalWrittenButUnsyncedBytes, written);
                 }
@@ -1676,7 +1676,7 @@ namespace Voron.Impl.Journal
                     if (_logger.IsInfoEnabled)
                     {
                         _logger.Info(
-                            $"Preparing to write tx {tx.Id} to journal with {journalEntry.NumberOfUncompressedPages:#,#} pages ({new Size(journalEntry.NumberOfUncompressedPages * Constants.Storage.PageSize, SizeUnit.Bytes)}) in {sp.Elapsed} with {new Size(journalEntry.NumberOf4Kbs * 4, SizeUnit.Kilobytes)} compressed.");
+                            $"Preparing to write tx {tx.Id} to journal with {journalEntry.NumberOfUncompressedPages:#,#} pages ({(new Size(journalEntry.NumberOfUncompressedPages * Constants.Storage.PageSize, SizeUnit.Bytes)) / Constants.Size.Kilobyte:#,#}) in {sp.Elapsed} with {new Size(journalEntry.NumberOf4Kbs * 4, SizeUnit.Kilobytes)} compressed. Environment {_env}");
                     }
 
                     if (tx.IsLazyTransaction && _lazyTransactionBuffer == null)
@@ -1689,7 +1689,7 @@ namespace Voron.Impl.Journal
                         _lazyTransactionBuffer?.WriteBufferToFile(CurrentFile, tx);
                         CurrentFile = NextFile(journalEntry.NumberOf4Kbs);
                         if (_logger.IsInfoEnabled)
-                            _logger.Info($"New journal file created {CurrentFile.Number:D19}");
+                            _logger.Info($"New journal file created {CurrentFile.Number:D19}. Environment {_env}");
                     }
 
                     tx._forTestingPurposes?.ActionToCallJustBeforeWritingToJournal?.Invoke();
@@ -1701,8 +1701,8 @@ namespace Voron.Impl.Journal
                     _lastCompressionAccelerationInfo.CalculateOptimalAcceleration();
 
                     if (_logger.IsInfoEnabled)
-                        _logger.Info($"Writing {new Size(journalEntry.NumberOf4Kbs * 4, SizeUnit.Kilobytes)} to journal {CurrentFile.Number:D19} took {sp.Elapsed}");
-
+                        _logger.Info($"Writing {new Size(journalEntry.NumberOf4Kbs * 4, SizeUnit.Kilobytes)} to journal {CurrentFile.Number:D19} took {sp.Elapsed}. Environment {_env}");
+                    
                     if (CurrentFile.Available4Kbs == 0)
                     {
                         _lazyTransactionBuffer?.WriteBufferToFile(CurrentFile, tx);
@@ -2104,7 +2104,7 @@ namespace Voron.Impl.Journal
                 _logger.Operations(
                     $"Compression buffer: {_compressionPager} has reached size {new Size(_compressionPager.NumberOfAllocatedPages * Constants.Storage.PageSize, SizeUnit.Bytes)} which is more than the maximum size " +
                     $"of {new Size(maxSize, SizeUnit.Bytes)}. Will trim it now to the max size allowed. If this is happen on a regular basis," +
-                    " consider raising the limit (MaxScratchBufferSize option control it), since it can cause performance issues");
+                    $" consider raising the limit (MaxScratchBufferSize option control it), since it can cause performance issues. Environment {_env}");
             }
 
             _lastCompressionBufferReduceCheck = DateTime.UtcNow;

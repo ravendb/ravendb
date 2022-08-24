@@ -16,19 +16,28 @@ namespace Raven.Server.Rachis
         private long _lastDeferredTicks;
         private Action _timeoutHappened;
         private string _currentLeader;
+        private readonly string _name;
 
-        public TimeoutEvent(int timeoutPeriod, string name, bool singleShot = true)
+        public TimeoutEvent(int timeoutPeriod, string name, bool singleShot, Logger logger)
         {
+            _logger = logger;
             TimeoutPeriod = timeoutPeriod;
             _singleShot = singleShot;
             _lastDeferredTicks = DateTime.UtcNow.Ticks;
             _timer = new Timer(Callback, null, Timeout.Infinite, Timeout.Infinite);
-            _logger = LoggingSource.Instance.GetLogger<TimeoutEvent>(name);
+            _name = name;
             LowMemoryNotification.Instance?.RegisterLowMemoryHandler(this);
         }
 
-        public TimeoutEvent(TimeSpan timeoutPeriod, string name, bool singleShot = true) :
-            this((int)timeoutPeriod.TotalMilliseconds, name, singleShot)
+        public TimeoutEvent(int timeoutPeriod, string name, Logger logger = null) :
+            this(timeoutPeriod, name, true, logger)
+        {
+            
+        }
+
+
+        public TimeoutEvent(TimeSpan timeoutPeriod, string name, bool singleShot = true, Logger logger = null) :
+            this((int)timeoutPeriod.TotalMilliseconds, name, singleShot, logger)
         {
         }
 
@@ -74,7 +83,7 @@ namespace Raven.Server.Rachis
                 {
                     if (_logger.IsInfoEnabled)
                     {
-                        _logger.Info("Failed to execute timeout callback, will retry again", e);
+                        _logger.Info($"{_name} Failed to execute timeout callback, will retry again", e);
                     }
 
                     lock (this)

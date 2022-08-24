@@ -31,7 +31,7 @@ namespace Raven.Server.Utils
         });
 
         public static PoolOfThreads GlobalRavenThreadPool => _globalRavenThreadPool.Value;
-        private static Logger _log = LoggingSource.Instance.GetLogger<PoolOfThreads>("Server");
+        private static readonly Logger Logger = LoggingSource.Instance.LoggersHolder.Generic.GetLogger<PoolOfThreads>();
 
         public int TotalNumberOfThreads;
 
@@ -224,9 +224,9 @@ namespace Raven.Server.Utils
                 }
                 catch (Exception e)
                 {
-                    if (_log.IsOperationsEnabled)
+                    if (Logger.IsOperationsEnabled)
                     {
-                        _log.Operations($"An uncaught exception occurred in '{_threadInfo.FullName}' and killed the process", e);
+                        Logger.Operations($"An uncaught exception occurred in '{_threadInfo.FullName}' and killed the process", e);
                     }
 
                     throw;
@@ -283,12 +283,12 @@ namespace Raven.Server.Utils
                 var currentPriority = ThreadHelper.GetThreadPriority();
                 if (currentPriority != ThreadPriority.Normal)
                 {
-                    if (ThreadHelper.TrySetThreadPriority(ThreadPriority.Normal, null, _log) == false)
+                    if (ThreadHelper.TrySetThreadPriority(ThreadPriority.Normal, null, Logger) == false)
                     {
                         // if we can't reset it, better just kill it
-                        if (_log.IsInfoEnabled)
+                        if (Logger.IsInfoEnabled)
                         {
-                            _log.Info($"Unable to set this thread priority to normal, since we don't want its priority of {currentPriority}, we'll let it exit");
+                            Logger.Info($"Unable to set this thread priority to normal, since we don't want its priority of {currentPriority}, we'll let it exit");
                         }
 
                         return false;

@@ -36,7 +36,7 @@ namespace Raven.Server.Utils
     {
         private const int BitsPerByte = 8;
 
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger("Server", typeof(CertificateUtils).FullName);
+        private static readonly Logger Logger = LoggingSource.Instance.LoggersHolder.Generic.GetLogger(typeof(CertificateUtils).FullName);
 
         internal static bool CertHasKnownIssuer(X509Certificate2 userCertificate, X509Certificate2 knownCertificate, SecurityConfiguration securityConfiguration)
         {

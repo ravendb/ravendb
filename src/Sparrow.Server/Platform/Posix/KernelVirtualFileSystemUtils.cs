@@ -10,7 +10,7 @@ namespace Sparrow.Platform.Posix
 {
     internal static class KernelVirtualFileSystemUtils
     {
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger("Server", typeof(KernelVirtualFileSystemUtils).FullName);
+        private static readonly Logger Logger = LoggingSource.Instance.LoggersHolder.Memory.GetLogger(nameof(KernelVirtualFileSystemUtils));
         private static readonly ConcurrentSet<string> IsOldFileAlert = new ConcurrentSet<string>();
         private static readonly ConcurrentSet<string> MissingCgroupFiles = new ConcurrentSet<string>();
 

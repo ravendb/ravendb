@@ -14,10 +14,6 @@ namespace Raven.Server.Documents
 {
     public class ConfigurationStorage : IDisposable
     {
-        private const string ResourceName = nameof(ConfigurationStorage);
-
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<ConfigurationStorage>(ResourceName);
-
         public TransactionContextPool ContextPool { get; }
 
         public NotificationsStorage NotificationsStorage { get; }
@@ -36,8 +32,8 @@ namespace Raven.Server.Documents
             }
 
             var options = db.Configuration.Core.RunInMemory
-                ? StorageEnvironmentOptions.CreateMemoryOnly(path.FullPath, tempPath, db.IoChanges, db.CatastrophicFailureNotification)
-                : StorageEnvironmentOptions.ForPath(path.FullPath, tempPath, null, db.IoChanges, db.CatastrophicFailureNotification);
+                ? StorageEnvironmentOptions.CreateMemoryOnly(path.FullPath, tempPath, db.IoChanges, db.CatastrophicFailureNotification, db.Logger)
+                : StorageEnvironmentOptions.ForPath(path.FullPath, tempPath, null, db.IoChanges, db.CatastrophicFailureNotification, db.Logger);
 
             options.OnNonDurableFileSystemError += db.HandleNonDurableFileSystemError;
             options.OnRecoverableFailure += db.HandleRecoverableFailure;
@@ -63,9 +59,9 @@ namespace Raven.Server.Documents
             options.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions = db.Configuration.Storage.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions;
             options.MaxNumberOfRecyclableJournals = db.Configuration.Storage.MaxNumberOfRecyclableJournals;
 
-            DirectoryExecUtils.SubscribeToOnDirectoryInitializeExec(options, db.Configuration.Storage, db.Name, DirectoryExecUtils.EnvironmentType.Configuration, Logger);
+            DirectoryExecUtils.SubscribeToOnDirectoryInitializeExec(options, db.Configuration.Storage, db.Name, DirectoryExecUtils.EnvironmentType.Configuration, db.Logger);
 
-            NotificationsStorage = new NotificationsStorage(db.Name);
+            NotificationsStorage = new NotificationsStorage(db.Logger);
 
             OperationsStorage = new OperationsStorage();
 

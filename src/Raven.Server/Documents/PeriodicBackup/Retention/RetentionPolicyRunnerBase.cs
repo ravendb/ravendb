@@ -13,7 +13,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
 {
     public abstract class RetentionPolicyRunnerBase
     {
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RetentionPolicyRunnerBase>("BackupTask");
+        private readonly Logger _logger;
 
         private readonly RetentionPolicy _retentionPolicy;
         private readonly string _databaseName;
@@ -21,13 +21,14 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
         private readonly Action<string> _onProgress;
         protected CancellationToken CancellationToken;
 
-        protected RetentionPolicyRunnerBase(RetentionPolicyBaseParameters parameters)
+        protected RetentionPolicyRunnerBase(RetentionPolicyBaseParameters parameters, Logger logger)
         {
             _retentionPolicy = parameters.RetentionPolicy;
             _databaseName = parameters.DatabaseName;
             _isFullBackup = parameters.IsFullBackup;
             _onProgress = parameters.OnProgress;
             CancellationToken = parameters.CancellationToken;
+            _logger = logger;
         }
 
         protected abstract GetFoldersResult GetSortedFolders();
@@ -93,21 +94,21 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
 
                 var message = $"Found {foldersToDelete.Count:#,#} backups to delete, took: {sp.ElapsedMilliseconds:#,#}ms";
                 _onProgress.Invoke(message);
-                if (Logger.IsInfoEnabled)
-                    Logger.Info(message);
+                if (_logger.IsInfoEnabled)
+                    _logger.Info(message);
 
                 sp.Restart();
                 DeleteFolders(foldersToDelete);
 
                 message = $"Deleted {foldersToDelete.Count:#,#} backups, took: {sp.ElapsedMilliseconds:#,#}ms";
                 _onProgress.Invoke(message);
-                if (Logger.IsInfoEnabled)
-                    Logger.Info(message);
+                if (_logger.IsInfoEnabled)
+                    _logger.Info(message);
             }
             catch (NotSupportedException)
             {
-                if (Logger.IsInfoEnabled)
-                    Logger.Info($"Retention Policy for {Name} isn't currently supported");
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Retention Policy for {Name} isn't currently supported");
             }
             catch (OperationCanceledException)
             {
@@ -119,8 +120,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
                 var message = $"Failed to run Retention Policy for {Name}";
                 _onProgress.Invoke($"{message}. Error: {e.Message}");
 
-                if (Logger.IsInfoEnabled)
-                    Logger.Info($"Failed to run Retention Policy for {Name}", e);
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Failed to run Retention Policy for {Name}", e);
             }
         }
 
@@ -136,8 +137,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
                 var folderDetails = RestorePointsBase.ParseFolderName(folderName);
                 if (folderDetails.BackupTimeAsString == null)
                 {
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info($"Failed to get backup date time for folder: {folder}");
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info($"Failed to get backup date time for folder: {folder}");
                     continue;
                 }
 
@@ -148,8 +149,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
                         DateTimeStyles.None,
                         out var backupTime) == false)
                 {
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info($"Failed to parse backup date time for folder: {folder}");
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info($"Failed to parse backup date time for folder: {folder}");
                     continue;
                 }
 

@@ -20,16 +20,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private readonly Logger _logger;
         private ImmutableList<IndexSearcherHoldingState> _states = ImmutableList<IndexSearcherHoldingState>.Empty;
 
-        public LuceneIndexSearcherHolder(Func<IState, IndexSearcher> recreateSearcher, DocumentDatabase documentDatabase)
+        public LuceneIndexSearcherHolder(Func<IState, IndexSearcher> recreateSearcher, DocumentDatabase documentDatabase, Logger logger)
         {
             _recreateSearcher = recreateSearcher;
             _documentDatabase = documentDatabase;
-            _logger = LoggingSource.Instance.GetLogger<LuceneIndexSearcherHolder>(documentDatabase.Name);
+            _logger = logger;
         }
 
         public void SetIndexSearcher(Transaction asOfTx)
         {
-            var state = new IndexSearcherHoldingState(asOfTx, _recreateSearcher, _documentDatabase.Name);
+            var state = new IndexSearcherHoldingState(asOfTx, _recreateSearcher, _logger);
 
             _states = _states.Insert(0, state);
 
@@ -135,10 +135,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             public int Usage;
             public readonly long AsOfTxId;
 
-            public IndexSearcherHoldingState(Transaction tx, Func<IState, IndexSearcher> recreateSearcher, string dbName)
+            public IndexSearcherHoldingState(Transaction tx, Func<IState, IndexSearcher> recreateSearcher, Logger logger)
             {
                 _recreateSearcher = recreateSearcher;
-                _logger = LoggingSource.Instance.GetLogger<LuceneIndexSearcherHolder>(dbName);
+                _logger = logger;
                 AsOfTxId = tx.LowLevelTransaction.Id;
                 _lazyIndexSearcher = new Lazy<IndexSearcher>(() =>
                 {

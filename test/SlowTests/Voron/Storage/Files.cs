@@ -6,6 +6,7 @@
 
 using System.IO;
 using Raven.Server.Utils;
+using Sparrow.Logging;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
@@ -31,7 +32,8 @@ namespace SlowTests.Voron.Storage
         [Fact]
         public void TemporaryPathTest()
         {
-            var options = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(DataDir, DataDir + "Temp", null, null, null);
+            var logger = LoggingSource.Instance.GetLogger("Test","Test");
+            var options = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(DataDir, DataDir + "Temp", null, null, null, logger);
 
             Assert.Equal(DataDir, options.BasePath.FullPath);
             Assert.Equal(DataDir + "Temp", options.TempPath.FullPath);
@@ -51,7 +53,8 @@ namespace SlowTests.Voron.Storage
         [Fact]
         public void ScratchLocationWithTemporaryPathSpecified()
         {
-            var options = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(DataDir, DataDir + "Temp", null, null, null);
+            var logger = LoggingSource.Instance.GetLogger("Test","Test");
+            var options = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(DataDir, DataDir + "Temp", null, null, null, logger);
             using (var env = new StorageEnvironment(options))
             {
                 var scratchFile = Path.Combine(DataDir, StorageEnvironmentOptions.ScratchBufferName(0));

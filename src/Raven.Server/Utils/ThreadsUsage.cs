@@ -14,7 +14,7 @@ namespace Raven.Server.Utils
 {
     public class ThreadsUsage
     {
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<MachineResources>("ThreadsUsage");
+        private static readonly Logger Logger = LoggingSource.Instance.LoggersHolder.Generic.GetLogger<ThreadsUsage>();
         private (long TotalProcessorTimeTicks, long TimeTicks) _processTimes;
         private Dictionary<int, long> _threadTimesInfo = new Dictionary<int, long>();
 

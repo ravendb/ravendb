@@ -60,7 +60,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             _indexStorage = indexStorage;
             _metrics = metrics;
             _mapReduceContext = mapReduceContext;
-            _logger = LoggingSource.Instance.GetLogger<ReduceMapResultsBase<T>>(indexStorage.DocumentDatabase.Name);
+            _logger = _index.Logger;
         }
 
         static ReduceMapResultsBase()
@@ -154,7 +154,17 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             }
 
             WriteLastEtags(indexContext);
-            _mapReduceContext.StoreNextMapResultId();
+            try
+            {
+                _mapReduceContext.StoreNextMapResultId();
+            }
+            catch (Exception e)
+            {
+                if (_logger.IsInfoEnabled)
+                    _logger.Info("Failed to store next map result id", e);
+                throw;
+            }
+            
 
             return (false, Index.CanContinueBatchResult.None);
         }

@@ -68,7 +68,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public LuceneIndexPersistence(Index index) : base(index)
         {
-            _logger = LoggingSource.Instance.GetLogger<LuceneIndexPersistence>(index.DocumentDatabase.Name);
+            _logger = index.Logger;
             _suggestionsDirectories = new Dictionary<string, LuceneVoronDirectory>();
             _suggestionsIndexSearcherHolders = new Dictionary<string, LuceneIndexSearcherHolder>();
             _disposeOnce = new DisposeOnce<SingleAttempt>(() =>
@@ -139,7 +139,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             _fields = fields.ToDictionary(x => x.Name, x => x);
 
-            _luceneIndexSearcherHolder = new LuceneIndexSearcherHolder(CreateIndexSearcher, _index._indexStorage.DocumentDatabase);
+            _luceneIndexSearcherHolder = new LuceneIndexSearcherHolder(CreateIndexSearcher, _index._indexStorage.DocumentDatabase, _index.Logger);
 
             foreach (var field in _fields)
             {
@@ -147,7 +147,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     continue;
 
                 string fieldName = field.Key;
-                _suggestionsIndexSearcherHolders[fieldName] = new LuceneIndexSearcherHolder(state => new IndexSearcher(_suggestionsDirectories[fieldName], true, state), _index._indexStorage.DocumentDatabase);
+                _suggestionsIndexSearcherHolders[fieldName] = new LuceneIndexSearcherHolder(state => new IndexSearcher(_suggestionsDirectories[fieldName], true, state), _index._indexStorage.DocumentDatabase, _index.Logger);
             }
 
             IndexSearcher CreateIndexSearcher(IState state)
@@ -518,7 +518,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     var snapshotter = new SnapshotDeletionPolicy(new KeepOnlyLastCommitDeletionPolicy());
                     var writer = new LuceneSuggestionIndexWriter(field, _suggestionsDirectories[field],
                                         snapshotter, IndexWriter.MaxFieldLength.UNLIMITED,
-                        _index, state);
+                        _index, state, _logger);
 
                     _suggestionsIndexWriters[field] = writer;
                 }

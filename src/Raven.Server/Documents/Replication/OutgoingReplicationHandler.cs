@@ -110,7 +110,7 @@ namespace Raven.Server.Documents.Replication
 
             Destination = node;
             ReplicationType = external ? ReplicationLatestEtagRequest.ReplicationType.External : ReplicationLatestEtagRequest.ReplicationType.Internal;
-            _log = LoggingSource.Instance.GetLogger<OutgoingReplicationHandler>(_database.Name);
+            _log = _database.Logger;
             _tcpConnectionOptions = tcpConnectionOptions ??
                                     new TcpConnectionOptions { DocumentDatabase = database, Operation = TcpConnectionHeaderMessage.OperationTypes.Replication };
             _connectionInfo = connectionInfo;

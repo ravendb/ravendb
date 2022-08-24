@@ -130,7 +130,7 @@ namespace Raven.Server.Documents.Replication
 
             CertificateThumbprint = options.Certificate?.Thumbprint;
 
-            _log = LoggingSource.Instance.GetLogger<IncomingReplicationHandler>(_database.Name);
+            _log = _database.Logger;
             _cts = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
 
             _conflictManager = new ConflictManager(_database, _parent.ConflictResolver);
@@ -1709,7 +1709,7 @@ namespace Raven.Server.Documents.Replication
                 ReplicatedItems = replicationItems,
                 ReplicatedAttachmentStreams = replicatedAttachmentStreams,
                 SupportedFeatures = SupportedFeatures,
-                Logger = LoggingSource.Instance.GetLogger<IncomingReplicationHandler>(database.Name)
+                Logger = database.Logger
             };
 
             return new IncomingReplicationHandler.MergedDocumentReplicationCommand(dataForReplicationCommand, LastEtag, Mode);

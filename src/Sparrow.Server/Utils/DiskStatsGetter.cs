@@ -18,7 +18,7 @@ namespace Sparrow.Server.Utils
     internal class DiskStatsGetter : IDiskStatsGetter
     {
         private readonly TimeSpan _minInterval;
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger("Server", typeof(DiskStatsGetter).FullName);
+        private static readonly Logger Logger = LoggingSource.Instance.LoggersHolder.Generic.GetLogger(nameof(DiskStatsGetter));
 
         private readonly ConcurrentDictionary<string, Task<PrevInfo>> _previousInfo = new ConcurrentDictionary<string, Task<PrevInfo>>();
 

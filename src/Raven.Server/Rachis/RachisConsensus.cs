@@ -427,7 +427,7 @@ namespace Raven.Server.Rachis
             Timeout.TimeoutPeriod = _rand.Next(timeout / 3 * 2, timeout);
         }
 
-        public unsafe void Initialize(StorageEnvironment env, RavenConfiguration configuration, ClusterChanges changes, string myUrl, out long clusterTopologyEtag)
+        public unsafe void Initialize(StorageEnvironment env, RavenConfiguration configuration, ClusterChanges changes, string myUrl, out long clusterTopologyEtag, SwitchLogger clusterLogger)
         {
             try
             {
@@ -452,7 +452,7 @@ namespace Raven.Server.Rachis
 
                     RequestSnapshot = GetSnapshotRequest(context);
 
-                    Log = LoggingSource.Instance.GetLogger<RachisConsensus>(_tag);
+                    Log = clusterLogger.GetLogger(_tag);
                     LogsTable.Create(tx.InnerTransaction, EntriesSlice, 16);
 
                     CurrentTerm = ReadTerm(context);

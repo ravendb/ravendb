@@ -51,7 +51,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _indexReaderWarmer = indexReaderWarmer;
             _index = index;
 
-            _logger = LoggingSource.Instance.GetLogger<LuceneIndexWriter>(index.DocumentDatabase.Name);
+            _logger = index.Logger;
             RecreateIndexWriter(state);
         }
 

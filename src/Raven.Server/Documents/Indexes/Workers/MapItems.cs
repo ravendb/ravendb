@@ -28,8 +28,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             _mapReduceContext = mapReduceContext;
             _configuration = configuration;
             _indexStorage = indexStorage;
-            _logger = LoggingSource.Instance
-                .GetLogger<MapDocuments>(indexStorage.DocumentDatabase.Name);
+            _logger = _index.Logger;
         }
 
         public string Name => "Map";

@@ -38,7 +38,7 @@ namespace Voron.Impl.Journal
         {
             _options = options;
             FileName = filename;
-            _log = LoggingSource.Instance.GetLogger<JournalWriter>(options.BasePath.FullPath);
+            _log = options.Logger;
 
             var result = Pal.rvn_open_journal_for_writes(filename.FullPath, mode, size, options.SupportDurabilityFlags, out _writeHandle, out var actualSize, out var error);
             if (result != PalFlags.FailCodes.Success)
@@ -60,7 +60,7 @@ namespace Voron.Impl.Journal
                 if (error == ERROR_WORKING_SET_QUOTA && _log.IsOperationsEnabled && _workingSetQuotaLogged == false)
                 {
                     _log.Operations(
-                        $"We managed to accomplish journal write although we got {nameof(ERROR_WORKING_SET_QUOTA)} under the covers and wrote data in 4KB chunks");
+                        $"We managed to accomplish journal write although we got {nameof(ERROR_WORKING_SET_QUOTA)} under the covers and wrote data in 4KB chunks. FileName {FileName}");
 
                     _workingSetQuotaLogged = true;
                 }

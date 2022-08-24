@@ -49,8 +49,7 @@ namespace Raven.Server.Documents.Subscriptions
         {
             _db = db;
             _serverStore = serverStore;
-            _logger = LoggingSource.Instance.GetLogger<SubscriptionStorage>(db.Name);
-
+            _logger = db.Logger;
             _concurrentConnectionsSemiSemaphore = new SemaphoreSlim(db.Configuration.Subscriptions.MaxNumberOfConcurrentConnections);
             LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
         }

@@ -118,7 +118,7 @@ namespace Voron
 
         private readonly ConcurrentQueue<TemporaryPage> _tempPagesPool = new ConcurrentQueue<TemporaryPage>();
         public bool Disposed;
-        private readonly Logger _log;
+        public readonly Logger Logger;
         public static int MaxConcurrentFlushes = 10; // RavenDB-5221
         public int TimeToSyncAfterFlushInSec;
 
@@ -138,7 +138,7 @@ namespace Voron
             {
                 SelfReference.Owner = this;
                 SelfReference.WeekReference = new WeakReference<StorageEnvironment>(this);
-                _log = LoggingSource.Instance.GetLogger<StorageEnvironment>(options.BasePath.FullPath);
+                Logger = options.Logger;
                 _options = options;
                 _dataPager = options.DataPager;
                 _freeSpaceHandling = new FreeSpaceHandling();
@@ -189,8 +189,8 @@ namespace Voron
 
         ~StorageEnvironment()
         {
-            if (_log.IsOperationsEnabled)
-                _log.Operations($"Finalizer of storage environment was called. Env: {this}");
+            if (Logger.IsOperationsEnabled)
+                Logger.Operations($"Finalizer of storage environment was called. Env: {this}");
 
             try
             {
@@ -198,8 +198,8 @@ namespace Voron
             }
             catch (Exception e)
             {
-                if (_log.IsOperationsEnabled) 
-                    _log.Operations($"Failed to dispose storage environment via finalizer. Env: {this}", e);
+                if (Logger.IsOperationsEnabled) 
+                    Logger.Operations($"Failed to dispose storage environment via finalizer. Env: {this}", e);
             }
         }
 
@@ -262,9 +262,9 @@ namespace Voron
 
                 string message = $"{nameof(IdleFlushTimer)} failed (numberOfFailures: {numberOfFailures}), unable to schedule flush / syncs of data file. Will be restarted on new write transaction";
 
-                if (env._log.IsOperationsEnabled)
+                if (env.Logger.IsOperationsEnabled)
                 {
-                    env._log.Operations(message, e);
+                    env.Logger.Operations($"{message}. Env {env}", e);
                 }
 
                 try
@@ -1437,8 +1437,8 @@ namespace Voron
             {
                 var oldMode = Options.TransactionsMode;
 
-                if (_log.IsOperationsEnabled)
-                    _log.Operations($"Setting transaction mode to {mode}. Old mode is {oldMode}");
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations($"Setting transaction mode to {mode}. Old mode is {oldMode}. Env {this}");
 
                 if (oldMode == mode)
                     return TransactionsModeResult.ModeAlreadySet;

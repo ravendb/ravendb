@@ -75,7 +75,7 @@ namespace Raven.Server.Documents.Indexes
             _index = index;
             _contextPool = contextPool;
             DocumentDatabase = database;
-            _logger = LoggingSource.Instance.GetLogger<IndexStorage>(DocumentDatabase.Name);
+            _logger = _index.Logger;
 
             var referencedCollections = index.GetReferencedCollections();
             if (referencedCollections != null)

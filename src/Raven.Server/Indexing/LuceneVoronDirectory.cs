@@ -202,7 +202,7 @@ namespace Raven.Server.Indexing
             if (state == null)
                 throw new ArgumentNullException(nameof(s));
             
-            return new VoronIndexOutput(_tempFileCache, name, state.Transaction, _name, _indexOutputFilesSummary);
+            return new VoronIndexOutput(_tempFileCache, name, state.Transaction, _name, _indexOutputFilesSummary, _environment.Logger);
         }
 
         public IDisposable SetTransaction(Transaction tx, out IState state)

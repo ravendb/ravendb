@@ -17,7 +17,7 @@ namespace Raven.Server.Storage
     {
         private static readonly TimeSpan CheckFrequency = TimeSpan.FromMinutes(10);
 
-        private readonly Logger _logger = LoggingSource.Instance.GetLogger<StorageSpaceMonitor>(nameof(StorageSpaceMonitor));
+        private readonly Logger _logger;
         private readonly LinkedList<DocumentDatabase> _databases = new LinkedList<DocumentDatabase>();
 
         private readonly object _runLock = new object();
@@ -31,6 +31,7 @@ namespace Raven.Server.Storage
 
         public StorageSpaceMonitor(NotificationCenter.NotificationCenter notificationCenter)
         {
+            _logger = notificationCenter.Logger;
             _notificationCenter = notificationCenter;
 
             _timer = new Timer(Run, null, CheckFrequency, CheckFrequency);

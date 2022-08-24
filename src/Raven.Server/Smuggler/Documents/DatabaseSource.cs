@@ -24,7 +24,6 @@ using Raven.Server.Smuggler.Documents.Iteration;
 using Raven.Server.Utils.Enumerators;
 using Sparrow;
 using Sparrow.Json;
-using Sparrow.Logging;
 using Voron;
 
 namespace Raven.Server.Smuggler.Documents
@@ -37,7 +36,6 @@ namespace Raven.Server.Smuggler.Documents
 
         private readonly long _startDocumentEtag;
         private readonly long _startRaftIndex;
-        private readonly Logger _logger;
         private IDisposable _returnContext;
         private IDisposable _returnServerContext;
         private DocumentsTransaction _disposeTransaction;
@@ -69,12 +67,11 @@ namespace Raven.Server.Smuggler.Documents
 
         private readonly SmugglerSourceType _type;
 
-        public DatabaseSource(DocumentDatabase database, long startDocumentEtag, long startRaftIndex, Logger logger)
+        public DatabaseSource(DocumentDatabase database, long startDocumentEtag, long startRaftIndex)
         {
             _database = database;
             _startDocumentEtag = startDocumentEtag;
             _startRaftIndex = startRaftIndex;
-            _logger = logger;
             _type = _startDocumentEtag == 0 ? SmugglerSourceType.FullExport : SmugglerSourceType.IncrementalExport;
         }
 

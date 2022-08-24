@@ -25,7 +25,6 @@ namespace Raven.Server.Documents
     {
         protected DocumentsContextPool ContextPool;
         protected DocumentDatabase Database;
-        protected Logger Logger;
 
         public override void Init(RequestHandlerContext context)
         {
@@ -33,7 +32,7 @@ namespace Raven.Server.Documents
 
             Database = context.Database;
             ContextPool = Database.DocumentsStorage.ContextPool;
-            Logger = LoggingSource.Instance.GetLogger(Database.Name, GetType().FullName);
+            Logger = Database.Logger.GetLogger(GetType().Name);
 
             context.HttpContext.Response.OnStarting(() => CheckForChanges(context));
         }

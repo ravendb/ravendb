@@ -36,7 +36,7 @@ namespace Raven.Server.Config
 #if !RVN
         internal static readonly RavenConfiguration Default = new RavenConfiguration("__default", ResourceType.Server);
 
-        private readonly Logger _logger;
+        private readonly Logger _logger = LoggingSource.Instance.LoggersHolder.Generic.GetLogger<RavenConfiguration>();
 
         private readonly string _customConfigPath;
 
@@ -111,8 +111,6 @@ namespace Raven.Server.Config
 
         private RavenConfiguration(string resourceName, ResourceType resourceType, string customConfigPath = null, bool skipEnvironmentVariables = false)
         {
-            _logger = LoggingSource.Instance.GetLogger<RavenConfiguration>(resourceName);
-
             ResourceName = resourceName;
             ResourceType = resourceType;
             _customConfigPath = customConfigPath;

@@ -44,7 +44,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
         {
             _etl = etl;
             _database = database;
-            _logger = LoggingSource.Instance.GetLogger<RelationalDatabaseWriter>(_database.Name);
+            _logger = database.Logger;
             _providerFactory = GetDbProviderFactory(etl.Configuration);
             _providerType = SqlProviderParser.GetSupportedProvider(_etl.Configuration.Connection.FactoryName);
             _commandBuilder = _providerFactory.InitializeCommandBuilder();

@@ -65,7 +65,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         }
 
         public LuceneIndexReadOperation(Index index, LuceneVoronDirectory directory, LuceneIndexSearcherHolder searcherHolder, QueryBuilderFactories queryBuilderFactories, Transaction readTransaction, IndexQueryServerSide query)
-            : base(index, LoggingSource.Instance.GetLogger<LuceneIndexReadOperation>(index._indexStorage.DocumentDatabase.Name), queryBuilderFactories, query)
+            : base(index, index.Logger, queryBuilderFactories, query)
         {
             try
             {

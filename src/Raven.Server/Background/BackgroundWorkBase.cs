@@ -14,10 +14,10 @@ namespace Raven.Server.Background
         private Task _currentTask;
         protected readonly Logger Logger;
 
-        protected BackgroundWorkBase(string resourceName, CancellationToken shutdown)
+        protected BackgroundWorkBase(Logger logger, CancellationToken shutdown)
         {
             _shutdown = shutdown;
-            Logger = LoggingSource.Instance.GetLogger(resourceName ?? "Server", GetType().FullName);
+            Logger = logger ?? LoggingSource.Instance.LoggersHolder.Generic.GetLogger(GetType().Name);
             Cts = CancellationTokenSource.CreateLinkedTokenSource(_shutdown);
         }
 

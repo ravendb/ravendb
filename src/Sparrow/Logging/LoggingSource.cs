@@ -55,11 +55,12 @@ namespace Sparrow.Logging
         private readonly MultipleUseFlag _keepLogging = new MultipleUseFlag(true);
         private int _logNumber = -1;
         private DateTime _today;
-        private bool _isInfoEnabled;
-        private bool _isOperationsEnabled;
 
-        public bool IsInfoEnabled => _isInfoEnabled; 
-        public bool IsOperationsEnabled => _isOperationsEnabled;
+        private readonly LoggingSourceLogAvailability _logAvailability = new LoggingSourceLogAvailability();
+        public LogAvailability LogAvailability => _logAvailability;
+
+        public bool IsInfoEnabled => LogAvailability.IsInfoEnabled; 
+        public bool IsOperationsEnabled => LogAvailability.IsOperationsEnabled;
 
         private Stream _additionalOutput;
 
@@ -89,15 +90,15 @@ namespace Sparrow.Logging
         public bool Compressing => _compressLoggingThread != null;
 
 
-        private (bool Info, bool Operation) CalculateIsLogEnabled(LogMode? logMode = null)
+        private void SetLogAvailability(LogMode? logMode = null)
         {
-            if (_listeners.IsEmpty == false || _pipeSink != null) 
-                return (true, true);
-            
+            if (_listeners.IsEmpty == false || _pipeSink != null)
+            {
+                logMode = LogMode.Information;
+            }
+
             logMode ??= LogMode;
-            var info = (logMode & LogMode.Information) == LogMode.Information;
-            var operation = (logMode & LogMode.Operations) == LogMode.Operations;
-            return (info, operation);
+            _logAvailability.SetMode(logMode.Value);
         }
         
         public async Task Register(WebSocket source, WebSocketContext context, CancellationToken token)
@@ -114,7 +115,7 @@ namespace Sparrow.Logging
                 }
                 else
                 {
-                    (_isInfoEnabled, _isOperationsEnabled) = (true, true);
+                    _logAvailability.SetMode(LogMode);
                 }
             }
 
@@ -173,6 +174,7 @@ namespace Sparrow.Logging
             _localState = new LightWeightThreadLocal<LocalThreadWriterState>(GenerateThreadWriterState);
             _freePooledMessageEntries = new LimitedConcurrentSet<LogMessageEntry>[Environment.ProcessorCount];
             _activePoolMessageEntries = new LimitedConcurrentSet<LogMessageEntry>[Environment.ProcessorCount];
+            LoggersHolder = new LoggersHolder(this);
             for (int i = 0; i < _freePooledMessageEntries.Length; i++)
             {
                 _freePooledMessageEntries[i] = new LimitedConcurrentSet<LogMessageEntry>(1000);
@@ -185,6 +187,10 @@ namespace Sparrow.Logging
             SetupLogMode(logMode, path, retentionTime, retentionSize, compress);
         }
 
+        public void SetupLogMode(LogMode logMode)
+        {
+            SetupLogMode(logMode, _path, RetentionTime, RetentionSize, Compressing);
+        }
         public void SetupLogMode(LogMode logMode, string path, TimeSpan? retentionTime, long? retentionSize, bool compress)
         {
             SetupLogMode(logMode, path, retentionTime ?? TimeSpan.MaxValue, retentionSize ?? long.MaxValue, compress);
@@ -200,9 +206,9 @@ namespace Sparrow.Logging
                     Task.Run(() => SetupLogMode(logMode, path, retentionTime, retentionSize, compress));
                     return;
                 }
-                (bool info, bool operation) old = (_isInfoEnabled, _isOperationsEnabled);
-                (_isInfoEnabled, _isOperationsEnabled) = CalculateIsLogEnabled(logMode);
-                if (_isInfoEnabled == old.info && _isOperationsEnabled == old.operation && LogMode == logMode && path == _path && retentionTime == RetentionTime && compress == Compressing)
+                (bool info, bool operation) old = (LogAvailability.IsInfoEnabled, LogAvailability.IsOperationsEnabled);
+                SetLogAvailability(logMode);
+                if (LogAvailability.IsInfoEnabled == old.info && LogAvailability.IsOperationsEnabled == old.operation && LogMode == logMode && path == _path && retentionTime == RetentionTime && compress == Compressing)
                     return;
                 LogMode = logMode;
                 _path = path;
@@ -237,7 +243,7 @@ namespace Sparrow.Logging
             _keepLogging.Raise();
             _loggingThread = new Thread(BackgroundLogger) { IsBackground = true, Name = _name + " Thread" };
             _loggingThread.Start();
-            if (compress)
+            if (compress && LogMode != LogMode.None)
             {
                 _compressLoggingThread = new Thread(BackgroundLoggerCompress) { IsBackground = true, Name = _name + " Log Compression Thread" };
                 _compressLoggingThread.Start();
@@ -551,6 +557,7 @@ namespace Sparrow.Logging
             item.Data = state.ForwardingStream.Destination;
             Debug.Assert(item.Data != null);
             item.Type = entry.Type;
+            item.OverrideWriteMode = entry.OverrideWriteMode;
             
             _activePoolMessageEntries[currentProcessNumber].Enqueue(item, 128);
 
@@ -604,6 +611,8 @@ namespace Sparrow.Logging
             return new Logger(this, source, logger);
         }
 
+        public readonly LoggersHolder LoggersHolder;
+        
         private void BackgroundLogger()
         {
             NativeMemory.EnsureRegistered();
@@ -708,8 +717,7 @@ namespace Sparrow.Logging
         {
             try
             {
-                _isInfoEnabled = false;
-                _isOperationsEnabled = false;
+                _logAvailability.SetMode(LogMode.None);
 
                 foreach (var queue in _activePoolMessageEntries)
                 {
@@ -720,7 +728,7 @@ namespace Sparrow.Logging
             }
             finally
             {
-                (_isInfoEnabled, _isOperationsEnabled) = CalculateIsLogEnabled();
+                SetLogAvailability();
             }
         }
 
@@ -839,7 +847,7 @@ namespace Sparrow.Logging
             }
             else
             {
-                (_isInfoEnabled, _isOperationsEnabled) = (true, true);
+                _logAvailability.SetMode(LogMode.Information);
             }
         }
 
@@ -852,7 +860,7 @@ namespace Sparrow.Logging
             }
             else
             {
-                (_isInfoEnabled, _isOperationsEnabled) = CalculateIsLogEnabled();
+                SetLogAvailability();
             }
         }
 
@@ -861,24 +869,21 @@ namespace Sparrow.Logging
             item.Data.TryGetBuffer(out var bytes);
             Debug.Assert(bytes.Array != null);
 
-            if (item.Type == LogMode.Operations && LogMode != LogMode.None || (LogMode & LogMode.Information) == LogMode.Information)
+            try
             {
-                file.Write(bytes.Array, bytes.Offset, bytes.Count);
-                _additionalOutput?.Write(bytes.Array, bytes.Offset, bytes.Count);
-                if (item.Task != null)
+                var logMode = item.OverrideWriteMode ?? LogMode;
+                if (item.Type == LogMode.Operations && logMode != LogMode.None || (logMode & LogMode.Information) == LogMode.Information)
                 {
-                    try
+                    file.Write(bytes.Array, bytes.Offset, bytes.Count);
+                    _additionalOutput?.Write(bytes.Array, bytes.Offset, bytes.Count);
+                    if (item.Task != null)
                     {
                         file.Flush();
                         _additionalOutput?.Flush();
                     }
-                    finally
-                    {
-                        item.Task.TrySetResult(null);
-                    }
                 }
             }
-            else
+            finally
             {
                 item.Task?.TrySetResult(null);
             }
@@ -975,7 +980,7 @@ namespace Sparrow.Logging
             }
             else
             {
-                (_isInfoEnabled, _isOperationsEnabled) = CalculateIsLogEnabled();
+                SetLogAvailability();
             }
         }
 

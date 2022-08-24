@@ -15,7 +15,7 @@ namespace Raven.Server.Utils.Cpu
 {
     public static class CpuHelper
     {
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<MachineResources>("Server");
+        private static readonly Logger Logger = LoggingSource.Instance.LoggersHolder.Generic.GetLogger(nameof(CpuHelper));
 
         internal static ICpuUsageCalculator GetOSCpuUsageCalculator()
         {

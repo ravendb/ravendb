@@ -66,7 +66,8 @@ namespace Raven.Server.Documents
     {
         private readonly ServerStore _serverStore;
         private readonly Action<string> _addToInitLog;
-        private readonly Logger _logger;
+        public readonly SwitchLogger Logger;
+        public readonly SwitchLogger IndexesLogger;
         private readonly DisposeOnce<SingleAttempt> _disposeOnce;
         internal TestingStuff ForTestingPurposes;
 
@@ -103,7 +104,8 @@ namespace Raven.Server.Documents
         public DocumentDatabase(string name, RavenConfiguration configuration, ServerStore serverStore, Action<string> addToInitLog)
         {
             Name = name;
-            _logger = LoggingSource.Instance.GetLogger<DocumentDatabase>(Name);
+            Logger = serverStore.Server.DatabasesLogger.GetSubSwitchLogger(Name);
+            IndexesLogger = Logger.GetSubSwitchLogger("Indexes");
             _serverStore = serverStore;
             _addToInitLog = addToInitLog;
             StartTime = Time.GetUtcNow();
@@ -124,7 +126,7 @@ namespace Raven.Server.Documents
                 {
                     _addToInitLog("Creating db.lock file");
                     _fileLocker = new FileLocker(Configuration.Core.DataDirectory.Combine("db.lock").FullPath);
-                    _fileLocker.TryAcquireWriteLock(_logger);
+                    _fileLocker.TryAcquireWriteLock(Logger);
                 }
 
                 using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
@@ -164,9 +166,9 @@ namespace Raven.Server.Documents
                 MetricCacher = new DatabaseMetricCacher(this);
                 TxMerger = new TransactionOperationsMerger(this, DatabaseShutdown);
                 ConfigurationStorage = new ConfigurationStorage(this);
-                NotificationCenter = new NotificationCenter.NotificationCenter(ConfigurationStorage.NotificationsStorage, Name, DatabaseShutdown, configuration);
+                NotificationCenter = new NotificationCenter.NotificationCenter(ConfigurationStorage.NotificationsStorage, Name, DatabaseShutdown, configuration, Logger);
                 HugeDocuments = new HugeDocuments(NotificationCenter, ConfigurationStorage.NotificationsStorage, Name, configuration.PerformanceHints.HugeDocumentsCollectionSize,
-                    configuration.PerformanceHints.HugeDocumentSize.GetValue(SizeUnit.Bytes));
+                    configuration.PerformanceHints.HugeDocumentSize.GetValue(SizeUnit.Bytes), Logger);
                 Operations = new Operations.Operations(Name, ConfigurationStorage.OperationsStorage, NotificationCenter, Changes,
                     Is32Bits ? TimeSpan.FromHours(12) : TimeSpan.FromDays(2));
                 DatabaseInfoCache = serverStore.DatabaseInfoCache;
@@ -375,9 +377,9 @@ namespace Raven.Server.Documents
                     }
                     catch (Exception e)
                     {
-                        if (_logger.IsInfoEnabled)
+                        if (Logger.IsInfoEnabled)
                         {
-                            _logger.Info("An unhandled exception closed the cluster transaction task", e);
+                            Logger.Info("An unhandled exception closed the cluster transaction task", e);
                         }
                     }
                 }, DatabaseShutdown);
@@ -483,9 +485,9 @@ namespace Raven.Server.Documents
                 }
                 catch (Exception e)
                 {
-                    if (_logger.IsInfoEnabled)
+                    if (Logger.IsInfoEnabled)
                     {
-                        _logger.Info($"Can't perform cluster transaction on database '{Name}'.", e);
+                        Logger.Info($"Can't perform cluster transaction on database '{Name}'.", e);
                     }
                 }
             }
@@ -497,11 +499,11 @@ namespace Raven.Server.Documents
                 ClusterTransactionCommand.ReadCommandsBatch(context, Name, fromCount: _nextClusterCommand, take: batchSize));
 
             Stopwatch stopwatch = null;
-            if (_logger.IsInfoEnabled)
+            if (Logger.IsInfoEnabled)
             {
                 stopwatch = Stopwatch.StartNew();
                 //_nextClusterCommand refers to each individual put/delete while batch size refers to number of transaction (each contains multiple commands)
-                _logger.Info($"Read {batch.Count:#,#;;0} cluster transaction commands - fromCount: {_nextClusterCommand}, take: {batchSize}");
+                Logger.Info($"Read {batch.Count:#,#;;0} cluster transaction commands - fromCount: {_nextClusterCommand}, take: {batchSize}");
             }
             
             if (batch.Count == 0)
@@ -528,9 +530,9 @@ namespace Raven.Server.Documents
                 }
                 catch (Exception e) when (_databaseShutdown.IsCancellationRequested == false)
                 {
-                    if (_logger.IsInfoEnabled)
+                    if (Logger.IsInfoEnabled)
                     {
-                        _logger.Info($"Failed to execute cluster transaction batch (count: {batch.Count}), will retry them one-by-one.", e);
+                        Logger.Info($"Failed to execute cluster transaction batch (count: {batch.Count}), will retry them one-by-one.", e);
                     }
                     await ExecuteClusterTransactionOneByOne(batch);
                     return batch;
@@ -559,8 +561,8 @@ namespace Raven.Server.Documents
             }
             finally
             {
-                if (_logger.IsInfoEnabled && stopwatch != null)
-                    _logger.Info($"cluster transaction batch took {stopwatch.Elapsed:c}");
+                if (Logger.IsInfoEnabled && stopwatch != null)
+                    Logger.Info($"cluster transaction batch took {stopwatch.Elapsed:c}");
             }
             
             return batch;
@@ -638,9 +640,9 @@ namespace Raven.Server.Documents
             catch (Exception e)
             {
                 // nothing we can do
-                if (_logger.IsInfoEnabled)
+                if (Logger.IsInfoEnabled)
                 {
-                    _logger.Info($"Failed to notify about transaction completion for database '{Name}'.", e);
+                    Logger.Info($"Failed to notify about transaction completion for database '{Name}'.", e);
                 }
             }
         }
@@ -707,8 +709,8 @@ namespace Raven.Server.Documents
                 ForTestingPurposes?.DisposeLog?.Invoke(Name, $"Generating offline database info failed: {e}");
                 // if we encountered a catastrophic failure we might not be able to retrieve database info
 
-                if (_logger.IsInfoEnabled)
-                    _logger.Info("Failed to generate and store database info", e);
+                if (Logger.IsInfoEnabled)
+                    Logger.Info("Failed to generate and store database info", e);
             }
 
             if (ForTestingPurposes == null || ForTestingPurposes.SkipDrainAllRequests == false)
@@ -730,7 +732,7 @@ namespace Raven.Server.Documents
                 ForTestingPurposes?.DisposeLog?.Invoke(Name, $"Drained all requests. Took: {sp.Elapsed}");
             }
 
-            var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(DocumentDatabase)} {Name}");
+            var exceptionAggregator = new ExceptionAggregator(Logger, $"Could not dispose {nameof(DocumentDatabase)} {Name}");
 
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Acquiring cluster lock");
 
@@ -739,8 +741,8 @@ namespace Raven.Server.Documents
 
             ForTestingPurposes?.DisposeLog?.Invoke(Name, $"Acquired cluster lock. Taken: {lockTaken}");
 
-            if (lockTaken == false && _logger.IsOperationsEnabled)
-                _logger.Operations("Failed to acquire lock during database dispose for cluster notifications. Will dispose rudely...");
+            if (lockTaken == false && Logger.IsOperationsEnabled)
+                Logger.Operations("Failed to acquire lock during database dispose for cluster notifications. Will dispose rudely...");
 
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Unsubscribing from storage space monitor");
             exceptionAggregator.Execute(() =>
@@ -945,6 +947,7 @@ namespace Raven.Server.Documents
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Finished dispose");
 
             exceptionAggregator.ThrowIfNeeded();
+            Logger.Dispose();
         }
 
         public DynamicJsonValue GenerateOfflineDatabaseInfo()
@@ -1095,8 +1098,8 @@ namespace Raven.Server.Documents
                     _nextIoMetricsCleanupTime = utcNow.Add(Configuration.Storage.IoMetricsCleanupInterval.AsTimeSpan);
                 }
 
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Ran idle operations for database '{Name}' in {mode} mode, took: {sp.ElapsedMilliseconds}ms");
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Ran idle operations for database '{Name}' in {mode} mode, took: {sp.ElapsedMilliseconds}ms");
             }
             finally
             {
@@ -1216,7 +1219,7 @@ namespace Raven.Server.Documents
                     using (var zipStream = zipArchiveEntry.Open())
                     using (var outputStream = GetOutputStream(zipStream))
                     {
-                        var smugglerSource = new DatabaseSource(this, 0, 0, _logger);
+                        var smugglerSource = new DatabaseSource(this, 0, 0);
                         using (DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
                         {
                             var smugglerDestination = new StreamDestination(outputStream, documentsContext, smugglerSource);
@@ -1375,8 +1378,8 @@ namespace Raven.Server.Documents
 
                 RachisLogIndexNotifications.NotifyListenersAbout(index, e);
 
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Got exception during StateChanged({index}).", e);
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Got exception during StateChanged({index}).", e);
 
                 if (throwShutDown != null)
                     throw throwShutDown;
@@ -1413,8 +1416,8 @@ namespace Raven.Server.Documents
                     Debug.Assert(string.Equals(Name, record.DatabaseName, StringComparison.OrdinalIgnoreCase),
                         $"{Name} != {record.DatabaseName}");
 
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info($"Starting to process record {index} (current {LastDatabaseRecordChangeIndex}) for {record.DatabaseName}.");
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info($"Starting to process record {index} (current {LastDatabaseRecordChangeIndex}) for {record.DatabaseName}.");
 
                     try
                     {
@@ -1432,13 +1435,13 @@ namespace Raven.Server.Documents
 
                         LastDatabaseRecordChangeIndex = index;
 
-                        if (_logger.IsInfoEnabled)
-                            _logger.Info($"Finish to process record {index} for {record.DatabaseName}.");
+                        if (Logger.IsInfoEnabled)
+                            Logger.Info($"Finish to process record {index} for {record.DatabaseName}.");
                     }
                     catch (Exception e)
                     {
-                        if (_logger.IsInfoEnabled)
-                            _logger.Info($"Encounter an error while processing record {index} for {record.DatabaseName}.", e);
+                        if (Logger.IsInfoEnabled)
+                            Logger.Info($"Encounter an error while processing record {index} for {record.DatabaseName}.", e);
                         throw;
                     }
                 }
@@ -1450,7 +1453,7 @@ namespace Raven.Server.Documents
 
                         if (sp?.Elapsed > TimeSpan.FromSeconds(10))
                         {
-                            if (_logger.IsOperationsEnabled)
+                            if (Logger.IsOperationsEnabled)
                             {
                                 using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
                                 using (ctx.OpenReadTransaction())
@@ -1458,7 +1461,7 @@ namespace Raven.Server.Documents
                                     var logs = ServerStore.Engine.LogHistory.GetLogByIndex(ctx, index).Select(djv => ctx.ReadObject(djv, "djv").ToString());
                                     var msg =
                                         $"Lock held for a very long time {sp.Elapsed} in database {Name} for index {index} ({string.Join(", ", logs)})";
-                                    _logger.Operations(msg);
+                                    Logger.Operations(msg);
 
 #if !RELEASE
                                     Console.WriteLine(msg);
@@ -1493,8 +1496,8 @@ namespace Raven.Server.Documents
             if (LastDatabaseRecordChangeIndex > index)
             {
                 // index and LastDatabaseRecordIndex could have equal values when we transit from/to passive and want to update the tasks.
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Skipping record {index} (current {LastDatabaseRecordChangeIndex}) for {database} because it was already precessed.");
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Skipping record {index} (current {LastDatabaseRecordChangeIndex}) for {database} because it was already precessed.");
                 return true;
             }
 
@@ -1506,8 +1509,8 @@ namespace Raven.Server.Documents
             if (LastValueChangeIndex > index)
             {
                 // index and LastDatabaseRecordIndex could have equal values when we transit from/to passive and want to update the tasks.
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Skipping value change for index {index} (current {LastValueChangeIndex}) for {database} because it was already precessed.");
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Skipping value change for index {index} (current {LastValueChangeIndex}) for {database} because it was already precessed.");
                 return true;
             }
 
@@ -1670,8 +1673,8 @@ namespace Raven.Server.Documents
         {
             string title = $"Non Durable File System - {Name ?? "Unknown Database"}";
 
-            if (_logger.IsOperationsEnabled)
-                _logger.Operations($"{title}. {e.Message}", e.Exception);
+            if (Logger.IsOperationsEnabled)
+                Logger.Operations($"{title}. {e.Message}", e.Exception);
 
             _serverStore?.NotificationCenter.Add(AlertRaised.Create(
                 Name,
@@ -1725,8 +1728,8 @@ namespace Raven.Server.Documents
 
             string message = $"{e.Message}{Environment.NewLine}{Environment.NewLine}Environment: {environment}";
 
-            if (_logger.IsOperationsEnabled)
-                _logger.Operations($"{title}. {message}", e.Exception);
+            if (Logger.IsOperationsEnabled)
+                Logger.Operations($"{title}. {message}", e.Exception);
 
             nc?.Add(AlertRaised.Create(Name,
                 title,
@@ -1778,8 +1781,8 @@ namespace Raven.Server.Documents
 
             string message = $"{e.Message}{Environment.NewLine}{Environment.NewLine}Environment: {environment}";
 
-            if (_logger.IsOperationsEnabled)
-                _logger.Operations($"{title}. {message}", e.Exception);
+            if (Logger.IsOperationsEnabled)
+                Logger.Operations($"{title}. {message}", e.Exception);
 
             nc?.Add(AlertRaised.Create(Name,
                 title,
@@ -1794,8 +1797,8 @@ namespace Raven.Server.Documents
             var title = $"Recoverable Voron error in '{Name}' database";
             var message = $"Failure {e.FailureMessage} in the following environment: {e.EnvironmentPath}";
 
-            if (_logger.IsOperationsEnabled)
-                _logger.Operations($"{title}. {message}", e.Exception);
+            if (Logger.IsOperationsEnabled)
+                Logger.Operations($"{title}. {message}", e.Exception);
 
             try
             {

@@ -52,7 +52,7 @@ namespace Raven.Server.Documents
         public TransactionOperationsMerger(DocumentDatabase parent, CancellationToken shutdown)
         {
             _parent = parent;
-            _log = LoggingSource.Instance.GetLogger<TransactionOperationsMerger>(_parent.Name);
+            _log = parent.Logger;
             _shutdown = shutdown;
 
             _maxTimeToWaitForPreviousTxInMs = _parent.Configuration.TransactionMergerConfiguration.MaxTimeToWaitForPreviousTx.AsTimeSpan.TotalMilliseconds;

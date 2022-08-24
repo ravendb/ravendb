@@ -8,6 +8,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Server.Indexing;
+using Sparrow.Logging;
 using Sparrow.Server;
 using Voron;
 using Voron.Exceptions;
@@ -27,7 +28,9 @@ namespace SlowTests.Tests
         public void Can_reuse_files_for_cache()
         {
             var path = new VoronPathSetting(NewDataPath());
-            var environment = new StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions(path, path, path, null, null);
+
+            var logger = LoggingSource.Instance.GetLogger<TempFileCacheTests>("Test");
+            var environment = new StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions(path, path, path, null, null, logger);
 
             using (File.Create(TempFileCache.GetTempFileName(environment)))
             {
@@ -43,7 +46,8 @@ namespace SlowTests.Tests
         public void Skip_files_that_are_in_use()
         {
             var path = new VoronPathSetting(NewDataPath());
-            var environment = new StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions(path, path, path, null, null);
+            var logger = LoggingSource.Instance.GetLogger("Test","Test");
+            var environment = new StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions(path, path, path, null, null, logger);
 
             for (var i = 0; i < TempFileCache.MaxFilesToKeepInCache; i++)
             {

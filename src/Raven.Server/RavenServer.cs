@@ -76,10 +76,12 @@ namespace Raven.Server
         static RavenServer()
         {
             DebugStuff.Attach();
-            UnhandledExceptions.Track(Logger);
+            UnhandledExceptions.Track(LoggingSource.Instance.LoggersHolder.Generic);
         }
 
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RavenServer>("Server");
+        public readonly SwitchLogger Logger = new SwitchLogger(LoggingSource.Instance, "Server");
+        public readonly SwitchLogger DatabasesLogger;
+        public readonly SwitchLogger ClusterLogger;
         private readonly Logger _authAuditLog = LoggingSource.AuditLog.GetLogger("AuthenticateCertificate", "Audit");
         internal TestingStuff _forTestingPurposes;
 
@@ -125,6 +127,9 @@ namespace Raven.Server
 
         public RavenServer(RavenConfiguration configuration)
         {
+            DatabasesLogger = Logger.GetSubSwitchLogger("Databases");
+            ClusterLogger = Logger.GetSubSwitchLogger("Cluster");
+            
             JsonDeserializationValidator.Validate();
 
             Configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
@@ -142,7 +147,7 @@ namespace Raven.Server
             Metrics = new MetricCounters();
             MetricCacher = new ServerMetricCacher(this);
 
-            _tcpLogger = LoggingSource.Instance.GetLogger<RavenServer>("Server/TCP");
+            _tcpLogger = LoggingSource.Instance.LoggersHolder.Generic.GetLogger("Server/TCP");
             _externalCertificateValidator = new ExternalCertificateValidator(this, Logger);
             _tcpContextPool = new JsonContextPool(Configuration.Memory.MaxContextSizeToKeep);
         }

@@ -51,7 +51,7 @@ namespace Raven.Server.Rachis.Remote
             _context = JsonOperationContext.ShortTermSingleUse();
             _releaseBuffer = _context.GetMemoryBuffer(out _buffer);
             _disposeOnce = new DisposeOnce<SingleAttempt>(DisposeInternal);
-            _log = LoggingSource.Instance.GetLogger<RemoteConnection>($"{src} > {dest}");
+            _log = LoggingSource.Instance.LoggersHolder.Generic.GetLogger($"{src} > {dest}");
             RegisterConnection(dest, term, caller);
         }
 
@@ -433,7 +433,7 @@ namespace Raven.Server.Rachis.Remote
                 var rachisHello = JsonDeserializationRachis<RachisHello>.Deserialize(json);
                 _src = rachisHello.DebugSourceIdentifier ?? "unknown";
                 _destTag = rachisHello.DebugDestinationIdentifier ?? _destTag;
-                _log = LoggingSource.Instance.GetLogger<RemoteConnection>($"{_src} > {_destTag}");
+                _log = LoggingSource.Instance.LoggersHolder.Generic.GetLogger($"{_src} > {_destTag}");
                 _info.Destination = _destTag;
 
                 return rachisHello;

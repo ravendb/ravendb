@@ -18,7 +18,7 @@ namespace Raven.Server.NotificationCenter.Handlers
     {
         private const int WelcomeMessageId = -1;
         
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<ClusterDashboardConnection>(nameof(ClusterDashboardConnection));
+        private static readonly Logger Logger = LoggingSource.Instance.LoggersHolder.Generic.GetLogger<ClusterDashboardConnection>();
 
         private readonly CanAccessDatabase _canAccessDatabase;
         private readonly ClusterDashboardNotifications _clusterDashboardNotifications;

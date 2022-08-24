@@ -32,7 +32,6 @@ namespace Voron.Platform.Win32
         private readonly Win32NativeFileAccess _access;
         private readonly MemoryMappedFileAccess _memoryMappedFileAccess;
         private readonly bool _copyOnWriteMode;
-        private readonly Logger _logger;
         public override long TotalAllocationSize => _totalAllocationSize;
 
         [StructLayout(LayoutKind.Explicit)]
@@ -58,7 +57,6 @@ namespace Voron.Platform.Win32
             SYSTEM_INFO systemInfo;
             GetSystemInfo(out systemInfo);
             FileName = file;
-            _logger = LoggingSource.Instance.GetLogger<StorageEnvironment>($"Pager-{file}");
 
             _access = access;
             _copyOnWriteMode = Options.CopyOnWriteMode && FileName.FullPath.EndsWith(Constants.DatabaseFilename);
@@ -96,14 +94,14 @@ namespace Voron.Platform.Win32
                     if (PhysicalDrivePerMountCache.TryGetValue(drive, out UniquePhysicalDriveId) == false)
                         UniquePhysicalDriveId = GetPhysicalDriveId(drive);
 
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info($"Physical drive '{drive}' unique id = '{UniquePhysicalDriveId}' for file '{file}'");
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info($"Physical drive '{drive}' unique id = '{UniquePhysicalDriveId}' for file '{file}'");
                 }
                 catch (Exception ex)
                 {
                     UniquePhysicalDriveId = 0;
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info($"Failed to determine physical drive Id for drive letter '{drive}', file='{file}'", ex);
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info($"Failed to determine physical drive Id for drive letter '{drive}', file='{file}'", ex);
                 }
 
                 var streamAccessType = _access == Win32NativeFileAccess.GenericRead

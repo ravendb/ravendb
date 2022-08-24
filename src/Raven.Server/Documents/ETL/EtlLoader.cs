@@ -55,8 +55,7 @@ namespace Raven.Server.Documents.ETL
 
         public EtlLoader(DocumentDatabase database, ServerStore serverStore)
         {
-            Logger = LoggingSource.Instance.GetLogger(database.Name, GetType().FullName);
-
+            Logger = database.Logger;
             _database = database;
             _serverStore = serverStore;
 

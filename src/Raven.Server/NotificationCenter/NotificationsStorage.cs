@@ -23,7 +23,7 @@ namespace Raven.Server.NotificationCenter
 
         private static readonly Slice ByPostponedUntil;
 
-        protected readonly Logger Logger;
+        private readonly Logger _logger;
 
         private StorageEnvironment _environment;
 
@@ -40,9 +40,9 @@ namespace Raven.Server.NotificationCenter
             }
         }
 
-        public NotificationsStorage(string resourceName)
+        public NotificationsStorage(Logger logger)
         {
-            Logger = LoggingSource.Instance.GetLogger<NotificationsStorage>(resourceName);
+            _logger = logger;
 
             _actionsSchema.DefineKey(new TableSchema.SchemaIndexDef
             {
@@ -101,8 +101,8 @@ namespace Raven.Server.NotificationCenter
                     }
                 }
 
-                if (Logger.IsInfoEnabled)
-                    Logger.Info($"Saving notification '{notification.Id}'.");
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Saving notification '{notification.Id}'.");
 
                 using (var json = context.ReadObject(notification.ToJson(), "notification", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 using (var tx = context.OpenWriteTransaction())
@@ -242,8 +242,8 @@ namespace Raven.Server.NotificationCenter
                 }
             }
 
-            if (deleteResult && Logger.IsInfoEnabled)
-                Logger.Info($"Deleted notification '{id}'.");
+            if (deleteResult && _logger.IsInfoEnabled)
+                _logger.Info($"Deleted notification '{id}'.");
 
             return deleteResult;
 

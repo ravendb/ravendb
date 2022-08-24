@@ -10,7 +10,7 @@ namespace Raven.Server.ServerWide.Tcp.Sync
 {
     internal static class TcpNegotiationSyncExtensions
     {
-        private static readonly Logger Log = LoggingSource.Instance.GetLogger("TCP Negotiation", typeof(TcpNegotiation).FullName);
+        private static readonly Logger Log = LoggingSource.Instance.LoggersHolder.Generic.GetLogger(nameof(TcpNegotiation));
 
         internal static TcpConnectionHeaderMessage.SupportedFeatures NegotiateProtocolVersion(this TcpNegotiation.SyncTcpNegotiation syncTcpNegotiation, JsonOperationContext context, Stream stream, TcpNegotiateParameters parameters)
         {

@@ -100,9 +100,7 @@ namespace Raven.Server.ServerWide
     /// </summary>
     public class ServerStore : IDisposable, ILowMemoryHandler
     {
-        private const string ResourceName = nameof(ServerStore);
-
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<ServerStore>(ResourceName);
+        private readonly Logger Logger;
 
         public const string LicenseStorageKey = "License/Key";
 
@@ -150,6 +148,7 @@ namespace Raven.Server.ServerWide
 
         public ServerStore(RavenConfiguration configuration, RavenServer server)
         {
+            Logger = server.Logger;
             // we want our servers to be robust get early errors about such issues
             MemoryInformation.EnableEarlyOutOfMemoryChecks = true;
 
@@ -169,9 +168,9 @@ namespace Raven.Server.ServerWide
 
             DatabasesLandlord = new DatabasesLandlord(this);
 
-            _notificationsStorage = new NotificationsStorage(ResourceName);
+            _notificationsStorage = new NotificationsStorage(Logger);
 
-            NotificationCenter = new NotificationCenter.NotificationCenter(_notificationsStorage, null, ServerShutdown, configuration);
+            NotificationCenter = new NotificationCenter.NotificationCenter(_notificationsStorage, null, ServerShutdown, configuration, server.Logger);
 
             ServerDashboardNotifications = new ServerDashboardNotifications(this, ServerShutdown);
 
@@ -601,11 +600,11 @@ namespace Raven.Server.ServerWide
             StorageEnvironmentOptions options;
             if (Configuration.Core.RunInMemory)
             {
-                options = StorageEnvironmentOptions.CreateMemoryOnly(null, null, null, CatastrophicFailureNotification);
+                options = StorageEnvironmentOptions.CreateMemoryOnly(null, null, null, CatastrophicFailureNotification, Logger);
             }
             else
             {
-                options = StorageEnvironmentOptions.ForPath(path.FullPath, null, null, IoChanges, CatastrophicFailureNotification);
+                options = StorageEnvironmentOptions.ForPath(path.FullPath, null, null, IoChanges, CatastrophicFailureNotification, Logger);
                 var secretKey = Path.Combine(path.FullPath, "secret.key.encrypted");
                 if (File.Exists(secretKey))
                 {
@@ -809,7 +808,7 @@ namespace Raven.Server.ServerWide
             _engine.BeforeAppendToRaftLog = BeforeAppendToRaftLog;
 
             var myUrl = GetNodeHttpServerUrl();
-            _engine.Initialize(_env, Configuration, clusterChanges, myUrl, out _lastClusterTopologyIndex);
+            _engine.Initialize(_env, Configuration, clusterChanges, myUrl, out _lastClusterTopologyIndex, _server.ClusterLogger);
 
             SorterCompilationCache.Instance.AddServerWideItems(this);
             AnalyzerCompilationCache.Instance.AddServerWideItems(this);
@@ -3359,8 +3358,7 @@ namespace Raven.Server.ServerWide
 
             try
             {
-                await TestConnectionHandler.ConnectToClientNodeAsync(_server, connectionInfo.Result, Engine.TcpConnectionTimeout,
-                    LoggingSource.Instance.GetLogger("testing-connection", "testing-connection"), database, result, ServerShutdown);
+                await TestConnectionHandler.ConnectToClientNodeAsync(_server, connectionInfo.Result, Engine.TcpConnectionTimeout, database, result, ServerShutdown);
             }
             catch (Exception e)
             {

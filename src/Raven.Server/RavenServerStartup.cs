@@ -45,7 +45,7 @@ namespace Raven.Server
         private RequestRouter _router;
         private RavenServer _server;
         private long _requestId;
-        private readonly Logger _logger = LoggingSource.Instance.GetLogger<RavenServerStartup>("Server");
+        private static readonly Logger Logger = LoggingSource.Instance.LoggersHolder.Generic.GetLogger<RavenServerStartup>();
 
         public void Configure(IApplicationBuilder app, ILoggerFactory loggerFactory)
         {
@@ -221,9 +221,9 @@ namespace Raven.Server
                 }
                 catch (Exception internalException)
                 {
-                    if (_logger.IsOperationsEnabled)
+                    if (Logger.IsOperationsEnabled)
                     {
-                        _logger.Operations($"Error during error handling of a failed request. Original error: {e}", internalException);
+                        Logger.Operations($"Error during error handling of a failed request. Original error: {e}", internalException);
                     }
 
                     throw;
@@ -245,9 +245,9 @@ namespace Raven.Server
                     requestHandlerContext.Database?.Metrics.Requests.UpdateDuration(requestDuration);
                 }
 
-                if (_logger.IsInfoEnabled && SkipHttpLogging == false)
+                if (Logger.IsInfoEnabled && SkipHttpLogging == false)
                 {
-                    _logger.Info($"{context.Request.Method} {context.Request.Path.Value}{context.Request.QueryString.Value} - {context.Response.StatusCode} - {(sp?.ElapsedMilliseconds ?? 0):#,#;;0} ms", exception);
+                    Logger.Info($"{context.Request.Method} {context.Request.Path.Value}{context.Request.QueryString.Value} - {context.Response.StatusCode} - {(sp?.ElapsedMilliseconds ?? 0):#,#;;0} ms", exception);
                 }
             }
         }

@@ -80,7 +80,7 @@ namespace FastTests
         {
             LicenseManager.IgnoreProcessorAffinityChanges = ignore;
         }
-
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<TestBase>(nameof(TestBase));
         static unsafe TestBase()
         {
             IgnoreProcessorAffinityChanges(ignore: true);
@@ -606,7 +606,7 @@ namespace FastTests
 
             base.Dispose();
 
-            var exceptionAggregator = new ExceptionAggregator("Could not dispose test");
+            var exceptionAggregator = new ExceptionAggregator(Logger, "Could not dispose test");
 
             var testOutcomeAnalyzer = new TestOutcomeAnalyzer(Context);
             var shouldSaveDebugPackage = testOutcomeAnalyzer.ShouldSaveDebugPackage();
@@ -645,7 +645,6 @@ namespace FastTests
             ServersForDisposal = null;
 
             RavenTestHelper.DeletePaths(_localPathsToDelete, exceptionAggregator);
-
             exceptionAggregator.ThrowIfNeeded();
         }
 

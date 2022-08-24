@@ -30,15 +30,12 @@ using Raven.Server.Smuggler.Migration;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Logging;
 using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Web.System
 {
     public sealed class DatabasesHandler : RequestHandler
     {
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<DatabasesHandler>("Server");
-
         [RavenAction("/databases", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Databases()
         {

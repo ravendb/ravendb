@@ -51,7 +51,7 @@ namespace Raven.Server.Commercial
 {
     public class LicenseManager : IDisposable
     {
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<LicenseManager>("Server");
+        private static readonly Logger Logger = LoggingSource.Instance.LoggersHolder.Generic.GetLogger<LicenseManager>();
         private static readonly RSAParameters _rsaParameters;
         private readonly LicenseStorage _licenseStorage = new LicenseStorage();
         private Timer _leaseLicenseTimer;

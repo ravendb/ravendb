@@ -35,7 +35,7 @@ namespace Raven.Server.Utils.Cpu
     
     internal abstract class CpuUsageCalculator<T> : ICpuUsageCalculator where T : ProcessInfo
     {
-        protected readonly Logger Logger = LoggingSource.Instance.GetLogger<MachineResources>("Server");
+        protected readonly Logger Logger = LoggingSource.Instance.LoggersHolder.Generic.GetLogger<MachineResources>();
         private readonly object _locker = new object();
 
         protected  CpuUsageStats LastCpuUsage;

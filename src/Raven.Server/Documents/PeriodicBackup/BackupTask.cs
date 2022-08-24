@@ -58,7 +58,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         private readonly string _taskName;
         internal PeriodicBackupRunner.TestingStuff _forTestingPurposes;
         private readonly DateTime _startTimeUtc;
-        public BackupTask(DocumentDatabase database, BackupParameters backupParameters, BackupConfiguration configuration, Logger logger, PeriodicBackupRunner.TestingStuff forTestingPurposes = null)
+        public BackupTask(DocumentDatabase database, BackupParameters backupParameters, BackupConfiguration configuration, PeriodicBackupRunner.TestingStuff forTestingPurposes = null)
         {
             _database = database;
             _taskName = backupParameters.Name;
@@ -70,7 +70,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             _backupToLocalFolder = backupParameters.BackupToLocalFolder;
             _tempBackupPath = backupParameters.TempBackupPath;
             _configuration = configuration;
-            _logger = logger;
+            _logger = database.Logger;
             _isServerWide = backupParameters.Name?.StartsWith(ServerWideBackupConfiguration.NamePrefix, StringComparison.OrdinalIgnoreCase) ?? false;
             _isBackupEncrypted = IsBackupEncrypted(_database, _configuration);
             _forTestingPurposes = forTestingPurposes;
@@ -650,7 +650,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             if (_backupToLocalFolder)
             {
                 var sp = Stopwatch.StartNew();
-                var localRetentionPolicy = new LocalRetentionPolicyRunner(_retentionPolicyParameters, _configuration.LocalSettings.FolderPath);
+                var localRetentionPolicy = new LocalRetentionPolicyRunner(_retentionPolicyParameters, _configuration.LocalSettings.FolderPath, _logger);
                 localRetentionPolicy.Execute();
                 sp.Stop();
                 status.LocalRetentionDurationInMs = sp.ElapsedMilliseconds;
@@ -758,7 +758,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             using (var outputStream = GetOutputStream(fileStream))
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                var smugglerSource = new DatabaseSource(_database, startDocumentEtag.Value, startRaftIndex.Value, _logger);
+                var smugglerSource = new DatabaseSource(_database, startDocumentEtag.Value, startRaftIndex.Value);
                 var smugglerDestination = new StreamDestination(outputStream, context, smugglerSource);
                 var smuggler = new DatabaseSmuggler(_database,
                     smugglerSource,

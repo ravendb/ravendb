@@ -32,12 +32,12 @@ namespace Raven.Server.Documents.Replication
 
         internal Dictionary<string, ScriptResolver> ScriptConflictResolversCache = new Dictionary<string, ScriptResolver>();
 
-        public ResolveConflictOnReplicationConfigurationChange(ReplicationLoader replicationLoader, Logger log)
+        public ResolveConflictOnReplicationConfigurationChange(ReplicationLoader replicationLoader)
         {
             _replicationLoader = replicationLoader ??
                 throw new ArgumentNullException($"{nameof(ResolveConflictOnReplicationConfigurationChange)} must have replicationLoader instance");
             _database = _replicationLoader.Database;
-            _log = log;
+            _log = _database.Logger;
         }
 
         public long ConflictsCount => _database.DocumentsStorage?.ConflictsStorage?.ConflictsCount ?? 0;
@@ -547,8 +547,7 @@ namespace Raven.Server.Documents.Replication
         public ResolveConflictOnReplicationConfigurationChange.PutResolvedConflictsCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
             var resolver = new ResolveConflictOnReplicationConfigurationChange(
-                database.ReplicationLoader,
-                LoggingSource.Instance.GetLogger<DatabaseDestination>(database.Name));
+                database.ReplicationLoader);
 
             return new ResolveConflictOnReplicationConfigurationChange.PutResolvedConflictsCommand(
                 database.DocumentsStorage.ConflictsStorage,

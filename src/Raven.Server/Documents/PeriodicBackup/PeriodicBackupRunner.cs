@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             _database = database;
             _serverStore = serverStore;
-            _logger = LoggingSource.Instance.GetLogger<PeriodicBackupRunner>(_database.Name);
+            _logger = database.Logger;
             _auditLog = LoggingSource.AuditLog.GetLogger(_database.Name, "Audit");
             _cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
             _tempBackupPath = BackupUtils.GetBackupTempPath(_database.Configuration, "PeriodicBackupTemp", out _);
@@ -382,7 +382,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                         Name = periodicBackup.Configuration.Name
                     };
 
-                    var backupTask = new BackupTask(_database, backupParameters, periodicBackup.Configuration, _logger, _forTestingPurposes);
+                    var backupTask = new BackupTask(_database, backupParameters, periodicBackup.Configuration, _forTestingPurposes);
                     periodicBackup.CancelToken = backupTask.TaskCancelToken;
 
                     periodicBackup.RunningTask = new PeriodicBackup.RunningBackupTask

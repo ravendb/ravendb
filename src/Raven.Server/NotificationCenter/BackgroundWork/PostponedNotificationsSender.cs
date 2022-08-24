@@ -6,6 +6,7 @@ using Raven.Client.Util;
 using Raven.Server.Background;
 using Raven.Server.NotificationCenter.Notifications;
 using Sparrow.Collections;
+using Sparrow.Logging;
 using Sparrow.Server;
 
 namespace Raven.Server.NotificationCenter.BackgroundWork
@@ -16,9 +17,9 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
         private readonly ConcurrentSet<ConnectedWatcher> _watchers;
         private AsyncManualResetEvent _event;
 
-        public PostponedNotificationsSender(string resourceName, NotificationsStorage notificationsStorage,
-            ConcurrentSet<ConnectedWatcher> watchers, CancellationToken shutdown)
-            : base(resourceName, shutdown)
+        public PostponedNotificationsSender(NotificationsStorage notificationsStorage,
+            ConcurrentSet<ConnectedWatcher> watchers, Logger logger, CancellationToken shutdown)
+            : base(logger, shutdown)
         {
             _notificationsStorage = notificationsStorage;
             _watchers = watchers;

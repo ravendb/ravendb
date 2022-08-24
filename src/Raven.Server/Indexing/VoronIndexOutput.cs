@@ -12,7 +12,7 @@ namespace Raven.Server.Indexing
 {
     public class VoronIndexOutput : BufferedIndexOutput
     {
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<LuceneVoronDirectory>("VoronIndexOutput");
+        private readonly Logger _logger;
 
         private readonly TempFileCache _fileCache;
         private readonly string _name;
@@ -24,13 +24,14 @@ namespace Raven.Server.Indexing
 
         private Stream StreamToUse => _ms ?? _file;
 
-        public VoronIndexOutput(
-            TempFileCache fileCache,
+        public VoronIndexOutput(TempFileCache fileCache,
             string name,
             Transaction tx,
             string tree,
-            IndexOutputFilesSummary indexOutputFilesSummary)
+            IndexOutputFilesSummary indexOutputFilesSummary, 
+            Logger logger)
         {
+            _logger = logger;
             _fileCache = fileCache;
             _name = name;
             _tree = tree;
@@ -151,8 +152,8 @@ namespace Raven.Server.Indexing
             }
             catch (Exception e)
             {
-                if (Logger.IsOperationsEnabled)
-                    Logger.Operations($"Failed to copy the file: {_name}", e);
+                if (_logger.IsOperationsEnabled)
+                    _logger.Operations($"Failed to copy the file: {_name}", e);
 
                 _indexOutputFilesSummary.SetWriteError();
 

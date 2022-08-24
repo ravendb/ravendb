@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Raven.Server.Documents.PeriodicBackup.GoogleCloud;
+using Sparrow.Logging;
 
 namespace Raven.Server.Documents.PeriodicBackup.Retention
 {
@@ -10,8 +11,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
 
         protected override string Name => "Google Cloud";
 
-        public GoogleCloudRetentionPolicyRunner(RetentionPolicyBaseParameters parameters, RavenGoogleCloudClient client)
-            : base(parameters)
+        public GoogleCloudRetentionPolicyRunner(RetentionPolicyBaseParameters parameters, RavenGoogleCloudClient client, Logger logger)
+            : base(parameters, logger)
         {
             _client = client;
         }

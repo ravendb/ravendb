@@ -23,13 +23,12 @@ namespace Raven.Server.Utils.Metrics
 
         private readonly ConcurrentSet<WeakReference<Ewma>> _scheduledEwmaActions = new ConcurrentSet<WeakReference<Ewma>>();
 
-        private readonly Logger _logger;
+        private static readonly Logger Logger = LoggingSource.Instance.LoggersHolder.Generic.GetLogger<MetricsScheduler>();
 
         public static readonly MetricsScheduler Instance = new MetricsScheduler();
 
         private MetricsScheduler()
         {
-            _logger = LoggingSource.Instance.GetLogger<MetricsScheduler>("Server");
             _tickIntervalInNanoseconds = Clock.NanosecondsInSecond;
             _schedulerThread = new Thread(SchedulerTicking)
             {
@@ -64,8 +63,8 @@ namespace Raven.Server.Utils.Metrics
                     }
                     catch (Exception e)
                     {
-                        if (_logger.IsInfoEnabled)
-                            _logger.Info("Error occurred during MetricsScheduler ticking of a single Metric action", e);
+                        if (Logger.IsInfoEnabled)
+                            Logger.Info("Error occurred during MetricsScheduler ticking of a single Metric action", e);
                     }
                 }
 
@@ -84,8 +83,8 @@ namespace Raven.Server.Utils.Metrics
                     }
                     catch (Exception e)
                     {
-                        if (_logger.IsInfoEnabled)
-                            _logger.Info("Error occurred during MetricsScheduler ticking of a single EWMA action", e);
+                        if (Logger.IsInfoEnabled)
+                            Logger.Info("Error occurred during MetricsScheduler ticking of a single EWMA action", e);
                     }
                 }
 

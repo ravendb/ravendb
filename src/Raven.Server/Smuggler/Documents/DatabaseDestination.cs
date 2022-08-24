@@ -68,7 +68,7 @@ namespace Raven.Server.Smuggler.Documents
         {
             _database = database;
             _token = token;
-            _log = LoggingSource.Instance.GetLogger<DatabaseDestination>(database.Name);
+            _log = database.Logger;
             _duplicateDocsHandler = new DuplicateDocsHandler(_database);
         }
 
@@ -1810,7 +1810,7 @@ namespace Raven.Server.Smuggler.Documents
 
             public MergedBatchPutCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
             {
-                var log = LoggingSource.Instance.GetLogger<DatabaseDestination>(database.Name);
+                var log = database.Logger;
                 var command = new MergedBatchPutCommand(database, BuildType, log)
                 {
                     IsRevision = IsRevision
@@ -1962,7 +1962,7 @@ namespace Raven.Server.Smuggler.Documents
 
                 public MergedBatchFixDocumentMetadataCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
                 {
-                    var log = LoggingSource.Instance.GetLogger<DatabaseDestination>(database.Name);
+                    var log = database.Logger;
                     var command = new MergedBatchFixDocumentMetadataCommand(database, log);
 
                     foreach (var id in Ids)
@@ -2045,7 +2045,7 @@ namespace Raven.Server.Smuggler.Documents
 
             public MergedBatchDeleteRevisionCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
             {
-                var log = LoggingSource.Instance.GetLogger<DatabaseDestination>(database.Name);
+                var log = database.Logger;
                 var command = new MergedBatchDeleteRevisionCommand(database, log);
 
                 foreach (var id in Ids)

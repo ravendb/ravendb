@@ -23,7 +23,7 @@ namespace Raven.Server.Commercial.LetsEncrypt;
 
 public class LetsEncryptSimulationHelper
 {
-    internal static readonly Logger Logger = LoggingSource.Instance.GetLogger<LicenseManager>("Server");
+    internal static readonly Logger Logger = LoggingSource.Instance.LoggersHolder.Generic.GetLogger<LicenseManager>();
 
     internal class UniqueResponseResponder : IStartup
     {

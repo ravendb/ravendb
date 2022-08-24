@@ -59,7 +59,7 @@ namespace Voron.Impl.Scratch
 
         public ScratchBufferPool(StorageEnvironment env)
         {
-            _logger = LoggingSource.Instance.GetLogger<ScratchBufferPool>(Path.GetFileName(env.ToString()));
+            _logger = env.Logger;
 
             _disposeOnceRunner = new DisposeOnce<ExceptionRetry>(() =>
             {
@@ -575,7 +575,7 @@ namespace Voron.Impl.Scratch
                             if (_logger.IsInfoEnabled)
                             {
                                 _logger.Info(
-                                    $"Cleanup of {nameof(ScratchBufferPool)} removed: {removedInactive} inactive scratches and {removedInactiveRecycled} inactive from the recycle area");
+                                    $"Cleanup of {nameof(ScratchBufferPool)} removed: {removedInactive} inactive scratches and {removedInactiveRecycled} inactive from the recycle area. env {_env}");
                             }
 
                             _forTestingPurposes?.ActionToCallDuringCleanupRightAfterRemovingInactiveScratches?.Invoke();

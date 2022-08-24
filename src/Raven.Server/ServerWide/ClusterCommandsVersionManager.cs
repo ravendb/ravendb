@@ -33,7 +33,7 @@ namespace Raven.Server.ServerWide
         public static int CurrentClusterMinimalVersion => _currentClusterMinimalVersion;
         private static int _currentClusterMinimalVersion;
 
-        private static readonly Logger Log = LoggingSource.Instance.GetLogger(typeof(ClusterCommandsVersionManager).FullName, typeof(ClusterCommandsVersionManager).FullName);
+        private static readonly Logger Log = LoggingSource.Instance.LoggersHolder.Generic.GetLogger(nameof(ClusterCommandsVersionManager));
 
         public static readonly IReadOnlyDictionary<string, int> ClusterCommandsVersions = new Dictionary<string, int>
         {

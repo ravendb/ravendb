@@ -13,7 +13,7 @@ namespace Sparrow.Json
         where T : JsonOperationContext
     {
         private readonly object _locker = new object();
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<JsonContextPoolBase<T>>("Memory");
+        private static readonly Logger Logger = LoggingSource.Instance.LoggersHolder.Memory.GetLogger<JsonContextPoolBase<T>>();
 
         private bool _disposed;
 

@@ -38,9 +38,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private readonly IState _state;
         private readonly LuceneVoronDirectory _directory;
 
-
+        
         public LuceneIndexWriteOperation(Index index, LuceneVoronDirectory directory, LuceneDocumentConverterBase converter, Transaction writeTransaction, LuceneIndexPersistence persistence)
-            : base(index, LoggingSource.Instance.GetLogger<LuceneIndexWriteOperation>(index._indexStorage.DocumentDatabase.Name))
+            : base(index, index.Logger)
         {
             _converter = converter;
 

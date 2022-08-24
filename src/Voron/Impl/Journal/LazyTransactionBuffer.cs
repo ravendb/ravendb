@@ -27,7 +27,7 @@ namespace Voron.Impl.Journal
             _options = options;
             _lazyTransactionPager = CreateBufferPager();
             _transactionPersistentContext = new TransactionPersistentContext(true);
-            _log = LoggingSource.Instance.GetLogger<LazyTransactionBuffer>(options.BasePath.FullPath);
+            _log = options.Logger;
         }
 
         private AbstractPager CreateBufferPager()
@@ -95,7 +95,7 @@ namespace Voron.Impl.Journal
                     journalFile.Write(_firstPositionInJournalFile.Value, src, _lastUsed4Kbs);
                     if (_log.IsInfoEnabled)
                     {
-                        _log.Info($"Writing lazy transaction buffer with {_lastUsed4Kbs / 4:#,#0} kb took {sp.Elapsed}");
+                        _log.Info($"Writing lazy transaction buffer with {_lastUsed4Kbs / 4:#,#0} kb took {sp.Elapsed}. {nameof(_options)} {_options}");
                     }
                     ZeroLazyTransactionBufferIfNeeded(tempTx);
                 }

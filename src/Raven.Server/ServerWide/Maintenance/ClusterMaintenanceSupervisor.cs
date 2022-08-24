@@ -206,7 +206,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 _token = _cts.Token;
                 _readStatusUpdateDebugString = $"ClusterMaintenanceServer/{ClusterTag}/UpdateState/Read-Response in term {term}";
                 _name = $"Heartbeats supervisor from {_parent._server.NodeTag} to {ClusterTag} in term {term}";
-                _log = LoggingSource.Instance.GetLogger<ClusterNode>(_name);
+                _log = _parent._server.Server.ClusterLogger;
                 _term = term;
             }
 
@@ -230,7 +230,7 @@ namespace Raven.Server.ServerWide.Maintenance
                     {
                         if (_log.IsInfoEnabled)
                         {
-                            _log.Info($"Exception occurred while collecting info from {ClusterTag}. Task is closed.", e);
+                            _log.Info($"{_name}: Exception occurred while collecting info from {ClusterTag}. Task is closed.", e);
                         }
                         // we don't want to crash the process so we don't propagate this exception.
                     }
@@ -249,7 +249,7 @@ namespace Raven.Server.ServerWide.Maintenance
                     if (_log.IsInfoEnabled)
                     {
                         _log.Info(
-                            $"Warning: TCP timeout is lower than the receive from worker timeout ({tcpTimeout} < {receiveFromWorkerTimeout}), " +
+                            $"{_name}: Warning: TCP timeout is lower than the receive from worker timeout ({tcpTimeout} < {receiveFromWorkerTimeout}), " +
                             "this could affect the cluster observer's decisions.");
                     }
                 }
@@ -312,7 +312,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
                                     if (_log.IsInfoEnabled)
                                     {
-                                        _log.Info("Exception occurred while reading the report from the connection", e);
+                                        _log.Info($"{_name}: Exception occurred while reading the report from the connection", e);
                                     }
 
                                     ReceivedReport = new ClusterNodeStatusReport(new ServerReport(), new Dictionary<string, DatabaseStatusReport>(),
@@ -345,7 +345,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
                         if (_log.IsInfoEnabled)
                         {
-                            _log.Info($"Exception was thrown while collecting info from {ClusterTag}", e);
+                            _log.Info($"{_name}: Exception was thrown while collecting info from {ClusterTag}", e);
                         }
 
                         ReceivedReport = new ClusterNodeStatusReport(new ServerReport(), new Dictionary<string, DatabaseStatusReport>(),
@@ -404,7 +404,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 // expected timeout
                 if (_log.IsInfoEnabled)
                 {
-                    _log.Info("Timeout occurred while collecting info report.");
+                    _log.Info($"{_name}: Timeout occurred while collecting info report.");
                 }
 
                 ReceivedReport = new ClusterNodeStatusReport(new ServerReport(), new Dictionary<string, DatabaseStatusReport>(),

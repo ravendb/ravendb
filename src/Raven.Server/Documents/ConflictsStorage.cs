@@ -120,7 +120,7 @@ namespace Raven.Server.Documents
         {
             _documentDatabase = documentDatabase;
             _documentsStorage = documentDatabase.DocumentsStorage;
-            _logger = LoggingSource.Instance.GetLogger<ConflictsStorage>(documentDatabase.Name);
+            _logger = documentDatabase.Logger;
 
             ConflictsSchema.Create(tx, ConflictsSlice, 32);
 

@@ -39,7 +39,7 @@ namespace Raven.Server.Monitoring.Snmp
 
         private readonly SemaphoreSlim _locker = new SemaphoreSlim(1, 1);
 
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<SnmpWatcher>("Server");
+        private readonly Logger _logger;
 
         private readonly RavenServer _server;
 
@@ -49,6 +49,7 @@ namespace Raven.Server.Monitoring.Snmp
 
         public SnmpWatcher(RavenServer server)
         {
+            _logger = server.Logger;
             _server = server;
             _server.ServerStore.LicenseManager.LicenseChanged += OnLicenseChanged;
         }
@@ -169,8 +170,8 @@ namespace Raven.Server.Monitoring.Snmp
                 }
                 catch (Exception e)
                 {
-                    if (Logger.IsOperationsEnabled)
-                        Logger.Operations($"Failed to update the SNMP mapping for database: {databaseName}", e);
+                    if (_logger.IsOperationsEnabled)
+                        _logger.Operations($"Failed to update the SNMP mapping for database: {databaseName}", e);
                 }
                 finally
                 {
@@ -193,7 +194,7 @@ namespace Raven.Server.Monitoring.Snmp
 
             var messageHandlerFactory = new MessageHandlerFactory(handlers);
 
-            var factory = new SnmpApplicationFactory(new SnmpLogger(Logger), objectStore, membershipProvider, messageHandlerFactory);
+            var factory = new SnmpApplicationFactory(new SnmpLogger(), objectStore, membershipProvider, messageHandlerFactory);
 
             var listener = new Listener();
 
@@ -245,8 +246,9 @@ namespace Raven.Server.Monitoring.Snmp
             engine.Listener.AddBinding(new IPEndPoint(IPAddress.Any, server.Configuration.Monitoring.Snmp.Port));
             engine.Listener.ExceptionRaised += (sender, e) =>
             {
-                if (Logger.IsOperationsEnabled)
-                    Logger.Operations("SNMP error: " + e.Exception.Message, e.Exception);
+                var logger = server.Logger;
+                if (logger.IsOperationsEnabled)
+                    logger.Operations("SNMP error: " + e.Exception.Message, e.Exception);
             };
 
             return engine;
@@ -570,8 +572,8 @@ namespace Raven.Server.Monitoring.Snmp
                 if (missingDatabases?.Count > 0)
                     msg += $" missing databases: {string.Join(", ", missingDatabases)}";
 
-                if (Logger.IsOperationsEnabled)
-                    Logger.Operations(msg, e);
+                if (_logger.IsOperationsEnabled)
+                    _logger.Operations(msg, e);
             }
             finally
             {
@@ -620,17 +622,12 @@ namespace Raven.Server.Monitoring.Snmp
 
         private class SnmpLogger : ILogger
         {
-            private readonly Logger _logger;
-
-            public SnmpLogger(Logger logger)
-            {
-                _logger = logger;
-            }
+            private static readonly Logger Logger = LoggingSource.Instance.LoggersHolder.Generic.GetLogger<SnmpLogger>();
 
             public void Log(ISnmpContext context)
             {
 #if DEBUG
-                if (_logger.IsInfoEnabled)
+                if (Logger.IsInfoEnabled)
                     return;
 
                 var builder = new StringBuilder();
@@ -652,7 +649,7 @@ namespace Raven.Server.Monitoring.Snmp
                     builder.AppendLine(string.Format("OID: {0}. Response: {1}", oid, responseData?.ToString()));
                 }
 
-                _logger.Info(builder.ToString());
+                Logger.Info(builder.ToString());
 #endif
             }
         }

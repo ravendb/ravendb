@@ -238,8 +238,9 @@ namespace Voron
 
         public event Action<StorageEnvironmentOptions> OnDirectoryInitialize;
 
-        protected StorageEnvironmentOptions(VoronPathSetting tempPath, IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification)
+        protected StorageEnvironmentOptions(VoronPathSetting tempPath, IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification, Logger logger)
         {
+            Logger = logger;
             DisposeWaitTime = TimeSpan.FromSeconds(15);
 
             TempPath = tempPath;
@@ -272,12 +273,10 @@ namespace Voron
                 new IoMetrics(0, 0) : // disabled
                 new IoMetrics(256, 256, ioChangesNotifications);
 
-            _log = LoggingSource.Instance.GetLogger<StorageEnvironmentOptions>(tempPath.FullPath);
-
             _catastrophicFailureNotification = catastrophicFailureNotification ?? new CatastrophicFailureNotification((id, path, e, stacktrace) =>
             {
-                if (_log.IsOperationsEnabled)
-                    _log.Operations($"Catastrophic failure in {this}, StackTrace:'{stacktrace}'", e);
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations($"Catastrophic failure in {this}, StackTrace:'{stacktrace}'", e);
             });
 
             PrefetchSegmentSize = 4 * Constants.Size.Megabyte;
@@ -304,8 +303,8 @@ namespace Voron
             }
             else
             {
-                if (_log.IsOperationsEnabled)
-                    _log.Operations($"Recoverable failure in {this}. Error: {failureMessage}.", e);
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations($"Recoverable failure in {this}. Error: {failureMessage}.", e);
             }
         }
 
@@ -319,8 +318,8 @@ namespace Voron
             if (_skipCatastrophicFailureAssertion)
                 return;
 
-            if (_log.IsInfoEnabled)
-                _log.Info($"CatastrophicFailure state, about to throw. Originally was set in the following stack trace : {_catastrophicFailureStack}");
+            if (Logger.IsInfoEnabled)
+                Logger.Info($"CatastrophicFailure state, about to throw. Originally was set in the following stack trace : {_catastrophicFailureStack}. Options:{this}");
 
             _catastrophicFailure.Throw(); // force re-throw of error
         }
@@ -332,29 +331,32 @@ namespace Voron
             return new DisposableAction(() => { _skipCatastrophicFailureAssertion = false; });
         }
 
-        public static StorageEnvironmentOptions CreateMemoryOnly(string name, string tempPath, IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification)
+        public static StorageEnvironmentOptions CreateMemoryOnly(string name, string tempPath, IoChangesNotifications ioChangesNotifications,
+            CatastrophicFailureNotification catastrophicFailureNotification, Logger logger)
         {
             var tempPathSetting = new VoronPathSetting(tempPath ?? GetTempPath());
-            return new PureMemoryStorageEnvironmentOptions(name, tempPathSetting, ioChangesNotifications, catastrophicFailureNotification);
+            return new PureMemoryStorageEnvironmentOptions(name, tempPathSetting, ioChangesNotifications, catastrophicFailureNotification, logger);
         }
 
         public static StorageEnvironmentOptions CreateMemoryOnly()
         {
-            return CreateMemoryOnly(null, null, null, null);
+            var logger = LoggingSource.Instance.LoggersHolder.Generic;
+            return CreateMemoryOnly(null, null, null, null, logger);
         }
 
-        public static StorageEnvironmentOptions ForPath(string path, string tempPath, string journalPath, IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification)
+        public static StorageEnvironmentOptions ForPath(string path, string tempPath, string journalPath, IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification, Logger logger)
         {
             var pathSetting = new VoronPathSetting(path);
             var tempPathSetting = new VoronPathSetting(tempPath ?? GetTempPath(path));
             var journalPathSetting = journalPath != null ? new VoronPathSetting(journalPath) : pathSetting.Combine("Journals");
 
-            return new DirectoryStorageEnvironmentOptions(pathSetting, tempPathSetting, journalPathSetting, ioChangesNotifications, catastrophicFailureNotification);
+            return new DirectoryStorageEnvironmentOptions(pathSetting, tempPathSetting, journalPathSetting, ioChangesNotifications, catastrophicFailureNotification, logger);
         }
 
-        public static StorageEnvironmentOptions ForPath(string path)
+        public static StorageEnvironmentOptions ForPath(string path, Logger logger = null)
         {
-            return ForPath(path, null, null, null, null);
+            logger ??= LoggingSource.Instance.LoggersHolder.Generic.GetLogger<StorageEnvironmentOptions>();
+            return ForPath(path, null, null, null, null, logger);
         }
 
         private static string GetTempPath(string basePath = null)
@@ -408,8 +410,8 @@ namespace Voron
                 new ConcurrentDictionary<string, LazyWithExceptionRetry<IJournalWriter>>(StringComparer.OrdinalIgnoreCase);
 
             public DirectoryStorageEnvironmentOptions(VoronPathSetting basePath, VoronPathSetting tempPath, VoronPathSetting journalPath,
-                IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification)
-                : base(tempPath ?? basePath, ioChangesNotifications, catastrophicFailureNotification)
+                IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification, Logger logger)
+                : base(tempPath ?? basePath, ioChangesNotifications, catastrophicFailureNotification, logger)
             {
                 Debug.Assert(basePath != null);
                 Debug.Assert(journalPath != null);
@@ -480,8 +482,8 @@ namespace Voron
                     }
                     catch (Exception ex)
                     {
-                        if (_log.IsInfoEnabled)
-                            _log.Info("On Storage Environment Options : Can't store journal for reuse : " + reusableFile, ex);
+                        if (Logger.IsInfoEnabled)
+                            Logger.Info("On Storage Environment Options : Can't store journal for reuse : " + reusableFile, ex);
                         TryDelete(reusableFile);
                     }
                 }
@@ -581,8 +583,8 @@ namespace Voron
                 }
                 catch (Exception ex)
                 {
-                    if (_log.IsInfoEnabled)
-                        _log.Info(ShouldRemoveJournal() ? "Can't remove" : "Can't store" + " journal for reuse : " + filename, ex);
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info(ShouldRemoveJournal() ? "Can't remove" : "Can't store" + " journal for reuse : " + filename, ex);
                     try
                     {
                         if (File.Exists(filename.FullPath))
@@ -636,8 +638,8 @@ namespace Voron
                         {
                             TryDelete(filename);
 
-                            if (_log.IsInfoEnabled)
-                                _log.Info("Failed to rename " + filename + " to " + desiredPath, ex);
+                            if (Logger.IsInfoEnabled)
+                                Logger.Info("Failed to rename " + filename + " to " + desiredPath, ex);
                         }
                     }
 
@@ -946,8 +948,8 @@ namespace Voron
 
 
             public PureMemoryStorageEnvironmentOptions(string name, VoronPathSetting tempPath,
-                IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification)
-                : base(tempPath, ioChangesNotifications, catastrophicFailureNotification)
+                IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification, Logger parentLogger)
+                : base(tempPath, ioChangesNotifications, catastrophicFailureNotification, parentLogger)
             {
                 _name = name;
                 _instanceId = Interlocked.Increment(ref _counter);
@@ -1253,7 +1255,7 @@ namespace Voron
         public int MaxNumberOfRecyclableJournals { get; set; } = 32;
         public bool DiscardVirtualMemory { get; set; } = true;
         
-        private readonly Logger _log;
+        public readonly Logger Logger;
 
         private readonly SortedList<long, string> _journalsForReuse = new SortedList<long, string>();
 
@@ -1274,8 +1276,8 @@ namespace Voron
             }
             catch (Exception ex)
             {
-                if (_log.IsInfoEnabled)
-                    _log.Info("Failed to delete " + file, ex);
+                if (Logger.IsInfoEnabled)
+                    Logger.Info("Failed to delete " + file, ex);
             }
         }
 
@@ -1297,8 +1299,8 @@ namespace Voron
                     }
                     catch (Exception ex)
                     {
-                        if (_log.IsInfoEnabled)
-                            _log.Info($"Couldn't delete recyclable journal: {recyclableJournal.Value}", ex);
+                        if (Logger.IsInfoEnabled)
+                            Logger.Info($"Couldn't delete recyclable journal: {recyclableJournal.Value}. Options {this}", ex);
                     }
                 }
 
@@ -1330,17 +1332,17 @@ namespace Voron
                 {
                     case PalFlags.FailCodes.FailOpenFile:
                         {
-                            if (_log.IsInfoEnabled)
-                                _log.Info(
-                                    $"Failed to create test file at '{testFile}'. Error:'{PalHelper.GetNativeErrorString(errorCode, "Failed to open test file", out _)}'. Cannot determine if O_DIRECT supported by the file system. Assuming it is");
+                            if (Logger.IsInfoEnabled)
+                                Logger.Info(
+                                    $"Failed to create test file at '{testFile}'. Error:'{PalHelper.GetNativeErrorString(errorCode, "Failed to open test file", out _)}'. Cannot determine if O_DIRECT supported by the file system. Assuming it is. Options {this}");
                         }
                         break;
 
                     case PalFlags.FailCodes.FailAllocFile:
                         {
-                            if (_log.IsInfoEnabled)
-                                _log.Info(
-                                    $"Failed to allocate test file at '{testFile}'. Error:'{PalHelper.GetNativeErrorString(errorCode, "Failed to allocate space for test file", out _)}'. Cannot determine if O_DIRECT supported by the file system. Assuming it is");
+                            if (Logger.IsInfoEnabled)
+                                Logger.Info(
+                                    $"Failed to allocate test file at '{testFile}'. Error:'{PalHelper.GetNativeErrorString(errorCode, "Failed to allocate space for test file", out _)}'. Cannot determine if O_DIRECT supported by the file system. Assuming it is. Options {this}");
                         }
                         break;
 
@@ -1358,9 +1360,9 @@ namespace Voron
                     case PalFlags.FailCodes.Success:
                         break;
                     default:
-                        if (_log.IsInfoEnabled)
-                            _log.Info(
-                                $"Unknown failure on test file at '{testFile}'. Error:'{PalHelper.GetNativeErrorString(errorCode, "Unknown error while testing O_DIRECT", out _)}'. Cannot determine if O_DIRECT supported by the file system. Assuming it is");
+                        if (Logger.IsInfoEnabled)
+                            Logger.Info(
+                                $"Unknown failure on test file at '{testFile}'. Error:'{PalHelper.GetNativeErrorString(errorCode, "Unknown error while testing O_DIRECT", out _)}'. Cannot determine if O_DIRECT supported by the file system. Assuming it is. Options {this}");
                         break;
                 }
             }

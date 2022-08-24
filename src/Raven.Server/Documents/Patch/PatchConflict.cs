@@ -18,7 +18,7 @@ namespace Raven.Server.Documents.Patch
 
         public PatchConflict(DocumentDatabase database, IReadOnlyList<DocumentConflict> docs)
         {
-            _logger = LoggingSource.Instance.GetLogger<PatchConflict>(database.Name);
+            _logger = database.Logger;
             _database = database;
 
             foreach (var doc in docs)

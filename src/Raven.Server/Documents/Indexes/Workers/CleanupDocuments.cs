@@ -30,8 +30,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             _mapReduceContext = mapReduceContext;
             _documentsStorage = documentsStorage;
             _indexStorage = indexStorage;
-            _logger = LoggingSource.Instance
-                .GetLogger<CleanupDocuments>(indexStorage.DocumentDatabase.Name);
+            _logger = _index.Logger;
         }
 
         public string Name => "Cleanup";

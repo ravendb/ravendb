@@ -184,7 +184,7 @@ namespace Raven.Server.Documents
         {
             DocumentDatabase = documentDatabase;
             _name = DocumentDatabase.Name;
-            _logger = LoggingSource.Instance.GetLogger<DocumentsStorage>(documentDatabase.Name);
+            _logger = documentDatabase.Logger;
             _addToInitLog = addToInitLog;
         }
 
@@ -242,7 +242,7 @@ namespace Raven.Server.Documents
 
             }
 
-            var options = GetStorageEnvironmentOptionsFromConfiguration(DocumentDatabase.Configuration, DocumentDatabase.IoChanges, DocumentDatabase.CatastrophicFailureNotification);
+            var options = GetStorageEnvironmentOptionsFromConfiguration(DocumentDatabase.Configuration, DocumentDatabase.IoChanges, DocumentDatabase.CatastrophicFailureNotification, _logger);
 
             options.OnNonDurableFileSystemError += DocumentDatabase.HandleNonDurableFileSystemError;
             options.OnRecoveryError += DocumentDatabase.HandleOnDatabaseRecoveryError;
@@ -281,21 +281,23 @@ namespace Raven.Server.Documents
             }
         }
 
-        public static StorageEnvironmentOptions GetStorageEnvironmentOptionsFromConfiguration(RavenConfiguration config, IoChangesNotifications ioChanges, CatastrophicFailureNotification catastrophicFailureNotification)
+        public static StorageEnvironmentOptions GetStorageEnvironmentOptionsFromConfiguration(RavenConfiguration config, IoChangesNotifications ioChanges, CatastrophicFailureNotification catastrophicFailureNotification, Logger logger)
         {
             if (config.Core.RunInMemory)
                 return StorageEnvironmentOptions.CreateMemoryOnly(
                     config.Core.DataDirectory.FullPath,
                     config.Storage.TempPath?.FullPath,
                     ioChanges,
-                    catastrophicFailureNotification);
+                    catastrophicFailureNotification,
+                    logger);
 
             return StorageEnvironmentOptions.ForPath(
                 config.Core.DataDirectory.FullPath,
                 config.Storage.TempPath?.FullPath,
                 null,
                 ioChanges,
-                catastrophicFailureNotification
+                catastrophicFailureNotification, 
+                logger
             );
         }
 

@@ -81,7 +81,7 @@ namespace Raven.Server.Documents.TcpHandlers
         public readonly TcpConnectionOptions TcpConnection;
         public readonly string ClientUri;
         private readonly MemoryStream _buffer = new MemoryStream();
-        private  Logger _logger;
+        private Logger _logger;
         public readonly SubscriptionConnectionStats Stats;
 
         private SubscriptionConnectionStatsScope _connectionScope;
@@ -155,7 +155,7 @@ namespace Raven.Server.Documents.TcpHandlers
             TcpConnection = connectionOptions;
             _subscriptionConnectionInProgress = subscriptionConnectionInProgress;
             ClientUri = connectionOptions.TcpClient.Client.RemoteEndPoint.ToString();
-            _logger = LoggingSource.Instance.GetLogger<SubscriptionConnection>(connectionOptions.DocumentDatabase.Name);
+            _logger = TcpConnection.DocumentDatabase.Logger;
             CancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(TcpConnection.DocumentDatabase.DatabaseShutdown);
             _supportedFeatures = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(TcpConnectionHeaderMessage.OperationTypes.Subscription, connectionOptions.ProtocolVersion);
             Stats = new SubscriptionConnectionStats();
@@ -345,6 +345,7 @@ namespace Raven.Server.Documents.TcpHandlers
             using (subscriptionConnectionInProgress)
             using (this)
             {
+                var logger = tcpConnectionOptions.DocumentDatabase.Logger;
                 _lastConnectionStats = new SubscriptionConnectionStatsAggregator(_connectionStatsIdForConnection, null);
                 _connectionScope = _lastConnectionStats.CreateScope();
 
@@ -381,24 +382,24 @@ namespace Raven.Server.Documents.TcpHandlers
                 {
                     _connectionScope.RecordException(SubscriptionError.Error, e.ToString());
                     _subscriptionConnectionsState.DropSubscription(e);
-                    await ReportException(e);
+                    await ReportException(logger, e);
                 }
                 catch (SubscriptionInUseException e)
                 {
                     _connectionScope.RecordException(SubscriptionError.ConnectionRejected, e.ToString());
-                    await ReportException(e);
+                    await ReportException(logger, e);
                 }
                 catch (Exception e)
                 {
                     _connectionScope.RecordException(SubscriptionError.Error, e.ToString());
-                    await ReportException(e);
+                    await ReportException(logger, e);
                 }
                 finally
                 {
                     AddToStatusDescription("Finished processing subscription");
-                    if (_logger.IsInfoEnabled)
+                    if (logger.IsInfoEnabled)
                     {
-                        _logger.Info(
+                        logger.Info(
                             $"Finished processing subscription {SubscriptionId} / from client {TcpConnection.TcpClient.Client.RemoteEndPoint}");
                     }
                     disposeOnDisconnect?.Dispose();
@@ -406,13 +407,14 @@ namespace Raven.Server.Documents.TcpHandlers
             }
         }
 
-        private async Task ReportException(Exception e)
+        private async Task ReportException(Logger logger, Exception e)
         {
             var errorMessage = $"Failed to process subscription {SubscriptionId} / from client {TcpConnection.TcpClient.Client.RemoteEndPoint}";
             AddToStatusDescription($"{errorMessage}. Sending response to client");
-            if (_logger.IsInfoEnabled && e is not OperationCanceledException)
+            
+            if (logger.IsInfoEnabled && e is not OperationCanceledException)
             {
-                _logger.Info(errorMessage, e);
+                logger.Info(errorMessage, e);
             }
 
             if (ConnectionException == null && e is SubscriptionException se)

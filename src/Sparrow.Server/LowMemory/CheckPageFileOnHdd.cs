@@ -19,7 +19,7 @@ namespace Sparrow.Server.LowMemory
 {
     public static class CheckPageFileOnHdd
     {
-        private static readonly Logger Log = LoggingSource.Instance.GetLogger("Server", typeof(CheckPageFileOnHdd).FullName);
+        private static readonly Logger Log = LoggingSource.Instance.LoggersHolder.Memory.GetLogger(nameof(CheckPageFileOnHdd));
 
         private const string PageFileName = "pagefile.sys";
 
@@ -482,7 +482,8 @@ namespace Sparrow.Server.LowMemory
             }
             catch (Exception ex)
             {
-                Log.Info("Error while trying to determine if hdd swaps instead of ssd on linux, ignoring this check and assuming no hddswap", ex);
+                if(Log.IsInfoEnabled)
+                    Log.Info("Error while trying to determine if hdd swaps instead of ssd on linux, ignoring this check and assuming no hddswap", ex);
                 // ignore
                 return null;
             }

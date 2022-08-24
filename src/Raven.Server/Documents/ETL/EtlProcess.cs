@@ -159,7 +159,7 @@ namespace Raven.Server.Documents.ETL
             ConfigurationName = Configuration.Name;
             TransformationName = Transformation.Name;
             Name = $"{Configuration.Name}/{Transformation.Name}";
-            Logger = LoggingSource.Instance.GetLogger(database.Name, GetType().FullName);
+            Logger = database.Logger;
             Database = database;
             _serverStore = serverStore;
             Statistics = new EtlProcessStatistics(Tag, Name, Database.NotificationCenter);

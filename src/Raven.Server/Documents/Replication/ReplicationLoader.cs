@@ -262,7 +262,7 @@ namespace Raven.Server.Documents.Replication
 
             var config = Database.Configuration.Replication;
             var reconnectTime = config.RetryReplicateAfter.AsTimeSpan;
-            _log = LoggingSource.Instance.GetLogger<ReplicationLoader>(Database.Name);
+            _log = database.Logger;
             _reconnectAttemptTimer = new Timer(state => ForceTryReconnectAll(),
                 null, reconnectTime, reconnectTime);
             MinimalHeartbeatInterval = (int)config.ReplicationMinimalHeartbeat.AsTimeSpan.TotalMilliseconds;
@@ -852,7 +852,7 @@ namespace Raven.Server.Documents.Replication
                 return;
 
             ConflictSolverConfig = record.ConflictSolverConfig;
-            ConflictResolver = new ResolveConflictOnReplicationConfigurationChange(this, _log);
+            ConflictResolver = new ResolveConflictOnReplicationConfigurationChange(this);
             Task.Run(() => ConflictResolver.RunConflictResolversOnce(record.ConflictSolverConfig, index));
             _isInitialized.Raise();
         }

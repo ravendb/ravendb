@@ -68,7 +68,7 @@ namespace Voron.Recovery
 
         private StorageEnvironmentOptions CreateOptions()
         {
-            var result = StorageEnvironmentOptions.ForPath(_config.DataFileDirectory, null, null, null, null);
+            var result = StorageEnvironmentOptions.ForPath(_config.DataFileDirectory);
             result.CopyOnWriteMode = _copyOnWrite;
             result.ManualFlushing = true;
             result.ManualSyncing = true;

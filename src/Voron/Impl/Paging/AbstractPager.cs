@@ -23,7 +23,7 @@ namespace Voron.Impl.Paging
 {
     public abstract unsafe class AbstractPager : IDisposable, ILowMemoryHandler
     {
-        public readonly Logger Log = LoggingSource.Instance.GetLogger<AbstractPager>("AbstractPager");
+        protected readonly Logger Logger;
         private readonly StorageEnvironmentOptions _options;
 
         public static ConcurrentDictionary<string, uint> PhysicalDrivePerMountCache = new ConcurrentDictionary<string, uint>();
@@ -236,6 +236,7 @@ namespace Voron.Impl.Paging
 
         protected AbstractPager(StorageEnvironmentOptions options, bool canPrefetchAhead, bool usePageProtection = false) : this()
         {
+            Logger = options.Logger;
             DisposeOnceRunner = new DisposeOnce<SingleAttempt>(() =>
             {
                 if (FileName?.FullPath != null)
@@ -431,8 +432,8 @@ namespace Voron.Impl.Paging
             {
                 try
                 {
-                    if (Log.IsInfoEnabled)
-                        Log.Info("AbstractPager finalizer was called (leak?), and 'DisposeOnceRunner.Dispose' threw exception", e);
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info("AbstractPager finalizer was called (leak?), and 'DisposeOnceRunner.Dispose' threw exception", e);
                 }
                 catch
                 {
@@ -443,8 +444,8 @@ namespace Voron.Impl.Paging
             {
                 try
                 {
-                    if (Log.IsInfoEnabled)
-                        Log.Info("AbstractPager finalizer was called although GC.SuppressFinalize should have been called", new InvalidOperationException("Leak in "));
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info("AbstractPager finalizer was called although GC.SuppressFinalize should have been called", new InvalidOperationException("Leak in "));
                 }
                 catch
                 {

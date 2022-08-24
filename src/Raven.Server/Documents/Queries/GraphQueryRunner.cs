@@ -23,15 +23,18 @@ using Raven.Server.Utils.Features;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Queries
 {
     public partial class GraphQueryRunner : AbstractQueryRunner
     {
         private readonly HashSet<StringSegment> _mapReduceAliases = new HashSet<StringSegment>();
+        private readonly Logger _logger;
 
         public GraphQueryRunner(DocumentDatabase database) : base(database)
         {
+            _logger = database.Logger;
         }
 
         public class EdgeDebugInfo
@@ -217,12 +220,12 @@ namespace Raven.Server.Documents.Queries
         {
             if (orderBy.Length == 1)
             {
-                var orderByFieldSorter = new GraphQueryOrderByFieldComparer(orderBy.First(), databaseName, query);
+                var orderByFieldSorter = new GraphQueryOrderByFieldComparer(orderBy.First(), databaseName, query, _logger);
                 matches.Sort(orderByFieldSorter);
                 return;
             }
 
-            var orderByMltipleFieldsSorter = new GraphQueryMultipleFieldsComparer(orderBy, databaseName, query);
+            var orderByMltipleFieldsSorter = new GraphQueryMultipleFieldsComparer(orderBy, databaseName, query, _logger);
             matches.Sort(orderByMltipleFieldsSorter);
         }
 

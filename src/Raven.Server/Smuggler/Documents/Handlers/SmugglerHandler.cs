@@ -197,7 +197,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
         {
             using (token)
             {
-                var source = new DatabaseSource(Database, startDocumentEtag, startRaftIndex, Logger);
+                var source = new DatabaseSource(Database, startDocumentEtag, startRaftIndex);
                 await using (var outputStream = GetOutputStream(ResponseBodyStream(), options))
                 {
                     var destination = new StreamDestination(outputStream, context, source);
