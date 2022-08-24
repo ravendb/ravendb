@@ -29,7 +29,7 @@ namespace FastTests.Issues
             }
         }
 
-        public class Result
+        private class Result
         {
             public string Company { get; set; }
             public string Employee { get; set; }
