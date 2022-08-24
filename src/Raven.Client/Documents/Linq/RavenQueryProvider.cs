@@ -112,7 +112,7 @@ namespace Raven.Client.Documents.Linq
                     _highlightings,
                     _isMapReduce,
                     _conventions,
-                    FieldsToFetch?.Count == 0 ? null : FieldsToFetch);
+                    FieldsToFetch);
 
             ravenQueryProvider.Customize(_customizeQuery);
 
