@@ -25,6 +25,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 public static class CoraxQueryBuilder
 {
     private const int TakeAll = -1;
+    private const bool HasNoInnerBinary = false;
 
     public static IQueryMatch BuildQuery(IndexSearcher indexSearcher, TransactionOperationContext serverContext, DocumentsOperationContext context,
         IndexQueryServerSide query,
@@ -44,6 +45,7 @@ public static class CoraxQueryBuilder
                 coraxQuery = ToCoraxQuery<NullScoreFunction>(indexSearcher, serverContext, context, metadata.Query, metadata.Query.Where, metadata, index, parameters,
                     factories, default,
                     allEntries: allEntries,
+                    hasBinary: out var hasInnerBinary,
                     queryMapping: queryMapping,
                     buildSteps: buildSteps,
                     indexMapping: indexMapping,
@@ -57,6 +59,8 @@ public static class CoraxQueryBuilder
 
                 if (coraxQuery is CoraxBooleanItem cbi)
                     coraxQuery = cbi.Materialize();
+                
+                isBinary |= hasInnerBinary;
             }
             else
             {
@@ -70,7 +74,6 @@ public static class CoraxQueryBuilder
                 var sortMetadata = GetSortMetadata(query, index, factories.GetSpatialFieldFactory, indexMapping, queryMapping);
                 coraxQuery = OrderBy(indexSearcher, coraxQuery, sortMetadata, take);
             }
-
             // The parser already throws parse exception if there is a syntax error.
             // We now return null in the case of a term query that has been fully analyzed, so we need to return a valid query.
             return coraxQuery;
@@ -141,10 +144,11 @@ public static class CoraxQueryBuilder
         QueryExpression expression, QueryMetadata metadata, Index index,
         BlittableJsonReaderObject parameters, QueryBuilderFactories factories, TScoreFunction scoreFunction, IndexFieldsMapping indexMapping,
         Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms,
-        FieldsToFetch queryMapping, MemoizationMatchProvider<AllEntriesMatch> allEntries, bool exact = false, int? proximity = null,
+        FieldsToFetch queryMapping, MemoizationMatchProvider<AllEntriesMatch> allEntries, out bool hasBinary, bool exact = false, int? proximity = null,
         List<string> buildSteps = null, int take = TakeAll)
         where TScoreFunction : IQueryScoreFunction
     {
+        hasBinary = false;
         if (RuntimeHelpers.TryEnsureSufficientExecutionStack() == false)
             QueryBuilderHelper.ThrowQueryTooComplexException(metadata, parameters);
 
@@ -191,65 +195,72 @@ public static class CoraxQueryBuilder
                     {
                         case (NegatedExpression ne1, NegatedExpression ne2):
                             left = ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, ne1.Expression, metadata, index, parameters,
-                                factories, scoreFunction, indexMapping, highlightingTerms, queryMapping, allEntries, exact, buildSteps: buildSteps,
+                                factories, scoreFunction, indexMapping, highlightingTerms, queryMapping, allEntries, out var leftInnerBinary, exact, buildSteps: buildSteps,
                                 take: take);
                             right = ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, ne2.Expression, metadata, index, parameters,
-                                factories, scoreFunction, indexMapping, highlightingTerms, queryMapping, allEntries, exact, buildSteps: buildSteps,
+                                factories, scoreFunction, indexMapping, highlightingTerms, queryMapping, allEntries, out var rightInnerBinary, buildSteps: buildSteps,
                                 take: take);
-
-
+                            
                             TryMergeTwoNodes(indexSearcher, allEntries, ref left, ref right, out var merged, scoreFunction, true);
 
+                            hasBinary = leftInnerBinary | rightInnerBinary;
                             return indexSearcher.AndNot(allEntries.Replay(), indexSearcher.Or(left, right));
 
                         case (NegatedExpression ne1, _):
                             left = ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, @where.Right, metadata, index, parameters,
-                                factories, scoreFunction, indexMapping, highlightingTerms, queryMapping, allEntries, exact, buildSteps: buildSteps,
+                                factories, scoreFunction, indexMapping, highlightingTerms, queryMapping, allEntries, out leftInnerBinary, exact, buildSteps: buildSteps,
                                 take: take);
                             right = ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, ne1.Expression, metadata, index, parameters,
-                                factories, scoreFunction, indexMapping, highlightingTerms, queryMapping, allEntries, exact, buildSteps: buildSteps,
+                                factories, scoreFunction, indexMapping, highlightingTerms, queryMapping, allEntries, out rightInnerBinary, exact, buildSteps: buildSteps,
                                 take: take);
 
                             TryMergeTwoNodes(indexSearcher, allEntries, ref left, ref right, out merged, scoreFunction, true);
-
+                            
+                            hasBinary = leftInnerBinary | rightInnerBinary;
                             return indexSearcher.AndNot(right, left);
 
                         case (_, NegatedExpression ne1):
                             left = ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, @where.Left, metadata, index, parameters,
-                                factories, scoreFunction, indexMapping, highlightingTerms, queryMapping, allEntries, exact, buildSteps: buildSteps,
+                                factories, scoreFunction, indexMapping, highlightingTerms, queryMapping, allEntries, out leftInnerBinary, exact, buildSteps: buildSteps,
                                 take: take);
                             right = ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, ne1.Expression, metadata, index, parameters,
-                                factories, scoreFunction, indexMapping, highlightingTerms, queryMapping, allEntries, exact, buildSteps: buildSteps,
+                                factories, scoreFunction, indexMapping, highlightingTerms, queryMapping, allEntries, out rightInnerBinary, exact, buildSteps: buildSteps,
                                 take: take);
-
+                            
+                            hasBinary = leftInnerBinary | rightInnerBinary;
                             TryMergeTwoNodes(indexSearcher, allEntries, ref left, ref right, out merged, scoreFunction, true);
                             return indexSearcher.AndNot(left, right);
 
                         default:
                             left = ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, @where.Left, metadata, index, parameters,
-                                factories, scoreFunction, indexMapping, highlightingTerms, queryMapping, allEntries, exact, buildSteps: buildSteps,
+                                factories, scoreFunction, indexMapping, highlightingTerms, queryMapping, allEntries, out leftInnerBinary, exact, buildSteps: buildSteps,
                                 take: take);
                             right = ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, @where.Right, metadata, index, parameters,
-                                factories, scoreFunction, indexMapping, highlightingTerms, queryMapping, allEntries, exact, buildSteps: buildSteps,
+                                factories, scoreFunction, indexMapping, highlightingTerms, queryMapping, allEntries, out rightInnerBinary, exact, buildSteps: buildSteps,
                                 take: take);
+                            
 
                             if (TryMergeTwoNodes(indexSearcher, allEntries, ref left, ref right, out merged, scoreFunction))
                                 return merged;
+                            
+                            hasBinary = leftInnerBinary | rightInnerBinary;
                             return indexSearcher.And(left, right);
                     }
                 }
                 case OperatorType.Or:
                 {
                     var left = ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, @where.Left, metadata, index, parameters,
-                        factories, scoreFunction, indexMapping, highlightingTerms, queryMapping, allEntries, exact, buildSteps: buildSteps,
+                        factories, scoreFunction, indexMapping, highlightingTerms, queryMapping, allEntries, out var leftInnerBinary, exact, buildSteps: buildSteps,
                         take: take);
                     var right = ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, @where.Right, metadata, index, parameters,
-                        factories, scoreFunction, indexMapping, highlightingTerms, queryMapping, allEntries, exact, buildSteps: buildSteps, take: take);
+                        factories, scoreFunction, indexMapping, highlightingTerms, queryMapping, allEntries, out var rightInnerBinary, exact, buildSteps: buildSteps, take: take);
 
                     buildSteps?.Add(
                         $"OR operator: left - {left.GetType().FullName} ({left}) assembly: {left.GetType().Assembly.FullName} assemby location: {left.GetType().Assembly.Location} , right - {right.GetType().FullName} ({right}) assemlby: {right.GetType().Assembly.FullName} assemby location: {right.GetType().Assembly.Location}");
 
                     TryMergeTwoNodes(indexSearcher, allEntries, ref left, ref right, out var _, scoreFunction, true);
+                    hasBinary = leftInnerBinary | rightInnerBinary;
+
                     return indexSearcher.Or(left, right);
                 }
                 default:
@@ -344,12 +355,12 @@ public static class CoraxQueryBuilder
                 var newExpr = new BinaryExpression(new NegatedExpression(nbe.Left),
                     nbe.Right, nbe.Operator);
                 return ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, newExpr, metadata, index, parameters, factories, scoreFunction,
-                    indexMapping, highlightingTerms, queryMapping, allEntries, exact,
+                    indexMapping, highlightingTerms, queryMapping, allEntries, out hasBinary, exact,
                     buildSteps: buildSteps, take: take);
             }
 
             return ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, ne.Expression, metadata, index, parameters, factories, scoreFunction,
-                indexMapping, highlightingTerms, queryMapping, allEntries, exact,
+                indexMapping, highlightingTerms, queryMapping, allEntries, out hasBinary, exact,
                 buildSteps: buildSteps, take: take);
         }
 
@@ -439,7 +450,7 @@ public static class CoraxQueryBuilder
                         take);
                 case MethodType.Boost:
                     return HandleBoost(indexSearcher, serverContext, documentsContext, query, me, metadata, index, parameters, factories, exact,
-                        indexMapping, queryMapping, allEntries, highlightingTerms, take, buildSteps);
+                        indexMapping, queryMapping, allEntries, out hasBinary, highlightingTerms, take, buildSteps);
                 case MethodType.StartsWith:
                     return HandleStartsWith(indexSearcher, query, me, metadata, index, parameters, exact, scoreFunction, indexMapping, queryMapping, highlightingTerms,
                         take);
@@ -450,7 +461,7 @@ public static class CoraxQueryBuilder
                     return HandleExists(indexSearcher, query, parameters, me, metadata, scoreFunction);
                 case MethodType.Exact:
                     return HandleExact(indexSearcher, serverContext, documentsContext, query, me, metadata, index, parameters, factories, scoreFunction, indexMapping,
-                        queryMapping, allEntries, proximity, buildSteps, highlightingTerms, take);
+                        queryMapping, allEntries, out hasBinary, proximity, buildSteps, highlightingTerms, take);
                 case MethodType.Spatial_Within:
                 case MethodType.Spatial_Contains:
                 case MethodType.Spatial_Disjoint:
@@ -470,12 +481,12 @@ public static class CoraxQueryBuilder
         Query query,
         MethodExpression expression, QueryMetadata metadata, Index index,
         BlittableJsonReaderObject parameters, QueryBuilderFactories factories, TScoreFunction scoreFunction, IndexFieldsMapping indexMapping,
-        FieldsToFetch queryMapping, MemoizationMatchProvider<AllEntriesMatch> allEntries, int? proximity = null,
+        FieldsToFetch queryMapping, MemoizationMatchProvider<AllEntriesMatch> allEntries, out bool hasBinary, int? proximity = null,
         List<string> buildSteps = null, Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms = null, int take = TakeAll)
         where TScoreFunction : IQueryScoreFunction
     {
         return ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, expression.Arguments[0], metadata, index, parameters, factories, scoreFunction,
-            indexMapping, highlightingTerms, queryMapping, allEntries: allEntries, true, proximity, buildSteps);
+            indexMapping, highlightingTerms, queryMapping, allEntries: allEntries, out hasBinary, true, proximity, buildSteps);
     }
     
     private static CoraxBooleanItem TranslateBetweenQuery<TScoreFunction>(IndexSearcher indexSearcher, Query query, QueryMetadata metadata, Index index,
@@ -608,7 +619,7 @@ public static class CoraxQueryBuilder
     private static IQueryMatch HandleBoost(IndexSearcher indexSearcher, TransactionOperationContext serverContext, DocumentsOperationContext context, Query query,
         MethodExpression expression, QueryMetadata metadata, Index index,
         BlittableJsonReaderObject parameters, QueryBuilderFactories factories, bool exact, IndexFieldsMapping indexMapping, FieldsToFetch queryMapping,
-        MemoizationMatchProvider<AllEntriesMatch> allEntries,
+        MemoizationMatchProvider<AllEntriesMatch> allEntries, out bool hasBinary,
         Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms = null,
         int take = TakeAll,
         List<string> buildSteps = null)
@@ -651,7 +662,7 @@ public static class CoraxQueryBuilder
 
 
         var rawQuery = ToCoraxQuery(indexSearcher, serverContext, context, query, expression.Arguments[0], metadata, index, parameters, factories, default(NullScoreFunction),
-            indexMapping, highlightingTerms, queryMapping, allEntries, exact,
+            indexMapping, highlightingTerms, queryMapping, allEntries, out hasBinary, exact,
             buildSteps: buildSteps,
             take: take);
 
@@ -660,10 +671,10 @@ public static class CoraxQueryBuilder
         else if (rawQuery is CoraxBooleanQuery cbq)
         {
             rawQuery = cbq.Materialize();
-            //todo recieve hasBinary
+            hasBinary = cbq.HasInnerBinary;
         }
-        
-        
+
+        hasBinary = false;
         var scoreFunction = new ConstantScoreFunction(boost);
 
         return indexSearcher.Boost(rawQuery, scoreFunction);
