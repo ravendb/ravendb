@@ -48,9 +48,11 @@ namespace Raven.Client.Documents.Linq
             QueryStatistics queryStatistics,
             LinqQueryHighlightings highlightings,
             bool isMapReduce,
-            DocumentConventions conventions)
+            DocumentConventions conventions,
+            HashSet<FieldToFetch> fieldsToFetch = null
+            )
         {
-            FieldsToFetch = new HashSet<FieldToFetch>();
+            FieldsToFetch = fieldsToFetch ?? new HashSet<FieldToFetch>();
             OriginalQueryType = originalQueryType;
 
             _queryGenerator = queryGenerator;
@@ -102,14 +104,15 @@ namespace Raven.Client.Documents.Linq
                 return this;
 
             var ravenQueryProvider = new RavenQueryProvider<TS>(
-                _queryGenerator,
-                _indexName,
-                _collectionName,
-                OriginalQueryType,
-                _queryStatistics,
-                _highlightings,
-                _isMapReduce,
-                _conventions);
+                    _queryGenerator,
+                    _indexName,
+                    _collectionName,
+                    OriginalQueryType,
+                    _queryStatistics,
+                    _highlightings,
+                    _isMapReduce,
+                    _conventions,
+                    FieldsToFetch?.Count == 0 ? null : FieldsToFetch);
 
             ravenQueryProvider.Customize(_customizeQuery);
 
