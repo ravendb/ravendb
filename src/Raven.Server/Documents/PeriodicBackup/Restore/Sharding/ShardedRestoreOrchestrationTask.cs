@@ -165,13 +165,17 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore.Sharding
             switch (configuration)
             {
                 case RestoreBackupConfiguration restoreBackupConfiguration:
-                    restoreBackupConfiguration.BackupLocation = shardRestoreSetting.BackupPath;
+                    restoreBackupConfiguration.BackupLocation = shardRestoreSetting.FolderName;
+                    break;
+                case RestoreFromS3Configuration restoreFromS3Configuration:
+                    restoreFromS3Configuration.Settings.RemoteFolderName = shardRestoreSetting.FolderName;
                     break;
                 case RestoreFromAzureConfiguration restoreFromAzureConfiguration:
+                    restoreFromAzureConfiguration.Settings.RemoteFolderName = shardRestoreSetting.FolderName;
+                    break;
                 case RestoreFromGoogleCloudConfiguration restoreFromGoogleCloudConfiguration:
-                case RestoreFromS3Configuration restoreFromS3Configuration:
-                    DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Major, "implement sharded cloud restore");
-                    throw new NotImplementedException();
+                    restoreFromGoogleCloudConfiguration.Settings.RemoteFolderName = shardRestoreSetting.FolderName;
+                    break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(configuration));
             }
@@ -190,6 +194,5 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore.Sharding
 
             return result;
         }
-
     }
 }

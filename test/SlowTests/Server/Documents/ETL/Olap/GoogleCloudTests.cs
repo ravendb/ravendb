@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
-using FastTests.Client;
 using Parquet;
 using Parquet.Data;
 using Raven.Client.Documents;
