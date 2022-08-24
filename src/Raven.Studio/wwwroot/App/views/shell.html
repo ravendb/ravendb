@@ -9,7 +9,7 @@
     <aside class="top-alert" data-bind="visible: applyColorCustomization">
         !!! Running as Cloud Cluster Admin !!!  <a href="#" data-bind="click: disableColorCustomization">Disable color customization</a>
     </aside>
-    <nav class="navbar">
+    <nav class="navbar bs3">
         <div class="navbar-header">
             <a class="navbar-brand" data-bind="attr: { href: appUrls.clusterDashboard }">
                 <img src="../../Content/img/ravendb_logo.svg" class="main-logo" />
@@ -273,7 +273,7 @@
 
     <div id="resizeArea"></div>
 
-    <nav id="main-menu" class="main-menu"
+    <nav id="main-menu" class="main-menu bs3"
          data-bind="with: mainMenu, attr: { 'data-level': mainMenu.level }">
 
         <div class="level-0"
@@ -295,9 +295,9 @@
     <div id="page-host-root" class="content-container">
         <div id="page-host" class="page-host" data-bind="router: { cacheViews: false }" style="overflow-y: scroll"></div>
     </div>
-    <div class="notification-center-container" data-bind="compose: notificationCenterView"></div>
+    <div class="notification-center-container bs3" data-bind="compose: notificationCenterView"></div>
 
-    <footer class="status-footer" data-bind="with: $root.footer">
+    <footer class="status-footer bs3" data-bind="with: $root.footer">
         <div class="footer-left" data-bind="with: stats(), visible: stats">
             <div class="footer-item">
                 <a data-bind="attr: { href: $parent.urlForDocuments() }" title="Documents"><i class="icon-documents"></i> <span data-bind="text: countOfDocuments().toLocaleString()"></span></a>
@@ -388,7 +388,7 @@
             </div>
         </div>
     </footer>
-    <div class="connection-lost" data-bind="css: { show: $root.constructor.showConnectionLost }">
+    <div class="connection-lost bs3" data-bind="css: { show: $root.constructor.showConnectionLost }">
         <div class="absolute-center">
             <h3>Connection lost</h3>
             <img src="../../Content/img/connection-lost.svg" width="260" />

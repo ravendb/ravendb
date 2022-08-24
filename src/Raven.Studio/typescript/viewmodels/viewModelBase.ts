@@ -130,6 +130,28 @@ abstract class viewModelBase {
         window.addEventListener("beforeunload", this.beforeUnloadListener);
         this.isAttached = true;
         viewModelBase.showSplash(false);
+        
+        const bs5 = this.isUsingBootstrap5();
+        if (bs5 != null) {
+            const pageHostRoot = $("#page-host-root");
+            if (bs5) {
+                pageHostRoot.removeClass("bs3");
+                pageHostRoot.addClass("bs5");
+            } else {
+                pageHostRoot.removeClass("bs5");
+                pageHostRoot.addClass("bs3");
+            }
+        }
+    }
+
+    /**
+     * returns information if given view is using bootstrap 5
+     * true/false - self descriptive
+     * undefined - view can't determinate that and ambient style should be used 
+     *              this is mainly to cover confirmation dialogs etc. 
+     */
+    isUsingBootstrap5(): true | false | undefined {
+        return false;
     }
 
     compositionComplete() {

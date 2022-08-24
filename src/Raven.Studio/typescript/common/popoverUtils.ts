@@ -1,8 +1,8 @@
 /// <reference path="../../typings/tsd.d.ts"/>
 
 class popoverUtils {
-    static longPopoverTemplate = `<div class="popover popover-lg" role="tooltip"><div class="arrow"></div><h3 class="popover-title"></h3><div class="popover-content"></div></div>`;
-    static longPopoverRoundedTemplate = `<div class="popover popover-lg rounded" role="tooltip"><div class="arrow"></div><h3 class="popover-title"></h3><div class="popover-content"></div></div>`;
+    static longPopoverTemplate = `<div class="popover bs3 popover-lg" role="tooltip"><div class="arrow"></div><h3 class="popover-title"></h3><div class="popover-content"></div></div>`;
+    static longPopoverRoundedTemplate = `<div class="popover bs3 popover-lg rounded" role="tooltip"><div class="arrow"></div><h3 class="popover-title"></h3><div class="popover-content"></div></div>`;
 
     static longWithHover(selector: JQuery, extraOptions: PopoverUtilsOptions): JQuery {
         const options = {
