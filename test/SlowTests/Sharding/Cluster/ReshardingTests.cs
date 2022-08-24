@@ -24,9 +24,11 @@ namespace SlowTests.Sharding.Cluster
         [RavenFact(RavenTestCategory.Sharding)]
         public async Task CanMoveOneBucketManually()
         {
-            // TODO: once wired, disable the observer
+            DoNotReuseServer();
             using (var store = Sharding.GetDocumentStore())
             {
+                Server.ServerStore.Sharding.ManualMigration = true;
+
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
 
                 var id = "foo/bar";

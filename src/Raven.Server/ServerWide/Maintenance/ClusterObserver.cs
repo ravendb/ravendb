@@ -430,6 +430,9 @@ namespace Raven.Server.ServerWide.Maintenance
 
         private void UpdateReshardingStatus(ClusterOperationContext context, RawDatabaseRecord rawRecord, Dictionary<string, ClusterNodeStatusReport> newStats, ref List<DestinationMigrationConfirmCommand> confirmCommands)
         {
+            if (_server.Server.ServerStore.Sharding.ManualMigration)
+                return;
+
             var databaseName = rawRecord.DatabaseName;
             var sharding = rawRecord.Sharding;
             var currentMigration = sharding.BucketMigrations.SingleOrDefault(pair => pair.Value.Status < MigrationStatus.OwnershipTransferred).Value;

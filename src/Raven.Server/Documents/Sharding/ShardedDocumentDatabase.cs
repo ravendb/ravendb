@@ -62,6 +62,10 @@ public class ShardedDocumentDatabase : DocumentDatabase
     {
         // this called under lock
         base.OnDatabaseRecordChanged(record);
+
+        if (ServerStore.Sharding.ManualMigration)
+            return;
+
         var finishedMigrations = record.Sharding.BucketMigrations.Where(m => m.Value.Status == MigrationStatus.OwnershipTransferred);
         foreach (var finishedMigration in finishedMigrations)
         {

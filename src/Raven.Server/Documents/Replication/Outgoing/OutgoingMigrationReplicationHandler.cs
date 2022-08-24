@@ -33,7 +33,10 @@ namespace Raven.Server.Documents.Replication.Outgoing
                 if (_database.ShardedDocumentsStorage.HaveMoreDocumentsInBucket(bucket, lastSentChangeVector))
                     return;
 
-                var task = current._parent._server.Sharding.SourceMigrationCompleted(_database.ShardedDatabaseName, bucket, migrationIndex, lastSentChangeVector,
+                if (current.Server.Sharding.ManualMigration)
+                    return;
+
+                var task = current.Server.Sharding.SourceMigrationCompleted(_database.ShardedDatabaseName, bucket, migrationIndex, lastSentChangeVector,
                     $"{bucket}@{migrationIndex}/{lastSentChangeVector}");
 
                 task.Wait(_database.DatabaseShutdown);
