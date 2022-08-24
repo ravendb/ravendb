@@ -7,6 +7,7 @@ namespace Raven.Server.ServerWide
     public class ShardingStore
     {
         private readonly ServerStore _server;
+        public bool ManualMigration = false;
 
         public ShardingStore(ServerStore server)
         {
