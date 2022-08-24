@@ -15,7 +15,7 @@ internal class TrafficWatchToLog
 
     public TrafficWatchConfiguration Configuration { get; private set; } = new();
 
-    public bool LogToFile => Configuration.TrafficWatchMode == TrafficWatchMode.ToLogFile || Logger.IsOperationsEnabled;
+    public bool LogToFile => Configuration.TrafficWatchMode == TrafficWatchMode.ToLogFile && Logger.IsOperationsEnabled;
 
     private TrafficWatchToLog() { }
 
