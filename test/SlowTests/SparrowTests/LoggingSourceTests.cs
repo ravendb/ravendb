@@ -382,7 +382,7 @@ namespace SlowTests.SparrowTests
                 var logs = logDirectory.GetFiles();
                 foreach (var fileInfo in logs)
                 {
-                    using var file = fileInfo.OpenRead();
+                    using var file = fileInfo.Open(FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
 
                     Stream stream;
                     if (fileInfo.Name.EndsWith(".log.gz"))
