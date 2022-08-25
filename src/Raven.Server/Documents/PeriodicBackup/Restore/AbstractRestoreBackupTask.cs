@@ -68,7 +68,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             _disposeContext = ServerStore.ContextPool.AllocateOperationContext(out Context);
         }
 
-        public async Task<IOperationResult> Execute(Action<IOperationProgress> onProgress)
+        public async Task<IOperationResult> ExecuteAsync(Action<IOperationProgress> onProgress)
         {
             Result = new RestoreResult
             {
@@ -86,8 +86,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     if (HasEncryptionKey)
                     {
                         // save the encryption key so we'll be able to access the database
-                        ServerStore.PutSecretKey(RestoreConfiguration.EncryptionKey,
-                            DatabaseName, overwrite: false);
+                        PutSecretKey();
                     }
 
                     await OnBeforeRestoreAsync();
@@ -105,6 +104,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         }
 
         protected abstract Task RestoreAsync();
+
+        protected virtual void PutSecretKey() => 
+            ServerStore.PutSecretKey(RestoreConfiguration.EncryptionKey, DatabaseName, overwrite: false);
 
         protected virtual async Task InitializeAsync()
         {

@@ -18,18 +18,16 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore.Sharding
     internal class SingleShardRestoreBackupTask : RestoreBackupTask
     {
         private readonly int _shardNumber;
+        private readonly string _shardedDatabaseName;
 
         public SingleShardRestoreBackupTask(ServerStore serverStore, RestoreBackupConfigurationBase restoreConfiguration, List<string> filesToRestore, 
             IRestoreSource restoreSource, OperationCancelToken operationCancelToken) : base(serverStore, restoreConfiguration, restoreSource, filesToRestore, operationCancelToken)
         {
             DatabaseValidation = false;
-
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Major, "test encrypted backup & restore");
-            HasEncryptionKey = false;
-
             _shardNumber = ShardHelper.GetShardNumber(DatabaseName);
+            _shardedDatabaseName = ShardHelper.ToDatabaseName(DatabaseName);
         }
-        
+
         protected override Task OnBeforeRestoreAsync()
         {
             CreateDocumentDatabase();
@@ -47,12 +45,15 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore.Sharding
             return Task.CompletedTask;
         }
 
+        protected override void PutSecretKey() => 
+            ServerStore.PutSecretKey(RestoreConfiguration.EncryptionKey, _shardedDatabaseName, overwrite: false);
+
         protected override DatabaseRecord GetDatabaseRecord()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
             using (serverContext.OpenReadTransaction())
             {
-                var databaseRecord = ServerStore.Cluster.ReadDatabase(serverContext, ShardHelper.ToDatabaseName(DatabaseName));
+                var databaseRecord = ServerStore.Cluster.ReadDatabase(serverContext, _shardedDatabaseName);
                 Debug.Assert(databaseRecord != null);
 
                 return databaseRecord;

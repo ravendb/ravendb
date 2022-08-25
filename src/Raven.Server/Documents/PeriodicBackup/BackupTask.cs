@@ -205,8 +205,6 @@ namespace Raven.Server.Documents.PeriodicBackup
                                  $"in {totalSw.ElapsedMilliseconds:#,#;;0} ms");
                 }
 
-                _forTestingPurposes?.AfterBackupBatchCompleted?.Invoke();
-
                 return _backupResult;
             }
             catch (OperationCanceledException)
@@ -266,6 +264,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                         AddInfo("Saving backup status");
                         SaveBackupStatus(runningBackupStatus, _database, _logger, _backupResult);
                     }
+
+                    _forTestingPurposes?.AfterBackupBatchCompleted?.Invoke();
                 }
             }
         }
