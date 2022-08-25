@@ -16,7 +16,7 @@ using Raven.Debug.Utils;
 
 namespace Raven.Debug
 {
-    internal class CommandLineApp
+    public class CommandLineApp
     {
         private const string HelpOptionString = "-h | -? | --help";
 
@@ -377,21 +377,17 @@ namespace Raven.Debug
 
                     var cert = certArg.HasValue() ? certArg.Value() : null;
                     var certPass = certPassArg.HasValue() ? certPassArg.Value() : null;
-                    
-                    var cts = new CancellationTokenSource();
-                    var logTrafficWatchReply = new TrafficWatchReplay(path, cert, certPass, host, port, cts, threads);
 
-                    Console.CancelKeyPress += (sender, args) =>
+                    using (var logTrafficWatchReply = new TrafficWatchReplay(path, cert, certPass, host, port, threads))
                     {
-                        using (cts)
+                        Console.CancelKeyPress += (sender, args) =>
                         {
-                            Console.WriteLine("Stop collection traffic watch. Exiting...");
-                            cts.Cancel();
-                            logTrafficWatchReply.Stop().Wait();
-                        }
-                    };
+                            args.Cancel = true;
+                            logTrafficWatchReply.Stop();
+                        };
 
-                    await logTrafficWatchReply.Start();
+                        await logTrafficWatchReply.Start();
+                    }
 
                     return 0;
                 });
