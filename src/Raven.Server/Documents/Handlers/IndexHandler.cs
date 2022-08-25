@@ -941,7 +941,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/indexes/performance", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        [RavenAction("/databases/*/indexes/performance", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
         public async Task Performance()
         {
             var stats = GetIndexesToReportOn()
@@ -953,7 +953,7 @@ namespace Raven.Server.Documents.Handlers
                 .ToArray();
 
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
             {
                 writer.WritePerformanceStats(context, stats);
             }
