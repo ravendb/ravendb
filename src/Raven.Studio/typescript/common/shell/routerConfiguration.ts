@@ -76,6 +76,7 @@ function generateAllMenuItems() {
         getDatabasesMenuItem(appUrls),
         getManageServerMenuItem(),
         rootItems.about(),
+        rootItems.bs(),
         rootItems.clusterDashboard(),
     ];
 }

@@ -13,6 +13,19 @@ function aboutItem() {
     });
 }
 
+function bs5Item() {
+    return new leafMenuItem({
+        route: 'bs5',
+        moduleId: require('viewmodels/shell/bs5'),
+        title: 'Bootstrap 5',
+        tooltip: "Boostrap 5",
+        nav: false,
+        css: 'icon-info',
+        dynamicHash: () => "#bs5"
+    });
+}
+
+
 function clusterDashboard() {
     return new leafMenuItem({
         route: ["", "clusterDashboard"],
@@ -27,5 +40,6 @@ function clusterDashboard() {
 
 export = {
     about: aboutItem,
+    bs: bs5Item,
     clusterDashboard
 };
