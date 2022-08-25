@@ -449,19 +449,26 @@ public partial class RavenTestBase
                 return waitHandles.ToArray();
             }
 
-            public Task UpdateConfigurationAndRunBackupAsync(RavenServer server, IDocumentStore store, PeriodicBackupConfiguration config, bool isFullBackup = false)
+            public Task<long> UpdateConfigurationAndRunBackupAsync(RavenServer server, IDocumentStore store, PeriodicBackupConfiguration config, bool isFullBackup = false)
             {
                 return UpdateConfigurationAndRunBackupAsync(new List<RavenServer>{server}, store, config, isFullBackup);
             }
 
-            public async Task UpdateConfigurationAndRunBackupAsync(List<RavenServer> servers, IDocumentStore store, PeriodicBackupConfiguration config, bool isFullBackup = false)
+            public async Task<long> UpdateConfigurationAndRunBackupAsync(List<RavenServer> servers, IDocumentStore store, PeriodicBackupConfiguration config, bool isFullBackup = false)
             {
                 var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
 
-                await foreach (var documentDatabase in _parent.Sharding.GetShardsDocumentDatabaseInstancesFor(store.Database, servers))
+                await RunBackupAsync(store.Database, result.TaskId, isFullBackup, servers);
+
+                return result.TaskId;
+            }
+
+            public async Task RunBackupAsync(string database, long taskId, bool isFullBackup, List<RavenServer> servers = null)
+            {
+                await foreach (var documentDatabase in _parent.Sharding.GetShardsDocumentDatabaseInstancesFor(database, servers))
                 {
                     var periodicBackupRunner = documentDatabase.PeriodicBackupRunner;
-                    periodicBackupRunner.StartBackupTask(result.TaskId, isFullBackup);
+                    periodicBackupRunner.StartBackupTask(taskId, isFullBackup);
                 }
             }
 

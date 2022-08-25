@@ -37,6 +37,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore.Sharding
         {
             await base.InitializeAsync();
             CreateRestoreSettings();
+
+            // shard nodes will handle saving the secret key
+            HasEncryptionKey = false;
         }
 
         protected override async Task OnBeforeRestoreAsync()

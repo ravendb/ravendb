@@ -43,7 +43,7 @@ namespace SlowTests.Sharding.Backup
         }
 
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Sharding)]
-        public async Task CanBackupAndRestoreShardedDatabaseInCluster()
+        public async Task CanBackupAndRestoreShardedDatabase_InCluster()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
             var cluster = await CreateRaftCluster(3, watcherCluster: true);
@@ -109,7 +109,7 @@ namespace SlowTests.Sharding.Backup
         }
 
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Sharding)]
-        public async Task CanBackupAndRestoreSharded_FromLocalBackup()
+        public async Task CanBackupAndRestoreShardedDatabase_FromLocalBackup()
         {
             using (var store1 = Sharding.GetDocumentStore())
             using (var store2 = GetDocumentStore())
@@ -150,7 +150,7 @@ namespace SlowTests.Sharding.Backup
         }
 
         [AmazonS3Fact]
-        public async Task CanBackupAndRestoreSharded_FromS3Backup()
+        public async Task CanBackupAndRestoreShardedDatabase_FromS3Backup()
         {
             var s3Settings = GetS3Settings();
             try
@@ -214,7 +214,7 @@ namespace SlowTests.Sharding.Backup
         }
 
         [AmazonS3Fact]
-        public async Task CanBackupAndRestoreSharded_FromAzureBackup()
+        public async Task CanBackupAndRestoreShardedDatabase_FromAzureBackup()
         {
             var azureSettings = GetAzureSettings();
             try
@@ -278,7 +278,7 @@ namespace SlowTests.Sharding.Backup
         }
 
         [GoogleCloudFact]
-        public async Task CanBackupAndRestoreSharded_FromGoogleCloudBackup()
+        public async Task CanBackupAndRestoreShardedDatabase_FromGoogleCloudBackup()
         {
             var googleCloudSettings = GetGoogleCloudSettings();
             try
@@ -337,6 +337,364 @@ namespace SlowTests.Sharding.Backup
             finally
             {
                 await DeleteObjects(googleCloudSettings);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Sharding)]
+        public async Task CanBackupAndRestoreShardedDatabase_IncrementalBackup()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            var cluster = await CreateRaftCluster(3, watcherCluster: true);
+
+            var options = Sharding.GetOptionsForCluster(cluster.Leader, shards: 3, shardReplicationFactor: 1, orchestratorReplicationFactor: 3);
+            using (var store = Sharding.GetDocumentStore(options))
+            {
+                using (var session = store.OpenSession())
+                {
+                    for (int i = 0; i < 10; i++)
+                    {
+                        session.Store(new User(), $"users/{i}");
+                    }
+
+                    session.SaveChanges();
+                }
+
+                var waitHandles = await Sharding.Backup.WaitForBackupsToComplete(cluster.Nodes, store.Database);
+
+                var config = Backup.CreateBackupConfiguration(backupPath);
+                var backupTaskId = await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(cluster.Nodes, store, config, isFullBackup: false);
+
+                Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
+
+                // add more data
+                waitHandles = await Sharding.Backup.WaitForBackupsToComplete(cluster.Nodes, store.Database);
+                using (var session = store.OpenAsyncSession())
+                {
+                    for (int i = 0; i < 10; i++)
+                    {
+                        session.CountersFor($"users/{i}").Increment("downloads", i);
+                    }
+
+                    await session.StoreAsync(new User { Name = "ayende" }, "users/11");
+                    await session.SaveChangesAsync();
+                }
+
+                await Sharding.Backup.RunBackupAsync(store.Database, backupTaskId, isFullBackup: false, cluster.Nodes);
+                Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
+
+                var dirs = Directory.GetDirectories(backupPath);
+                Assert.Equal(cluster.Nodes.Count, dirs.Length);
+
+                foreach (var dir in dirs)
+                {
+                    var files = Directory.GetFiles(dir);
+                    Assert.Equal(2, files.Length);
+                }
+
+                var sharding = await Sharding.GetShardingConfigurationAsync(store);
+                var settings = GenerateShardRestoreSettings(dirs, sharding);
+
+                // restore the database with a different name
+                var databaseName = $"restored_database-{Guid.NewGuid()}";
+                using (Sharding.Backup.ReadOnly(backupPath))
+                using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
+                {
+                    DatabaseName = databaseName,
+                    ShardRestoreSettings = settings
+                }, timeout: TimeSpan.FromSeconds(60)))
+                {
+                    var dbRec = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
+                    Assert.Equal(3, dbRec.Sharding.Shards.Length);
+
+                    var shardNodes = new HashSet<string>();
+                    for (var index = 0; index < dbRec.Sharding.Shards.Length; index++)
+                    {
+                        var shardTopology = dbRec.Sharding.Shards[index];
+                        Assert.Equal(1, shardTopology.Members.Count);
+                        Assert.Equal(sharding.Shards[index].Members[0], shardTopology.Members[0]);
+                        Assert.True(shardNodes.Add(shardTopology.Members[0]));
+                    }
+
+                    using (var session = store.OpenSession(databaseName))
+                    {
+                        for (int i = 0; i < 10; i++)
+                        {
+                            var doc = session.Load<User>($"users/{i}");
+                            Assert.NotNull(doc);
+
+                            var counter = session.CountersFor(doc).Get("downloads");
+                            Assert.Equal(i, counter);
+                        }
+
+                        var user = session.Load<User>("users/11");
+                        Assert.Equal("ayende", user.Name);
+                    }
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Sharding | RavenTestCategory.Encryption)]
+        public async Task EncryptedBackupAndRestoreSharded_UsingProvidedKey()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+
+            var cluster = await CreateRaftCluster(3, watcherCluster: true);
+            var options = Sharding.GetOptionsForCluster(cluster.Leader, shards: 3, shardReplicationFactor: 1, orchestratorReplicationFactor: 3);
+
+            using (var store = Sharding.GetDocumentStore(options))
+            {
+                await Sharding.Backup.InsertData(store);
+
+                var waitHandles = await Sharding.Backup.WaitForBackupsToComplete(cluster.Nodes, store.Database);
+
+                var config = Backup.CreateBackupConfiguration(backupPath, backupEncryptionSettings: new BackupEncryptionSettings
+                {
+                    Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=",
+                    EncryptionMode = EncryptionMode.UseProvidedKey
+                });
+
+                await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(cluster.Nodes, store, config);
+
+                Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
+
+                var dirs = Directory.GetDirectories(backupPath);
+                Assert.Equal(cluster.Nodes.Count, dirs.Length);
+
+                var sharding = await Sharding.GetShardingConfigurationAsync(store);
+                var settings = GenerateShardRestoreSettings(dirs, sharding);
+
+                // restore the database with a different name
+                var databaseName = $"restored_database-{Guid.NewGuid()}";
+                using (Sharding.Backup.ReadOnly(backupPath))
+                using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
+                {
+                    DatabaseName = databaseName,
+                    ShardRestoreSettings = settings,
+                    BackupEncryptionSettings = new BackupEncryptionSettings
+                    {
+                        Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=",
+                        EncryptionMode = EncryptionMode.UseProvidedKey
+                    }
+                }, timeout: TimeSpan.FromSeconds(60)))
+                {
+                    var dbRec = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
+                    Assert.Equal(3, dbRec.Sharding.Shards.Length);
+
+                    var shardNodes = new HashSet<string>();
+                    for (var index = 0; index < dbRec.Sharding.Shards.Length; index++)
+                    {
+                        var shardTopology = dbRec.Sharding.Shards[index];
+                        Assert.Equal(1, shardTopology.Members.Count);
+                        Assert.Equal(sharding.Shards[index].Members[0], shardTopology.Members[0]);
+                        Assert.True(shardNodes.Add(shardTopology.Members[0]));
+                    }
+
+                    await Sharding.Backup.CheckData(store, RavenDatabaseMode.Sharded, expectedRevisionsCount: 16, database: databaseName);
+                }
+            }
+        }
+
+        [AmazonS3Fact]
+        public async Task EncryptedBackupAndRestoreShardedDatabase_UsingDatabaseKey()
+        {
+            var s3Settings = GetS3Settings();
+         
+            try
+            {
+                var key = Encryption.EncryptedServer(out var certificates, out var dbName);
+
+                using (var store = Sharding.GetDocumentStore(new Options
+                {
+                   AdminCertificate = certificates.ServerCertificate.Value,
+                   ClientCertificate = certificates.ServerCertificate.Value,
+                   ModifyDatabaseName = s => dbName,
+                   ModifyDatabaseRecord = record => record.Encrypted = true
+                }))
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        for (int i = 0; i < 10; i++)
+                        {
+                            session.Store(new User(), $"users/{i}");
+                        }
+                        session.SaveChanges();
+                    }
+
+                    var waitHandles = await Sharding.Backup.WaitForBackupToComplete(store);
+
+                    var config = Backup.CreateBackupConfiguration(s3Settings: s3Settings, fullBackupFrequency: null, incrementalBackupFrequency: "0 */6 * * *", 
+                        backupEncryptionSettings: new BackupEncryptionSettings
+                        {
+                            EncryptionMode = EncryptionMode.UseDatabaseKey
+                        });
+
+                    var backupTaskId = await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(Server, store, config);
+
+                    Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
+
+                    // add more data
+                    waitHandles = await Sharding.Backup.WaitForBackupToComplete(store);
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        for (int i = 0; i < 10; i++)
+                        {
+                            session.CountersFor($"users/{i}").Increment("downloads", i);
+                        }
+
+                        await session.StoreAsync(new User { Name = "ayende" }, "users/11");
+                        await session.SaveChangesAsync();
+                    }
+
+                    await Sharding.Backup.RunBackupAsync(store.Database, backupTaskId, false);
+                    Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
+
+                    var sharding = await Sharding.GetShardingConfigurationAsync(store);
+
+                    ShardedRestoreSettings shardedRestoreSettings;
+                    using (var s3Client = new RavenAwsS3Client(s3Settings, DefaultBackupConfiguration))
+                    {
+                        var prefix = $"{s3Settings.RemoteFolderName}/";
+                        var cloudObjects = await s3Client.ListObjectsAsync(prefix, "/", listFolders: true);
+
+                        Assert.Equal(3, cloudObjects.FileInfoDetails.Count);
+
+                        var folderNames = cloudObjects.FileInfoDetails.Select(fileInfo => fileInfo.FullPath).ToList();
+
+                        foreach (var folderName in folderNames)
+                        {
+                            var files = await s3Client.ListObjectsAsync(folderName, string.Empty, listFolders: false);
+                            Assert.Equal(2, files.FileInfoDetails.Count);
+                        }
+
+                        shardedRestoreSettings = GenerateShardRestoreSettings(folderNames, sharding);
+                    }
+
+                    var databaseName = $"restored_database-{Guid.NewGuid()}";
+                    using (Backup.RestoreDatabaseFromCloud(store, new RestoreFromS3Configuration
+                    {
+                       Settings = s3Settings,
+                       ShardRestoreSettings = shardedRestoreSettings,
+                       DatabaseName = databaseName,
+                       EncryptionKey = key,
+                       BackupEncryptionSettings = new BackupEncryptionSettings
+                       {
+                           EncryptionMode = EncryptionMode.UseDatabaseKey
+                       }
+                    }))
+                    {
+                        var dbRec = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
+                        Assert.Equal(3, dbRec.Sharding.Shards.Length);
+                        Assert.True(dbRec.Encrypted);
+
+                        for (var index = 0; index < dbRec.Sharding.Shards.Length; index++)
+                        {
+                            var shardTopology = dbRec.Sharding.Shards[index];
+                            Assert.Equal(1, shardTopology.Members.Count);
+                            Assert.Equal(sharding.Shards[index].Members[0], shardTopology.Members[0]);
+                        }
+
+                        using (var session = store.OpenSession(databaseName))
+                        {
+                            for (int i = 0; i < 10; i++)
+                            {
+                                var doc = session.Load<User>($"users/{i}");
+                                Assert.NotNull(doc);
+
+                                var counter = session.CountersFor(doc).Get("downloads");
+                                Assert.Equal(i, counter);
+                            }
+
+                            var user = session.Load<User>("users/11");
+                            Assert.Equal("ayende", user.Name);
+                        }
+                    }
+                }
+            }
+            finally
+            {
+                await DeleteObjects(s3Settings);
+            }
+        }
+
+        [AmazonS3Fact]
+        public async Task EncryptedBackupAndRestoreShardedDatabaseInCluster_UsingDatabaseKey()
+        {
+            var s3Settings = GetS3Settings();
+            try
+            {
+                var (nodes, leader, certificates) = await CreateRaftClusterWithSsl(3, watcherCluster: true);
+                var key = Encryption.SetupEncryptedDatabaseInCluster(nodes, certificates, out var databaseName);
+
+                var options = Sharding.GetOptionsForCluster(leader, shards: 3, shardReplicationFactor: 1, orchestratorReplicationFactor: 3);
+                options.ClientCertificate = certificates.ClientCertificate1.Value;
+                options.AdminCertificate = certificates.ServerCertificate.Value;
+                options.ModifyDatabaseName = _ => databaseName;
+                options.ModifyDatabaseRecord += record => record.Encrypted = true;
+                options.RunInMemory = false;
+
+                using (var store = Sharding.GetDocumentStore(options))
+                {
+                    await Sharding.Backup.InsertData(store);
+
+                    var waitHandles = await Sharding.Backup.WaitForBackupsToComplete(nodes, store.Database);
+
+                    var config = Backup.CreateBackupConfiguration(s3Settings: s3Settings,
+                        backupEncryptionSettings: new BackupEncryptionSettings
+                        {
+                            EncryptionMode = EncryptionMode.UseDatabaseKey
+                        });
+
+                    await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(nodes, store, config);
+
+                    Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
+
+                    var sharding = await Sharding.GetShardingConfigurationAsync(store);
+
+                    ShardedRestoreSettings shardedRestoreSettings;
+                    using (var s3Client = new RavenAwsS3Client(s3Settings, DefaultBackupConfiguration))
+                    {
+                        var prefix = $"{s3Settings.RemoteFolderName}/";
+                        var cloudObjects = await s3Client.ListObjectsAsync(prefix, "/", listFolders: true);
+
+                        Assert.Equal(3, cloudObjects.FileInfoDetails.Count);
+
+                        var folderNames = cloudObjects.FileInfoDetails.Select(fileInfo => fileInfo.FullPath).ToList();
+                        shardedRestoreSettings = GenerateShardRestoreSettings(folderNames, sharding);
+                    }
+
+                    var newDbName = $"restored_database-{Guid.NewGuid()}";
+                    using (Backup.RestoreDatabaseFromCloud(store, new RestoreFromS3Configuration
+                    {
+                        Settings = s3Settings,
+                        ShardRestoreSettings = shardedRestoreSettings,
+                        DatabaseName = newDbName,
+                        EncryptionKey = key,
+                        BackupEncryptionSettings = new BackupEncryptionSettings
+                        {
+                            EncryptionMode = EncryptionMode.UseDatabaseKey
+                        }
+                    }))
+                    {
+                        var dbRec = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(newDbName));
+                        Assert.Equal(3, dbRec.Sharding.Shards.Length);
+                        Assert.True(dbRec.Encrypted);
+
+                        var shardNodes = new HashSet<string>();
+                        for (var index = 0; index < dbRec.Sharding.Shards.Length; index++)
+                        {
+                            var shardTopology = dbRec.Sharding.Shards[index];
+                            Assert.Equal(1, shardTopology.Members.Count);
+                            Assert.Equal(sharding.Shards[index].Members[0], shardTopology.Members[0]);
+                            Assert.True(shardNodes.Add(shardTopology.Members[0]));
+                        }
+
+                        await Sharding.Backup.CheckData(store, RavenDatabaseMode.Sharded, expectedRevisionsCount: 16, newDbName);
+                    }
+                }
+            }
+            finally
+            {
+                await DeleteObjects(s3Settings);
             }
         }
 

@@ -650,7 +650,7 @@ namespace Raven.Server.Web.System
                     taskFactory: onProgress => Task.Run(async () =>
                     {
                         var restoreBackupTask = await RestoreUtils.CreateBackupTaskAsync(ServerStore, restoreConfiguration, restoreSource, cancelToken);
-                        return await restoreBackupTask.Execute(onProgress);
+                        return await restoreBackupTask.ExecuteAsync(onProgress);
                     }, cancelToken.Token),
                     token: cancelToken);
 
