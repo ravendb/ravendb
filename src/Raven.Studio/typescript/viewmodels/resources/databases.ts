@@ -4,10 +4,6 @@ import { DatabasesPage } from "../../components/pages/resources/databases/Databa
 class databases extends viewModelBase {
     view = { default: `<div class="databases flex-vertical absolute-fill content-margin" data-bind="react: reactOptions"></div>` };
 
-    isUsingBootstrap5(): boolean | undefined {
-        return true;
-    }
-
     reactOptions = ko.pureComputed(() => {
         const props: Parameters<typeof DatabasesPage>[0] = {
             activeDatabase: this.activeDatabase()?.name

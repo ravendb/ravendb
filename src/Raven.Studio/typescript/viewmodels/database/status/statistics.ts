@@ -5,7 +5,7 @@ class statistics extends shardViewModelBase {
     view = { default: `<section class="stats content-margin" data-bind="react: reactOptions"></section>` };
 
     props: Parameters<typeof StatisticsPage>[0];
-
+    
     activate(args: any, parameters?: any) {
         super.activate(args, parameters);
 
