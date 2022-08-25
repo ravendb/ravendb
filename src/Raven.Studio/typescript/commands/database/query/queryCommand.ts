@@ -156,21 +156,6 @@ f();
         
         return url + urlArgs;
     }
-
-    getCsvUrl() {
-        const criteria = this.criteria;
-
-        const url = endpoints.databases.streaming.streamsQueries;
-        
-        const urlArgs = this.urlEncodeArgs({
-            query: this.getQueryText(),
-            debug: criteria.indexEntries() ? "entries" : undefined,
-            format: "excel",
-            download: true
-        });
-
-        return url + urlArgs;
-    }
 }
 
 export = queryCommand;
