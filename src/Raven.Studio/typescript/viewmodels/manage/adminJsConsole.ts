@@ -6,6 +6,7 @@ import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBinding
 import databasesManager = require("common/shell/databasesManager");
 import defaultAceCompleter = require("common/defaultAceCompleter");
 import { highlight, languages } from "prismjs";
+import shardedDatabase from "models/resources/shardedDatabase";
 
 type jsConsolePatchOption = "Server" | "Database";
 type consoleJsSampleDto = {
@@ -83,7 +84,10 @@ class adminJsConsole extends viewModelBase {
     }
 
     private initObservables() {
-        this.databaseNames = ko.pureComputed(() => databasesManager.default.databases().map((db: database) => db.name));
+        this.databaseNames = ko.pureComputed(() => {
+            const dbs = databasesManager.default.databases();
+            return dbs.flatMap(db => db instanceof shardedDatabase ? db.shards().map(x => x.name) : [ db.name ]);
+        });
         this.previewCode = ko.pureComputed(() => {
             const item = this.previewItem();
             if (!item) {
