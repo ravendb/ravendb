@@ -117,33 +117,40 @@ namespace SlowTests.SparrowTests
                 long.MaxValue,
                 false);
 
-            var aLogger = new SwitchLogger(loggingSource, "A");
-            var bLogger = aLogger.GetSubSwitchLogger("B");
-            var cLogger = bLogger.GetSubSwitchLogger("C");
+            try
+            {
+                var aLogger = new SwitchLogger(loggingSource, "A");
+                var bLogger = aLogger.GetSubSwitchLogger("B");
+                var cLogger = bLogger.GetSubSwitchLogger("C");
 
-            var configuration1 = new DynamicJsonValue {["Loggers"] = new DynamicJsonValue {["B"] = new DynamicJsonValue {["LogMode"] = LogMode.Information}}};
-            var contest = JsonOperationContext.ShortTermSingleUse();
-            var blittable = contest.ReadObject(configuration1, "JsonDeserializationServer");
-            var configuration = JsonDeserializationServer.SwitchLoggerConfiguration(blittable);
+                var configuration1 = new DynamicJsonValue {["Loggers"] = new DynamicJsonValue {["B"] = new DynamicJsonValue {["LogMode"] = LogMode.Information}}};
+                var contest = JsonOperationContext.ShortTermSingleUse();
+                var blittable = contest.ReadObject(configuration1, "JsonDeserializationServer");
+                var configuration = JsonDeserializationServer.SwitchLoggerConfiguration(blittable);
 
 
-            Assert.True(aLogger.IsReset());
-            Assert.False(aLogger.IsOperationsEnabled || aLogger.IsInfoEnabled);
-            Assert.True(cLogger.IsReset());
-            Assert.False(aLogger.IsOperationsEnabled || aLogger.IsInfoEnabled);
+                Assert.True(aLogger.IsReset());
+                Assert.False(aLogger.IsOperationsEnabled || aLogger.IsInfoEnabled);
+                Assert.True(cLogger.IsReset());
+                Assert.False(aLogger.IsOperationsEnabled || aLogger.IsInfoEnabled);
 
-            Assert.True(bLogger.IsReset());
-            Assert.False(aLogger.IsOperationsEnabled || aLogger.IsInfoEnabled);
+                Assert.True(bLogger.IsReset());
+                Assert.False(aLogger.IsOperationsEnabled || aLogger.IsInfoEnabled);
 
-            configuration.Apply(aLogger);
+                configuration.Apply(aLogger);
 
-            Assert.True(aLogger.IsReset());
-            Assert.False(aLogger.IsOperationsEnabled || aLogger.IsInfoEnabled);
-            Assert.True(cLogger.IsReset());
-            Assert.False(aLogger.IsOperationsEnabled || aLogger.IsInfoEnabled);
+                Assert.True(aLogger.IsReset());
+                Assert.False(aLogger.IsOperationsEnabled || aLogger.IsInfoEnabled);
+                Assert.True(cLogger.IsReset());
+                Assert.False(aLogger.IsOperationsEnabled || aLogger.IsInfoEnabled);
 
-            Assert.False(bLogger.IsReset());
-            Assert.True(bLogger.IsInfoEnabled);
+                Assert.False(bLogger.IsReset());
+                Assert.True(bLogger.IsInfoEnabled);
+            }
+            finally
+            {
+                loggingSource.EndLogging();
+            }
         }
 
         [Fact]
@@ -162,12 +169,19 @@ namespace SlowTests.SparrowTests
                 long.MaxValue,
                 false);
 
-            var aLogger = new SwitchLogger(loggingSource, "A");
-            aLogger.SetLoggerMode(LogMode.Information);
-            var bLogger = aLogger.GetSubSwitchLogger("B");
+            try
+            {
+                var aLogger = new SwitchLogger(loggingSource, "A");
+                aLogger.SetLoggerMode(LogMode.Information);
+                var bLogger = aLogger.GetSubSwitchLogger("B");
 
-            Assert.False(bLogger.IsReset());
-            Assert.True(bLogger.IsInfoEnabled);
+                Assert.False(bLogger.IsReset());
+                Assert.True(bLogger.IsInfoEnabled);
+            }
+            finally
+            {
+                loggingSource.EndLogging();
+            }
         }
 
         [Fact]
@@ -186,26 +200,33 @@ namespace SlowTests.SparrowTests
                 long.MaxValue,
                 false);
 
-            var aLogger = new SwitchLogger(loggingSource, "A");
-            aLogger.SetLoggerMode(LogMode.Information);
-            var bLogger = aLogger.GetSubSwitchLogger("B");
-            var cLogger = bLogger.GetSubSwitchLogger("C");
+            try
+            {
+                var aLogger = new SwitchLogger(loggingSource, "A");
+                aLogger.SetLoggerMode(LogMode.Information);
+                var bLogger = aLogger.GetSubSwitchLogger("B");
+                var cLogger = bLogger.GetSubSwitchLogger("C");
 
-            Assert.False(aLogger.IsReset());
-            Assert.True(aLogger.IsInfoEnabled);
-            Assert.False(bLogger.IsReset());
-            Assert.True(bLogger.IsInfoEnabled);
-            Assert.False(cLogger.IsReset());
-            Assert.True(cLogger.IsInfoEnabled);
+                Assert.False(aLogger.IsReset());
+                Assert.True(aLogger.IsInfoEnabled);
+                Assert.False(bLogger.IsReset());
+                Assert.True(bLogger.IsInfoEnabled);
+                Assert.False(cLogger.IsReset());
+                Assert.True(cLogger.IsInfoEnabled);
 
-            aLogger.Reset(true);
+                aLogger.Reset(true);
 
-            Assert.True(aLogger.IsReset());
-            Assert.Equal(LogMode.None, aLogger.GetLogMode());
-            Assert.True(bLogger.IsReset());
-            Assert.Equal(LogMode.None, bLogger.GetLogMode());
-            Assert.True(cLogger.IsReset());
-            Assert.Equal(LogMode.None, cLogger.GetLogMode());
+                Assert.True(aLogger.IsReset());
+                Assert.Equal(LogMode.None, aLogger.GetLogMode());
+                Assert.True(bLogger.IsReset());
+                Assert.Equal(LogMode.None, bLogger.GetLogMode());
+                Assert.True(cLogger.IsReset());
+                Assert.Equal(LogMode.None, cLogger.GetLogMode());
+            }
+            finally
+            {
+                loggingSource.EndLogging();
+            }
 
         }
 
@@ -223,76 +244,84 @@ namespace SlowTests.SparrowTests
                 long.MaxValue,
                 false);
 
-            var logFile = await AssertWaitForNotNullAsync(async () => Directory.GetFiles(path, "*.log").FirstOrDefault());
-
-            var logger = new SwitchLogger(loggingSource, "A");
-
-            var shouldContainList = new List<string>();
-            var shouldNotContainList = new List<string>();
-
-            //Without listeners
+            try
             {
-                await AddLog($"Without listeners 1 - loggingSource.LogMode:{loggingSource.LogMode} logger.GetLogMode:{logger.GetLogMode()}", true);
+                var logFile = await AssertWaitForNotNullAsync(async () => Directory.GetFiles(path, "*.log").FirstOrDefault());
 
-                logger.SetLoggerMode(LogMode.None);
-                await AddLog($"Without listeners 2 - loggingSource.LogMode:{loggingSource.LogMode} logger.GetLogMode:{logger.GetLogMode()}", false);
-            
-                logger.SetLoggerMode(LogMode.Operations);
-                await AddLog($"Without listeners 3 - loggingSource.LogMode:{loggingSource.LogMode} logger.GetLogMode:{logger.GetLogMode()}", false);
+                var logger = new SwitchLogger(loggingSource, "A");
 
-                logger.SetLoggerMode(LogMode.Information);
-                await AddLog($"Without listeners 4 - loggingSource.LogMode:{loggingSource.LogMode} logger.GetLogMode:{logger.GetLogMode()}", true);
+                var shouldContainList = new List<string>();
+                var shouldNotContainList = new List<string>();
+
+                //Without listeners
+                {
+                    await AddLog($"Without listeners 1 - loggingSource.LogMode:{loggingSource.LogMode} logger.GetLogMode:{logger.GetLogMode()}", true);
+
+                    logger.SetLoggerMode(LogMode.None);
+                    await AddLog($"Without listeners 2 - loggingSource.LogMode:{loggingSource.LogMode} logger.GetLogMode:{logger.GetLogMode()}", false);
+
+                    logger.SetLoggerMode(LogMode.Operations);
+                    await AddLog($"Without listeners 3 - loggingSource.LogMode:{loggingSource.LogMode} logger.GetLogMode:{logger.GetLogMode()}", false);
+
+                    logger.SetLoggerMode(LogMode.Information);
+                    await AddLog($"Without listeners 4 - loggingSource.LogMode:{loggingSource.LogMode} logger.GetLogMode:{logger.GetLogMode()}", true);
+                }
+
+                //With listeners
+                using (var socket = new LogTestsHelper.DummyWebSocket())
+                {
+                    var context = new LoggingSource.WebSocketContext();
+                    _ = loggingSource.Register(socket, context, CancellationToken.None);
+
+                    loggingSource.SetupLogMode(LogMode.Information);
+                    await AddLog($"With listeners 1 - loggingSource.LogMode:{loggingSource.LogMode} logger.GetLogMode:{logger.GetLogMode()}", true);
+
+                    logger.SetLoggerMode(LogMode.None);
+                    await AddLog($"With listeners 2 - loggingSource.LogMode:{loggingSource.LogMode} logger.GetLogMode:{logger.GetLogMode()}", false);
+
+                    logger.SetLoggerMode(LogMode.Operations);
+                    await AddLog($"With listeners 3 - loggingSource.LogMode:{loggingSource.LogMode} logger.GetLogMode:{logger.GetLogMode()}", false);
+
+                    logger.SetLoggerMode(LogMode.Information);
+                    await AddLog($"With listeners 4 - loggingSource.LogMode:{loggingSource.LogMode} logger.GetLogMode:{logger.GetLogMode()}", true);
+                }
+
+                //To be sure all logs where written to file
+                var lastLineLogger = loggingSource.GetLogger("Test", "Test");
+                await lastLineLogger.InfoWithWait("");
+
+                var actualLogContent = await File.ReadAllTextAsync(logFile);
+                foreach (var msg in shouldContainList)
+                {
+                    Assert.Contains(msg, actualLogContent);
+                }
+
+                foreach (var msg in shouldNotContainList)
+                {
+                    Assert.DoesNotContain(msg, actualLogContent);
+                }
+
+                async Task AddLog(string msg, bool shouldContain)
+                {
+                    var list = shouldContain ? shouldContainList : shouldNotContainList;
+
+                    var subLogger = logger.GetLogger("test");
+                    list.Add(msg);
+                    if (logger.IsInfoEnabled)
+                        logger.Info(msg);
+
+                    var subLoggerMsg = $"subLogger {msg}";
+                    list.Add(subLoggerMsg);
+                    if (subLogger.IsInfoEnabled)
+                        subLogger.Info(subLoggerMsg);
+
+                    var waitLogger = loggingSource.GetLogger("", "");
+                    await waitLogger.OperationsWithWait("").WaitAsync(TimeSpan.FromSeconds(5));
+                }
             }
-            
-            //With listeners
-            using(var socket = new LogTestsHelper.DummyWebSocket())
+            finally
             {
-                var context = new LoggingSource.WebSocketContext();
-                _ = loggingSource.Register(socket, context, CancellationToken.None);
-                
-                loggingSource.SetupLogMode(LogMode.Information);
-                await AddLog($"With listeners 1 - loggingSource.LogMode:{loggingSource.LogMode} logger.GetLogMode:{logger.GetLogMode()}", true);
-
-                logger.SetLoggerMode(LogMode.None);
-                await AddLog($"With listeners 2 - loggingSource.LogMode:{loggingSource.LogMode} logger.GetLogMode:{logger.GetLogMode()}", false);
-            
-                logger.SetLoggerMode(LogMode.Operations);
-                await AddLog($"With listeners 3 - loggingSource.LogMode:{loggingSource.LogMode} logger.GetLogMode:{logger.GetLogMode()}", false);
-
-                logger.SetLoggerMode(LogMode.Information);
-                await AddLog($"With listeners 4 - loggingSource.LogMode:{loggingSource.LogMode} logger.GetLogMode:{logger.GetLogMode()}", true);
-            }
-
-            //To be sure all logs where written to file
-            var lastLineLogger = loggingSource.GetLogger("Test", "Test");
-            await lastLineLogger.InfoWithWait("");
-            
-            var actualLogContent = await File.ReadAllTextAsync(logFile);
-            foreach (var msg in shouldContainList)
-            {            
-                Assert.Contains(msg, actualLogContent);
-            }
-            foreach (var msg in shouldNotContainList)
-            {            
-                Assert.DoesNotContain(msg, actualLogContent);
-            }
-
-            async Task AddLog(string msg, bool shouldContain)
-            {
-                var list = shouldContain ? shouldContainList : shouldNotContainList;
-
-                var subLogger = logger.GetLogger("test");
-                list.Add(msg);
-                if (logger.IsInfoEnabled)
-                    logger.Info(msg);
-                
-                var subLoggerMsg = $"subLogger {msg}";
-                list.Add(subLoggerMsg);
-                if(subLogger.IsInfoEnabled)
-                    subLogger.Info(subLoggerMsg);
-
-                var waitLogger = loggingSource.GetLogger("", "");
-                await waitLogger.OperationsWithWait("").WaitAsync(TimeSpan.FromSeconds(5));
+                loggingSource.EndLogging();
             }
         }
 
