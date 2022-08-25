@@ -225,6 +225,10 @@ namespace Raven.Client.ServerWide
             {
                 var myUrl = clusterTopology.GetUrlFromTag(myTag);
                 var repNode = WhoseTaskIsIt(state, new PromotableTask(myTag, myUrl, databaseName));
+                if (repNode == null)
+                {
+                    return destinations;
+                }
                 var repNodeUrl = clusterTopology.GetUrlFromTag(repNode);
 
                 destinations.Add(new InternalReplication
