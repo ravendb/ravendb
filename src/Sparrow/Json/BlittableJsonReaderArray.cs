@@ -203,8 +203,7 @@ namespace Sparrow.Json
             AssertContextNotDisposed();
 
             // try get value from cache, works only with Blittable types, other objects are not stored for now
-            Tuple<object, BlittableJsonToken> result;
-            if (NoCache == false && _cache != null && _cache.TryGetValue(index, out result))
+            if (NoCache == false && _cache != null && _cache.TryGetValue(index, out Tuple<object, BlittableJsonToken> result))
                 return result;
 
             if (index >= _count || index < 0)
@@ -213,12 +212,14 @@ namespace Sparrow.Json
             var itemMetadataStartPtr = _metadataPtr + index * (_currentOffsetSize + 1);
             var offset = ReadNumber(itemMetadataStartPtr, _currentOffsetSize);
             var token = *(itemMetadataStartPtr + _currentOffsetSize);
-            result = Tuple.Create(_parent.GetObject((BlittableJsonToken)token,
-                (int)(_dataStart - _parent.BasePointer - offset)), (BlittableJsonToken)token & TypesMask);
+            result = Tuple.Create(
+                _parent.GetObject((BlittableJsonToken)token,(int)(_dataStart - _parent.BasePointer - offset), out bool isBlittableJsonReader), 
+                (BlittableJsonToken)token & TypesMask
+            );
 
-            if (result.Item1 is BlittableJsonReaderBase blittableJsonReaderBase)
+            if (isBlittableJsonReader)
             {
-                blittableJsonReaderBase.NoCache = NoCache;
+                ((BlittableJsonReaderBase)result.Item1).NoCache = NoCache;
                 if (NoCache == false)
                 {
                     if (_cache == null)

@@ -629,7 +629,7 @@ namespace Sparrow.Json
                 result = null;
                 return false;
             }
-            result = GetObject(token, (int)(_objStart - _mem - position));
+            result = GetObject(token, (int)(_objStart - _mem - position), out _);
             return true;
         }
 
@@ -653,35 +653,28 @@ namespace Sparrow.Json
             if (_mem == null)
                 goto ThrowDisposed;
 
-            bool opResult = true;
-
             // try get value from cache, works only with Blittable types, other objects are not stored for now
             if (_objectsPathCache != null && _objectsPathCache.TryGetValue(name, out result))
-                goto Return;
+                return true;
 
             var index = GetPropertyIndex(name);
             if (index == -1)
             {
-                result = null;
-                opResult = false;
-                goto Return;
+                Unsafe.SkipInit(out result);
+                return false;
             }
 
             var metadataSize = _currentOffsetSize + _currentPropertyIdSize + sizeof(byte);
 
-            BlittableJsonToken token;
-            int position;
-            int propertyId;
-            GetPropertyTypeAndPosition(index, metadataSize, out token, out position, out propertyId);
-            result = GetObject(token, (int)(_objStart - _mem - position));
+            GetPropertyTypeAndPosition(index, metadataSize, out BlittableJsonToken token, out int position, out _);
+            result = GetObject(token, (int)(_objStart - _mem - position), out bool isBlittableJsonReader);
 
-            if (NoCache == false && result is BlittableJsonReaderBase)
+            if (NoCache == false && isBlittableJsonReader)
             {
                 AddToCache(name, result, index);
             }
 
-            Return:
-            return opResult;
+            return true;
 
             ThrowDisposed:
             ThrowObjectDisposed();
@@ -747,7 +740,7 @@ namespace Sparrow.Json
                 return;
             }
 
-            var value = GetObject(token, (int)(_objStart - _mem - position));
+            var value = GetObject(token, (int)(_objStart - _mem - position), out _);
 
             if (NoCache == false && addObjectToCache)
             {
@@ -926,49 +919,60 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal object GetObject(BlittableJsonToken type, int position)
+        internal object GetObject(BlittableJsonToken type, int position, out bool isBlittableJsonReader)
         {
             AssertContextNotDisposed();
 
+            isBlittableJsonReader = false;
             BlittableJsonToken actualType = type & TypesMask;
             if (actualType == BlittableJsonToken.String)
                 return ReadStringLazily(position);
             if (actualType == BlittableJsonToken.Integer)
                 return ReadVariableSizeLong(position);
             if (actualType == BlittableJsonToken.StartObject)
+            {
+                isBlittableJsonReader = true;
                 return new BlittableJsonReaderObject(position, _parent ?? this, type) { NoCache = NoCache };
+            }
 
-            return GetObjectUnlikely(type, position, actualType);
+            return GetObjectUnlikely(type, position, actualType, out isBlittableJsonReader);
         }
 
-        private object GetObjectUnlikely(BlittableJsonToken type, int position, BlittableJsonToken actualType)
+        private object GetObjectUnlikely(BlittableJsonToken type, int position, BlittableJsonToken actualType, out bool isBlittableJsonReader)
         {
             AssertContextNotDisposed();
 
             switch (actualType)
             {
                 case BlittableJsonToken.EmbeddedBlittable:
+                    isBlittableJsonReader = true;
                     return ReadNestedObject(position);
 
                 case BlittableJsonToken.RawBlob:
+                    isBlittableJsonReader = false;
                     return ReadRawBlob(position);
 
                 case BlittableJsonToken.StartArray:
+                    isBlittableJsonReader = true;
                     return new BlittableJsonReaderArray(position, _parent ?? this, type)
                     {
                         NoCache = NoCache
                     };
 
                 case BlittableJsonToken.CompressedString:
+                    isBlittableJsonReader = false;
                     return ReadCompressStringLazily(position);
 
                 case BlittableJsonToken.Boolean:
+                    isBlittableJsonReader = false;
                     return ReadNumber(_mem + position, 1) == 1;
 
                 case BlittableJsonToken.Null:
+                    isBlittableJsonReader = false;
                     return null;
 
                 case BlittableJsonToken.LazyNumber:
+                    isBlittableJsonReader = false;
                     return new LazyNumberValue(ReadStringLazily(position));
             }
 
