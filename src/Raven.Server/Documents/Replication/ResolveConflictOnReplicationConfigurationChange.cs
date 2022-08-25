@@ -439,7 +439,7 @@ namespace Raven.Server.Documents.Replication
                 
                 var alert = AlertRaised.Create(
                     _database.Name,
-                    "Conflict didn't resolved",
+                    "User-provided conflict script raised an error during conflict resolution, manual intervention required!",
                     msg,
                     AlertType.Replication,
                     NotificationSeverity.Error,
