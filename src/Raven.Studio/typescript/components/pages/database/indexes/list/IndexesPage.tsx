@@ -112,7 +112,6 @@ function matchesAnyIndexStatus(
     }
 
     /* TODO
-    ADD : _.includes(status, "Stale") && this.isStale()
         || _.includes(status, "RollingDeployment") && this.rollingDeploymentInProgress()
      */
 
@@ -123,6 +122,7 @@ function matchesAnyIndexStatus(
         (status.includes("Normal") && anyMatch(index, (x) => IndexUtils.isNormalState(x, globalIndexingStatus))) ||
         (status.includes("ErrorOrFaulty") &&
             (anyMatch(index, IndexUtils.isErrorState) || IndexUtils.hasAnyFaultyNode(index))) ||
+        (status.includes("Stale") && anyMatch(index, (x) => x.stale)) ||
         (status.includes("Paused") && anyMatch(index, (x) => IndexUtils.isPausedState(x, globalIndexingStatus))) ||
         (status.includes("Disabled") && anyMatch(index, (x) => IndexUtils.isDisabledState(x, globalIndexingStatus))) ||
         (status.includes("Idle") && anyMatch(index, (x) => IndexUtils.isIdleState(x, globalIndexingStatus)))
