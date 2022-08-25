@@ -5,14 +5,23 @@
 
 @import "./bootstrap/variables-body.less";
 
-@import "animations.less";
+@import "./styles-common-root.less";
 
-@import "root.less";
+//@import "./bootstrap/bootstrap.less";
 
-@import "icons.less";
+
+// Core variables and mixins
+@import "./bootstrap/mixins.less";
+
+// Reset and dependencies
+@import "./bootstrap/normalize.less";
+
+// Core CSS
+@import "./bootstrap/grid.less"; 
+
 
 .bs3 {
     font-size: @font-size-base;
     
-    @import "styles-common.less";
+    @import "styles-common-scoped.less";
 }
