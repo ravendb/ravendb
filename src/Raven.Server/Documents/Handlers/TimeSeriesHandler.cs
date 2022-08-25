@@ -671,7 +671,7 @@ namespace Raven.Server.Documents.Handlers
         public async Task ConfigTimeSeries()
         {
             await DatabaseConfigurations(
-                ServerStore.ModifyTimeSeriesConfiguration,
+                ModifyTimeSeriesConfiguration,
                 "read-timeseries-config",
                 GetRaftRequestIdFromQuery(),
                 beforeSetupConfiguration: (string name, ref BlittableJsonReaderObject configuration, JsonOperationContext context) =>
@@ -701,6 +701,24 @@ namespace Raven.Server.Documents.Handlers
                         }
                     }
                 });
+        }
+
+        private async Task<(long, object)> ModifyTimeSeriesConfiguration(TransactionOperationContext context, string name, BlittableJsonReaderObject configurationJson, string raftRequestId)
+        {
+            var configuration = JsonDeserializationCluster.TimeSeriesConfiguration(configurationJson);
+            configuration?.InitializeRollupAndRetention();
+            ServerStore.LicenseManager.AssertCanAddTimeSeriesRollupsAndRetention(configuration);
+            var editTimeSeries = new EditTimeSeriesConfigurationCommand(configuration, name, raftRequestId);
+            var result = await ServerStore.SendToLeaderAsync(editTimeSeries);
+
+            using (context.OpenReadTransaction())
+            {
+                var topology = ServerStore.Cluster.ReadDatabaseTopology(context, name);
+                var clusterTopology = ServerStore.GetClusterTopology(context);
+                await WaitForExecutionOnRelevantNodes(context, name, clusterTopology, topology.Members, result.Index);
+            }
+
+            return result;
         }
 
         [RavenAction("/databases/*/admin/timeseries/policy", "PUT", AuthorizationStatus.DatabaseAdmin)]
