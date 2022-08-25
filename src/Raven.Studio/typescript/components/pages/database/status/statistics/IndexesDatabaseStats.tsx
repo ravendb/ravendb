@@ -179,31 +179,44 @@ export function IndexesDatabaseStats(props: IndexesDatabaseStatsProps) {
                 {locations.map((location, locationIndex) => {
                     const stat = perNodeStats.find((x) => databaseLocationComparator(x.location, location));
 
-                    const faulty = stat.status === "loaded" && index.details[locationIndex].isFaultyIndex;
+                    const locationDetails = index.details[locationIndex];
 
-                    if (!alwaysRenderValue && faulty) {
+                    const key = genUtils.formatLocation(location);
+                    if (alwaysRenderValue) {
+                        return <td key={key}>{children(locationDetails, location)}</td>;
+                    }
+
+                    if (stat.status === "loaded" && !locationDetails) {
                         return (
-                            <td key={genUtils.formatLocation(location)} className="text-danger">
+                            <td key={key} className="text-danger">
+                                (index wasn't found on: {genUtils.formatLocation(location)})
+                            </td>
+                        );
+                    }
+
+                    const faulty = stat.status === "loaded" && locationDetails?.isFaultyIndex;
+
+                    if (faulty) {
+                        return (
+                            <td key={key} className="text-danger">
                                 (faulty index)
                             </td>
                         );
                     }
 
-                    if (!alwaysRenderValue && stat.status === "error") {
+                    if (stat.status === "error") {
                         return (
-                            <td key={genUtils.formatLocation(location)} className="text-danger">
+                            <td key={key} className="text-danger">
                                 <i className="icon-cancel" title={"Load error: " + stat.error.responseJSON.Message} />
                             </td>
                         );
                     }
 
-                    return (
-                        <td key={genUtils.formatLocation(location)}>
-                            {stat.status === "loaded" || alwaysRenderValue
-                                ? children(index.details[locationIndex], location)
-                                : "loading..."}
-                        </td>
-                    );
+                    if (stat.status === "loading" || stat.status === "notLoaded") {
+                        return <td key={key}>loading...</td>;
+                    }
+
+                    return <td key={key}>{children(locationDetails, location)}</td>;
                 })}
             </>
         );
