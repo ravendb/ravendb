@@ -23,14 +23,14 @@ internal class TrafficWatchToLog
 
     public void Log(TrafficWatchChangeBase trafficWatchData)
     {
-        string msg = null;
-
-        if (Logger.IsOperationsEnabled == false)
-            return;
-
         if (Configuration.TrafficWatchMode == TrafficWatchMode.Off)
             return;
 
+        if (Logger.IsOperationsEnabled == false)
+            return;
+        
+        string msg = null;
+        
         if (trafficWatchData is TrafficWatchHttpChange twhc)
         {
             if (Configuration.Databases != null)
