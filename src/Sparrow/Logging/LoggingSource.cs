@@ -39,7 +39,6 @@ namespace Sparrow.Logging
 
         private readonly ManualResetEventSlim _hasEntries = new ManualResetEventSlim(false);
         private readonly ManualResetEventSlim _readyToCompress = new ManualResetEventSlim(false);
-        private readonly CancellationTokenSource _tokenSource = new CancellationTokenSource();
         private readonly LightWeightThreadLocal<LocalThreadWriterState> _localState;
 
         private readonly LimitedConcurrentSet<LogMessageEntry>[] _freePooledMessageEntries;
@@ -260,8 +259,6 @@ namespace Sparrow.Logging
 
                 _loggingThread?.Join(TimeToWaitForLoggingToEndInMilliseconds);
                 _compressLoggingThread?.Join(TimeToWaitForLoggingToEndInMilliseconds);
-
-                _tokenSource.Cancel();
             }
         }
 
@@ -700,8 +697,7 @@ namespace Sparrow.Logging
             finally
             {
                 _readyToCompress.Set();
-                if (_compressLoggingThread?.Join(1000) == false)
-                    _tokenSource.Cancel();
+                _compressLoggingThread?.Join();
             }
         }
 
@@ -747,11 +743,15 @@ namespace Sparrow.Logging
                         return;
 
                     if (_keepLogging == false)
+                    {
                         //To do last round of compression after stop logging
                         keepCompress = false;
-
-                    _readyToCompress.Wait(_tokenSource.Token);
-                    _readyToCompress.Reset();
+                    }
+                    else
+                    {
+                        _readyToCompress.Wait();
+                        _readyToCompress.Reset();
+                    }
 
                     string[] logFiles;
                     string[] logGzFiles;
