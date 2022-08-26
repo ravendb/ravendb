@@ -411,6 +411,9 @@ namespace Voron.Impl.Scratch
                     if (_parent._allocatedPages.TryGetValue(key, out var pageFromScratchBuffer) == false)
                         continue;
 
+                    if (pageFromScratchBuffer == null)
+                        continue;
+
                     pages.Add(pageFromScratchBuffer);
 
                     if (pages.Count == 10)

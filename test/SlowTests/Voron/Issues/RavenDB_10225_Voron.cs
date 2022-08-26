@@ -45,7 +45,7 @@ namespace SlowTests.Voron.Issues
 
             var journalPath = ((StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)Env.Options).JournalPath.FullPath;
 
-            Assert.True(SpinWait.SpinUntil(() => new DirectoryInfo(journalPath).GetFiles($"{StorageEnvironmentOptions.RecyclableJournalFileNamePrefix}*").Length == 6,
+            Assert.True(SpinWait.SpinUntil(() => Env.Options.GetNumberOfJournalsForReuse() == 6,
                 TimeSpan.FromSeconds(30)));
 
             Env.Cleanup(tryCleanupRecycledJournals: true);

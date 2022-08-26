@@ -191,6 +191,7 @@
         <div class="name flex-horizontal flex-grow">
             <h3 data-bind="attr: { title: name }">
                 <span data-bind="text: name"></span>
+                <span class="text-warning" data-bind="visible: dirtyFlag().isDirty">*</span>
             </h3>
         </div>
         <div class="flex-grow">

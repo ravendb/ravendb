@@ -56,7 +56,7 @@ class changeVectorUtils {
     }
     
     private static parseChangeVectorEntry(cvEntry: string) {
-        const trimmedValue = _.trim(cvEntry);
+        const trimmedValue = cvEntry.trim();
 
         const [tag, rest] = trimmedValue.split(":", 2);
         const [etag, dbId] = rest.split("-", 2);
@@ -65,7 +65,7 @@ class changeVectorUtils {
             tag: tag,
             etag: etag,
             dbId: dbId,
-            original: cvEntry
+            original: trimmedValue
         };
     }
 } 
