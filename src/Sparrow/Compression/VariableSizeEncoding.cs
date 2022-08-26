@@ -163,7 +163,7 @@ namespace Sparrow.Compression
 
                 if (typeof(T) == typeof(bool))
                     return (T)(object)(b == 1);
-                return (T)(object)b;
+                return (typeof(T) == typeof(sbyte)) ? (T)(object)(sbyte)b : (T)(object)b;
             }
 
             offset = 0;
@@ -191,34 +191,20 @@ namespace Sparrow.Compression
                 if (b1 < 0x80)
                     goto End;
 
-                // This is of type size 2 bytes, therefore we will cut it short here. 
-                if (typeof(T) == typeof(short) || typeof(T) == typeof(ushort))
-                {
-                    b = buffer[2];
-                    if (b < 0x80)
-                        goto Fail;
-
-                    ul |= (b & 0x7Ful) << 2 * bitsToShift;
-                    offset++;
-
-                    // PERF: This unconditional jump force the JIT to remove all the dead code.
-                    goto End;
-                }
-
-                int maxBytesWithoutOverflow;
+                int bytesReadWhenOverflow;
                 if (typeof(T) == typeof(long) || typeof(T) == typeof(ulong))
-                    maxBytesWithoutOverflow = 10;
+                    bytesReadWhenOverflow = 10;
                 else if (typeof(T) == typeof(int) || typeof(T) == typeof(uint))
-                    maxBytesWithoutOverflow = 6;
+                    bytesReadWhenOverflow = 5;
                 else
-                    maxBytesWithoutOverflow = 3;
+                    bytesReadWhenOverflow = 3;
 
                 // PERF: We need this for the JIT to understand that this can be profitable. 
                 buffer += 2;
                 int shift = 2 * bitsToShift;
                 do
                 {
-                    if (shift == maxBytesWithoutOverflow * bitsToShift)
+                    if (shift == bytesReadWhenOverflow * bitsToShift)
                         goto Fail; // PERF: Using goto to diminish the size of the loop.
 
                     b = *buffer;
@@ -403,7 +389,39 @@ namespace Sparrow.Compression
                 return i + 1;
             }
 
-            if (typeof(T) == typeof(short) || typeof(T) == typeof(ushort) || typeof(T) == typeof(int) || typeof(T) == typeof(uint))
+            if (typeof(T) == typeof(short) || typeof(T) == typeof(ushort))
+            {
+                ushort ui;
+                if (typeof(T) == typeof(short))
+                    ui = (ushort)(short)(object)value;
+                else
+                    ui = (ushort)(object)value;
+
+                if (ui < 0x80)
+                {
+                    *dest = (byte)ui;
+                    return 1;
+                }
+
+                *dest = (byte)(ui | 0x80);
+                ui >>= 7;
+                dest++;
+
+                int i = 1;
+                while (ui >= 0x80)
+                {
+                    *dest++ = (byte)(ui | 0x80);
+                    ui >>= 7;
+                    i++;
+                }
+
+                *dest++ = (byte)ui;
+                i++;
+
+                return i;
+            }
+
+            if (typeof(T) == typeof(int) || typeof(T) == typeof(uint))
             {
                 uint ui;
                 if (typeof(T) == typeof(short))
@@ -422,8 +440,8 @@ namespace Sparrow.Compression
                 }
 
                 *dest = (byte)(ui | 0x80);
-                dest++;
                 ui >>= 7;
+                dest++;
 
                 int i = 1;
                 while (ui >= 0x80)
@@ -432,8 +450,10 @@ namespace Sparrow.Compression
                     ui >>= 7;
                     i++;
                 }
+
                 *dest++ = (byte)ui;
                 i++;
+
                 return i;
             }
 

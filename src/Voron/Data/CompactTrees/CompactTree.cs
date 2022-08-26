@@ -784,7 +784,7 @@ namespace Voron.Data.CompactTrees
             if (state.LastSearchPosition >= 0) // update
             {
                 GetValuePointer(ref state, state.LastSearchPosition, out var b);
-                ZigZagEncoding.Decode<int>(b, out var len);
+                ZigZagEncoding.Decode<long>(b, out var len);
 
                 if (len == valueBufferLength)
                 {
