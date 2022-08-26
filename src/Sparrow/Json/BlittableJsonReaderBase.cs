@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using Sparrow.Compression;
 
 namespace Sparrow.Json
 {
@@ -145,7 +146,7 @@ namespace Sparrow.Json
         public BlittableJsonReaderObject ReadNestedObject(int pos)
         {
             AssertContextNotDisposed();
-            var size = ReadVariableSizeInt(pos, out byte offset);
+            var size = VariableSizeEncoding.Read<int>(_mem + pos, out var offset);
             return new BlittableJsonReaderObject(_mem + pos + offset, size, _context)
             {
                 NoCache = NoCache
@@ -156,7 +157,7 @@ namespace Sparrow.Json
         public LazyStringValue ReadStringLazily(int pos)
         {
             AssertContextNotDisposed();
-            var size = ReadVariableSizeInt(pos, out byte offset);
+            var size = VariableSizeEncoding.Read<int>(_mem + pos, out var offset);
 
             return _context.AllocateStringValue(null, _mem + pos + offset, size);
         }
@@ -165,76 +166,36 @@ namespace Sparrow.Json
         public LazyCompressedStringValue ReadCompressStringLazily(int pos)
         {
             AssertContextNotDisposed();
-            var uncompressedSize = ReadVariableSizeInt(pos, out byte offset);
+            var uncompressedSize = VariableSizeEncoding.Read<int>(_mem + pos, out var offset);
             pos += offset;
-            var compressedSize = ReadVariableSizeInt(pos, out offset);
+            var compressedSize = VariableSizeEncoding.Read<int>(_mem + pos, out offset);
             pos += offset;
             return new LazyCompressedStringValue(null, _mem + pos, uncompressedSize, compressedSize, _context);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int ReadVariableSizeInt(int pos, out byte offset)
+        public int ReadVariableSizeInt(int pos, out int offset)
         {
-            return ReadVariableSizeInt(_mem, pos, out offset);
+            return VariableSizeEncoding.Read<int>(_mem + pos, out offset);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int ReadVariableSizeInt(byte* buffer, ref int pos)
         {
-            var result = ReadVariableSizeInt(buffer, pos, out byte offset);
+            var result = VariableSizeEncoding.Read<int>(buffer + pos, out var offset);
             pos += offset;
             return result;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int ReadVariableSizeInt(byte* buffer, int pos, out byte offset)
+        public static int ReadVariableSizeInt(byte* buffer, int pos, out int offset)
         {
-            offset = 0;
-
-            if (pos < 0)
-                goto ThrowInvalid;
-
-            // Read out an Int32 7 bits at a time.  The high bit 
-            // of the byte when on means to continue reading more bytes.
-            // we assume that the value shouldn't be zero very often
-            // because then we'll always take 5 bytes to store it
-
-            int count = 0;
-            byte shift = 0;
-            byte b;
-            do
-            {
-                if (shift == 35)
-                    goto Error; // PERF: Using goto to diminish the size of the loop.
-
-                b = buffer[pos];
-                pos++;
-                offset++;
-
-                count |= (b & 0x7F) << shift;
-                shift += 7;                
-            }
-            while ((b & 0x80) != 0);
-
-            return count;
-
-            Error:
-            ThrowInvalidShift();            
-
-            ThrowInvalid:
-            ThrowInvalidPosition(pos);
-
-            return -1;
+            return VariableSizeEncoding.Read<int>(buffer + pos, out offset);
         }
 
         private static void ThrowInvalidShift()
         {
             throw new FormatException("Bad variable size int");
-        }
-
-        private static void ThrowInvalidPosition(int pos)
-        {
-            throw new ArgumentOutOfRangeException(nameof(pos), "Position cannot be negative, but was " + pos);
         }
 
         public static int ReadVariableSizeIntInReverse(byte* buffer, int pos, out byte offset)
