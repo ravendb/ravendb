@@ -584,6 +584,11 @@ namespace Voron
                 }
             }
 
+            public override int GetNumberOfJournalsForReuse()
+            {
+                return _journalsForReuse.Count;
+            }
+
             private void AttemptToReuseJournal(VoronPathSetting desiredPath, long desiredSize)
             {
                 lock (_journalsForReuse)
@@ -982,6 +987,11 @@ namespace Voron
             {
             }
 
+            public override int GetNumberOfJournalsForReuse()
+            {
+                return 0;
+            }
+
             protected override void Disposing()
             {
                 if (Disposed)
@@ -1237,6 +1247,8 @@ namespace Voron
         private long _maxScratchBufferSize;
 
         public abstract void TryStoreJournalForReuse(VoronPathSetting filename);
+
+        public abstract int GetNumberOfJournalsForReuse();
 
         private void TryDelete(string file)
         {

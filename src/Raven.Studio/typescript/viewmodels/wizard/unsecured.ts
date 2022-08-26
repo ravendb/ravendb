@@ -70,22 +70,23 @@ class unsecured extends setupStep {
         
         const initialIp = ipEntry.runningOnDocker ? "" : "127.0.0.1";
         
-        this.model.nodes().forEach(x => {
-            let ip = x.ips()[0];
-            if (!ip) {
-                ip = ipEntry.forIp(initialIp, false);
+        this.model.nodes().forEach(node => {
+            const firstIp = node.ips()[0].ip();
+
+            if (!firstIp) {
+                node.ips()[0] = ipEntry.forIp(initialIp, false);
             }
         });
     }
     
     compositionComplete() {
         super.compositionComplete();
+        const nodes = this.model.nodes();
 
-        if (this.model.nodes().length) {
+        if (nodes.length) {
+            const firstNode = nodes[0];
 
-            let firstNode = this.model.nodes()[0];
-
-            if (firstNode.ips().length === 0 ) {
+            if (firstNode.ips().length === 0) {
                 firstNode.ips.push(new ipEntry(true));
             }
 
