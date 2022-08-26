@@ -220,23 +220,6 @@ namespace FastTests.Sparrow
                     Assert.Equal(reader.Read(), reader2.Read());
                 }
             }
-
-            //for (int i = 0; i <= 100000; i++)
-            //{
-            //    int uivalue = (int)rnd.Next();
-
-            //    uint valueForSpan = (uint)BinaryPrimitives.ReverseEndianness(uivalue << (sizeof(uint) * 8 - uivalue));
-            //    var valueSpan = MemoryMarshal.Cast<uint, byte>(MemoryMarshal.CreateSpan(ref valueForSpan, 1));
-
-            //    for (int bits = 1; bits <= sizeof(byte) * 8; bits++)
-            //    {
-            //        var reader = new BitReader(valueSpan, bits);
-            //        var reader2 = new TypedBitReader<uint>(valueForSpan, bits);
-
-            //        Assert.Equal(reader.Read(), reader2.Read());
-            //    }
-            //}
-
         }
     }
 }
