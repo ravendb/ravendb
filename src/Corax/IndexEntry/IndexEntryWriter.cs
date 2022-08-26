@@ -7,6 +7,7 @@ using Corax.Utils;
 using Corax.Utils.Spatial;
 using Sparrow;
 using Sparrow.Binary;
+using Sparrow.Compression;
 using Sparrow.Server;
 using Sparrow.Server.Compression;
 using Voron.Impl;

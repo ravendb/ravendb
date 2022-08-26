@@ -1,20 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
-using Sparrow.Platform.Posix;
 
-namespace Sparrow.Server.Compression
+namespace Sparrow.Compression
 {
     public static class VariableSizeEncoding
     {
-        private const ulong ContinueMask = 0xFFFF_FFFF_FFFF_FF80;
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int ReadMany<T>(ReadOnlySpan<byte> buffer, int count, Span<T> output) where T : unmanaged
         {
             if (output.Length < count)
@@ -162,8 +153,8 @@ namespace Sparrow.Server.Compression
             throw new ArgumentException("Not enough output space.");
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-        public static unsafe T Read<T>(byte* input, out int offset) //where T : unmanaged
+        [MethodImpl(MethodImplOptions.AggressiveInlining )]
+        public static unsafe T Read<T>(byte* input, out int offset) where T : unmanaged
         {
             if (typeof(T) == typeof(sbyte) || typeof(T) == typeof(byte) || typeof(T) == typeof(bool))
             {
@@ -262,7 +253,7 @@ namespace Sparrow.Server.Compression
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static unsafe T ReadCompact<T>(byte* input, out int offset, out bool success) // where T : unmanaged
+        public static unsafe T ReadCompact<T>(byte* input, out int offset, out bool success) where T : unmanaged
         {
             if (typeof(T) == typeof(sbyte) || typeof(T) == typeof(byte) || typeof(T) == typeof(bool))
             {
@@ -333,8 +324,8 @@ namespace Sparrow.Server.Compression
         }
 
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-        public static unsafe T Read<T>(ReadOnlySpan<byte> input, out int offset, int pos = 0) //where T : unmanaged
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static unsafe T Read<T>(ReadOnlySpan<byte> input, out int offset, int pos = 0) where T : unmanaged
         {
             if (typeof(T) == typeof(sbyte) || typeof(T) == typeof(byte) || typeof(T) == typeof(bool))
             {
@@ -367,14 +358,14 @@ namespace Sparrow.Server.Compression
             return 9 * count;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining )]
         public static int WriteMany<T>(Span<byte> dest, Span<T> values, int pos = 0) where T : unmanaged
         {
             ReadOnlySpan<T> roValues = values;
             return WriteMany(dest, roValues, pos);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining )]
         public static int WriteMany<T>(Span<byte> dest, ReadOnlySpan<T> values, int pos = 0) where T : unmanaged
         {
             if ((dest.Length - pos) < (Unsafe.SizeOf<T>() + 1) * values.Length)
@@ -387,7 +378,7 @@ namespace Sparrow.Server.Compression
             return pos - startPos;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static unsafe int Write<T>(byte* dest, T value) where T : unmanaged
         {
             if (typeof(T) == typeof(sbyte) || typeof(T) == typeof(byte) || typeof(T) == typeof(bool))
@@ -482,7 +473,7 @@ namespace Sparrow.Server.Compression
             return -1;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static unsafe int Write<T>(Span<byte> dest, T value, int pos = 0) where T : unmanaged
         {
             if (typeof(T) == typeof(sbyte) || typeof(T) == typeof(byte) || typeof(T) == typeof(bool))
