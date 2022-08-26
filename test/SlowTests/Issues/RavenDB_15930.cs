@@ -64,8 +64,15 @@ namespace SlowTests.Issues
                     tx.Commit();
                 }
 
-                Assert.True(SpinWait.SpinUntil(() => new DirectoryInfo(journalPath).GetFiles($"{StorageEnvironmentOptions.RecyclableJournalFileNamePrefix}*").Length == 2,
-                    TimeSpan.FromSeconds(30)));
+                int numberOfRecyclableJournalFiles = -1;
+
+                Assert.True(SpinWait.SpinUntil(() =>
+                    {
+                        numberOfRecyclableJournalFiles = new DirectoryInfo(journalPath).GetFiles($"{StorageEnvironmentOptions.RecyclableJournalFileNamePrefix}*").Length;
+
+                        return numberOfRecyclableJournalFiles == 2;
+                    },
+                    TimeSpan.FromSeconds(30)), $"Expected 2 recyclable journals but there was {numberOfRecyclableJournalFiles}");
 
                 Assert.Equal(1, new DirectoryInfo(journalPath).GetFiles("000000000000000000*.journal").Length);
                 Assert.Equal(3, new DirectoryInfo(journalPath).GetFiles().Length);

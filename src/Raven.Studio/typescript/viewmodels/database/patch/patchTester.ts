@@ -116,6 +116,33 @@ class patchTester extends viewModelBase {
         });
     }
 
+    private getAutoComplete() {
+        const documentIdPrefix = this.documentId();
+        this.spinners.autocomplete(true);
+        
+        if (!documentIdPrefix) {
+            this.resetForm();
+            this.docsIdsAutocompleteResults([]);
+            return;
+        }
+
+        const [name, type] = queryUtil.getCollectionOrIndexName(this.query());
+
+        if (type === "index" && this.mapReduceIndexesCache.has(name.toLocaleLowerCase())) {
+            // patch is not supported for map-reduce indexes
+            messagePublisher.reportWarning("Patch operation is not supported for Map-Reduce indexes");
+            return;
+        }
+        
+        this.docsIdsAutocompleteSource.fetch(documentIdPrefix, this.query())
+            .done(results => {
+                const term = documentIdPrefix.toLowerCase();
+                results = _.take(results.filter(x => x.toLowerCase().indexOf(term) !== -1), 10);
+                this.docsIdsAutocompleteResults(results);
+            })
+            .always(() => this.spinners.autocomplete(false));
+    }
+    
     private initObservables() {
         this.testMode.subscribe(testMode => {
             this.$body.toggleClass('show-test', testMode);
@@ -126,34 +153,14 @@ class patchTester extends viewModelBase {
         });
 
         validationHelpers.addDocumentIdValidation(
-            this.documentId, this.activeDatabase, ko.pureComputed(() => !!this.docsIdsAutocompleteResults()));
+            this.documentId, this.activeDatabase, ko.pureComputed(() => !this.spinners.autocomplete() && !!this.docsIdsAutocompleteResults()));
 
         this.query.subscribe(x => 
             this.docsIdsAutocompleteResults([]));
 
-        this.documentId.throttle(250).subscribe(item => {
-           if (!item) {
-               this.resetForm();
-               return;
-           }
-
-           const [name, type] = queryUtil.getCollectionOrIndexName(this.query());
-           
-           if (type === "index" && this.mapReduceIndexesCache.has(name.toLocaleLowerCase())) {
-               // patch is not supported for map-reduce indexes
-               messagePublisher.reportWarning("Patch operation is not supported for Map-Reduce indexes");
-               return;
-           }
-           
-           this.spinners.autocomplete(true);
-           this.docsIdsAutocompleteSource.fetch(this.documentId(), this.query())
-                .done(results => {
-                    const term = item.toLowerCase();
-                    results = _.take(results.filter(x => x.toLowerCase().indexOf(term) !== -1), 10);
-                    this.docsIdsAutocompleteResults(results);
-                })
-                .always(() => this.spinners.autocomplete(false));
-        });
+        
+        const documentIdDebounced = _.debounce(() => { this.getAutoComplete() }, 600);
+        this.documentId.subscribe(() => documentIdDebounced());
         
         this.loadedCount = ko.pureComputed(() => {
             const actions = this.actions;
