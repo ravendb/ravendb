@@ -12,7 +12,7 @@ namespace Raven.Server.Config.Categories
 
         [Description("The full license string for RavenDB. If License is specified, it overrides the License.Path configuration.")]
         [DefaultValue(null)]
-        [ConfigurationEntry("License", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        [ConfigurationEntry("License", ConfigurationEntryScope.ServerWideOrPerDatabase, isSecured: true)]
         public string License { get; set; }
 
         [Description("The path to the license file for RavenDB, default for license.json")]
@@ -20,7 +20,7 @@ namespace Raven.Server.Config.Categories
         [DefaultValue("license.json")]
         [ConfigurationEntry("License.Path", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public PathSetting LicensePath { get; set; }
-        
+
         [Description("Indicates if End-User License Agreement was accepted")]
         [DefaultValue(false)]
         [ConfigurationEntry("License.Eula.Accepted", ConfigurationEntryScope.ServerWideOnly)]
@@ -46,8 +46,8 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(false)]
         [ConfigurationEntry("License.SkipLeasingErrorsLogging", ConfigurationEntryScope.ServerWideOnly)]
         public bool SkipLeasingErrorsLogging { get; set; }
-        
-        
+
+
         [Description("EXPERT ONLY. Disable automatic updating of the license")]
         [DefaultValue(false)]
         [ConfigurationEntry("License.DisableAutoUpdate", ConfigurationEntryScope.ServerWideOnly)]

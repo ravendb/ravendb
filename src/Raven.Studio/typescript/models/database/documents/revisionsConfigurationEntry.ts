@@ -1,5 +1,6 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
 import generalUtils = require("common/generalUtils");
+import jsonUtil = require("common/jsonUtil");
 
 class revisionsConfigurationEntry {
 
@@ -47,6 +48,8 @@ class revisionsConfigurationEntry {
         minimumRevisionAgeToKeep: this.minimumRevisionAgeToKeep,
         maxRevisionsToDeleteUponUpdate: this.maxRevisionsToDeleteUponUpdate
     });
+
+    dirtyFlag: () => DirtyFlag;
 
     constructor(collection: string, dto: Raven.Client.Documents.Operations.Revisions.RevisionsCollectionConfiguration) {
         this.collection(collection);
@@ -145,14 +148,14 @@ class revisionsConfigurationEntry {
         this.limitRevisionsByAge.subscribe(() => {
             this.minimumRevisionAgeToKeep.clearError();
         });
-        
-        this.name = ko.pureComputed(() => {
-            if (this.isDefault()) {
-                return "Document Defaults";
 
         this.setMaxRevisionsToDelete.subscribe(() => {
             this.maxRevisionsToDeleteUponUpdate.clearError();
         });
+        
+        this.name = ko.pureComputed(() => {
+            if (this.isDefault()) {
+                return "Document Defaults";
             } 
             if (this.isConflicts()) {
                 return "Conflicting Document Defaults";
@@ -160,6 +163,21 @@ class revisionsConfigurationEntry {
             
             return this.collection();
         });
+
+        this.dirtyFlag = new ko.DirtyFlag([
+            this.collection,
+            this.disabled,
+            this.purgeOnDelete,
+            
+            this.limitRevisions,
+            this.minimumRevisionsToKeep,
+            
+            this.limitRevisionsByAge,
+            this.minimumRevisionAgeToKeep,
+            
+            this.setMaxRevisionsToDelete,
+            this.maxRevisionsToDeleteUponUpdate
+        ], false, jsonUtil.newLineNormalizingHashFunction);
     }
 
     private initValidation() {

@@ -122,8 +122,19 @@ namespace SlowTests.Tests.Linq
                     var revision2 = session.Advanced.Revisions.Get<User>(cvList[1]);
                     var revision3 = session.Advanced.Revisions.Get<User>(cvList[2]);
                     Assert.NotNull(revision1);
+                    Assert.Null(revision1.FirstRevision);
+                    Assert.Null(revision1.SecondRevision);
+                    Assert.Null(revision1.ChangeVectors);
+
                     Assert.NotNull(revision2);
+                    Assert.NotNull(revision2.FirstRevision);
+                    Assert.Null(revision2.SecondRevision);
+                    Assert.Null(revision2.ChangeVectors);
+
                     Assert.NotNull(revision3);
+                    Assert.NotNull(revision3.FirstRevision);
+                    Assert.NotNull(revision3.SecondRevision);
+                    Assert.Null(revision3.ChangeVectors);
 
                     if (includeCounters)
                     {
@@ -230,7 +241,10 @@ namespace SlowTests.Tests.Linq
                     var revision1 = session.Advanced.Revisions.Get<UserNested>(cvList[0]);
                     var revision2 = session.Advanced.Revisions.Get<UserNested>(cvList[1]);
                     Assert.NotNull(revision1);
+                    Assert.Null(revision1.Revisions.FirstRevision);
+
                     Assert.NotNull(revision2);
+                    Assert.NotNull(revision2.Revisions.FirstRevision);
 
                     if (includeCounters)
                     {
@@ -322,8 +336,19 @@ namespace SlowTests.Tests.Linq
                     var revision3 = await asyncSession.Advanced.Revisions.GetAsync<User>(cvList[2]);
 
                     Assert.NotNull(revision1);
+                    Assert.Null(revision1.FirstRevision);
+                    Assert.Null(revision1.SecondRevision);
+                    Assert.Null(revision1.ChangeVectors);
+
                     Assert.NotNull(revision2);
+                    Assert.NotNull(revision2.FirstRevision);
+                    Assert.Null(revision2.SecondRevision);
+                    Assert.Null(revision2.ChangeVectors);
+
                     Assert.NotNull(revision3);
+                    Assert.NotNull(revision3.FirstRevision);
+                    Assert.NotNull(revision3.SecondRevision);
+                    Assert.Null(revision3.ChangeVectors);
 
                     Assert.Equal(1, asyncSession.Advanced.NumberOfRequests);
                 }
@@ -356,8 +381,11 @@ namespace SlowTests.Tests.Linq
                 {
                     var query = session.Load<User>(id, builder => builder.IncludeRevisions(x => x.ChangeVector));
                     var revision = session.Advanced.Revisions.Get<User>(changeVector);
-
                     Assert.NotNull(revision);
+                    Assert.Null(revision.FirstRevision);
+                    Assert.Null(revision.SecondRevision);
+                    Assert.Null(revision.ChangeVectors);
+
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
                 }
             }
@@ -392,6 +420,9 @@ namespace SlowTests.Tests.Linq
                     var revision = await session.Advanced.Revisions.GetAsync<User>(changeVector);
 
                     Assert.NotNull(revision);
+                    Assert.Null(revision.FirstRevision);
+                    Assert.Null(revision.SecondRevision);
+                    Assert.Null(revision.ChangeVectors);
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
                 }
             }
@@ -423,19 +454,35 @@ namespace SlowTests.Tests.Linq
                     Assert.Equal(1, metadatas.Count);
 
                     changeVector = metadatas.First().GetString(Constants.Documents.Metadata.ChangeVector);
+
+                    session.Advanced.Patch<User, string>(id, x => x.FirstRevision, changeVector);
+
                     session.SaveChanges();
+
+
                     cvList.Add(changeVector);
 
                     metadatas = session.Advanced.Revisions.GetMetadataFor(id);
+
                     changeVector = metadatas[0].GetString(Constants.Documents.Metadata.ChangeVector);
+
                     cvList.Add(changeVector);
+
+                    session.Advanced.Patch<User, string>(id, x => x.SecondRevision, changeVector);
 
                     session.SaveChanges();
+
+
                     metadatas = session.Advanced.Revisions.GetMetadataFor(id);
+
                     changeVector = metadatas[0].GetString(Constants.Documents.Metadata.ChangeVector);
 
                     cvList.Add(changeVector);
+
+                    session.Advanced.Patch<User, string>(id, x => x.ThirdRevision, changeVector);
+
                     session.Advanced.Patch<User, List<string>>(id, x => x.ChangeVectors, cvList);
+
                     session.SaveChanges();
                 }
 
@@ -446,6 +493,21 @@ namespace SlowTests.Tests.Linq
                     var revision1 = session.Advanced.Revisions.Get<User>(cvList[0]);
                     var revision2 = session.Advanced.Revisions.Get<User>(cvList[1]);
                     var revision3 = session.Advanced.Revisions.Get<User>(cvList[2]);
+
+                    Assert.NotNull(revision1);
+                    Assert.Null(revision1.FirstRevision);
+                    Assert.Null(revision1.SecondRevision);
+                    Assert.Null(revision1.ChangeVectors);
+
+                    Assert.NotNull(revision2);
+                    Assert.NotNull(revision2.FirstRevision);
+                    Assert.Null(revision2.SecondRevision);
+                    Assert.Null(revision2.ChangeVectors);
+
+                    Assert.NotNull(revision3);
+                    Assert.NotNull(revision3.FirstRevision);
+                    Assert.NotNull(revision3.SecondRevision);
+                    Assert.Null(revision3.ChangeVectors);
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
                 }
@@ -515,6 +577,21 @@ namespace SlowTests.Tests.Linq
                     var revision1 = await session.Advanced.Revisions.GetAsync<User>(cvList[0]);
                     var revision2 = await session.Advanced.Revisions.GetAsync<User>(cvList[1]);
                     var revision3 = await session.Advanced.Revisions.GetAsync<User>(cvList[2]);
+
+                    Assert.NotNull(revision1);
+                    Assert.Null(revision1.FirstRevision);
+                    Assert.Null(revision1.SecondRevision);
+                    Assert.Null(revision1.ChangeVectors);
+
+                    Assert.NotNull(revision2);
+                    Assert.NotNull(revision2.FirstRevision);
+                    Assert.Null(revision2.SecondRevision);
+                    Assert.Null(revision2.ChangeVectors);
+
+                    Assert.NotNull(revision3);
+                    Assert.NotNull(revision3.FirstRevision);
+                    Assert.NotNull(revision3.SecondRevision);
+                    Assert.Null(revision3.ChangeVectors);
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
                 }
@@ -589,11 +666,41 @@ namespace SlowTests.Tests.Linq
                     var revision3 = session.Advanced.Revisions.Get<User>(cvList[2]);
                     var revisions = session.Advanced.Revisions.Get<User>(cvList);
 
-
                     Assert.NotNull(revision1);
+                    Assert.Null(revision1.FirstRevision);
+                    Assert.Null(revision1.SecondRevision);
+                    Assert.Null(revision1.ChangeVectors);
+
                     Assert.NotNull(revision2);
+                    Assert.NotNull(revision2.FirstRevision);
+                    Assert.Null(revision2.SecondRevision);
+                    Assert.Null(revision2.ChangeVectors);
+
                     Assert.NotNull(revision3);
+                    Assert.NotNull(revision3.FirstRevision);
+                    Assert.NotNull(revision3.SecondRevision);
+                    Assert.Null(revision3.ChangeVectors);
+
                     Assert.NotNull(revisions);
+                    Assert.Equal(revisions.Count, 3);
+                    Assert.Contains(cvList[0], revisions.Keys);
+
+                    Assert.NotNull(cvList[0]);
+                    Assert.Equal(revisions[cvList[0]].FirstRevision, revision1.FirstRevision);
+                    Assert.Equal(revisions[cvList[0]].SecondRevision, revision1.SecondRevision);
+                    Assert.Equal(revisions[cvList[0]].ChangeVectors, revision1.ChangeVectors);
+
+                    Assert.Contains(cvList[1], revisions.Keys);
+                    Assert.NotNull(cvList[1]);
+                    Assert.Equal(revisions[cvList[1]].FirstRevision, revision2.FirstRevision);
+                    Assert.Equal(revisions[cvList[1]].SecondRevision, revision2.SecondRevision);
+                    Assert.Equal(revisions[cvList[1]].ChangeVectors, revision2.ChangeVectors);
+
+                    Assert.Contains(cvList[2], revisions.Keys);
+                    Assert.NotNull(cvList[2]);
+                    Assert.Equal(revisions[cvList[2]].FirstRevision, revision3.FirstRevision);
+                    Assert.Equal(revisions[cvList[2]].SecondRevision, revision3.SecondRevision);
+                    Assert.Equal(revisions[cvList[2]].ChangeVectors, revision3.ChangeVectors);
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
                 }
@@ -668,8 +775,35 @@ namespace SlowTests.Tests.Linq
                     var revisions = await session.Advanced.Revisions.GetAsync<User>(cvList);
 
                     Assert.NotNull(revision1);
+                    Assert.Null(revision1.FirstRevision);
+                    Assert.Null(revision1.SecondRevision);
+                    Assert.Null(revision1.ChangeVectors);
+
                     Assert.NotNull(revision2);
+                    Assert.NotNull(revision2.FirstRevision);
+                    Assert.Null(revision2.SecondRevision);
+                    Assert.Null(revision2.ChangeVectors);
+
                     Assert.NotNull(revisions);
+                    Assert.Equal(revisions.Count, 3);
+                    Assert.Contains(cvList[0], revisions.Keys);
+
+                    Assert.NotNull(revisions[cvList[0]]);
+                    Assert.Equal(revisions[cvList[0]].FirstRevision, revision1.FirstRevision);
+                    Assert.Equal(revisions[cvList[0]].SecondRevision, revision1.SecondRevision);
+                    Assert.Equal(revisions[cvList[0]].ChangeVectors, revision1.ChangeVectors);
+
+                    Assert.Contains(cvList[1], revisions.Keys);
+                    Assert.NotNull(revisions[cvList[1]]);
+                    Assert.Equal(revisions[cvList[1]].FirstRevision, revision2.FirstRevision);
+                    Assert.Equal(revisions[cvList[1]].SecondRevision, revision2.SecondRevision);
+                    Assert.Equal(revisions[cvList[1]].ChangeVectors, revision2.ChangeVectors);
+
+                    Assert.Contains(cvList[2], revisions.Keys);
+                    Assert.NotNull(revisions[cvList[2]]);
+                    Assert.Equal(revisions[cvList[2]].FirstRevision, ex.FirstRevision);
+                    Assert.Equal(revisions[cvList[2]].SecondRevision, ex.SecondRevision);
+                    Assert.Null(revisions[cvList[2]].ChangeVectors);
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
                 }
@@ -687,8 +821,7 @@ namespace SlowTests.Tests.Linq
                 await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User { Name = "Omer", },
-                        id);
+                    session.Store(new User { Name = "Omer", }, id);
                     session.SaveChanges();
 
                     var metadatas = session.Advanced.Revisions.GetMetadataFor(id);
@@ -696,6 +829,7 @@ namespace SlowTests.Tests.Linq
                     changeVector = metadatas.First().GetString(Constants.Documents.Metadata.ChangeVector);
                     session.Advanced.Patch<User, string>(id, x => x.ChangeVector, changeVector);
                     session.Advanced.Patch<User, List<string>>(id, x => x.ChangeVectors, new List<string> { changeVector });
+                    session.SaveChanges();
                 }
 
                 var dateTime = DateTime.Now.ToLocalTime();
@@ -706,11 +840,26 @@ namespace SlowTests.Tests.Linq
                         .IncludeRevisions(x => x.ChangeVector)
                         .IncludeRevisions(x => x.ChangeVectors));
 
-                    var revision = session.Advanced.Revisions.Get<User>(id, dateTime.ToUniversalTime());
-                    var revision2 = session.Advanced.Revisions.Get<User>(changeVector);
+                    var revision = session.Advanced.Revisions.Get<User>(changeVector);
+                    var revision2 = session.Advanced.Revisions.Get<User>(id, dateTime.ToUniversalTime());
                     Assert.NotNull(query);
+                    Assert.Null(query.FirstRevision);
+                    Assert.Null(query.SecondRevision);
+                    Assert.NotNull(query.ChangeVectors);
+                    Assert.NotNull(query.Name);
+
                     Assert.NotNull(revision);
+                    Assert.Null(revision.FirstRevision);
+                    Assert.Null(revision.SecondRevision);
+                    Assert.Null(revision.ChangeVectors);
+                    Assert.NotNull(revision.Name);
+
                     Assert.NotNull(revision2);
+                    Assert.Null(revision2.FirstRevision);
+                    Assert.Null(revision2.SecondRevision);
+                    Assert.NotNull(revision2.ChangeVectors);
+                    Assert.NotNull(revision2.Name);
+
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
                 }
             }
@@ -727,14 +876,15 @@ namespace SlowTests.Tests.Linq
                 await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User { Name = "Omer", },
-                        id);
+                    var user = new User { Name = "Omer", };
+                    await session.StoreAsync(user, id);
                     await session.SaveChangesAsync();
 
                     var metadatas = await session.Advanced.Revisions.GetMetadataForAsync(id);
                     Assert.Equal(1, metadatas.Count);
                     changeVector = metadatas.First().GetString(Constants.Documents.Metadata.ChangeVector);
                     session.Advanced.Patch<User, string>(id, x => x.ChangeVector, changeVector);
+                    await session.SaveChangesAsync();
                 }
 
                 var dateTime = DateTime.Now.ToLocalTime();
@@ -744,11 +894,29 @@ namespace SlowTests.Tests.Linq
                         .IncludeRevisions(dateTime)
                         .IncludeRevisions(x => x.ChangeVector));
 
-                    var revision = await session.Advanced.Revisions.GetAsync<User>(id, dateTime.ToUniversalTime());
-                    var revision2 = await session.Advanced.Revisions.GetAsync<User>(changeVector);
+                    var revision2 = await session.Advanced.Revisions.GetAsync<User>(id, dateTime.ToUniversalTime());
+                    var revision = await session.Advanced.Revisions.GetAsync<User>(changeVector); //revision before 'ChangeVector' value chaged.
                     Assert.NotNull(query);
+                    Assert.Null(query.FirstRevision);
+                    Assert.Null(query.SecondRevision);
+                    Assert.Null(query.ChangeVectors);
+                    Assert.NotNull(query.ChangeVector);
+                    Assert.NotNull(query.Name);
+
                     Assert.NotNull(revision);
+                    Assert.Null(revision.FirstRevision);
+                    Assert.Null(revision.SecondRevision);
+                    Assert.Null(revision.ChangeVectors);
+                    Assert.Null(revision.ChangeVector);
+                    Assert.NotNull(revision.Name);
+
                     Assert.NotNull(revision2);
+                    Assert.Null(revision2.FirstRevision);
+                    Assert.Null(revision2.SecondRevision);
+                    Assert.Null(revision2.ChangeVectors);
+                    Assert.NotNull(revision2.ChangeVector);
+                    Assert.NotNull(revision2.Name);
+
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
                 }
             }
@@ -786,7 +954,9 @@ namespace SlowTests.Tests.Linq
                     var revision = session.Advanced.Revisions.Get<User>(changeVector);
 
                     Assert.NotNull(users);
+                    Assert.Equal(users.Count, 1);
                     Assert.NotNull(revision);
+                    Assert.NotNull(revision.Name);
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
                 }
             }
@@ -823,7 +993,9 @@ namespace SlowTests.Tests.Linq
 
                     var revision = await asyncSession.Advanced.Revisions.GetAsync<User>(changeVector);
                     Assert.NotNull(users);
+                    Assert.Equal(users.Count, 1);
                     Assert.NotNull(revision);
+                    Assert.NotNull(revision.Name);
                     Assert.Equal(1, asyncSession.Advanced.NumberOfRequests);
                 }
             }
@@ -870,6 +1042,10 @@ namespace SlowTests.Tests.Linq
 
                     var revision = session.Advanced.Revisions.Get<User>(changeVector);
                     Assert.NotNull(revision);
+                    Assert.NotNull(revision.Name);
+                    Assert.NotNull(query);
+                    Assert.Equal(query.Count, 1);
+                    Assert.NotNull(query[0].Name);
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
                 }
             }
@@ -916,6 +1092,7 @@ namespace SlowTests.Tests.Linq
                     var revision = await session.Advanced.Revisions.GetAsync<User>(changeVector);
 
                     Assert.NotNull(revision);
+                    Assert.NotNull(revision.Name);
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
                 }
             }
@@ -956,7 +1133,10 @@ namespace SlowTests.Tests.Linq
                     var revision = session.Advanced.Revisions.Get<User>(changeVector);
 
                     Assert.NotNull(query);
+                    Assert.Equal(query.Count, 1);
+                    Assert.NotNull(query[0].Name);
                     Assert.NotNull(revision);
+                    Assert.NotNull(revision.Name);
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
                 }
             }
@@ -995,7 +1175,10 @@ namespace SlowTests.Tests.Linq
                     var revision = await session.Advanced.Revisions.GetAsync<User>(changeVector);
 
                     Assert.NotNull(query);
+                    Assert.Equal(query.Count, 1);
+                    Assert.NotNull(query[0].Name);
                     Assert.NotNull(revision);
+                    Assert.NotNull(revision.Name);
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
                 }
             }
@@ -1052,7 +1235,10 @@ select Foo(u)"
 
                     var revision = session.Advanced.Revisions.Get<User>(changeVector);
 
+                    Assert.Equal(query.Count, 1);
+                    Assert.NotNull(query[0].Name);
                     Assert.NotNull(revision);
+                    Assert.NotNull(revision.Name);
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
                 }
             }
@@ -1108,7 +1294,10 @@ select Foo(u)"
                         .ToListAsync();
 
                     var revision = await session.Advanced.Revisions.GetAsync<User>(changeVector);
+                    Assert.Equal(query.Count, 1);
+                    Assert.NotNull(query[0].Name);
                     Assert.NotNull(revision);
+                    Assert.NotNull(revision.Name);
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
                 }
             }
@@ -1161,7 +1350,10 @@ select Foo(u)"
                         .ToList();
 
                     var revision = session.Advanced.Revisions.Get<User>(changeVector);
+                    Assert.Equal(query.Count, 1);
+                    Assert.NotNull(query[0].Name);
                     Assert.NotNull(revision);
+                    Assert.NotNull(revision.Name);
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
                 }
             }
@@ -1211,7 +1403,10 @@ select Foo(u)"
                         .ToList();
 
                     var revision = session.Advanced.Revisions.Get<User>("users/rhino", getRevisionBefore);
+                    Assert.Equal(query.Count, 1);
+                    Assert.NotNull(query[0].Name);
                     Assert.NotNull(revision);
+                    Assert.NotNull(revision.Name);
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
                 }
             }
@@ -1261,7 +1456,10 @@ select Foo(u)"
                         .ToListAsync();
 
                     var revision = await session.Advanced.Revisions.GetAsync<User>("users/Rhino", getRevisionBefore);
+                    Assert.Equal(query.Count, 1);
+                    Assert.NotNull(query[0].Name);
                     Assert.NotNull(revision);
+                    Assert.NotNull(revision.Name);
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
                 }
             }
@@ -1314,7 +1512,10 @@ select Foo(u)"
                         .ToList();
 
                     var revision = session.Advanced.Revisions.Get<User>(changeVector);
+                    Assert.Equal(query.Count, 1);
+                    Assert.NotNull(query[0].Name);
                     Assert.NotNull(revision);
+                    Assert.NotNull(revision.Name);
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
                 }
             }
@@ -1368,7 +1569,10 @@ select Foo(u)"
 
                     var revision = await session.Advanced.Revisions.GetAsync<User>(changeVector);
 
+                    Assert.Equal(query.Count, 1);
+                    Assert.NotNull(query[0].Name);
                     Assert.NotNull(revision);
+                    Assert.NotNull(revision.Name);
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
                 }
             }
@@ -1458,8 +1662,19 @@ select Foo(u)"
 
 
                     Assert.NotNull(revision1);
+                    Assert.Null(revision1.FirstRevision);
+                    Assert.Null(revision1.SecondRevision);
+                    Assert.Null(revision1.ChangeVectors);
+
                     Assert.NotNull(revision2);
+                    Assert.NotNull(revision2.FirstRevision);
+                    Assert.Null(revision2.SecondRevision);
+                    Assert.Null(revision2.ChangeVectors);
+
                     Assert.NotNull(revision3);
+                    Assert.NotNull(revision3.FirstRevision);
+                    Assert.NotNull(revision3.SecondRevision);
+                    Assert.Null(revision3.ChangeVectors);
 
                     if (session.Advanced.NumberOfRequests != 1)
                         WaitForUserToContinueTheTest(store);
@@ -1544,8 +1759,19 @@ select Foo(u)"
                     var revision3 = await session.Advanced.Revisions.GetAsync<User>(cvList[2]);
 
                     Assert.NotNull(revision1);
+                    Assert.Null(revision1.FirstRevision);
+                    Assert.Null(revision1.SecondRevision);
+                    Assert.Null(revision1.ChangeVectors);
+
                     Assert.NotNull(revision2);
+                    Assert.NotNull(revision2.FirstRevision);
+                    Assert.Null(revision2.SecondRevision);
+                    Assert.Null(revision2.ChangeVectors);
+
                     Assert.NotNull(revision3);
+                    Assert.NotNull(revision3.FirstRevision);
+                    Assert.NotNull(revision3.SecondRevision);
+                    Assert.Null(revision3.ChangeVectors);
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
                 }
@@ -1592,7 +1818,10 @@ select Foo(u)"
 
                     var revision = session.Advanced.Revisions.Get<User>(changeVector);
 
+                    Assert.Equal(query.Count, 1);
+                    Assert.NotNull(query[0].Name);
                     Assert.NotNull(revision);
+                    Assert.NotNull(revision.Name);
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
                 }
             }
@@ -1638,7 +1867,10 @@ select Foo(u)"
 
                     var revision = await session.Advanced.Revisions.GetAsync<User>(changeVector);
 
+                    Assert.Equal(query.Count, 1);
+                    Assert.NotNull(query[0].Name);
                     Assert.NotNull(revision);
+                    Assert.NotNull(revision.Name);
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
                 }
             }
@@ -1714,8 +1946,19 @@ select Foo(u)"
                     var revision3 = session.Advanced.Revisions.Get<User>(cvList[2]);
 
                     Assert.NotNull(revision1);
+                    Assert.Null(revision1.FirstRevision);
+                    Assert.Null(revision1.SecondRevision);
+                    Assert.Null(revision1.ChangeVectors);
+
                     Assert.NotNull(revision2);
+                    Assert.NotNull(revision2.FirstRevision);
+                    Assert.Null(revision2.SecondRevision);
+                    Assert.Null(revision2.ChangeVectors);
+
                     Assert.NotNull(revision3);
+                    Assert.NotNull(revision3.FirstRevision);
+                    Assert.NotNull(revision3.SecondRevision);
+                    Assert.Null(revision3.ChangeVectors);
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
                 }
@@ -1789,8 +2032,19 @@ select Foo(u)"
                     var revision3 = session.Advanced.Revisions.Get<User>(cvList[2]);
 
                     Assert.NotNull(revision1);
+                    Assert.Null(revision1.FirstRevision);
+                    Assert.Null(revision1.SecondRevision);
+                    Assert.Null(revision1.ChangeVectors);
+
                     Assert.NotNull(revision2);
+                    Assert.NotNull(revision2.FirstRevision);
+                    Assert.Null(revision2.SecondRevision);
+                    Assert.Null(revision2.ChangeVectors);
+
                     Assert.NotNull(revision3);
+                    Assert.NotNull(revision3.FirstRevision);
+                    Assert.NotNull(revision3.SecondRevision);
+                    Assert.Null(revision3.ChangeVectors);
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
                 }
@@ -1863,8 +2117,19 @@ select Foo(u)"
                     var revision3 = await session.Advanced.Revisions.GetAsync<User>(cvList[2]);
 
                     Assert.NotNull(revision1);
+                    Assert.Null(revision1.FirstRevision);
+                    Assert.Null(revision1.SecondRevision);
+                    Assert.Null(revision1.ChangeVectors);
+
                     Assert.NotNull(revision2);
+                    Assert.NotNull(revision2.FirstRevision);
+                    Assert.Null(revision2.SecondRevision);
+                    Assert.Null(revision2.ChangeVectors);
+
                     Assert.NotNull(revision3);
+                    Assert.NotNull(revision3.FirstRevision);
+                    Assert.NotNull(revision3.SecondRevision);
+                    Assert.Null(revision3.ChangeVectors);
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
                 }
@@ -1897,7 +2162,7 @@ select Foo(u)"
                         .RawQuery<User>("from Users as u include revisions(u.FirstRevision, x.SecondRevision)")
                         .ToList());
 
-                    Assert.Contains("Field `x.SecondRevision` inside `include revisions(..)` is invalid."
+                    Assert.Contains("Field `x.SecondRevision` (which is mentioned inside `include revisions(..)`) is missing in document."
                         , error.Message);
                 }
 
@@ -1910,7 +2175,7 @@ select Foo(u)"
                         .AddParameter("p2", "x.ThirdRevision")
                         .ToList());
 
-                    Assert.Contains("Field `x.ThirdRevision` inside `include revisions(..)` is invalid."
+                    Assert.Contains("Field `x.ThirdRevision` (which is mentioned inside `include revisions(..)`) is missing in document."
                         , error.Message);
                 }
             }
@@ -1942,7 +2207,7 @@ select Foo(u)"
                         .RawQuery<User>("from Users as u include revisions(u.FirstRevision, x.SecondRevision)")
                         .ToList());
 
-                    Assert.Contains("Field `x.SecondRevision` inside `include revisions(..)` is invalid."
+                    Assert.Contains("Field `x.SecondRevision` (which is mentioned inside `include revisions(..)`) is missing in document."
                         , error.Message);
                 }
 
@@ -1955,7 +2220,7 @@ select Foo(u)"
                         .AddParameter("p2", "x.ThirdRevision")
                         .ToListAsync());
 
-                    Assert.Contains("Field `x.ThirdRevision` inside `include revisions(..)` is invalid."
+                    Assert.Contains("Field `x.ThirdRevision` (which is mentioned inside `include revisions(..)`) is missing in document."
                         , error.Message);
                 }
             }

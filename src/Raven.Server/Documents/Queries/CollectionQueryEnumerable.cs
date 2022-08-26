@@ -346,8 +346,8 @@ namespace Raven.Server.Documents.Queries
                     }
 
                     documents = _isAllDocsCollection
-                        ? _documents.GetDocumentsStartingWith(_context, _startsWith, null, null, _startAfterId, _start, _query.PageSize, fields: _fields)
-                        : _documents.GetDocumentsStartingWith(_context, _startsWith, _startAfterId, _start, _query.PageSize, _collection, _skippedResults, _fields);
+                        ? _documents.GetDocumentsStartingWith(_context, _startsWith, null, null, _startAfterId, _start, _query.PageSize, null, fields: _fields, _token) 
+                        : _documents.GetDocumentsStartingWith(_context, _startsWith, _startAfterId, _start, _query.PageSize, _collection, _skippedResults,  _fields, _token);
 
                     if (countQuery)
                     {

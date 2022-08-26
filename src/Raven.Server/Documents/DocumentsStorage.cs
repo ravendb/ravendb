@@ -740,7 +740,7 @@ namespace Raven.Server.Documents
         }
 
         public IEnumerable<Document> GetDocumentsStartingWith(DocumentsOperationContext context, string idPrefix, string startAfterId,
-            long start, long take, string collection, Reference<long> skippedResults, DocumentFields fields = DocumentFields.All)
+            long start, long take, string collection, Reference<long> skippedResults, DocumentFields fields = DocumentFields.All, CancellationToken token = default)
         {
             var isAllDocs = collection == Constants.Documents.Collections.AllDocumentsCollection;
             var isEmptyCollection = collection == Constants.Documents.Collections.EmptyCollection;
@@ -753,6 +753,8 @@ namespace Raven.Server.Documents
                 // we request ALL documents that start with `idPrefix` and filter it here by the collection name
                 foreach (var doc in GetDocumentsStartingWith(context, idPrefix, null, null, startAfterId, start, take: long.MaxValue, fields: fields))
                 {
+                    token.ThrowIfCancellationRequested();
+
                     if (isAllDocs)
                     {
                         if (take-- < 0)
@@ -809,7 +811,7 @@ namespace Raven.Server.Documents
         }
 
         public IEnumerable<Document> GetDocumentsStartingWith(DocumentsOperationContext context, string idPrefix, string matches, string exclude, string startAfterId,
-            long start, long take, Reference<long> skip = null, DocumentFields fields = DocumentFields.All)
+            long start, long take, Reference<long> skip = null, DocumentFields fields = DocumentFields.All, CancellationToken token = default)
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
 
@@ -822,6 +824,8 @@ namespace Raven.Server.Documents
             {
                 foreach (var result in table.SeekByPrimaryKeyPrefix(prefixSlice, startAfterSlice, skip?.Value ?? 0))
                 {
+                    token.ThrowIfCancellationRequested();
+
                     var document = TableValueToDocument(context, ref result.Value.Reader, fields);
                     string documentId = document.Id;
                     if (documentId.StartsWith(idPrefix, StringComparison.OrdinalIgnoreCase) == false)
