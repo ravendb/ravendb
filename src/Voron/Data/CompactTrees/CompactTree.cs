@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using Sparrow;
+using Sparrow.Compression;
 using Sparrow.Server;
 using Voron.Data.BTrees;
 using Voron.Debugging;

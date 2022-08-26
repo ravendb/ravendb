@@ -14,6 +14,7 @@ using Corax.Pipeline;
 using Corax.Utils;
 using Sparrow;
 using Sparrow.Binary;
+using Sparrow.Compression;
 using Sparrow.Json;
 using Sparrow.Server;
 using Sparrow.Server.Compression;

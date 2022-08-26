@@ -11,6 +11,7 @@ using Sparrow;
 using System.Runtime.Intrinsics.X86;
 using Corax.Pipeline;
 using Corax.Queries;
+using Sparrow.Compression;
 using Sparrow.Server;
 using Voron.Data.BTrees;
 

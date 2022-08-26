@@ -5,13 +5,13 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Sparrow.Server.Compression
+namespace Sparrow.Compression
 {
     public static class ZigZagEncoding
     {
         public const int MaxEncodedSize = 10;
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int Encode<T>(Span<byte> buffer, T value, int pos = 0) where T : unmanaged
         {
             int sizeOfTInBits = Unsafe.SizeOf<T>() * 8 - 1;
@@ -64,7 +64,7 @@ namespace Sparrow.Server.Compression
             throw new NotSupportedException($"The type {nameof(T)} is not supported to be written.");
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static unsafe int Encode<T>(byte* buffer, T value, int pos = 0) where T : unmanaged
         {
             int sizeOfTInBits = Unsafe.SizeOf<T>() * 8 - 1;
@@ -117,35 +117,35 @@ namespace Sparrow.Server.Compression
             throw new NotSupportedException($"The type {nameof(T)} is not supported to be written.");
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static T Decode<T>(ReadOnlySpan<byte> buffer, int pos = 0) where T : unmanaged
         {
             T value = VariableSizeEncoding.Read<T>(buffer, out int _, pos);
             return UnZag(value);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static unsafe T Decode<T>(byte* buffer, out int len, int pos = 0) where T : unmanaged
         {
             T value = VariableSizeEncoding.Read<T>(buffer + pos, out len);
             return UnZag(value);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static unsafe T DecodeCompact<T>(byte* buffer, out int len, out bool success, int pos = 0) where T : unmanaged
         {
             T value = VariableSizeEncoding.ReadCompact<T>(buffer + pos, out len, out success);
             return UnZag(value);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static T Decode<T>(ReadOnlySpan<byte> buffer, out int len, int pos = 0) where T : unmanaged
         {
             T value = VariableSizeEncoding.Read<T>(buffer, out len, pos);
             return UnZag(value);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static long[] DecodeDebug(ReadOnlySpan<byte> buffer) 
         {
             int count = UnZag(VariableSizeEncoding.Read<int>(buffer, out var len, 0));
@@ -161,7 +161,7 @@ namespace Sparrow.Server.Compression
             return results;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static T UnZag<T>(T value) where T : unmanaged
         {
             if (typeof(T) == typeof(sbyte))

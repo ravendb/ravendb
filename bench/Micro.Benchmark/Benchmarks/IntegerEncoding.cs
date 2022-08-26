@@ -10,6 +10,7 @@ using BenchmarkDotNet.Environments;
 using BenchmarkDotNet.Exporters;
 using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Validators;
+using Sparrow.Compression;
 using Sparrow.Json;
 using Sparrow.Server.Compression;
 

@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Corax.Utils;
 using Sparrow;
+using Sparrow.Compression;
 using Sparrow.Server.Compression;
 
 namespace Corax;
