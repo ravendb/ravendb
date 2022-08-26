@@ -30,7 +30,7 @@ namespace Sparrow.Json
         {
             _parent = parent;
 
-            _count = parent.ReadVariableSizeInt(pos, out byte arraySizeOffset);
+            _count = parent.ReadVariableSizeInt(pos, out var arraySizeOffset);
 
             _dataStart = parent.BasePointer + pos;
             _metadataPtr = _dataStart + arraySizeOffset;

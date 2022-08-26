@@ -8,6 +8,7 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Sparrow.Compression;
 using Sparrow.Json.Parsing;
 
 namespace Sparrow.Json
@@ -86,8 +87,7 @@ namespace Sparrow.Json
             // init root level object properties
             var objStartOffset = ReadVariableSizeIntInReverse(_mem, propOffsetStart - offset, out offset);
             // get offset of beginning of data of the main object
-            byte propCountOffset;
-            _propCount = ReadVariableSizeInt(objStartOffset, out propCountOffset); // get main object properties count
+            _propCount = ReadVariableSizeInt(objStartOffset, out var propCountOffset); // get main object properties count
             _objStart = objStartOffset + mem;
             _metadataPtr = objStartOffset + mem + propCountOffset;
             // get pointer to current objects property tags metadata collection
@@ -157,7 +157,7 @@ namespace Sparrow.Json
                 ThrowOutOfRangeException(propNamesOffsetFlag);
 
             _objStart = _mem + pos;
-            _propCount = ReadVariableSizeInt(pos, out byte propCountOffset);
+            _propCount = ReadVariableSizeInt(pos, out var propCountOffset);
             _metadataPtr = _objStart + propCountOffset;
 
             // analyze main object type and it's offset and propertyIds flags
@@ -830,23 +830,22 @@ namespace Sparrow.Json
         /// </summary>
         /// <param name="propertyId">Position of the string in the property ids storage</param>
         /// <param name="comparer">Comparer of a specific string value</param>
-        /// <param name="ignoreCase">Indicates if the comparassion should be case insensitive</param>
+        /// <param name="ignoreCase">Indicates if the comparison should be case insensitive</param>
         /// <returns></returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private int ComparePropertyName(int propertyId, LazyStringValue comparer)
         {
             AssertContextNotDisposed();
 
-            // Get the offset of the property name from the _proprNames position
+            // Get the offset of the property name from the _propNames position
             var propertyNameOffsetPtr = _propNames + 1 + propertyId * _propNamesDataOffsetSize;
             var propertyNameOffset = ReadNumber(propertyNameOffsetPtr, _propNamesDataOffsetSize);
 
             // Get the relative "In Document" position of the property Name
             var propertyNameRelativePosition = _propNames - propertyNameOffset;
-            var position = propertyNameRelativePosition - _mem;
 
             // Get the property name size
-            var size = ReadVariableSizeInt((int)position, out byte propertyNameLengthDataLength);
+            var size = VariableSizeEncoding.Read<int>(propertyNameRelativePosition, out var propertyNameLengthDataLength);
 
             // Return result of comparison between property name and received comparer
             return comparer.Compare(propertyNameRelativePosition + propertyNameLengthDataLength, size);
@@ -994,7 +993,7 @@ namespace Sparrow.Json
 
         private RawBlob ReadRawBlob(int pos)
         {
-            var size = ReadVariableSizeInt(pos, out byte offset);
+            var size = ReadVariableSizeInt(pos, out var offset);
             return new RawBlob(_mem + pos + offset, size);
         }
 
@@ -1137,15 +1136,13 @@ namespace Sparrow.Json
         {
             AssertContextNotDisposed();
 
-            byte lenOffset;
-            byte escOffset;
-            int stringLength;
-            stringLength = ReadVariableSizeInt(stringOffset, out lenOffset);
+            int stringLength = ReadVariableSizeInt(stringOffset, out var lenOffset);
             if (stringLength < 0)
                 throw new InvalidDataException("String not valid");
+
             var str = stringOffset + lenOffset;
             var totalEscCharLen = 0;
-            var escCount = ReadVariableSizeInt(stringOffset + lenOffset + stringLength, out escOffset);
+            var escCount = ReadVariableSizeInt(stringOffset + lenOffset + stringLength, out var escOffset);
             if (escCount != 0)
             {
                 var prevEscCharOffset = 0;
@@ -1196,13 +1193,12 @@ namespace Sparrow.Json
             return tokenType;
         }
 
-        private int PropertiesValidation(BlittableJsonToken rootTokenTypen, int mainPropOffsetSize, int mainPropIdSize,
+        private int PropertiesValidation(BlittableJsonToken rootTokenType, int mainPropOffsetSize, int mainPropIdSize,
             int objStartOffset, int numberOfPropsNames)
         {
             AssertContextNotDisposed();
 
-            byte offset;
-            var numberOfProperties = ReadVariableSizeInt(_mem + objStartOffset, 0, out offset);
+            var numberOfProperties = ReadVariableSizeInt(objStartOffset, out var offset);
             var current = objStartOffset + offset;
 
             if (numberOfProperties < 0)
@@ -1215,7 +1211,7 @@ namespace Sparrow.Json
                     ThrowInvalidPropertiesOffest();
                 current += mainPropOffsetSize;
 
-                if (rootTokenTypen == BlittableJsonToken.StartObject)
+                if (rootTokenType == BlittableJsonToken.StartObject)
                 {
                     var id = ReadNumber(_mem + current, mainPropIdSize);
                     if ((id > numberOfPropsNames) || (id < 0))
@@ -1245,8 +1241,8 @@ namespace Sparrow.Json
                         break;
 
                     case BlittableJsonToken.LazyNumber:
-                        var numberLength = ReadVariableSizeInt(propValueOffset, out byte lengthOffset);
-                        var escCount = ReadVariableSizeInt(propValueOffset + lengthOffset + numberLength, out byte escOffset);
+                        var numberLength = ReadVariableSizeInt(propValueOffset, out var lengthOffset);
+                        var escCount = ReadVariableSizeInt(propValueOffset + lengthOffset + numberLength, out var escOffset);
 
                         // if number has any non-ascii symbols, we rull it out immediately
                         if (escCount > 0)
@@ -1285,8 +1281,7 @@ namespace Sparrow.Json
                         break;
 
                     case BlittableJsonToken.EmbeddedBlittable:
-                        byte offsetLen;
-                        stringLength = ReadVariableSizeInt(propValueOffset, out offsetLen);
+                        stringLength = ReadVariableSizeInt(propValueOffset, out var offsetLen);
                         var blittableJsonReaderObject = new BlittableJsonReaderObject(_mem + propValueOffset + offsetLen, stringLength, _context);
                         blittableJsonReaderObject.BlittableValidation();
                         break;
