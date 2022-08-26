@@ -54,6 +54,7 @@ import detectBrowser = require("viewmodels/common/detectBrowser");
 import genUtils = require("common/generalUtils");
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
 import connectionStatus from "models/resources/connectionStatus";
+import moment from "moment";
 
 class shell extends viewModelBase {
 
@@ -98,6 +99,9 @@ class shell extends viewModelBase {
     applyColorCustomization: KnockoutObservable<boolean>;
     
     clientCertificate = clientCertificateModel.certificateInfo;
+    certificateExpirationState = clientCertificateModel.certificateExpirationState;
+    
+    
 
     mainMenu = new menu(generateMenuItems(activeDatabaseTracker.default.database()));
     searchBox = new searchBox();
@@ -296,9 +300,14 @@ class shell extends viewModelBase {
                                         </div>`).join("")
                 : "No access granted";
             
+            const notAfter = this.clientCertificate().NotAfter;
+            const notAfterUtc = moment(notAfter).utc();
+            
             const authenticationInfo = `<dl class="dl-horizontal margin-none client-certificate-info">
                             <dt>Client Certificate</dt>
                             <dd><strong>${this.clientCertificate().Name}</strong></dd>
+                            <dt>Expiration Date</dt>
+                            <dd><strong>${notAfter.substring(0, 10)} <span class="${this.getExpirationDurationClass()}">(${genUtils.formatDurationByDate(notAfterUtc, true)})</span></strong></dd>
                             <dt>Thumbprint</dt>
                             <dd><strong>${this.clientCertificate().Thumbprint}</strong></dd>
                             <dt><span>Security Clearance</span></dt>
@@ -329,6 +338,17 @@ class shell extends viewModelBase {
             console.error(e);
             messagePublisher.reportWarning("Failed to load routed module!", e);
         };
+    }
+    
+    private getExpirationDurationClass() {
+        switch (this.certificateExpirationState()) {
+            case "expired":
+                return "text-danger";
+            case "aboutToExpire":
+                return "text-warning";
+            default:
+                return "text-success";
+        }
     }
 
     private initializeShellComponents() {
