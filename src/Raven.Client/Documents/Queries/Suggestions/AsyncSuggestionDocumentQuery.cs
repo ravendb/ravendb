@@ -31,7 +31,7 @@ namespace Raven.Client.Documents.Queries.Suggestions
 
         public IAsyncSuggestionDocumentQuery<T> AndSuggestUsing(Action<ISuggestionBuilder<T>> builder)
         {
-            var f = new SuggestionBuilder<T>();
+            var f = new SuggestionBuilder<T>(_source.Conventions);
             builder.Invoke(f);
 
             _source.SuggestUsing(f.Suggestion);

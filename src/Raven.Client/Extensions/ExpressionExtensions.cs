@@ -9,6 +9,9 @@ using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
+#if !RVN
+using Raven.Client.Documents.Conventions;
+#endif
 
 namespace Raven.Client.Extensions
 {
@@ -17,33 +20,6 @@ namespace Raven.Client.Extensions
     ///</summary>
     internal static class ExpressionExtensions
     {
-        public static Type ExtractTypeFromPath<T>(this Expression<Func<T, object>> path)
-        {
-            var propertySeparator = '.';
-            var collectionSeparator = "[].";
-            var collectionSeparatorAsString = collectionSeparator;
-            var propertyPath = path.ToPropertyPath(propertySeparator, collectionSeparator);
-            var properties = propertyPath.Split(propertySeparator);
-            var type = typeof(T);
-            foreach (var property in properties)
-            {
-                if (property.Contains(collectionSeparatorAsString))
-                {
-                    var normalizedProperty = property.Replace(collectionSeparatorAsString, string.Empty);
-
-                    type = type.IsArray
-                        ? type.GetElementType().GetProperty(normalizedProperty).PropertyType
-                        : type.GetGenericArguments()[0].GetProperty(normalizedProperty).PropertyType;
-                }
-                else
-                {
-                    type = type.GetProperty(property).PropertyType;
-                }
-            }
-
-            return type;
-        }
-
         public static MemberInfo ToProperty(this LambdaExpression expr)
         {
             var expression = expr.Body;
@@ -70,22 +46,24 @@ namespace Raven.Client.Extensions
             return me.Member;
         }
 
+#if !RVN
         ///<summary>
         /// Turn an expression like x=&lt; x.User.Name to "User.Name"
         ///</summary>
         public static string ToPropertyPath(this LambdaExpression expr,
+            DocumentConventions conventions,
             char propertySeparator = '.',
             string collectionSeparator = "[].")
         {
             var expression = expr.Body;
 
-            return expression.ToPropertyPath(propertySeparator, collectionSeparator);
+            return expression.ToPropertyPath(conventions, propertySeparator, collectionSeparator);
         }
         
 
-        public static string ToPropertyPath(this Expression expression, char propertySeparator = '.', string collectionSeparator = "[].")
+        public static string ToPropertyPath(this Expression expression, DocumentConventions conventions, char propertySeparator = '.', string collectionSeparator = "[].")
         {
-            var propertyPathExpressionVisitor = new PropertyPathExpressionVisitor(propertySeparator.ToString(), collectionSeparator);
+            var propertyPathExpressionVisitor = new PropertyPathExpressionVisitor(conventions, propertySeparator.ToString(), collectionSeparator);
             propertyPathExpressionVisitor.Visit(expression);
 
             var builder = new StringBuilder();
@@ -119,17 +97,19 @@ namespace Raven.Client.Extensions
             return builder.ToString().Trim(propertySeparator, collectionSeparator[0], collectionSeparator[1], collectionSeparator[2]);
         }
 
-        internal class PropertyPathExpressionVisitor : ExpressionVisitor
+        private class PropertyPathExpressionVisitor : ExpressionVisitor
         {
             private readonly string _propertySeparator;
             private readonly string _collectionSeparator;
             public Stack<string> Results = new Stack<string>();
             private bool _isFirst = true;
+            private readonly DocumentConventions _conventions;
 
-            public PropertyPathExpressionVisitor(string propertySeparator, string collectionSeparator)
+            public PropertyPathExpressionVisitor(DocumentConventions conventions, string propertySeparator, string collectionSeparator)
             {
                 _propertySeparator = propertySeparator;
                 _collectionSeparator = collectionSeparator;
+                _conventions = conventions;
             }
 
             protected override Expression VisitMember(MemberExpression node)
@@ -210,5 +190,6 @@ namespace Raven.Client.Extensions
                 return node;
             }
         }
+#endif
     }
 }

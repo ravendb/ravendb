@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Newtonsoft.Json;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session.Tokens;
 using Sparrow.Json;
 
@@ -27,7 +28,7 @@ namespace Raven.Client.Documents.Queries.Facets
             set => _displayFieldName = value;
         }
 
-        internal abstract FacetToken ToFacetToken(Func<object, string> addQueryParameter);
+        internal abstract FacetToken ToFacetToken(DocumentConventions conventions, Func<object, string> addQueryParameter);
 
         internal static void Fill(FacetBase facet, BlittableJsonReaderObject json)
         {

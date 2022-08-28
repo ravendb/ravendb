@@ -20,19 +20,10 @@ namespace Raven.Client.Extensions
 
         public override IJavascriptMemberMetadata GetMemberMetadata(MemberInfo memberInfo)
         {
-            string name = null;
-            if (_conventions.PropertyNameConverter != null)
+            return new MemberMetadata
             {
-                if (memberInfo.DeclaringType?.Namespace?.StartsWith("System") == false &&
-                    memberInfo.DeclaringType?.Namespace?.StartsWith("Microsoft") == false)
-                {
-                    name = _conventions.PropertyNameConverter(memberInfo);
-                }              
-            }
-
-            return string.IsNullOrWhiteSpace(name) ?
-                new MemberMetadata { MemberName = memberInfo.Name } :
-                new MemberMetadata { MemberName = name };
+                MemberName = _conventions.GetConvertedPropertyNameFor(memberInfo)
+            };
         }
     }
 }

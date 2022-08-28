@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session.Tokens;
 using Sparrow.Extensions;
 using Sparrow.Json;
@@ -28,10 +30,10 @@ namespace Raven.Client.Documents.Queries.Facets
         /// </summary>
         public List<string> Ranges { get; set; }
 
-        internal override FacetToken ToFacetToken(Func<object, string> addQueryParameter)
+        internal override FacetToken ToFacetToken(DocumentConventions conventions, Func<object, string> addQueryParameter)
         {
             if (_parent != null)
-                return _parent.ToFacetToken(addQueryParameter);
+                return _parent.ToFacetToken(conventions, addQueryParameter);
             return FacetToken.Create(this, addQueryParameter);
         }
 
@@ -67,34 +69,49 @@ namespace Raven.Client.Documents.Queries.Facets
         /// </summary>
         public List<Expression<Func<T, bool>>> Ranges { get; set; }
 
-        internal override FacetToken ToFacetToken(Func<object, string> addQueryParameter)
+        internal override FacetToken ToFacetToken(DocumentConventions conventions, Func<object, string> addQueryParameter)
         {
-            return FacetToken.Create(this, addQueryParameter);
+            return FacetToken.Create(this, addQueryParameter, conventions);
         }
 
         public static implicit operator RangeFacet(RangeFacet<T> other)
         {
-            var ranges = other.Ranges.Select(Parse).ToList();
+            var ranges = other.Ranges.Select(r => Parse(r, DocumentConventions.Default)).ToList();
 
             return new RangeFacet(other)
             {
                 Ranges = ranges,
                 Aggregations = other.Aggregations,
-                DisplayFieldName = other.DisplayFieldName
+                DisplayFieldName = other.DisplayFieldName,
             };
         }
 
         public static string Parse(Expression<Func<T, bool>> expr)
         {
-            return Parse(null, expr, null);
+            return Parse(expr, DocumentConventions.Default);
+        }
+        
+        public static string Parse(Expression<Func<T, bool>> expr, DocumentConventions documentConventions)
+        {
+            return Parse(null, expr, null, documentConventions);
         }
 
         public static string Parse(string prefix, LambdaExpression expr)
         {
-            return Parse(prefix, expr, null);
+            return Parse(prefix, expr, DocumentConventions.Default);
+        }
+        
+        public static string Parse(string prefix, LambdaExpression expr, DocumentConventions documentConventions)
+        {
+            return Parse(prefix, expr, null, documentConventions);
         }
 
         public static string Parse(string prefix, LambdaExpression expr, Func<object, string> addQueryParameter)
+        {
+            return Parse(prefix, expr, addQueryParameter, DocumentConventions.Default);
+        }
+        
+        public static string Parse(string prefix, LambdaExpression expr, Func<object, string> addQueryParameter, DocumentConventions documentConventions)
         {
             if (expr.Body is MethodCallExpression mce)
             {
@@ -103,7 +120,7 @@ namespace Raven.Client.Documents.Queries.Facets
                     if (mce.Arguments[0] is MemberExpression src &&
                         mce.Arguments[1] is LambdaExpression le)
                     {
-                        return Parse(GetFieldName(prefix, src), le);
+                        return Parse(GetFieldName(prefix, src, documentConventions), le, documentConventions);
                     }
                 }
                 throw new InvalidOperationException("Don't know how to translate expression to facets: " + expr);
@@ -114,7 +131,7 @@ namespace Raven.Client.Documents.Queries.Facets
 
             if (leftExpression is MemberExpression me)
             {
-                var fieldName = GetFieldName(prefix, me);
+                var fieldName = GetFieldName(prefix, me, documentConventions);
                 var subExpressionValue = ParseSubExpression(operation);
                 var expression = GetStringRepresentation(fieldName, operation.NodeType, subExpressionValue, addQueryParameter);
                 return expression;
@@ -136,8 +153,8 @@ namespace Raven.Client.Documents.Queries.Facets
                 throw new InvalidOperationException("Expressions on both sides of '&&' must point to range field. E.g. x => x.Age > 18 && x.Age < 99");
             }
 
-            var leftFieldName = GetFieldName(prefix, leftMember);
-            var rightFieldName = GetFieldName(prefix, rightMember);
+            var leftFieldName = GetFieldName(prefix, leftMember, documentConventions);
+            var rightFieldName = GetFieldName(prefix, rightMember, documentConventions);
 
             if (leftFieldName != rightFieldName)
             {
@@ -165,20 +182,22 @@ namespace Raven.Client.Documents.Queries.Facets
             throw new InvalidOperationException("Members in sub-expression(s) are not the correct types (expected '<', '<=', '>' or '>=')");
         }
 
-        private static string GetFieldName(string prefix, MemberExpression left)
+        private static string GetFieldName(string prefix, MemberExpression left, DocumentConventions conventions)
         {
             if (Nullable.GetUnderlyingType(left.Member.DeclaringType) != null)
-                return GetFieldName(prefix, ((MemberExpression)left.Expression));
+                return GetFieldName(prefix, ((MemberExpression)left.Expression), conventions);
 
+            string memberName = conventions.GetConvertedPropertyNameFor(left.Member);
+            
             if (left.Expression is MemberExpression parent)
             {
-                return GetFieldName(prefix, parent) + "_" + left.Member.Name;
+                return GetFieldName(prefix, parent, conventions) + "_" + memberName;
             }
 
             if (prefix != null)
-                return prefix + "_" + left.Member.Name;
+                return prefix + "_" + memberName;
 
-            return left.Member.Name;
+            return memberName;
         }
 
         private static object ParseSubExpression(BinaryExpression operation)
