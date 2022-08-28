@@ -16,10 +16,16 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
         {
         }
 
+        protected virtual void AssertCanExecute()
+        {
+        }
+
         protected abstract string GetDatabaseName();
 
         public override async ValueTask ExecuteAsync()
         {
+            AssertCanExecute();
+
             var databaseName = GetDatabaseName();
             var hub = RequestHandler.GetStringQueryString("name", true);
             var filter = RequestHandler.GetStringQueryString("filter", false);

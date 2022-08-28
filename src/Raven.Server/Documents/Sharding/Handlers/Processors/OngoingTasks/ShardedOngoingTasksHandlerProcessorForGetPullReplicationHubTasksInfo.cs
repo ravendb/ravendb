@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Client.Exceptions.Sharding;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.Handlers.Processors.OngoingTasks;
@@ -14,19 +15,14 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks
         {
         }
 
+        protected override void AssertCanExecute()
+        {
+            throw new NotSupportedInShardingException("Get Pull Replication Hub Task Info is not supported in sharding");
+        }
+
         protected override IEnumerable<OngoingTaskPullReplicationAsHub> GetOngoingTasks(TransactionOperationContext context, DatabaseRecord databaseRecord, ClusterTopology clusterTopology, long key)
         {
-            if (databaseRecord.HubPullReplications != null)
-            {
-                foreach (var replicationDefinition in databaseRecord.HubPullReplications)
-                {
-                    yield return new OngoingTaskPullReplicationAsHub()
-                    {
-                        TaskId = replicationDefinition.TaskId,
-                        TaskName = replicationDefinition.Name,
-                    };
-                }
-            }
+            yield return null;
         }
     }
 }
