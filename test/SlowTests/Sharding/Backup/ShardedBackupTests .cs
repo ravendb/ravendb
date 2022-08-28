@@ -230,9 +230,11 @@ namespace SlowTests.Sharding.Backup
                 }));
 
                 // wait for backups to complete
-                var backupsDone = await Sharding.Backup.WaitForBackupsToComplete(new[] { store1, store2 });
+                var backupsDone = await Sharding.Backup.WaitForBackupToComplete(store1);
+                var backupsDone2 = await Backup.WaitForBackupToComplete(store2);
 
                 Assert.True(WaitHandle.WaitAll(backupsDone, TimeSpan.FromMinutes(2)));
+                Assert.True(WaitHandle.WaitAll(backupsDone2, TimeSpan.FromMinutes(2)));
 
                 var dirs = Directory.GetDirectories(backupPath);
                 Assert.Equal(2, dirs.Length);
