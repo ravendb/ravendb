@@ -129,17 +129,7 @@ namespace Raven.Client.Documents.Indexes
         {
             var isId = false;
 
-            string name = null;
-            if (_conventions.PropertyNameConverter != null)
-            {
-                //do not use convention for types in system namespaces
-                if (member.DeclaringType?.Namespace?.StartsWith("System") == false &&
-                   member.DeclaringType?.Namespace?.StartsWith("Microsoft") == false)
-                    name = _conventions.PropertyNameConverter(member);
-            }
-
-            if (string.IsNullOrWhiteSpace(name))
-                name = GetPropertyName(member.Name, exprType);
+            string name = GetPropertyName(member);
 
             if (TranslateToDocumentId(instance, member, exprType))
             {
@@ -273,42 +263,33 @@ namespace Raven.Client.Documents.Indexes
             }
         }
 
-        private string GetPropertyName(string name, Type exprType)
+        private string GetPropertyName(MemberInfo memberInfo)
         {
-            var memberInfo = (MemberInfo)exprType.GetProperty(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly) ??
-                exprType.GetField(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly);
-
-            if (memberInfo == null)
+            foreach (var customAttribute in memberInfo.GetCustomAttributes(true))
             {
-                memberInfo = ReflectionUtil.GetPropertiesAndFieldsFor(exprType, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
-                    .FirstOrDefault(x => x.Name == name);
-            }
-
-            if (memberInfo != null)
-            {
-                foreach (var customAttribute in memberInfo.GetCustomAttributes(true))
+                string propName;
+                var customAttributeType = customAttribute.GetType();
+                if (typeof(JsonPropertyAttribute).Namespace != customAttributeType.Namespace)
+                    continue;
+                switch (customAttributeType.Name)
                 {
-                    string propName;
-                    var customAttributeType = customAttribute.GetType();
-                    if (typeof(JsonPropertyAttribute).Namespace != customAttributeType.Namespace)
+                    case "JsonPropertyAttribute":
+                        propName = ((dynamic)customAttribute).PropertyName;
+                        break;
+                    case "DataMemberAttribute":
+                        propName = ((dynamic)customAttribute).Name;
+                        break;
+                    default:
                         continue;
-                    switch (customAttributeType.Name)
-                    {
-                        case "JsonPropertyAttribute":
-                            propName = ((dynamic)customAttribute).PropertyName;
-                            break;
-                        case "DataMemberAttribute":
-                            propName = ((dynamic)customAttribute).Name;
-                            break;
-                        default:
-                            continue;
-                    }
-                    if (KeywordsInCSharp.Contains(propName))
-                        return '@' + propName;
-                    return propName ?? name;
                 }
+
+                if (KeywordsInCSharp.Contains(propName))
+                    return '@' + propName;
+                if (propName != null)
+                    return propName;
             }
-            return name;
+
+            return _conventions.GetConvertedPropertyNameFor(memberInfo);
         }
 
         private static Type GetMemberType(MemberInfo member)
@@ -1354,7 +1335,7 @@ namespace Raven.Client.Documents.Indexes
         /// <returns></returns>
         protected override MemberAssignment VisitMemberAssignment(MemberAssignment assignment)
         {
-            Out(assignment.Member.Name);
+            Out(_conventions.GetConvertedPropertyNameFor(assignment.Member));
             Out(" = ");
             var constantExpression = assignment.Expression as ConstantExpression;
             if (constantExpression != null && constantExpression.Value == null)
@@ -1962,7 +1943,7 @@ namespace Raven.Client.Documents.Indexes
 
                 if (node.Members?[i] != null)
                 {
-                    string name = node.Members[i].Name;
+                    string name = _conventions.GetConvertedPropertyNameFor(node.Members[i]);
                     name = KeywordsInCSharp.Contains(name) ? $"@{name}" : name;
                     Out(name);
                     Out(" = ");

@@ -222,25 +222,25 @@ namespace Raven.Client.Documents.Session.Loaders
 
         ISubscriptionIncludeBuilder<T> IDocumentIncludeBuilder<T, ISubscriptionIncludeBuilder<T>>.IncludeDocuments(Expression<Func<T, string>> path)
         {
-            IncludeDocuments(path.ToPropertyPath());
+            IncludeDocuments(path.ToPropertyPath(_conventions));
             return this;
         }
 
         ISubscriptionIncludeBuilder<T> IDocumentIncludeBuilder<T, ISubscriptionIncludeBuilder<T>>.IncludeDocuments(Expression<Func<T, IEnumerable<string>>> path)
         {
-            IncludeDocuments(path.ToPropertyPath());
+            IncludeDocuments(path.ToPropertyPath(_conventions));
             return this;
         }
 
         ISubscriptionIncludeBuilder<T> IDocumentIncludeBuilder<T, ISubscriptionIncludeBuilder<T>>.IncludeDocuments<TInclude>(Expression<Func<T, string>> path)
         {
-            IncludeDocuments(IncludesUtil.GetPrefixedIncludePath<TInclude>(path.ToPropertyPath(), _conventions));
+            IncludeDocuments(IncludesUtil.GetPrefixedIncludePath<TInclude>(path.ToPropertyPath(_conventions), _conventions));
             return this;
         }
 
         ISubscriptionIncludeBuilder<T> IDocumentIncludeBuilder<T, ISubscriptionIncludeBuilder<T>>.IncludeDocuments<TInclude>(Expression<Func<T, IEnumerable<string>>> path)
         {
-            IncludeDocuments(IncludesUtil.GetPrefixedIncludePath<TInclude>(path.ToPropertyPath(), _conventions));
+            IncludeDocuments(IncludesUtil.GetPrefixedIncludePath<TInclude>(path.ToPropertyPath(_conventions), _conventions));
             return this;
         }
 
@@ -252,25 +252,25 @@ namespace Raven.Client.Documents.Session.Loaders
 
         IQueryIncludeBuilder<T> IDocumentIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeDocuments(Expression<Func<T, string>> path)
         {
-            IncludeDocuments(path.ToPropertyPath());
+            IncludeDocuments(path.ToPropertyPath(_conventions));
             return this;
         }
 
         IQueryIncludeBuilder<T> IDocumentIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeDocuments(Expression<Func<T, IEnumerable<string>>> path)
         {
-            IncludeDocuments(path.ToPropertyPath());
+            IncludeDocuments(path.ToPropertyPath(_conventions));
             return this;
         }
 
         IQueryIncludeBuilder<T> IDocumentIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeDocuments<TInclude>(Expression<Func<T, string>> path)
         {
-            IncludeDocuments(IncludesUtil.GetPrefixedIncludePath<TInclude>(path.ToPropertyPath(), _conventions));
+            IncludeDocuments(IncludesUtil.GetPrefixedIncludePath<TInclude>(path.ToPropertyPath(_conventions), _conventions));
             return this;
         }
 
         IQueryIncludeBuilder<T> IDocumentIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeDocuments<TInclude>(Expression<Func<T, IEnumerable<string>>> path)
         {
-            IncludeDocuments(IncludesUtil.GetPrefixedIncludePath<TInclude>(path.ToPropertyPath(), _conventions));
+            IncludeDocuments(IncludesUtil.GetPrefixedIncludePath<TInclude>(path.ToPropertyPath(_conventions), _conventions));
             return this;
         }
 
@@ -306,25 +306,25 @@ namespace Raven.Client.Documents.Session.Loaders
 
         IIncludeBuilder<T> IDocumentIncludeBuilder<T, IIncludeBuilder<T>>.IncludeDocuments(Expression<Func<T, string>> path)
         {
-            IncludeDocuments(path.ToPropertyPath());
+            IncludeDocuments(path.ToPropertyPath(_conventions));
             return this;
         }
 
         IIncludeBuilder<T> IDocumentIncludeBuilder<T, IIncludeBuilder<T>>.IncludeDocuments(Expression<Func<T, IEnumerable<string>>> path)
         {
-            IncludeDocuments(path.ToPropertyPath());
+            IncludeDocuments(path.ToPropertyPath(_conventions));
             return this;
         }
 
         IIncludeBuilder<T> IDocumentIncludeBuilder<T, IIncludeBuilder<T>>.IncludeDocuments<TInclude>(Expression<Func<T, string>> path)
         {
-            IncludeDocuments(IncludesUtil.GetPrefixedIncludePath<TInclude>(path.ToPropertyPath(), _conventions));
+            IncludeDocuments(IncludesUtil.GetPrefixedIncludePath<TInclude>(path.ToPropertyPath(_conventions), _conventions));
             return this;
         }
 
         IIncludeBuilder<T> IDocumentIncludeBuilder<T, IIncludeBuilder<T>>.IncludeDocuments<TInclude>(Expression<Func<T, IEnumerable<string>>> path)
         {
-            IncludeDocuments(IncludesUtil.GetPrefixedIncludePath<TInclude>(path.ToPropertyPath(), _conventions));
+            IncludeDocuments(IncludesUtil.GetPrefixedIncludePath<TInclude>(path.ToPropertyPath(_conventions), _conventions));
             return this;
         }
 
@@ -343,7 +343,7 @@ namespace Raven.Client.Documents.Session.Loaders
         IQueryIncludeBuilder<T> IQueryIncludeBuilder<T>.IncludeTimeSeries(Expression<Func<T, string>> path, string name, DateTime from, DateTime to)
         {
             WithAlias(path);
-            IncludeTimeSeriesFromTo(path.ToPropertyPath(), name, from, to);
+            IncludeTimeSeriesFromTo(path.ToPropertyPath(_conventions), name, from, to);
             return this;
         }
         IQueryIncludeBuilder<T> ICompareExchangeValueIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeCompareExchangeValue(string path)
@@ -354,13 +354,13 @@ namespace Raven.Client.Documents.Session.Loaders
 
         IQueryIncludeBuilder<T> ICompareExchangeValueIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeCompareExchangeValue(Expression<Func<T, string>> path)
         {
-            IncludeCompareExchangeValue(path.ToPropertyPath());
+            IncludeCompareExchangeValue(path.ToPropertyPath(_conventions));
             return this;
         }
 
         IQueryIncludeBuilder<T> ICompareExchangeValueIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeCompareExchangeValue(Expression<Func<T, IEnumerable<string>>> path)
         {
-            IncludeCompareExchangeValue(path.ToPropertyPath());
+            IncludeCompareExchangeValue(path.ToPropertyPath(_conventions));
             return this;
         }
 
@@ -372,13 +372,13 @@ namespace Raven.Client.Documents.Session.Loaders
 
         IIncludeBuilder<T> ICompareExchangeValueIncludeBuilder<T, IIncludeBuilder<T>>.IncludeCompareExchangeValue(Expression<Func<T, string>> path)
         {
-            IncludeCompareExchangeValue(path.ToPropertyPath());
+            IncludeCompareExchangeValue(path.ToPropertyPath(_conventions));
             return this;
         }
 
         IIncludeBuilder<T> ICompareExchangeValueIncludeBuilder<T, IIncludeBuilder<T>>.IncludeCompareExchangeValue(Expression<Func<T, IEnumerable<string>>> path)
         {
-            IncludeCompareExchangeValue(path.ToPropertyPath());
+            IncludeCompareExchangeValue(path.ToPropertyPath(_conventions));
             return this;
         }
         
@@ -527,13 +527,13 @@ namespace Raven.Client.Documents.Session.Loaders
         private void IncludeCounterWithAlias(Expression<Func<T, string>> path, string name)
         {
             WithAlias(path);
-            IncludeCounter(path.ToPropertyPath(), name);
+            IncludeCounter(path.ToPropertyPath(_conventions), name);
         }
 
         private void IncludeCountersWithAlias(Expression<Func<T, string>> path, string[] names)
         {
             WithAlias(path);
-            IncludeCounters(path.ToPropertyPath(), names);
+            IncludeCounters(path.ToPropertyPath(_conventions), names);
         }
 
         private void IncludeRevisionsBefore(DateTime dateTime)
@@ -582,7 +582,7 @@ namespace Raven.Client.Documents.Session.Loaders
         private void IncludeAllCountersWithAlias(Expression<Func<T, string>> path)
         {
             WithAlias(path);
-            IncludeAllCounters(path.ToPropertyPath());
+            IncludeAllCounters(path.ToPropertyPath(_conventions));
         }
 
         private void IncludeAllCounters(string sourcePath)
@@ -768,21 +768,21 @@ namespace Raven.Client.Documents.Session.Loaders
         IQueryIncludeBuilder<T> IRevisionIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeRevisions(Expression<Func<T, string>> changeVectorPath)
         {
             WithAlias(changeVectorPath);
-            IncludeRevisionsByChangeVectors(changeVectorPath.ToPropertyPath());
+            IncludeRevisionsByChangeVectors(changeVectorPath.ToPropertyPath(_conventions));
             return this;
         }
 
         IIncludeBuilder<T> IRevisionIncludeBuilder<T, IIncludeBuilder<T>>.IncludeRevisions(Expression<Func<T, string>> changeVectorPath)
         {
             WithAlias(changeVectorPath);
-            IncludeRevisionsByChangeVectors(changeVectorPath.ToPropertyPath());
+            IncludeRevisionsByChangeVectors(changeVectorPath.ToPropertyPath(_conventions));
             return this;
         }
 
         IIncludeBuilder<T> IRevisionIncludeBuilder<T, IIncludeBuilder<T>>.IncludeRevisions(Expression<Func<T, IEnumerable<string>>> changeVectorPaths)
         {
             WithAlias(changeVectorPaths);
-            IncludeRevisionsByChangeVectors(changeVectorPaths.ToPropertyPath());
+            IncludeRevisionsByChangeVectors(changeVectorPaths.ToPropertyPath(_conventions));
             return this;
         }
         
@@ -802,7 +802,7 @@ namespace Raven.Client.Documents.Session.Loaders
         IQueryIncludeBuilder<T> IRevisionIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeRevisions(Expression<Func<T, IEnumerable<string>>> changeVectorPaths)
         {
             WithAlias(changeVectorPaths);
-            IncludeRevisionsByChangeVectors(changeVectorPaths.ToPropertyPath());
+            IncludeRevisionsByChangeVectors(changeVectorPaths.ToPropertyPath(_conventions));
             return this;
         }
     }

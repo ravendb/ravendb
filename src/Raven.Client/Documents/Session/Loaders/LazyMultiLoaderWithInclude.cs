@@ -37,7 +37,7 @@ namespace Raven.Client.Documents.Session.Loaders
         /// <param name="path">The path.</param>
         public ILazyLoaderWithInclude<T> Include(Expression<Func<T, string>> path)
         {
-            return Include(path.ToPropertyPath());
+            return Include(path.ToPropertyPath(_session.Conventions));
         }
 
         /// <summary>
@@ -46,7 +46,7 @@ namespace Raven.Client.Documents.Session.Loaders
         /// <param name="path">The path.</param>
         public ILazyLoaderWithInclude<T> Include(Expression<Func<T, IEnumerable<string>>> path)
         {
-            return Include(path.ToPropertyPath());
+            return Include(path.ToPropertyPath(_session.Conventions));
         }
 
         /// <summary>
@@ -139,7 +139,7 @@ namespace Raven.Client.Documents.Session.Loaders
         /// <param name="path">The path.</param>
         public IAsyncLazyLoaderWithInclude<T> Include(Expression<Func<T, string>> path)
         {
-            return Include(path.ToPropertyPath());
+            return Include(path.ToPropertyPath(_session.Conventions));
         }
 
 
@@ -149,7 +149,7 @@ namespace Raven.Client.Documents.Session.Loaders
         /// <param name="path">The path.</param>
         public IAsyncLazyLoaderWithInclude<T> Include(Expression<Func<T, IEnumerable<string>>> path)
         {
-            return Include(path.ToPropertyPath());
+            return Include(path.ToPropertyPath(_session.Conventions));
         }
 
         /// <summary>

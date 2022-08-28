@@ -38,7 +38,7 @@ namespace Raven.Client.Documents.Session
         /// <param name = "path">The path.</param>
         public void Include(Expression<Func<T, object>> path)
         {
-            Include(path.ToPropertyPath());
+            Include(path.ToPropertyPath(_conventions));
         }
 
         public void Include(IncludeBuilder includes)

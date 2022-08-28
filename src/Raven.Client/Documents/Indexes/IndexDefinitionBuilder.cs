@@ -182,12 +182,12 @@ namespace Raven.Client.Documents.Indexes
                 if (PatternForOutputReduceToCollectionReferences != null)
                     indexDefinition.PatternForOutputReduceToCollectionReferences = ConvertPatternForOutputReduceToCollectionReferencesToString(PatternForOutputReduceToCollectionReferences);
 
-                var indexes = ConvertToStringDictionary(Indexes);
-                var stores = ConvertToStringDictionary(Stores);
-                var analyzers = ConvertToStringDictionary(Analyzers);
-                var suggestionsOptions = ConvertToStringSet(SuggestionsOptions).ToDictionary(x => x, x => true);
-                var termVectors = ConvertToStringDictionary(TermVectors);
-                var spatialOptions = ConvertToStringDictionary(SpatialIndexes);
+                var indexes = ConvertToStringDictionary(conventions,Indexes);
+                var stores = ConvertToStringDictionary(conventions,Stores);
+                var analyzers = ConvertToStringDictionary(conventions,Analyzers);
+                var suggestionsOptions = ConvertToStringSet(conventions, SuggestionsOptions).ToDictionary(x => x, x => true);
+                var termVectors = ConvertToStringDictionary(conventions,TermVectors);
+                var spatialOptions = ConvertToStringDictionary(conventions,SpatialIndexes);
 
                 foreach (var indexesString in IndexesStrings)
                 {
@@ -365,23 +365,23 @@ namespace Raven.Client.Documents.Indexes
             }
         }
 
-        private static IDictionary<string, TValue> ConvertToStringDictionary<TValue>(IEnumerable<KeyValuePair<Expression<Func<TReduceResult, object>>, TValue>> input)
+        private static IDictionary<string, TValue> ConvertToStringDictionary<TValue>(DocumentConventions conventions, IEnumerable<KeyValuePair<Expression<Func<TReduceResult, object>>, TValue>> input)
         {
             var result = new Dictionary<string, TValue>();
             foreach (var value in input)
             {
-                var propertyPath = value.Key.ToPropertyPath('_');
+                var propertyPath = value.Key.ToPropertyPath(conventions, '_');
                 result[propertyPath] = value.Value;
             }
             return result;
         }
 
-        private static ISet<string> ConvertToStringSet(IEnumerable<Expression<Func<TReduceResult, object>>> input)
+        private static ISet<string> ConvertToStringSet(DocumentConventions conventions, IEnumerable<Expression<Func<TReduceResult, object>>> input)
         {
             var result = new HashSet<string>();
             foreach (var value in input)
             {
-                var propertyPath = value.ToPropertyPath('_');
+                var propertyPath = value.ToPropertyPath(conventions,'_');
                 result.Add(propertyPath);
             }
             return result;

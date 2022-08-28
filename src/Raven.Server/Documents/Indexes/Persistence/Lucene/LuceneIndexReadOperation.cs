@@ -816,7 +816,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                 // get the current Lucene docid for the given RavenDB doc ID
                 if (td.ScoreDocs.Length == 0)
-                    throw new InvalidOperationException("Given filtering expression did not yield any documents that could be used as a base of comparison");
+                    throw new InvalidOperationException($"Given filtering expression '{query.Query}' did not yield any documents that could be used as a base of comparison");
 
                 baseDocId = td.ScoreDocs[0].Doc;
             }

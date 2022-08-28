@@ -1,5 +1,6 @@
 using System;
 using System.Linq.Expressions;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session.Tokens;
 using Raven.Client.Extensions;
 using Sparrow.Json;
@@ -8,13 +9,17 @@ namespace Raven.Client.Documents.Queries.Facets
 {
     public class Facet : FacetBase
     {
+        internal FacetBase _parent;
+
         /// <summary>
         /// Name of field the facet aggregate on
         /// </summary>
         public string FieldName { get; set; }
 
-        internal override FacetToken ToFacetToken(Func<object, string> addQueryParameter)
+        internal override FacetToken ToFacetToken(DocumentConventions conventions, Func<object, string> addQueryParameter)
         {
+            if (_parent != null)
+                return _parent.ToFacetToken(conventions, addQueryParameter);
             return FacetToken.Create(this, addQueryParameter);
         }
 
@@ -45,17 +50,18 @@ namespace Raven.Client.Documents.Queries.Facets
         {
             return new Facet
             {
-                FieldName = other.FieldName.ToPropertyPath('_'),
+                FieldName = other.FieldName.ToPropertyPath(DocumentConventions.Default, '_'),
                 Options = other.Options,
                 Aggregations = other.Aggregations,
-                DisplayFieldName = other.DisplayFieldName
+                DisplayFieldName = other.DisplayFieldName,
+                _parent = other
             };
         }
 
-        internal override FacetToken ToFacetToken(Func<object, string> addQueryParameter)
+        internal override FacetToken ToFacetToken(DocumentConventions conventions,Func<object, string> addQueryParameter)
         {
             var facet = (Facet)this;
-            return facet.ToFacetToken(addQueryParameter);
+            return facet.ToFacetToken(conventions, addQueryParameter);
         }
     }
 }

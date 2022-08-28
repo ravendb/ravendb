@@ -84,7 +84,7 @@ namespace Raven.Client.Documents.Queries.Suggestions
 
         public ISuggestionQuery<T> AndSuggestUsing(Action<ISuggestionBuilder<T>> builder)
         {
-            var f = new SuggestionBuilder<T>();
+            var f = new SuggestionBuilder<T>(((IRavenQueryProvider)_source.Provider).QueryGenerator.Conventions);
             builder?.Invoke(f);
 
             return AndSuggestUsing(f.Suggestion);

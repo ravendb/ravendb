@@ -38,7 +38,7 @@ namespace Raven.Client.Documents.Queries.Facets
 
         public IAggregationQuery<T> AndAggregateBy(Action<IFacetBuilder<T>> builder = null)
         {
-            var f = new FacetBuilder<T>();
+            var f = new FacetBuilder<T>(((IRavenQueryProvider)_source.Provider).QueryGenerator.Conventions);
             builder?.Invoke(f);
 
             return AndAggregateBy(f.Facet);

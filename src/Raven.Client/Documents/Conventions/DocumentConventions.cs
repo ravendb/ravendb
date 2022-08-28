@@ -372,6 +372,20 @@ namespace Raven.Client.Documents.Conventions
         }
 #endif
 
+        public string GetConvertedPropertyNameFor(MemberInfo member)
+        {
+            var converter = PropertyNameConverter;
+            if (converter == null)
+                return member.Name;
+            
+            //do not use convention for types in system namespaces
+            if (member.DeclaringType?.Namespace?.StartsWith("System") == true ||
+                member.DeclaringType?.Namespace?.StartsWith("Microsoft") == true)
+                return member.Name;
+
+            return converter(member);
+        }
+
         public Func<MemberInfo, string> PropertyNameConverter
         {
             get => _propertyNameConverter;
