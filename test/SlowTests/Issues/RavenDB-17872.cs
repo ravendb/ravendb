@@ -35,7 +35,6 @@ namespace SlowTests.Issues
             const string metadataPropName = "RandomProp";
             const string metadataValue = "RandomValue";
 
-            // CompareExchangeSessionValue.MetadataHasChanged:  newMetadataNullOrEmpty == true && oldMetadataNullOrEmpty == true
             using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
             {
                 var entity = new TestObj();
@@ -43,7 +42,6 @@ namespace SlowTests.Issues
                 await session.SaveChangesAsync();
             }
 
-            // * CompareExchangeSessionValue.MetadataHasChanged: case newMetadataNullOrEmpty == false && oldMetadataNullOrEmpty == true
             using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
             {
                 var entity = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<TestObj>(id);
@@ -72,7 +70,6 @@ namespace SlowTests.Issues
             const string metadataPropName = "RandomProp";
             const string metadataValue = "RandomValue";
 
-            // CompareExchangeSessionValue.MetadataHasChanged:  newMetadataNullOrEmpty == true && oldMetadataNullOrEmpty == true
             using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
             {
                 var entity = new TestObj();
@@ -80,7 +77,6 @@ namespace SlowTests.Issues
                 await session.SaveChangesAsync();
             }
 
-            // CompareExchangeSessionValue.MetadataHasChanged: case newMetadataNullOrEmpty == false && oldMetadataNullOrEmpty == true
             using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
             {
                 var entity = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<TestObj>(id);
@@ -88,7 +84,6 @@ namespace SlowTests.Issues
                 await session.SaveChangesAsync();
             }
 
-            // * CompareExchangeSessionValue.MetadataHasChanged: newMetadataNullOrEmpty == false && oldMetadataNullOrEmpty == false, and return false (same kvp's).
             using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
             {
                 var entity = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<TestObj>(id);
@@ -113,7 +108,6 @@ namespace SlowTests.Issues
             const string metadataPropName = "RandomProp";
             const string metadataValue = "RandomValue";
 
-            // CompareExchangeSessionValue.MetadataHasChanged:  newMetadataNullOrEmpty == true && oldMetadataNullOrEmpty == true
             using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
             {
                 var entity = new TestObj();
@@ -121,7 +115,6 @@ namespace SlowTests.Issues
                 await session.SaveChangesAsync();
             }
 
-            // CompareExchangeSessionValue.MetadataHasChanged: case newMetadataNullOrEmpty == false && oldMetadataNullOrEmpty == true
             using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
             {
                 var entity = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<TestObj>(id);
@@ -130,7 +123,6 @@ namespace SlowTests.Issues
                 await session.SaveChangesAsync();
             }
 
-            // * CompareExchangeSessionValue.MetadataHasChanged: case newMetadataNullOrEmpty == false && oldMetadataNullOrEmpty == false, and return true (different kvp's).
             using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
             {
                 var entity = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<TestObj>(id);
@@ -153,7 +145,6 @@ namespace SlowTests.Issues
 
             const string id = "testObjs/0";
 
-            // CompareExchangeSessionValue.MetadataHasChanged:  newMetadataNullOrEmpty == true && oldMetadataNullOrEmpty == true
             using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
             {
                 var entity = new TestObj();
@@ -161,7 +152,6 @@ namespace SlowTests.Issues
                 await session.SaveChangesAsync();
             }
 
-            // * CompareExchangeSessionValue.MetadataHasChanged:  newMetadataNullOrEmpty == true && oldMetadataNullOrEmpty == true
             using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
             {
                 var entity = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<TestObj>(id);
@@ -186,7 +176,6 @@ namespace SlowTests.Issues
             const string metadataPropName = "RandomProp";
             const string metadataValue = "RandomValue";
 
-            // CompareExchangeSessionValue.MetadataHasChanged:  newMetadataNullOrEmpty == true && oldMetadataNullOrEmpty == true
             using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
             {
                 var entity = new TestObj();
@@ -194,7 +183,6 @@ namespace SlowTests.Issues
                 await session.SaveChangesAsync();
             }
 
-            // CompareExchangeSessionValue.MetadataHasChanged: case newMetadataNullOrEmpty == false && oldMetadataNullOrEmpty == true
             using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
             {
                 var entity = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<TestObj>(id);
@@ -203,7 +191,6 @@ namespace SlowTests.Issues
                 await session.SaveChangesAsync();
             }
 
-            // * CompareExchangeSessionValue.MetadataHasChanged: case newMetadataNullOrEmpty == false && oldMetadataNullOrEmpty == false, and return true (different kvp's).
             using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
             {
                 var entity = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<TestObj>(id);
@@ -230,7 +217,6 @@ namespace SlowTests.Issues
             const string metadataPropName = "RandomProp";
             const string metadataValue = "RandomValue";
 
-            // CompareExchangeSessionValue.MetadataHasChanged:  newMetadataNullOrEmpty == true && oldMetadataNullOrEmpty == true
             using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
             {
                 var entity = new TestObj();
@@ -238,7 +224,6 @@ namespace SlowTests.Issues
                 await session.SaveChangesAsync();
             }
 
-            // CompareExchangeSessionValue.MetadataHasChanged: case newMetadataNullOrEmpty == false && oldMetadataNullOrEmpty == true
             using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
             {
                 var entity = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<TestObj>(id);
@@ -248,7 +233,6 @@ namespace SlowTests.Issues
                 await session.SaveChangesAsync();
             }
 
-            // * CompareExchangeSessionValue.MetadataHasChanged: case newMetadataNullOrEmpty == false && oldMetadataNullOrEmpty == false, and return true (different counts).
             using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
             {
                 var entity = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<TestObj>(id);

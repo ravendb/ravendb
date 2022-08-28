@@ -406,12 +406,12 @@ namespace Raven.Client.Documents.Session
                         var entity = CompareExchangeValueBlittableJsonConverter.ConvertToBlittable(_value.Value, conventions, context, jsonSerializer);
                         var entityJson = entity as BlittableJsonReaderObject;
                         BlittableJsonReaderObject metadata = null;
+                        var metadataHasChanged = false;
                         if (_value.HasMetadata && _value.Metadata.Count != 0)
                         {
                             metadata = PrepareMetadataForPut(_key, _value.Metadata, conventions, context);
+                            metadataHasChanged = InMemoryDocumentSessionOperations.UpdateMetadataModifications(_value?.Metadata, metadata);
                         }
-
-                        var metadataHasChanged = MetadataHasChanged(_originalValue?.Metadata, _value?.Metadata);
 
                         BlittableJsonReaderObject entityToInsert = null;
 
@@ -468,50 +468,6 @@ namespace Raven.Client.Documents.Session
                     return true;
 
                 return originalValue.Value.Equals(newValue.Value) == false;
-            }
-
-            internal bool MetadataHasChanged(IMetadataDictionary oldMetadata, IMetadataDictionary newMetadata)
-            {
-                bool oldMetadataNullOrEmpty = oldMetadata == null || oldMetadata.Count == 0;
-                bool newMetadataNullOrEmpty = newMetadata == null || newMetadata.Count == 0;
-
-                if (newMetadataNullOrEmpty)
-                {
-                    if (oldMetadataNullOrEmpty) // newMetadataNullOrEmpty == true && oldMetadataNullOrEmpty == true
-                    {
-                        return false;
-                    }
-                    else                    // newMetadataNullOrEmpty == true && oldMetadataNullOrEmpty == false
-                    {
-                        return true;
-                    }
-                }
-                else
-                {
-                    if (oldMetadataNullOrEmpty) // newMetadataNullOrEmpty == false && oldMetadataNullOrEmpty == true
-                    {
-                        return true;
-                    }
-                    else // newMetadataNullOrEmpty == false && oldMetadataNullOrEmpty == false
-                    {
-                        if(oldMetadata.Count != newMetadata.Count)
-                            return true;
-
-                        var keys = newMetadata.Keys.Union(oldMetadata.Keys);
-
-                        foreach (var key in keys) 
-                        {
-                            if (oldMetadata.TryGetValue(key, out string oldVal) == false ||
-                                newMetadata.TryGetValue(key, out string newVal) == false ||
-                                oldVal != newVal)
-                            {
-                                return true;
-                            }
-                        }
-
-                        return false;
-                    }
-                }
             }
 
             public enum CompareExchangeValueState
