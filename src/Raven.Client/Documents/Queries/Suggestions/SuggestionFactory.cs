@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq.Expressions;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Extensions;
 
 namespace Raven.Client.Documents.Queries.Suggestions
@@ -24,8 +25,14 @@ namespace Raven.Client.Documents.Queries.Suggestions
 
     internal class SuggestionBuilder<T> : ISuggestionBuilder<T>, ISuggestionOperations<T>
     {
+        private readonly DocumentConventions _conventions;
         private SuggestionWithTerm _term;
         private SuggestionWithTerms _terms;
+
+        public SuggestionBuilder(DocumentConventions conventions)
+        {
+            _conventions = conventions;
+        }
 
         public ISuggestionOperations<T> WithDisplayName(string displayName)
         {
@@ -68,12 +75,12 @@ namespace Raven.Client.Documents.Queries.Suggestions
 
         public ISuggestionOperations<T> ByField(Expression<Func<T, object>> path, string term)
         {
-            return ByField(path.ToPropertyPath(), term);
+            return ByField(path.ToPropertyPath(_conventions), term);
         }
 
         public ISuggestionOperations<T> ByField(Expression<Func<T, object>> path, string[] terms)
         {
-            return ByField(path.ToPropertyPath(), terms);
+            return ByField(path.ToPropertyPath(_conventions), terms);
         }
 
         public ISuggestionOperations<T> WithOptions(SuggestionOptions options)

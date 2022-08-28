@@ -16,7 +16,7 @@ namespace Raven.Client.Documents.Session
                 throw new InvalidOperationException($"Aggregation query can select only facets while it got {token.GetType().Name} token");
             }
 
-            SelectTokens.AddLast(FacetToken.Create(facet, AddQueryParameter));
+            SelectTokens.AddLast(FacetToken.Create(facet, AddQueryParameter, _conventions));
         }
 
         public void AggregateUsing(string facetSetupDocumentId)

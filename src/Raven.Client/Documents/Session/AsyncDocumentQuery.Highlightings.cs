@@ -21,13 +21,13 @@ namespace Raven.Client.Documents.Session
 
         IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.Highlight(Expression<Func<T, object>> path, int fragmentLength, int fragmentCount, out Highlightings highlightings)
         {
-            Highlight(path.ToPropertyPath(), fragmentLength, fragmentCount, null, out highlightings);
+            Highlight(path.ToPropertyPath(Conventions), fragmentLength, fragmentCount, null, out highlightings);
             return this;
         }
 
         IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.Highlight(Expression<Func<T, object>> path, int fragmentLength, int fragmentCount, HighlightingOptions options, out Highlightings highlightings)
         {
-            Highlight(path.ToPropertyPath(), fragmentLength, fragmentCount, options, out highlightings);
+            Highlight(path.ToPropertyPath(Conventions), fragmentLength, fragmentCount, options, out highlightings);
             return this;
         }
     }

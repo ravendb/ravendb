@@ -126,13 +126,13 @@ namespace Raven.Client.Documents.Linq
 
         public IRavenQueryable<T> Highlight(Expression<Func<T, object>> path, int fragmentLength, int fragmentCount, out Highlightings highlightings)
         {
-            return Highlight(path.ToPropertyPath(), fragmentLength, fragmentCount, out highlightings);
+            return Highlight(path.ToPropertyPath(_conventions), fragmentLength, fragmentCount, out highlightings);
         }
 
         public IRavenQueryable<T> Highlight(Expression<Func<T, object>> path, int fragmentLength, int fragmentCount, HighlightingOptions options,
             out Highlightings highlightings)
         {
-            return Highlight(path.ToPropertyPath(), fragmentLength, fragmentCount, options, out highlightings);
+            return Highlight(path.ToPropertyPath(_conventions), fragmentLength, fragmentCount, options, out highlightings);
         }
 
         /// <summary>
