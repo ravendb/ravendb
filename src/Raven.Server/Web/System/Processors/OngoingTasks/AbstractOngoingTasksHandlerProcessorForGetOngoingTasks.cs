@@ -98,6 +98,9 @@ internal abstract class AbstractOngoingTasksHandlerProcessorForGetOngoingTasks<T
 
                 var dbTopology = GetTopology(record);
 
+                if (dbTopology == null)
+                    throw new InvalidOperationException($"The database record '{RequestHandler.DatabaseName}' doesn't contain topology.");
+
                 switch (type)
                 {
                     case OngoingTaskType.Replication:
