@@ -86,7 +86,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     if (HasEncryptionKey)
                     {
                         // save the encryption key so we'll be able to access the database
-                        PutSecretKey();
+                        ServerStore.PutSecretKey(RestoreConfiguration.EncryptionKey, RestoreSettings.DatabaseRecord.DatabaseName, overwrite: false);
                     }
 
                     await OnBeforeRestoreAsync();
@@ -104,9 +104,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         }
 
         protected abstract Task RestoreAsync();
-
-        protected virtual void PutSecretKey() => 
-            ServerStore.PutSecretKey(RestoreConfiguration.EncryptionKey, DatabaseName, overwrite: false);
 
         protected virtual async Task InitializeAsync()
         {
