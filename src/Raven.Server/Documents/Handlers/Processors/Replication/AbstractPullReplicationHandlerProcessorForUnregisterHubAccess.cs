@@ -15,13 +15,6 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
         {
         }
 
-        protected override ValueTask AssertCanExecuteAsync()
-        {
-            RequestHandler.ServerStore.LicenseManager.AssertCanAddPullReplicationAsHub();
-
-            return base.AssertCanExecuteAsync();
-        }
-
         protected override async Task<(long Index, object Result)> OnUpdateConfiguration(TransactionOperationContext context, BlittableJsonReaderObject configuration, string raftRequestId)
         {
             var hub = RequestHandler.GetStringQueryString("name", true);

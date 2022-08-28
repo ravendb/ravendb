@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 
         protected abstract IEnumerable<OngoingTaskPullReplicationAsHub> GetOngoingTasks(TransactionOperationContext context, DatabaseRecord databaseRecord, ClusterTopology clusterTopology, long key);
 
-        protected void AssertCanExecute()
+        protected virtual void AssertCanExecute()
         {
             if (ResourceNameValidator.IsValidResourceName(RequestHandler.DatabaseName, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
                 throw new BadRequestException(errorMessage);
