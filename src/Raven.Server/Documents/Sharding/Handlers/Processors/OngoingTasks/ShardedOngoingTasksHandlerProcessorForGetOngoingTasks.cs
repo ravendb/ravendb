@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks
             return new GetOngoingTasksInfoCommand(nodeTag);
         }
 
-        protected override Task HandleRemoteNodeAsync(ProxyCommand<OngoingTasksResult> command, OperationCancelToken token) => RequestHandler.ExecuteRemoteAsync(command, token.Token);
+        protected override Task HandleRemoteNodeAsync(ProxyCommand<OngoingTasksResult> command, OperationCancelToken token) => RequestHandler.DatabaseContext.AllNodesExecutor.ExecuteForNodeAsync(command, command.SelectedNodeTag, token.Token);
     }
 
     internal class GetOngoingTasksInfoCommand : RavenCommand<OngoingTasksResult>
