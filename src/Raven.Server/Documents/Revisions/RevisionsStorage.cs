@@ -68,7 +68,7 @@ namespace Raven.Server.Documents.Revisions
 
         public Table EnsureRevisionTableCreated(Transaction tx, CollectionName collection)
         {
-            var revisionsSchema = _documentsStorage.DocumentPut.DocumentsCompression.CompressRevisions ?
+            var revisionsSchema = _database.DocumentsCompression.CompressRevisions ?
                 CompressedRevisionsSchema :
                 RevisionsSchema;
 

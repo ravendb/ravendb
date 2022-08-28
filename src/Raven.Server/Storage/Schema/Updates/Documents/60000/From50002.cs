@@ -1,9 +1,16 @@
-﻿using Raven.Server.Documents;
+﻿using System.Collections.Generic;
+using Google.Protobuf.WellKnownTypes;
+using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Voron;
 using Voron.Data.Fixed;
 using Voron.Data.Tables;
 using Sparrow.Binary;
+using Sparrow.Json;
+using Sparrow.Server;
+using Sparrow.Utils;
+using Voron.Data;
+using Voron.Data.BTrees;
 using static Raven.Server.Documents.Schemas.Attachments;
 using static Raven.Server.Documents.Schemas.Conflicts;
 using static Raven.Server.Documents.Schemas.Counters;
@@ -15,7 +22,7 @@ using static Raven.Server.Documents.Schemas.Tombstones;
 
 namespace Raven.Server.Storage.Schema.Updates.Documents
 {
-    public class From50002 : ISchemaUpdate
+    public unsafe class From50002 : ISchemaUpdate
     {
         public int From => 50_002;
 
@@ -29,13 +36,39 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
 
         public bool Update(UpdateStep step)
         {
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Normal, "what if we migrate from a compressed database?");
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Normal, "test that we can get by bucket after schema upgrade");
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Normal, "test on large dataset");
+
+            Dictionary<string, CollectionName> collections;
+            using (var ctx = JsonOperationContext.ShortTermSingleUse())
+            {
+                collections = DocumentsStorage.ReadCollections(step.ReadTx, ctx);
+            }
+
             InsertIndexValuesFor(step, DocsSchemaBase60, AllDocsBucketAndEtagSlice,
                 fixedSizeIndex: DocsSchemaBase60.FixedSizeIndexes[AllDocsEtagsSlice],
                 etagPosition: (int)DocumentsTable.Etag);
 
+            foreach (var collection in collections)
+            {
+                InsertIndexValuesFor(step, DocsSchemaBase60, CollectionDocsBucketAndEtagSlice,
+                    fixedSizeIndex: DocsSchemaBase60.FixedSizeIndexes[CollectionEtagsSlice],
+                    etagPosition: (int)DocumentsTable.Etag,
+                    collection.Value.GetTableName(CollectionTableType.Documents));
+            }
+
             InsertIndexValuesFor(step, TombstonesSchemaBase60, TombstonesBucketAndEtagSlice,
                 fixedSizeIndex: TombstonesSchemaBase60.FixedSizeIndexes[AllTombstonesEtagsSlice],
                 etagPosition: (int)TombstoneTable.Etag);
+
+            foreach (var collection in collections)
+            {
+                InsertIndexValuesFor(step, TombstonesSchemaBase60, CollectionTombstonesBucketAndEtagSlice,
+                    fixedSizeIndex: TombstonesSchemaBase60.FixedSizeIndexes[CollectionEtagsSlice],
+                    etagPosition: (int)TombstoneTable.Etag,
+                    tableName: collection.Value.GetTableName(CollectionTableType.Tombstones));
+            }
 
             InsertIndexValuesFor(step, RevisionsSchemaBase60, RevisionsBucketAndEtagSlice,
                 fixedSizeIndex: RevisionsSchemaBase60.FixedSizeIndexes[AllRevisionsEtagsSlice],
@@ -67,18 +100,18 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
 
         private void InsertIndexValuesFor(UpdateStep step, TableSchema schema, Slice indexName, TableSchema.FixedSizeKeyIndexDef fixedSizeIndex, int etagPosition, string tableName = null)
         {
-            var indexTree = step.WriteTx.CreateTree(indexName, isIndexTree: true);
             var indexDef = schema.DynamicKeyIndexes[indexName];
-            
+            var table = tableName == null
+                ? new Table(schema, step.WriteTx)
+                : step.WriteTx.OpenTable(schema, tableName);
+
+            var indexTree = CreateIndexTree(step, tableName, indexDef);
+
             bool done = false;
             long fromEtag = 0;
 
             while (done == false)
             {
-                var table = tableName == null
-                    ? new Table(schema, step.ReadTx)
-                    : step.ReadTx.OpenTable(schema, tableName);
-
                 using (step.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 {
                     context.TransactionMarkerOffset = (short)step.WriteTx.LowLevelTransaction.Id;
@@ -98,7 +131,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
 
                         using (indexDef.GetValue(step.WriteTx.Allocator, ref value, out Slice val))
                         {
-                            var index = new FixedSizeTree(step.WriteTx.LowLevelTransaction, indexTree, val, 0, isIndexTree: true);
+                            var index = table.GetFixedSizeTree(indexTree, val, 0, indexDef.IsGlobal, isIndexTree: true);
                             index.Add(value.Id);
                         }
 
@@ -119,6 +152,24 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                     done = true;
                 }
             }
+        }
+
+        private static Tree CreateIndexTree(UpdateStep step, string tableName, TableSchema.DynamicKeyIndexDef indexDef)
+        {
+            if (indexDef.IsGlobal)
+                return step.WriteTx.CreateTree(indexDef.Name, isIndexTree: true);
+
+            // we are adding new index to an existing table
+            var tableTree = step.WriteTx.ReadTree(tableName, RootObjectType.Table);
+            var tablePageAllocator = new NewPageAllocator(step.WriteTx.LowLevelTransaction, tableTree);
+            var indexTree = Tree.Create(step.WriteTx.LowLevelTransaction, step.WriteTx, indexDef.Name, isIndexTree: true, newPageAllocator: tablePageAllocator);
+            using (tableTree.DirectAdd(indexDef.Name, sizeof(TreeRootHeader), out var ptr))
+            {
+                indexTree.State.CopyTo((TreeRootHeader*)ptr);
+            }
+
+            return indexTree;
+
         }
     }
 }

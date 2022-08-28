@@ -55,7 +55,7 @@ namespace Raven.Server.Documents.Schemas
                 Slice.From(ctx, "Docs", ByteStringType.Immutable, out DocsSlice);
                 Slice.From(ctx, "CollectionEtags", ByteStringType.Immutable, out CollectionEtagsSlice);
                 Slice.From(ctx, "AllDocsEtags", ByteStringType.Immutable, out AllDocsEtagsSlice);
-                Slice.From(ctx, "DocsBucketAndEtag", ByteStringType.Immutable, out AllDocsBucketAndEtagSlice);
+                Slice.From(ctx, "AllDocsBucketAndEtag", ByteStringType.Immutable, out AllDocsBucketAndEtagSlice);
                 Slice.From(ctx, "CollectionDocsBucketAndEtag", ByteStringType.Immutable, out CollectionDocsBucketAndEtagSlice);
             }
 
@@ -93,6 +93,7 @@ namespace Raven.Server.Documents.Schemas
                     Name = AllDocsEtagsSlice
                 });
             }
+
             void DefineIndexesForDocsSchemaBase60(TableSchema docsSchema)
             {
                 DefineIndexesForDocsSchemaBase(docsSchema);
@@ -107,6 +108,7 @@ namespace Raven.Server.Documents.Schemas
                 docsSchema.DefineIndex(new TableSchema.DynamicKeyIndexDef
                 {
                     GenerateKey = DocumentsStorage.GenerateBucketAndEtagIndexKeyForDocuments,
+                    IsGlobal = false,
                     Name = CollectionDocsBucketAndEtagSlice
                 });
             }
