@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -14,7 +13,6 @@ using Voron.Data.Tables;
 using System.Linq;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
-using Raven.Client.ServerWide;
 using Sparrow.Server;
 using static Raven.Server.Documents.DocumentsStorage;
 using Constants = Raven.Client.Constants;
@@ -135,7 +133,7 @@ namespace Raven.Server.Documents
                 ValidateId(lowerId);
 
                 var collectionName = _documentsStorage.ExtractCollectionName(context, document);
-                var table = context.Transaction.InnerTransaction.OpenTable(GetDocsSchemaForCollection(collectionName), collectionName.GetTableName(CollectionTableType.Documents));
+                var table = context.Transaction.InnerTransaction.OpenTable(_documentDatabase.GetDocsSchemaForCollection(collectionName), collectionName.GetTableName(CollectionTableType.Documents));
 
                 var oldValue = default(TableValueReader);
                 if (knownNewId == false)
@@ -301,37 +299,6 @@ namespace Raven.Server.Documents
                     LastModified = new DateTime(modifiedTicks, DateTimeKind.Utc)
                 };
             }
-        }
-
-        public void InitializeFromDatabaseRecord(DatabaseRecord record)
-        {
-            if (_documentsCompression.Equals(record.DocumentsCompression))
-                return;
-
-            if (record.DocumentsCompression == null) // legacy configurations
-            {
-                _compressedCollections.Clear();
-                _documentsCompression = new DocumentsCompressionConfiguration(false);
-                return;
-            }
-
-            _documentsCompression = record.DocumentsCompression;
-            _compressedCollections = new HashSet<string>(record.DocumentsCompression.Collections, StringComparer.OrdinalIgnoreCase);
-        }
-
-        public DocumentsCompressionConfiguration DocumentsCompression => _documentsCompression;
-
-        private DocumentsCompressionConfiguration _documentsCompression = new DocumentsCompressionConfiguration(false, Array.Empty<string>());
-        private HashSet<string> _compressedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        public TableSchema GetDocsSchemaForCollection(CollectionName collection)
-        {
-            if (_documentsCompression.CompressAllCollections || _compressedCollections.Contains(collection.Name))
-            {
-                return CompressedDocsSchema;
-            }
-
-            return DocsSchema;
         }
 
         [Conditional("DEBUG")]

@@ -45,7 +45,7 @@ namespace Raven.Server.Documents
     public unsafe class DocumentsStorage : IDisposable
     {
         public static readonly TableSchema DocsSchema = Schemas.Documents.Current;
-        public static readonly TableSchema CompressedDocsSchema = Schemas.Documents.CurrentCompressed;
+        public static readonly TableSchema CompressedDocsSchema = CurrentCompressed;
         public static readonly TableSchema TombstonesSchema = Schemas.Tombstones.Current;
         public static readonly TableSchema CollectionsSchema = Schemas.Collections.Current;
         public readonly DocumentDatabase DocumentDatabase;
@@ -2467,6 +2467,20 @@ namespace Raven.Server.Documents
                     var tombstonesTree = tx.ReadTree(collectionName.GetTableName(CollectionTableType.Tombstones), RootObjectType.Table);
                     NewPageAllocator.MaybePrefetchSections(tombstonesTree, tx.LowLevelTransaction);
                 }
+            }
+
+            return result;
+        }
+
+        public static Dictionary<string, CollectionName> ReadCollections(Transaction tx, JsonOperationContext context)
+        {
+            var result = new Dictionary<string, CollectionName>(StringComparer.OrdinalIgnoreCase);
+            var collections = tx.OpenTable(CollectionsSchema, CollectionsSlice);
+            foreach (var tvr in collections.SeekByPrimaryKey(Slices.BeforeAllKeys, 0))
+            {
+                var collection = TableValueToId(context, (int)CollectionsTable.Name, ref tvr.Reader);
+                var collectionName = new CollectionName(collection);
+                result.Add(collection, collectionName);
             }
 
             return result;

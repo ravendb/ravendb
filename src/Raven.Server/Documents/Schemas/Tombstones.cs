@@ -90,6 +90,7 @@ namespace Raven.Server.Documents.Schemas
                 TombstonesSchemaBase60.DefineIndex(new TableSchema.DynamicKeyIndexDef
                 {
                     GenerateKey = DocumentsStorage.GenerateBucketAndEtagIndexKeyForTombstones,
+                    IsGlobal = false,
                     Name = CollectionTombstonesBucketAndEtagSlice
                 });
             }

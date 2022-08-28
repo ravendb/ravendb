@@ -58,6 +58,7 @@ using Sparrow.Server.Meters;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron;
+using Voron.Data.Tables;
 using Voron.Exceptions;
 using Voron.Impl.Backup;
 using Constants = Raven.Client.Constants;
@@ -1539,11 +1540,42 @@ namespace Raven.Server.Documents
 
             ClientConfiguration = record.Client;
             StudioConfiguration = record.Studio;
+            InitializeCompressionFromDatabaseRecord(record);
             DocumentsStorage.RevisionsStorage.InitializeFromDatabaseRecord(record);
-            DocumentsStorage.DocumentPut.InitializeFromDatabaseRecord(record);
             ExpiredDocumentsCleaner = ExpiredDocumentsCleaner.LoadConfigurations(this, record, ExpiredDocumentsCleaner);
             TimeSeriesPolicyRunner = TimeSeriesPolicyRunner.LoadConfigurations(this, record, TimeSeriesPolicyRunner);
             PeriodicBackupRunner.UpdateConfigurations(record);
+        }
+
+        public void InitializeCompressionFromDatabaseRecord(DatabaseRecord record)
+        {
+            if (_documentsCompression.Equals(record.DocumentsCompression))
+                return;
+
+            if (record.DocumentsCompression == null) // legacy configurations
+            {
+                _compressedCollections.Clear();
+                _documentsCompression = new DocumentsCompressionConfiguration(false);
+                return;
+            }
+
+            _documentsCompression = record.DocumentsCompression;
+            _compressedCollections = new HashSet<string>(record.DocumentsCompression.Collections, StringComparer.OrdinalIgnoreCase);
+        }
+
+        public DocumentsCompressionConfiguration DocumentsCompression => _documentsCompression;
+
+        private DocumentsCompressionConfiguration _documentsCompression = new DocumentsCompressionConfiguration(false, Array.Empty<string>());
+        private HashSet<string> _compressedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        public TableSchema GetDocsSchemaForCollection(CollectionName collection)
+        {
+            if (_documentsCompression.CompressAllCollections || _compressedCollections.Contains(collection.Name))
+            {
+                return DocumentsStorage.CompressedDocsSchema;
+            }
+
+            return DocumentsStorage.DocsSchema;
         }
 
         private void LoadTimeSeriesPolicyRunnerConfigurations()
