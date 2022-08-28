@@ -28,10 +28,12 @@ using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks;
 using Raven.Server.Documents.Sharding;
+using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Web;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -151,7 +153,9 @@ public partial class RavenTestBase
             {
                 foreach (var task in server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(database))
                 {
-                    yield return await task;
+                    var databaseInstance = await task;
+                    Debug.Assert(databaseInstance != null, $"The requested database '{database}' is null, probably you try to loaded sharded database without the $");
+                    yield return databaseInstance;
                 }
             }
         }
@@ -439,11 +443,7 @@ public partial class RavenTestBase
                 {
                     await foreach (var db in _parent.Sharding.GetShardsDocumentDatabaseInstancesFor(store))
                     {
-                        var mre = new ManualResetEventSlim();
-                        waitHandles.Add(mre.WaitHandle);
-
-                        db.PeriodicBackupRunner._forTestingPurposes ??= new PeriodicBackupRunner.TestingStuff();
-                        db.PeriodicBackupRunner._forTestingPurposes.AfterBackupBatchCompleted = () => mre.Set();
+                        BackupTestBase.FillBackupCompletionHandles(waitHandles, db);
                     }
                 }
 
@@ -456,11 +456,7 @@ public partial class RavenTestBase
 
                 await foreach (var db in _parent.Sharding.GetShardsDocumentDatabaseInstancesFor(database, nodes))
                 {
-                    var mre = new ManualResetEventSlim();
-                    waitHandles.Add(mre.WaitHandle);
-
-                    db.PeriodicBackupRunner._forTestingPurposes ??= new PeriodicBackupRunner.TestingStuff();
-                    db.PeriodicBackupRunner._forTestingPurposes.AfterBackupBatchCompleted = () => mre.Set();
+                    BackupTestBase.FillBackupCompletionHandles(waitHandles, db);
                 }
 
                 return waitHandles.ToArray();
@@ -601,8 +597,20 @@ public partial class RavenTestBase
 
             public async Task MoveShardForId(IDocumentStore store, string id, List<RavenServer> servers = null)
             {
-                await StartMovingShardForId(store, id, servers);
-                await WaitForMigrationComplete(store, id);
+                try
+                {
+                    await StartMovingShardForId(store, id, servers);
+                    await WaitForMigrationComplete(store, id);
+                }
+                catch (Exception e)
+                {
+                    var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                    using (var ctx = JsonOperationContext.ShortTermSingleUse())
+                    {
+                        var sharding = store.Conventions.Serialization.DefaultConverter.ToBlittable(record.Sharding, ctx).ToString();
+                        throw new InvalidOperationException($"Failed to completed the migration for {id}{Environment.NewLine}{sharding}{Environment.NewLine}", e);
+                    }
+                }
             }
         }
     }

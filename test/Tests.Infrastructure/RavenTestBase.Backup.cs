@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Org.BouncyCastle.Math.EC;
 using Raven.Client.Documents;
@@ -10,6 +12,7 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server;
+using Raven.Server.Documents;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
 using Xunit;
@@ -475,6 +478,32 @@ namespace FastTests
                             PrintBackupResultMessagesStatus(result));
                     }
                 }
+            }
+            
+            public Task<WaitHandle[]> WaitForBackupToComplete(IDocumentStore store)
+            {
+                return WaitForBackupsToComplete(new List<IDocumentStore> { store });
+            }
+
+            public async Task<WaitHandle[]> WaitForBackupsToComplete(IEnumerable<IDocumentStore> stores)
+            {
+                var waitHandles = new List<WaitHandle>();
+                foreach (var store in stores)
+                {
+                    var database = await _parent.GetDocumentDatabaseInstanceFor(store);
+                    FillBackupCompletionHandles(waitHandles, database);
+                }
+
+                return waitHandles.ToArray();
+            }
+
+            public static void FillBackupCompletionHandles(List<WaitHandle> waitHandles, DocumentDatabase database)
+            {
+                var mre = new ManualResetEventSlim();
+                waitHandles.Add(mre.WaitHandle);
+
+                database.PeriodicBackupRunner._forTestingPurposes ??= new PeriodicBackupRunner.TestingStuff();
+                database.PeriodicBackupRunner._forTestingPurposes.AfterBackupBatchCompleted = () => mre.Set();
             }
         }
     }
