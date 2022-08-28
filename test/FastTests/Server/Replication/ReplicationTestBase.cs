@@ -22,6 +22,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Handlers.Processors.Replication;
 using Raven.Server.Web;
 using Raven.Server.Web.System;
 using Sparrow.Json;
@@ -532,7 +533,7 @@ namespace FastTests.Server.Replication
                     ThrowInvalidResponse();
 
                 BlittableJsonReaderArray array;
-                if (response.TryGet("Results", out array) == false)
+                if (response.TryGet(nameof(GetTombstonesPreviewResult.Tombstones), out array) == false)
                     ThrowInvalidResponse();
 
                 var result = new List<string>();
