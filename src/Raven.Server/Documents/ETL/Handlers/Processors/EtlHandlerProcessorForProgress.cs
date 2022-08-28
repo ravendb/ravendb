@@ -5,6 +5,7 @@ using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Raven.Server.Web.Http;
 using Sparrow.Json;
 
@@ -21,7 +22,7 @@ internal class EtlHandlerProcessorForProgress : AbstractEtlHandlerProcessorForPr
     protected override async ValueTask HandleCurrentNodeAsync()
     {
         using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-        await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
+        await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, RequestHandler.ResponseBodyStream()))
         using (context.OpenReadTransaction())
         {
             var names = GetNames();

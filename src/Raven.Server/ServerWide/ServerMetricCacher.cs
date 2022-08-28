@@ -25,7 +25,7 @@ namespace Raven.Server.ServerWide
 
         public void Initialize()
         {
-            Register(MetricCacher.Keys.Server.CpuUsage, TimeSpan.FromMilliseconds(DefaultCpuRefreshRateInMs), _server.CpuUsageCalculator.Calculate);
+            Register(MetricCacher.Keys.Server.CpuUsage, TimeSpan.FromMilliseconds(DefaultCpuRefreshRateInMs), _server.CpuUsageCalculator.Calculate, asyncRefresh: false);
             Register(MetricCacher.Keys.Server.MemoryInfo, TimeSpan.FromSeconds(1), CalculateMemoryInfo);
             Register(MetricCacher.Keys.Server.MemoryInfoExtended.RefreshRate15Seconds, TimeSpan.FromSeconds(15), CalculateMemoryInfoExtended);
             Register(MetricCacher.Keys.Server.MemoryInfoExtended.RefreshRate5Seconds, TimeSpan.FromSeconds(5), CalculateMemoryInfoExtended);
@@ -47,7 +47,7 @@ namespace Raven.Server.ServerWide
             return MemoryInformation.GetMemoryInfo(_smapsReader, extended: true);
         }
 
-        private DiskSpaceResult CalculateDiskSpaceInfo()
+        private object CalculateDiskSpaceInfo()
         {
             return DiskUtils.GetDiskSpaceInfo(_server.ServerStore.Configuration.Core.DataDirectory.FullPath);
         }
@@ -56,9 +56,9 @@ namespace Raven.Server.ServerWide
         {
             return GC.GetGCMemoryInfo(gcKind);
         }
-        private static MemInfo CalculateMemInfo()
+        private static object CalculateMemInfo()
         {
-            if (PlatformDetails.RunningOnPosix == false)
+            if (PlatformDetails.RunningOnPosix == false || PlatformDetails.RunningOnMacOsx)
                 return MemInfo.Invalid;
 
             return MemInfoReader.Read();

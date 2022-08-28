@@ -40,8 +40,8 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
     private readonly bool _ownsTransaction;
 
-    private Tree _metadataTree; 
-    
+    private Tree _metadataTree;
+
     // The reason why we want to have the transaction open for us is so that we avoid having
     // to explicitly provide the index searcher with opening semantics and also every new
     // searcher becomes essentially a unit of work which makes reusing assets tracking more explicit.
@@ -70,12 +70,14 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
     public IndexEntryReader GetReaderFor(long id)
     {
-        return GetReaderFor(_transaction, ref _lastPage, id);
+        return GetReaderFor(_transaction, ref _lastPage, id, out _);
     }
 
-    public static IndexEntryReader GetReaderFor(Transaction transaction, ref Page page, long id)
+    public static IndexEntryReader GetReaderFor(Transaction transaction, ref Page page, long id, out int rawSize)
     {
-        var data = Container.MaybeGetFromSamePage(transaction.LowLevelTransaction, ref page, id).ToSpan();
+        var item = Container.MaybeGetFromSamePage(transaction.LowLevelTransaction, ref page, id);
+        rawSize = item.Length;
+        var data = item.ToSpan();
         int size = ZigZagEncoding.Decode<int>(data, out var len);
         return new IndexEntryReader(data.Slice(size + len));
     }
@@ -107,21 +109,21 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     //We cannot dispose them before the whole query is executed because they are an integral part of IQueryMatch.
     //We know that the Slices are automatically disposed when the transaction is closed so we don't need to track them.
     [SkipLocalsInit]
-    private Slice EncodeAndApplyAnalyzer(string term, int fieldId)
+    internal Slice EncodeAndApplyAnalyzer(string term, int fieldId)
     {
         if (term is null)
             return default;
 
         if (term.Length == 0 || term == Constants.EmptyString)
             return Constants.EmptyStringSlice;
-        
+
         if (term == Constants.NullValue)
             return Constants.NullValueSlice;
 
-        ApplyAnalyzer(term, fieldId, out var encodedTerm); 
+        ApplyAnalyzer(term, fieldId, out var encodedTerm);
         return encodedTerm;
     }
-    
+
     internal ByteStringContext<ByteStringMemoryCache>.InternalScope ApplyAnalyzer(string originalTerm, int fieldId, out Slice value)
     {
         if (_fieldMapping.TryGetByFieldId(fieldId, out var binding) == false
@@ -138,7 +140,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
             return AnalyzeTerm(binding, originalTermSliced, fieldId, out value);
         }
     }
-    
+
     internal ByteStringContext<ByteStringMemoryCache>.InternalScope ApplyAnalyzer(ReadOnlySpan<byte> originalTerm, int fieldId, out Slice value)
     {
         if (_fieldMapping.TryGetByFieldId(fieldId, out var binding) == false
@@ -152,7 +154,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
         return AnalyzeTerm(binding, originalTerm, fieldId, out value);
     }
-    
+
     [SkipLocalsInit]
     internal ByteStringContext<ByteStringMemoryCache>.InternalScope ApplyAnalyzer(Slice originalTerm, int fieldId, out Slice value)
     {
@@ -160,10 +162,10 @@ public sealed unsafe partial class IndexSearcher : IDisposable
             || binding.FieldIndexingMode is FieldIndexingMode.Exact or FieldIndexingMode.Search
             || binding.Analyzer is null)
         {
-            value =  originalTerm;
+            value = originalTerm;
             return default;
         }
-        
+
         return AnalyzeTerm(binding, originalTerm.AsSpan(), fieldId, out value);
     }
 
@@ -172,7 +174,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     {
         var analyzer = binding.Analyzer!;
         analyzer.GetOutputBuffersSize(originalTerm.Length, out int outputSize, out int tokenSize);
-        
+
         Debug.Assert(outputSize < 1024 * 1024, "Term size is too big for analyzer.");
         Debug.Assert(Unsafe.SizeOf<Token>() * tokenSize < 1024 * 1024, "Analyzer wants to create too much tokens.");
 
@@ -203,21 +205,41 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
         return terms?.NumberOfEntries ?? 0;
     }
-    
+
     public bool TryGetTermsOfField(string field, out ExistsTermProvider existsTermProvider)
     {
         using var _ = Slice.From(Allocator, field, ByteStringType.Immutable, out var fieldName);
         var fields = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
         var terms = fields?.CompactTreeFor(fieldName);
-        
+
         if (terms == null)
         {
             existsTermProvider = default;
             return false;
         }
-        
+
         existsTermProvider = new ExistsTermProvider(this, _transaction.Allocator, terms, fieldName);
         return true;
+    }
+
+    public (Slice FieldName, Slice NumericTree) GetSliceForRangeQueries<T>(string name, T value)
+    {
+        Slice.From(Allocator, name, ByteStringType.Immutable, out var fieldName);
+        Slice numericTree;
+        switch (value)
+        {
+            case long l:
+                Slice.From(Allocator, $"{name}-L", ByteStringType.Immutable, out numericTree);
+                break;
+            case double d:
+                Slice.From(Allocator, $"{name}-D", ByteStringType.Immutable, out numericTree);
+                break;
+            default:
+                numericTree = default;
+                break;
+        }
+
+        return (fieldName, numericTree);
     }
 
     public void Dispose()

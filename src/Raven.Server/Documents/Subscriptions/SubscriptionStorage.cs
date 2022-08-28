@@ -159,6 +159,25 @@ namespace Raven.Server.Documents.Subscriptions
             return true;
         }
 
+        public bool DeleteAndSetException(long subscriptionId, SubscriptionException ex)
+        {
+            if (_subscriptions.TryRemove(subscriptionId, out SubscriptionConnectionsState state) == false)
+                return false;
+
+            foreach (var connection in state.GetConnections())
+            {
+                // this is just to set appropriate exception, the connections will be dropped on state dispose
+                connection.ConnectionException = ex;
+            }
+
+            state.Dispose();
+
+            if (_logger.IsInfoEnabled)
+                _logger.Info($"Subscription with id '{subscriptionId}' and name '{state.SubscriptionName}' was deleted and connections were dropped.", ex);
+
+            return true;
+        }
+
         public bool DropSingleSubscriptionConnection(long subscriptionId, string workerId, SubscriptionException ex)
         {
             if (_subscriptions.TryGetValue(subscriptionId, out SubscriptionConnectionsState subscriptionConnectionsState) == false)
@@ -483,7 +502,7 @@ namespace Raven.Server.Documents.Subscriptions
                     using var subscriptionStateRaw = _serverStore.Cluster.Subscriptions.ReadSubscriptionStateRaw(context, _databaseName, subscriptionName);
                     if (subscriptionStateRaw == null)
                     {
-                        DropSubscriptionConnections(id, new SubscriptionDoesNotExistException($"The subscription {subscriptionName} had been deleted"));
+                        DeleteAndSetException(id, new SubscriptionDoesNotExistException($"The subscription {subscriptionName} had been deleted"));
                         continue;
                     }
 

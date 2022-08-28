@@ -210,7 +210,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                     {
                         var databaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(ctx);
                         Assert.Contains($"A:8-{originalDatabase.DbBase64Id}", databaseChangeVector);
-                        Assert.Contains($"A:10-{restoredDatabase.DbBase64Id}", databaseChangeVector);
+                        Assert.Contains($"A:11-{restoredDatabase.DbBase64Id}", databaseChangeVector);
                     }
                 }
             }

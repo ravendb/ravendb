@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -9,11 +10,13 @@ using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.ServerWide.Operations.Configuration;
@@ -32,6 +35,7 @@ using Raven.Server.Utils;
 using Raven.Server.Utils.Features;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Utils;
 using StudioConfiguration = Raven.Client.Documents.Operations.Configuration.StudioConfiguration;
 
 namespace Raven.Server.Web.System
@@ -490,14 +494,21 @@ namespace Raven.Server.Web.System
                 }
             }
         }
-
-        [RavenAction("/setup/unsecured", "POST", AuthorizationStatus.UnauthenticatedClients)]
-        public async Task SetupUnsecured()
+        
+        [RavenAction("/setup/unsecured/package", "POST", AuthorizationStatus.UnauthenticatedClients)]
+        public async Task SetupUnsecuredPackage()
         {
             AssertOnlyInSetupMode();
 
+            var stream = TryGetRequestFromStream("Options") ?? RequestBodyStream();
+            var operationCancelToken = CreateOperationToken();
+            var operationId = GetLongQueryString("operationId", false);
+
+            if (operationId.HasValue == false)
+                operationId = ServerStore.Operations.GetNextOperationId();
+
             using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-            using (var setupInfoJson = await context.ReadForMemoryAsync(RequestBodyStream(), "setup-unsecured"))
+            using (var setupInfoJson = await context.ReadForMemoryAsync(stream, "setup-unsecured"))
             {
                 // Making sure we don't have leftovers from previous setup
                 try
@@ -513,56 +524,34 @@ namespace Raven.Server.Web.System
                     // ignored
                 }
 
-                var setupInfo = JsonDeserializationServer.UnsecuredSetupInfo(setupInfoJson);
+                var unsecuredSetupInfo = JsonDeserializationServer.UnsecuredSetupInfo(setupInfoJson);
 
-                BlittableJsonReaderObject settingsJson;
-                await using (var fs = new FileStream(ServerStore.Configuration.ConfigPath, FileMode.Open, FileAccess.Read))
-                {
-                    settingsJson = await context.ReadForMemoryAsync(fs, "settings-json");
-                }
+                var operationResult = await ServerStore.Operations.AddLocalOperation(
+                    operationId.Value,
+                    OperationType.Setup,
+                    "Setting up RavenDB in unsecured mode.",
+                    detailedDescription: null,
+                    progress => SetupManager.SetupUnsecuredTask(progress,
+                        unsecuredSetupInfo,
+                        ServerStore,
+                        context,
+                        operationCancelToken.Token),
+                    token: operationCancelToken);
 
-                settingsJson.Modifications = new DynamicJsonValue(settingsJson)
-                {
-                    [RavenConfiguration.GetKey(x => x.Licensing.EulaAccepted)] = true,
-                    [RavenConfiguration.GetKey(x => x.Core.SetupMode)] = nameof(SetupMode.Unsecured),
-                    [RavenConfiguration.GetKey(x => x.Security.UnsecuredAccessAllowed)] = nameof(UnsecuredAccessAddressRange.PublicNetwork)
-                };
+                // unsecured ->  toggle off(no zip only) -> single node  =>> don't create zip
+                if (unsecuredSetupInfo.ZipOnly == false && unsecuredSetupInfo.NodeSetupInfos.Count == 1)
+                    return;
 
-                if (setupInfo.Port == Constants.Network.ZeroValue)
-                    setupInfo.Port = Constants.Network.DefaultUnsecuredRavenDbHttpPort;
+                var zip = ((SetupProgressAndResult)operationResult).SettingsZipFile;
 
-                settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = string.Join(";", setupInfo.Addresses.Select(ip => IpAddressToUrl(ip, setupInfo.Port)));
+                var fileName = $"Unsecure.Cluster.Settings {DateTime.UtcNow:yyyy-MM-dd HH-mm}.zip ";
+                var contentDisposition = $"attachment; filename={fileName}";
 
-                if (setupInfo.TcpPort == Constants.Network.ZeroValue)
-                    setupInfo.TcpPort = Constants.Network.DefaultSecuredRavenDbTcpPort;
+                HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
+                HttpContext.Response.ContentType = "application/octet-stream";
 
-                settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.TcpServerUrls)] = string.Join(";", setupInfo.Addresses.Select(ip => IpAddressToUrl(ip, setupInfo.TcpPort, "tcp")));
-
-                if (setupInfo.EnableExperimentalFeatures)
-                {
-                    settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)] = FeaturesAvailability.Experimental;
-                }
-
-                if (!string.IsNullOrEmpty(setupInfo.LocalNodeTag))
-                {
-                    await ServerStore.EnsureNotPassiveAsync(nodeTag: setupInfo.LocalNodeTag);
-                }
-
-                if (setupInfo.Environment != StudioConfiguration.StudioEnvironment.None)
-                {
-                    var res = await ServerStore.PutValueInClusterAsync(
-                        new PutServerWideStudioConfigurationCommand(new ServerWideStudioConfiguration { Disabled = false, Environment = setupInfo.Environment },
-                            RaftIdGenerator.DontCareId));
-                    await ServerStore.Cluster.WaitForIndexNotification(res.Index);
-                }
-
-                var modifiedJsonObj = context.ReadObject(settingsJson, "modified-settings-json");
-
-                var indentedJson = JsonStringHelper.Indent(modifiedJsonObj.ToString());
-                SettingsZipFileHelper.WriteSettingsJsonLocally(ServerStore.Configuration.ConfigPath, indentedJson);
+                await HttpContext.Response.Body.WriteAsync(zip, 0, zip.Length);
             }
-
-            NoContentStatus();
         }
 
         [RavenAction("/setup/secured", "POST", AuthorizationStatus.UnauthenticatedClients)]
@@ -598,8 +587,10 @@ namespace Raven.Server.Web.System
 
                 var cn = nodeCert.GetNameInfo(X509NameType.SimpleName, false);
 
-                var contentDisposition = $"attachment; filename={cn}.Cluster.Settings.zip";
-                HttpContext.Response.Headers[Constants.Headers.ContentDisposition] = contentDisposition;
+                var fileName = $"{cn}.Cluster.Settings {DateTime.UtcNow:yyyy-MM-dd HH-mm}.zip ";
+                var contentDisposition = $"attachment; filename={fileName}";
+                
+                HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
                 HttpContext.Response.ContentType = "application/octet-stream";
 
                 await HttpContext.Response.Body.WriteAsync(zip, 0, zip.Length);
@@ -656,8 +647,10 @@ namespace Raven.Server.Web.System
 
                 var zip = ((SetupProgressAndResult)operationResult).SettingsZipFile;
 
-                var contentDisposition = $"attachment; filename={setupInfo.Domain}.Cluster.Settings.zip";
-                HttpContext.Response.Headers[Constants.Headers.ContentDisposition] = contentDisposition;
+                var fileName = $"{setupInfo.Domain}.Cluster.Settings {DateTime.UtcNow:yyyy-MM-dd HH-mm}.zip ";
+                var contentDisposition = $"attachment; filename={fileName}";
+                
+                HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
                 HttpContext.Response.ContentType = "application/octet-stream";
 
                 await HttpContext.Response.Body.WriteAsync(zip, 0, zip.Length);
@@ -685,8 +678,7 @@ namespace Raven.Server.Web.System
 
                 try
                 {
-                    var urlByTag = new Dictionary<string, string>();
-
+                    var urlOrIpByTag = new Dictionary<string, string>();
                     await using (var ms = new MemoryStream(zipBytes))
                     using (var archive = new ZipArchive(ms, ZipArchiveMode.Read, false))
                     {
@@ -699,16 +691,22 @@ namespace Raven.Server.Web.System
 
                             using (var settingsJson = await context.ReadForMemoryAsync(entry.Open(), "settings-json"))
                                 if (settingsJson.TryGet(nameof(ConfigurationNodeInfo.PublicServerUrl), out string publicServerUrl))
-                                    urlByTag[tag] = publicServerUrl;
+                                {
+                                    urlOrIpByTag[tag] = publicServerUrl;
+                                }
+                                else if (settingsJson.TryGet(nameof(ConfigurationNodeInfo.ServerUrl), out string serverUrl))
+                                {
+                                    urlOrIpByTag[tag] = serverUrl;
+                                }
                         }
                     }
-
+    
                     await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
                         writer.WriteStartArray();
                         var first = true;
 
-                        foreach (var node in urlByTag)
+                        foreach (var node in urlOrIpByTag)
                         {
                             if (first == false)
                                 writer.WriteComma();
@@ -717,10 +715,20 @@ namespace Raven.Server.Web.System
                             writer.WritePropertyName(nameof(ConfigurationNodeInfo.Tag));
                             writer.WriteString(node.Key);
                             writer.WriteComma();
-                            writer.WritePropertyName(nameof(ConfigurationNodeInfo.PublicServerUrl));
-                            writer.WriteString(node.Value);
-                            writer.WriteEndObject();
-
+                            var uri = new Uri(node.Value);
+                            if (uri.Scheme.Equals(Uri.UriSchemeHttp) == false)
+                            {
+                                writer.WritePropertyName(nameof(ConfigurationNodeInfo.PublicServerUrl));
+                                writer.WriteString(node.Value);
+                                writer.WriteEndObject();
+                            }
+                            else
+                            {
+                                writer.WritePropertyName(nameof(ConfigurationNodeInfo.ServerUrl));
+                                writer.WriteString(node.Value);
+                                writer.WriteEndObject();
+                            }
+                            
                             first = false;
                         }
 
@@ -734,6 +742,36 @@ namespace Raven.Server.Web.System
             }
         }
 
+        [RavenAction("/setup/continue/unsecured", "POST", AuthorizationStatus.UnauthenticatedClients)]
+        public async Task ContinueUnsecuredClusterSetup()
+        {
+            AssertOnlyInSetupMode();
+
+            var operationCancelToken = CreateOperationToken();
+            var operationId = GetLongQueryString("operationId", false);
+
+            if (operationId.HasValue == false)
+                operationId = ServerStore.Operations.GetNextOperationId();
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            using (var continueSetupInfoJson = await context.ReadForMemoryAsync(RequestBodyStream(), "continue-cluster-setup"))
+            {
+                var continueSetupInfo = JsonDeserializationServer.ContinueSetupInfo(continueSetupInfoJson);
+
+                await ServerStore.Operations.AddLocalOperation(
+                    operationId.Value,
+                    OperationType.Setup,
+                    "Continue Unsecured Cluster Setup.",
+                    detailedDescription: null,
+                    progress => SetupManager.ContinueUnsecuredClusterSetupTask(progress, continueSetupInfo, ServerStore, operationCancelToken.Token),
+                    token: operationCancelToken);
+            }
+
+            NoContentStatus();
+        }
+
+        
+        
         [RavenAction("/setup/continue", "POST", AuthorizationStatus.UnauthenticatedClients)]
         public async Task ContinueClusterSetup()
         {
@@ -807,6 +845,7 @@ namespace Raven.Server.Web.System
     public class ConfigurationNodeInfo
     {
         public string Tag { get; set; }
+        public string ServerUrl { get; set; }
         public string PublicServerUrl { get; set; }
     }
 }

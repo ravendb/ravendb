@@ -80,7 +80,7 @@
             <div class="row">
                 <div class="col-sm-8">
                     <div class="input-group" data-bind="validationOptions: { insertMessages: false }, validationElement: documentId">
-                        <input type="text" id="documentId" data-bind="textInput: documentId" 
+                        <input type="text" id="documentId" data-bind="textInput: documentId, disable: spinners.testing"
                                class="form-control" placeholder="Enter document id for the patch test" autocomplete="off" />
                         <span class="help-block" data-bind="validationMessage: documentId"></span>
                         <ul class="documentIdAutocomplete dropdown-menu autocomplete-list" role="menu" 
@@ -92,12 +92,14 @@
                             </li>
                         </ul>
                         <span class="input-group-btn" style="vertical-align:top">
-                            <button class="btn" type="button" 
-                                    data-bind="click: previewDocument, css: { 'btn-spinner': spinners.preview }, disable: spinners.preview() || !documentId()" title="Show document preview">
+                            <button class="btn" type="button" title="Show document preview"
+                                    data-bind="click: previewDocument, css: { 'btn-spinner': spinners.autocomplete() || spinners.preview() },
+                                               disable: spinners.preview() || !documentId() || spinners.testing() || spinners.autocomplete()">
                                 <i class="icon-preview"></i>
                             </button>
                         </span>
-                        <button class="btn btn-default" data-bind="click: loadDocument, css: { 'btn-spinner': spinners.loadingDocument }, disable: spinners.loadingDocument() || !documentId()" >
+                        <button class="btn btn-default" title="Load document to the 'Before' view"
+                                data-bind="click: loadDocument, css: { 'btn-spinner': spinners.loadingDocument }, disable: spinners.loadingDocument() || !documentId() || spinners.testing()" >
                             <i class="icon-import"></i>
                             <span>Load document</span>
                         </button>

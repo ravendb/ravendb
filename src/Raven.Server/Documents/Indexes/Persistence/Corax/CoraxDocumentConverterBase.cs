@@ -52,7 +52,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
     private bool EnumerableDataStructExist =>
         StringsListForEnumerableScope is not null && LongsListForEnumerableScope is not null && DoublesListForEnumerableScope is not null;
 
-    public List<Memory<byte>> StringsListForEnumerableScope;
+    public List<ByteString> StringsListForEnumerableScope;
     public List<long> LongsListForEnumerableScope;
     public List<double> DoublesListForEnumerableScope;
     public List<BlittableJsonReaderObject> BlittableJsonReaderObjectsListForEnumerableScope;

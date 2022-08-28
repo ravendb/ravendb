@@ -11,6 +11,7 @@ using Raven.Server.Config.Attributes;
 using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Admin.Processors.Configuration;
@@ -71,7 +72,7 @@ internal abstract class AbstractAdminConfigurationHandlerProcessorForGetSettings
 
         using (RequestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
         {
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, RequestHandler.ResponseBodyStream()))
             {
                 context.Write(writer, settingsResult.ToJson());
             }

@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
 
@@ -13,7 +14,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         public async Task HugeDocuments()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
             using (context.OpenReadTransaction())
             {
                 writer.WriteStartObject();

@@ -88,6 +88,7 @@ using Voron.Exceptions;
 using Constants = Raven.Client.Constants;
 using MemoryCache = Raven.Server.Utils.Imports.Memory.MemoryCache;
 using MemoryCacheOptions = Raven.Server.Utils.Imports.Memory.MemoryCacheOptions;
+using NodeInfo = Raven.Client.ServerWide.Commands.NodeInfo;
 
 namespace Raven.Server.ServerWide
 {

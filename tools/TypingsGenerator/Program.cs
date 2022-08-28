@@ -292,7 +292,10 @@ namespace TypingsGenerator
             // cluster
             scripter.AddType(typeof(ClusterTopology));
             scripter.AddType(typeof(ClusterObserverDecisions));
-            scripter.AddType(typeof(NodeInfo));
+            scripter.AddType(typeof(Raven.Client.ServerWide.Commands.NodeInfo));
+            scripter.AddType(typeof(Raven.Server.Commercial.NodeInfo));
+            scripter.AddType(typeof(SetupInfo));
+            scripter.AddType(typeof(UnsecuredSetupInfo));
 
             // query
             scripter.AddType(typeof(QueryResult<,>));

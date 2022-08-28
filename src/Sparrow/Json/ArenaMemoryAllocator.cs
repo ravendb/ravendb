@@ -372,8 +372,10 @@ namespace Sparrow.Json
             var address = allocation.Address;
 
 #if DEBUG
-            Debug.Assert(address != _ptrCurrent);
-            Debug.Assert(allocation.IsReturned == false);
+            var current = _ptrCurrent;
+
+            Debug.Assert(address != current, $"address != current ({new IntPtr(address)} != {new IntPtr(current)} [{nameof(_ptrCurrent)} = {new IntPtr(_ptrCurrent)}])");
+            Debug.Assert(allocation.IsReturned == false, "allocation.IsReturned == false");
             allocation.IsReturned = true;
 
 #endif

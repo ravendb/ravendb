@@ -1,4 +1,6 @@
-﻿require("google.analytics");
+﻿import router from "plugins/router";
+
+require("google.analytics");
 
 class eventsCollector {
     static UACode = "UA-82335022-3";
@@ -53,8 +55,9 @@ class eventsCollector {
         this.preInitializationQueue = [];
     }
 
-    reportViewModel(view: any) {
-        const viewName = view.__moduleId__;
+    reportViewModel() {
+        const instr = router.activeInstruction();
+        const viewName = instr?.fragment || "n/a";
         this.internalLog((ga) => {
             ga('set', 'location', `http://raven.studio/${viewName}${document.location.search}`);
             ga('send', 'pageview');

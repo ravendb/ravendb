@@ -604,7 +604,7 @@ namespace Raven.Server.Documents.Queries
             if (exact || index == null || valueFirst == null || valueSecond == null || index.Definition.Version < IndexDefinitionBaseServerSide.IndexVersion.TimeTicks)
                 return false;
 
-            if (index.IndexFieldsPersistence.HasTimeValues(fieldName) && TryGetTime(index,valueFirst, out ticksFirst) && TryGetTime(index,valueSecond, out ticksSecond))
+            if (index.IndexFieldsPersistence.HasTimeValues(fieldName) && QueryBuilderHelper.TryGetTime(index, valueFirst, out ticksFirst) && QueryBuilderHelper.TryGetTime(index, valueSecond, out ticksSecond))
                 return true;
 
             return false;
@@ -617,66 +617,10 @@ namespace Raven.Server.Documents.Queries
             if (exact || index == null || value == null || index.Definition.Version < IndexDefinitionBaseServerSide.IndexVersion.TimeTicks)
                 return false;
 
-            if (index.IndexFieldsPersistence.HasTimeValues(fieldName) && TryGetTime(index, value, out ticks))
+            if (index.IndexFieldsPersistence.HasTimeValues(fieldName) && QueryBuilderHelper.TryGetTime(index, value, out ticks))
                 return true;
 
             return false;
-        }
-
-        private unsafe static bool TryGetTime(Index index, object value, out long ticks)
-        {
-            ticks = -1;
-            DateTime dt = default;
-            DateTimeOffset dto = default;
-            DateOnly @do = default;
-            TimeOnly to = default;
-            LazyStringParser.Result result = LazyStringParser.Result.Failed;
-
-            switch (value)
-            {
-                case LazyStringValue lsv:
-                    result = LazyStringParser.TryParseTimeForQuery(lsv.Buffer, lsv.Size, out dt, out dto, out @do, out to, 
-                        index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.ProperlyParseThreeDigitsMillisecondsDates);
-                    break;
-                case string valueAsString:
-                    fixed (char* buffer = valueAsString)
-                    {
-                        result = LazyStringParser.TryParseTimeForQuery(buffer, valueAsString.Length, out dt, out dto, out @do, out to,
-                            index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.ProperlyParseThreeDigitsMillisecondsDates);
-
-                    }
-
-                    break;
-                default:
-                    var otherAsString = value.ToString();
-                    fixed (char* buffer = otherAsString)
-                    {
-                        result = LazyStringParser.TryParseTimeForQuery(buffer, otherAsString.Length, out dt, out dto, out @do, out to,
-                            index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.ProperlyParseThreeDigitsMillisecondsDates);
-                    }
-
-                    break;
-            }
-
-            switch (result)
-            {
-                case LazyStringParser.Result.Failed:
-                    return false;
-                case LazyStringParser.Result.DateTime:
-                    ticks = dt.Ticks;
-                    return true;
-                case LazyStringParser.Result.DateTimeOffset:
-                    ticks = dto.UtcDateTime.Ticks;
-                    return true;
-                case LazyStringParser.Result.TimeOnly:
-                    ticks = to.Ticks;
-                    return true;
-                case LazyStringParser.Result.DateOnly:
-                    ticks = @do.DayNumber * TimeSpan.TicksPerDay;
-                    return true;
-                default:
-                    throw new InvalidOperationException("Should not happen!");
-            }
         }
 
         private static bool IsExact(Index index, bool exact, QueryFieldName fieldName)

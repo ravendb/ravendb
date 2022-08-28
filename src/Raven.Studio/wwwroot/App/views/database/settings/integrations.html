@@ -74,9 +74,8 @@
                                 <button class="btn btn-default margin-right-xs" data-bind="click: toggleHidden, visible: passwordHidden" title="View hidden characters">
                                     <i class="icon-preview"></i>
                                 </button>
-                                <button class="btn btn-default margin-right-xs" data-bind="click: toggleHidden, visible: !passwordHidden()" title="Hide characters">
-                                    <i class="icon-preview"></i>
-                                    <!--  TODO: replace above icon with RavenDB-17391 -->
+                                <button class="btn btn-info margin-right-xs" data-bind="click: toggleHidden, visible: !passwordHidden()" title="Hide characters">
+                                    <i class="icon-preview-off"></i>
                                 </button>
                                 <button class="btn copy-button" data-bind="click: copyPasswordToClipboard, disable: !password()" title="Copy password to clipboard">
                                     <i class="icon-copy"></i>

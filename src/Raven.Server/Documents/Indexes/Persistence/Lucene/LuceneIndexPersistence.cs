@@ -16,6 +16,7 @@ using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.TimeSeries;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Static.Counters;
 using Raven.Server.Documents.Indexes.Static.TimeSeries;
+using Raven.Server.Documents.Queries;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
 using Raven.Server.Utils;
@@ -434,12 +435,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 );
         }
 
-        public override IndexReadOperationBase OpenIndexReader(Transaction readTransaction)
+        public override IndexReadOperationBase OpenIndexReader(Transaction readTransaction, IndexQueryServerSide query = null)
         {
             CheckDisposed();
             CheckInitialized();
 
-            return new LuceneIndexReadOperation(_index, _directory, _luceneIndexSearcherHolder, _index._queryBuilderFactories, readTransaction);
+            return new LuceneIndexReadOperation(_index, _directory, _luceneIndexSearcherHolder, _index._queryBuilderFactories, readTransaction, query);
         }
 
         public override IndexFacetedReadOperation OpenFacetedIndexReader(Transaction readTransaction)

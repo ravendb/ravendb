@@ -1427,6 +1427,41 @@ namespace SlowTests.Client.Subscriptions
             }, true, timeout: 60000, interval: 1000), $"WaitForValue=>LastRecentlyUsed");
         }
 
+        [Fact]
+        public async Task DeletingSubscriptionShouldRemoveItsState()
+        {
+            using var server = GetNewServer(new ServerCreationOptions
+            {
+                CustomSettings = new Dictionary<string, string>
+                {
+                    [RavenConfiguration.GetKey(x => x.Databases.MaxIdleTime)] = "1000000",
+                    [RavenConfiguration.GetKey(x => x.Databases.FrequencyToCheckForIdle)] = "1000000",
+                    [RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "false"
+                }
+            });
+
+            using var store = GetDocumentStore(new Options { Server = server, RunInMemory = false });
+            var name = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions { Query = "from Users", Name = "Subscription0" });
+            var state = await store.Subscriptions.GetSubscriptionStateAsync(name);
+          
+
+            var connections = new CountdownEvent(5);
+            var tasks = new List<Task>();
+            for (int i = 0; i < 5; i++)
+            {
+                var subsWorker1 = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(name) { Strategy = SubscriptionOpeningStrategy.Concurrent });
+                subsWorker1.OnEstablishedSubscriptionConnection += () => { connections.Signal(); };
+                tasks.Add(subsWorker1.Run(_ => { }));
+            }
+
+            connections.Wait(_reasonableWaitTime);
+
+            await store.Subscriptions.DeleteAsync(name);
+
+            var db = await Databases.GetDocumentDatabaseInstanceFor(server, store);
+            await AssertWaitForExceptionAsync<KeyNotFoundException>(async () => await Task.Run(() => db.SubscriptionStorage.GetSubscriptionStateById(state.SubscriptionId)), interval: 1000);
+        }
+
         private class IdleDatabaseStatistics
         {
             public string MaxIdleTime { get; set; }

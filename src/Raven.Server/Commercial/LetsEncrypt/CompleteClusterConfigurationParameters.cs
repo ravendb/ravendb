@@ -15,6 +15,7 @@ public class CompleteClusterConfigurationParameters
     public Action<IOperationProgress> OnProgress;
     public Func<string> OnSettingsPath;
     public SetupInfo SetupInfo;
+    public UnsecuredSetupInfo UnsecuredSetupInfo;
     public Func<string, string, Task> OnBeforeAddingNodesToCluster;
     public Func<string, Task> AddNodeToCluster;
     public Action<Action<IOperationProgress>, SetupProgressAndResult, X509Certificate2> RegisterClientCertInOs;

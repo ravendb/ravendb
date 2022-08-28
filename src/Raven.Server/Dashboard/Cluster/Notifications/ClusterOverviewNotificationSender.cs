@@ -6,7 +6,9 @@
 
 using System;
 using System.Threading;
+using Raven.Server.Commercial;
 using Raven.Server.NotificationCenter;
+using Raven.Server.ServerWide;
 
 namespace Raven.Server.Dashboard.Cluster.Notifications
 {
@@ -50,7 +52,9 @@ namespace Raven.Server.Dashboard.Cluster.Notifications
                 NodeUrl = _server.WebUrl,
                 NodeType = nodeType,
                 NodeState = _server.ServerStore.CurrentRachisState,
-                StartTime = testStartTime
+                StartTime = testStartTime,
+                ServerVersion = ServerVersion.FullVersion,
+                OsName = LicenseManager.OsInfo.FullName
             };
         }
     }

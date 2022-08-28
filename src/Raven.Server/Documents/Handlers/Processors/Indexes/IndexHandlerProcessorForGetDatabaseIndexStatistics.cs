@@ -132,7 +132,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Indexes
         private async ValueTask WriteResultAsync(IndexStats[] result)
         {
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, RequestHandler.ResponseBodyStream()))
                 writer.WriteIndexesStats(context, result);
         }
     }

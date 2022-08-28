@@ -218,7 +218,7 @@ namespace Raven.Server.Documents.Handlers
         public async Task GetReplicationOutgoingFailureStats()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
             {
                 var data = new DynamicJsonArray();
                 foreach (var item in Database.ReplicationLoader.OutgoingFailureInfo)
@@ -255,7 +255,7 @@ namespace Raven.Server.Documents.Handlers
         public async Task GetReplicationIncomingActivityTimes()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
             {
                 var data = new DynamicJsonArray();
                 foreach (var item in Database.ReplicationLoader.IncomingLastActivityTime)
@@ -284,7 +284,7 @@ namespace Raven.Server.Documents.Handlers
         public async Task GetReplicationIncomingRejectionInfo()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
             {
                 var stats = new DynamicJsonArray();
                 foreach (var statItem in Database.ReplicationLoader.IncomingRejectionStats)
@@ -317,7 +317,7 @@ namespace Raven.Server.Documents.Handlers
         public async Task GetReplicationReconnectionQueue()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
             {
                 var data = new DynamicJsonArray();
                 foreach (var queueItem in Database.ReplicationLoader.ReconnectQueue)

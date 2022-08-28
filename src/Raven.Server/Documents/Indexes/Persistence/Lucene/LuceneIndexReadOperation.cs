@@ -57,8 +57,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private FastVectorHighlighter _highlighter;
         private FieldQuery _highlighterQuery;
 
-        public LuceneIndexReadOperation(Index index, LuceneVoronDirectory directory, LuceneIndexSearcherHolder searcherHolder, QueryBuilderFactories queryBuilderFactories, Transaction readTransaction)
-            : base(index, LoggingSource.Instance.GetLogger<LuceneIndexReadOperation>(index._indexStorage.DocumentDatabase.Name), queryBuilderFactories)
+        public LuceneIndexReadOperation(Index index, LuceneVoronDirectory directory, LuceneIndexSearcherHolder searcherHolder, QueryBuilderFactories queryBuilderFactories, Transaction readTransaction, IndexQueryServerSide query)
+            : base(index, LoggingSource.Instance.GetLogger<LuceneIndexReadOperation>(index._indexStorage.DocumentDatabase.Name), queryBuilderFactories, query)
         {
             try
             {
@@ -958,11 +958,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public override void Dispose()
         {
+            base.Dispose();
             _analyzer?.Dispose();
             _releaseSearcher?.Dispose();
             _releaseReadTransaction?.Dispose();
         }
-
-
     }
 }

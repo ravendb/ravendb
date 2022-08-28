@@ -425,8 +425,7 @@ namespace SlowTests.Tests.Querying
                 };
                 var blogTwo = new Blog
                 {
-                    Title =
-                                          "Maecenas mauris leo, feugiat sodales facilisis target word, pellentesque, suscipit aliquet turpis.",
+                    Title = "Maecenas mauris leo, feugiat sodales facilisis target word, pellentesque, suscipit aliquet turpis.",
                     Category = "The Rhinos"
                 };
                 var blogThree = new Blog { Title = "Target cras vitae felis arcu word.", Category = "Los Rhinos" };
@@ -457,6 +456,8 @@ namespace SlowTests.Tests.Querying
 
                     Assert.Equal(1, results.Length);
                     Assert.NotEmpty(highlightings.GetFragments(results.First().Category));
+                    // TODO Federico - this fails in Corax
+                    // Assert.Equal(@"<b style=""background:yellow"">Lorem</b> ipsum dolor", highlightings.GetFragments(results.First().Category).First());
                 }
             }
         }
@@ -478,8 +479,8 @@ namespace SlowTests.Tests.Querying
                                    select new { Category = g.Key, Title = g.Select(x=>x.Title).Aggregate(string.Concat) }",
                         Fields = new Dictionary<string, IndexFieldOptions>
                         {
-                            {"Title", new IndexFieldOptions { Storage = FieldStorage.Yes, Indexing = FieldIndexing.Search, TermVector = FieldTermVector.WithPositionsAndOffsets} },
-                            {"Category", new IndexFieldOptions { Storage = FieldStorage.Yes, Indexing = FieldIndexing.Search, TermVector = FieldTermVector.WithPositionsAndOffsets} }
+                            {"Title", new IndexFieldOptions { Storage = FieldStorage.Yes, Indexing = FieldIndexing.Search, TermVector = FieldTermVector.WithPositionsAndOffsets } }, 
+                            {"Category", new IndexFieldOptions { Storage = FieldStorage.Yes, TermVector = FieldTermVector.WithPositionsAndOffsets } },
                         }
                     }}));
 
@@ -490,8 +491,7 @@ namespace SlowTests.Tests.Querying
                 };
                 var blogTwo = new Blog
                 {
-                    Title =
-                                          "Maecenas mauris leo, feugiat sodales facilisis target word, pellentesque, suscipit aliquet turpis.",
+                    Title = "Maecenas mauris leo, feugiat sodales facilisis target word, pellentesque, suscipit aliquet turpis.",
                     Category = "The Rhinos"
                 };
                 var blogThree = new Blog { Title = "Target cras vitae felis arcu word.", Category = "Los Rhinos" };
@@ -527,6 +527,8 @@ namespace SlowTests.Tests.Querying
 
                     Assert.Equal(1, results.Length);
                     Assert.NotEmpty(highlightings.GetFragments(results.First().Category));
+                    // TODO Federico - this fails in Corax
+                    // Assert.Equal(@"<b style=""background:yellow"">Lorem</b> ipsum dolor",highlightings.GetFragments(results.First().Category).First());
                 }
             }
         }

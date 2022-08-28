@@ -360,6 +360,13 @@ namespace SlowTests.Client.TimeSeries.Issues
             };
 
             var now = DateTime.UtcNow;
+
+            if (now.Day == 1 && now.Hour == 0)
+            {
+                // the first hour on the first day of the month requires adding an hour to avoid appending two entries on different months
+                now = now.AddHours(1);
+            }
+            
             var oneHourAgo = now.Subtract(TimeSpan.FromHours(1));
 
             var timeSeries = session.TimeSeriesFor<DispatchEntry>(location);

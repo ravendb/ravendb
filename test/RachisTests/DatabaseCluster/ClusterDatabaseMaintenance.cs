@@ -1117,7 +1117,8 @@ namespace RachisTests.DatabaseCluster
                 // ensure that at this point we still can't talk to node
                 await Task.Delay(fromSeconds); // wait for the observer to update the status
                 dbToplogy = (await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
-                Assert.Equal(1, dbToplogy.Rehabs.Count);
+                
+                Assert.True(1 == dbToplogy.Rehabs.Count, $"topology: {dbToplogy}");
                 Assert.Equal(groupSize - 1, dbToplogy.Members.Count);
             }
 

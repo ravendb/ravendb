@@ -7,6 +7,7 @@ using Microsoft.Extensions.Primitives;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Raven.Server.Web.Http;
 using Sparrow.Json;
 
@@ -35,7 +36,7 @@ internal class EtlHandlerProcessorForStats : AbstractEtlHandlerProcessorForStats
 
         using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
         {
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, RequestHandler.ResponseBodyStream()))
             {
                 writer.WriteStartObject();
                 writer.WriteArray(context, "Results", etlStats, (w, c, stats) => w.WriteObject(context.ReadObject(stats.ToJson(), "etl/stats")));

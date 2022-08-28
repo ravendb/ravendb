@@ -25,12 +25,12 @@ class welcome extends setupStep {
             .done((localIpsResult, setupParamsResult: [Raven.Server.Commercial.SetupParameters]) => {
                 this.model.init(setupParamsResult[0]);
 
-                const ipV4 = _.filter(localIpsResult[0], (ip: string) => _.split(ip,  '.').length === 4);
-                const ipV6 = _.difference(localIpsResult[0],  ipV4);
+                const ipV4 = _.filter(localIpsResult[0], (ip: string) => _.split(ip, '.').length === 4);
+                const ipV6 = _.difference(localIpsResult[0], ipV4);
                
                 this.model.localIps(_.uniq(_.concat(["0.0.0.0"], ipV4, ipV6)));
                 
-                this.disableLetEncrypt(setupParamsResult[0].RunningOnMacOsx);
+                this.model.disableLetsEncrypt(setupParamsResult[0].RunningOnMacOsx);
                 
                 // Remove localhost IPs if running on Docker
                 if (setupParamsResult[0].IsDocker) {
@@ -55,37 +55,19 @@ class welcome extends setupStep {
             .execute();
     }
     
-    chooseUnsecured() {
-        this.model.mode("Unsecured");
-        this.forwardToNextStep();
+    setupNewClusterFlow() {
+        this.model.mode(this.model.mode() === "Continue" ? "LetsEncrypt" : this.model.mode());
     }
 
-    chooseSecured() {
-        this.model.mode("Secured");
-        this.forwardToNextStep();
+    useSetupPackageFlow() {
+        this.model.mode("Continue")
     }
 
-    chooseGenerate() {
-        this.model.mode("LetsEncrypt");
-        this.forwardToNextStep();
-    }
-    
-    chooseContinue() {
-        this.model.mode("Continue");
-        router.navigate("#continue");
-    }
-    
-    forwardToNextStep() {
-        switch (this.model.mode()) {
-            case "Unsecured":
-                router.navigate("#unsecured");
-                break;
-            case "Secured":
-                router.navigate("#certificate");
-                break;
-            case "LetsEncrypt":
-                router.navigate("#license");
-                break;
+    goToNextView() {
+        if (this.model.mode() !== "Continue") {
+            router.navigate("#security");
+        } else {
+            router.navigate("#continue");
         }
     }
 }

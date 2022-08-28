@@ -6,21 +6,10 @@ using System.Runtime.InteropServices;
 using Corax.Utils;
 using Corax.Utils.Spatial;
 using Sparrow;
-using Spatial4n.Distance;
-using Spatial4n.Shapes;
 using static Corax.Queries.SortingMatch;
-using Constants = Corax.Constants.IndexSearcher;
-using DistanceUtils = Spatial4n.Distance.DistanceUtils;
 
 namespace Corax.Queries
 {
-    internal readonly struct NullStruct
-    {
-        internal static readonly NullStruct Instance = new NullStruct();
-    }
-
-    
-    
     [DebuggerDisplay("{DebugView,nq}")]
     public unsafe struct SortingMatch<TInner, TComparer> : IQueryMatch
         where TInner : IQueryMatch

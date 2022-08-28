@@ -127,7 +127,7 @@ namespace Sparrow.Server
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
             {
-                Debug.Assert(HasValue);
+                Debug.Assert(HasValue, "ByteString.HasValue");
                 EnsureIsNotBadPointer();
 
                 return _pointer->Flags;
@@ -139,7 +139,7 @@ namespace Sparrow.Server
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
             {
-                Debug.Assert(HasValue);
+                Debug.Assert(HasValue, "ByteString.HasValue");
                 EnsureIsNotBadPointer();
 
                 return _pointer->Ptr;
@@ -168,7 +168,7 @@ namespace Sparrow.Server
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
             {
-                Debug.Assert(HasValue);
+                Debug.Assert(HasValue, "ByteString.HasValue");
                 EnsureIsNotBadPointer();
 
                 return (_pointer->Flags & ByteStringType.Mutable) != 0;
@@ -180,7 +180,7 @@ namespace Sparrow.Server
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
             {
-                Debug.Assert(HasValue);
+                Debug.Assert(HasValue, "ByteString.HasValue");
                 EnsureIsNotBadPointer();
 
                 return (_pointer->Flags & ByteStringType.External) != 0;
@@ -229,7 +229,7 @@ namespace Sparrow.Server
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
             {
-                Debug.Assert(HasValue);
+                Debug.Assert(HasValue, "ByteString.HasValue");
                 EnsureIsNotBadPointer();
 
                 return *(_pointer->Ptr + (sizeof(byte) * index));
@@ -238,7 +238,7 @@ namespace Sparrow.Server
 
         public void CopyTo(int from, byte* dest, int offset, int count)
         {
-            Debug.Assert(HasValue);
+            Debug.Assert(HasValue, "ByteString.HasValue");
 
             if (from + count > _pointer->Length)
                 throw new ArgumentOutOfRangeException(nameof(from), "Cannot copy data after the end of the slice");
@@ -249,7 +249,7 @@ namespace Sparrow.Server
 
         public void CopyTo(byte* dest)
         {
-            Debug.Assert(HasValue);
+            Debug.Assert(HasValue, "ByteString.HasValue");
 
             EnsureIsNotBadPointer();
             Memory.Copy(dest, _pointer->Ptr, _pointer->Length);
@@ -257,7 +257,7 @@ namespace Sparrow.Server
 
         public void CopyTo(byte[] dest)
         {
-            Debug.Assert(HasValue);
+            Debug.Assert(HasValue, "ByteString.HasValue");
 
             EnsureIsNotBadPointer();
             fixed (byte* p = dest)
@@ -282,7 +282,7 @@ namespace Sparrow.Server
                 if (this.Key >> 16 != _pointer->Key >> 16)
                     throw new InvalidOperationException("The owner context for the ByteString and the unmanaged storage are different. Make sure you havent killed the allocator and kept a reference to the ByteString outside of its scope.");
 
-                Debug.Assert((this.Key & 0x0000000FFFFFFFF) != (_pointer->Key & 0x0000000FFFFFFFF));
+                Debug.Assert((this.Key & 0x0000000FFFFFFFF) != (_pointer->Key & 0x0000000FFFFFFFF), "(this.Key & 0x0000000FFFFFFFF) != (_pointer->Key & 0x0000000FFFFFFFF)");
                 throw new InvalidOperationException("The key for the ByteString and the unmanaged storage are different. This is a dangling pointer. Check your .Release() statements and aliases in the calling code.");                                    
             }
         }
@@ -294,7 +294,7 @@ namespace Sparrow.Server
 
         public void CopyTo(int from, byte[] dest, int offset, int count)
         {
-            Debug.Assert(HasValue);
+            Debug.Assert(HasValue, "ByteString.HasValue");
 
             if (from + count > _pointer->Length)
                 throw new ArgumentOutOfRangeException(nameof(from), "Cannot copy data after the end of the slice");
@@ -812,7 +812,7 @@ namespace Sparrow.Server
             _externalFastPoolCount = 0;
             _externalCurrentLeft = (int)(_externalCurrent.End - _externalCurrent.Start) / ByteStringContext.ExternalAlignedSize;
 
-            Debug.Assert(_wholeSegments.Count >= 2);
+            Debug.Assert(_wholeSegments.Count >= 2, "_wholeSegments.Count >= 2");
             // We need to make ensure that the _internalCurrent is linked to an unmanaged segment
             var index = _wholeSegments.Count - 1;
             if (_wholeSegments[index] == _externalCurrent)
@@ -989,7 +989,7 @@ namespace Sparrow.Server
                 allocationUnit += sizeof(long) - allocationUnit % sizeof(long);
 
             // All allocation units are 32 bits aligned. If not we will have a performance issue.
-            Debug.Assert(allocationUnit % sizeof(int) == 0);
+            Debug.Assert(allocationUnit % sizeof(int) == 0, "allocationUnit % sizeof(int) == 0");
 
             _currentlyAllocated += allocationUnit;
 
@@ -1129,7 +1129,7 @@ namespace Sparrow.Server
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private ByteString Create(void* ptr, int length, int size, ByteStringType type = ByteStringType.Immutable)
         {
-            Debug.Assert(length <= size - sizeof(ByteStringStorage));
+            Debug.Assert(length <= size - sizeof(ByteStringStorage), "length <= size - sizeof(ByteStringStorage)");
 
             var basePtr = (ByteStringStorage*)ptr;
             basePtr->Flags = type;
@@ -1211,7 +1211,7 @@ namespace Sparrow.Server
                 ThrowObjectDisposed();
 
 #if DEBUG
-            Debug.Assert(value.Generation == Generation);
+            Debug.Assert(value.Generation == Generation, "value.Generation == Generation");
 #endif
             Debug.Assert(value._pointer != null, "Pointer cannot be null. You have a defect in your code.");
             if (value._pointer == null) // this is a safe-guard on Release, it is better to not release the memory than fail

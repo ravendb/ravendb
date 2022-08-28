@@ -268,7 +268,6 @@ class query extends shardViewModelBase {
     termsUrl: KnockoutComputed<string>;
     visualizerUrl: KnockoutComputed<string>;
     rawJsonUrl = ko.observable<string>();
-    csvUrl = ko.observable<string>();
 
     containsAsterixQuery: KnockoutComputed<boolean>; // query contains: *.* ?
 
@@ -989,7 +988,6 @@ class query extends shardViewModelBase {
             
             try {
                 this.rawJsonUrl(appUrl.forDatabaseQuery(database) + queryCmd.getUrl("GET"));
-                this.csvUrl(queryCmd.getCsvUrl());
             } catch (error) {
                 // it may throw when unable to compute query parameters, etc.
                 messagePublisher.reportError("Unable to run the query", error.message, null, false);
@@ -1750,11 +1748,11 @@ class query extends shardViewModelBase {
     private exportCsvInternal(columns?: string[]): void {
         eventsCollector.default.reportEvent("query", "export-csv");
 
-        let args: { format: string, debug?: string, field?: string[] };
-        if (this.criteria().indexEntries()) {
-            args = { format: "csv", debug: "entries", field: columns };
-        } else {
-            args = { format: "csv", field: columns };
+        const args = {
+            format: "csv",
+            field: columns,
+            debug: this.criteria().indexEntries() ? "entries" : undefined,
+            includeLimit: this.criteria().ignoreIndexQueryLimit() ? "true" : undefined
         }
         
         let payload: { Query: string };

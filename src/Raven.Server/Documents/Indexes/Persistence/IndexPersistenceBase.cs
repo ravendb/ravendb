@@ -1,5 +1,6 @@
 ﻿using System;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
+using Raven.Server.Documents.Queries;
 using Raven.Server.Indexing;
 using Sparrow.Json;
 using Voron;
@@ -30,7 +31,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
 
         public abstract IndexWriteOperationBase OpenIndexWriter(Transaction writeTransaction, JsonOperationContext indexContext);
 
-        public abstract IndexReadOperationBase OpenIndexReader(Transaction readTransaction);
+        public abstract IndexReadOperationBase OpenIndexReader(Transaction readTransaction, IndexQueryServerSide query = null);
 
         public abstract bool ContainsField(string field);
         public abstract IndexFacetedReadOperation OpenFacetedIndexReader(Transaction readTransaction);
