@@ -60,10 +60,10 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Replication
                 return final;
             }
 
-            public RavenCommand<GetTombstonesPreviewResult> CreateCommandForShard(int shardNumber) => new GetTombstonesCommand(_token.Pages[shardNumber].Start, _token.PageSize);
+            public RavenCommand<GetTombstonesPreviewResult> CreateCommandForShard(int shardNumber) => new GetReplicationTombstonesCommand(_token.Pages[shardNumber].Start, _token.PageSize);
         }
 
-        internal class GetTombstonesCommand : RavenCommand<GetTombstonesPreviewResult>
+        internal class GetReplicationTombstonesCommand : RavenCommand<GetTombstonesPreviewResult>
         {
             private readonly long _start;
             private readonly int? _pageSize;
@@ -72,13 +72,13 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Replication
 
             public override bool IsReadRequest => true;
 
-            public GetTombstonesCommand(long start = 0, int pageSize = int.MaxValue)
+            public GetReplicationTombstonesCommand(long start = 0, int pageSize = int.MaxValue)
             {
                 _start = start;
                 _pageSize = pageSize;
             }
 
-            public GetTombstonesCommand(string continuationToken)
+            public GetReplicationTombstonesCommand(string continuationToken)
             {
                 _token = continuationToken;
             }
