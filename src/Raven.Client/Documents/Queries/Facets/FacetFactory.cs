@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Extensions;
 
 namespace Raven.Client.Documents.Queries.Facets
@@ -41,6 +42,7 @@ namespace Raven.Client.Documents.Queries.Facets
 
     internal class FacetBuilder<T> : IFacetBuilder<T>, IFacetOperations<T>, IRangeFacetOperations<T>
     {
+        private readonly DocumentConventions _conventions;
         private RangeFacet<T> _range;
         private Facet _default;
         private readonly HashSet<string> _rqlKeywords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -55,7 +57,12 @@ namespace Raven.Client.Documents.Queries.Facets
             "UPDATE"
         };
 
-        public IRangeFacetOperations<T> ByRanges(Expression<Func<T, bool>> path, params Expression<Func<T, bool>>[] paths)
+        public FacetBuilder(DocumentConventions conventions)
+        {
+            _conventions = conventions;
+        }
+
+        public IFacetOperations<T> ByRanges(Expression<Func<T, bool>> path, params Expression<Func<T, bool>>[] paths)
         {
             if (path == null)
                 throw new ArgumentNullException(nameof(path));
@@ -78,7 +85,7 @@ namespace Raven.Client.Documents.Queries.Facets
 
         public IFacetOperations<T> ByField(Expression<Func<T, object>> path)
         {
-            return ByField(path.ToPropertyPath('_'));
+            return ByField(path.ToPropertyPath(_conventions,'_'));
         }
 
         public IFacetOperations<T> ByField(string fieldName)
@@ -159,7 +166,7 @@ namespace Raven.Client.Documents.Queries.Facets
 
             aggregations.Add(new FacetAggregationField
             {
-                Name = path.ToPropertyPath(), 
+                Name = path.ToPropertyPath(_conventions), 
                 DisplayName = displayName
             });
 
@@ -173,7 +180,7 @@ namespace Raven.Client.Documents.Queries.Facets
 
             aggregations.Add(new FacetAggregationField
             {
-                Name = path.ToPropertyPath(),
+                Name = path.ToPropertyPath(_conventions),
                 DisplayName = displayName
             });
             return this;
@@ -186,7 +193,7 @@ namespace Raven.Client.Documents.Queries.Facets
 
             aggregations.Add(new FacetAggregationField
             {
-                Name = path.ToPropertyPath(),
+                Name = path.ToPropertyPath(_conventions),
                 DisplayName = displayName
             });
             return this;
@@ -199,7 +206,7 @@ namespace Raven.Client.Documents.Queries.Facets
 
             aggregations.Add(new FacetAggregationField
             {
-                Name = path.ToPropertyPath(),
+                Name = path.ToPropertyPath(_conventions),
                 DisplayName = displayName
             });
             return this;

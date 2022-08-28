@@ -151,7 +151,8 @@ namespace Raven.Client.Documents.Linq
 
             string path;
 
-            switch (memberExpression.Member.Name)
+            string memberName = _conventions.GetConvertedPropertyNameFor(memberExpression.Member);
+            switch (memberName)
             {
                 case "Value":
                     // we truncate the nullable .Value because in json all values are nullable
@@ -178,19 +179,19 @@ namespace Raven.Client.Documents.Linq
                 mi.Member.DeclaringType != null && 
                 mi.Member.DeclaringType.IsGenericType &&
                 mi.Member.DeclaringType.GetGenericTypeDefinition() == typeof(KeyValuePair<,>)
-                )
+               )
             {
-                path = mi.Expression + "." + memberExpression.Member.Name;
+                path = mi.Expression + "." + memberName;
             }
             else if (memberExpression.Expression is MethodCallExpression methodCallExpression &&
                      methodCallExpression.Method.Name == "get_Item")
             {
-                path = GetPath(memberExpression.Expression, isFilterActive).Path + "." + memberExpression.Member.Name;
+                path = GetPath(memberExpression.Expression, isFilterActive).Path + "." + memberName;
                 isNested = true;
             }
             else
             {
-                path = memberExpression.ToString();
+                path = memberExpression.Expression +"." + memberName;
             }
 
             AssertNoComputation(memberExpression);

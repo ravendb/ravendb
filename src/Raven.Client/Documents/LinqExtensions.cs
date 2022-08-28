@@ -40,7 +40,7 @@ namespace Raven.Client.Documents
         /// <returns></returns>
         public static IRavenQueryable<TResult> Include<TResult>(this IQueryable<TResult> source, Expression<Func<TResult, object>> path)
         {
-            return source.Include(path.ToPropertyPath());
+            return source.Include(path.ToPropertyPath(((IRavenQueryProvider)source.Provider).QueryGenerator.Conventions));
         }
 
         /// <summary>
@@ -56,7 +56,7 @@ namespace Raven.Client.Documents
             var queryInspector = (IRavenQueryInspector)source;
             var conventions = queryInspector.Session.Conventions;
 
-            return Include(source, IncludesUtil.GetPrefixedIncludePath<TInclude>(path.ToPropertyPath(), conventions));
+            return Include(source, IncludesUtil.GetPrefixedIncludePath<TInclude>(path.ToPropertyPath(((IRavenQueryProvider)source.Provider).QueryGenerator.Conventions), conventions));
         }
         
         /// <summary>
@@ -172,7 +172,7 @@ namespace Raven.Client.Documents
 
         public static IAggregationQuery<T> AggregateBy<T>(this IQueryable<T> source, Action<IFacetBuilder<T>> builder)
         {
-            var f = new FacetBuilder<T>();
+            var f = new FacetBuilder<T>(((IRavenQueryProvider)source.Provider).QueryGenerator.Conventions);
             builder.Invoke(f);
 
             return source.AggregateBy(f.Facet);
@@ -252,7 +252,7 @@ namespace Raven.Client.Documents
         /// </summary>
         public static ISuggestionQuery<T> SuggestUsing<T>(this IQueryable<T> source, Action<ISuggestionBuilder<T>> builder)
         {
-            var f = new SuggestionBuilder<T>();
+            var f = new SuggestionBuilder<T>(((IRavenQueryProvider)source.Provider).QueryGenerator.Conventions);
             builder?.Invoke(f);
 
             return source.SuggestUsing(f.Suggestion);
@@ -1114,7 +1114,7 @@ namespace Raven.Client.Documents
 
         public static IRavenQueryable<T> Spatial<T>(this IQueryable<T> source, Expression<Func<T, object>> path, Func<SpatialCriteriaFactory, SpatialCriteria> clause)
         {
-            return source.Spatial(path.ToPropertyPath(), clause);
+            return source.Spatial(path.ToPropertyPath(((IRavenQueryProvider)source.Provider).QueryGenerator.Conventions), clause);
         }
 
         public static IRavenQueryable<T> Spatial<T>(this IQueryable<T> source, string fieldName, Func<SpatialCriteriaFactory, SpatialCriteria> clause)
@@ -1130,7 +1130,7 @@ namespace Raven.Client.Documents
 
         public static IRavenQueryable<T> Spatial<T>(this IQueryable<T> source, Func<DynamicSpatialFieldFactory<T>, DynamicSpatialField> field, Func<SpatialCriteriaFactory, SpatialCriteria> clause)
         {
-            return source.Spatial(field(DynamicSpatialFieldFactory<T>.Instance), clause);
+            return source.Spatial(field(new DynamicSpatialFieldFactory<T>(((IRavenQueryProvider)source.Provider).QueryGenerator.Conventions)), clause);
         }
 
         public static IRavenQueryable<T> Spatial<T>(this IQueryable<T> source, DynamicSpatialField field, Func<SpatialCriteriaFactory, SpatialCriteria> clause)
@@ -1146,7 +1146,7 @@ namespace Raven.Client.Documents
 
         public static IOrderedQueryable<T> OrderByDistance<T>(this IQueryable<T> source, Func<DynamicSpatialFieldFactory<T>, DynamicSpatialField> field, double latitude, double longitude)
         {
-            return source.OrderByDistance(field(DynamicSpatialFieldFactory<T>.Instance), latitude, longitude);
+            return source.OrderByDistance(field(new DynamicSpatialFieldFactory<T>(((IRavenQueryProvider)source.Provider).QueryGenerator.Conventions)), latitude, longitude);
         }
 
         public static IOrderedQueryable<T> OrderByDistance<T>(this IQueryable<T> source, DynamicSpatialField field, double latitude, double longitude)
@@ -1167,7 +1167,7 @@ namespace Raven.Client.Documents
 
         public static IOrderedQueryable<T> OrderByDistance<T>(this IQueryable<T> source, Expression<Func<T, object>> path, double latitude, double longitude, double roundFactor)
         {
-            return source.OrderByDistance(path.ToPropertyPath(), latitude, longitude, roundFactor);
+            return source.OrderByDistance(path.ToPropertyPath(((IRavenQueryProvider)source.Provider).QueryGenerator.Conventions), latitude, longitude, roundFactor);
         }
         public static IOrderedQueryable<T> OrderByDistance<T>(this IQueryable<T> source, string fieldName, double latitude, double longitude)
         {
@@ -1192,7 +1192,7 @@ namespace Raven.Client.Documents
 
         public static IOrderedQueryable<T> OrderByDistance<T>(this IQueryable<T> source, Func<DynamicSpatialFieldFactory<T>, DynamicSpatialField> field, string shapeWkt)
         {
-            return source.OrderByDistance(field(DynamicSpatialFieldFactory<T>.Instance), shapeWkt);
+            return source.OrderByDistance(field(new DynamicSpatialFieldFactory<T>(((IRavenQueryProvider)source.Provider).QueryGenerator.Conventions)), shapeWkt);
         }
 
         public static IOrderedQueryable<T> OrderByDistance<T>(this IQueryable<T> source, DynamicSpatialField field, string shapeWkt)
@@ -1208,7 +1208,7 @@ namespace Raven.Client.Documents
 
         public static IOrderedQueryable<T> OrderByDistance<T>(this IQueryable<T> source, Expression<Func<T, object>> path, string shapeWkt)
         {
-            return source.OrderByDistance(path.ToPropertyPath(), shapeWkt);
+            return source.OrderByDistance(path.ToPropertyPath(((IRavenQueryProvider)source.Provider).QueryGenerator.Conventions), shapeWkt);
         }
 
         public static IOrderedQueryable<T> OrderByDistance<T>(this IQueryable<T> source, string fieldName, string shapeWkt)
@@ -1224,7 +1224,7 @@ namespace Raven.Client.Documents
 
         public static IOrderedQueryable<T> OrderByDistanceDescending<T>(this IQueryable<T> source, Func<DynamicSpatialFieldFactory<T>, DynamicSpatialField> field, double latitude, double longitude)
         {
-            return source.OrderByDistanceDescending(field(DynamicSpatialFieldFactory<T>.Instance), latitude, longitude);
+            return source.OrderByDistanceDescending(field(new DynamicSpatialFieldFactory<T>(((IRavenQueryProvider)source.Provider).QueryGenerator.Conventions)), latitude, longitude);
         }
 
         public static IOrderedQueryable<T> OrderByDistanceDescending<T>(this IQueryable<T> source, DynamicSpatialField field, double latitude, double longitude)
@@ -1247,7 +1247,7 @@ namespace Raven.Client.Documents
 
         public static IOrderedQueryable<T> OrderByDistanceDescending<T>(this IQueryable<T> source, Expression<Func<T, object>> path, double latitude, double longitude, double roundFactor)
         {
-            return source.OrderByDistanceDescending(path.ToPropertyPath(), latitude, longitude, roundFactor);
+            return source.OrderByDistanceDescending(path.ToPropertyPath(((IRavenQueryProvider)source.Provider).QueryGenerator.Conventions), latitude, longitude, roundFactor);
         }
 
         public static IOrderedQueryable<T> OrderByDistanceDescending<T>(this IQueryable<T> source, string fieldName, double latitude, double longitude)
@@ -1272,7 +1272,7 @@ namespace Raven.Client.Documents
 
         public static IOrderedQueryable<T> OrderByDistanceDescending<T>(this IQueryable<T> source, Func<DynamicSpatialFieldFactory<T>, DynamicSpatialField> field, string shapeWkt)
         {
-            return source.OrderByDistanceDescending(field(DynamicSpatialFieldFactory<T>.Instance), shapeWkt);
+            return source.OrderByDistanceDescending(field(new DynamicSpatialFieldFactory<T>(((IRavenQueryProvider)source.Provider).QueryGenerator.Conventions)), shapeWkt);
         }
 
         public static IOrderedQueryable<T> OrderByDistanceDescending<T>(this IQueryable<T> source, DynamicSpatialField field, string shapeWkt)
@@ -1292,7 +1292,7 @@ namespace Raven.Client.Documents
         }
         public static IOrderedQueryable<T> OrderByDistanceDescending<T>(this IQueryable<T> source, Expression<Func<T, object>> path, string shapeWkt, double roundFactor)
         {
-            return source.OrderByDistanceDescending(path.ToPropertyPath(), shapeWkt, roundFactor);
+            return source.OrderByDistanceDescending(path.ToPropertyPath(((IRavenQueryProvider)source.Provider).QueryGenerator.Conventions), shapeWkt, roundFactor);
         }
 
         public static IOrderedQueryable<T> OrderByDistanceDescending<T>(this IQueryable<T> source, string fieldName, string shapeWkt)
@@ -1317,7 +1317,7 @@ namespace Raven.Client.Documents
 
         public static IOrderedQueryable<T> OrderBy<T>(this IQueryable<T> source, Expression<Func<T, object>> path, string sorterName)
         {
-            return source.OrderBy(path.ToPropertyPath(), sorterName);
+            return source.OrderBy(path.ToPropertyPath(((IRavenQueryProvider)source.Provider).QueryGenerator.Conventions), sorterName);
         }
 
         public static IOrderedQueryable<T> OrderBy<T>(this IQueryable<T> source, string path, string sorterName)
@@ -1333,7 +1333,7 @@ namespace Raven.Client.Documents
 
         public static IOrderedQueryable<T> OrderBy<T>(this IQueryable<T> source, Expression<Func<T, object>> path, OrderingType ordering = OrderingType.String)
         {
-            return source.OrderBy(path.ToPropertyPath(), ordering);
+            return source.OrderBy(path.ToPropertyPath(((IRavenQueryProvider)source.Provider).QueryGenerator.Conventions), ordering);
         }
 
         public static IOrderedQueryable<T> OrderBy<T>(this IQueryable<T> source, string path, OrderingType ordering = OrderingType.String)
@@ -1350,7 +1350,7 @@ namespace Raven.Client.Documents
 
         public static IOrderedQueryable<T> OrderByDescending<T>(this IQueryable<T> source, Expression<Func<T, object>> path, string sorterName)
         {
-            return source.OrderByDescending(path.ToPropertyPath(), sorterName);
+            return source.OrderByDescending(path.ToPropertyPath(((IRavenQueryProvider)source.Provider).QueryGenerator.Conventions), sorterName);
         }
 
         public static IOrderedQueryable<T> OrderByDescending<T>(this IQueryable<T> source, string path, string sorterName)
@@ -1369,7 +1369,7 @@ namespace Raven.Client.Documents
 
         public static IOrderedQueryable<T> OrderByDescending<T>(this IQueryable<T> source, Expression<Func<T, object>> path, OrderingType ordering = OrderingType.String)
         {
-            return source.OrderByDescending(path.ToPropertyPath(), ordering);
+            return source.OrderByDescending(path.ToPropertyPath(((IRavenQueryProvider)source.Provider).QueryGenerator.Conventions), ordering);
         }
 
         public static IOrderedQueryable<T> OrderByDescending<T>(this IQueryable<T> source, string path, OrderingType ordering = OrderingType.String)
@@ -1385,7 +1385,7 @@ namespace Raven.Client.Documents
 
         public static IOrderedQueryable<T> ThenBy<T>(this IOrderedQueryable<T> source, Expression<Func<T, object>> path, string sorterName)
         {
-            return source.ThenBy(path.ToPropertyPath(), sorterName);
+            return source.ThenBy(path.ToPropertyPath(((IRavenQueryProvider)source.Provider).QueryGenerator.Conventions), sorterName);
         }
 
         public static IOrderedQueryable<T> ThenBy<T>(this IOrderedQueryable<T> source, string path, string sorterName)
@@ -1401,7 +1401,7 @@ namespace Raven.Client.Documents
 
         public static IOrderedQueryable<T> ThenBy<T>(this IOrderedQueryable<T> source, Expression<Func<T, object>> path, OrderingType ordering = OrderingType.String)
         {
-            return source.ThenBy(path.ToPropertyPath(), ordering);
+            return source.ThenBy(path.ToPropertyPath(((IRavenQueryProvider)source.Provider).QueryGenerator.Conventions), ordering);
         }
 
         public static IOrderedQueryable<T> ThenBy<T>(this IOrderedQueryable<T> source, string path, OrderingType ordering = OrderingType.String)
@@ -1417,7 +1417,7 @@ namespace Raven.Client.Documents
 
         public static IOrderedQueryable<T> ThenByDescending<T>(this IOrderedQueryable<T> source, Expression<Func<T, object>> path, string sorterName)
         {
-            return source.ThenByDescending(path.ToPropertyPath(), sorterName);
+            return source.ThenByDescending(path.ToPropertyPath(((IRavenQueryProvider)source.Provider).QueryGenerator.Conventions), sorterName);
         }
 
         public static IOrderedQueryable<T> ThenByDescending<T>(this IOrderedQueryable<T> source, string path, string sorterName)
@@ -1433,7 +1433,7 @@ namespace Raven.Client.Documents
 
         public static IOrderedQueryable<T> ThenByDescending<T>(this IOrderedQueryable<T> source, Expression<Func<T, object>> path, OrderingType ordering = OrderingType.String)
         {
-            return source.ThenByDescending(path.ToPropertyPath(), ordering);
+            return source.ThenByDescending(path.ToPropertyPath(((IRavenQueryProvider)source.Provider).QueryGenerator.Conventions), ordering);
         }
 
         public static IOrderedQueryable<T> ThenByDescending<T>(this IOrderedQueryable<T> source, string path, OrderingType ordering = OrderingType.String)

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
 
@@ -60,13 +61,13 @@ namespace Raven.Client.Documents.Session.Tokens
             return token;
         }
 
-        public static FacetToken Create<T>(RangeFacet<T> facet, Func<object, string> addQueryParameter)
+        public static FacetToken Create<T>(RangeFacet<T> facet, Func<object, string> addQueryParameter, DocumentConventions conventions)
         {
             var optionsParameterName = GetOptionsParameterName(facet, addQueryParameter);
 
             var ranges = new List<string>();
             foreach (var expression in facet.Ranges)
-                ranges.Add(RangeFacet<T>.Parse(null, expression, addQueryParameter));
+                ranges.Add(RangeFacet<T>.Parse(null, expression, addQueryParameter, conventions));
 
             var token = new FacetToken(null, QueryFieldUtil.EscapeIfNecessary(facet.DisplayFieldName), ranges, optionsParameterName);
 
@@ -75,10 +76,10 @@ namespace Raven.Client.Documents.Session.Tokens
             return token;
         }
 
-        public static FacetToken Create(FacetBase facet, Func<object, string> addQueryParameter)
+        public static FacetToken Create(FacetBase facet, Func<object, string> addQueryParameter, DocumentConventions conventions)
         {
             // this is just a dispatcher
-            return facet.ToFacetToken(addQueryParameter);
+            return facet.ToFacetToken(conventions, addQueryParameter);
         }
 
         public override void WriteTo(StringBuilder writer)
