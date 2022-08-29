@@ -1070,7 +1070,7 @@ namespace Raven.Server.Documents.Replication
                                     break;
 
                                 default:
-                                    _logger.Info($"Failed to dispose an unknown type '{instance?.GetType()}", e);
+                                    _logger.Info($"Failed to dispose an unknown type '{instance?.GetType().FullName}", e);
                                     break;
                             }
                         }

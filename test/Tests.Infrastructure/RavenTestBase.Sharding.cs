@@ -608,7 +608,9 @@ public partial class RavenTestBase
                     using (var ctx = JsonOperationContext.ShortTermSingleUse())
                     {
                         var sharding = store.Conventions.Serialization.DefaultConverter.ToBlittable(record.Sharding, ctx).ToString();
-                        throw new InvalidOperationException($"Failed to completed the migration for {id}{Environment.NewLine}{sharding}{Environment.NewLine}", e);
+                        throw new InvalidOperationException(
+                            $"Failed to completed the migration for {id}{Environment.NewLine}{sharding}{Environment.NewLine}{_parent.Cluster.CollectLogsFromNodes(servers ?? new List<RavenServer> { _parent.Server })}",
+                            e);
                     }
                 }
             }
