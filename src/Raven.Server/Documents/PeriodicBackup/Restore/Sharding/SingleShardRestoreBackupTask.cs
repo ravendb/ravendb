@@ -40,7 +40,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore.Sharding
         {
             SmugglerBase.EnsureProcessed(Result, skipped: false);
             Progress.Invoke(Result.Progress);
-            return Task.CompletedTask;
+            return SaveDatabaseRecordAsync(RestoreSettings.DatabaseRecord.DatabaseName, RestoreSettings.DatabaseRecord, databaseValues: null, Result, Progress);
         }
 
         protected override DatabaseRecord GetDatabaseRecord()
@@ -60,49 +60,16 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore.Sharding
             return DatabasesLandlord.CreateDatabaseConfiguration(ServerStore, DatabaseName, RestoreSettings.DatabaseRecord.Settings);
         }
 
-        protected override async Task ImportLastBackupFileAsync(DocumentDatabase database, DatabaseDestination destination, JsonOperationContext context,
+        protected override Task ImportLastBackupFileAsync(DocumentDatabase database, DatabaseDestination destination, JsonOperationContext context,
             DatabaseSmugglerOptionsServerSide options, DatabaseRecord databaseRecord, string lastFilePath)
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Normal, 
                 "RavenDB-19202 : consider using the most up-to-date database record");
+
             if (_shardNumber > 0)
                 options.OperateOnTypes &= ~DatabaseItemType.Subscriptions;
 
-            await ImportSingleBackupFileAsync(database, Progress, Result, lastFilePath, context, destination, options, isLastFile: true, 
-            onDatabaseRecordAction: smugglerDatabaseRecord =>
-            {
-                databaseRecord.ConflictSolverConfig = smugglerDatabaseRecord.ConflictSolverConfig;
-                foreach (var setting in smugglerDatabaseRecord.Settings)
-                {
-                    databaseRecord.Settings[setting.Key] = setting.Value;
-                }
-
-                databaseRecord.SqlEtls = smugglerDatabaseRecord.SqlEtls;
-                databaseRecord.RavenEtls = smugglerDatabaseRecord.RavenEtls;
-                databaseRecord.PeriodicBackups = smugglerDatabaseRecord.PeriodicBackups;
-                databaseRecord.ExternalReplications = smugglerDatabaseRecord.ExternalReplications;
-                databaseRecord.Sorters = smugglerDatabaseRecord.Sorters;
-                databaseRecord.Analyzers = smugglerDatabaseRecord.Analyzers;
-                databaseRecord.SinkPullReplications = smugglerDatabaseRecord.SinkPullReplications;
-                databaseRecord.HubPullReplications = smugglerDatabaseRecord.HubPullReplications;
-                databaseRecord.Revisions = smugglerDatabaseRecord.Revisions;
-                databaseRecord.Expiration = smugglerDatabaseRecord.Expiration;
-                databaseRecord.RavenConnectionStrings = smugglerDatabaseRecord.RavenConnectionStrings;
-                databaseRecord.SqlConnectionStrings = smugglerDatabaseRecord.SqlConnectionStrings;
-                databaseRecord.Client = smugglerDatabaseRecord.Client;
-                databaseRecord.TimeSeries = smugglerDatabaseRecord.TimeSeries;
-                databaseRecord.DocumentsCompression = smugglerDatabaseRecord.DocumentsCompression;
-                databaseRecord.LockMode = smugglerDatabaseRecord.LockMode;
-                databaseRecord.OlapConnectionStrings = smugglerDatabaseRecord.OlapConnectionStrings;
-                databaseRecord.OlapEtls = smugglerDatabaseRecord.OlapEtls;
-                databaseRecord.ElasticSearchEtls = smugglerDatabaseRecord.ElasticSearchEtls;
-                databaseRecord.ElasticSearchConnectionStrings = smugglerDatabaseRecord.ElasticSearchConnectionStrings;
-                databaseRecord.QueueEtls = smugglerDatabaseRecord.QueueEtls;
-                databaseRecord.QueueConnectionStrings = smugglerDatabaseRecord.QueueConnectionStrings;
-
-                // need to enable revisions before import
-                database.DocumentsStorage.RevisionsStorage.InitializeFromDatabaseRecord(smugglerDatabaseRecord);
-            });
+            return base.ImportLastBackupFileAsync(database, destination, context, options, databaseRecord, lastFilePath);
         }
     }
 }
