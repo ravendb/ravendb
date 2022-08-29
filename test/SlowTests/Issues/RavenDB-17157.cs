@@ -37,12 +37,25 @@ namespace SlowTests.Issues
                     session.Store(new User { Name = "Bar" });
                     session.SaveChanges();
 
-                    List<User> results = session.Query<User>().Where(x => x.Name.StartsWith("Foo")).ToList();
+                    QueryStatistics stats;
+                    var results = session.Query<User>()
+                        .Statistics(out stats)
+                        .Where(x => x.Name.StartsWith("Foo"))
+                        .ToList();
+
+                    Assert.Equal(1, results.Count);
+                    Assert.False(stats.IsStale);
 
                     session.Store(new User { Name = "FooBar" });
                     session.SaveChanges();
 
-                    results = session.Query<User>().Where(x => x.Name.StartsWith("Foo")).ToList();
+                    results = session.Query<User>()
+                        .Statistics(out stats)
+                        .Where(x => x.Name.StartsWith("Foo"))
+                        .ToList();
+
+                    Assert.Equal(2, results.Count);
+                    Assert.False(stats.IsStale);
                 }
             }
         }
@@ -51,32 +64,63 @@ namespace SlowTests.Issues
         public async Task OnSessionCreated_WaitForReplicationAfterSaveChanges_Test()
         {
             var db = "DatabaseNodes";
-            var (_, leader) = await CreateRaftCluster(3);
+            var (nodes, leader) = await CreateRaftCluster(3);
             await CreateDatabaseInCluster(db, 3, leader.WebUrl);
-            using (var store = new DocumentStore
+
+            using (var store1 = new DocumentStore
                    {
                        Database = db,
-                       Urls = new[] { leader.WebUrl }
-                   }.Initialize())
+                       Urls = new[] { nodes[0].WebUrl },
+                       Conventions = new Raven.Client.Documents.Conventions.DocumentConventions
+                       {
+                           DisableTopologyUpdates = true
+                       }
+            }.Initialize())
+            using (var store2 = new DocumentStore
             {
-
-                store.OnSessionCreated += (sender, sessionCreatedEventArgs) =>
+                Database = db,
+                Urls = new[] { nodes[1].WebUrl },
+                Conventions = new Raven.Client.Documents.Conventions.DocumentConventions
                 {
-                    sessionCreatedEventArgs.Session.WaitForReplicationAfterSaveChanges();
+                    DisableTopologyUpdates = true
+                }
+            }.Initialize())
+            using (var store3 = new DocumentStore
+            {
+                Database = db,
+                Urls = new[] { nodes[2].WebUrl },
+                Conventions = new Raven.Client.Documents.Conventions.DocumentConventions
+                {
+                    DisableTopologyUpdates = true
+                }
+            }.Initialize())
+
+            {
+                store1.OnSessionCreated += (sender, sessionCreatedEventArgs) =>
+                {
+                    sessionCreatedEventArgs.Session.WaitForReplicationAfterSaveChanges(replicas: 2);
                 };
-                
-                using (var session = store.OpenSession())
+
+                using (var session = store1.OpenSession())
                 {
-                    session.Store(new User { Name = "Foo" });
-                    session.Store(new User { Name = "Bar" });
+                    for (int i = 0; i < 10; i++)
+                    {
+                        session.Store(new User { Name = "Foo" }, i.ToString());
+                    }
+
                     session.SaveChanges();
+                }
 
-                    List<User> results = session.Query<User>().Where(x => x.Name.StartsWith("Foo")).ToList();
+                using (var session = store2.OpenSession())
+                {
+                    Assert.NotNull(session.Load<User>("4"));
+                    Assert.NotNull(session.Load<User>("1"));
+                }
 
-                    session.Store(new User { Name = "FooBar" });
-                    session.SaveChanges();
-
-                    results = session.Query<User>().Where(x => x.Name.StartsWith("Foo")).ToList();
+                using (var session = store3.OpenSession())
+                {
+                    Assert.NotNull(session.Load<User>("4"));
+                    Assert.NotNull(session.Load<User>("1"));
                 }
             }
         }
