@@ -11,6 +11,8 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Exceptions.Documents;
+using Raven.Client.Http;
+using Raven.Client.ServerWide;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Json;
@@ -711,12 +713,14 @@ namespace Raven.Server.Documents.Handlers
             var editTimeSeries = new EditTimeSeriesConfigurationCommand(configuration, name, raftRequestId);
             var result = await ServerStore.SendToLeaderAsync(editTimeSeries);
 
+            DatabaseTopology topology;
+            ClusterTopology clusterTopology;
             using (context.OpenReadTransaction())
             {
-                var topology = ServerStore.Cluster.ReadDatabaseTopology(context, name);
-                var clusterTopology = ServerStore.GetClusterTopology(context);
-                await WaitForExecutionOnRelevantNodes(context, name, clusterTopology, topology.Members, result.Index);
+                topology = ServerStore.Cluster.ReadDatabaseTopology(context, name);
+                clusterTopology = ServerStore.GetClusterTopology(context);
             }
+            await WaitForExecutionOnRelevantNodes(context, name, clusterTopology, topology.Members, result.Index);
 
             return result;
         }
