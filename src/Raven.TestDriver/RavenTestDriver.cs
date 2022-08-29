@@ -88,6 +88,8 @@ namespace Raven.TestDriver
 
             PreInitialize(store);
 
+            store.Conventions.DisableTopologyCache = true;
+
             store.Initialize();
 
             store.AfterDispose += (sender, args) =>
@@ -277,6 +279,8 @@ namespace Raven.TestDriver
             {
                 Urls = new[] { url.AbsoluteUri }
             };
+
+            store.Conventions.DisableTopologyCache = true;
 
             store.Initialize();
 
