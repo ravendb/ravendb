@@ -12,6 +12,7 @@ using Raven.Server.Documents.Sharding.Queries;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Operations;
 
@@ -47,6 +48,8 @@ public class ShardedQueryOperation : IShardedReadOperation<QueryResult, ShardedQ
         {
             Results = new List<BlittableJsonReaderObject>()
         };
+
+        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Arek, DevelopmentHelper.Severity.Normal, "Check if we could handle this in streaming manner so we won't need to materialize all blittables and do Clone() here");
 
         foreach (var cmdResult in results.Span)
         {
