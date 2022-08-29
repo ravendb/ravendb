@@ -1,5 +1,8 @@
 ﻿using System;
+using Azure;
 using Raven.Client.Documents.Replication.Messages;
+using Raven.Server.Utils;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Replication.Stats
@@ -77,6 +80,25 @@ namespace Raven.Server.Documents.Replication.Stats
                 [nameof(SourceMachineName)] = SourceMachineName,
                 [nameof(SourceTag)] = SourceTag,
                 [nameof(RemoteIp)] = RemoteIp
+            };
+        }
+
+        public static IncomingConnectionInfo FromJson(JsonOperationContext ctx, BlittableJsonReaderObject json)
+        {
+            if (json == null)
+                return null;
+
+            json.TryGet(nameof(SourceDatabaseId), out string sourceDatabaseId);
+            json.TryGet(nameof(SourceDatabaseName), out string sourceDatabaseName);
+            json.TryGet(nameof(SourceMachineName), out string sourceMachineName);
+            json.TryGet(nameof(SourceUrl), out string sourceUrl);
+
+            return new IncomingConnectionInfo
+            {
+                SourceDatabaseId = sourceDatabaseId,
+                SourceMachineName = sourceMachineName,
+                SourceDatabaseName = sourceDatabaseName,
+                SourceUrl = sourceUrl
             };
         }
     }

@@ -121,38 +121,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/replication/active-connections", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetReplicationActiveConnections()
         {
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                var incoming = new DynamicJsonArray();
-                foreach (var item in Database.ReplicationLoader.IncomingConnections)
-                {
-                    incoming.Add(new DynamicJsonValue
-                    {
-                        ["SourceDatabaseId"] = item.SourceDatabaseId,
-                        ["SourceDatabaseName"] = item.SourceDatabaseName,
-                        ["SourceMachineName"] = item.SourceMachineName,
-                        ["SourceUrl"] = item.SourceUrl
-                    });
-                }
-
-                var outgoing = new DynamicJsonArray();
-                foreach (var item in Database.ReplicationLoader.OutgoingConnections)
-                {
-                    outgoing.Add(new DynamicJsonValue
-                    {
-                        ["Url"] = item.Url,
-                        ["Database"] = item.Database,
-                        ["Disabled"] = item.Disabled
-                    });
-                }
-
-                context.Write(writer, new DynamicJsonValue
-                {
-                    ["IncomingConnections"] = incoming,
-                    ["OutgoingConnections"] = outgoing
-                });
-            }
+            using (var processor = new ReplicationHandlerProcessorForGetActiveConnections(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/replication/debug/outgoing-failures", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
