@@ -187,7 +187,7 @@ internal abstract class ShardedOngoingTasksHandlerProcessorForGetOngoingTasksInf
         if (replication is ExternalReplication externalReplication)
         {
             if (tag == ServerStore.NodeTag)
-                res = GetExternalReplicationResultAsync(externalReplication).Result;
+                res = GetExternalReplicationResult(externalReplication);
             else
                 res.Status = OngoingTaskConnectionStatus.NotOnThisNode;
         }
@@ -200,12 +200,12 @@ internal abstract class ShardedOngoingTasksHandlerProcessorForGetOngoingTasksInf
         return ValueTask.FromResult(res);
     }
 
-    private async ValueTask<(string Url, OngoingTaskConnectionStatus Status)> GetExternalReplicationResultAsync(ExternalReplication replication)
+    private (string Url, OngoingTaskConnectionStatus Status) GetExternalReplicationResult(ExternalReplication replication)
     {
         var shardDb = ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(RequestHandler.DatabaseName);
         foreach (var task in shardDb)
         {
-            var db = await task;
+            var db = task.Result;
             var res = db.ReplicationLoader.GetExternalReplicationDestination(replication.TaskId);
 
             if (res.Status == OngoingTaskConnectionStatus.Active)

@@ -1,10 +1,11 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client.Documents.Replication;
 using Raven.Server.Documents.Handlers.Processors.Replication;
-using Raven.Server.Documents.Replication.Incoming;
-using Raven.Server.Documents.Replication.Outgoing;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Utils;
+using Raven.Server.Web.Http;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Replication
 {
@@ -14,15 +15,14 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Replication
         {
         }
 
-        protected override IEnumerable<IAbstractIncomingReplicationHandler> GetIncomingHandlers(TransactionOperationContext context)
-        {
-            return RequestHandler.DatabaseContext.Replication.IncomingHandlers;
-        }
+        protected override bool SupportsCurrentNode => false;
 
-        protected override IEnumerable<IReportOutgoingReplicationPerformance> GetOutgoingReplicationReportsPerformance(TransactionOperationContext context)
+        protected override ValueTask HandleCurrentNodeAsync() => throw new NotSupportedException();
+
+        protected override Task HandleRemoteNodeAsync(ProxyCommand<ReplicationPerformance> command, OperationCancelToken token)
         {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "handle outgoing performance");
-            return null;
+            var shardNumber = GetShardNumber();
+            return RequestHandler.ShardExecutor.ExecuteSingleShardAsync(command, shardNumber, token.Token);
         }
     }
 }

@@ -1,7 +1,9 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Replication;
+using Raven.Client.Http;
 using Raven.Server.Documents.Replication.Incoming;
 using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.Utils;
@@ -10,7 +12,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.Processors.Replication
 {
-    internal abstract class AbstractReplicationHandlerProcessorForGetPerformance<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
+    internal abstract class AbstractReplicationHandlerProcessorForGetPerformance<TRequestHandler, TOperationContext> : AbstractHandlerProxyReadProcessor<ReplicationPerformance, TRequestHandler, TOperationContext>
         where TOperationContext : JsonOperationContext
         where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
@@ -19,18 +21,9 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
         {
         }
 
-        protected abstract IEnumerable<IAbstractIncomingReplicationHandler> GetIncomingHandlers(TOperationContext context);
-
-        protected abstract IEnumerable<IReportOutgoingReplicationPerformance> GetOutgoingReplicationReportsPerformance(TOperationContext context);
-
-        public override async ValueTask ExecuteAsync()
+        protected override RavenCommand<ReplicationPerformance> CreateCommandForNode(string nodeTag)
         {
-            using (ContextPool.AllocateOperationContext(out TOperationContext context))
-            {
-                var incomingHandlers = GetIncomingHandlers(context);
-                var outgoingReplicationReports = GetOutgoingReplicationReportsPerformance(context);
-                await WriteResultsAsync(context, incomingHandlers, outgoingReplicationReports);
-            }
+            return new GetReplicationPerformanceStatisticsOperation.GetReplicationPerformanceStatisticsCommand(nodeTag);
         }
 
         protected async ValueTask WriteResultsAsync(JsonOperationContext context, IEnumerable<IAbstractIncomingReplicationHandler> incomingHandlers,

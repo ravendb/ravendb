@@ -1108,14 +1108,16 @@ namespace RachisTests.DatabaseCluster
                     var server = Servers.Single(s => s.WebUrl == responsibale);
                     using (var processor = await Sharding.InstantiateShardedOutgoingTaskProcessor(srcDB, server))
                     {
-                        // TODO: change after fixing ShardedOngoingTasksHandlerProcessorForGetOngoingTasksInfo.GetOngoingTasksInternal().CollectExternalReplicationTasks()
                         Assert.True(WaitForValue(
-                            () => ((OngoingTaskReplication)processor.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskReplication)).TaskName !=
+                            () => ((OngoingTaskReplication)processor.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskReplication)).DestinationUrl !=
                                   null,
                             true));
 
+                        var watcherTaskUrl = ((OngoingTaskReplication)processor.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskReplication))
+                            .DestinationUrl;
+
                         // fail the node to to where the data is sent
-                        await DisposeServerAndWaitForFinishOfDisposalAsync(Servers.Single(s => s.WebUrl == dstLeader.WebUrl));
+                        await DisposeServerAndWaitForFinishOfDisposalAsync(Servers.Single(s => s.WebUrl == watcherTaskUrl));
                     }
 
                     using (var session = srcStore.OpenSession())
@@ -1192,14 +1194,16 @@ namespace RachisTests.DatabaseCluster
                     var server = Servers.Single(s => s.WebUrl == responsibale);
                     using (var processor = await Sharding.InstantiateShardedOutgoingTaskProcessor(srcDB, server))
                     {
-                        // TODO: change after fixing ShardedOngoingTasksHandlerProcessorForGetOngoingTasksInfo.GetOngoingTasksInternal().CollectExternalReplicationTasks()
                         Assert.True(WaitForValue(
-                            () => ((OngoingTaskReplication)processor.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskReplication)).TaskName !=
+                            () => ((OngoingTaskReplication)processor.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskReplication)).DestinationUrl !=
                                   null,
                             true));
 
+                        var watcherTaskUrl = ((OngoingTaskReplication)processor.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskReplication))
+                            .DestinationUrl;
+
                         // fail the node to to where the data is sent
-                        await DisposeServerAndWaitForFinishOfDisposalAsync(Servers.Single(s => s.WebUrl == dstLeader.WebUrl));
+                        await DisposeServerAndWaitForFinishOfDisposalAsync(Servers.Single(s => s.WebUrl == watcherTaskUrl));
                     }
 
                     using (var session = srcStore.OpenSession())
