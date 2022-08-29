@@ -10,6 +10,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Raven.Client.Util;
+using Raven.Server.Utils;
 using Sparrow.Platform;
 
 namespace Raven.Server.Commercial
@@ -391,7 +393,7 @@ namespace Raven.Server.Commercial
             // post-as-get (https://community.letsencrypt.org/t/acme-v2-scheduled-deprecation-of-unauthenticated-resource-gets/74380)
             var (pem, _) = await SendAsync<string>(HttpMethod.Post, response.Certificate, string.Empty, token);
 
-            var cert = new X509Certificate2(Encoding.UTF8.GetBytes(pem), (string)null, X509KeyStorageFlags.MachineKeySet);
+            var cert = new X509Certificate2(Encoding.UTF8.GetBytes(pem), (string)null, CertificateUtils.FlagsForOpen);
 
             byte[] blob = null;
             switch (key)

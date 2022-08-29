@@ -1026,7 +1026,7 @@ namespace Raven.Server.ServerWide
 
                 cmd.TryGet(nameof(InstallUpdatedServerCertificateCommand.ReplaceImmediately), out bool replaceImmediately);
 
-                var x509Certificate = new X509Certificate2(Convert.FromBase64String(cert), (string)null, X509KeyStorageFlags.MachineKeySet);
+                var x509Certificate = new X509Certificate2(Convert.FromBase64String(cert), (string)null, CertificateUtils.FlagsForOpen);
                 // we assume that this is valid, and we don't check dates, since that would introduce external factor to the state machine, which is not allowed
                 using (Slice.From(context.Allocator, CertificateReplacement.CertificateReplacementDoc, out var key))
                 {
