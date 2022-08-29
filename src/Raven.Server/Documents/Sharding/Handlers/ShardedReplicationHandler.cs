@@ -33,4 +33,11 @@ public class ShardedReplicationHandler : ShardedDatabaseRequestHandler
         using (var processor = new ShardedReplicationHandlerProcessorForGetPerformance(this))
             await processor.ExecuteAsync();
     }
+
+    [RavenShardedAction("/databases/*/replication/active-connections", "GET")]
+    public async Task GetReplicationActiveConnections()
+    {
+        using (var processor = new ShardedReplicationHandlerProcessorForGetActiveConnections(this))
+            await processor.ExecuteAsync();
+    }
 }
