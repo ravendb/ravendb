@@ -33,7 +33,7 @@ namespace SlowTests.Issues
         }
 
         [LicenseRequiredFact]
-        public async Task ServerMonitoringTest()
+        public void ServerMonitoringTest()
         {
             DoNotReuseServer();
         
@@ -43,19 +43,9 @@ namespace SlowTests.Issues
             
                 using (var commands = store.Commands())
                 {
-                    ServerMetrics metrics = null;
-
-                    // since RavenDB-19040 we're calculating the metrics as the background task
-                    // we need to wait for non default (empty) values
-
-                    await WaitForGreaterThanAsync(async () =>
-                    {
-                        var command = new ServerMonitoringCommand();
-                        await commands.RequestExecutor.ExecuteAsync(command, commands.Context);
-                        metrics = command.Result;
-
-                        return metrics.Cpu.ProcessUsage;
-                    }, double.Epsilon);
+                    var command = new ServerMonitoringCommand();
+                    commands.RequestExecutor.Execute(command, commands.Context);
+                    var metrics = command.Result;
                     
                     Assert.Equal(string.Join(";", Server.Configuration.Core.ServerUrls), string.Join(";", metrics.Config.ServerUrls));
                     Assert.Equal(ServerVersion.Version, metrics.ServerVersion);
