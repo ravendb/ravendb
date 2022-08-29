@@ -18,7 +18,7 @@ namespace Raven.Server.Documents
             Register(MetricCacher.Keys.Database.DiskSpaceInfo, TimeSpan.FromSeconds(30), CalculateDiskSpaceInfo);
         }
 
-        private object CalculateDiskSpaceInfo()
+        private DiskSpaceResult CalculateDiskSpaceInfo()
         {
             return DiskUtils.GetDiskSpaceInfo(_database.Configuration.Core.DataDirectory.FullPath);
         }
