@@ -140,9 +140,11 @@ namespace SlowTests.Sharding.Backup
 
                 }, timeout: TimeSpan.FromSeconds(60)))
                 {
-                    var dbRec = await store2.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
-                    Assert.Equal(DatabaseStateStatus.Normal, dbRec.DatabaseState);
-                    Assert.Equal(3, dbRec.Sharding.Shards.Length);
+                    var databaseRecord = await store2.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
+                    Assert.Equal(DatabaseStateStatus.Normal, databaseRecord.DatabaseState);
+                    Assert.Equal(3, databaseRecord.Sharding.Shards.Length);
+                    Assert.Equal(1, databaseRecord.PeriodicBackups.Count);
+                    Assert.NotNull(databaseRecord.Revisions);
 
                     await Sharding.Backup.CheckData(store2, RavenDatabaseMode.Sharded, expectedRevisionsCount : 16, database: databaseName);
                 }
@@ -191,13 +193,16 @@ namespace SlowTests.Sharding.Backup
                         Settings = s3Settings
                     }, timeout: TimeSpan.FromSeconds(60)))
                     {
-                        var dbRec = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
-                        Assert.Equal(3, dbRec.Sharding.Shards.Length);
+                        var databaseRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
+
+                        Assert.Equal(3, databaseRecord.Sharding.Shards.Length);
+                        Assert.Equal(1, databaseRecord.PeriodicBackups.Count);
+                        Assert.NotNull(databaseRecord.Revisions);
 
                         var shardNodes = new HashSet<string>();
-                        for (var index = 0; index < dbRec.Sharding.Shards.Length; index++)
+                        for (var index = 0; index < databaseRecord.Sharding.Shards.Length; index++)
                         {
-                            var shardTopology = dbRec.Sharding.Shards[index];
+                            var shardTopology = databaseRecord.Sharding.Shards[index];
                             Assert.Equal(1, shardTopology.Members.Count);
                             Assert.Equal(sharding.Shards[index].Members[0], shardTopology.Members[0]);
                             Assert.True(shardNodes.Add(shardTopology.Members[0]));
@@ -213,7 +218,7 @@ namespace SlowTests.Sharding.Backup
             }
         }
 
-        [AmazonS3Fact]
+        [AzureFactAttribute]
         public async Task CanBackupAndRestoreShardedDatabase_FromAzureBackup()
         {
             var azureSettings = GetAzureSettings();
@@ -734,14 +739,9 @@ namespace SlowTests.Sharding.Backup
             if (string.IsNullOrEmpty(s3Settings.RemoteFolderName) == false)
                 remoteFolderName = $"{s3Settings.RemoteFolderName}/{remoteFolderName}";
 
-
-            return new S3Settings
+            return new S3Settings(s3Settings)
             {
-                BucketName = s3Settings.BucketName,
-                RemoteFolderName = remoteFolderName,
-                AwsAccessKey = s3Settings.AwsAccessKey,
-                AwsSecretKey = s3Settings.AwsSecretKey,
-                AwsRegionName = s3Settings.AwsRegionName
+                RemoteFolderName = remoteFolderName
             };
         }
 
@@ -758,13 +758,9 @@ namespace SlowTests.Sharding.Backup
             if (string.IsNullOrEmpty(settings.RemoteFolderName) == false)
                 remoteFolderName = $"{settings.RemoteFolderName}/{remoteFolderName}";
 
-            return new AzureSettings
+            return new AzureSettings(settings)
             {
-                RemoteFolderName = remoteFolderName,
-                AccountName = settings.AccountName,
-                StorageContainer = settings.StorageContainer,
-                AccountKey = settings.AccountKey,
-                SasToken = settings.SasToken
+                RemoteFolderName = remoteFolderName
             };
         }
 
@@ -781,9 +777,10 @@ namespace SlowTests.Sharding.Backup
             if (string.IsNullOrEmpty(googleCloudSettings.RemoteFolderName) == false)
                 remoteFolderName = $"{googleCloudSettings.RemoteFolderName}/{remoteFolderName}";
 
-            googleCloudSettings.RemoteFolderName = remoteFolderName;
-
-            return googleCloudSettings;
+            return new GoogleCloudSettings(googleCloudSettings)
+            {
+                RemoteFolderName = remoteFolderName
+            };
         }
 
         private static async Task DeleteObjects(S3Settings s3Settings)

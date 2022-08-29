@@ -51,7 +51,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore.Sharding
 
             // we are currently restoring, shouldn't try to access it
             databaseRecord.DatabaseState = DatabaseStateStatus.RestoreInProgress;
-            var index = await SaveDatabaseRecordAsync(DatabaseName, databaseRecord, RestoreSettings.DatabaseValues, Result, Progress);
+            var index = await SaveDatabaseRecordAsync(DatabaseName, databaseRecord, databaseValues: null, Result, Progress);
 
             var dbSearchResult = ServerStore.DatabasesLandlord.TryGetOrCreateDatabase(DatabaseName);
             var shardedDbContext = dbSearchResult.DatabaseContext;

@@ -73,6 +73,12 @@ namespace Raven.Server.Smuggler.Documents
                     continue;
                 }
 
+                if (OnIndexAction != null)
+                {
+                    OnIndexAction(index);
+                    continue;
+                }
+
                 switch (index.Type)
                 {
                     case IndexType.AutoMap:
