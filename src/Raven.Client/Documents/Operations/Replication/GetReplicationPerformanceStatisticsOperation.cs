@@ -13,8 +13,16 @@ namespace Raven.Client.Documents.Operations.Replication
             return new GetReplicationPerformanceStatisticsCommand();
         }
 
-        private class GetReplicationPerformanceStatisticsCommand : RavenCommand<ReplicationPerformance>
+        internal class GetReplicationPerformanceStatisticsCommand : RavenCommand<ReplicationPerformance>
         {
+            public GetReplicationPerformanceStatisticsCommand()
+            {
+            }
+
+            public GetReplicationPerformanceStatisticsCommand(string nodeTag)
+            {
+                SelectedNodeTag = nodeTag;
+            }
             public override bool IsReadRequest => false;
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
