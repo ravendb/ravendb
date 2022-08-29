@@ -7,10 +7,12 @@ using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Commands;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
+using Raven.Client.ServerWide.Operations;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -125,9 +127,19 @@ namespace Raven.Server.Documents.Handlers.Debugging
                                     await DebugInfoPackageUtils.WriteExceptionAsZipEntryAsync(e, archive, $"Node - [{tag}]");
                                 }
                             }
+                            
+                        }
+
+                        // For debugging 
+                        ms.Position = 0;
+                        await using (FileStream file = new("C:\\Work\\Test\\file.zip", FileMode.Create, FileAccess.ReadWrite))
+                        {
+                            await ms.CopyToAsync(file);
+                            file.Flush();
                         }
 
                         ms.Position = 0;
+
                         await ms.CopyToAsync(ResponseBodyStream(), token.Token);
                     }
                 }
@@ -146,15 +158,18 @@ namespace Raven.Server.Documents.Handlers.Debugging
             //note : theoretically GetDebugInfoFromNodeAsync() can throw, error handling is done at the level of WriteDebugInfoPackageForNodeAsync() calls
             using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(url, certificate))
             {
-                var timeout = TimeSpan.FromMinutes(10);
-                if (ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan > timeout)
-                    timeout = ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan;
+                var timeout = TimeSpan.FromSeconds(3);
+                // if (ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan > timeout)
+                //     timeout = ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan;
 
-                requestExecutor.DefaultTimeout = timeout;
+                var command = new GetNextOperationIdCommand();
+                await requestExecutor.ExecuteAsync(command, context);
+                var operationId = command.Result;
 
                 await using (var responseStream = await GetDebugInfoFromNodeAsync(
                     context,
-                    requestExecutor))
+                    requestExecutor, 
+                    operationId, timeout))
                 {
                     var entry = archive.CreateEntry($"Node - [{tag}].zip");
                     entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
@@ -174,8 +189,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             var contentDisposition = $"attachment; filename={DateTime.UtcNow:yyyy-MM-dd H:mm:ss} - Node [{ServerStore.NodeTag}].zip";
             HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
             HttpContext.Response.Headers["Content-Type"] = "application/zip";
-
-
+            
             var token = CreateOperationToken();
 
             var operationId = GetLongQueryString("operationId", false) ?? ServerStore.Operations.GetNextOperationId();
@@ -195,65 +209,69 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     }
 
                     ms.Position = 0;
-                    await ms.CopyToAsync(ResponseBodyStream(), token.Token);
+                    await ms.CopyToAsync(ResponseBodyStream());
                 }
 
                 return null;
             }, operationId, token: token);
         }
 
-        private static async Task WriteLogFile(ZipArchive archive, CancellationToken token = default)
+        private static async Task WriteLogFile(ZipArchive archive, CancellationToken token)
         {
-            token.ThrowIfCancellationRequested();
-
             var prefix = $"{_serverWidePrefix}/{DateTime.UtcNow:yyyy-MM-dd H:mm:ss}.txt";
-
-            try
+            var entry = archive.CreateEntry(prefix, CompressionLevel.Optimal);
+            entry.ExternalAttributes = (int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR) << 16;
+            await using (var entryStream = entry.Open())
             {
-                var entry = archive.CreateEntry(prefix, CompressionLevel.Optimal);
-                entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
-
-                await using (var entryStream = entry.Open())
+                try
                 {
                     LoggingSource.Instance.AttachPipeSink(entryStream);
 
-                    await Task.Delay(15000, token);
+                    try
+                    {
+                        await Task.Delay(15000, token);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                    }
+                    
                     LoggingSource.Instance.DetachPipeSink();
-
-                    await entryStream.FlushAsync(token);
                 }
-            }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch (Exception e)
-            {
-                LoggingSource.Instance.DetachPipeSink();
-                await DebugInfoPackageUtils.WriteExceptionAsZipEntryAsync(e, archive, prefix);
+                catch (Exception e)
+                {
+                    LoggingSource.Instance.DetachPipeSink();
+                    await DebugInfoPackageUtils.WriteExceptionAsZipEntryAsync(e, archive, prefix);
+                }
+                finally
+                {
+                    await entryStream.FlushAsync();
+                }
             }
         }
 
-        private async Task<Stream> GetDebugInfoFromNodeAsync(
-            JsonOperationContext context,
-            RequestExecutor requestExecutor)
+        private async Task<Stream> GetDebugInfoFromNodeAsync(JsonOperationContext context,
+            RequestExecutor requestExecutor, long operationId, TimeSpan timeout)
         {
-            var rawStreamCommand = new GetRawStreamResultCommand($"/admin/debug/info-package");
+            var rawStreamCommand = new GetRawStreamResultCommand($"/admin/debug/info-package?operationId={operationId}");
+
+            var killWithDelayCommand = new GetKillOperationWithDelayCommand(operationId, timeout);
+            await requestExecutor.ExecuteAsync(killWithDelayCommand, context);
+
             await requestExecutor.ExecuteAsync(rawStreamCommand, context);
             rawStreamCommand.Result.Position = 0;
             return rawStreamCommand.Result;
         }
 
-        private async Task WriteForAllLocalDatabases(ZipArchive archive, JsonOperationContext jsonOperationContext, LocalEndpointClient localEndpointClient, CancellationToken token = default)
+        private async Task WriteForAllLocalDatabases(ZipArchive archive, JsonOperationContext jsonOperationContext, LocalEndpointClient localEndpointClient)
         {
-            token.ThrowIfCancellationRequested();
-
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
+
                 foreach (var databaseName in ServerStore.Cluster.GetDatabaseNames(context))
                 {
-                    token.ThrowIfCancellationRequested();
+                    if (token.IsCancellationRequested)
+                        return;
 
                     using (var rawRecord = ServerStore.Cluster.ReadRawDatabaseRecord(context, databaseName))
                     {
@@ -261,7 +279,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                             rawRecord.Topology.RelevantFor(ServerStore.NodeTag) == false)
                             continue;
 
-                        await WriteDatabaseRecord(archive, databaseName, jsonOperationContext, context, token);
+                        await WriteDatabaseRecord(archive, databaseName, jsonOperationContext, context);
 
                         if (rawRecord.IsDisabled ||
                             rawRecord.DatabaseState == DatabaseStateStatus.RestoreInProgress ||
@@ -271,6 +289,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                         await WriteDatabaseInfo(archive, jsonOperationContext, localEndpointClient, databaseName, token);
                     }
                 }
+
             }
         }
 
@@ -305,17 +324,18 @@ namespace Raven.Server.Documents.Handlers.Debugging
             CancellationToken token = default)
         {
             var debugInfoDict = new Dictionary<string, TimeSpan>();
-            token.ThrowIfCancellationRequested();
-
+            
             var routes = DebugInfoPackageUtils.GetAuthorizedRoutes(Server, HttpContext, databaseName).Where(x => x.TypeOfRoute == routeType);
 
             var id = Guid.NewGuid();
             if (_logger.IsOperationsEnabled)
                 _logger.Operations($"Creating Debug Package '{id}' for '{databaseName ?? "Server"}'.");
 
-
             foreach (var route in routes)
             {
+                if (token.IsCancellationRequested)
+                    return;
+
                 Exception ex = null;
                 var sw = Stopwatch.StartNew();
 
@@ -330,6 +350,10 @@ namespace Raven.Server.Documents.Handlers.Debugging
                         await InvokeAndWriteToArchive(archive, context, localEndpointClient, route, path, endpointParameters, mergedToken.Token);
                         debugInfoDict[route.Path] = sw.Elapsed;
                     }
+                }
+                catch (OperationCanceledException)
+                {
+                    // write which route was canceled + time
                 }
                 catch (Exception e)
                 {
@@ -358,7 +382,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 var entry = archive.CreateEntry(entryName);
                 entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
 
-                using (var entryStream = entry.Open())
+                await using (var entryStream = entry.Open())
                 {
                     if (response.ContentType == "text/plain")
                     {
@@ -370,27 +394,25 @@ namespace Raven.Server.Documents.Handlers.Debugging
                         {
                             var endpointOutput = await jsonOperationContext.ReadForMemoryAsync(response.Body, $"read/local endpoint/{route.Path}");
                             jsonOperationContext.Write(writer, endpointOutput);
-                            await writer.FlushAsync();
+                            await writer.FlushAsync(token);
                         }
                     }
                     await entryStream.FlushAsync(token);
                 }
             }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
             catch (Exception e)
             {
                 //precaution, ideally this exception should never be thrown
                 if (e is InvalidStartOfObjectException)
-                    e = new InvalidOperationException("Expected to find a blittable object as a result of debug endpoint, but found something else (see inner exception for details). This should be investigated as all RavenDB endpoints are supposed to return an object.", e);
+                    e = new InvalidOperationException(
+                        "Expected to find a blittable object as a result of debug endpoint, but found something else (see inner exception for details). This should be investigated as all RavenDB endpoints are supposed to return an object.",
+                        e);
 
                 await DebugInfoPackageUtils.WriteExceptionAsZipEntryAsync(e, archive, DebugInfoPackageUtils.GetOutputPathFromRouteInformation(route, path, null));
             }
         }
 
-        private async Task WriteDatabaseRecord(ZipArchive archive, string databaseName, JsonOperationContext jsonOperationContext, TransactionOperationContext transactionCtx, CancellationToken token = default)
+        private async Task WriteDatabaseRecord(ZipArchive archive, string databaseName, JsonOperationContext jsonOperationContext, TransactionOperationContext transactionCtx)
         {
             var entryName = DebugInfoPackageUtils.GetOutputPathFromRouteInformation("/database-record", databaseName, "json");
             try
@@ -403,7 +425,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 {
                     jsonOperationContext.Write(writer, GetDatabaseRecordForDebugPackage(transactionCtx, databaseName));
                     await writer.FlushAsync();
-                    await entryStream.FlushAsync(token);
+                    await entryStream.FlushAsync();
                 }
             }
             catch (Exception e)
