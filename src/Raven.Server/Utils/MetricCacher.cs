@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Threading;
-using System.Threading.Tasks;
 using Raven.Client.Util;
 
 namespace Raven.Server.Utils
@@ -55,11 +54,11 @@ namespace Raven.Server.Utils
             }
         }
 
-        private readonly ConcurrentDictionary<string, MetricValue> _metrics = new(StringComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentDictionary<string, MetricValueBase> _metrics = new ConcurrentDictionary<string, MetricValueBase>(StringComparer.OrdinalIgnoreCase);
 
-        public void Register(string key, TimeSpan refreshRate, Func<object> factory)
+        public void Register<T>(string key, TimeSpan refreshRate, Func<T> factory)
         {
-            if (_metrics.TryAdd(key, new MetricValue(refreshRate, factory)) == false)
+            if (_metrics.TryAdd(key, new MetricValue<T>(refreshRate, factory)) == false)
                 throw new InvalidOperationException($"Cannot cache '{key}' metric, because it already exists.");
         }
 
@@ -68,72 +67,86 @@ namespace Raven.Server.Utils
             if (_metrics.TryGetValue(key, out var value) == false)
                 throw new InvalidOperationException($"Metric '{key}' was not found.");
 
-            return (T)value.GetRefreshedValue();
-        }
+            if (value.ShouldRefresh(out var first) == false)
+                return (T)value.Value;
 
-        private class MetricValue
-        {
-            private readonly TimeSpan _refreshRate;
-            private readonly Func<object> _factory;
-            private Task<DateTime> _task;
-            private object _value;
-            private long _observedFailureTicks;
-
-            public MetricValue(TimeSpan refreshRate, Func<object> factory)
+            if (first)
             {
-                _refreshRate = refreshRate;
-                _factory = factory;
-                _value = factory();
-                _task = Task.FromResult(SystemTime.UtcNow + _refreshRate);
+                lock (value)
+                {
+                    if (value.ShouldRefresh(out first))
+                        value.Refresh();
+
+                    return (T)value.Value;
+                }
             }
 
-            public object GetRefreshedValue()
+            if (Monitor.TryEnter(value, 0) == false)
+                return (T)value.Value;
+
+            try
             {
-                var currentTask = _task;
-                if (currentTask.IsCompleted == false)
-                    return _value; // return current value, while it is being computed
+                if (value.ShouldRefresh(out first))
+                    value.Refresh();
 
-                if (currentTask.IsFaulted)
+                return (T)value.Value;
+            }
+            finally
+            {
+                Monitor.Exit(value);
+            }
+        }
+
+        private class MetricValue<T> : MetricValueBase
+        {
+            private readonly Func<T> _factory;
+
+            public MetricValue(TimeSpan refreshRate, Func<T> factory)
+                : base(refreshRate)
+            {
+                if (factory == null)
+                    throw new ArgumentNullException(nameof(factory));
+
+                _factory = factory;
+            }
+
+            protected override object RefreshInternal()
+            {
+                return _factory();
+            }
+        }
+
+        private abstract class MetricValueBase
+        {
+            private DateTime _lastRefresh;
+            private TimeSpan _refreshRate;
+
+            protected MetricValueBase(TimeSpan refreshRate)
+            {
+                _refreshRate = refreshRate;
+            }
+
+            public object Value { get; private set; }
+
+            protected abstract object RefreshInternal();
+
+            internal void Refresh()
+            {
+                try
                 {
-                    // if we failed, we'll retry
-                    var failureAt= new DateTime(_observedFailureTicks);
-                    if (SystemTime.UtcNow - failureAt > _refreshRate)
-                    {
-                        // but only at the same rate as we are expected too
-                        Interlocked.Exchange(ref _observedFailureTicks, SystemTime.UtcNow.Ticks);
-                        TryStartingRefreshTask();
-                    }
-                    // the error must be reported 
-                    throw new InvalidOperationException("Failed to get value", currentTask.Exception);
+                    Value = RefreshInternal();
                 }
-
-                var nextRefreshForTask = currentTask.Result;
-                if (SystemTime.UtcNow < nextRefreshForTask)
-                    return _value;// no need to refresh yet...
-
-                TryStartingRefreshTask();
-                
-                // we may have started the task (or another thread did), but we don't know if we got a new value or not
-                // we don't care, we are okay with getting the "old" value here, since it will update
-                // soon, and this is likely called many times over, so as long as we get it to some point, we are good
-                return _value;
-
-                void TryStartingRefreshTask()
+                finally
                 {
-                    var task = new Task<DateTime>(() =>
-                    {
-                        var result = _factory();
-                        var nextRefresh = SystemTime.UtcNow + _refreshRate;
-                        Interlocked.Exchange(ref _value, result);
-                        return nextRefresh;
-                    });
-                    // try to update the task
-                    if (Interlocked.CompareExchange(ref _task, task, currentTask) == currentTask)
-                    {
-                        // we won the right to start the task
-                        task.Start();
-                    }
+                    _lastRefresh = SystemTime.UtcNow;
                 }
+            }
+
+            internal bool ShouldRefresh(out bool first)
+            {
+                first = _lastRefresh == DateTime.MinValue;
+
+                return first || SystemTime.UtcNow - _lastRefresh >= _refreshRate;
             }
         }
     }
