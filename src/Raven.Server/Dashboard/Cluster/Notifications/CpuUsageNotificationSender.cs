@@ -9,6 +9,7 @@ using System.Threading;
 using Raven.Server.Commercial;
 using Raven.Server.NotificationCenter;
 using Raven.Server.Utils;
+using Raven.Server.Utils.Cpu;
 
 namespace Raven.Server.Dashboard.Cluster.Notifications
 {
@@ -50,7 +51,7 @@ namespace Raven.Server.Dashboard.Cluster.Notifications
 
         protected override AbstractClusterDashboardNotification CreateNotification()
         {
-            var cpuInfo = _server.MetricCacher.GetValue<(double MachineCpuUsage, double ProcessCpuUsage, double? MachineIoWait)>(
+            var cpuInfo = _server.MetricCacher.GetValue<CpuUsageStats>(
                 MetricCacher.Keys.Server.CpuUsage);
 
             TryFillNodeLicenseLimits();

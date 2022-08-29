@@ -5,6 +5,7 @@ using System.Text;
 using Corax.Queries;
 using Corax;
 using FastTests.Voron;
+using Sparrow;
 using Sparrow.Server;
 using Voron;
 using Xunit.Abstractions;
@@ -17,7 +18,7 @@ namespace FastTests.Corax
     public class CoraxQueries : StorageTest
     {
         private List<Entry> _entries;
-        private const int IndexId = 0, LongValue = 1;
+        private const int IndexId = 0, LongValue = 1, DoubleValue = 2, TextualValue = 3;
         private IndexFieldsMapping _knownFields;
         public CoraxQueries(ITestOutputHelper output) : base(output)
         {
@@ -30,10 +31,8 @@ namespace FastTests.Corax
             IndexEntries();
             using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
             using var searcher = new IndexSearcher(Env);
-            Slice.From(ctx, "Content", out var fieldName);
-            Slice.From(ctx, "3", out var three);
-            var match1 = searcher.GreaterThanQuery(fieldName, three);
-            var expectedList = GetExpectedResult("3");
+            var match1 = searcher.GreaterThanQuery<long, NullScoreFunction>("Content", 3, default);
+            var expectedList = GetExpectedResult(3);
             expectedList.Sort();
             var outputList = FetchFromCorax(ref match1);
             outputList.Sort();
@@ -83,9 +82,7 @@ namespace FastTests.Corax
             IndexEntries();
             using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
             using var searcher = new IndexSearcher(Env);
-            Slice.From(ctx, "0", out var id);
-            Slice.From(ctx, "Content", out var field);
-            var match1 = searcher.LessThanQuery(field, id);
+            var match1 = searcher.LessThanQuery<long, NullScoreFunction>("Content", 0, default);
             var ids = new long[16];
             int read = match1.Fill(ids);
             Assert.Equal(0, read);
@@ -102,7 +99,7 @@ namespace FastTests.Corax
             Slice.From(ctx, "995", out var high);
             Slice.From(ctx, "Content", out var field);
 
-            var match1 = searcher.BetweenQuery(field, low, high);
+            var match1 = searcher.BetweenQuery("Content", low.ToString(), high.ToString(), default(NullScoreFunction));
             var expectedList = _entries.Where(x => x.LongValue is >= 991 and <= 995).Select(x => x.Id).ToList();
             expectedList.Sort();
             var outputList = FetchFromCorax(ref match1);
@@ -123,7 +120,7 @@ namespace FastTests.Corax
             Slice.From(ctx, "Content-L", out var fieldLong);
 
 
-            var match1 = searcher.BetweenQuery(field, fieldLong, 95, 212);
+            var match1 = searcher.BetweenQuery("Content", 95L, 212L, default(NullScoreFunction));
             var expectedList = _entries.Where(x => x.LongValue is >= 95 and <= 212).Select(x => x.Id).ToList();
             expectedList.Sort();
             var outputList = FetchFromCorax(ref match1);
@@ -145,7 +142,7 @@ namespace FastTests.Corax
             Slice.From(ctx, "Content-D", out var fieldLong);
 
 
-            var match1 = searcher.BetweenQuery(field, fieldLong, 95.2, 213.2);
+            var match1 = searcher.BetweenQuery(field.ToString(), 95.2, 213.2, default(NullScoreFunction));
             var expectedList = _entries.Where(x => (double)x.LongValue is >= 95.2 and <= 213.2).Select(x => x.Id).ToList();
             expectedList.Sort();
             var outputList = FetchFromCorax(ref match1);
@@ -167,6 +164,26 @@ namespace FastTests.Corax
             var match0 = searcher.AllEntries();
             var match1 = searcher.UnaryQuery<AllEntriesMatch, long>(match0, LongValue, 3, UnaryMatchOperation.GreaterThan);
             var expectedList = _entries.Where(x => x.LongValue > 3).Select(x => x.Id).ToList();
+            expectedList.Sort();
+            var outputList = FetchFromCorax(ref match1);
+            outputList.Sort();
+            Assert.Equal(expectedList.Count, outputList.Count);
+            for (int i = 0; i < expectedList.Count; ++i) 
+                Assert.Equal(expectedList[i], outputList[i]);
+        }
+
+        [Fact]
+        public void MultiUnaryMatchWithNumerical()
+        {
+            PrepareData();
+            IndexEntries();
+            using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
+            using var searcher = new IndexSearcher(Env);
+      
+            var match0 = searcher.AllEntries();
+            var comparers = new MultiUnaryItem[] {new(LongValue, 3L, UnaryMatchOperation.GreaterThan), new(DoubleValue, 20.5, UnaryMatchOperation.LessThan)};
+            var match1 = searcher.CreateMultiUnaryMatch(match0, comparers);
+            var expectedList = _entries.Where(x => x.LongValue > 3 && x.DoubleValue < 20.5).Select(x => x.Id).ToList();
             expectedList.Sort();
             var outputList = FetchFromCorax(ref match1);
             outputList.Sort();
@@ -238,6 +255,8 @@ namespace FastTests.Corax
         {
             entryWriter.Write(IndexId, Encoding.UTF8.GetBytes(entry.Id));
             entryWriter.Write(LongValue, Encoding.UTF8.GetBytes(entry.LongValue.ToString()), entry.LongValue, entry.LongValue);
+            entryWriter.Write(DoubleValue, Encoding.UTF8.GetBytes(entry.DoubleValue.ToString()), (long)entry.DoubleValue, entry.DoubleValue);
+            entryWriter.Write(TextualValue, Encodings.Utf8.GetBytes(entry.TextualValue));
             return entryWriter.Finish(out output);
         }
 
@@ -245,21 +264,29 @@ namespace FastTests.Corax
         {
             Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice idSlice);
             Slice.From(ctx, "Content", ByteStringType.Immutable, out Slice longSlice);
+            Slice.From(ctx, "DoubleItem", ByteStringType.Immutable, out Slice doubleSlice);
+            Slice.From(ctx, "TextualItem", ByteStringType.Immutable, out Slice textualSlice);
 
             return new IndexFieldsMapping(ctx)
                         .AddBinding(IndexId, idSlice)
-                        .AddBinding(LongValue, longSlice);
+                        .AddBinding(LongValue, longSlice)
+                        .AddBinding(DoubleValue, doubleSlice)
+                        .AddBinding(TextualValue, textualSlice);
         }
-        
+
+        private const int seed = 1000;
         private void PrepareData(int size = 1000)
         {
+            var random = new Random(seed);
             _entries ??= new();
             for (int i = 0; i < size; ++i)
             {
                 _entries.Add(new Entry()
                 {
                     Id = $"entries/{i}",
-                    LongValue = i
+                    LongValue = i,
+                    DoubleValue = i * random.NextDouble(),
+                    TextualValue = i % 2 == 0 ? "abc" : "cde" 
                 });
             }
         }
@@ -285,11 +312,20 @@ namespace FastTests.Corax
             return _entries.Where(entry => entry.LongValue.ToString().CompareTo(input) == 1).Select(x => x.Id).ToList();
         }
         
+        private List<string> GetExpectedResult(long input)
+        {
+            return _entries.Where(entry => entry.LongValue > input).Select(x => x.Id).ToList();
+        }
+        
         private class Entry
         {
             public string Id { get; set; }
             
             public long LongValue { get; set; }
+            
+            public double DoubleValue { get; set; }
+            
+            public string TextualValue { get; set; }
         }
     }
 }

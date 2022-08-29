@@ -14,18 +14,32 @@ namespace Raven.Server.Utils.Cpu
 {
     public interface ICpuUsageCalculator : IDisposable
     {
-        (double MachineCpuUsage, double ProcessCpuUsage, double? MachineIoWait) Calculate();
+        CpuUsageStats Calculate();
         
         void Init();
     }
 
+    public class CpuUsageStats
+    {
+        public static readonly CpuUsageStats EmptyCpuUsage = new(0.0, 0.0, (double?)null);
+        public CpuUsageStats(double machineCpuUsage, double processCpuUsage, double? machineIoWait)
+        {
+            MachineCpuUsage = machineCpuUsage;
+            ProcessCpuUsage = processCpuUsage;
+            MachineIoWait = machineIoWait;
+        }
+
+        public double MachineCpuUsage;
+        public double ProcessCpuUsage;
+        public double? MachineIoWait;
+    }
+    
     internal abstract class CpuUsageCalculator<T> : ICpuUsageCalculator where T : ProcessInfo
     {
-        private readonly (double MachineCpuUsage, double ProcessCpuUsage, double? MachineIoWait) _emptyCpuUsage = (0.0, 0.0, (double?)null);
         protected readonly Logger Logger = LoggingSource.Instance.GetLogger<MachineResources>("Server");
         private readonly object _locker = new object();
 
-        protected (double MachineCpuUsage, double ProcessCpuUsage, double? MachineIoWait)? LastCpuUsage;
+        protected  CpuUsageStats LastCpuUsage;
 
         protected T PreviousInfo;
 
@@ -36,7 +50,7 @@ namespace Raven.Server.Utils.Cpu
 
         protected abstract (double MachineCpuUsage, double? MachineIoWait) CalculateMachineCpuUsage(T processInfo);
 
-        public (double MachineCpuUsage, double ProcessCpuUsage, double? MachineIoWait) Calculate()
+        public CpuUsageStats Calculate()
         {
             // this is a pretty quick method (sys call only), and shouldn't be
             // called heavily, so it is easier to make sure that this is thread
@@ -44,19 +58,20 @@ namespace Raven.Server.Utils.Cpu
             lock (_locker)
             {
                 if (PreviousInfo == null)
-                    return _emptyCpuUsage;
+                    return CpuUsageStats.EmptyCpuUsage;
 
                 var currentInfo = GetProcessInfo();
                 if (currentInfo == null)
-                    return _emptyCpuUsage;
+                    return CpuUsageStats.EmptyCpuUsage;
 
                 var machineCpuUsage = CalculateMachineCpuUsage(currentInfo);
                 var processCpuUsage = CalculateProcessCpuUsage(currentInfo, machineCpuUsage.MachineCpuUsage);
 
                 PreviousInfo = currentInfo;
 
-                LastCpuUsage = (machineCpuUsage.MachineCpuUsage, processCpuUsage, machineCpuUsage.MachineIoWait);
-                return (machineCpuUsage.MachineCpuUsage, processCpuUsage, machineCpuUsage.MachineIoWait);
+                CpuUsageStats usage = new (machineCpuUsage.MachineCpuUsage, processCpuUsage, machineCpuUsage.MachineIoWait);
+                LastCpuUsage = usage;
+                return usage;
             }
         }
 
@@ -159,7 +174,7 @@ namespace Raven.Server.Utils.Cpu
 
     internal class LinuxCpuUsageCalculator : CpuUsageCalculator<LinuxInfo>
     {
-        private static char[] _separators = { ' ', '\t' };
+        private static readonly char[] Separators = { ' ', '\t' };
 
         protected override (double MachineCpuUsage, double? MachineIoWait) CalculateMachineCpuUsage(LinuxInfo linuxInfo)
         {
@@ -182,8 +197,8 @@ namespace Raven.Server.Utils.Cpu
             else if (LastCpuUsage != null)
             {
                 // overflow
-                machineCpuUsage = LastCpuUsage.Value.MachineCpuUsage;
-                machineIoWait = LastCpuUsage.Value.MachineIoWait;
+                machineCpuUsage = LastCpuUsage.MachineCpuUsage;
+                machineIoWait = LastCpuUsage.MachineIoWait;
             }
 
             return (machineCpuUsage, machineIoWait);
@@ -197,7 +212,7 @@ namespace Raven.Server.Utils.Cpu
                 if (line.StartsWith("cpu", StringComparison.OrdinalIgnoreCase) == false)
                     continue;
 
-                var items = line.Split(_separators, StringSplitOptions.RemoveEmptyEntries);
+                var items = line.Split(Separators, StringSplitOptions.RemoveEmptyEntries);
                 if (items.Length == 0 || items.Length < 9)
                     continue;
 
@@ -277,10 +292,10 @@ namespace Raven.Server.Utils.Cpu
             );
         }
 
-        public (double MachineCpuUsage, double ProcessCpuUsage, double? MachineIoWait) Calculate()
+        public CpuUsageStats Calculate()
         {
             var data = _inspector.Data;
-            return (data.MachineCpuUsage, data.ProcessCpuUsage, null);
+            return new (data.MachineCpuUsage, data.ProcessCpuUsage, null);
         }
 
         public void Init()

@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Debugging
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, RequestHandler.ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
 

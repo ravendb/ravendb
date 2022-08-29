@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
@@ -102,30 +103,39 @@ public readonly struct CoraxBooleanItem : IQueryMatch
         {
             baseMatch = (Term, Term2) switch
             {
-                (long l, long l2) => _indexSearcher.Between(_indexSearcher.ExistsQuery(Name), FieldId, l, l2, BetweenLeft, BetweenRight),
-                (double d, double d2) => _indexSearcher.Between(_indexSearcher.ExistsQuery(Name), FieldId, d, d2, BetweenLeft, BetweenRight),
-                (string s, string s2) => _indexSearcher.Between(_indexSearcher.ExistsQuery(Name), FieldId, s, s2, BetweenLeft, BetweenRight),
-                (long l, double d) => _indexSearcher.Between(_indexSearcher.ExistsQuery(Name), FieldId, Convert.ToDouble(l), d, BetweenLeft, BetweenRight),
-                (double d, long l) => _indexSearcher.Between(_indexSearcher.ExistsQuery(Name), FieldId, d, Convert.ToDouble(l), BetweenLeft, BetweenRight),
-
-                    _ => throw new InvalidOperationException($"UnaryMatchOperation {Operation} is not supported for type {Term.GetType()}")
-            };
-        }
-
-        else
-        {
-            baseMatch = Term switch
-            {
-                long l => _indexSearcher.UnaryQuery(_indexSearcher.ExistsQuery(Name), FieldId, l, Operation),
-                double d => _indexSearcher.UnaryQuery(_indexSearcher.ExistsQuery(Name), FieldId, d, Operation),
-                string s => _indexSearcher.UnaryQuery(_indexSearcher.ExistsQuery(Name), FieldId, s, Operation),
+                (long l, long l2) => _indexSearcher.BetweenQuery(Name, l, l2, _scoreFunction, leftSide: BetweenLeft, rightSide: BetweenRight, fieldId: FieldId),
+                (double d, double d2) => _indexSearcher.BetweenQuery(Name, d, d2, _scoreFunction, leftSide: BetweenLeft, rightSide: BetweenRight, fieldId: FieldId),
+                (string s, string s2) => _indexSearcher.BetweenQuery(Name, s, s2, _scoreFunction, leftSide: BetweenLeft, rightSide: BetweenRight, fieldId: FieldId),
+                (long l, double d) => _indexSearcher.BetweenQuery(Name, Convert.ToDouble(l), d, _scoreFunction, leftSide: BetweenLeft, rightSide: BetweenRight, fieldId: FieldId),
+                (double d, long l) => _indexSearcher.BetweenQuery(Name, d, Convert.ToDouble(l), _scoreFunction, leftSide: BetweenLeft, rightSide: BetweenRight, fieldId: FieldId),
                 _ => throw new InvalidOperationException($"UnaryMatchOperation {Operation} is not supported for type {Term.GetType()}")
             };
         }
+        else
+        {
+            baseMatch = (Operation, Term) switch
+            {
+                (UnaryMatchOperation.LessThan, long term) => _indexSearcher.LessThanQuery(Name, term, _scoreFunction, false, FieldId),
+                (UnaryMatchOperation.LessThan, double term) => _indexSearcher.LessThanQuery(Name, term, _scoreFunction, false, FieldId),
+                (UnaryMatchOperation.LessThan, string term) => _indexSearcher.LessThanQuery(Name, term, _scoreFunction, false, FieldId),
 
-        return _scoreFunction is NullScoreFunction
-            ? baseMatch
-            : _indexSearcher.Boost(baseMatch, _scoreFunction);
+                (UnaryMatchOperation.LessThanOrEqual, long term) => _indexSearcher.LessThanOrEqualsQuery(Name, term, _scoreFunction, false, FieldId),
+                (UnaryMatchOperation.LessThanOrEqual, double term) => _indexSearcher.LessThanOrEqualsQuery(Name, term, _scoreFunction, false, FieldId),
+                (UnaryMatchOperation.LessThanOrEqual, string term) => _indexSearcher.LessThanOrEqualsQuery(Name, term, _scoreFunction, false, FieldId),
+
+                (UnaryMatchOperation.GreaterThan, long term) => _indexSearcher.GreaterThanQuery(Name, term, _scoreFunction, false, FieldId),
+                (UnaryMatchOperation.GreaterThan, double term) => _indexSearcher.GreaterThanQuery(Name, term, _scoreFunction, false, FieldId),
+                (UnaryMatchOperation.GreaterThan, string term) => _indexSearcher.GreaterThanQuery(Name, term, _scoreFunction, false, FieldId),
+
+
+                (UnaryMatchOperation.GreaterThanOrEqual, long term) => _indexSearcher.GreatThanOrEqualsQuery(Name, term, _scoreFunction, false, FieldId),
+                (UnaryMatchOperation.GreaterThanOrEqual, double term) => _indexSearcher.GreatThanOrEqualsQuery(Name, term, _scoreFunction, false, FieldId),
+                (UnaryMatchOperation.GreaterThanOrEqual, string term) => _indexSearcher.GreatThanOrEqualsQuery(Name, term, _scoreFunction, false, FieldId),
+                _ => throw new ArgumentException("This is only Greater*/Less* Query part")
+            };
+        }
+
+        return baseMatch;
     }
 }
 
@@ -141,6 +151,7 @@ public class CoraxBooleanQuery : IQueryMatch
 
     private readonly IndexSearcher _indexSearcher;
     public bool HasInnerBinary { get; private set; }
+
     public CoraxBooleanQuery(IndexSearcher indexSearcher, MemoizationMatchProvider<AllEntriesMatch> allEntries, CoraxBooleanItem left, CoraxBooleanItem right,
         IQueryScoreFunction scoreFunction)
     {
@@ -169,19 +180,24 @@ public class CoraxBooleanQuery : IQueryMatch
         return true;
     }
 
-    public IQueryMatch Materialize()
+    public unsafe IQueryMatch Materialize()
     {
         Debug.Assert(_queryStack.Count > 0);
 
-        _queryStack.Sort(((item, booleanItem) =>
+        _queryStack.Sort(((firstUnaryItem, secondUnaryItem) =>
         {
-            if (item.Operation == UnaryMatchOperation.Equals && booleanItem.Operation != UnaryMatchOperation.Equals)
+            if (firstUnaryItem.Operation == UnaryMatchOperation.Equals && secondUnaryItem.Operation != UnaryMatchOperation.Equals)
                 return -1;
-            if (item.Operation != UnaryMatchOperation.Equals && booleanItem.Operation == UnaryMatchOperation.Equals)
+            if (firstUnaryItem.Operation != UnaryMatchOperation.Equals && secondUnaryItem.Operation == UnaryMatchOperation.Equals)
                 return 1;
+            if (firstUnaryItem.Operation == UnaryMatchOperation.Between && secondUnaryItem.Operation != UnaryMatchOperation.Between)
+                return -1;
+            if (firstUnaryItem.Operation != UnaryMatchOperation.Between && secondUnaryItem.Operation == UnaryMatchOperation.Between)
+                return 1;
+            if (firstUnaryItem.Operation == UnaryMatchOperation.Between && secondUnaryItem.Operation == UnaryMatchOperation.Between)
+                return firstUnaryItem.Count.CompareTo(secondUnaryItem.Count);
 
-
-            return item.Count.CompareTo(booleanItem.Count);
+            return firstUnaryItem.Count.CompareTo(secondUnaryItem.Count);
         }));
 
         IQueryMatch baseMatch = null;
@@ -189,58 +205,151 @@ public class CoraxBooleanQuery : IQueryMatch
         int reduced = 0;
         foreach (var query in stack)
         {
+            //Out of TermMatches in our stack
             if (query.Operation is not (UnaryMatchOperation.Equals or UnaryMatchOperation.NotEquals))
                 break;
-            
-            IQueryMatch second = _indexSearcher.TermQuery(query.Name, query.TermAsString, query.FieldId);
-                if (query.Operation is UnaryMatchOperation.NotEquals)
-                {
-                    second = _indexSearcher.AndNot(_indexSearcher.ExistsQuery(query.Name), second);
-                    HasInnerBinary = true;
-                }
-                
 
+            //We're always do TermMatch (true and NOT (X))
+            IQueryMatch second = _indexSearcher.TermQuery(query.Name, query.TermAsString, query.FieldId);
+
+            if (query.Operation is UnaryMatchOperation.NotEquals)
+            {
+                //This could be more expensive than scanning RAW elements. This returns ~(field.NumberOfEntries - term.NumberOfEntries). Can we set threshold around ~10% to perfom SCAN maybe? 
+                if (baseMatch != null)
+                {
+                    // Instead of performing AND(TermMatch, AndNot(Exist, Term)) we can translate it into AndNot(baseMatch, Term). This way we avoid additional BinaryMatch
+                    baseMatch = _indexSearcher.AndNot(baseMatch, second);
+                    HasInnerBinary = true;
+                    goto Reduce;
+                }
+
+                //In the first place we've to do (true and NOT))
+                baseMatch = _indexSearcher.AndNot<MultiTermMatch, TermMatch>(_indexSearcher.ExistsQuery(query.Name), (TermMatch)second);
+                HasInnerBinary = true;
+                goto Reduce;
+            }
+
+
+            // TermMatch:
+            // This should be more complex. Should we always perform AND for TermMatch? For example there could be a case when performing RangeQueries in first place will limit our set very well so scanning would be better option.
+
+            
             if (baseMatch == null)
+            {
                 baseMatch = second;
+            }
             else
             {
                 baseMatch = _indexSearcher.And(baseMatch, second);
                 HasInnerBinary = true;
             }
-
+            Reduce:
             reduced++;
+
         }
 
         stack = stack.Slice(reduced);
+        if (stack.Length == 0)
+            goto Return;
 
-        foreach (var query in stack)
+        // Ascending term amount stack. It not always would work for us. Thats is telling us terms inside field are clustered in centrains points
+        var leftmostClause = stack[0];
+        if (leftmostClause.Operation is UnaryMatchOperation.Between)
         {
+            var nextQuery = (leftmostClause.Term, leftmostClause.Term2) switch
+            {
+                (long l, long l2) => _indexSearcher.BetweenQuery(leftmostClause.Name, l, l2,
+                    default(NullScoreFunction),
+                    leftSide: leftmostClause.BetweenLeft, rightSide: leftmostClause.BetweenRight, fieldId: leftmostClause.FieldId),
+                (double d, double d2) => _indexSearcher.BetweenQuery(leftmostClause.Name, d, d2,
+                    default(NullScoreFunction),
+                    leftSide: leftmostClause.BetweenLeft, rightSide: leftmostClause.BetweenRight, fieldId: leftmostClause.FieldId),
+                (string s, string s2) => _indexSearcher.BetweenQuery(leftmostClause.Name, s, s2,
+                    default(NullScoreFunction),
+                    leftSide: leftmostClause.BetweenLeft, rightSide: leftmostClause.BetweenRight, fieldId: leftmostClause.FieldId),
+                (long l, double d) => _indexSearcher.BetweenQuery(leftmostClause.Name, Convert.ToDouble(l), d,
+                    default(NullScoreFunction), leftSide: leftmostClause.BetweenLeft, rightSide: leftmostClause.BetweenRight, fieldId: leftmostClause.FieldId),
+                (double d, long l) => _indexSearcher.BetweenQuery(leftmostClause.Name, d, Convert.ToDouble(l),
+                    default(NullScoreFunction), leftSide: leftmostClause.BetweenLeft, rightSide: leftmostClause.BetweenRight, fieldId: leftmostClause.FieldId),
+                _ => throw new InvalidOperationException($"UnaryMatchOperation {leftmostClause.Operation} is not supported for type {leftmostClause.Term.GetType()}")
+            };
+
+            baseMatch = baseMatch is null
+                ? nextQuery
+                : _indexSearcher.And(baseMatch, nextQuery);
+        }
+        else
+        {
+            var nextQuery = (leftmostClause.Operation, leftmostClause.Term) switch
+            {
+                (UnaryMatchOperation.LessThan, long l) => _indexSearcher.LessThanQuery(leftmostClause.Name, l, default(NullScoreFunction),
+                    fieldId: leftmostClause.FieldId),
+                (UnaryMatchOperation.LessThan, double d) => _indexSearcher.LessThanQuery(leftmostClause.Name, d, default(NullScoreFunction),
+                    fieldId: leftmostClause.FieldId),
+                (UnaryMatchOperation.LessThan, string s) => _indexSearcher.LessThanQuery(leftmostClause.Name, s, default(NullScoreFunction),
+                    fieldId: leftmostClause.FieldId),
+
+                (UnaryMatchOperation.LessThanOrEqual, long l) => _indexSearcher.LessThanOrEqualsQuery(leftmostClause.Name, l, default(NullScoreFunction),
+                    fieldId: leftmostClause.FieldId),
+                (UnaryMatchOperation.LessThanOrEqual, double d) => _indexSearcher.LessThanOrEqualsQuery(leftmostClause.Name, d, default(NullScoreFunction),
+                    fieldId: leftmostClause.FieldId),
+                (UnaryMatchOperation.LessThanOrEqual, string s) => _indexSearcher.LessThanOrEqualsQuery(leftmostClause.Name, s, default(NullScoreFunction),
+                    fieldId: leftmostClause.FieldId),
+
+                (UnaryMatchOperation.GreaterThan, long l) => _indexSearcher.GreaterThanQuery(leftmostClause.Name, l, default(NullScoreFunction),
+                    fieldId: leftmostClause.FieldId),
+                (UnaryMatchOperation.GreaterThan, double d) => _indexSearcher.GreaterThanQuery(leftmostClause.Name, d, default(NullScoreFunction),
+                    fieldId: leftmostClause.FieldId),
+                (UnaryMatchOperation.GreaterThan, string s) => _indexSearcher.GreaterThanQuery(leftmostClause.Name, s, default(NullScoreFunction),
+                    fieldId: leftmostClause.FieldId),
+
+                (UnaryMatchOperation.GreaterThanOrEqual, long l) => _indexSearcher.GreatThanOrEqualsQuery(leftmostClause.Name, l, default(NullScoreFunction),
+                    fieldId: leftmostClause.FieldId),
+                (UnaryMatchOperation.GreaterThanOrEqual, double d) => _indexSearcher.GreatThanOrEqualsQuery(leftmostClause.Name, d, default(NullScoreFunction),
+                    fieldId: leftmostClause.FieldId),
+                (UnaryMatchOperation.GreaterThanOrEqual, string s) => _indexSearcher.GreatThanOrEqualsQuery(leftmostClause.Name, s, default(NullScoreFunction),
+                    fieldId: leftmostClause.FieldId),
+                _ => throw new InvalidOperationException($"UnaryMatchOperation {leftmostClause.Operation} is not supported for type {leftmostClause.Term.GetType()}")            };
+
+            baseMatch = baseMatch is null
+                ? nextQuery
+                : _indexSearcher.And(baseMatch, nextQuery);
+        }
+
+        MultiUnaryItem[] listOfMergedUnaries = new MultiUnaryItem[stack.Length - 1];
+        for (var index = 1; index < stack.Length; index++)
+        {
+            var query = stack[index];
             if (query.Operation is UnaryMatchOperation.Between)
             {
-                baseMatch = (query.Term, query.Term2) switch
+                listOfMergedUnaries[index - 1] = (query.Term, query.Term2) switch
                 {
-                    (long l, long l2) => _indexSearcher.Between(baseMatch ?? _indexSearcher.ExistsQuery(query.Name), query.FieldId, l, l2, query.BetweenLeft,
-                        query.BetweenRight),
-                    (double d, double d2) => _indexSearcher.Between(baseMatch ?? _indexSearcher.ExistsQuery(query.Name), query.FieldId, d, d2, query.BetweenLeft,
-                        query.BetweenRight),
-                    (string s, string s2) => _indexSearcher.Between(baseMatch ?? _indexSearcher.ExistsQuery(query.Name), query.FieldId, s, s2, query.BetweenLeft,
-                        query.BetweenRight),
-                    (long l, double d) => _indexSearcher.Between(baseMatch ?? _indexSearcher.ExistsQuery(query.Name),  query.FieldId, Convert.ToDouble(l), d, query.BetweenLeft, query.BetweenRight),
-                    (double d, long l) => _indexSearcher.Between(baseMatch ?? _indexSearcher.ExistsQuery(query.Name),  query.FieldId, d, Convert.ToDouble(l), query.BetweenLeft, query.BetweenRight),
+                    (long l, long l2) => new MultiUnaryItem(query.FieldId, l, l2, query.BetweenLeft, query.BetweenRight),
+                    (double d, double d2) => new MultiUnaryItem(query.FieldId, d, d2, query.BetweenLeft, query.BetweenRight),
+                    (string s, string s2) => new MultiUnaryItem(_indexSearcher, query.FieldId, s, s2, query.BetweenLeft, query.BetweenRight),
+                    (long l, double d) => new MultiUnaryItem(query.FieldId, Convert.ToDouble(l), d, query.BetweenLeft, query.BetweenRight),
+                    (double d, long l) => new MultiUnaryItem(query.FieldId, d, Convert.ToDouble(l), query.BetweenLeft, query.BetweenRight),
                     _ => throw new InvalidOperationException($"UnaryMatchOperation {query.Operation} is not supported for type {query.Term.GetType()}")
                 };
             }
             else
             {
-                baseMatch = query.Term switch
+                listOfMergedUnaries[index - 1] = query.Term switch
                 {
-                    long longTerm => _indexSearcher.UnaryQuery(baseMatch ?? _indexSearcher.ExistsQuery(query.Name), query.FieldId, longTerm, query.Operation, -1),
-                    double doubleTerm => _indexSearcher.UnaryQuery(baseMatch ?? _indexSearcher.ExistsQuery(query.Name), query.FieldId, doubleTerm, query.Operation, -1),
-                    _ => _indexSearcher.UnaryQuery(baseMatch ?? _indexSearcher.ExistsQuery(query.Name), query.FieldId, query.Term as string, query.Operation, -1),
+                    long longTerm => new MultiUnaryItem(query.FieldId, longTerm, query.Operation),
+                    double doubleTerm => new MultiUnaryItem(query.FieldId, doubleTerm, query.Operation),
+                    _ => new MultiUnaryItem(_indexSearcher, query.FieldId, query.Term as string, query.Operation),
                 };
             }
         }
 
+
+        if (listOfMergedUnaries.Length > 0)
+        {
+            baseMatch = _indexSearcher.CreateMultiUnaryMatch(baseMatch ?? _indexSearcher.ExistsQuery(stack[1].Name), listOfMergedUnaries);
+        }
+
+        Return:
         return _scoreFunction is NullScoreFunction
             ? baseMatch
             : _indexSearcher.Boost(baseMatch, _scoreFunction);
@@ -258,4 +367,53 @@ public class CoraxBooleanQuery : IQueryMatch
     public void Score(Span<long> matches, Span<float> scores) => throw new InvalidOperationException(QueryMatchUsageException);
 
     public QueryInspectionNode Inspect() => throw new InvalidOperationException(QueryMatchUsageException);
+}
+
+public class CostCounter
+{
+    private CoraxBooleanItem[] _list;
+
+    /// <summary>
+    /// Assumption: this is bigger than 0;
+    /// </summary>
+    private readonly long _numberOfEntries;
+
+    private double[] _ratio;
+
+    public CostCounter(IndexSearcher searcher, CoraxBooleanItem[] list)
+    {
+        _list = list;
+        _numberOfEntries = searcher.NumberOfEntries;
+        _ratio = ArrayPool<double>.Shared.Rent(list.Length);
+    }
+
+    // Main goal is to find smallest beginning set to perform operations on it.
+    // This class is not used for know.
+
+    public void Optimize()
+    {
+        // At very beginning lets find hit ratio of our term
+        for (int index = 0; index < _list.Length; index++)
+        {
+            CoraxBooleanItem item = _list[index];
+            ref var ratio = ref _ratio[index];
+
+            //Closer to 1 (or over) means we should avoid it. 
+            if (item.Operation == UnaryMatchOperation.Equals)
+                ratio = (double)item.Count / _numberOfEntries;
+            else if (item.Operation == UnaryMatchOperation.NotEquals)
+                ratio = (double)(_numberOfEntries - item.Count) / _numberOfEntries;
+            else
+            {
+                //This is ideal scenario IF they are ranged (not (-inf, X) or (X, inf)
+                //Values over 1 means duplications
+                var count = item.Materialize().Count;
+            }
+
+            //This is interesting part because we don't know how many items do we hit. Maybe should we go trough tree and calculate the cost first? 
+        }
+    }
+
+
+    public ReadOnlySpan<CoraxBooleanItem> GetStack() => _list.AsSpan();
 }

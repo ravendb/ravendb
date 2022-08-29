@@ -73,27 +73,23 @@ namespace SlowTests.Authentication
                 email = command.Result.Email;
             }
 
-            var tcpListener = new TcpListener(IPAddress.Loopback, 0);
-            tcpListener.Start();
-            var port = ((IPEndPoint)tcpListener.LocalEndpoint).Port;
-            tcpListener.Stop();
-
             var setupInfo = new SetupInfo
             {
                 Domain = domain,
                 RootDomain = rootDomain,
-                ModifyLocalServer = false, // N/A here
+                ZipOnly = false, // N/A here
                 RegisterClientCert = false, // N/A here
                 Password = null,
                 Certificate = null,
                 LocalNodeTag = "A",
                 License = license,
                 Email = email,
-                NodeSetupInfos = new Dictionary<string, SetupInfo.NodeInfo>()
+                NodeSetupInfos = new Dictionary<string, NodeInfo>()
                 {
-                    ["A"] = new SetupInfo.NodeInfo
+                    ["A"] = new NodeInfo
                     {
-                        Port = port,
+                        Port = GetAvailablePort(),
+                        TcpPort = GetAvailablePort(),
                         Addresses = new List<string>
                         {
                             "127.0.0.1"

@@ -265,7 +265,8 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <summary>
-        /// Gets the metadata for the specified entity.
+        /// Gets the metadata for the specified instance.
+        /// Throws an exception if the instance is not tracked by the session.
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="instance">The instance.</param>
@@ -339,9 +340,8 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <summary>
-        /// Gets the Change Vector for the specified entity.
-        /// If the entity is transient, it will load the change vector from the store
-        /// and associate the current state of the entity with the change vector from the server.
+        /// Gets the Change Vector for the specified instance.
+        /// Throws an exception if the instance is not tracked by the session.
         /// </summary>
         /// <param name="instance">The instance.</param>
         /// <returns></returns>
@@ -688,6 +688,9 @@ more responsive application.
 
             if (DocumentsByEntity.TryGetValue(entity, out var value))
             {
+                if (id != null && value.Id.Equals(id, StringComparison.OrdinalIgnoreCase) == false)
+                    throw new InvalidOperationException($"Cannot store the same entity (id: {value.Id}) with a different id ({id})"); 
+
                 value.ChangeVector = changeVector ?? value.ChangeVector;
                 value.ConcurrencyCheckMode = forceConcurrencyCheck;
                 return;

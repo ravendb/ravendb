@@ -3,95 +3,74 @@
     <h2 class="margin-bottom margin-top">
         <strong class="margin-right">1.</strong> Welcome
     </h2>
-    <p>
-        The wizard will assist you with setting up your RavenDB server.<br />
-        Let's start with choosing your desired level of security. Select the security option that best addresses your needs.
+    <p class="margin-top-lg">
+        This Setup Wizard will assist you with setting up your RavenDB server.<br />
+        First, select whether to set up a new cluster from scratch or continue the setup using an existing Setup Package.
     </p>
 </div>
 <div class="row flex-row welcome">
-    <div class="col-sm-8 flex-vertical">
+    <div class="col-sm-6 flex-vertical">
         <div class="panel flex-vertical flex-grow margin-none">
             <div class="padding padding-lg flex-grow">
-                <h2 class="text-center margin-bottom margin-lg text-success">SECURE</h2>
-                <div class="row">
-                    <div class="col-sm-6 has-disable-reason" data-bind="attr: { 'data-original-title': disableLetEncrypt() ? 'Not available on Mac OS' : '' }">
-                        <button data-bind="click: chooseGenerate, enable: !disableLetEncrypt()" class="btn btn-icon btn-default">
-                            <i class="icon-lets-encrypt icon-xl"></i>
-                            <p class="lead">Generate <br />Let's Encrypt Certificate</p>
-                        </button>
-                        <div class="padding">
-                            <ul class="list">
-                                <li><i class="icon-plus"></i><span>Secured communication via SSL/TLS 1.2</span></li>
-                                <li><i class="icon-plus"></i><span>Authentication via X509 client certificates</span></li>
-                                <li><i class="icon-plus"></i><span>Automatic certificate generation and renewal</span></li>
-                                <li><i class="icon-plus"></i><span>Hassle free and automatic</span></li>
-                                <li><i class="icon-minus"></i><span>Requires access to the public Internet</span></li>
+                <h2 class="text-center margin-bottom-lg text-success">New Cluster</h2>
+                <button class="btn btn-icon btn-default" title="Set up a new Cluster"
+                        data-bind="click: setupNewClusterFlow, css: { 'btn-selected-success' : model.mode() !== 'Continue' }">
+                    <i class="icon-server icon-xl"></i>
+                    <p class="lead">New Cluster</p>
+                </button>
+                <div class="padding">
+                    <strong>When to use</strong>:
+                    <ul class="list">
+                        <li><i class="icon-plus"></i><span>Setting up a new single-node cluster</span></li>
+                        <li><i class="icon-plus"></i><span>Setting up a new Cluster:</span></li>
+                        <li>
+                            <ul>
+                                <li>This Setup Wizard will configure the cluster and set up the first node.</li>
+                                <li>After that, run the Setup Wizard again per node and select option: 'Use Setup Package'.</li>
                             </ul>
-                            <div class="small">
-                                Secure and easy to setup. Uses an automatically generated server certificate via Let's Encrypt. 
-                                Reduce administration overhead with easy deployment both inside your organization and on publicly facing databases by handling all the certificate generation for you.
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-sm-6">
-                        <button data-bind="click: chooseSecured" class="btn btn-icon btn-default">
-                            <i class="icon-certificate icon-xl"></i>
-                            <p class="lead">Provide Your Own Certificate</p>
-                        </button>
-                        <div class="padding">
-                            <ul class="list">
-                                <li><i class="icon-plus"></i><span>Secured communication via SSL/TLS 1.2</span></li>
-                                <li><i class="icon-plus"></i><span>Authentication via X509 client certificates</span></li>
-                                <li><i class="icon-plus"></i><span>Does not require access to the public Internet</span></li>
-                                <li><i class="icon-minus"></i><span>Manual certificate generation and renewal</span></li>
-                            </ul>
-                            <div class="small">
-                                Best to use with corporate configurations with existing PKI infrastructure or for those choosing to control
-                                their certificate's creation on their own. Can be used in secured setups without external access required.
-                                Administrator takes care of the server certificates generation and renewal.
-                            </div>
-                        </div>
-                    </div>
+                        </li>
+                        <li>
+                            <i class="icon-plus"></i>
+                            <span>Optionally, create a Setup Package for an external environment<br />i.e. cloud instance, containers, or similar.</span>
+                        </li>
+                    </ul>
                 </div>
             </div>
         </div>
-        <div class="flex-horizontal bg-info padding">
-            <div class="margin-right"><strong>To build a cluster</strong>, select one of the above options and complete a full wizard flow for the first node.<br>
-                When this wizard is opened for the other nodes,<br>
-                click on 'Continue cluster setup' to join them to the cluster. </div>
-            <button class="btn btn-primary" data-bind="click: chooseContinue"><i class="icon-arrow-right"></i><span>Continue cluster setup for new node</span></button>
-        </div>
     </div>
-    <div class="col-sm-4 flex-vertical">
+    <div class="col-sm-6 flex-vertical">
         <div class="panel flex-vertical flex-grow margin-none">
             <div class="padding padding-lg flex-grow">
-                <h2 class="text-center margin-bottom margin-lg text-warning">UNSECURE</h2>
-                <button data-bind="click: chooseUnsecured" class="btn btn-icon btn-default">
-                    <i class="icon-unsecure icon-xl"></i>
-                    <p class="lead">Unsecured</p>
+                <h2 class="text-center margin-bottom margin-lg text-info">Use Setup Package</h2>
+                <button class="btn btn-icon btn-default" title="Setup using a Setup Package"
+                        data-bind="click: useSetupPackageFlow, css: { 'btn-selected-info' : model.mode() === 'Continue' }">
+                    <i class="icon-cluster icon-xl"></i>
+                    <p class="lead">Use Setup Package</p>
                 </button>
                 <div class="padding">
+                    <strong>When to use</strong>:
                     <ul class="list">
-                        <li><i class="icon-plus"></i><span>Ready to use in no time</span></li>
-                        <li><i class="icon-minus"></i><span>Unsecured, running on http</span></li>
-                        <li><i class="icon-minus"></i><span>No authentication</span></li>
-                        <li><i class="icon-minus"></i><span>Cannot host encrypted databases</span></li>
+                        <li><i class="icon-plus text-info"></i><span>Only after you have obtained a Setup Package</span></li>
+                        <li><i class="icon-plus text-info"></i><span>Setting up a new cluster</span></li>
+                        <li><i class="icon-plus text-info"></i><span>Setting up another node in an existing cluster</span></li>
                     </ul>
-                    <div class="small">
-                        Useful for local development and environments without <i>any</i> requirements for security.
-                        <i>Not</i> suitable for publicly facing servers and storing production data.
-                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
-<div class="bg-info padding flex-horizontal margin-top">
+<div class="navigation padding padding-lg flex-horizontal">
+    <div class="flex-separator"></div>
+    <button class="btn btn-primary btn-lg" data-bind="click: goToNextView">
+        <span>Next</span> <i class="icon-arrow-right"></i>
+    </button>
+</div>
+<div class="bg-info padding flex-horizontal">
     <div>
         <i class="icon-info icon-lg"></i>
     </div>
     <div>
-        <strong>To disable this guide</strong> and setup the server manually:
+        <strong>To disable this wizard</strong> and setup the server manually:
         <ul>
             <li>Open the settings.json file located in your RavenDB installation directory</li>
             <li>Change the setup mode to None, e.g. "Setup.Mode: "None"</li>

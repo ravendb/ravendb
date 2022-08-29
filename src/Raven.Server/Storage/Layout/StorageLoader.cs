@@ -95,7 +95,7 @@ namespace Raven.Server.Storage.Layout
 
                         }
 
-                        throw new InvalidJournalException($"{message}{Environment.NewLine}Error details: {e.Message}");
+                        throw new InvalidJournalException($"{message}{Environment.NewLine}Error details: {e.Message}", e);
                     }
                 }
 

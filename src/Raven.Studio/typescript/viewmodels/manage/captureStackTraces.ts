@@ -484,7 +484,7 @@ class captureStackTraces extends viewModelBase {
                 .done(stacks => {
                     stacks.forEach(stack => {
                         if (stack.Stacks) {
-                            this.reverseStacks(stack.Stacks);    
+                            stack.Stacks = captureStackTraces.reverseStacks(stack.Stacks);
                         }
                         
                         const serverUrl = tagMapping[stack.NodeTag];
@@ -501,7 +501,7 @@ class captureStackTraces extends viewModelBase {
                 .done(stacks => {
                     this.data = stacks;
                     this.hasAnyData(true);
-                    this.reverseStacks(stacks.Results);
+                    this.data.Results = captureStackTraces.reverseStacks(stacks.Results);
                     this.draw();
                 })
                 .always(() => this.spinners.loading(false));
@@ -580,9 +580,14 @@ class captureStackTraces extends viewModelBase {
         $container.empty();
     }
     
-    private reverseStacks(data: rawStackTraceResponseItem[]) {
-        data.forEach(d => {
-            d.StackTrace = d.StackTrace.reverse();
+    private static reverseStacks(data: rawStackTraceResponseItem[]): rawStackTraceResponseItem[] {
+        return data.map(x => {
+            const { StackTrace, ...rest } = x;
+            
+            return {
+                ...rest,
+                StackTrace: StackTrace.reverse()
+            }
         });
     }
     
@@ -598,7 +603,11 @@ class captureStackTraces extends viewModelBase {
     }
     
     exportAsJson() {
-        fileDownloader.downloadAsJson(this.data, "stacks.json");
+        const dataCopy: stackTracesResponseDto = {
+            Results: captureStackTraces.reverseStacks(this.data.Results),
+            Threads: this.data.Threads
+        };
+        fileDownloader.downloadAsJson(dataCopy, "stacks.json");
     }
 
     fileSelected(fileInput: HTMLInputElement) {
@@ -607,6 +616,14 @@ class captureStackTraces extends viewModelBase {
 
     private dataImported(result: string) {
         this.data = JSON.parse(result);
+        
+        // imported data might have 2 origins:
+        // - exported via this view
+        // - from debug package
+        
+        // in both cases we need to reverse stacks
+        
+        this.data.Results = captureStackTraces.reverseStacks(this.data.Results);
         this.draw();
     }
 }

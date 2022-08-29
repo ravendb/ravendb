@@ -203,13 +203,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                         result = AggregateOn(_aggregationBatch.Items, indexContext, _nestedValuesReductionStats.NestedValuesAggregation, token);
                     }
 
-                    if (section.IsNew == false)
-                        writer.Value.DeleteReduceResult(reduceKeyHash, stats);
-
-                    foreach (var output in result.GetOutputs())
-                    {
-                        writer.Value.IndexDocument(reduceKeyHash, null, output, stats, indexContext);
-                    }
+                    IndexReducedResult(indexContext, stats, writer, reduceKeyHash, result.GetOutputs(), section.IsNew);
                 }
                 finally
                 {
@@ -230,6 +224,69 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                 HandleReductionError(e, reduceKeyHash, writer, stats, updateStats: true, page: null, numberOfNestedValues: numberOfEntriesToReduce);
             }
+        }
+
+        private void IndexReducedResult(TransactionOperationContext indexContext, IndexingStatsScope stats, Lazy<IndexWriteOperationBase> writer, LazyStringValue reduceKeyHash,
+            IEnumerable<object> results, bool isNewSection)
+        {
+            if (_index.SearchEngineType == SearchEngineType.Lucene)
+            {
+                OutputReduceResultsLucene(indexContext, stats, writer, reduceKeyHash, results, isNewSection);
+            }
+            else if (_index.SearchEngineType == SearchEngineType.Corax)
+            {
+                OutputReduceResultsCorax(indexContext, stats, writer, reduceKeyHash, results, isNewSection);
+            }
+            else
+            {
+                throw new NotSupportedException("Unsupported search engine type: " + _index.SearchEngineType);
+            }
+        }
+
+        private static void OutputReduceResultsLucene(TransactionOperationContext indexContext, IndexingStatsScope stats, Lazy<IndexWriteOperationBase> writer, LazyStringValue reduceKeyHash,
+            IEnumerable<object> results, bool isNewSection)
+        {
+            if (isNewSection == false)
+                writer.Value.DeleteReduceResult(reduceKeyHash, stats);
+
+            foreach (var output in results)
+            {
+                writer.Value.IndexDocument(reduceKeyHash, null, output, stats, indexContext);
+            }
+        }
+        
+        private static void OutputReduceResultsCorax(TransactionOperationContext indexContext, IndexingStatsScope stats, Lazy<IndexWriteOperationBase> writer, LazyStringValue reduceKeyHash,
+            IEnumerable<object> results, bool isNewSection)
+        {
+            using var it = results.GetEnumerator();
+
+            if (it.MoveNext() == false) // no entries, just delete then
+            {
+                if (isNewSection == false) // but if this was never written, can skip...
+                    writer.Value.DeleteReduceResult(reduceKeyHash, stats);
+
+                return;
+            }
+
+            var first = it.Current;
+
+            if (it.MoveNext() == false)
+            {
+                // a single entry..., try to update
+                writer.Value.UpdateDocument(Raven.Client.Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName,
+                    reduceKeyHash, null, first, stats, indexContext);
+                return;
+            }
+
+            if (isNewSection == false) // need to delete all other values
+                writer.Value.DeleteReduceResult(reduceKeyHash, stats);
+
+            writer.Value.IndexDocument(reduceKeyHash, null, first, stats, indexContext);
+
+            do
+            {
+                writer.Value.IndexDocument(reduceKeyHash, null, it.Current, stats, indexContext);
+            } while (it.MoveNext());
         }
 
         private void HandleTreeReduction(TransactionOperationContext indexContext, IndexingStatsScope stats,
@@ -317,12 +374,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                         {
                             if (parentPage == -1)
                             {
-                                writer.Value.DeleteReduceResult(reduceKeyHash, stats);
-
-                                foreach (var output in result.GetOutputs())
-                                {
-                                    writer.Value.IndexDocument(reduceKeyHash, null, output, stats, indexContext);
-                                }
+                                IndexReducedResult(indexContext, stats, writer, reduceKeyHash, result.GetOutputs(), false);
                             }
                             else
                             {
@@ -376,12 +428,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                         {
                             if (parentPage == -1)
                             {
-                                writer.Value.DeleteReduceResult(reduceKeyHash, stats);
-
-                                foreach (var output in result.GetOutputs())
-                                {
-                                    writer.Value.IndexDocument(reduceKeyHash, null, output, stats, indexContext);
-                                }
+                                IndexReducedResult(indexContext, stats, writer, reduceKeyHash, result.GetOutputs(), false);
                             }
                             else
                             {

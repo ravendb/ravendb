@@ -96,6 +96,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         {
             await base.OnAfterRestoreAsync();
             RegenerateDatabaseIdInIndexes(Database);
+            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (var tx = context.OpenWriteTransaction())
+            {
+                var changeVector = Database.DocumentsStorage.GetNewChangeVector(context);
+                Database.DocumentsStorage.SetDatabaseChangeVector(context, changeVector.ChangeVector);
+                tx.Commit();
+            }
         }
 
         private async Task<RestoreSettings> RestoreSnapshotAsync(JsonOperationContext context, string backupPath,

@@ -7,7 +7,7 @@ namespace Voron.Exceptions
     {
         public long Number { get; }
 
-        public InvalidJournalException(string message) : base(message)
+        public InvalidJournalException(string message, Exception innerException) : base(message, innerException)
         {
 
         }

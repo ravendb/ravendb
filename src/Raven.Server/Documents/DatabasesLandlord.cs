@@ -626,7 +626,7 @@ namespace Raven.Server.Documents
         {
             using (EnterReadLockImmediately(databaseName))
             {
-                if (DatabasesCache.TryGetValue(databaseName, out var databaseTask))
+                if (TryGetResourceStore(databaseName, out var databaseTask))
                 {
                     return new DatabaseSearchResult
                     {
@@ -725,36 +725,45 @@ namespace Raven.Server.Documents
                 }
                 release = EnterReadLockImmediately(databaseName);
 
-                if (DatabasesCache.TryGetValue(databaseName, out var database))
-                {
-                    if (database.IsFaulted)
-                    {
-                        // If a database was unloaded, this is what we get from DatabasesCache.
-                        // We want to keep the exception there until UnloadAndLockDatabase is disposed.
-                        if (IsLockedDatabase(database.Exception))
-                            return database;
-                    }
+                if (TryGetResourceStore(databaseName, out var database))
+                    return database;
 
-                    if (database.IsFaulted || database.IsCanceled)
-                    {
-                        DatabasesCache.TryRemove(databaseName, database);
-                        LastRecentlyUsed.TryRemove(databaseName, out var _);
-                        // and now we will try creating it again
-                    }
-                    else
-                    {
-                        if (database.IsCompletedSuccessfully)
-                            database.Result.LastAccessTime = database.Result.Time.GetUtcNow();
-
-                        return database;
-                    }
-                }
                 return CreateDatabase(databaseName, wakeup, ignoreDisabledDatabase, ignoreBeenDeleted, ignoreNotRelevant, caller);
             }
             finally
             {
                 release?.Dispose();
             }
+        }
+
+        private bool TryGetResourceStore(StringSegment databaseName, out Task<DocumentDatabase> database)
+        {
+            if (DatabasesCache.TryGetValue(databaseName, out database))
+            {
+                if (database.IsFaulted)
+                {
+                    // If a database was unloaded, this is what we get from DatabasesCache.
+                    // We want to keep the exception there until UnloadAndLockDatabase is disposed.
+                    if (IsLockedDatabase(database.Exception))
+                        return true;
+                }
+
+                if (database.IsFaulted || database.IsCanceled)
+                {
+                    DatabasesCache.TryRemove(databaseName, database);
+                    LastRecentlyUsed.TryRemove(databaseName, out var _);
+                    // and now we will try creating it again
+                }
+                else
+                {
+                    if (database.IsCompletedSuccessfully)
+                        database.Result.LastAccessTime = database.Result.Time.GetUtcNow();
+
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         internal static bool IsLockedDatabase(AggregateException exception)

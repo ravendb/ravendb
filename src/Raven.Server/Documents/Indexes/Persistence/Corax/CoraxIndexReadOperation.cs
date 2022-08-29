@@ -32,7 +32,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         private readonly ByteStringContext _allocator;
         private long _entriesCount = 0;
         
-        public CoraxIndexReadOperation(Index index, Logger logger, Transaction readTransaction, QueryBuilderFactories queryBuilderFactories, IndexFieldsMapping fieldsMapping) : base(index, logger, queryBuilderFactories)
+        public CoraxIndexReadOperation(Index index, Logger logger, Transaction readTransaction, QueryBuilderFactories queryBuilderFactories, IndexFieldsMapping fieldsMapping, IndexQueryServerSide query) : base(index, logger, queryBuilderFactories, query)
         {
             _allocator = readTransaction.Allocator;
             _fieldMappings = fieldsMapping;
@@ -668,6 +668,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
         public override void Dispose()
         {
+            base.Dispose();
+
             var exceptionAggregator = new ExceptionAggregator($"Could not dispose {nameof(CoraxIndexReadOperation)} of {_index.Name}");
             exceptionAggregator.Execute(() => _indexSearcher?.Dispose());
             exceptionAggregator.ThrowIfNeeded();

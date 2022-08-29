@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Documents.TcpHandlers;
+using Raven.Server.Utils;
 using Sparrow.Collections;
 using Sparrow.Json;
 
@@ -40,7 +41,7 @@ internal abstract class AbstractTcpManagementHandlerProcessorForGetAll<TRequestH
                 .Skip(start)
                 .Take(pageSize);
 
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, RequestHandler.ResponseBodyStream()))
             {
                 writer.WriteStartObject();
 

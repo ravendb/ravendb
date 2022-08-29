@@ -221,14 +221,14 @@ namespace SlowTests.Issues
         [Fact]
         public async Task QueriesShouldFailoverIfIndexIsCompactingCluster()
         {
-            var (nodes, leader) = await CreateRaftCluster(2);
+            var (nodes, leader) = await CreateRaftCluster(2, watcherCluster: true); // Prevent updating the db topology after getting it.
+            leader.ServerStore.Observer.Suspended = true;
             Assert.Equal(nodes.Count, 2);
             var storeOptions = new Options
             {
                 Server = leader,
                 ReplicationFactor = nodes.Count,
-                RunInMemory = false,
-                ModifyDocumentStore = (store) => store.Conventions.DisableTopologyUpdates = true
+                RunInMemory = false
             };
 
             using (var store = GetDocumentStore(storeOptions))
@@ -259,23 +259,18 @@ namespace SlowTests.Issues
 
                 // Test
                 CompactSettings settings = new CompactSettings { DatabaseName = store.Database, Documents = true, Indexes = new[] { index.IndexName } };
-
                 Exception exception = null;
                 List<Categoroies_Details.Entity> l = null;
+                var responsibleNodeTag = store.GetRequestExecutor(store.Database).Topology.Nodes[0].ClusterTag;
                 var d = () =>
                 {
                     try
                     {
-                        using (var store2 = new DocumentStore() // DisableTopologyUpdates is false, for letting failover work (failover updates the topology)
-                               {
-                                   Urls = (from node in nodes select node.WebUrl).ToArray<string>(),
-                                   Database = store.Database,
-                               }.Initialize())
-                        using (var session = store2.OpenSession())
+                        // Ensure that call this function once.
+                        using (var session = store.OpenSession())
                         {
                             l = session.Query<Categoroies_Details.Entity, Categoroies_Details>()
-                                .ProjectInto<Categoroies_Details.Entity>()
-                                .ToList();
+                                .ProjectInto<Categoroies_Details.Entity>().ToList();
                         }
                     }
                     catch (Exception e)
@@ -284,12 +279,12 @@ namespace SlowTests.Issues
                     }
                 };
 
-                var responsibleNodeUrl = store.GetRequestExecutor(store.Database).Topology.Nodes[0].Url;
-                var responsibleNode = nodes.Single(n => n.ServerStore.GetNodeHttpServerUrl() == responsibleNodeUrl);
+
+                var responsibleNode = nodes.Single(n => n.ServerStore.NodeTag == responsibleNodeTag);
                 var database = await GetDatabase(responsibleNode, store.Database);
                 database.IndexStore.ForTestingPurposesOnly().IndexCompaction = d;
 
-                var operation = await store.Maintenance.Server.SendAsync(new CompactDatabaseOperation(settings));
+                var operation = await store.Maintenance.Server.SendAsync(new CompactDatabaseOperation(settings, responsibleNodeTag));
                 await operation.WaitForCompletionAsync();
 
                 // Check if failover succeeded

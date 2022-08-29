@@ -1096,6 +1096,8 @@ namespace Voron.Data.CompactTrees
         [Conditional("DEBUG")]
         private void VerifySizeOf(ref CursorState p)
         {
+            if (p.Header == null)
+                return; // page may have been released
             var actualFreeSpace = p.ComputeFreeSpace();
             if (p.Header->FreeSpace != actualFreeSpace)
             {

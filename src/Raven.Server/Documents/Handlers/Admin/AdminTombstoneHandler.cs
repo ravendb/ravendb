@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using Raven.Server.Routing;
+using Raven.Server.Utils;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Admin
@@ -32,7 +33,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
 

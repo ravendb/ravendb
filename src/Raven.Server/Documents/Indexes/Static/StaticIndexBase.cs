@@ -234,8 +234,8 @@ namespace Raven.Server.Documents.Indexes.Static
             {
                 documentDatabase.NotificationCenter.Add(PerformanceHint.Create(
                     documentDatabase.Name,
-                    $"Index '{indexMetadata.Name}' contains a lot of `let` clauses. Index contains {StackSizeInSelectClause} `let` clauses but we suggest not to exceed {performanceHintConfig.MaxDepthOfRecursionInLinqSelect}.",
-                    $"Each of the let clause is nesting projections and could potentially leads to StackoverflowException.",
+                    $"Index '{indexMetadata.Name}' contains {StackSizeInSelectClause} `let` clauses.",
+                    $"We have detected that your index contains many `let` clauses. This can be not optimal approach because it might cause to allocate a lot of stack-based memory. Please consider to simplify your index definition. We suggest not to exceed {performanceHintConfig.MaxDepthOfRecursionInLinqSelect} `let` statements.",
                     PerformanceHintType.Indexing,
                     NotificationSeverity.Info,
                     nameof(IndexCompiler)));

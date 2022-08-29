@@ -38,7 +38,7 @@ public class RavenDB_18377 : RavenTestBase
 
 
     [RavenTheory(RavenTestCategory.Indexes)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public void ArrayInIndex(Options options)
     {
         using var store = GetDocumentStore(options);
@@ -56,6 +56,7 @@ public class RavenDB_18377 : RavenTestBase
             var result = session.Query<Item, NestedArray>().Where(p => p.Data.Any(data => data > 10)).ToList();
             Assert.Empty(result);
             result = session.Query<Item, NestedArray>().Where(p => p.Data.Any(data => data < 10)).ToList();
+            WaitForUserToContinueTheTest(store);
             Assert.Single(result);
         }
         {

@@ -7,6 +7,7 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Raven.Server.Web.Http;
 using Sparrow.Json;
 
@@ -103,7 +104,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Stats
         private async ValueTask WriteResultAsync(DatabaseStatistics result)
         {
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, RequestHandler.ResponseBodyStream()))
                 writer.WriteDatabaseStatistics(context, result);
         }
     }

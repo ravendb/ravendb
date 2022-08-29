@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Org.BouncyCastle.Math.EC;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
@@ -225,9 +226,13 @@ namespace FastTests
                 Assert.Equal(opStatus, value);
             }
 
-            public IDisposable RestoreDatabase(IDocumentStore store, RestoreBackupConfiguration config, TimeSpan? timeout = null)
+            public IDisposable RestoreDatabase(IDocumentStore store, RestoreBackupConfiguration config, TimeSpan? timeout = null, string nodeTag = null)
             {
-                var restoreOperation = new RestoreBackupOperation(config);
+                RestoreBackupOperation restoreOperation;
+                if (nodeTag != null)
+                    restoreOperation = new RestoreBackupOperation(config, nodeTag);
+                else
+                    restoreOperation = new RestoreBackupOperation(config);
 
                 var operation = store.Maintenance.Server.Send(restoreOperation);
                 operation.WaitForCompletion(timeout ?? TimeSpan.FromMilliseconds(_reasonableTimeout * 2));

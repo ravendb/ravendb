@@ -100,7 +100,7 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
                     changeVector = "LastDocument";
                     break;
                 case "Change Vector":
-                    changeVector = this.startingChangeVector();
+                    changeVector = this.startingChangeVector().trim().replace(/\r?\n/g, " ");
                     break;
             }
         }

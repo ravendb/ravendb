@@ -1,7 +1,7 @@
 import commandBase = require("commands/commandBase");
 import endpoints = require("endpoints");
 
-class continueClusterConfigurationCommand extends commandBase {
+class continueSecureClusterConfigurationCommand extends commandBase {
 
     constructor(private operationId: number, private dto: Raven.Server.Commercial.ContinueSetupInfo) {
         super();
@@ -18,4 +18,4 @@ class continueClusterConfigurationCommand extends commandBase {
     }
 }
 
-export = continueClusterConfigurationCommand;
+export = continueSecureClusterConfigurationCommand;

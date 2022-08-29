@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using Raven.Server.Routing;
+using Raven.Server.Utils;
 using Sparrow.Json;
 
 namespace Raven.Server.Web.System
@@ -10,7 +11,7 @@ namespace Raven.Server.Web.System
         public async Task GetRootStats()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
             {
                 Server.Statistics.WriteTo(writer);
             }

@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Client.Util;
+using Sparrow.Logging;
 
 namespace Raven.Server.Utils
 {
@@ -54,11 +56,11 @@ namespace Raven.Server.Utils
             }
         }
 
-        private readonly ConcurrentDictionary<string, MetricValueBase> _metrics = new ConcurrentDictionary<string, MetricValueBase>(StringComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentDictionary<string, MetricValue> _metrics = new(StringComparer.OrdinalIgnoreCase);
 
-        public void Register<T>(string key, TimeSpan refreshRate, Func<T> factory)
+        public void Register(string key, TimeSpan refreshRate, Func<object> factory, bool asyncRefresh = true)
         {
-            if (_metrics.TryAdd(key, new MetricValue<T>(refreshRate, factory)) == false)
+            if (_metrics.TryAdd(key, new MetricValue(refreshRate, key, factory, asyncRefresh)) == false)
                 throw new InvalidOperationException($"Cannot cache '{key}' metric, because it already exists.");
         }
 
@@ -67,86 +69,132 @@ namespace Raven.Server.Utils
             if (_metrics.TryGetValue(key, out var value) == false)
                 throw new InvalidOperationException($"Metric '{key}' was not found.");
 
-            if (value.ShouldRefresh(out var first) == false)
-                return (T)value.Value;
-
-            if (first)
-            {
-                lock (value)
-                {
-                    if (value.ShouldRefresh(out first))
-                        value.Refresh();
-
-                    return (T)value.Value;
-                }
-            }
-
-            if (Monitor.TryEnter(value, 0) == false)
-                return (T)value.Value;
-
-            try
-            {
-                if (value.ShouldRefresh(out first))
-                    value.Refresh();
-
-                return (T)value.Value;
-            }
-            finally
-            {
-                Monitor.Exit(value);
-            }
+            var result = value.GetRefreshedValue();
+            if (result == null)
+                return default;
+            return (T)result;
         }
 
-        private class MetricValue<T> : MetricValueBase
+        private class MetricValue
         {
-            private readonly Func<T> _factory;
+            private readonly TimeSpan _refreshRate;
+            private readonly Func<object> _factory;
+            private readonly bool _asyncRefresh;
+            private Task<DateTime> _task;
+            private object _value;
+            private long _observedFailureTicks;
+            private readonly Logger _logger;
 
-            public MetricValue(TimeSpan refreshRate, Func<T> factory)
-                : base(refreshRate)
+            public MetricValue(TimeSpan refreshRate, string key, Func<object> factory, bool asyncRefresh = true)
             {
-                if (factory == null)
-                    throw new ArgumentNullException(nameof(factory));
-
-                _factory = factory;
-            }
-
-            protected override object RefreshInternal()
-            {
-                return _factory();
-            }
-        }
-
-        private abstract class MetricValueBase
-        {
-            private DateTime _lastRefresh;
-            private TimeSpan _refreshRate;
-
-            protected MetricValueBase(TimeSpan refreshRate)
-            {
+                _logger = LoggingSource.Instance.GetLogger<MetricValue>(key);
                 _refreshRate = refreshRate;
-            }
-
-            public object Value { get; private set; }
-
-            protected abstract object RefreshInternal();
-
-            internal void Refresh()
-            {
+                _factory = factory;
+                _asyncRefresh = asyncRefresh;
+                _task = Task.FromResult(SystemTime.UtcNow + _refreshRate);
                 try
                 {
-                    Value = RefreshInternal();
+                    _value = factory();
                 }
-                finally
+                catch (Exception e)
                 {
-                    _lastRefresh = SystemTime.UtcNow;
+                    _value = default;
+                    if (_logger.IsOperationsEnabled)
+                    {
+                        _logger.Operations("Got an error while refreshing value", e);
+                    }
                 }
             }
 
-            internal bool ShouldRefresh(out bool first)
+            public object GetRefreshedValue()
             {
-                first = _lastRefresh == DateTime.MinValue;
+                var currentTask = _task;
+                if (currentTask.IsCompleted == false)
+                {
+                    if (_asyncRefresh == false)
+                    {
+                        // don't want to return stale value
+                        // let's wait until current value calculation is done
 
-                return first || SystemTime.UtcNow - _lastRefresh >= _refreshRate;
+                        currentTask.Wait();
+                    }
+
+                    return _value; // return current value, while it is being computed
+                }
+
+                if (currentTask.IsFaulted)
+                {
+                    // if we failed, we'll retry
+                    var failureAt= new DateTime(_observedFailureTicks);
+                    if (SystemTime.UtcNow - failureAt > _refreshRate)
+                    {
+                        // but only at the same rate as we are expected too
+                        Interlocked.Exchange(ref _observedFailureTicks, SystemTime.UtcNow.Ticks);
+                        TryStartingRefreshTask();
+                    }
+
+                    return _value; // return cached value in case of an error, better than throwing.
+                }
+
+                var nextRefreshForTask = currentTask.Result;
+                if (SystemTime.UtcNow < nextRefreshForTask)
+                    return _value;// no need to refresh yet...
+
+                TryStartingRefreshTask();
+
+                if (_asyncRefresh)
+                {
+                    // we may have started the task (or another thread did), but we don't know if we got a new value or not
+                    // we don't care, we are okay with getting the "old" value here, since it will update
+                    // soon, and this is likely called many times over, so as long as we get it to some point, we are good
+                    return _value;
+                }
+
+                // if we don't want to return "old" value we have the option to force waiting
+                // for the new value calculated by just started task
+
+                currentTask = _task;
+
+                if (currentTask.IsCompleted == false)
+                    currentTask.Wait();
+
+                return _value;
+
+                void TryStartingRefreshTask()
+                {
+                    var task = new Task<DateTime>(() =>
+                    {
+                        object result;
+                        try
+                        {
+                            result = _factory();
+                        }
+                        catch (Exception e)
+                        {
+                            if (_logger.IsOperationsEnabled)
+                            {
+                                _logger.Operations("Got an error while refreshing value", e);
+                            }
+                            throw;
+                        }
+                        var nextRefresh = SystemTime.UtcNow + _refreshRate;
+                        Interlocked.Exchange(ref _value, result);
+                        if (currentTask.IsFaulted)
+                        {
+                            if (_logger.IsOperationsEnabled)
+                            {
+                                _logger.Operations("Recovered from error in refreshing value.");
+                            }
+                        }
+                        return nextRefresh;
+                    });
+                    // try to update the task
+                    if (Interlocked.CompareExchange(ref _task, task, currentTask) == currentTask)
+                    {
+                        // we won the right to start the task
+                        task.Start();
+                    }
+                }
             }
         }
     }

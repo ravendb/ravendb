@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Security;
 using Sparrow.Platform;
@@ -157,17 +158,26 @@ namespace Sparrow.Utils
                               *       requires explicitly allowing such size at streaming decompression stage. */
         };
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void AssertZstdSuccess(UIntPtr v)
         {
-            if (ZSTD_isError(v) == 0)
+            ulong code = v.ToUInt64();
+            if (ZSTD_Error_maxCode > code)
                 return;
 
+            RaiseError(v);
+        }
+
+        private static void RaiseError(UIntPtr v)
+        {
             throw new InvalidOperationException(Marshal.PtrToStringAnsi(ZSTD_getErrorName(v)));
         }
+        const ulong ZSTD_Error_maxCode = unchecked(0UL - 120L);
 
         private static void AssertSuccess(UIntPtr v, CompressionDictionary dictionary)
         {
-            if (ZSTD_isError(v) == 0)
+            ulong code = v.ToUInt64();
+            if (ZSTD_Error_maxCode > code)
                 return;
 
             string ptrToStringAnsi = Marshal.PtrToStringAnsi(ZSTD_getErrorName(v));
