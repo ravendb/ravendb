@@ -24,6 +24,7 @@ namespace SlowTests.Client.Subscriptions
         [Fact]
         public async Task ReadDocWithCompressedStringFromOneContextAndWriteToAnother()
         {
+            DoNotReuseServer();
             using (var documentStore = GetDocumentStore())
             {
                 Server.ServerStore.Observer.Suspended = true;
@@ -75,6 +76,7 @@ namespace SlowTests.Client.Subscriptions
         [Fact]
         public async Task SubscriptionShouldRespectDocumentsWithCompressedData()
         {
+            DoNotReuseServer();
             using (var documentStore = GetDocumentStore())
             {
                 Server.ServerStore.Observer.Suspended = true;
