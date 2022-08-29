@@ -69,10 +69,7 @@ namespace Raven.Server.Utils
             if (_metrics.TryGetValue(key, out var value) == false)
                 throw new InvalidOperationException($"Metric '{key}' was not found.");
 
-            var result = value.GetRefreshedValue();
-            if (result == null)
-                return default;
-            return (T)result;
+            return (T)value.GetRefreshedValue();
         }
 
         private class MetricValue
@@ -89,19 +86,8 @@ namespace Raven.Server.Utils
                 _logger = LoggingSource.Instance.GetLogger<MetricValue>(key);
                 _refreshRate = refreshRate;
                 _factory = factory;
+                _value = factory();
                 _task = Task.FromResult(SystemTime.UtcNow + _refreshRate);
-                try
-                {
-                    _value = factory();
-                }
-                catch (Exception e)
-                {
-                    _value = default;
-                    if (_logger.IsOperationsEnabled)
-                    {
-                        _logger.Operations("Got an error while refreshing value", e);
-                    }
-                }
             }
 
             public object GetRefreshedValue()
