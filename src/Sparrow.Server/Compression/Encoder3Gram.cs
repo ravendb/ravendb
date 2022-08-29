@@ -15,9 +15,13 @@ namespace Sparrow.Server.Compression
     internal unsafe struct Interval3Gram
     {
         [FieldOffset(0)]
+        public uint BufferAndLength;
+
+        [FieldOffset(0)]
         public fixed byte KeyBuffer[3];
         [FieldOffset(3)]
         public byte _prefixAndKeyLength;
+
         [FieldOffset(4)]
         public Code Code;
 
@@ -426,7 +430,7 @@ namespace Sparrow.Server.Compression
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private unsafe int Lookup(ReadOnlySpan<byte> symbol, ReadOnlySpan<Interval3Gram> table, int numberOfEntries, out Code code)
         {
-            [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             static int CompareDictionaryEntry(ReadOnlySpan<byte> s1, ReadOnlySpan<byte> s2)
             {
                 int length = s1.Length;
@@ -450,27 +454,49 @@ namespace Sparrow.Server.Compression
 
             int l = 0;
             int r = numberOfEntries;
-            while (r - l > 1)
-            {
-                int m = (l + r) >> 1;
 
-                int cmp;
-                fixed (byte* p = table[m].KeyBuffer)
+            if (symbol.Length >= 4)
+            {
+                // PERF: this is an optimized version of the CompareDictionaryEntry routine. Given that we
+                // can actually perform the operation in parallel. The usual case will be to call the parallel
+                // version instead of the serial, until we hit the end of the key. 
+                uint symbolValue = BinaryPrimitives.ReverseEndianness(MemoryMarshal.Read<uint>(symbol)) >> 8;
+                while (r - l > 1)
                 {
-                    cmp = CompareDictionaryEntry(symbol, new ReadOnlySpan<byte>(p,3));
+                    int m = (l + r) >> 1;
+
+                    uint codeValue = BinaryPrimitives.ReverseEndianness(table[m].BufferAndLength) >> 8;
+                    if (symbolValue < codeValue)
+                        r = m;
+                    else
+                        l = m;
                 }
-                if (cmp < 0)
+            }
+            else
+            {
+                while (r - l > 1)
                 {
-                    r = m;
-                }
-                else if (cmp == 0)
-                {
-                    l = m;
-                    break;
-                }
-                else
-                {
-                    l = m;
+                    int m = (l + r) >> 1;
+
+                    int cmp;
+                    fixed (byte* p = table[m].KeyBuffer)
+                    {
+                        cmp = CompareDictionaryEntry(symbol, new ReadOnlySpan<byte>(p, 3));
+                    }
+
+                    if (cmp < 0)
+                    {
+                        r = m;
+                    }
+                    else if (cmp == 0)
+                    {
+                        l = m;
+                        break;
+                    }
+                    else
+                    {
+                        l = m;
+                    }
                 }
             }
 
