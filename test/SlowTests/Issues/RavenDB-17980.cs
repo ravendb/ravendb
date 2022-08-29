@@ -25,8 +25,11 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                Assert.True(Directory.GetFiles(store.Conventions.TopologyCacheLocation, "*.raven-database-topology").Length == 0);
-                Assert.True(Directory.GetFiles(store.Conventions.TopologyCacheLocation, "*.raven-cluster-topology").Length == 0);
+                var numberOfDatabaseTopologyFiles = Directory.GetFiles(store.Conventions.TopologyCacheLocation, "*.raven-database-topology").Length;
+                Assert.True(numberOfDatabaseTopologyFiles == 0, $"number of files: {numberOfDatabaseTopologyFiles}");
+
+                var numberOfClusterTopologyFiles = Directory.GetFiles(store.Conventions.TopologyCacheLocation, "*.raven-database-topology").Length;
+                Assert.True(numberOfClusterTopologyFiles == 0, $"number of files: {numberOfClusterTopologyFiles}");
             }
         }
     }
