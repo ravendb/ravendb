@@ -642,6 +642,12 @@ namespace FastTests
             var testOutcomeAnalyzer = new TestOutcomeAnalyzer(Context);
             var shouldSaveDebugPackage = testOutcomeAnalyzer.ShouldSaveDebugPackage();
 
+            exceptionAggregator.Execute(() =>
+            {
+                if (_globalServer?.ServerStore.Observer?.Suspended == true)
+                    throw new InvalidOperationException("The observer is suspended for the global server!");
+            });
+            
             Dispose(exceptionAggregator);
 
             DownloadAndSaveDebugPackage(shouldSaveDebugPackage, _globalServer, exceptionAggregator, Context);
