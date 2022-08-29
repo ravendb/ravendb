@@ -178,7 +178,7 @@ namespace Raven.Server.Web.Authentication
                 try
                 {
                     var password = string.IsNullOrEmpty(certificate.Password) ? null : certificate.Password;
-                    using var certificate2 = new X509Certificate2(certBytes, password, X509KeyStorageFlags.MachineKeySet);
+                    using var certificate2 = new X509Certificate2(certBytes, password, CertificateUtils.FlagsForOpen);
                 }
                 catch (Exception e)
                 {
@@ -214,9 +214,9 @@ namespace Raven.Server.Web.Authentication
             var collection = new X509Certificate2Collection();
 
             if (string.IsNullOrEmpty(password))
-                collection.Import(certBytes, (string)null, X509KeyStorageFlags.MachineKeySet);
+                collection.Import(certBytes, (string)null, CertificateUtils.FlagsForOpen);
             else
-                collection.Import(certBytes, password, X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+                collection.Import(certBytes, password, CertificateUtils.FlagsForOpen);
 
             var first = true;
             var collectionPrimaryKey = string.Empty;
@@ -679,7 +679,7 @@ namespace Raven.Server.Web.Authentication
             var collection = new X509Certificate2Collection();
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                collection.Import(Server.Certificate.Certificate.Export(X509ContentType.Cert), (string)null, X509KeyStorageFlags.MachineKeySet);
+                collection.Import(Server.Certificate.Certificate.Export(X509ContentType.Cert), (string)null, CertificateUtils.FlagsForOpen);
 
                 if (ServerStore.CurrentRachisState != RachisState.Passive)
                 {
@@ -695,10 +695,10 @@ namespace Raven.Server.Web.Authentication
 
                             foreach (var cert in clusterNodes)
                             {
-                                var x509Certificate2 = new X509Certificate2(Convert.FromBase64String(cert.Certificate), (string)null, X509KeyStorageFlags.MachineKeySet);
+                                var x509Certificate2 = new X509Certificate2(Convert.FromBase64String(cert.Certificate), (string)null, CertificateUtils.FlagsForOpen);
 
                                 if (collection.Contains(x509Certificate2) == false)
-                                    collection.Import(x509Certificate2.Export(X509ContentType.Cert), (string)null, X509KeyStorageFlags.MachineKeySet);
+                                    collection.Import(x509Certificate2.Export(X509ContentType.Cert), (string)null, CertificateUtils.FlagsForOpen);
                             }
                         }
                         finally
@@ -951,7 +951,7 @@ namespace Raven.Server.Web.Authentication
                             try
                             {
                                 var cert = new X509Certificate2Collection();
-                                cert.Import(certBytes, certificate.Password, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+                                cert.Import(certBytes, certificate.Password, CertificateUtils.FlagsForExport);
                                 // Exporting with the private key, but without the password
                                 certBytes = cert.Export(X509ContentType.Pkcs12);
                                 certificate.Certificate = Convert.ToBase64String(certBytes);
@@ -965,7 +965,7 @@ namespace Raven.Server.Web.Authentication
                         // Ensure we'll be able to load the certificate
                         try
                         {
-                            var _ = new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+                            var _ = new X509Certificate2(certBytes, (string)null, CertificateUtils.FlagsForExport);
                         }
                         catch (Exception e)
                         {

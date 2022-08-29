@@ -336,7 +336,7 @@ exit 0";
             X509Certificate2 serverCertificate;
             try
             {
-                serverCertificate = new X509Certificate2(certificates.ServerCertificatePath, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+                serverCertificate = new X509Certificate2(certificates.ServerCertificatePath, (string)null, CertificateUtils.FlagsForExport);
             }
             catch (CryptographicException e)
             {

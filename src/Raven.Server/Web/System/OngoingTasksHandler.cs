@@ -170,7 +170,7 @@ namespace Raven.Server.Web.System
                 var certBytes = Convert.FromBase64String(sinkReplication.CertificateWithPrivateKey);
                 var certificate = new X509Certificate2(certBytes,
                     sinkReplication.CertificatePassword,
-                    X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+                    CertificateUtils.FlagsForExport);
 
                 sinkInfo.CertificatePublicKey = Convert.ToBase64String(certificate.Export(X509ContentType.Cert));
             }

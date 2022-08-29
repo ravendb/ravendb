@@ -648,7 +648,7 @@ namespace Raven.Server.Utils.Cli
             X509Certificate2 cert;
             try
             {
-                cert = args.Count == 3 ? new X509Certificate2(path, args[2], X509KeyStorageFlags.MachineKeySet) : new X509Certificate2(path, (string)null, X509KeyStorageFlags.MachineKeySet);
+                cert = args.Count == 3 ? new X509Certificate2(path, args[2], CertificateUtils.FlagsForOpen) : new X509Certificate2(path, (string)null, CertificateUtils.FlagsForOpen);
             }
             catch (Exception e)
             {
@@ -739,7 +739,7 @@ namespace Raven.Server.Utils.Cli
             try
             {
                 certBytes = File.ReadAllBytes(path);
-                cert = password != null ? new X509Certificate2(certBytes, password, X509KeyStorageFlags.MachineKeySet) : new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.MachineKeySet);
+                cert = password != null ? new X509Certificate2(certBytes, password, CertificateUtils.FlagsForOpen) : new X509Certificate2(certBytes, (string)null, CertificateUtils.FlagsForOpen);
             }
             catch (Exception e)
             {
@@ -892,7 +892,7 @@ namespace Raven.Server.Utils.Cli
             try
             {
                 certBytes = File.ReadAllBytes(path);
-                cert.Import(certBytes, password, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+                cert.Import(certBytes, password, CertificateUtils.FlagsForExport);
             }
             catch (Exception e)
             {
@@ -919,7 +919,7 @@ namespace Raven.Server.Utils.Cli
             X509Certificate2 loadedCert;
             try
             {
-                loadedCert = new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+                loadedCert = new X509Certificate2(certBytes, (string)null, CertificateUtils.FlagsForExport);
             }
             catch (Exception e)
             {
