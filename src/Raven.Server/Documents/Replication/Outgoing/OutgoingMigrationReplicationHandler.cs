@@ -21,31 +21,33 @@ namespace Raven.Server.Documents.Replication.Outgoing
         {
             _database = database;
             BucketMigrationNode = node;
-            SuccessfulReplication += (handler) =>
-            {
-                var current = handler as OutgoingMigrationReplicationHandler;
-                var bucket = current.BucketMigrationNode.Bucket;
-                var migrationIndex = current.BucketMigrationNode.MigrationIndex;
-                var lastSentChangeVector = current.LastChangeVectorInBucket;
-                
-                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal,
-                    "this is only best effort, this will not solve failovers / writting to a different node / writing after this");
-                if (_database.ShardedDocumentsStorage.HaveMoreDocumentsInBucket(bucket, lastSentChangeVector))
-                    return;
+            SuccessfulReplication += TryNotifySourceMigrationCompleted;
+        }
 
-                if (current.Server.Sharding.ManualMigration)
-                    return;
+        private void TryNotifySourceMigrationCompleted(DatabaseOutgoingReplicationHandler handler)
+        {
+            var current = handler as OutgoingMigrationReplicationHandler;
+            var bucket = current.BucketMigrationNode.Bucket;
+            var migrationIndex = current.BucketMigrationNode.MigrationIndex;
+            var lastSentChangeVector = current.LastChangeVectorInBucket;
 
-                var task = current.Server.Sharding.SourceMigrationCompleted(_database.ShardedDatabaseName, bucket, migrationIndex, lastSentChangeVector,
-                    $"{bucket}@{migrationIndex}/{lastSentChangeVector}");
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal,
+                "this is only best effort, this will not solve failovers / writting to a different node / writing after this");
+            if (_database.ShardedDocumentsStorage.HaveMoreDocumentsInBucket(bucket, lastSentChangeVector))
+                return;
 
-                task.Wait(_database.DatabaseShutdown);
+            if (current.Server.Sharding.ManualMigration)
+                return;
 
-                var result = task.Result;
+            var task = current.Server.Sharding.SourceMigrationCompleted(_database.ShardedDatabaseName, bucket, migrationIndex, lastSentChangeVector,
+                $"{bucket}@{migrationIndex}/{lastSentChangeVector}");
 
-                var op = new WaitForIndexNotificationOperation(result.Index);
-                _database.DatabaseContext.AllNodesExecutor.ExecuteParallelForAllAsync(op).Wait(_database.DatabaseShutdown);
-            };
+            task.Wait(_database.DatabaseShutdown);
+
+            var result = task.Result;
+
+            var op = new WaitForIndexNotificationOperation(result.Index);
+            _database.DatabaseContext.AllNodesExecutor.ExecuteParallelForAllAsync(op).Wait(_database.DatabaseShutdown);
         }
 
         public override ReplicationDocumentSenderBase CreateDocumentSender(Stream stream, Logger logger) => 
@@ -59,5 +61,11 @@ namespace Raven.Server.Documents.Replication.Outgoing
         }
 
         public override int GetHashCode() => BucketMigrationNode.GetHashCode();
+
+        public override void Dispose()
+        {
+            SuccessfulReplication -= TryNotifySourceMigrationCompleted;
+            base.Dispose();
+        }
     }
 }
