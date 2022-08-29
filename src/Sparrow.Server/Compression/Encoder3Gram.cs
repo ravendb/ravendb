@@ -426,27 +426,26 @@ namespace Sparrow.Server.Compression
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private unsafe int Lookup(ReadOnlySpan<byte> symbol, ReadOnlySpan<Interval3Gram> table, int numberOfEntries, out Code code)
         {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
             static int CompareDictionaryEntry(ReadOnlySpan<byte> s1, ReadOnlySpan<byte> s2)
             {
-                for (int i = 0; i < 3; i++)
-                {
-                    if (i >= s1.Length)
-                    {
-                        if (s2[i] == 0)
-                            return 0;
-                        return -1;
-                    }
+                int length = s1.Length;
+                if (0 >= length)
+                    return s2[0] == 0 ? 0 : -1;
+                if (s1[0] != s2[0])
+                    return s1[0] < s2[0] ? -1 : 1;
 
-                    if (s1[i] < s2[i])
-                        return -1;
-                    if (s1[i] > s2[i])
-                        return 1;
-                }
+                if (1 >= length)
+                    return s2[1] == 0 ? 0 : -1;
+                if (s1[1] != s2[1])
+                    return s1[1] < s2[1] ? -1 : 1;
 
-                if (s1.Length > 3)
-                    return 1;
-                return 0;
+                if (2 >= length)
+                    return s2[2] == 0 ? 0 : -1;
+                if (s1[2] != s2[2])
+                    return s1[2] < s2[2] ? -1 : 1;
+
+                return length > 3 ? 1 : 0;
             }
 
             int l = 0;
