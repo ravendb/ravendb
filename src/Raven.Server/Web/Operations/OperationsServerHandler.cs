@@ -1,3 +1,4 @@
+using System;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Server.Routing;
@@ -22,6 +23,38 @@ namespace Raven.Server.Web.Operations
                     writer.WriteEndObject();
                 }
             }
+        }
+
+        [RavenAction("/admin/operations/get-operations-id", "GET", AuthorizationStatus.Operator)]
+        public async Task GetOperationsId()
+        {
+            var operations = ServerStore.Operations.GetActive();
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    foreach (Documents.Operations.Operations.Operation operation in operations)
+                    {
+                        writer.WriteStartObject();
+                        writer.WritePropertyName($"Id");
+                        writer.WriteInteger(operation.Id);
+                        writer.WriteEndObject();
+                    }
+                }
+            }
+        }
+
+        [RavenAction("/admin/operations/kill-with-delay", "POST", AuthorizationStatus.Operator)]
+        public Task KillWithDelay()
+        {
+            var id = GetLongQueryString("id");
+            var timeSpan = (TimeSpan) GetTimeSpanQueryString("delay");
+
+            // ReSharper disable once PossibleInvalidOperationException
+            Task.Delay(timeSpan).ContinueWith(_ => ServerStore.Operations.KillOperation(id));
+
+            return NoContent();
         }
 
         [RavenAction("/admin/operations/kill", "POST", AuthorizationStatus.Operator)]
