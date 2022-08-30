@@ -2,6 +2,8 @@ import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import operation = require("common/notifications/models/operation");
 import notificationCenter = require("common/notifications/notificationCenter");
 import generalUtils = require("common/generalUtils");
+import database = require("models/resources/database");
+import abstractNotification = require("common/notifications/models/abstractNotification");
 
 abstract class abstractOperationDetails extends dialogViewModelBase {
 
@@ -98,6 +100,39 @@ abstract class abstractOperationDetails extends dialogViewModelBase {
 
         return `${formattedDuration}`;
     }
+    
+    protected static handleInternal<T extends abstractNotification & { merge: (dto: Raven.Server.NotificationCenter.Notifications.OperationChanged) => void }>(
+        operationClass: new (db: database) => T,
+        operationDto: Raven.Server.NotificationCenter.Notifications.OperationChanged,
+        notificationsContainer: KnockoutObservableArray<abstractNotification>,
+        database: database,
+        callbacks: { spinnersCleanup: Function, onChange: Function }): void {
+
+        // find "in progress" operation and update it + remove from notification center
+        // completed notification will be merged into grouped notification
+        // update is needed if user has details opened
+
+        const existingOperation = notificationsContainer().find(x => x.id === operationDto.Id) as operation;
+        if (existingOperation) {
+            existingOperation.updateWith(operationDto);
+            existingOperation.invokeOnUpdateHandlers();
+
+            notificationsContainer.remove(existingOperation);
+        }
+
+        // create or update cumulative notification
+        let cumulativeNotification = notificationsContainer().find(x => x instanceof operationClass) as T;
+        if (!cumulativeNotification) {
+            cumulativeNotification = new operationClass(database);
+            notificationsContainer.push(cumulativeNotification);
+        }
+
+        cumulativeNotification.merge(operationDto);
+
+        callbacks.spinnersCleanup();
+        callbacks.onChange();
+    }
+
 }
 
 export = abstractOperationDetails;

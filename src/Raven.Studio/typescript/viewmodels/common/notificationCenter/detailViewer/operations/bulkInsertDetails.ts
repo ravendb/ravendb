@@ -6,6 +6,7 @@ import abstractNotification = require("common/notifications/models/abstractNotif
 import notificationCenter = require("common/notifications/notificationCenter");
 import abstractOperationDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/abstractOperationDetails");
 import virtualBulkInsert = require("common/notifications/models/virtualBulkInsert");
+import virtualBulkInsertFailures = require("common/notifications/models/virtualBulkInsertFailures");
 
 class bulkInsertDetails extends abstractOperationDetails {
 
@@ -48,34 +49,16 @@ class bulkInsertDetails extends abstractOperationDetails {
     static tryHandle(operationDto: Raven.Server.NotificationCenter.Notifications.OperationChanged, notificationsContainer: KnockoutObservableArray<abstractNotification>,
                      database: database, callbacks: { spinnersCleanup: Function, onChange: Function }): boolean {
         
-        // first check if operation is completed bulk insert - that the only case when we execute custom logic
-        if (operationDto.Type === "OperationChanged" && operationDto.TaskType === "BulkInsert" && operationDto.State.Status === "Completed") {
-            
-            // find "in progress" operation and update it + remove from notification center
-            // completed notification will be merged into grouped notification
-            // update is needed if user has details opened
+        if (operationDto.Type === "OperationChanged" && operationDto.TaskType === "BulkInsert") {
+            if (operationDto.State.Status === "Completed") {
+                abstractOperationDetails.handleInternal(virtualBulkInsert, operationDto, notificationsContainer, database, callbacks);
+                return true;
+            }
 
-            const existingOperation = notificationsContainer().find(x => x.id === operationDto.Id) as operation;
-            if (existingOperation) {
-                existingOperation.updateWith(operationDto);
-                existingOperation.invokeOnUpdateHandlers();
-                
-                notificationsContainer.remove(existingOperation);
+            if (operationDto.State.Status === "Faulted") {
+                abstractOperationDetails.handleInternal(virtualBulkInsertFailures, operationDto, notificationsContainer, database, callbacks);
+                return true;
             }
-            
-            // create or update cumulative notification
-            let cumulativeNotification = notificationsContainer().find(x => x instanceof virtualBulkInsert) as virtualBulkInsert;
-            if (!cumulativeNotification) {
-                cumulativeNotification = new virtualBulkInsert(database);
-                notificationsContainer.push(cumulativeNotification);
-            }
-            
-            cumulativeNotification.merge(operationDto);
-            
-            callbacks.spinnersCleanup();
-            callbacks.onChange();
-            
-            return true;
         }
         
         return false;
