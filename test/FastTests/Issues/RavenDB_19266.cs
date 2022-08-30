@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.Operations.DocumentsCompression;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -32,9 +33,8 @@ namespace FastTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                var record = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(store.Database));
-                record.DocumentsCompression = new DocumentsCompressionConfiguration(true, true, "Orders");
-                store.Maintenance.Server.Send(new UpdateDatabaseOperation(record, record.Etag));
+                var documentsCompression = new DocumentsCompressionConfiguration(true, true, "Orders");
+                store.Maintenance.Send(new UpdateDocumentsCompressionConfigurationOperation(documentsCompression));
                 
                 using (var session = store.OpenSession())
                 {
