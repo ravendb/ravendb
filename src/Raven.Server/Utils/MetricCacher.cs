@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Util;
+using Sparrow.Logging;
 
 namespace Raven.Server.Utils
 {
@@ -59,7 +60,7 @@ namespace Raven.Server.Utils
 
         public void Register(string key, TimeSpan refreshRate, Func<object> factory)
         {
-            if (_metrics.TryAdd(key, new MetricValue(refreshRate, factory)) == false)
+            if (_metrics.TryAdd(key, new MetricValue(refreshRate, key, factory)) == false)
                 throw new InvalidOperationException($"Cannot cache '{key}' metric, because it already exists.");
         }
 
@@ -78,9 +79,11 @@ namespace Raven.Server.Utils
             private Task<DateTime> _task;
             private object _value;
             private long _observedFailureTicks;
+            private readonly Logger _logger;
 
-            public MetricValue(TimeSpan refreshRate, Func<object> factory)
+            public MetricValue(TimeSpan refreshRate, string key, Func<object> factory)
             {
+                _logger = LoggingSource.Instance.GetLogger<MetricValue>(key);
                 _refreshRate = refreshRate;
                 _factory = factory;
                 _value = factory();
@@ -103,8 +106,8 @@ namespace Raven.Server.Utils
                         Interlocked.Exchange(ref _observedFailureTicks, SystemTime.UtcNow.Ticks);
                         TryStartingRefreshTask();
                     }
-                    // the error must be reported 
-                    throw new InvalidOperationException("Failed to get value", currentTask.Exception);
+
+                    return _value; // return cached value in case of an error, better than throwing.
                 }
 
                 var nextRefreshForTask = currentTask.Result;
@@ -122,9 +125,28 @@ namespace Raven.Server.Utils
                 {
                     var task = new Task<DateTime>(() =>
                     {
-                        var result = _factory();
+                        object result;
+                        try
+                        {
+                            result = _factory();
+                        }
+                        catch (Exception e)
+                        {
+                            if (_logger.IsOperationsEnabled)
+                            {
+                                _logger.Operations("Got an error while refreshing value", e);
+                            }
+                            throw;
+                        }
                         var nextRefresh = SystemTime.UtcNow + _refreshRate;
                         Interlocked.Exchange(ref _value, result);
+                        if (currentTask.IsFaulted)
+                        {
+                            if (_logger.IsOperationsEnabled)
+                            {
+                                _logger.Operations("Recovered from error in refreshing value.");
+                            }
+                        }
                         return nextRefresh;
                     });
                     // try to update the task
