@@ -11,6 +11,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
+using Raven.Client.Json;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using SlowTests.Core.Utils.Entities;
@@ -253,6 +254,42 @@ namespace SlowTests.Issues
         {
             public string Id { get; set; }
             public string Prop { get; set; }
+        }
+
+
+        [Fact]
+        public async Task CompareExchangeNestedMetadata_Create_WithoutPropChange()
+        {
+            using var store = GetDocumentStore();
+            const string id = "testObjs/0";
+            Dictionary<string, long> dictionary = new Dictionary<string, long> { { "bbbb", 2 } };
+
+            using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+            {
+                var entity = new TestObj();
+                session.Advanced.ClusterTransaction.CreateCompareExchangeValue(id, entity);
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+            {
+                var entity = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<TestObj>(id);
+                // entity.Value.Prop = "Changed"; //without this line the session doesn't send an update to the compare exchange
+                entity.Metadata["Custom-Metadata"] = dictionary;
+                await session.SaveChangesAsync();
+            }
+
+            //The session doesn't set the metadata but it can be seen in the studio. 
+            WaitForUserToContinueTheTest(store);
+
+            using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+            {
+                var entity = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<TestObj>(id);
+                var metadata = entity.Metadata;
+                var dictionary1 = metadata.GetObjects("Custom-Metadata")[0];
+
+                Assert.Equal(2, dictionary1.GetLong("bbbb"));
+            }
         }
 
     }
