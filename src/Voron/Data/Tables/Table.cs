@@ -272,7 +272,7 @@ namespace Voron.Data.Tables
                 throw new ArgumentOutOfRangeException("DicId was: +" + dicIdCode, nameof(dicIdCode));
 
             var pos = (int)LookupTable[dicIdCode];
-            if (!singleElement)
+            if (singleElement == false)
                 pos++;
        
             ulong decompressedSize = sizeId switch
