@@ -3,17 +3,18 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.Replication;
-using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Smuggler;
-using Raven.Server.Documents.Replication;
+using Raven.Client.Http;
+using Raven.Server.Documents.Handlers.Processors.Replication;
 using Raven.Server.Documents.Replication.Stats;
-using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Raven.Server.Utils.Stats;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -537,6 +538,51 @@ namespace SlowTests.Server.Replication
                 await EnsureReplicatingAsync(store1, store2);
                 
                 WaitForUserToContinueTheTest(store2);
+            }
+        }
+
+        [Fact]
+        public async Task GetReplicationActiveConnectionsShouldWork()
+        {
+            using (var store1 = Sharding.GetDocumentStore())
+            using (var store2 = Sharding.GetDocumentStore())
+            {
+                await SetupReplicationAsync(store1, store2);
+
+                using (var s1 = store1.OpenSession())
+                {
+                    for (int i = 0; i < 50; i++)
+                    {
+                        s1.Store(new User(), $"foo/bar/{i}");
+                    }
+
+                    s1.SaveChanges();
+                }
+
+                for (int i = 0; i < 50; i++)
+                {
+                    var id = $"foo/bar/{i}";
+                    Assert.True(WaitForDocument<User>(store2, id, predicate: null, timeout: 30_000));
+                }
+
+                var dbs = Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store2.Database);
+                foreach (var task in dbs)
+                {
+                    var db = await task;
+                    var shardNumber = ShardHelper.GetShardNumber(db.Name);
+                    var replicationActiveConnections = await store2.Maintenance.ForShard(shardNumber).SendAsync(new GetReplicationActiveConnectionsInfoOperation());
+                    Assert.NotNull(replicationActiveConnections.IncomingConnections);
+                    Assert.Equal(3, replicationActiveConnections.IncomingConnections.Count);
+                    Assert.Empty(replicationActiveConnections.OutgoingConnections);
+                }
+            }
+        }
+
+        public class GetReplicationActiveConnectionsInfoOperation : IMaintenanceOperation<ReplicationActiveConnectionsPreview>
+        {
+            public RavenCommand<ReplicationActiveConnectionsPreview> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+            {
+                return new GetReplicationActiveConnectionsInfoCommand();
             }
         }
     }
