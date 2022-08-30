@@ -321,31 +321,16 @@ namespace Raven.Client.Documents.Session
                                 throw new InvalidOperationException("Value cannot be null.");
 
                             T entity = default;
-                            IMetadataDictionary metadata = null;
-                            if (_originalValue != null)
+                            if (_originalValue != null && _originalValue.Value != null)
                             {
-                                if (_originalValue.Value != null)
-                                {
-                                    var type = typeof(T);
-                                    if (type.IsPrimitive || type == typeof(string))
-                                        _originalValue.Value.TryGet(Constants.CompareExchange.ObjectFieldName, out entity);
-                                    else
-                                        entity = conventions.Serialization.DefaultConverter.FromBlittable<T>(_originalValue.Value, _key);
-                                }
-
-                                if (_originalValue.Metadata != null)
-                                {
-                                    metadata = new MetadataAsDictionary();
-                                    foreach (var kvp in _originalValue.Metadata)
-                                    {
-                                        var key = kvp.Key;
-                                        var val = kvp.Value;
-                                        metadata[key] = val;
-                                    }
-                                }
+                                var type = typeof(T);
+                                if (type.IsPrimitive || type == typeof(string))
+                                    _originalValue.Value.TryGet(Constants.CompareExchange.ObjectFieldName, out entity);
+                                else
+                                    entity = conventions.Serialization.DefaultConverter.FromBlittable<T>(_originalValue.Value, _key);
                             }
 
-                            var value = new CompareExchangeValue<T>(_key, _index, entity, metadata);
+                            var value = new CompareExchangeValue<T>(_key, _index, entity, _originalValue?.Metadata);
                             _value = value;
 
                             return value;
