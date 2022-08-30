@@ -47,4 +47,11 @@ public class ShardedReplicationHandler : ShardedDatabaseRequestHandler
         using (var processor = new ShardedReplicationHandlerProcessorForGetPerformanceLive(this))
             await processor.ExecuteAsync();
     }
+
+    [RavenShardedAction("/databases/*/replication/pulses/live", "GET")]
+    public async Task PulsesLive()
+    {
+        using (var processor = new ShardedReplicationHandlerProcessorForGetPulsesLive(this))
+            await processor.ExecuteAsync();
+    }
 }

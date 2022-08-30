@@ -1,14 +1,9 @@
-﻿using System;
-using System.IO;
-using System.Linq;
-using System.Net.WebSockets;
+﻿using System.Linq;
 using System.Threading.Tasks;
 using Raven.Server.Documents.Handlers.Processors.Replication;
-using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers
@@ -46,55 +41,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/replication/pulses/live", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, SkipUsagesCount = true)]
         public async Task PulsesLive()
         {
-            using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
-            {
-                var receiveBuffer = new ArraySegment<byte>(new byte[1024]);
-                var receive = webSocket.ReceiveAsync(receiveBuffer, Database.DatabaseShutdown);
-
-                await using (var ms = new MemoryStream())
-                using (var collector = new LiveReplicationPulsesCollector(Database))
-                {
-                    // 1. Send data to webSocket without making UI wait upon opening webSocket
-                    await SendPulsesOrHeartbeatToWebSocket(receive, webSocket, collector, ms, 100);
-
-                    // 2. Send data to webSocket when available
-                    while (Database.DatabaseShutdown.IsCancellationRequested == false)
-                    {
-                        if (await SendPulsesOrHeartbeatToWebSocket(receive, webSocket, collector, ms, 4000) == false)
-                        {
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-
-        private async Task<bool> SendPulsesOrHeartbeatToWebSocket(Task<WebSocketReceiveResult> receive, WebSocket webSocket,
-            LiveReplicationPulsesCollector collector, MemoryStream ms, int timeToWait)
-        {
-            if (receive.IsCompleted || webSocket.State != WebSocketState.Open)
-                return false;
-
-            var tuple = await collector.Pulses.TryDequeueAsync(TimeSpan.FromMilliseconds(timeToWait));
-            if (tuple.Item1 == false)
-            {
-                await webSocket.SendAsync(WebSocketHelper.Heartbeat, WebSocketMessageType.Text, true, Database.DatabaseShutdown);
-                return true;
-            }
-
-            ms.SetLength(0);
-
-            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ms))
-            {
-                var pulse = tuple.Item2;
-                context.Write(writer, pulse.ToJson());
-            }
-
-            ms.TryGetBuffer(out ArraySegment<byte> bytes);
-            await webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, Database.DatabaseShutdown);
-
-            return true;
+            using (var processor = new ReplicationHandlerProcessorForGetPulsesLive(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/replication/active-connections", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
