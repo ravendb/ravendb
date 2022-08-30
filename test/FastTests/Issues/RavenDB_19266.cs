@@ -24,8 +24,11 @@ namespace FastTests.Issues
             public List<string> Lines = new();
         }
 
-        [Fact]
-        public void CompressAndDecompressDocument3Mb()
+        [Theory]
+        [InlineData(3)]
+        [InlineData(6)]
+        [InlineData(10)]
+        public void CompressAndDecompressDocument(int size)
         {
             using (var store = GetDocumentStore())
             {
@@ -37,62 +40,12 @@ namespace FastTests.Issues
                 {
                     var doc = new Order();
 
-                    for (int i = 0; i < 3 * 1024; i++)
+                    for (int i = 0; i < size * 1024; i++)
                     {
                         string line = RandomString(new Random(123), 1024);
                         doc.Lines.Add(line);
                     }
                     
-                    session.Store(doc);
-                    session.SaveChanges();
-                }
-            }
-        }
-
-        [Fact]
-        public void CompressAndDecompressDocument6Mb()
-        {
-            using (var store = GetDocumentStore())
-            {
-                var record = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(store.Database));
-                record.DocumentsCompression = new DocumentsCompressionConfiguration(true, true, "Orders");
-                store.Maintenance.Server.Send(new UpdateDatabaseOperation(record, record.Etag));
-
-                using (var session = store.OpenSession())
-                {
-                    var doc = new Order();
-
-                    for (int i = 0; i < 6 * 1024; i++)
-                    {
-                        string line = RandomString(new Random(123), 1024);
-                        doc.Lines.Add(line);
-                    }
-
-                    session.Store(doc);
-                    session.SaveChanges();
-                }
-            }
-        }
-
-        [Fact]
-        public void CompressAndDecompressDocument10Mb()
-        {
-            using (var store = GetDocumentStore())
-            {
-                var record = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(store.Database));
-                record.DocumentsCompression = new DocumentsCompressionConfiguration(true, true, "Orders");
-                store.Maintenance.Server.Send(new UpdateDatabaseOperation(record, record.Etag));
-
-                using (var session = store.OpenSession())
-                {
-                    var doc = new Order();
-
-                    for (int i = 0; i < 10 * 1024; i++)
-                    {
-                        string line = RandomString(new Random(123), 1024);
-                        doc.Lines.Add(line);
-                    }
-
                     session.Store(doc);
                     session.SaveChanges();
                 }
