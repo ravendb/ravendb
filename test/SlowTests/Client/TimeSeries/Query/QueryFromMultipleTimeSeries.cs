@@ -1043,7 +1043,7 @@ select out()
                     }
 
                     var expected = 8;
-                    if (now.Hour == 23 && (now.Minute > 0 || now.Second > 0))
+                    if (now.Hour == 23 && (now.Minute > 0 || now.Second >= 0))
                         expected--; // if now is 23:00:34, we will not get any result for that day, only for the next one
 
                     Assert.Equal(expected, days.Count);
