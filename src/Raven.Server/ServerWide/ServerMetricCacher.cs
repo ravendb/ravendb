@@ -47,7 +47,7 @@ namespace Raven.Server.ServerWide
             return MemoryInformation.GetMemoryInfo(_smapsReader, extended: true);
         }
 
-        private DiskSpaceResult CalculateDiskSpaceInfo()
+        private object CalculateDiskSpaceInfo()
         {
             return DiskUtils.GetDiskSpaceInfo(_server.ServerStore.Configuration.Core.DataDirectory.FullPath);
         }
@@ -56,7 +56,7 @@ namespace Raven.Server.ServerWide
         {
             return GC.GetGCMemoryInfo(gcKind);
         }
-        private static MemInfo CalculateMemInfo()
+        private static object CalculateMemInfo()
         {
             if (PlatformDetails.RunningOnPosix == false)
                 return MemInfo.Invalid;
