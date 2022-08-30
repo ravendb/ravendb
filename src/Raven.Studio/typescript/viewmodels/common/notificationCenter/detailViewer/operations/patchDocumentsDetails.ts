@@ -5,6 +5,7 @@ import operation = require("common/notifications/models/operation");
 import abstractNotification = require("common/notifications/models/abstractNotification");
 import notificationCenter = require("common/notifications/notificationCenter");
 import virtualUpdateByQuery = require("common/notifications/models/virtualUpdateByQuery");
+import virtualUpdateByQueryFailures = require("common/notifications/models/virtualUpdateByQueryFailures");
 import abstractOperationDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/abstractOperationDetails");
 
 class patchDocumentsDetails extends abstractOperationDetails {
@@ -61,34 +62,16 @@ class patchDocumentsDetails extends abstractOperationDetails {
     static tryHandle(operationDto: Raven.Server.NotificationCenter.Notifications.OperationChanged, notificationsContainer: KnockoutObservableArray<abstractNotification>,
                      database: database, callbacks: { spinnersCleanup: Function, onChange: Function }): boolean {
 
-        // first check if operation is completed UpdateByQuery - that the only case when we execute custom logic
-        if (operationDto.Type === "OperationChanged" && operationDto.TaskType === "UpdateByQuery" && operationDto.State.Status === "Completed") {
-
-            // find "in progress" operation and update it + remove from notification center
-            // completed notification will be merged into grouped notification
-            // update is needed if user has details opened
-
-            const existingOperation = notificationsContainer().find(x => x.id === operationDto.Id) as operation;
-            if (existingOperation) {
-                existingOperation.updateWith(operationDto);
-                existingOperation.invokeOnUpdateHandlers();
-
-                notificationsContainer.remove(existingOperation);
+        if (operationDto.Type === "OperationChanged" && operationDto.TaskType === "UpdateByQuery") {
+            if (operationDto.State.Status === "Completed") {
+                abstractOperationDetails.handleInternal(virtualUpdateByQuery, operationDto, notificationsContainer, database, callbacks);
+                return true;
             }
-
-            // create or update cumulative notification
-            let cumulativeNotification = notificationsContainer().find(x => x instanceof virtualUpdateByQuery) as virtualUpdateByQuery;
-            if (!cumulativeNotification) {
-                cumulativeNotification = new virtualUpdateByQuery(database);
-                notificationsContainer.push(cumulativeNotification);
+            
+            if (operationDto.State.Status === "Faulted") {
+                abstractOperationDetails.handleInternal(virtualUpdateByQueryFailures, operationDto, notificationsContainer, database, callbacks);
+                return true;
             }
-
-            cumulativeNotification.merge(operationDto);
-
-            callbacks.spinnersCleanup();
-            callbacks.onChange();
-
-            return true;
         }
 
         return false;
