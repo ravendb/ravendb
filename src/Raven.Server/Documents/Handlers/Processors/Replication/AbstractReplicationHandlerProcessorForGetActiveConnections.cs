@@ -22,6 +22,10 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
 
     internal class GetReplicationActiveConnectionsInfoCommand : RavenCommand<ReplicationActiveConnectionsPreview>
     {
+        public GetReplicationActiveConnectionsInfoCommand()
+        {
+        }
+
         public GetReplicationActiveConnectionsInfoCommand(string nodeTag)
         {
             SelectedNodeTag = nodeTag;
@@ -70,7 +74,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
         public override bool IsReadRequest => true;
     }
 
-    internal class ReplicationActiveConnectionsPreview
+    public class ReplicationActiveConnectionsPreview
     {
         public List<IncomingConnectionInfo> IncomingConnections;
 

@@ -4,6 +4,7 @@ using FastTests.Server.Replication;
 using Raven.Client.Documents.Operations;
 using Raven.Client.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -329,6 +330,55 @@ namespace SlowTests.Server.Replication
 
                 stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
                 Assert.Equal(0, stats.CountOfTombstones);
+            }
+        }
+
+        [Fact]
+        public async Task Replication_of_document_should_delete_existing_tombstone_at_destination_sharding()
+        {
+            var dbName1 = "FooBar-1";
+            var dbName2 = "FooBar-2";
+            using (var store1 = Sharding.GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => $"{s}_{dbName1}"
+            }))
+            using (var store2 = Sharding.GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => $"{s}_{dbName2}"
+            }))
+            {
+                using (var s1 = store1.OpenSession())
+                {
+                    s1.Store(new User(), "foo/bar");
+                    s1.SaveChanges();
+                }
+
+                await SetupReplicationAsync(store1, store2);
+
+                Assert.True(WaitForDocument(store2, "foo/bar"));
+
+                using (var s1 = store1.OpenSession())
+                {
+                    s1.Delete("foo/bar");
+                    s1.SaveChanges();
+                }
+
+                var tombstoneIDs = WaitUntilHasTombstones(store2);
+                Assert.Equal(1, tombstoneIDs.Count);
+                Assert.Contains("foo/bar", tombstoneIDs);
+
+                long countOfTombstones = 0;
+                var dbs = Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store2.Database);
+                foreach (var task in dbs)
+                {
+                    var db = await task;
+                    var shardNumber = ShardHelper.GetShardNumber(db.Name);
+                    var stats = await store2.Maintenance.ForShard(shardNumber).SendAsync(new GetStatisticsOperation(db.ServerStore.Server.DebugTag, db.ServerStore.NodeTag));
+                    if (stats.CountOfTombstones > 0)
+                        countOfTombstones += stats.CountOfTombstones;
+                }
+             
+                Assert.Equal(1, countOfTombstones);
             }
         }
 
