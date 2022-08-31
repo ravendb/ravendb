@@ -322,7 +322,6 @@ namespace Raven.Client.Documents.Session
                                 throw new InvalidOperationException("Value cannot be null.");
 
                             T entity = default;
-                            IMetadataDictionary metadata = null;
                             if (_originalValue != null && _originalValue.Value != null)
                             {
                                 var type = typeof(T);
@@ -404,6 +403,7 @@ namespace Raven.Client.Documents.Session
                             }
                             else
                             {
+                                ValidateMetadataForPut(_key, _value.Metadata);
                                 metadataHasChanged = InMemoryDocumentSessionOperations.UpdateMetadataModifications(_value.Metadata, metadata); //add modifications to the existing metadata
                             }
                         }
@@ -503,19 +503,24 @@ namespace Raven.Client.Documents.Session
 
             internal static BlittableJsonReaderObject PrepareMetadataForPut(string key, IMetadataDictionary metadataDictionary, DocumentConventions conventions, JsonOperationContext context)
             {
-                if (metadataDictionary.TryGetValue(Constants.Documents.Metadata.Expires, out object obj))
-                {
-                    if (obj == null)
-                        ThrowInvalidExpiresMetadata($"The value of {Constants.Documents.Metadata.Expires} metadata for compare exchange '{key}' is null.");
-                    if (obj is DateTime == false && obj is string == false)
-                        ThrowInvalidExpiresMetadata($"The type of {Constants.Documents.Metadata.Expires} metadata for compare exchange '{key}' is not valid. Use the following type: {nameof(DateTime)} or {nameof(String)}");
-                }
+                ValidateMetadataForPut(key, metadataDictionary);
 
                 using (var writer = conventions.Serialization.CreateWriter(context))
                 {
                     writer.WriteMetadata(metadataDictionary);
                     writer.FinalizeDocument();
                     return writer.CreateReader();
+                }
+            }
+
+            private static void ValidateMetadataForPut(string key, IMetadataDictionary metadataDictionary)
+            {
+                if (metadataDictionary.TryGetValue(Constants.Documents.Metadata.Expires, out object obj))
+                {
+                    if (obj == null)
+                        ThrowInvalidExpiresMetadata($"The value of {Constants.Documents.Metadata.Expires} metadata for compare exchange '{key}' is null.");
+                    if (obj is DateTime == false && obj is string == false)
+                        ThrowInvalidExpiresMetadata($"The type of {Constants.Documents.Metadata.Expires} metadata for compare exchange '{key}' is not valid. Use the following type: {nameof(DateTime)} or {nameof(String)}");
                 }
             }
 
