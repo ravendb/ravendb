@@ -4,7 +4,6 @@ using Raven.Client.ServerWide.Commands;
 using Raven.Server.Documents.Replication.Senders;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.Sharding.Operations;
-using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Utils;
@@ -13,13 +12,13 @@ namespace Raven.Server.Documents.Replication.Outgoing
 {
     public class OutgoingMigrationReplicationHandler : DatabaseOutgoingReplicationHandler
     {
-        private readonly ShardedDocumentDatabase _database;
+        private readonly ShardedDocumentDatabase _shardedDatabase;
         public readonly BucketMigrationReplication BucketMigrationNode;
         public string LastChangeVectorInBucket = null;
 
         public OutgoingMigrationReplicationHandler(ReplicationLoader parent, ShardedDocumentDatabase database, BucketMigrationReplication node, TcpConnectionInfo connectionInfo) : base(parent, database, node, connectionInfo)
         {
-            _database = database;
+            _shardedDatabase = database;
             BucketMigrationNode = node;
             SuccessfulReplication += TryNotifySourceMigrationCompleted;
         }
@@ -33,21 +32,21 @@ namespace Raven.Server.Documents.Replication.Outgoing
 
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal,
                 "this is only best effort, this will not solve failovers / writting to a different node / writing after this");
-            if (_database.ShardedDocumentsStorage.HaveMoreDocumentsInBucket(bucket, lastSentChangeVector))
+            if (_shardedDatabase.ShardedDocumentsStorage.HaveMoreDocumentsInBucket(bucket, lastSentChangeVector))
                 return;
 
             if (current.Server.Sharding.ManualMigration)
                 return;
 
-            var task = current.Server.Sharding.SourceMigrationCompleted(_database.ShardedDatabaseName, bucket, migrationIndex, lastSentChangeVector,
+            var task = current.Server.Sharding.SourceMigrationCompleted(_shardedDatabase.ShardedDatabaseName, bucket, migrationIndex, lastSentChangeVector,
                 $"{bucket}@{migrationIndex}/{lastSentChangeVector}");
 
-            task.Wait(_database.DatabaseShutdown);
+            task.Wait(_shardedDatabase.DatabaseShutdown);
 
             var result = task.Result;
 
             var op = new WaitForIndexNotificationOperation(result.Index);
-            _database.DatabaseContext.AllNodesExecutor.ExecuteParallelForAllAsync(op).Wait(_database.DatabaseShutdown);
+            _shardedDatabase.DatabaseContext.AllNodesExecutor.ExecuteParallelForAllAsync(op).Wait(_shardedDatabase.DatabaseShutdown);
         }
 
         public override ReplicationDocumentSenderBase CreateDocumentSender(Stream stream, Logger logger) => 
