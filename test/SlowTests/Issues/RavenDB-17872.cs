@@ -286,9 +286,55 @@ namespace SlowTests.Issues
             {
                 var entity = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<TestObj>(id);
                 var metadata = entity.Metadata;
-                var dictionary1 = metadata.GetObjects("Custom-Metadata")[0];
-
+                var dictionary1 = metadata.GetObject("Custom-Metadata");
                 Assert.Equal(2, dictionary1.GetLong("bbbb"));
+            }
+        }
+
+        [Fact]
+        public async Task CompareExchangeDoubleNestedMetadata_Create_WithoutPropChange()
+        {
+            using var store = GetDocumentStore();
+            const string id = "testObjs/0";
+            var dictionary = new Dictionary<string, Dictionary<string, int>>
+            {
+                {
+                    "123", new Dictionary<string, int> { { "aaaa", 1 } }
+                },
+                {
+                    "321", new Dictionary<string, int> { { "bbbb", 2 } }
+                }
+            };
+
+            using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+            {
+                var entity = new TestObj();
+                session.Advanced.ClusterTransaction.CreateCompareExchangeValue(id, entity);
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+            {
+                var entity = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<TestObj>(id);
+                // entity.Value.Prop = "Changed"; //without this line the session doesn't send an update to the compare exchange
+                entity.Metadata["Custom-Metadata"] = dictionary;
+                await session.SaveChangesAsync();
+            }
+
+            //The session doesn't set the metadata but it can be seen in the studio. 
+            // WaitForUserToContinueTheTest(store);
+
+            using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+            {
+                var entity = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<TestObj>(id);
+                var metadata = entity.Metadata;
+                var dictionaryLevel1 = metadata.GetObject("Custom-Metadata");
+
+                var dictionaryLevel2 = dictionaryLevel1.GetObject("123");
+                Assert.Equal(1, dictionaryLevel2.GetLong("aaaa"));
+
+                dictionaryLevel2 = dictionaryLevel1.GetObject("321");
+                Assert.Equal(2, dictionaryLevel2.GetLong("bbbb"));
             }
         }
 
