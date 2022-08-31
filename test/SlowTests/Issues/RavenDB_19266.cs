@@ -1,13 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using FastTests;
 using Raven.Client.ServerWide;
-using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.DocumentsCompression;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace FastTests.Issues
+namespace SlowTests.Issues
 {
     public class RavenDB_19266 : RavenTestBase
     {
