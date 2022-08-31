@@ -59,7 +59,8 @@ namespace FastTests.Client
                 "DeleteServerWideSorterCommand", "PutServerWideSortersCommand",
                 "SetDatabasesLockCommand",
                 "GetDatabaseSettingsCommand", "PutDatabaseConfigurationSettingsCommand",
-                "GetTrafficWatchConfigurationCommand", "SetTrafficWatchConfigurationCommand"
+                "GetTrafficWatchConfigurationCommand", "SetTrafficWatchConfigurationCommand",
+                "GetNextServerOperationIdCommand", "KillServerOperationCommand"
             }.OrderBy(t => t);
 
             var commandBaseType = typeof(RavenCommand<>);

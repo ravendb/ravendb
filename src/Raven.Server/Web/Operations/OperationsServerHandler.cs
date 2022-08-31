@@ -45,18 +45,6 @@ namespace Raven.Server.Web.Operations
             }
         }
 
-        [RavenAction("/admin/operations/kill-with-delay", "POST", AuthorizationStatus.Operator)]
-        public Task KillWithDelay()
-        {
-            var id = GetLongQueryString("id");
-            var timeSpan = (TimeSpan) GetTimeSpanQueryString("delay");
-
-            // ReSharper disable once PossibleInvalidOperationException
-            Task.Delay(timeSpan).ContinueWith(_ => ServerStore.Operations.KillOperation(id));
-
-            return NoContent();
-        }
-
         [RavenAction("/admin/operations/kill", "POST", AuthorizationStatus.Operator)]
         public Task Kill()
         {
