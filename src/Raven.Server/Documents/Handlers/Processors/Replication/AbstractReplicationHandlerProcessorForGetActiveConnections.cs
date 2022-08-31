@@ -1,9 +1,12 @@
 ﻿using System.Collections.Generic;
 using System.Net.Http;
 using JetBrains.Annotations;
+using Raven.Client.Documents.Replication;
 using Raven.Client.Http;
 using Raven.Server.Documents.Replication.Stats;
+using Raven.Server.Json;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using static Raven.Server.Documents.Handlers.Processors.Replication.ReplicationActiveConnectionsPreview;
 
 namespace Raven.Server.Documents.Handlers.Processors.Replication
@@ -53,7 +56,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
             {
                 foreach (BlittableJsonReaderObject bjro in bjra)
                 {
-                    var incomingConnectionInfo = IncomingConnectionInfo.FromJson(context, bjro);
+                    var incomingConnectionInfo = IncomingConnectionInfo.FromJson(bjro);
                     incomingConnectionsInfo.Add(incomingConnectionInfo);
                 }
             }
@@ -63,7 +66,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
             {
                 foreach (BlittableJsonReaderObject bjro in bjra)
                 {
-                    var outgoingConnectionInfo = OutgoingConnectionInfo.FromJson(context, bjro);
+                    var outgoingConnectionInfo = OutgoingConnectionInfo.FromJson(bjro);
                     outgoingConnectionsInfo.Add(outgoingConnectionInfo);
                 }
             }
@@ -88,21 +91,22 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
 
             public bool Disabled;
 
-            public static OutgoingConnectionInfo FromJson(JsonOperationContext ctx, BlittableJsonReaderObject json)
+            public static DynamicJsonValue ToJson(ReplicationNode replicationNode)
+            {
+                return new DynamicJsonValue
+                {
+                    [nameof(Url)] = replicationNode.Url,
+                    [nameof(Database)] = replicationNode.Database,
+                    [nameof(Disabled)] = replicationNode.Disabled
+                };
+            }
+
+            public static OutgoingConnectionInfo FromJson(BlittableJsonReaderObject json)
             {
                 if (json == null)
                     return null;
 
-                json.TryGet(nameof(Url), out string url);
-                json.TryGet(nameof(Database), out string database);
-                json.TryGet(nameof(Disabled), out bool disabled);
-
-                return new OutgoingConnectionInfo
-                {
-                    Url = url,
-                    Database = database,
-                    Disabled = disabled
-                };
+                return JsonDeserializationServer.ReplicationOutgoingConnectionInfo(json);
             }
         }
     }

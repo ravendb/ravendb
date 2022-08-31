@@ -16,9 +16,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
         {
         }
 
-        protected virtual void AssertCanExecute()
-        {
-        }
+        protected abstract void AssertCanExecute();
 
         protected abstract string GetDatabaseName();
 

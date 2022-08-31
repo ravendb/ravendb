@@ -30,15 +30,17 @@ using Raven.Server.Documents.Commands.Indexes;
 using Raven.Server.Documents.Commands.Revisions;
 using Raven.Server.Documents.ETL.Providers.ElasticSearch.Test;
 using Raven.Server.Documents.ETL.Providers.OLAP.Test;
+using Raven.Server.Documents.ETL.Providers.Queue.Test;
 using Raven.Server.Documents.ETL.Providers.Raven.Test;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Handlers.Debugging;
-using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Handlers.Processors.Subscriptions;
+using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Replication;
+using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.Documents.Revisions;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.Documents.Studio;
@@ -55,8 +57,8 @@ using Raven.Server.Utils;
 using Raven.Server.Web.Studio;
 using Raven.Server.Web.System;
 using Sparrow.Json;
+using static Raven.Server.Documents.Handlers.Processors.Replication.ReplicationActiveConnectionsPreview;
 using FacetSetup = Raven.Client.Documents.Queries.Facets.FacetSetup;
-using Raven.Server.Documents.ETL.Providers.Queue.Test;
 
 namespace Raven.Server.Json
 {
@@ -79,6 +81,10 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, ReplicationLatestEtagRequest> ReplicationLatestEtagRequest = GenerateJsonDeserializationRoutine<ReplicationLatestEtagRequest>();
 
         public static readonly Func<BlittableJsonReaderObject, ReplicationInitialRequest> ReplicationInitialRequest = GenerateJsonDeserializationRoutine<ReplicationInitialRequest>();
+
+        public static readonly Func<BlittableJsonReaderObject, IncomingConnectionInfo> ReplicationIncomingConnectionInfo = GenerateJsonDeserializationRoutine<IncomingConnectionInfo>();
+
+        public static readonly Func<BlittableJsonReaderObject, OutgoingConnectionInfo> ReplicationOutgoingConnectionInfo = GenerateJsonDeserializationRoutine<OutgoingConnectionInfo>();
 
         public static readonly Func<BlittableJsonReaderObject, SubscriptionConnectionClientMessage> SubscriptionConnectionClientMessage = GenerateJsonDeserializationRoutine<SubscriptionConnectionClientMessage>();
 

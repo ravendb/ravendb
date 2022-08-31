@@ -22,7 +22,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks
 
         protected override IEnumerable<OngoingTaskPullReplicationAsHub> GetOngoingTasks(TransactionOperationContext context, DatabaseRecord databaseRecord, ClusterTopology clusterTopology, long key)
         {
-            yield return null;
+            throw new NotSupportedInShardingException("Get Pull Replication Hub Task Info is not supported in sharding");
         }
     }
 }
