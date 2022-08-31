@@ -10,6 +10,10 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
         {
         }
 
+        protected override void AssertCanExecute()
+        {
+        }
+
         protected override string GetDatabaseName() => RequestHandler.Database.Name;
     }
 }

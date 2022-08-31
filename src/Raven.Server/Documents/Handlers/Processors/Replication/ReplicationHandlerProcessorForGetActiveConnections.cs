@@ -13,6 +13,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
         public ReplicationHandlerProcessorForGetActiveConnections([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {
         }
+
         protected override bool SupportsCurrentNode => true;
 
         protected override async ValueTask HandleCurrentNodeAsync()
@@ -20,33 +21,22 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
             {
-                var incoming = new DynamicJsonArray();
+                var incomings = new DynamicJsonArray();
                 foreach (var item in RequestHandler.Database.ReplicationLoader.IncomingConnections)
                 {
-                    incoming.Add(new DynamicJsonValue
-                    {
-                        ["SourceDatabaseId"] = item.SourceDatabaseId,
-                        ["SourceDatabaseName"] = item.SourceDatabaseName,
-                        ["SourceMachineName"] = item.SourceMachineName,
-                        ["SourceUrl"] = item.SourceUrl
-                    });
+                    incomings.Add(item.ToJson());
                 }
 
-                var outgoing = new DynamicJsonArray();
+                var outgoings = new DynamicJsonArray();
                 foreach (var item in RequestHandler.Database.ReplicationLoader.OutgoingConnections)
                 {
-                    outgoing.Add(new DynamicJsonValue
-                    {
-                        ["Url"] = item.Url,
-                        ["Database"] = item.Database,
-                        ["Disabled"] = item.Disabled
-                    });
+                    outgoings.Add(ReplicationActiveConnectionsPreview.OutgoingConnectionInfo.ToJson(item));
                 }
 
                 context.Write(writer, new DynamicJsonValue
                 {
-                    [nameof(ReplicationActiveConnectionsPreview.IncomingConnections)] = incoming,
-                    [nameof(ReplicationActiveConnectionsPreview.OutgoingConnections)] = outgoing
+                    [nameof(ReplicationActiveConnectionsPreview.IncomingConnections)] = incomings,
+                    [nameof(ReplicationActiveConnectionsPreview.OutgoingConnections)] = outgoings
                 });
             }
         }

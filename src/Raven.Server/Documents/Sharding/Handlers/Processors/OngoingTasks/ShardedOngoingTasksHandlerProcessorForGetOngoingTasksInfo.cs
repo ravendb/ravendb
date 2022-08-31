@@ -182,14 +182,19 @@ internal abstract class ShardedOngoingTasksHandlerProcessorForGetOngoingTasksInf
         var taskStatus = ReplicationLoader.GetExternalReplicationState(ServerStore, RequestHandler.DatabaseName, replication.TaskId);
         tag = ServerStore.WhoseTaskIsIt(databaseTopology, replication, taskStatus);
 
+        return GetReplicationTaskConnectionStatusInternalAsync(tag, replication);
+    }
+
+    private async ValueTask<(string Url, OngoingTaskConnectionStatus Status)> GetReplicationTaskConnectionStatusInternalAsync<T>(string tag, T replication)
+    {
         (string Url, OngoingTaskConnectionStatus Status) res = (null, OngoingTaskConnectionStatus.None);
 
         if (replication is ExternalReplication externalReplication)
         {
             if (tag == ServerStore.NodeTag)
-                res = GetExternalReplicationResult(externalReplication);
-            else
-                res.Status = OngoingTaskConnectionStatus.NotOnThisNode;
+                return await GetExternalReplicationResultAsync(externalReplication);
+
+            res.Status = OngoingTaskConnectionStatus.NotOnThisNode;
         }
 
         if (replication is PullReplicationAsSink)
@@ -197,15 +202,15 @@ internal abstract class ShardedOngoingTasksHandlerProcessorForGetOngoingTasksInf
             res.Status = OngoingTaskConnectionStatus.NotActive;
         }
 
-        return ValueTask.FromResult(res);
+        return res;
     }
 
-    private (string Url, OngoingTaskConnectionStatus Status) GetExternalReplicationResult(ExternalReplication replication)
+    private async ValueTask<(string Url, OngoingTaskConnectionStatus Status)> GetExternalReplicationResultAsync(ExternalReplication replication)
     {
         var shardDb = ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(RequestHandler.DatabaseName);
         foreach (var task in shardDb)
         {
-            var db = task.Result;
+            var db = await task;
             var res = db.ReplicationLoader.GetExternalReplicationDestination(replication.TaskId);
 
             if (res.Status == OngoingTaskConnectionStatus.Active)

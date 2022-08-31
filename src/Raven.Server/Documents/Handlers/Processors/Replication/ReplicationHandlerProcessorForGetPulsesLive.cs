@@ -7,7 +7,6 @@ using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Raven.Server.Web.Http;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Replication
@@ -20,32 +19,27 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
 
         protected override bool SupportsCurrentNode => true;
 
-        protected override async ValueTask HandleCurrentNodeAsync()
+        protected override async ValueTask HandleCurrentNodeAsync(WebSocket webSocket, OperationCancelToken token)
         {
-            using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
+            var receiveBuffer = new ArraySegment<byte>(new byte[1024]);
+            var receive = webSocket.ReceiveAsync(receiveBuffer, RequestHandler.Database.DatabaseShutdown);
+
+            await using (var ms = new MemoryStream())
+            using (var collector = new LiveReplicationPulsesCollector(RequestHandler.Database))
             {
-                var receiveBuffer = new ArraySegment<byte>(new byte[1024]);
-                var receive = webSocket.ReceiveAsync(receiveBuffer, RequestHandler.Database.DatabaseShutdown);
+                // 1. Send data to webSocket without making UI wait upon opening webSocket
+                await SendPulsesOrHeartbeatToWebSocket(receive, webSocket, collector, ms, 100);
 
-                await using (var ms = new MemoryStream())
-                using (var collector = new LiveReplicationPulsesCollector(RequestHandler.Database))
+                // 2. Send data to webSocket when available
+                while (RequestHandler.Database.DatabaseShutdown.IsCancellationRequested == false)
                 {
-                    // 1. Send data to webSocket without making UI wait upon opening webSocket
-                    await SendPulsesOrHeartbeatToWebSocket(receive, webSocket, collector, ms, 100);
-
-                    // 2. Send data to webSocket when available
-                    while (RequestHandler.Database.DatabaseShutdown.IsCancellationRequested == false)
+                    if (await SendPulsesOrHeartbeatToWebSocket(receive, webSocket, collector, ms, 4000) == false)
                     {
-                        if (await SendPulsesOrHeartbeatToWebSocket(receive, webSocket, collector, ms, 4000) == false)
-                        {
-                            break;
-                        }
+                        break;
                     }
                 }
             }
         }
-
-        protected override Task HandleRemoteNodeAsync(ProxyCommand<object> command, OperationCancelToken token) => RequestHandler.ExecuteRemoteAsync(command, token.Token);
 
         private async Task<bool> SendPulsesOrHeartbeatToWebSocket(Task<WebSocketReceiveResult> receive, WebSocket webSocket,
             LiveReplicationPulsesCollector collector, MemoryStream ms, int timeToWait)
