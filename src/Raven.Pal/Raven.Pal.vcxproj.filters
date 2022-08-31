@@ -96,4 +96,9 @@
       <Filter>Source Files\Posix</Filter>
     </ClCompile>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\scripts\assets\icon.png">
+      <Filter>Resource Files</Filter>
+    </None>
+  </ItemGroup>
 </Project>
