@@ -8,6 +8,7 @@ using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Session.Operations.Lazy;
+using Raven.Client.Extensions;
 using Raven.Client.Json;
 using Raven.Client.Json.Serialization;
 using Raven.Client.Util;
@@ -98,7 +99,7 @@ namespace Raven.Client.Documents.Session
             {
                 _session.IncrementRequestCount();
 
-                var value = await _session.Operations.SendAsync(new GetCompareExchangeValueOperation<BlittableJsonReaderObject>(key, materializeMetadata: false), sessionInfo: _session._sessionInfo, token: token).ConfigureAwait(false);
+                var value = await _session.Operations.SendAsync(new GetCompareExchangeValueOperation<BlittableJsonReaderObject>(key, materializeMetadata: true), sessionInfo: _session._sessionInfo, token: token).ConfigureAwait(false);
                 if (value == null)
                 {
                     RegisterMissingCompareExchangeValue(key);
@@ -321,16 +322,31 @@ namespace Raven.Client.Documents.Session
                                 throw new InvalidOperationException("Value cannot be null.");
 
                             T entity = default;
-                            if (_originalValue != null && _originalValue.Value != null)
+                            IMetadataDictionary metadata = null;
+                            if (_originalValue != null)
                             {
-                                var type = typeof(T);
-                                if (type.IsPrimitive || type == typeof(string))
-                                    _originalValue.Value.TryGet(Constants.CompareExchange.ObjectFieldName, out entity);
-                                else
-                                    entity = conventions.Serialization.DefaultConverter.FromBlittable<T>(_originalValue.Value, _key);
+                                if (_originalValue.Value != null)
+                                {
+                                    var type = typeof(T);
+                                    if (type.IsPrimitive || type == typeof(string))
+                                        _originalValue.Value.TryGet(Constants.CompareExchange.ObjectFieldName, out entity);
+                                    else
+                                        entity = conventions.Serialization.DefaultConverter.FromBlittable<T>(_originalValue.Value, _key);
+                                }
+
+                                if (_originalValue.Metadata != null)
+                                {
+                                    metadata = new MetadataAsDictionary();
+                                    foreach (var kvp in _originalValue.Metadata)
+                                    {
+                                        var key = kvp.Key;
+                                        var val = kvp.Value;
+                                        metadata[key] = val;
+                                    }
+                                }
                             }
 
-                            var value = new CompareExchangeValue<T>(_key, _index, entity, _originalValue?.Metadata);
+                            var value = new CompareExchangeValue<T>(_key, _index, entity, metadata);
                             _value = value;
 
                             return value;
@@ -391,11 +407,19 @@ namespace Raven.Client.Documents.Session
                         var entity = CompareExchangeValueBlittableJsonConverter.ConvertToBlittable(_value.Value, conventions, context, jsonSerializer);
                         var entityJson = entity as BlittableJsonReaderObject;
                         BlittableJsonReaderObject metadata = null;
+                        _originalValue?.Value.TryGet(Constants.Documents.Metadata.Key, out metadata);
                         var metadataHasChanged = false;
                         if (_value.HasMetadata && _value.Metadata.Count != 0)
                         {
-                            metadata = PrepareMetadataForPut(_key, _value.Metadata, conventions, context);
-                            metadataHasChanged = InMemoryDocumentSessionOperations.UpdateMetadataModifications(_value?.Metadata, metadata);
+                            if (metadata == null)
+                            {
+                                metadataHasChanged = true;
+                                metadata = PrepareMetadataForPut(_key, _value.Metadata, conventions, context);
+                            }
+                            else
+                            {
+                                metadataHasChanged = InMemoryDocumentSessionOperations.UpdateMetadataModifications(_value.Metadata, metadata);
+                            }
                         }
 
                         BlittableJsonReaderObject entityToInsert = null;
