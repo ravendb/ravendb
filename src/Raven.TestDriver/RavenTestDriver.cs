@@ -83,12 +83,14 @@ namespace Raven.TestDriver
             var store = new DocumentStore
             {
                 Urls = documentStore.Urls,
-                Database = name
+                Database = name,
+                Conventions =
+                {
+                    DisableTopologyCache = true
+                }
             };
 
             PreInitialize(store);
-
-            store.Conventions.DisableTopologyCache = true;
 
             store.Initialize();
 
@@ -277,10 +279,12 @@ namespace Raven.TestDriver
 
             var store = new DocumentStore
             {
-                Urls = new[] { url.AbsoluteUri }
+                Urls = new[] { url.AbsoluteUri },
+                Conventions =
+                {
+                    DisableTopologyCache = true
+                }
             };
-
-            store.Conventions.DisableTopologyCache = true;
 
             store.Initialize();
 
