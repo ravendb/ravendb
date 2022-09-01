@@ -8,8 +8,11 @@ import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import generalUtils = require("common/generalUtils");
 import virtualBulkInsertFailures = require("common/notifications/models/virtualBulkInsertFailures");
+import moment = require("moment");
 
 class virtualBulkInsertFailuresDetails extends dialogViewModelBase {
+
+    view = require("views/common/notificationCenter/detailViewer/virtualOperations/virtualBulkInsertFailuresDetails.html");
 
     private bulkInserts: virtualBulkInsertFailures;
     private gridController = ko.observable<virtualGridController<virtualBulkOperationFailureItem>>();

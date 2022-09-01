@@ -8,8 +8,11 @@ import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import generalUtils = require("common/generalUtils");
 import virtualDeleteByQueryFailures = require("common/notifications/models/virtualDeleteByQueryFailures");
+import moment = require("moment");
 
 class virtualDeleteByQueryFailuresDetails extends dialogViewModelBase {
+
+    view = require("views/common/notificationCenter/detailViewer/virtualOperations/virtualDeleteByQueryFailuresDetails.html");
 
     private virtualNotification: virtualDeleteByQueryFailures;
     private gridController = ko.observable<virtualGridController<queryBasedVirtualBulkOperationFailureItem>>();
