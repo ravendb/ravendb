@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
+using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -256,6 +257,8 @@ namespace Raven.Server.Documents.Indexes.Workers
                                                 {
                                                     var numberOfResults = _index.HandleMap(current, mapResults, writeOperation, indexContext, collectionStats);
 
+                                                    _index.DocumentDatabase.IndexStore.ForTestingPurposes?.AfterReferencedDocumentWasIndexed?.Invoke();
+
                                                     resultsCount += numberOfResults;
                                                     collectionStats.RecordMapReferenceSuccess();
                                                     _index.MapsPerSec?.MarkSingleThreaded(numberOfResults);
@@ -386,6 +389,29 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                 yield return item;
             }
+
+            if (CurrentIndexingScope.Current.ReferencesByCollection != null &&
+                CurrentIndexingScope.Current.ReferencesByCollection.TryGetValue(collection, out var values))
+            {
+                // references were found during handling references
+                // in case of a very rare race condition the found reference was saved after we processed the parent document
+                // we saved the references in the ReferencesByCollection (in memory) but we process the references that we take from the storage
+                // at this point, we cannot find the references in the storage, we skip the reference document and mark it as processed
+
+                foreach (var key in new List<Slice>(values.Keys))
+                {
+                    if (indexed.Add(key.ToString()) == false)
+                        continue;
+
+                    var item = GetItem(queryContext.Documents, key);
+                    if (item == null)
+                        continue;
+
+                    yield return item;
+                }
+            }
+
+            //TODO: compare exchange references
         }
 
         protected virtual IEnumerable<Reference> GetItemReferences(QueryOperationContext queryContext, CollectionName referencedCollection, long lastEtag, long pageSize)
