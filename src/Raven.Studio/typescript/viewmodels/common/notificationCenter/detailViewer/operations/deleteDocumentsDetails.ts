@@ -5,6 +5,7 @@ import operation = require("common/notifications/models/operation");
 import abstractNotification = require("common/notifications/models/abstractNotification");
 import notificationCenter = require("common/notifications/notificationCenter");
 import virtualDeleteByQuery = require("common/notifications/models/virtualDeleteByQuery");
+import virtualDeleteByQueryFailures = require("common/notifications/models/virtualDeleteByQueryFailures");
 import abstractOperationDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/abstractOperationDetails");
 
 class deleteDocumentsDetails extends abstractOperationDetails {
@@ -68,35 +69,17 @@ class deleteDocumentsDetails extends abstractOperationDetails {
 
     static tryHandle(operationDto: Raven.Server.NotificationCenter.Notifications.OperationChanged, notificationsContainer: KnockoutObservableArray<abstractNotification>,
                      database: database, callbacks: { spinnersCleanup: Function, onChange: Function }): boolean {
-
-        // first check if operation is completed DeleteByQuery - that the only case when we execute custom logic
-        if (operationDto.Type === "OperationChanged" && (operationDto.TaskType === "DeleteByQuery" || operationDto.TaskType === "DeleteByCollection") && operationDto.State.Status === "Completed") {
-
-            // find "in progress" operation and update it + remove from notification center
-            // completed notification will be merged into grouped notification
-            // update is needed if user has details opened
-
-            const existingOperation = notificationsContainer().find(x => x.id === operationDto.Id) as operation;
-            if (existingOperation) {
-                existingOperation.updateWith(operationDto);
-                existingOperation.invokeOnUpdateHandlers();
-
-                notificationsContainer.remove(existingOperation);
+        if (operationDto.Type === "OperationChanged" && (operationDto.TaskType === "DeleteByQuery" || operationDto.TaskType === "DeleteByCollection")) {
+            if (operationDto.State.Status === "Completed") {
+                abstractOperationDetails.handleInternal(virtualDeleteByQuery, operationDto, notificationsContainer, database, callbacks);
+                return true;
             }
 
-            // create or update cumulative DeleteByQuery notification
-            let cumulativeNotification = notificationsContainer().find(x => x instanceof virtualDeleteByQuery) as virtualDeleteByQuery;
-            if (!cumulativeNotification) {
-                cumulativeNotification = new virtualDeleteByQuery(database);
-                notificationsContainer.push(cumulativeNotification);
+            if (operationDto.State.Status === "Faulted") {
+                abstractOperationDetails.handleInternal(virtualDeleteByQueryFailures, operationDto, notificationsContainer, database, callbacks);
+                return true;
             }
-
-            cumulativeNotification.merge(operationDto);
-
-            callbacks.spinnersCleanup();
-            callbacks.onChange();
-
-            return true;
+            
         }
 
         return false;

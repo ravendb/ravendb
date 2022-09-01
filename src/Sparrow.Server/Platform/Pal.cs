@@ -10,7 +10,7 @@ namespace Sparrow.Server.Platform
     public static unsafe class Pal
     {
         public static PalDefinitions.SystemInformation SysInfo;
-        public const int PAL_VER = 42013; // Should match auto generated rc from rvn_get_pal_ver() @ src/rvngetpalver.c
+        public const int PAL_VER = 52000; // Should match auto generated rc from rvn_get_pal_ver() @ src/rvngetpalver.c
 
         static Pal()
         {
