@@ -61,13 +61,13 @@ namespace SlowTests.Sharding.Client.Operations
                     Assert.Equal(expected, totalResults);
 
                     var documentsConflict = await store.Maintenance.SendAsync(new GetConflictsOperation(start: 0));
-                    Assert.Equal(20, documentsConflict.Results.Length);
+                    Assert.Equal(expected, documentsConflict.Results.Count);
 
-                    documentsConflict = await store.Maintenance.SendAsync(new GetConflictsOperation(start: 12));
-                    Assert.Equal(8, documentsConflict.Results.Length);
+                    documentsConflict = await store.Maintenance.SendAsync(new GetConflictsOperation(start: 2));
+                    Assert.Equal(8, documentsConflict.Results.Count);
 
-                    documentsConflict = await store.Maintenance.SendAsync(new GetConflictsOperation(start: 0, pageSize: 10));
-                    Assert.Equal(10, documentsConflict.Results.Length);
+                    documentsConflict = await store.Maintenance.SendAsync(new GetConflictsOperation(start: 0, pageSize: 5));
+                    Assert.Equal(5, documentsConflict.Results.Count);
                 }
             }
         }
@@ -100,12 +100,12 @@ namespace SlowTests.Sharding.Client.Operations
                     var conflicts = db.DocumentsStorage.ConflictsStorage.GetConflictsByBucketFrom(context, bucket, etag: 0).ToList();
                     Assert.Equal(20, conflicts.Count); // 2 conflicts per doc
 
-                    var documentsConflict = await store.Maintenance.SendAsync(new GetConflictsOperation(start: 0, pageSize: 15));
-                    Assert.Equal(15, documentsConflict.Results.Length);
+                    var documentsConflict = await store.Maintenance.SendAsync(new GetConflictsOperation(start: 0, pageSize: 5));
+                    Assert.Equal(5, documentsConflict.Results.Count);
 
                     documentsConflict = await store.Maintenance.SendAsync(new GetConflictsOperation(continuationToken: documentsConflict.ContinuationToken));
-                    Assert.Equal(5, documentsConflict.Results.Length);
-                    Assert.Equal(20, documentsConflict.TotalResults);
+                    Assert.Equal(5, documentsConflict.Results.Count);
+                    Assert.Equal(10, documentsConflict.TotalResults);
                 }
             }
         }

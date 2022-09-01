@@ -111,30 +111,26 @@ namespace Raven.Server.Documents
         {
             var table = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, ConflictsSlice);
 
-            var conflicts = new List<GetConflictsPreviewResult.ConflictPreview>();
-            foreach (var tvr in table.SeekBackwardFromLast(ConflictsSchema.FixedSizeIndexes[AllConflictedDocsEtagsSlice], skip))
+            var conflictsDictionary = new Dictionary<string, GetConflictsPreviewResult.ConflictPreview>();
+            foreach (var tvr in table.SeekBackwardFromLast(ConflictsSchema.FixedSizeIndexes[AllConflictedDocsEtagsSlice]))
             {
                 var documentConflict = TableValueToConflictDocument(context, ref tvr.Reader);
 
-                var conflict = new GetConflictsPreviewResult.ConflictPreview
-                {
-                    Id = documentConflict.Id,
-                    LastModified = documentConflict.LastModified,
-                };
-
-                conflicts.Add(conflict);
+                conflictsDictionary.TryAdd(documentConflict.Id, new GetConflictsPreviewResult.ConflictPreview {Id = documentConflict.Id, LastModified = documentConflict.LastModified});
             }
 
+            var conflicts = conflictsDictionary.Values.ToList();
+            conflicts = conflicts.GetRange((int)skip, conflicts.Count - (int)skip);
             conflicts.Sort(ConflictsPreviewComparer.Instance);
-
+          
             return new GetConflictsPreviewResult
             {
-                TotalResults = GetNumberOfConflicts(context),
+                TotalResults = GetNumberOfDocumentsConflicts(context),
                 Results = conflicts.Select(c=>
                 {
                     c.ConflictsPerDocument = GetConflictsFor(context, c.Id).Count;
                     return c;
-                }).ToArray()
+                }).ToList()
             };
         }
 
