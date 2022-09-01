@@ -385,6 +385,7 @@ namespace SlowTests.Client.Subscriptions
         [Fact]
         public void ShouldIncrementFailingTests()
         {
+            DoNotReuseServer();
             using (var store = GetDocumentStore())
             {
                 Server.ServerStore.Observer.Suspended = true;
