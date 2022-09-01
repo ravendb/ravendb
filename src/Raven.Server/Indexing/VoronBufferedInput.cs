@@ -5,7 +5,6 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using Lucene.Net.Store;
 using Raven.Client.Extensions.Streams;
-using Voron;
 using Voron.Data;
 using Voron.Impl;
 
@@ -31,10 +30,9 @@ public class VoronBufferedInput : BufferedIndexInput
     /// </seealso>
     public override int ReadVInt(IState state)
     {
-        Optimized:
-        //Perf shortcut
         if (bufferPosition + 5 < bufferLength)
         {
+            // handle directly
             byte b = buffer[bufferPosition++];
             int i = b & 0x7F;
             for (int shift = 7; (b & 0x80) != 0; shift += 7)
@@ -46,18 +44,23 @@ public class VoronBufferedInput : BufferedIndexInput
             return i;
         }
 
+        return ReadVIntUnlikely(state);
+    }
+
+    private int ReadVIntUnlikely(IState state)
+    {
         //We want to refill only when we're out of cache. Calling this before can lead to data loss. 
         if (bufferPosition >= bufferLength)
         {
             Refill(state);
-
-            // If we got at least 5 elements that means we can go to shortcut.
             if (bufferPosition + 5 < bufferLength)
-                goto Optimized;
+            {
+                return ReadVInt(state);
+            }
         }
 
-        //We don't have 5 elements (what is max here) in buffer. To avoid copy pasting of code: go to standard implementation
-
+        // We don't have 5 elements (what is max here) in buffer, just go to standard implementation
+        // that would read it one line at a time
         return base.ReadVInt(state);
     }
 
@@ -67,7 +70,7 @@ public class VoronBufferedInput : BufferedIndexInput
         _name = name;
         _tree = tree;
 
-        OpenInternal(transaction);
+        _stream = VoronIndexInput.OpenVoronStream(transaction, _directory, _name, _tree);
 
         //We don't want to get buffer instantly. Only when needed.
         //buffer = ArrayPool<byte>.Shared.Rent(DefaultBufferSize);
@@ -92,39 +95,7 @@ public class VoronBufferedInput : BufferedIndexInput
         buffer = newBuffer;
         ArrayPool<byte>.Shared.Return(oldBuffer);
     }
-
-    private void OpenInternal(Transaction transaction)
-    {
-        if (transaction.IsWriteTransaction == false)
-        {
-            if (transaction.LowLevelTransaction.ImmutableExternalState is IndexTransactionCache cache)
-            {
-                if (cache.DirectoriesByName.TryGetValue(_directory.Name, out var files))
-                {
-                    if (files.ChunksByName.TryGetValue(_name, out var details))
-                    {
-                        // we don't dispose here explicitly, the fileName needs to be
-                        // alive as long as the transaction is
-                        Slice.From(transaction.Allocator, _name, out Slice fileName);
-                        _stream = new VoronStream(fileName, details, transaction.LowLevelTransaction);
-                        return;
-                    }
-                }
-            }
-        }
-
-        var fileTree = transaction.ReadTree(_tree);
-        if (fileTree == null)
-            throw new FileNotFoundException($"Could not find '{_tree}' tree for index input", _name);
-
-        using (Slice.From(transaction.Allocator, _name, out Slice fileName))
-        {
-            _stream = fileTree.ReadStream(fileName);
-            if (_stream == null)
-                throw new FileNotFoundException("Could not find index input", _name);
-        }
-    }
-
+    
     public override object Clone(IState s)
     {
         var state = s as VoronState;
@@ -139,8 +110,7 @@ public class VoronBufferedInput : BufferedIndexInput
         var clone = (VoronBufferedInput)base.Clone(s);
         GC.SuppressFinalize(clone);
         clone._isOriginal = false;
-
-        clone.OpenInternal(state.Transaction);
+        clone._stream = VoronIndexInput.OpenVoronStream(state.Transaction, clone._directory, clone._name, clone._tree);
         clone._stream.Position = _stream.Position;
 
         return clone;

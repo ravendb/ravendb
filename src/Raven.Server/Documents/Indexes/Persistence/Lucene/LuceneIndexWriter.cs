@@ -159,7 +159,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 NumberOfLargeSegmentsToMergeInSingleBatch = _index.Configuration.NumberOfLargeSegmentsToMergeInSingleBatch
             };
             
-            mergePolicy.SetUseCompoundFile(_index.Configuration.UseCompoundFileInMerging);
+            mergePolicy.SetUseCompoundFile(_index.Configuration.LuceneUseCompoundFileInMerging);
             _indexWriter.SetMergePolicy(mergePolicy);
 
             if (_indexReaderWarmer != null)

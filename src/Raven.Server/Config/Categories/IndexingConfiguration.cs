@@ -431,13 +431,14 @@ namespace Raven.Server.Config.Categories
         
         [Description("EXPERT: Use compound file in merging")]
         [DefaultValue(true)]
-        [IndexUpdateType(IndexUpdateType.None)]
+        [IndexUpdateType(IndexUpdateType.Refresh)]
+        [ConfigurationEntry("Indexing.Lucene.UseCompoundFileInMerging", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         [ConfigurationEntry("Indexing.UseCompoundFileInMerging", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
-        public bool UseCompoundFileInMerging { get; set; }
+        public bool LuceneUseCompoundFileInMerging { get; set; }
         
         [Description("Lucene index input")]
         [DefaultValue(LuceneIndexInputType.Buffered)]
-        [IndexUpdateType(IndexUpdateType.None)]
+        [IndexUpdateType(IndexUpdateType.Refresh)]
         [ConfigurationEntry("Indexing.Lucene.IndexInputType", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public LuceneIndexInputType LuceneIndexInput { get; set; }
         
