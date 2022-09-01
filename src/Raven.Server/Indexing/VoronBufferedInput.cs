@@ -22,6 +22,46 @@ public class VoronBufferedInput : BufferedIndexInput
 
     private bool _isOriginal = true;
 
+    /// <summary>Reads a long stored in variable-length format.  Reads between one and
+    /// nine bytes.  Smaller values take fewer bytes.  Negative numbers are not
+    /// supported. 
+    /// </summary>
+    public override long ReadVLong(IState state)
+    {
+        if (bufferPosition + 9 < bufferLength)
+        {
+            // handle directly
+            byte b = buffer[bufferPosition++];
+            int i = b & 0x7F;
+            for (int shift = 7; (b & 0x80) != 0; shift += 7)
+            {
+                b = buffer[bufferPosition++];
+                i |= (b & 0x7F) << shift;
+            }
+
+            return i;
+        }
+
+        return ReadVLongUnlikely(state);
+    }
+
+    private long ReadVLongUnlikely(IState state)
+    {
+        //We want to refill only when we're out of cache. Calling this before can lead to data loss. 
+        if (bufferPosition >= bufferLength)
+        {
+            Refill(state);
+            if (bufferPosition + 9 < bufferLength)
+            {
+                return ReadVLong(state);
+            }
+        }
+
+        // We don't have 9 elements (what is max here) in buffer, just go to standard implementation
+        // that would read it one line at a time
+        return base.ReadVLong(state);
+    }
+
     /// <summary>Reads an int stored in variable-length format.  Reads between one and
     /// five bytes.  Smaller values take fewer bytes.  Negative numbers are not
     /// supported.
@@ -95,7 +135,7 @@ public class VoronBufferedInput : BufferedIndexInput
         buffer = newBuffer;
         ArrayPool<byte>.Shared.Return(oldBuffer);
     }
-    
+
     public override object Clone(IState s)
     {
         var state = s as VoronState;
