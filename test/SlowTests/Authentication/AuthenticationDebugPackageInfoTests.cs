@@ -5,7 +5,6 @@ using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Documents.Linq;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Documents.Handlers.Debugging;
 using Raven.Server.Routing;
@@ -22,7 +21,7 @@ namespace SlowTests.Authentication
         public AuthenticationDebugPackageTests(ITestOutputHelper output) : base(output)
         {
         }
-        
+
         [LinuxFact]
         public async Task WriteMeminfoAsTextFileInDebugPackage_RavenDB_17427()
         {
@@ -61,14 +60,14 @@ namespace SlowTests.Authentication
                 "replication.outgoing-reconnect-queue.json", "stats.json", "subscriptions.json", "tcp.json", "documents.huge.json", "identities.json",
                 "queries.running.json", "queries.cache.list.json", "script-runners.json", "storage.report.json", "storage.all-environments.report.json",
                 "admin.txinfo.json", "admin.cluster.txinfo.json", "admin.configuration.settings.json", "etl.stats.json", "etl.progress.json",
-                "admin.tombstones.state.json"
+                "admin.tombstones.state.json", "indexes.performance.json"
             };
-            
+
             var dbName = GetDatabaseName();
-            
+
             await AssertDatabaseDebugInfoEntries(dbName, new Dictionary<string, DatabaseAccess>(), SecurityClearance.Operator, shouldContain);
         }
-        
+
         [Fact]
         public async Task DatabaseDebugInfoPackage_WhenHasClusterAdminPermissions_ShouldContainSettingsJson()
         {
@@ -79,14 +78,14 @@ namespace SlowTests.Authentication
                 "replication.outgoing-reconnect-queue.json", "stats.json", "subscriptions.json", "tcp.json", "documents.huge.json", "identities.json",
                 "queries.running.json", "queries.cache.list.json", "script-runners.json", "storage.report.json", "storage.all-environments.report.json",
                 "admin.txinfo.json", "admin.cluster.txinfo.json", "admin.configuration.settings.json", "etl.stats.json", "etl.progress.json",
-                "admin.tombstones.state.json"
+                "admin.tombstones.state.json", "indexes.performance.json"
             };
-            
+
             var dbName = GetDatabaseName();
-            
+
             await AssertDatabaseDebugInfoEntries(dbName, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, shouldContain);
         }
-        
+
         [Fact]
         public async Task DatabaseDebugInfoPackage_WhenDatabaseAdminPermissions_ShouldContainSettingsJson()
         {
@@ -97,15 +96,15 @@ namespace SlowTests.Authentication
                 "replication.outgoing-reconnect-queue.json", "stats.json", "subscriptions.json", "tcp.json", "documents.huge.json", "identities.json",
                 "queries.running.json", "queries.cache.list.json", "script-runners.json", "storage.report.json", "storage.all-environments.report.json",
                 "admin.txinfo.json", "admin.cluster.txinfo.json", "admin.configuration.settings.json", "etl.stats.json", "etl.progress.json",
-                "admin.tombstones.state.json"
+                "admin.tombstones.state.json", "indexes.performance.json"
             };
-            
+
             var dbName = GetDatabaseName();
             var databaseAccesses = new Dictionary<string, DatabaseAccess> { [dbName] = DatabaseAccess.Admin };
-            
+
             await AssertDatabaseDebugInfoEntries(dbName, databaseAccesses, SecurityClearance.ValidUser, shouldContain);
         }
-        
+
         [Fact]
         public async Task DatabaseDebugInfoPackage_WhenValidUserWithOnlyReadWritePermissions_ShouldNotContainSettingsJson()
         {
@@ -115,12 +114,12 @@ namespace SlowTests.Authentication
                 "replication.outgoing-failures.json", "replication.incoming-last-activity-time.json", "replication.incoming-rejection-info.json",
                 "replication.outgoing-reconnect-queue.json", "stats.json", "subscriptions.json", "tcp.json", "documents.huge.json", "identities.json",
                 "queries.running.json", "queries.cache.list.json", "script-runners.json", "storage.report.json", "storage.all-environments.report.json",
-                "etl.stats.json", "etl.progress.json",
+                "etl.stats.json", "etl.progress.json", "indexes.performance.json"
             };
-            
+
             var dbName = GetDatabaseName();
             var databaseAccesses = new Dictionary<string, DatabaseAccess> { [dbName] = DatabaseAccess.ReadWrite };
-            
+
             await AssertDatabaseDebugInfoEntries(dbName, databaseAccesses, SecurityClearance.ValidUser, shouldContain);
         }
 
@@ -133,7 +132,7 @@ namespace SlowTests.Authentication
 
             var userCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, databaseAccesses, securityClearance);
 
-            using var store = GetDocumentStore(new Options {AdminCertificate = adminCert, ClientCertificate = userCert, ModifyDatabaseName = s => dbName});
+            using var store = GetDocumentStore(new Options { AdminCertificate = adminCert, ClientCertificate = userCert, ModifyDatabaseName = s => dbName });
             var requestExecutor = store.GetRequestExecutor(store.Database);
             await using var response = await requestExecutor.HttpClient.GetStreamAsync($"{store.Urls.First()}/databases/{dbName}/debug/info-package");
             using var archive = new ZipArchive(response);
@@ -141,19 +140,19 @@ namespace SlowTests.Authentication
 
             var shouldContainButNot = shouldContain.Except(entries).ToArray();
             var shouldNotContainButDo = entries.Except(shouldContain).ToArray();
-            Assert.True(shouldContainButNot.Any() == false && shouldNotContainButDo.Any() == false, 
+            Assert.True(shouldContainButNot.Any() == false && shouldNotContainButDo.Any() == false,
                 $"Should contain \"{string.Join(", ", shouldContainButNot)}\", Should not contain \"{string.Join(", ", shouldNotContainButDo)}\"");
         }
-    
+
         [Fact]
         public async Task CanGetDatabaseRecordInDebugPackageFromUnsecuredServerWithoutClientCert()
         {
             DoNotReuseServer();
             var databaseName = GetDatabaseName();
             using (var store = GetDocumentStore(new Options()
-                   {
-                       ModifyDatabaseName = s => databaseName
-                   }))
+            {
+                ModifyDatabaseName = s => databaseName
+            }))
             {
                 Server.ForTestingPurposesOnly().DebugPackage.RoutesToSkip = _routesToSkip;
                 var requestExecutor = store.GetRequestExecutor(store.Database);
@@ -183,7 +182,7 @@ namespace SlowTests.Authentication
             var userCert = Certificates.RegisterClientCertificate(certs.ServerCertificate.Value, certs.ClientCertificate2.Value,
                 new Dictionary<string, DatabaseAccess>() { [databaseName] = DatabaseAccess.ReadWrite }, SecurityClearance.Operator);
 
-            using (var store = GetDocumentStore(new Options() {ClientCertificate = userCert, AdminCertificate = adminCert, ModifyDatabaseName = _ => databaseName}))
+            using (var store = GetDocumentStore(new Options() { ClientCertificate = userCert, AdminCertificate = adminCert, ModifyDatabaseName = _ => databaseName }))
             {
                 Server.ForTestingPurposesOnly().DebugPackage.RoutesToSkip = _routesToSkip;
                 var requestExecutor = store.GetRequestExecutor(databaseName);
@@ -214,14 +213,14 @@ namespace SlowTests.Authentication
                 new Dictionary<string, DatabaseAccess>(),
                 SecurityClearance.ClusterAdmin);
             var userCert = Certificates.RegisterClientCertificate(certs.ServerCertificate.Value, certs.ClientCertificate2.Value,
-                new Dictionary<string, DatabaseAccess>() {[databaseName] = DatabaseAccess.ReadWrite}, SecurityClearance.ValidUser);
+                new Dictionary<string, DatabaseAccess>() { [databaseName] = DatabaseAccess.ReadWrite }, SecurityClearance.ValidUser);
 
             using (var store = GetDocumentStore(new Options()
-                   {
-                       ClientCertificate = userCert, 
-                       AdminCertificate = adminCert, 
-                       ModifyDatabaseName = _ => databaseName
-                   }))
+            {
+                ClientCertificate = userCert,
+                AdminCertificate = adminCert,
+                ModifyDatabaseName = _ => databaseName
+            }))
             {
                 Server.ForTestingPurposesOnly().DebugPackage.RoutesToSkip = _routesToSkip;
                 var requestExecutor = store.GetRequestExecutor(databaseName);
@@ -248,11 +247,11 @@ namespace SlowTests.Authentication
                 new Dictionary<string, DatabaseAccess>() { [databaseName] = DatabaseAccess.Admin }, SecurityClearance.ValidUser);
 
             using (var store = GetDocumentStore(new Options()
-                   {
-                       ClientCertificate = userCert,
-                       AdminCertificate = adminCert,
-                       ModifyDatabaseName = _ => databaseName
-                   }))
+            {
+                ClientCertificate = userCert,
+                AdminCertificate = adminCert,
+                ModifyDatabaseName = _ => databaseName
+            }))
             {
                 Server.ForTestingPurposesOnly().DebugPackage.RoutesToSkip = _routesToSkip;
                 var requestExecutor = store.GetRequestExecutor(databaseName);
@@ -270,8 +269,8 @@ namespace SlowTests.Authentication
         private void AssertArchiveContainsAllEntriesAndOnlyThem(HashSet<string> debugEntries, ZipArchive archive)
         {
             var archiveEntries = archive.Entries.Select(entry => entry.FullName)
-                .Where(e => e.Contains($"{DateTime.UtcNow:yyyy-MM-dd}") == false  && (e.LastIndexOf(".error") == -1 || e.LastIndexOf(".error") != e.Length - 6))
-                .Select(e => e.Replace(".txt", "").Replace(".json","")).ToHashSet();
+                .Where(e => e.Contains($"{DateTime.UtcNow:yyyy-MM-dd}") == false && (e.LastIndexOf(".error") == -1 || e.LastIndexOf(".error") != e.Length - 6))
+                .Select(e => e.Replace(".txt", "").Replace(".json", "")).ToHashSet();
             foreach (var e in debugEntries)
                 Assert.True(archiveEntries.Contains(e), $"{e} is missing from the debug package");
             foreach (var e in archiveEntries)
@@ -288,7 +287,7 @@ namespace SlowTests.Authentication
             return route.AuthorizationStatus == AuthorizationStatus.ValidUser ||
                    route.AuthorizationStatus == AuthorizationStatus.UnauthenticatedClients;
         }
-        
+
         private bool DatabaseAdminAccess(RouteInformation route)
         {
             return route.AuthorizationStatus == AuthorizationStatus.ValidUser || route.AuthorizationStatus == AuthorizationStatus.DatabaseAdmin ||
