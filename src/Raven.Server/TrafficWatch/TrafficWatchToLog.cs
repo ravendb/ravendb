@@ -1,4 +1,6 @@
-﻿using Raven.Client.Documents.Changes;
+﻿using System.Text;
+using Microsoft.Extensions.Primitives;
+using Raven.Client.Documents.Changes;
 using Raven.Client.ServerWide.Operations.TrafficWatch;
 using Raven.Client.Util;
 using Raven.Server.Config.Categories;
@@ -28,8 +30,8 @@ internal class TrafficWatchToLog
 
         if (Logger.IsOperationsEnabled == false)
             return;
-        
-        string msg = null;
+
+        var stringBuilder = new StringBuilder();
         
         if (trafficWatchData is TrafficWatchHttpChange twhc)
         {
@@ -64,24 +66,38 @@ internal class TrafficWatchToLog
 
             var requestSize = new Size(twhc.RequestSizeInBytes, SizeUnit.Bytes);
             var responseSize = new Size(twhc.ResponseSizeInBytes, SizeUnit.Bytes);
-            var customInfo = twhc.CustomInfo?.ReplaceLineEndings("") ?? "N/A";
+            var customInfo = twhc.CustomInfo?.ReplaceLineEndings(string.Empty) ?? "N/A";
 
-            msg = $"HTTP, {twhc.DatabaseName}, " +
-                  $"{twhc.ClientIP}, {twhc.CertificateThumbprint ?? "N/A"}, " +
-                  $"request ID: {twhc.RequestId}, {twhc.HttpMethod}, {twhc.ResponseStatusCode}, " +
-                  $"{twhc.RequestUri}, {twhc.AbsoluteUri}, request: {requestSize}, " +
-                  $"response: {responseSize}, {twhc.Type}, {twhc.ElapsedMilliseconds}ms, " +
-                  $"custom info: [{customInfo}]";
+            stringBuilder
+                .Append("HTTP, ")
+                .Append(twhc.DatabaseName).Append(", ")
+                .Append(twhc.ClientIP).Append(", ")
+                .Append(twhc.CertificateThumbprint ?? "N/A").Append(", ")
+                .Append("request ID: ").Append(twhc.RequestId).Append(", ")
+                .Append(twhc.HttpMethod).Append(", ")
+                .Append(twhc.ResponseStatusCode).Append(", ")
+                .Append(twhc.RequestUri).Append(", ")
+                .Append(twhc.AbsoluteUri).Append(", ")
+                .Append("request size: ").Append(requestSize).Append(", ")
+                .Append("response size: ").Append(responseSize).Append(", ")
+                .Append(twhc.Type).Append(", ")
+                .Append(twhc.ElapsedMilliseconds).Append("ms, ")
+                .Append("custom info: ").Append(customInfo);
         }
         else if (trafficWatchData is TrafficWatchTcpChange twtc)
         {
-            msg = $"TCP, {twtc.Operation}, " +
-                  $"{twtc.OperationVersion}, {twtc.DatabaseName}, {twtc.Source}, " +
-                  $"{twtc.CustomInfo}, {twtc.ClientIP}, {twtc.CertificateThumbprint}";
+            stringBuilder
+                .Append("TCP, ")
+                .Append(twtc.Operation).Append(", ")
+                .Append(twtc.OperationVersion).Append(", ")
+                .Append(twtc.DatabaseName).Append(", ")
+                .Append(twtc.Source).Append(", ")
+                .Append(twtc.CustomInfo).Append(", ")
+                .Append(twtc.ClientIP).Append(", ")
+                .Append(twtc.CertificateThumbprint);
         }
 
-        if (Configuration.TrafficWatchMode == TrafficWatchMode.ToLogFile)
-            Logger.Operations(msg);
+        Logger.Operations(stringBuilder.ToString());
     }
 
     public void UpdateConfiguration(TrafficWatchConfiguration configuration)
