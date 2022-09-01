@@ -570,6 +570,7 @@ namespace FastTests.Client.Subscriptions
             SubscriptionWorker<dynamic> throwingSubscriptionWorker = null;
             SubscriptionWorker<dynamic> notThrowingSubscriptionWorker = null;
 
+            DoNotReuseServer();
             var store = GetDocumentStore();
             try
             {
@@ -721,6 +722,7 @@ namespace FastTests.Client.Subscriptions
         [Fact]
         public async Task RavenDB_3452_ShouldStopPullingDocsIfReleased()
         {
+            DoNotReuseServer();
             using (var store = GetDocumentStore())
             {
                 Server.ServerStore.Observer.Suspended = true;

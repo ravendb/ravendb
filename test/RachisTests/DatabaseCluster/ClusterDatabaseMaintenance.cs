@@ -308,10 +308,7 @@ namespace RachisTests.DatabaseCluster
 
                 cluster.Leader.ServerStore.ClusterMaintenanceSupervisor.ForTestingPurposesOnly().SetTriggerTimeoutAfterNoChangeAction("B");
 
-                await Task.Delay(2 * 1000); // twice the StabilizationTime
-
-                var members = await GetMembersCount(store);
-                Assert.Equal(3, members);
+                await WaitForValueAsync(async () => await GetMembersCount(store), expectedVal: 3, timeout: 15_000);
             }
         }
 

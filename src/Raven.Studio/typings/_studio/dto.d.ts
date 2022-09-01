@@ -574,7 +574,14 @@ interface sqlMigrationAdvancedSettingsDto {
     DetectManyToMany: boolean 
 }
 
-type virtualNotificationType = "CumulativeBulkInsert" | "AttachmentUpload" | "CumulativeUpdateByQuery" | "CumulativeDeleteByQuery";
+type virtualNotificationType = 
+    "CumulativeBulkInsert" 
+    | "CumulativeBulkInsertFailures" 
+    | "AttachmentUpload" 
+    | "CumulativeUpdateByQuery" 
+    | "CumulativeUpdateByQueryFailures" 
+    | "CumulativeDeleteByQuery"
+    | "CumulativeDeleteByQueryFailures";
 
 declare module Raven.Server.NotificationCenter.Notifications {
     interface Notification {
@@ -598,9 +605,23 @@ interface virtualBulkOperationItem {
     timeSeriesProcessed: number;
 }
 
+interface virtualBulkOperationFailureItem {
+    id: string;
+    date: string;
+    duration: number;
+    errorMsg: string;
+    error: string;
+}
+
 interface queryBasedVirtualBulkOperationItem extends virtualBulkOperationItem {
     query: string;
     indexOrCollectionUsed: string;
+}
+
+interface queryBasedVirtualBulkOperationFailureItem extends virtualBulkOperationItem {
+    query: string;
+    errorMsg: string;
+    error: string;
 }
 
 type adminLogsHeaderType = "Source" | "Logger";
