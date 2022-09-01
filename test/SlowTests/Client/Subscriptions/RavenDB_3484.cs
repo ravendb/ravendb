@@ -60,6 +60,7 @@ namespace SlowTests.Client.Subscriptions
         [Fact]
         public async Task ShouldReplaceActiveClientWhen_TakeOver_StrategyIsUsed()
         {
+            DoNotReuseServer();
             using (var store = GetDocumentStore())
             {
                 Server.ServerStore.Observer.Suspended = true;

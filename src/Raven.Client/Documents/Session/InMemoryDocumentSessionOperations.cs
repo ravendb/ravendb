@@ -931,32 +931,31 @@ more responsive application.
 
         protected internal abstract ClusterTransactionOperationsBase GetClusterSession();
 
-        private static bool UpdateMetadataModifications(DocumentInfo documentInfo)
+        internal static bool UpdateMetadataModifications(IMetadataDictionary metadataDictionary, BlittableJsonReaderObject metadata)
         {
-            if ((documentInfo.MetadataInstance == null ||
-                ((MetadataAsDictionary)documentInfo.MetadataInstance).Changed == false) &&
-                (documentInfo.Metadata.Modifications == null ||
-                documentInfo.Metadata.Modifications.Properties.Count == 0))
+            if ((metadataDictionary == null ||
+                 ((MetadataAsDictionary)metadataDictionary).Changed == false) &&
+                (metadata?.Modifications == null ||
+                 metadata.Modifications.Properties.Count == 0))
                 return false;
 
-            if (documentInfo.Metadata.Modifications == null || documentInfo.Metadata.Modifications.Properties.Count == 0)
+            if (metadata.Modifications == null || metadata.Modifications.Properties.Count == 0)
             {
-                documentInfo.Metadata.Modifications = new DynamicJsonValue();
+                metadata.Modifications = new DynamicJsonValue();
             }
 
-            if (documentInfo.MetadataInstance != null)
+            if (metadataDictionary != null)
             {
-                foreach (var prop in documentInfo.MetadataInstance.Keys)
+                foreach (var prop in metadataDictionary.Keys)
                 {
-                    var result = documentInfo.MetadataInstance[prop];
-                    if(result is IMetadataDictionary md)
+                    var result = metadataDictionary[prop];
+                    if (result is IMetadataDictionary md)
                     {
                         result = HandleDictionaryObject(md);
                     }
-                    documentInfo.Metadata.Modifications[prop] =  result;
+                    metadata.Modifications[prop] = result;
                 }
             }
-
             return true;
         }
 
@@ -1069,7 +1068,7 @@ more responsive application.
                     if (IsDeleted(entity.Value.Id))
                         continue;
 
-                    var metadataUpdated = UpdateMetadataModifications(entity.Value);
+                    var metadataUpdated = UpdateMetadataModifications(entity.Value.MetadataInstance, entity.Value.Metadata);
 
                     var document = JsonConverter.ToBlittable(entity.Key, entity.Value);
 
@@ -1088,7 +1087,7 @@ more responsive application.
                         var beforeStoreEventArgs = new BeforeStoreEventArgs(this, entity.Value.Id, entity.Key);
                         onOnBeforeStore(this, beforeStoreEventArgs);
                         if (metadataUpdated || beforeStoreEventArgs.MetadataAccessed)
-                            metadataUpdated |= UpdateMetadataModifications(entity.Value);
+                            metadataUpdated |= UpdateMetadataModifications(entity.Value.MetadataInstance, entity.Value.Metadata);
                         if (beforeStoreEventArgs.MetadataAccessed ||
                             EntityChanged(document, entity.Value, null))
                         {
@@ -1285,7 +1284,7 @@ more responsive application.
         {
             foreach (var pair in DocumentsById)
             {
-                UpdateMetadataModifications(pair.Value);
+                UpdateMetadataModifications(pair.Value.MetadataInstance, pair.Value.Metadata);
                 var newObj = JsonConverter.ToBlittable(pair.Value.Entity, pair.Value);
                 EntityChanged(newObj, pair.Value, changes);
             }
