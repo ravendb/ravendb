@@ -66,7 +66,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Replication
                     results,
                     selector: r => r.Results,
                     comparer: ConflictsLastModifiedComparer.Instance,
-                    _token).ToArray();
+                    _token).ToList();
 
                 foreach (var s in span)
                 {

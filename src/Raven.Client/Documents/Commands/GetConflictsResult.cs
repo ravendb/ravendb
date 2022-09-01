@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
@@ -25,7 +26,7 @@ namespace Raven.Client.Documents.Commands
 
     internal class GetConflictsPreviewResult
     {
-        public ConflictPreview[] Results { get; internal set; }
+        public List<ConflictPreview> Results { get; internal set; }
 
         public long TotalResults { get; set; }
 
