@@ -73,7 +73,7 @@ class editReplicationSinkTask extends viewModelBase {
                             this.serverCertificateModel(new replicationCertificateModel(serverCertificate.Certificate));
                             deferred.resolve({can: true});
                         })
-                        .fail((response: JQueryXHR) => {
+                        .fail(() => {
                             deferred.resolve({ redirect: appUrl.forOngoingTasks(this.activeDatabase()) });
                         });
                 } else {
@@ -278,7 +278,7 @@ class editReplicationSinkTask extends viewModelBase {
         this.spinners.save(true);
 
         // All is well, Save connection string (if relevant..) 
-        let savingNewStringAction = $.Deferred<void>();
+        const savingNewStringAction = $.Deferred<void>();
         if (this.createNewConnectionString()) {
             this.newConnectionString()
                 .saveConnectionString(this.activeDatabase())
@@ -349,14 +349,11 @@ class editReplicationSinkTask extends viewModelBase {
     
     private importConfigurationFile(contents: string) {
         try {
-            let hubName: string;
             let accessName: string;
             let certificate: replicationCertificateModel;
             let h2sPrefixes: Array<prefixPathModel>;
             let s2hPrefixes: Array<prefixPathModel>;
             let useSamePrefixes: boolean;
-            let h2sMode: boolean;
-            let s2hMode: boolean;
             
             const config = JSON.parse(contents) as pullReplicationExportFileFormat;
             
@@ -365,9 +362,9 @@ class editReplicationSinkTask extends viewModelBase {
                 return;
             }
 
-            hubName = config.HubName;
-            h2sMode = config.AllowHubToSinkMode;
-            s2hMode = config.AllowSinkToHubMode;
+            const hubName = config.HubName;
+            const h2sMode = config.AllowHubToSinkMode;
+            const s2hMode = config.AllowSinkToHubMode;
             
             if (this.canDefineCertificates) {
                 if (!config.AccessName || !config.HubToSinkPrefixes) {
@@ -435,7 +432,7 @@ class editReplicationSinkTask extends viewModelBase {
             this.editedSinkTask().replicationAccess().selectedFileName(shortFileName);
 
             const certAsBase64 = forge.util.encode64(data);
-            this.editedSinkTask().replicationAccess().onCertificateSelected(certAsBase64, shortFileName);
+            this.editedSinkTask().replicationAccess().onCertificateSelected(certAsBase64);
         });
     }
 

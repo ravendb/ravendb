@@ -76,6 +76,7 @@ abstract class viewModelBase {
         _.bindAll(this, ...methods);
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     canActivate(args: any): boolean | JQueryPromise<canActivateResultDto> {
         setTimeout(() => viewModelBase.showSplash(this.isAttached === false), 700);
         this.downloader.reset();
@@ -133,6 +134,7 @@ abstract class viewModelBase {
         this.dirtyFlag().reset(); //Resync Changes
     }
    
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     canDeactivate(isClose: boolean): boolean | JQueryPromise<canDeactivateResultDto> {
         if (this.dirtyFlag().isDirty()) {
             return this.discardStayResult();
@@ -184,19 +186,19 @@ abstract class viewModelBase {
         this.disposed = true;
     }
 
-    protected registerDisposableDelegateHandler($element: JQuery, event: string, delegate: string, handler: Function) {
+    protected registerDisposableDelegateHandler($element: JQuery, event: string, delegate: string, handler: (event: any) => void) {
         $element.on(event as any, delegate, handler);
 
         this.disposableActions.push({
-             dispose: () => $element.off(event as any, delegate, handler as any)
+             dispose: () => $element.off(event as any, delegate, handler)
         });
     }
     
-    protected registerDisposableHandler($element: JQuery, event: string, handler: Function) {
+    protected registerDisposableHandler($element: JQuery, event: string, handler: (event: any) => void) {
         $element.on(event as any, handler);
 
         this.disposableActions.push({
-             dispose: () => $element.off(event as any, handler as any)
+             dispose: () => $element.off(event as any, handler)
         });
     }
 

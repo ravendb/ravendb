@@ -233,7 +233,7 @@ class customSorters extends viewModelBase {
         });
 
         this.columnsSelector.init(this.gridController(),
-            (s, t, c) => this.effectiveFetcher()(s, t),
+            (s, t) => this.effectiveFetcher()(s, t),
             (w, r) => {
                 if (this.currentTab() === "results") {
                     return documentsProvider.findColumns(w, r, ["__metadata"]);

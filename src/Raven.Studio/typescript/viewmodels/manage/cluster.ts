@@ -162,7 +162,7 @@ class cluster extends viewModelBase {
             });
     }
 
-    stepDown(node: clusterNode) {
+    stepDown() {
         this.confirmationMessage("Are you sure?", `Do you want current leader to step down?`, {
             buttons: ["Cancel", "Step down"]
         })

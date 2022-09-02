@@ -46,7 +46,7 @@ class getOngoingTaskInfoCommand<T extends Raven.Client.Documents.Operations.Ongo
         return new getOngoingTaskInfoCommand<Raven.Client.Documents.Subscriptions.SubscriptionStateWithNodeDetails>(db, "Subscription", taskId, taskName);
     }
 
-    static forBackup(db: database, taskId: number, reportFailure: boolean = true) { 
+    static forBackup(db: database, taskId: number, reportFailure = true) { 
         return new getOngoingTaskInfoCommand<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup>(db, "Backup", taskId, undefined, reportFailure);
     }
 

@@ -895,6 +895,11 @@ interface cachedDateValue<T> {
 
 type widgetType = Raven.Server.Dashboard.Cluster.ClusterDashboardNotificationType | "Welcome" | "License";
 
+interface ioStatsWidgetConfig {
+    splitIops?: boolean;
+    splitThroughput?: boolean;
+}
+
 type databaseAccessLevel = `Database${Raven.Client.ServerWide.Operations.Certificates.DatabaseAccess}`;
 type securityClearance = Raven.Client.ServerWide.Operations.Certificates.SecurityClearance;
 type accessLevel = databaseAccessLevel | securityClearance;
@@ -916,6 +921,11 @@ interface rawTaskItem {
     dbName: string;
     count: number;
     node: string;
+}
+
+interface databaseDisconnectedEventArgs {
+    database: database;
+    cause: databaseDisconnectionCause;
 }
 
 interface taskInfo {

@@ -2,7 +2,6 @@
 import database = require("models/resources/database");
 import abstractWebSocketClient = require("common/abstractWebSocketClient");
 import d3 = require("d3");
-import endpoints = require("endpoints");
 
 abstract class liveIOStatsWebSocketClient extends abstractWebSocketClient<Raven.Server.Utils.IoMetrics.IOMetricsResponse> {
 

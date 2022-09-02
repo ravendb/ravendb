@@ -386,7 +386,7 @@ describe("rangeAggregator", function () {
 
     it('Calculate number of concurrent working indexes - Multiple indexes with overlaping time ranges - sample flow 3', () => {
         
-        let finder = new rangeAggregator([]);
+        const finder = new rangeAggregator([]);
 
         finder.inputItems([
             { startTime: 5, endTime: 14 },

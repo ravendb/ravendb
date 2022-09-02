@@ -86,7 +86,7 @@ class s3Settings extends amazonSettings {
 
         const ipRegExp = /^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$/;
         const letterOrNumberRegex = /^[a-z0-9]+$/;
-        const regExp = /^[a-z0-9\.-]+$/;
+        const regExp = /^[a-z0-9.-]+$/;
         this.bucketName.extend({
             validation: [
                 {

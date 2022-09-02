@@ -371,7 +371,7 @@ class editRabbitMqEtlTask extends viewModelBase {
     saveRabbitMqEtl() {
         let hasAnyErrors = false;
         this.spinners.save(true);
-        let editedEtl = this.editedRabbitMqEtl();
+        const editedEtl = this.editedRabbitMqEtl();
         
         // 1. Validate *edited transformation script*
         if (editedEtl.showEditTransformationArea()) {
@@ -411,7 +411,7 @@ class editRabbitMqEtlTask extends viewModelBase {
         }
 
         // 4. All is well, Save connection string (if relevant..) 
-        let savingNewStringAction = $.Deferred<void>();
+        const savingNewStringAction = $.Deferred<void>();
         if (this.createNewConnectionString()) {
             this.newConnectionString()
                 .saveConnectionString(this.activeDatabase())

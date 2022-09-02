@@ -12,7 +12,7 @@ class protractedCommandsDetector {
         this.showSpinner.subscribe((show: boolean) => $("body").toggleClass("processing", show));
     }
 
-    requestStarted(timeForSpinner: number, timeForAlert: number = 0): requestExecution {
+    requestStarted(timeForSpinner: number, timeForAlert = 0): requestExecution {
         const execution = new requestExecution(timeForSpinner, timeForAlert, () => this.sync());
 
         this.requestsInProgress.push(execution);

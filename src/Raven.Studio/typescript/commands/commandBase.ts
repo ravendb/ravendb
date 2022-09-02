@@ -24,12 +24,12 @@ class commandBase {
         return longWait ? 60000 : 9000;
     }
 
-    query<T>(relativeUrl: string, args: any, db?: database, resultsSelector?: (results: any, xhr: JQueryXHR) => T, options?: JQueryAjaxSettings, timeToAlert: number = 9000, baseUrl?: string): JQueryPromise<T> {
+    query<T>(relativeUrl: string, args: any, db?: database, resultsSelector?: (results: any, xhr: JQueryXHR) => T, options?: JQueryAjaxSettings, timeToAlert = 9000, baseUrl?: string): JQueryPromise<T> {
         const ajax = this.ajax<T>(relativeUrl, args, "GET", db, options, timeToAlert, baseUrl);
         if (resultsSelector) {
             const task = $.Deferred<T>();
             ajax.done((results, status, xhr) => {
-                var transformedResults = resultsSelector(results, xhr);
+                const transformedResults = resultsSelector(results, xhr);
                 task.resolve(transformedResults, status, xhr);
             });
             ajax.fail((request, status, error) => {
@@ -69,7 +69,7 @@ class commandBase {
         }
     }
 
-    protected put<T>(relativeUrl: string, args: any, db?: database, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<T> {
+    protected put<T>(relativeUrl: string, args: any, db?: database, options?: JQueryAjaxSettings, timeToAlert = 9000): JQueryPromise<T> {
         return this.ajax<T>(relativeUrl, args, "PUT", db, options, timeToAlert);
     }
 
@@ -77,11 +77,11 @@ class commandBase {
         return this.ajax<T>(relativeUrl, args, "RESET", db, options);
     }
 
-    protected del<T>(relativeUrl: string, args: any, db?: database, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<T> {
+    protected del<T>(relativeUrl: string, args: any, db?: database, options?: JQueryAjaxSettings, timeToAlert = 9000): JQueryPromise<T> {
         return this.ajax<T>(relativeUrl, args, "DELETE", db, options, timeToAlert);
     }
 
-    protected post<T>(relativeUrl: string, args: any, db?: database, options?: JQueryAjaxSettings, timeToAlert: number = 9000, baseUrl?: string): JQueryPromise<any> {
+    protected post<T>(relativeUrl: string, args: any, db?: database, options?: JQueryAjaxSettings, timeToAlert = 9000, baseUrl?: string): JQueryPromise<any> {
         return this.ajax<T>(relativeUrl, args, "POST", db, options, timeToAlert, baseUrl);
     }
 
@@ -89,7 +89,7 @@ class commandBase {
         return this.ajax<T>(relativeUrl, args, "PATCH", db, options);
     }
 
-    protected ajax<T>(relativeUrl: string, args: any, method: string, db?: database, options?: JQueryAjaxSettings, timeToAlert: number = 9000, baseUrl?: string): JQueryPromise<T> {
+    protected ajax<T>(relativeUrl: string, args: any, method: string, db?: database, options?: JQueryAjaxSettings, timeToAlert = 9000, baseUrl?: string): JQueryPromise<T> {
         const requestExecution = protractedCommandsDetector.instance.requestStarted(4000, timeToAlert);
 
         // ContentType:
@@ -132,7 +132,7 @@ class commandBase {
         };
         
         if (options) {
-            for (let prop in options) {
+            for (const prop in options) {
                 if (prop === "xhr") {
                     (defaultOptions as any)["xhr"] = () => {
                         const xhrFactory = (<any>options)["xhr"];

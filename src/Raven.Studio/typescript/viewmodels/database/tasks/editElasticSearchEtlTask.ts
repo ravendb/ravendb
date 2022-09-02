@@ -339,15 +339,7 @@ class editElasticSearchEtlTask extends viewModelBase {
             }
             return dto;
         };
-
-        const connectionStringProvider = () => {
-            if (this.createNewConnectionString()) {
-                return this.newConnectionString().toDto();
-            } else {
-                return null;
-            }
-        };
-
+        
         this.test = new elasticSearchTaskTestMode(this.activeDatabase, () => {
             return this.isValid(this.editedTransformationScriptSandbox().validationGroup);
         }, dtoProvider);
@@ -468,7 +460,7 @@ class editElasticSearchEtlTask extends viewModelBase {
         }
                 
         // 5. All is well, Save connection string (if relevant..) 
-        let savingNewStringAction = $.Deferred<void>();
+        const savingNewStringAction = $.Deferred<void>();
         if (this.createNewConnectionString()) {
             this.newConnectionString()
                 .saveConnectionString(this.activeDatabase())

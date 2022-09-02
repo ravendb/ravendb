@@ -3453,7 +3453,7 @@ namespace Raven.Server.ServerWide
                             DiskSpaceResult = FillDiskSpaceResult(tempBuffersDiskSpaceResult)
                         };
                         var tempBufferIoStatsResult = Server.DiskStatsGetter.Get(driveInfo?.TempPath.DriveName);
-                        if(tempBufferIoStatsResult != null)
+                        if (tempBufferIoStatsResult != null)
                             tempBuffersUsage.IoStatsResult = FillIoStatsResult(ioStatsResult);  
 
                         yield return tempBuffersUsage;
@@ -3475,7 +3475,7 @@ namespace Raven.Server.ServerWide
             };
         }
 
-        private static IoStatsResult FillIoStatsResult(DiskStatsResult ioStatsResult)
+        internal static IoStatsResult FillIoStatsResult(DiskStatsResult ioStatsResult)
         {
             return new IoStatsResult
             {

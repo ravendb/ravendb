@@ -26,7 +26,7 @@ class replicationAccessHubModel extends replicationAccessBaseModel {
 
     constructor(accessName: string, certificate: replicationCertificateModel,
                 hubToSink: prefixPathModel[], sinkToHub: prefixPathModel[],
-                filteringRequired: boolean, isNewItem: boolean = true) {
+                filteringRequired: boolean, isNewItem = true) {
         
         super(accessName, certificate, hubToSink, sinkToHub, filteringRequired);
         
@@ -120,7 +120,7 @@ class replicationAccessHubModel extends replicationAccessBaseModel {
             return this.validationGroupForExportWithFiltering;
         }
         
-        return this.validationGroupForExportNoFiltering;;
+        return this.validationGroupForExportNoFiltering;
     }
 
     getValidationGroupForSave(withFiltering: boolean) {
@@ -128,7 +128,7 @@ class replicationAccessHubModel extends replicationAccessBaseModel {
             return this.validationGroupForSaveWithFiltering;
         }
 
-        return this.validationGroupForSaveNoFiltering;;
+        return this.validationGroupForSaveNoFiltering;
     }
 
     static empty(filteringRequired: boolean): replicationAccessHubModel {

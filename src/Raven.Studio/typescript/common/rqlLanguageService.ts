@@ -8,7 +8,7 @@ class rqlLanguageService {
     
     private nextMessageId = 1;
     private worker: Worker;
-    private pendingMessages: Map<number, Function>;
+    private pendingMessages: Map<number, (response: LanguageServiceResponse) => void>;
     private latestSyntaxCheckRequestId = -1;
     private lastAutoCompleteRequestId = -1;
     private metadataProvider: queryCompleterProviders;
@@ -26,7 +26,7 @@ class rqlLanguageService {
         _.bindAll(this, "complete");
         
         
-        this.pendingMessages = new Map<number, Function>();
+        this.pendingMessages = new Map<number, (response: LanguageServiceResponse) => void>();
         
         this.configure();
     }

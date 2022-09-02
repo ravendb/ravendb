@@ -9,9 +9,7 @@ import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import generalUtils = require("common/generalUtils");
 import moment = require("moment");
 
-interface hugeDocumentsDetailsItemDto extends Raven.Server.NotificationCenter.Notifications.Details.HugeDocumentInfo {
-    
-}
+type hugeDocumentsDetailsItemDto = Raven.Server.NotificationCenter.Notifications.Details.HugeDocumentInfo
 
 class hugeDocumentsDetails extends abstractPerformanceHintDetails {
 
@@ -37,7 +35,7 @@ class hugeDocumentsDetails extends abstractPerformanceHintDetails {
         const grid = this.gridController();
         grid.headerVisible(true);
 
-        grid.init((s, t) => this.fetcher(s, t), () => {
+        grid.init(() => this.fetcher(), () => {
             return [
                 new textColumn<hugeDocumentsDetailsItemDto>(grid, x => x.Id, "Document ID", "30%", {
                     sortable: "string"
@@ -65,7 +63,7 @@ class hugeDocumentsDetails extends abstractPerformanceHintDetails {
         });
     }
 
-    private fetcher(skip: number, take: number): JQueryPromise<pagedResult<hugeDocumentsDetailsItemDto>> {
+    private fetcher(): JQueryPromise<pagedResult<hugeDocumentsDetailsItemDto>> {
         return $.Deferred<pagedResult<hugeDocumentsDetailsItemDto>>()
             .resolve({
                 items: this.tableItems,

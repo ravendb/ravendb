@@ -35,6 +35,7 @@ export function overrideSystem() {
         }
 
         // super()
+        // eslint-disable-next-line prefer-rest-params
         return acquire.apply(this, arguments);
     };
 }

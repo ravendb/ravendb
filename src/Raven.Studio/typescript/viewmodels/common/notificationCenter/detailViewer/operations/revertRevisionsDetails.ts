@@ -67,7 +67,7 @@ class revertRevisionsDetails extends abstractOperationDetails {
         const grid = this.gridController();
         grid.headerVisible(true);
 
-        grid.init((s, t) => this.fetcher(s, t), () => {
+        grid.init(() => this.fetcher(), () => {
             return [
                 new textColumn<gridItem>(grid, x => x.Id, "Document ID", "15%", {
                     sortable: "string"
@@ -91,7 +91,7 @@ class revertRevisionsDetails extends abstractOperationDetails {
         this.gridInitialized = true;
     }
 
-    private fetcher(skip: number, take: number): JQueryPromise<pagedResult<gridItem>> {
+    private fetcher(): JQueryPromise<pagedResult<gridItem>> {
         return $.Deferred<pagedResult<gridItem>>()
             .resolve({
                 items: this.allWarnings(),

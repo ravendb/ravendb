@@ -29,17 +29,19 @@ abstract class abstractNotificationCenterClient extends eventsWebSocketClient<Ra
         const actionType = actionDto.Type;
 
         switch (actionType) {
-            case "PerformanceHint":
+            case "PerformanceHint": {
                 const performanceHintDto = actionDto as Raven.Server.NotificationCenter.Notifications.PerformanceHint;
                 this.fireEvents<Raven.Server.NotificationCenter.Notifications.PerformanceHint>(this.allPerformanceHintsHandlers(), performanceHintDto, () => true);
                 break;
+            }
 
-            case "AlertRaised":
+            case "AlertRaised": {
                 const alertDto = actionDto as Raven.Server.NotificationCenter.Notifications.AlertRaised;
                 this.fireEvents<Raven.Server.NotificationCenter.Notifications.AlertRaised>(this.allAlertsHandlers(), alertDto, () => true);
                 break;
+            }
 
-            case "OperationChanged":
+            case "OperationChanged": {
                 const operationDto = actionDto as Raven.Server.NotificationCenter.Notifications.OperationChanged;
                 this.fireEvents<Raven.Server.NotificationCenter.Notifications.OperationChanged>(this.allOperationsHandlers(), operationDto, () => true);
 
@@ -48,11 +50,12 @@ abstract class abstractNotificationCenterClient extends eventsWebSocketClient<Ra
                 });
 
                 break;
-
-            case "NotificationUpdated":
+            }
+            case "NotificationUpdated": {
                 const notificationUpdatedDto = actionDto as Raven.Server.NotificationCenter.Notifications.NotificationUpdated;
                 this.fireEvents<Raven.Server.NotificationCenter.Notifications.NotificationUpdated>(this.allNotificationUpdatedHandlers(), notificationUpdatedDto, () => true);
                 break;
+            }
             default: 
                 super.onMessage(actionDto);
         }

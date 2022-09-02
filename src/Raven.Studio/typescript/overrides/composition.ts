@@ -11,6 +11,7 @@ export function overrideComposition() {
             settings.model = system.resolveObject(settings.model);
         }
 
+        // eslint-disable-next-line prefer-rest-params
         return compose.apply(this, arguments);
     };
     

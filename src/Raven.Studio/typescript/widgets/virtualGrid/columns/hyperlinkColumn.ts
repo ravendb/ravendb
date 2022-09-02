@@ -7,7 +7,7 @@ import virtualGridController = require("widgets/virtualGrid/virtualGridControlle
 /**
  * Virtual grid column that renders hyperlinks.
  */
-class hyperlinkColumn<T> extends textColumn<T> {
+class hyperlinkColumn<T extends object> extends textColumn<T> {
 
     private readonly hrefAccessor: (obj: T) => string;
     private readonly customHandler: (obj: T, event: JQueryEventObject) => void;

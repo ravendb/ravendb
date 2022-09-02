@@ -4,7 +4,7 @@ import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import genUtils = require("common/generalUtils");
 
-class iconsPlusTextColumn<T> implements virtualColumn {
+class iconsPlusTextColumn<T extends object> implements virtualColumn {
     width: string;
     header: string;
 
@@ -37,7 +37,7 @@ class iconsPlusTextColumn<T> implements virtualColumn {
         return genUtils.unescapeHtml(titleToUse);
     }
 
-    renderCell(item: T, isSelected: boolean, isSorted: boolean): string {
+    renderCell(item: T): string {
         const data = this.dataForHtml(item);
         let innerHtml = "";
         

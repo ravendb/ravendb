@@ -65,7 +65,7 @@ interface customOperationMerger {
 
 interface customOperationHandler {
     tryHandle(operationDto: Raven.Server.NotificationCenter.Notifications.OperationChanged, notificationsContainer: KnockoutObservableArray<abstractNotification>,
-              database: database, callbacks: { spinnersCleanup: Function, onChange: Function }): boolean;
+              database: database, callbacks: { spinnersCleanup: () => void, onChange: () => void }): boolean;
 }
 
 class notificationCenter {
@@ -233,7 +233,7 @@ class notificationCenter {
     }
 
     initialize() {
-        $("#notification-center").on('transitionend', e => {
+        $("#notification-center").on('transitionend', () => {
             if (!this.showNotifications()) {
                 this.includeInDom(false);
             }
@@ -268,7 +268,7 @@ class notificationCenter {
         serverWideClient.watchAllAlerts(e => this.onAlertReceived(e, this.globalNotifications, null));
         serverWideClient.watchAllPerformanceHints(e => this.onPerformanceHintReceived(e, this.globalNotifications, null));
         serverWideClient.watchAllOperations(e => this.onOperationChangeReceived(e, this.globalNotifications, null));
-        serverWideClient.watchAllNotificationUpdated(e => this.onNotificationUpdated(e, this.globalNotifications, null));
+        serverWideClient.watchAllNotificationUpdated(e => this.onNotificationUpdated(e, this.globalNotifications));
     }
 
     configureForDatabase(client: databaseNotificationCenterClient): changeSubscription[] {
@@ -279,7 +279,7 @@ class notificationCenter {
             client.watchAllAlerts(e => this.onAlertReceived(e, this.databaseNotifications, db)),
             client.watchAllPerformanceHints(e => this.onPerformanceHintReceived(e, this.databaseNotifications, db)),
             client.watchAllOperations(e => this.onOperationChangeReceived(e, this.databaseNotifications, db)),
-            client.watchAllNotificationUpdated(e => this.onNotificationUpdated(e, this.databaseNotifications, db)),
+            client.watchAllNotificationUpdated(e => this.onNotificationUpdated(e, this.databaseNotifications)),
             client.watchAllDatabaseStatsChanged(e => collectionsTracker.default.onDatabaseStatsChanged(e, db))
         ];
     }
@@ -381,8 +381,7 @@ class notificationCenter {
         invokeOnChange();
     }
 
-    private onNotificationUpdated(notificationUpdatedDto: Raven.Server.NotificationCenter.Notifications.NotificationUpdated, notificationsContainer: KnockoutObservableArray<abstractNotification>,
-        database: database) {
+    private onNotificationUpdated(notificationUpdatedDto: Raven.Server.NotificationCenter.Notifications.NotificationUpdated, notificationsContainer: KnockoutObservableArray<abstractNotification>) {
 
         const existingOperation = notificationsContainer().find(x => x.id === notificationUpdatedDto.NotificationId) as operation;
         if (existingOperation) {
