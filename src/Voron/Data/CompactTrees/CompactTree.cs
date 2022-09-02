@@ -633,7 +633,7 @@ namespace Voron.Data.CompactTrees
                 }
 
                 // We encode the length of the key and the value with variable length in order to store them later. 
-                int valueLength = ZigZagEncoding.Encode(valueEncodingBuffer, val, forceInline: true);
+                int valueLength = ZigZagEncoding.Encode(valueEncodingBuffer, val);
                 int keySizeLength = VariableSizeEncoding.Write(keyEncodingBuffer, encodedKey.Length);
 
                 // If we dont have enough free space in the receiving page, we move on. 
@@ -778,8 +778,7 @@ namespace Voron.Data.CompactTrees
             state.Page = _llt.ModifyPage(state.Page.PageNumber);
 
             var valueBufferPtr = stackalloc byte[10];
-            var valueBuffer = new Span<byte>(valueBufferPtr, 10);
-            int valueBufferLength = ZigZagEncoding.Encode(valueBuffer, value, forceInline: true);
+            int valueBufferLength = ZigZagEncoding.Encode(valueBufferPtr, value);
 
             if (state.LastSearchPosition >= 0) // update
             {
@@ -1356,18 +1355,31 @@ namespace Voron.Data.CompactTrees
             return (int)(entryPos - page.Pointer - entryOffset);
         }
 
+        private static void InvalidBufferContent()
+        {
+            throw new VoronErrorException("Invalid data found in the buffer.");
+        }
+
         private static Span<byte> GetEncodedEntryBuffer(Page page, ushort entryOffset)
         {
             if(entryOffset < PageHeader.SizeOf)
                 throw new ArgumentOutOfRangeException();
+
             byte* entry = page.Pointer + entryOffset;
             byte* pos = entry;
-            var keyLen = VariableSizeEncoding.Read<int>(pos, out var lenOfKeyLen);
-            sourceEncodedKeysLength += keyLen;
+            var keyLen = VariableSizeEncoding.ReadCompact<int>(pos, out var lenOfKeyLen, out bool success);
+            if (success == false)
+                InvalidBufferContent();
+
             pos += keyLen;
             pos += lenOfKeyLen;
-            VariableSizeEncoding.Read<int>(pos, out var lenOfValue);
+
+            VariableSizeEncoding.ReadCompact<int>(pos, out var lenOfValue, out success);
+            if (success == false)
+                InvalidBufferContent();
+
             pos += lenOfValue;
+
             return new Span<byte>(entry, (int)(pos - entry));
         }
 
@@ -1390,8 +1402,14 @@ namespace Voron.Data.CompactTrees
         private static void GetEntryBuffer(Page page, ushort entryOffset, out byte* b, out int len)
         {
             byte* entryPos = b = page.Pointer + entryOffset;
-            var keyLen = (int)VariableSizeEncoding.Read<int>(entryPos, out var lenKeyLen);
-            ZigZagEncoding.Decode<long>(entryPos + keyLen + lenKeyLen, out var valLen);
+            var keyLen = VariableSizeEncoding.ReadCompact<int>(entryPos, out var lenKeyLen, out bool success);
+            if (success == false)
+                InvalidBufferContent();
+
+            ZigZagEncoding.DecodeCompact<long>(entryPos + keyLen + lenKeyLen, out var valLen, out success);
+            if (success == false)
+                InvalidBufferContent();
+
             len = lenKeyLen + keyLen + valLen;
         }
 

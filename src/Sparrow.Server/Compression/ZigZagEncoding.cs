@@ -12,7 +12,7 @@ namespace Sparrow.Server.Compression
         public const int MaxEncodedSize = 10;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-        public static int Encode<T>(Span<byte> buffer, T value, int pos = 0, bool forceInline = false) where T : unmanaged
+        public static int Encode<T>(Span<byte> buffer, T value, int pos = 0) where T : unmanaged
         {
             int sizeOfTInBits = Unsafe.SizeOf<T>() * 8 - 1;
             if (typeof(T) == typeof(sbyte))
@@ -26,7 +26,7 @@ namespace Sparrow.Server.Compression
                     b = (byte)(object)value;
 
                 byte uv = (byte)((b << 1) ^ (b >> sizeOfTInBits));
-                return VariableSizeEncoding.Write(buffer, uv, pos, forceInline);
+                return VariableSizeEncoding.Write(buffer, uv, pos);
             }
 
             if (typeof(T) == typeof(short))
@@ -38,7 +38,7 @@ namespace Sparrow.Server.Compression
                     us = (ushort)(object)value;
 
                 ushort uv = (ushort)((us << 1) ^ (us >> sizeOfTInBits));
-                return VariableSizeEncoding.Write(buffer, uv, pos, forceInline);
+                return VariableSizeEncoding.Write(buffer, uv, pos);
             }
 
             if (typeof(T) == typeof(int))
@@ -50,7 +50,7 @@ namespace Sparrow.Server.Compression
                     ui = (uint)(object)value;
 
                 uint uv = ((ui << 1) ^ (ui >> sizeOfTInBits));
-                return VariableSizeEncoding.Write(buffer, uv, pos, forceInline);
+                return VariableSizeEncoding.Write(buffer, uv, pos);
             }
 
             if (typeof(T) == typeof(long))
@@ -58,14 +58,14 @@ namespace Sparrow.Server.Compression
                 long ul = (long)(object)value;
 
                 ulong uv = (ulong)((ul << 1) ^ (ul >> sizeOfTInBits));
-                return VariableSizeEncoding.Write(buffer, uv, pos, forceInline);
+                return VariableSizeEncoding.Write(buffer, uv, pos);
             }
 
             throw new NotSupportedException($"The type {nameof(T)} is not supported to be written.");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-        public static unsafe int Encode<T>(byte* buffer, T value, int pos = 0, bool forceInline = false) where T : unmanaged
+        public static unsafe int Encode<T>(byte* buffer, T value, int pos = 0) where T : unmanaged
         {
             int sizeOfTInBits = Unsafe.SizeOf<T>() * 8 - 1;
             if (typeof(T) == typeof(sbyte))
@@ -79,9 +79,7 @@ namespace Sparrow.Server.Compression
                     b = (byte)(object)value;
 
                 byte uv = (byte)((b << 1) ^ (b >> sizeOfTInBits));
-                return forceInline
-                    ? VariableSizeEncoding.WriteInline(buffer + pos, uv)
-                    : VariableSizeEncoding.Write(buffer + pos, uv);
+                return VariableSizeEncoding.Write(buffer + pos, uv);
             }
 
             if (typeof(T) == typeof(short))
@@ -93,9 +91,7 @@ namespace Sparrow.Server.Compression
                     us = (ushort)(object)value;
 
                 ushort uv = (ushort)((us << 1) ^ (us >> sizeOfTInBits));
-                return forceInline
-                    ? VariableSizeEncoding.WriteInline(buffer + pos, uv)
-                    : VariableSizeEncoding.Write(buffer + pos, uv);
+                return VariableSizeEncoding.Write(buffer + pos, uv);
             }
 
             if (typeof(T) == typeof(int))
@@ -107,9 +103,7 @@ namespace Sparrow.Server.Compression
                     ui = (uint)(object)value;
 
                 uint uv = ((ui << 1) ^ (ui >> sizeOfTInBits));
-                return forceInline
-                    ? VariableSizeEncoding.WriteInline(buffer + pos, uv)
-                    : VariableSizeEncoding.Write(buffer + pos, uv);
+                return VariableSizeEncoding.Write(buffer + pos, uv);
             }
 
             if (typeof(T) == typeof(long))
@@ -117,9 +111,7 @@ namespace Sparrow.Server.Compression
                 long ul = (long)(object)value;
 
                 ulong uv = (ulong)((ul << 1) ^ (ul >> sizeOfTInBits));
-                return forceInline
-                    ? VariableSizeEncoding.WriteInline(buffer + pos, uv)
-                    : VariableSizeEncoding.Write(buffer + pos, uv);
+                return VariableSizeEncoding.Write(buffer + pos, uv);
             }
 
             throw new NotSupportedException($"The type {nameof(T)} is not supported to be written.");
@@ -136,6 +128,13 @@ namespace Sparrow.Server.Compression
         public static unsafe T Decode<T>(byte* buffer, out int len, int pos = 0) where T : unmanaged
         {
             T value = VariableSizeEncoding.Read<T>(buffer + pos, out len);
+            return UnZag(value);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        public static unsafe T DecodeCompact<T>(byte* buffer, out int len, out bool success, int pos = 0) where T : unmanaged
+        {
+            T value = VariableSizeEncoding.ReadCompact<T>(buffer + pos, out len, out success);
             return UnZag(value);
         }
 
