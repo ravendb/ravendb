@@ -7,7 +7,7 @@ class leafMenuItem implements menuItem {
     tooltip: string;
     nav: boolean | KnockoutObservable<boolean>;
     route: string | Array<string>;
-    moduleId: Function;
+    moduleId: any;
     hash: string;
     dynamicHash: dynamicHashType;
     css: string;
@@ -24,10 +24,10 @@ class leafMenuItem implements menuItem {
     countPrefix: KnockoutComputed<string>;
     sizeClass: KnockoutComputed<string>;
 
-    constructor({ title, tooltip, route, moduleId, nav, hash, css, dynamicHash, disableWithReason, openAsDialog, itemRouteToHighlight, badgeData, alias, requiredAccess }: {
+    constructor({ title, route, moduleId, nav, hash, css, dynamicHash, disableWithReason, openAsDialog, itemRouteToHighlight, badgeData, alias, requiredAccess }: {
         title: string,
         route: string | Array<string>,
-        moduleId: Function,
+        moduleId: any,
         nav: boolean | KnockoutObservable<boolean>,
         tooltip?: string,
         hash?: string,

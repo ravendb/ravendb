@@ -254,9 +254,13 @@ namespace Raven.Server.Dashboard
                     }
                     else
                     {
-                        // Use existing data
+                        // Use existing data but update IO stats (which has separate cache)
                         foreach (var systemPoint in cachedSystemInfoCopy.MountPoints)
                         {
+                            var driveInfo = systemPoint.DiskSpaceResult.DriveName;
+                            var ioStatsResult = serverStore.Server.DiskStatsGetter.Get(driveInfo);
+                            if (ioStatsResult != null)
+                                systemPoint.IoStatsResult = ServerStore.FillIoStatsResult(ioStatsResult); 
                             UpdateMountPoint(serverStore.Configuration.Storage, systemPoint, "<System>", drivesUsage);
                         }
                     }

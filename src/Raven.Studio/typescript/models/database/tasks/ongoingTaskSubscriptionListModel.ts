@@ -73,9 +73,9 @@ class ongoingTaskSubscriptionListModel extends ongoingTaskListModel {
                 
                 const dateFormat = generalUtils.dateFormat;
 
-                const lastServerTime = (!!result.LastBatchAckTime) ? moment.utc(result.LastBatchAckTime).local().format(dateFormat):"N/A";
+                const lastServerTime = (result.LastBatchAckTime) ? moment.utc(result.LastBatchAckTime).local().format(dateFormat):"N/A";
                 this.lastTimeServerMadeProgressWithDocuments(lastServerTime);
-                const lastClientTime = (!!result.LastClientConnectionTime)?moment.utc(result.LastClientConnectionTime).local().format(dateFormat):"N/A";
+                const lastClientTime = (result.LastClientConnectionTime)?moment.utc(result.LastClientConnectionTime).local().format(dateFormat):"N/A";
                 this.lastClientConnectionTime(lastClientTime);
 
                 // 2. Get connection details info

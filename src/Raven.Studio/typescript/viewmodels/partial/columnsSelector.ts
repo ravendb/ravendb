@@ -25,7 +25,7 @@ class columnItem {
         return !(column instanceof checkedColumn) && !isActionColumn && !isMetadata;
     });
 
-    constructor(col: virtualColumn, editable: boolean, visible: boolean = false) {
+    constructor(col: virtualColumn, editable: boolean, visible = false) {
         this.virtualColumn(col);
         this.editable(editable);
         this.visible(visible);
@@ -131,7 +131,7 @@ class customColumnForm {
     }
 }
 
-class columnsSelector<T> {
+class columnsSelector<T extends object> {
 
     view = require("views/partial/columnsSelector.html");
     

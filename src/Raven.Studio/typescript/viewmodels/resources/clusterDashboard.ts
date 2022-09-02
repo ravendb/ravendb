@@ -6,6 +6,7 @@ import addWidgetModal = require("viewmodels/resources/addWidgetModal");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import memoryUsageWidget = require("viewmodels/resources/widgets/memoryUsageWidget");
 import cpuUsageWidget = require("viewmodels/resources/widgets/cpuUsageWidget");
+import ioStatsWidget = require("viewmodels/resources/widgets/ioStatsWidget");
 import licenseWidget = require("viewmodels/resources/widgets/licenseWidget");
 import storageWidget = require("viewmodels/resources/widgets/storageWidget");
 import clusterNode = require("models/database/cluster/clusterNode");
@@ -245,6 +246,9 @@ class clusterDashboard extends viewModelBase {
                 });
         } else {
             this.addWidget(new cpuUsageWidget(this));
+            if (clusterTopologyManager.default.hasAnyNodeWithOs("Linux")) {
+                this.addWidget(new ioStatsWidget(this));
+            }
             this.addWidget(new trafficWidget(this));
             this.addWidget(new databaseTrafficWidget(this));
             this.addWidget(new databaseIndexingWidget(this));
@@ -338,7 +342,7 @@ class clusterDashboard extends viewModelBase {
         }
     }
 
-    layout(withDelay: boolean = true, mode: "shift" | "full" = "full") {
+    layout(withDelay = true, mode: "shift" | "full" = "full") {
         const layoutAction = () => {
             mode === "full" ? this.packery.layout() : this.packery.shiftLayout();
         }
@@ -394,7 +398,7 @@ class clusterDashboard extends viewModelBase {
         app.showBootstrapDialog(addWidgetView);
     }
     
-    spawnWidget(type: widgetType, fullscreen: boolean = false, config: any = undefined, state: any = undefined) {
+    spawnWidget(type: widgetType, fullscreen = false, config: any = undefined, state: any = undefined) {
         let widget: widget<any>;
         
         switch (type) {
@@ -403,6 +407,9 @@ class clusterDashboard extends viewModelBase {
                 break;
             case "CpuUsage":
                 widget = new cpuUsageWidget(this);
+                break;
+            case "IoStats":
+                widget = new ioStatsWidget(this);
                 break;
             case "License":
                 widget = new licenseWidget(this);

@@ -1,6 +1,4 @@
-﻿import jsonUtil = require("common/jsonUtil");
-
-class prefixPathModel {
+﻿class prefixPathModel {
     path = ko.observable<string>();
     validationGroup: KnockoutValidationGroup;
 

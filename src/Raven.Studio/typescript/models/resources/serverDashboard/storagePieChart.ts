@@ -40,8 +40,7 @@ class storagePieChart {
             this.highlightTable(dbName);
         });
         
-        $(container).on("mouseleave", "path", event => {
-            const dbName = $(event.target).attr("data-db-name");
+        $(container).on("mouseleave", "path", () => {
             this.highlightTable(null);
         });
     }

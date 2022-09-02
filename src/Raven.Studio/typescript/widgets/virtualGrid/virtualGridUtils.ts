@@ -13,6 +13,7 @@ function deselect() {
             window.getSelection().removeAllRanges();
         }
     } catch (err) {
+        // ignore
     }
 }
 

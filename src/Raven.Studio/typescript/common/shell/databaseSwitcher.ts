@@ -73,11 +73,12 @@ class databaseSwitcher {
             setTimeout(() => this.autoHighlight(), 1);
         });
         
+        // eslint-disable-next-line @typescript-eslint/no-this-alias
         const self = this;
         $('.box-container', this.$selectDatabaseContainer).on('click', "a", function (e: Event) {
             e.stopPropagation();
             self.hide();
-            let a: HTMLAnchorElement = this as HTMLAnchorElement;
+            const a: HTMLAnchorElement = this as HTMLAnchorElement;
             ko.postbox.publish(EVENTS.DatabaseSwitcher.ItemSelected, a.href);
         });
         

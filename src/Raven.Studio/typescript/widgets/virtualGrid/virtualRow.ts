@@ -5,8 +5,8 @@ import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
  * A virtual row. Contains an element displayed as a row in the grid. Gets recycled as the grid scrolls in order to create and manage fewer elements.
  */
 class virtualRow {
-    private _item: Object | null = null; // The last item populated into this virtual row.
-    private sortColumnIndex: number = -1;
+    private _item: object | null = null; // The last item populated into this virtual row.
+    private sortColumnIndex = -1;
     private isItemSelected = false;
     readonly element: JQuery;
     private _top = -9999;
@@ -16,7 +16,7 @@ class virtualRow {
     private _height: number;
     private readonly _disableStripes: boolean;
     
-    constructor(height: number, disableStripes: boolean = false) {
+    constructor(height: number, disableStripes = false) {
         this._height = height;
         this._disableStripes = disableStripes;
         this.element = $(`<div class="virtual-row" style="height: ${this._height}px; top: ${this.top}px"></div>`);
@@ -26,7 +26,7 @@ class virtualRow {
         return this._top;
     }
 
-    get data(): Object {
+    get data(): object {
         return this._item;
     }
 
@@ -51,7 +51,7 @@ class virtualRow {
         this.element.text(`Unable to load data`);
     }
 
-    populate(item: Object | null, rowIndex: number, isSelected: boolean, columns: virtualColumn[], sortColumnIndex: number, customRowClasses: string[] = []) {
+    populate(item: object | null, rowIndex: number, isSelected: boolean, columns: virtualColumn[], sortColumnIndex: number, customRowClasses: string[] = []) {
         // Optimization: don't regenerate this row HTML if nothing's changed since last render.
         const alreadyDisplayingData = !!item && this._item === item && this._index === rowIndex && this.isItemSelected === isSelected && this.sortColumnIndex === sortColumnIndex;
         if (!alreadyDisplayingData) {
@@ -117,7 +117,7 @@ class virtualRow {
         this.element.removeClass("even");
     }
 
-    private createCellsHtml(item: Object, columns: virtualColumn[], isSelected: boolean, sortColumnIndex: number): string {
+    private createCellsHtml(item: object, columns: virtualColumn[], isSelected: boolean, sortColumnIndex: number): string {
         return columns.map((c, idx) => c.renderCell(item, isSelected, sortColumnIndex === idx))
             .join("");
     }

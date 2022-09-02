@@ -1,0 +1,152 @@
+<div>
+    <div class="cluster-dashboard-item-header">
+        <h3> <i class="icon-storage"></i> <span>IO Stats</span></h3>
+        <button class="btn btn-default btn-sm" data-bind="click: openWidgetSettings" title="Open widget settings">
+            <i class="icon-settings"></i>
+        </button>
+        <button class="btn btn-warning btn-sm" data-bind="click: remove" title="Remove widget from board">
+            <i class="icon-trash"></i>
+        </button>
+        <button class="btn btn-default btn-sm" data-bind="click: toggleFullscreen">
+            <i data-bind="css: { 'icon-fullscreen': !fullscreen(), 'icon-exit-fullscreen': fullscreen },
+                          attr: { title: fullscreen() ? 'Minimize widget' : 'Maximize widget' }"></i>
+        </button>
+    </div>
+    <div class="property-container property-collapse" data-bind="visible: !splitIops()">
+        <h4>IOPS</h4>
+        <div class="property">
+            <div class="flex-horizontal">
+                <div class="nodes-container" data-bind="foreach: nodeStats">
+                    <div data-bind="attr: { class: 'nodes-item node-' + tag } ">
+                        <div class="nodes-item-header" data-bind="css: { 'no-data': !currentItem(), 'spinner': spinner }">
+                            <div class="node-label" data-bind="text: tag"></div>
+                            <div class="node-value">
+                                <span data-bind="text: iopsFormatted"></span>
+                                <span class="supplementary-info" data-bind="text: iopsDistribution"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="graph-container disk-iops-line-chart">
+            </div>
+        </div>
+    </div>
+    <div class="property-container property-collapse mb-sm" data-bind="visible: splitIops">
+        <h4>IOPS</h4>
+        <div class="property">
+            <div class="flex-horizontal">
+                <div class="nodes-container" data-bind="foreach: nodeStats">
+                    <div data-bind="attr: { class: 'nodes-item node-' + tag } ">
+                        <div class="nodes-item-header" data-bind="css: { 'no-data': !currentItem(), 'spinner': spinner }">
+                            <div class="node-label" data-bind="text: tag"></div>
+                            <div class="node-value">
+                                <span data-bind="text: iopsReadFormatted"></span>
+                                <span class="supplementary-info" data-bind="text: iopsReadSplitInfo"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="graph-container graph-container-sm disk-iops-read-line-chart">
+            </div>
+        </div>
+    </div>
+    <div class="property-container property-collapse" data-bind="visible: splitIops">
+        <div class="property">
+            <div class="flex-horizontal">
+                <div class="nodes-container" data-bind="foreach: nodeStats">
+                    <div data-bind="attr: { class: 'nodes-item node-' + tag } ">
+                        <div class="nodes-item-header" data-bind="css: { 'no-data': !currentItem(), 'spinner': spinner }">
+                            <div class="node-label" data-bind="text: tag"></div>
+                            <div class="node-value">
+                                <span data-bind="text: iopsWriteFormatted"></span>
+                                <span class="supplementary-info" data-bind="text: iopsWriteSplitInfo"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="graph-container graph-container-sm disk-iops-write-line-chart">
+            </div>
+        </div>
+    </div>
+    <div class="property-container property-collapse" data-bind="visible: !splitThroughput()">
+        <h4>Throughput</h4>
+        <div class="property">
+            <div class="flex-horizontal">
+                <div class="nodes-container" data-bind="foreach: nodeStats">
+                    <div data-bind="attr: { class: 'nodes-item node-' + tag } ">
+                        <div class="nodes-item-header" data-bind="css: { 'no-data': !currentItem(), 'spinner': spinner }">
+                            <div class="node-label" data-bind="text: tag"></div>
+                            <div class="node-value">
+                                <span data-bind="text: throughputFormatted"></span>
+                                <span class="supplementary-info" data-bind="text: throughputDistribution"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="graph-container disk-throughput-line-chart">
+            </div>
+        </div>
+    </div>
+    <div class="property-container property-collapse mb-sm" data-bind="visible: splitThroughput">
+        <h4>Throughput</h4>
+        <div class="property">
+            <div class="flex-horizontal">
+                <div class="nodes-container" data-bind="foreach: nodeStats">
+                    <div data-bind="attr: { class: 'nodes-item node-' + tag } ">
+                        <div class="nodes-item-header" data-bind="css: { 'no-data': !currentItem(), 'spinner': spinner }">
+                            <div class="node-label" data-bind="text: tag"></div>
+                            <div class="node-value">
+                                <span data-bind="text: throughputReadFormatted"></span>
+                                <span class="supplementary-info" data-bind="text: throughputReadSplitInfo"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="graph-container graph-container-sm disk-throughput-read-line-chart">
+            </div>
+        </div>
+    </div>
+    <div class="property-container property-collapse" data-bind="visible: splitThroughput">
+        <div class="property">
+            <div class="flex-horizontal">
+                <div class="nodes-container" data-bind="foreach: nodeStats">
+                    <div data-bind="attr: { class: 'nodes-item node-' + tag } ">
+                        <div class="nodes-item-header" data-bind="css: { 'no-data': !currentItem(), 'spinner': spinner }">
+                            <div class="node-label" data-bind="text: tag"></div>
+                            <div class="node-value">
+                                <span data-bind="text: throughputWriteFormatted"></span>
+                                <span class="supplementary-info" data-bind="text: throughputWriteSplitInfo"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="graph-container graph-container-sm disk-throughput-write-line-chart">
+            </div>
+        </div>
+    </div>
+    <div class="property-container property-collapse">
+        <h4>Disk Queue</h4>
+        <div class="property">
+            <div class="flex-horizontal">
+                <div class="nodes-container" data-bind="foreach: nodeStats">
+                    <div data-bind="attr: { class: 'nodes-item node-' + tag } ">
+                        <div class="nodes-item-header" data-bind="css: { 'no-data': !currentItem(), 'spinner': spinner }">
+                            <div class="node-label" data-bind="text: tag"></div>
+                            <div class="node-value">
+                                <span data-bind="text: diskQueueFormatted"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="graph-container disk-queue-line-chart">
+            </div>
+        </div>
+    </div>
+</div>

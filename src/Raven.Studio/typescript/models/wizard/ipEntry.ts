@@ -8,7 +8,7 @@ class ipEntry {
    
    isLocalNetwork: KnockoutComputed<boolean>;
 
-   static runningOnDocker: boolean = false;
+   static runningOnDocker = false;
    
    constructor(allowHostname: boolean) {
        

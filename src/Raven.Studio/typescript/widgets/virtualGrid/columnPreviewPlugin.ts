@@ -22,7 +22,7 @@ class copyFeature implements columnPreviewFeature {
     }
 }
 
-class columnPreviewPlugin<T> {
+class columnPreviewPlugin<T extends object> {
 
     private grid: virtualGrid<T>;
     private previewTimeoutHandle: number;

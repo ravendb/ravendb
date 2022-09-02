@@ -35,7 +35,7 @@ class eulaShell extends viewModelBase {
     }
 
     // Override canActivate: we can always load this page, regardless of any system db prompt.
-    canActivate(args: any): any {
+    canActivate(): any {
         return true;
     }
 
@@ -74,7 +74,7 @@ class eulaShell extends viewModelBase {
         router.map(eulaRoutes.get()).buildNavigationModel();
 
         router.mapUnknownRoutes((instruction: DurandalRouteInstruction) => {
-            const queryString = !!instruction.queryString ? ("?" + instruction.queryString) : "";
+            const queryString = instruction.queryString ? ("?" + instruction.queryString) : "";
 
             messagePublisher.reportError("Unknown route", "The route " + instruction.fragment + queryString + " doesn't exist, redirecting...");
 

@@ -4,7 +4,7 @@ import virtualGridController = require("widgets/virtualGrid/virtualGridControlle
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import generalUtils = require("common/generalUtils");
 
-class multiNodeTagsColumn<T> implements virtualColumn {
+class multiNodeTagsColumn<T extends object> implements virtualColumn {
 
     constructor(gridController: virtualGridController<T>,
                 public valueAccessor: ((item: T) => string[]),
@@ -32,7 +32,7 @@ class multiNodeTagsColumn<T> implements virtualColumn {
     }
 
     renderCell(item: T): string {
-        let extraCssClasses = this.opts.extraClass ? this.opts.extraClass(item) : '';
+        const extraCssClasses = this.opts.extraClass ? this.opts.extraClass(item) : '';
         
         return `<div class="cell text-cell ${extraCssClasses}" style="width: ${this.width}">${this.getValueHtml(this.getValue(item))}</div>`;
     }

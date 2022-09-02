@@ -2,7 +2,7 @@
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 
-class customColumn<T> extends textColumn<T> {
+class customColumn<T extends object> extends textColumn<T> {
 
     jsCode: string;
 

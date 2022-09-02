@@ -82,7 +82,7 @@ class timeSeriesEntryModel {
 
     entryTitle = ko.observable<string>();
     
-    existingNumberOfValues: number = 0;
+    existingNumberOfValues = 0;
     maxNumberOfValuesReachedWarning: KnockoutComputed<string>;
     
     validationGroup: KnockoutValidationGroup;

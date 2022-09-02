@@ -1,5 +1,4 @@
 ﻿import router = require("plugins/router");
-import EVENTS = require("common/constants/events");
 import database = require("models/resources/database");
 import changesContext = require("common/changesContext");
 import getDatabasesCommand = require("commands/resources/getDatabasesCommand");

@@ -34,7 +34,7 @@ class visualizerTreeExplorer extends dialogViewModelBase {
             const grid = this.gridController();
             grid.headerVisible(true);
 
-            grid.init((s, t) => this.fetcher(s, t), () => this.findColumns());
+            grid.init(() => this.fetcher(), () => this.findColumns());
 
             this.columnPreview.install(".visualiserTreeExplorer", ".js-visualizer-tree-tooltip",
                 (details: Raven.Server.Documents.Indexes.Debugging.MapResultInLeaf, column: textColumn<Raven.Server.Documents.Indexes.Debugging.MapResultInLeaf>,
@@ -60,7 +60,7 @@ class visualizerTreeExplorer extends dialogViewModelBase {
         return columns;
     }
 
-    private fetcher(skip: number, take: number): JQueryPromise<pagedResult<Raven.Server.Documents.Indexes.Debugging.MapResultInLeaf>> {
+    private fetcher(): JQueryPromise<pagedResult<Raven.Server.Documents.Indexes.Debugging.MapResultInLeaf>> {
         return $.Deferred<pagedResult<Raven.Server.Documents.Indexes.Debugging.MapResultInLeaf>>()
             .resolve({
                 items: this.tableItems,

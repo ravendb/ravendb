@@ -138,7 +138,7 @@ class indexErrors extends viewModelBase {
         super.compositionComplete();
         const grid = this.gridController();
         grid.headerVisible(true);
-        grid.init((s, t) => this.fetchIndexErrors(s, t), () =>
+        grid.init(() => this.fetchIndexErrors(), () =>
             [
                 new actionColumn<IndexErrorPerDocument>(grid, (error, index) => this.showErrorDetails(index), "Show", `<i class="icon-preview"></i>`, "72px",
                     {
@@ -197,7 +197,7 @@ class indexErrors extends viewModelBase {
         this.gridController().reset(false);
     }
 
-    private fetchIndexErrors(start: number, take: number): JQueryPromise<pagedResult<IndexErrorPerDocument>> {
+    private fetchIndexErrors(): JQueryPromise<pagedResult<IndexErrorPerDocument>> {
         if (this.allIndexErrors === null) {
             return this.fetchRemoteIndexesError().then(list => {
                 this.allIndexErrors = list;
@@ -283,7 +283,7 @@ class indexErrors extends viewModelBase {
             });
 
         const mappedReducedItems: indexActionAndCount[] = mappedItems.reduce((result: indexActionAndCount[], next: indexActionAndCount) => {
-            var existing = result.find(x => x.actionName === next.actionName);
+            const existing = result.find(x => x.actionName === next.actionName);
             if (existing) {
                 existing.count += next.count;
             } else {

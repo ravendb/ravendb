@@ -3,8 +3,8 @@ import MENU_BASED_ROUTER_CONFIGURATION = require("common/shell/routerConfigurati
 
 class Routes {
 
-    static get(appUrls: computedAppUrls): Array<DurandalRouteConfiguration> {
-        let routes: DurandalRouteConfiguration[] = [
+    static get(): Array<DurandalRouteConfiguration> {
+        const routes: DurandalRouteConfiguration[] = [
             {
                 route: "databases/edit",
                 title: "Edit Document",

@@ -8,7 +8,7 @@ class etlProgress extends genericProgress {
     constructor(processed: number,
                 total: number,
                 numberFormatter: (number: number) => string,
-                processedPerSecond: number = 0) {
+                processedPerSecond = 0) {
         super(processed, total, numberFormatter, processedPerSecond);
         
         this.completed = ko.observable<boolean>(false); //override property - here we have explicit complete 
