@@ -46,7 +46,7 @@ abstract class abstractDatabaseAndNodeAwareTableWidget<TRaw, TStats extends stat
 
         grid.customRowClassProvider(item => item.even ? ["even"] : []);
         
-        grid.init((s, t) => this.prepareGridData(), (containerWidth, results) => this.prepareColumns(containerWidth, results));
+        grid.init(() => this.prepareGridData(), (containerWidth, results) => this.prepareColumns(containerWidth, results));
 
         this.enableSyncUpdates();
 
@@ -57,7 +57,7 @@ abstract class abstractDatabaseAndNodeAwareTableWidget<TRaw, TStats extends stat
     
     protected abstract prepareColumns(containerWidth:number, results: pagedResult<TTableItem>): virtualColumn[];
 
-    protected afterSyncUpdate(updatesCount: number) {
+    protected afterSyncUpdate() {
         this.gridController().reset(false);
     }
 

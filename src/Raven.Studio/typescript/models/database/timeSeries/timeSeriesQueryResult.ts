@@ -28,12 +28,14 @@ class timeSeriesQueryResult {
         }
         
         switch (this.detectResultType()) {
-            case "grouped":
+            case "grouped": {
                 const groupedResults = this.dto.Results as Array<timeSeriesQueryGroupedItemResultDto>;
                 return [groupedResults[0].From, groupedResults[groupedResults.length - 1].To];
-            case "raw":
+            }
+            case "raw": {
                 const rawResults = this.dto.Results as Array<timeSeriesRawItemResultDto>;
                 return [rawResults[0].Timestamp, rawResults[rawResults.length - 1].Timestamp];
+            }
         }
     }
     
@@ -63,7 +65,7 @@ class timeSeriesQueryResult {
     
     static detectValuesCount(dto: timeSeriesQueryResultDto): number {
         switch (timeSeriesQueryResult.detectResultType(dto)) {
-            case "grouped":
+            case "grouped": {
                 const groupedValues = dto.Results as Array<timeSeriesQueryGroupedItemResultDto>;
                 const keys = timeSeriesQueryResult.detectGroupKeys(groupedValues);
                 if (keys.length) {
@@ -72,9 +74,11 @@ class timeSeriesQueryResult {
                 } else {
                     return 0;
                 }
-            case "raw":
+            }
+            case "raw": {
                 const rawValues = dto.Results as Array<timeSeriesRawItemResultDto>;
                 return _.max(rawValues.map(x => x.Values.length));
+            }
         }
     }
 }

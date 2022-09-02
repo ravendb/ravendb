@@ -12,7 +12,7 @@ class docsIdsBasedOnQueryFetcher {
         this.database = database
     }
     
-    fetch(documentIdPrefix: string, query: string, count: number = docsIdsBasedOnQueryFetcher.MAX_RESULTS): JQueryPromise<string[]> {
+    fetch(documentIdPrefix: string, query: string): JQueryPromise<string[]> {
         if (!query)
             query = "from @all_docs";
 

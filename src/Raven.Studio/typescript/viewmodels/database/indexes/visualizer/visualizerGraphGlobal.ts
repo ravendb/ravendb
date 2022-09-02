@@ -118,12 +118,12 @@ class reduceTreeItem {
     }
 
     filterAndLayoutVisibleItems(documents: documentItem[]) {
-        this.cleanCache(documents);
+        this.cleanCache();
         this.filterVisibleItems(documents);
         this.layout();
     }
 
-    private cleanCache(documents: documentItem[]) {
+    private cleanCache() {
         this.itemsAtDepth.clear();
     }
 
@@ -458,11 +458,6 @@ class hitTest {
     }
 }
 
-interface avgXVals {
-    docIndex: number;
-    avgXVal: number;
-}
-
 class visualizerGraphGlobal {
     private colors = {
         highlight: undefined as string,
@@ -510,7 +505,7 @@ class visualizerGraphGlobal {
     private svg: d3.Selection<void>;
     private zoom: d3.behavior.Zoom<void>;
     private currentReduceTreeHighlight: d3.Selection<void>;
-    private reduceTreeHighlightHandler: () => void = () => { };
+    private reduceTreeHighlightHandler: () => void = () => { /* empty */ };
 
     private dataWidth = 0; // total width of all virtual elements
     private dataHeight = 0; // total height of all virtual elements
@@ -631,7 +626,7 @@ class visualizerGraphGlobal {
             .call(this.zoom)
             .call(d => this.setupEvents(d));
 
-        this.hitTest.init(item => this.onReduceTreeClicked(item), item => this.onTrashClicked(item), item => this.onReduceTreeEnter(item), item => this.onReduceTreeExit(item));
+        this.hitTest.init(item => this.onReduceTreeClicked(item), item => this.onTrashClicked(item), item => this.onReduceTreeEnter(item), () => this.onReduceTreeExit());
     }
 
     getDocumentsColors(): Array<documentColorPair> {
@@ -682,7 +677,7 @@ class visualizerGraphGlobal {
 
         const requestedTranslation: [number, number] = [-item.x * requestedScale + extraXOffset, -item.y * requestedScale];
 
-        this.reduceTreeHighlightHandler = () => { };
+        this.reduceTreeHighlightHandler = () => { /* empty */ };
 
         // cancel transition
         this.currentReduceTreeHighlight
@@ -724,7 +719,7 @@ class visualizerGraphGlobal {
         this.reduceTreeHighlightHandler();
     }
 
-    private onReduceTreeExit(item: reduceTreeItem) {
+    private onReduceTreeExit() {
         if (this.animationInProgress) {
             return;
         }

@@ -1,6 +1,5 @@
 ﻿import leafMenuItem = require("common/shell/menu/leafMenuItem");
 import appUrl = require("common/appUrl");
-import accessManager = require("common/shell/accessManager");
 
 function aboutItem() {
     return new leafMenuItem({

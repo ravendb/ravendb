@@ -94,6 +94,7 @@ abstract class widget<TConfig = unknown, TState = unknown> {
         this.afterSyncUpdate(updatesCount);
     }
     
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     protected afterSyncUpdate(updatesCount: number) {
         // empty by default
     }
@@ -102,11 +103,12 @@ abstract class widget<TConfig = unknown, TState = unknown> {
         // empty by default
     }
     
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     restoreState(state: TState) {
         // empty by default
     }
     
-    // noinspection JSUnusedLocalSymbols
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     restoreConfiguration(config: TConfig) {
         // empty by default
     }

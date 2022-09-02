@@ -2,7 +2,6 @@ import app = require("durandal/app");
 
 import abstractNotification = require("common/notifications/models/abstractNotification");
 import actionColumn = require("widgets/virtualGrid/columns/actionColumn");
-import notificationCenter = require("common/notifications/notificationCenter");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
@@ -28,7 +27,7 @@ class virtualUpdateByQueryDetails extends dialogViewModelBase {
         const grid = this.gridController();
         grid.headerVisible(true);
 
-        grid.init((s, t) => this.fetcher(s, t), () => {
+        grid.init(() => this.fetcher(), () => {
             return [
                 new textColumn<queryBasedVirtualBulkOperationItem>(grid, x => generalUtils.formatUtcDateAsLocal(x.date), "Date", "25%", {
                     sortable: x => x.date
@@ -66,7 +65,7 @@ class virtualUpdateByQueryDetails extends dialogViewModelBase {
             });
     }
 
-    private fetcher(skip: number, take: number): JQueryPromise<pagedResult<queryBasedVirtualBulkOperationItem>> {
+    private fetcher(): JQueryPromise<pagedResult<queryBasedVirtualBulkOperationItem>> {
         return $.Deferred<pagedResult<queryBasedVirtualBulkOperationItem>>()
             .resolve({
                 items: this.virtualNotification.operations(),
@@ -78,7 +77,7 @@ class virtualUpdateByQueryDetails extends dialogViewModelBase {
         return notification.type === "CumulativeUpdateByQuery";
     }
 
-    static showDetailsFor(virtualNotification: virtualUpdateByQuery, center: notificationCenter) {
+    static showDetailsFor(virtualNotification: virtualUpdateByQuery) {
         return app.showBootstrapDialog(new virtualUpdateByQueryDetails(virtualNotification));
     }
 

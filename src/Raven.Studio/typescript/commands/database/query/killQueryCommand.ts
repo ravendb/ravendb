@@ -18,7 +18,7 @@ class killQueryCommand extends commandBase {
         const task = $.Deferred<void>();
 
         this.post(url + this.urlEncodeArgs(args), null, this.db, { dataType: undefined })
-            .done(result => task.resolve())
+            .done(() => task.resolve())
             .fail((response: JQueryXHR) => {
                 if (response.status === 404) {
                     task.resolve(null);

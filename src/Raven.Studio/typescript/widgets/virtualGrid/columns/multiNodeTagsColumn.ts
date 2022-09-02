@@ -4,7 +4,7 @@ import virtualGridController = require("widgets/virtualGrid/virtualGridControlle
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import generalUtils = require("common/generalUtils");
 
-class multiNodeTagsColumn<T> implements virtualColumn {
+class multiNodeTagsColumn<T extends object> implements virtualColumn {
 
     constructor(gridController: virtualGridController<T>,
                 public valueAccessor: ((item: T) => string[]),

@@ -39,7 +39,7 @@ class pagingDetails extends abstractPerformanceHintDetails {
         const grid = this.gridController();
         grid.headerVisible(true);
 
-        grid.init((s, t) => this.fetcher(s, t), () => {
+        grid.init(() => this.fetcher(), () => {
             return [
                 new textColumn<pagingDetailsItemDto>(grid, x => x.Action, "Action", "13%", {
                     sortable: "string"
@@ -79,7 +79,7 @@ class pagingDetails extends abstractPerformanceHintDetails {
         });
     }
 
-    private fetcher(skip: number, take: number): JQueryPromise<pagedResult<pagingDetailsItemDto>> {
+    private fetcher(): JQueryPromise<pagedResult<pagingDetailsItemDto>> {
         return $.Deferred<pagedResult<pagingDetailsItemDto>>()
             .resolve({
                 items: this.tableItems,

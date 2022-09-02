@@ -24,7 +24,6 @@ class autoCompleterSupport {
   completeTheWord(input: JQuery, selectedCompletion: string, updateObservableClouse: (newValue: string) => void = null) {
     if (input.length > 0) {
       const inputValue: string = input.val();
-      const typedWord = this.getWordUserIsTyping(input);
 
       const cursorPosition = inputCursor.getPosition(input);
       const beginIndex = this.findWordStartWithEndPosition(inputValue, cursorPosition - 1) + 1;

@@ -16,8 +16,6 @@ abstract class layoutable {
     abstract getId(): string;
 }
 
-type databaseNodeState = "valid" | "errored";
-
 class databaseNode extends layoutable {
     tag: string;
     type: databaseGroupNodeType;

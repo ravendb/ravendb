@@ -17,7 +17,6 @@ import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleM
 import getDocumentsMetadataByIDPrefixCommand = require("commands/database/documents/getDocumentsMetadataByIDPrefixCommand");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import jsonUtil = require("common/jsonUtil");
-import ongoingTaskEtlTransformationModel = require("models/database/tasks/ongoingTaskRavenEtlTransformationModel");
 import viewHelpers = require("common/helpers/view/viewHelpers");
 import documentMetadata = require("models/database/documents/documentMetadata");
 import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");

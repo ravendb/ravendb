@@ -152,8 +152,7 @@ class patchTester extends viewModelBase {
         validationHelpers.addDocumentIdValidation(
             this.documentId, this.activeDatabase, ko.pureComputed(() => !this.spinners.autocomplete() && !!this.docsIdsAutocompleteResults()));
 
-        this.query.subscribe(x => 
-            this.docsIdsAutocompleteResults([]));
+        this.query.subscribe(() => this.docsIdsAutocompleteResults([]));
 
         
         const documentIdDebounced = _.debounce(() => { this.getAutoComplete() }, 600);

@@ -263,7 +263,6 @@ class queryCompleter {
         let liveAutoCompleteSkippedTriggerToken = false;
         let isBeforeComma = false;
         let isBeforeBinaryOperation = false;
-        let afterCommaDividersCount = 0;
 
         let lastRow: number;
         let lastToken: AceAjax.TokenInfo;
@@ -293,7 +292,7 @@ class queryCompleter {
             }
             
             switch (token.type) {
-                case "keyword.clause":
+                case "keyword.clause": {
                     const keyword = token.value.toLowerCase();
                     if (_.includes(this.rules.clauseAppendKeywords, result.keyword)) {
                         result.keyword = keyword + " " + result.keyword;
@@ -301,6 +300,7 @@ class queryCompleter {
                         result.keyword = keyword;
                     }
                     return result;
+                }
                 case "keyword.clause.clauseAppend":
                     if (result.keyword) {
                         result.dividersCount++;
@@ -393,9 +393,8 @@ class queryCompleter {
                     break;
                 case "space":
                     if (isBeforeComma) {
-                        afterCommaDividersCount++;
-                    }
-                    else if (!isBeforeBinaryOperation && !result.keyword) {
+                        // empty
+                    } else if (!isBeforeBinaryOperation && !result.keyword) {
                         if (!lastToken || lastToken.type !== "space") {
                             result.dividersCount++;
                         }

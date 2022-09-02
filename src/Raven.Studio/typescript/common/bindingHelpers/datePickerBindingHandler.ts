@@ -17,7 +17,7 @@ class datePickerBindingHandler {
     }
 
     // Called by Knockout a single time when the binding handler is setup.
-    init(element: HTMLElement, valueAccessor: any, allBindings: KnockoutAllBindingsAccessor, viewModel: any, bindingContext: any) {
+    init(element: HTMLElement, valueAccessor: any, allBindings: KnockoutAllBindingsAccessor) {
         const options = allBindings().datepickerOptions || {};
         const endDateElement = options.endDateElement;
         const startDateElement = options.startDateElement;
@@ -40,7 +40,7 @@ class datePickerBindingHandler {
     }
 
     // Called by Knockout each time the dependent observable value changes.
-    update(element: HTMLElement, valueAccessor: any, allBindings: KnockoutAllBindingsAccessor, viewModel: any, bindingContext: any) {
+    update(element: HTMLElement, valueAccessor: any) {
         const date : moment.Moment = ko.unwrap(valueAccessor());
         $(element).data("DateTimePicker").date(date || null);
     }

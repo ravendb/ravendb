@@ -30,7 +30,7 @@ class glacierSettings extends amazonSettings {
         ], false, jsonUtil.newLineNormalizingHashFunction);
     }
     
-    compositionComplete(view: Element, container: HTMLElement) {
+    compositionComplete() {
         popoverUtils.longWithHover($(".vault-info"),
             {
                 content: tasksCommonContent.textForPopover("Vault", this.targetOperation)
@@ -42,7 +42,7 @@ class glacierSettings extends amazonSettings {
         
         // - vault name can be between 1 and 255 characters long.
         // - allowed characters are a-z, A-Z, 0-9, '_' (underscore), '-' (hyphen), and '.' (period).
-        const regExp = /^[A-Za-z0-9_\.-]+$/;
+        const regExp = /^[A-Za-z0-9_.-]+$/;
 
         this.vaultName.extend({
             validation: [

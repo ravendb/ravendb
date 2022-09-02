@@ -170,7 +170,7 @@ class unsecured extends setupStep {
     }
    
     private findFirstAvailableNodeTag() {
-        for (let nodesTagsKey of serverSetup.nodesTags) {
+        for (const nodesTagsKey of serverSetup.nodesTags) {
             if (!this.model.nodes().find(x => x.nodeTag() === nodesTagsKey)) {
                 return nodesTagsKey;
             }

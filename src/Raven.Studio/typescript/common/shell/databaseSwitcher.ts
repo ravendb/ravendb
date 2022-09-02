@@ -73,6 +73,7 @@ class databaseSwitcher {
             setTimeout(() => this.autoHighlight(), 1);
         });
         
+        // eslint-disable-next-line @typescript-eslint/no-this-alias
         const self = this;
         $('.box-container', this.$selectDatabaseContainer).on('click', "a", function (e: Event) {
             e.stopPropagation();

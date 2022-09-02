@@ -24,7 +24,7 @@ class stackInfo {
         if (withoutArgs.includes('+')) {
             return withoutArgs.replace(/.*\.(.*\+.*)/, '$1');
         } else {
-            return withoutArgs.replace(/.*\.([^\.]+\.[^\.]+)$/, '$1');
+            return withoutArgs.replace(/.*\.([^.]+\.[^.]+)$/, '$1');
         }
     }
 
@@ -343,9 +343,8 @@ class captureStackTraces extends viewModelBase {
 
         enteringNodes.filter(d => d.depth > 0).each(function (d: stackInfo, index: number) {
             if (d.threadNamesHeight() > 0) {
-                const threadContainer = this;
                 const offsetTop = d.boxHeight() - stackInfo.boxPadding + stackInfo.lineHeight/4;
-                const framesContainer = d3.select(threadContainer)
+                const framesContainer = d3.select(this)
                     .append("g")
                     .attr('class', 'traces')
                     .style('clip-path', () => 'url(#stack-clip-path-' + index + ')');
@@ -402,9 +401,8 @@ class captureStackTraces extends viewModelBase {
             .attr("y", 0);
         
         enteringNodes.filter(d => d.depth > 0).each(function (d: stackInfo, index: number) {
-            const threadContainer = this;
             const offsetTop = d.boxHeight() - stackInfo.boxPadding - stackInfo.lineHeight/2 - d.threadNamesHeight();
-            const framesContainer = d3.select(threadContainer)
+            const framesContainer = d3.select(this)
                 .append("g")
                 .attr('class', 'traces')
                 .style('clip-path', () => 'url(#stack-clip-path-' + index + ')');

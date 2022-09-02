@@ -82,7 +82,7 @@ abstract class abstractChartsWebsocketWidget<
         this.charts.forEach(chart => chart.recordNoData(now, abstractChartsWebsocketWidget.chartKey(ws.nodeTag)));
     }
 
-    protected afterSyncUpdate(updatesCount: number) {
+    protected afterSyncUpdate() {
         this.charts.forEach(chart => chart.draw());
     }
 

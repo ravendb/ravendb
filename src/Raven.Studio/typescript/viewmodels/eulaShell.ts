@@ -34,7 +34,7 @@ class eulaShell extends viewModelBase {
     }
 
     // Override canActivate: we can always load this page, regardless of any system db prompt.
-    canActivate(args: any): any {
+    canActivate(): any {
         return true;
     }
 

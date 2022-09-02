@@ -157,7 +157,7 @@ class databases extends viewModelBase {
     }
 
     // Override canActivate: we can always load this page, regardless of any system db prompt.
-    canActivate(args: any): any {
+    canActivate(): any {
         return true;
     }
 
@@ -340,6 +340,7 @@ class databases extends viewModelBase {
     }
     
     private initTooltips() {
+        // eslint-disable-next-line @typescript-eslint/no-this-alias
         const self = this;
 
         const contentProvider = (dbInfo: databaseInfo) => {

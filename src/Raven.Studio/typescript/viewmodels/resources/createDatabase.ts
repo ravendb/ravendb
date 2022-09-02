@@ -227,6 +227,7 @@ class createDatabase extends dialogViewModelBase {
         });
 
         this.databaseModel.configurationSections.forEach(section => {
+            // eslint-disable-next-line no-prototype-builtins
             if (!section.hasOwnProperty('validationGroup')) {
                 section.validationGroup = undefined;
             }
@@ -303,19 +304,19 @@ class createDatabase extends dialogViewModelBase {
 
         this.databaseModel.restore.azureCredentials().onCredentialsChange(() => {
             this.updateBackupDirectoryPathOptions();
-            this.databaseModel.fetchRestorePoints(true);
+            this.databaseModel.fetchRestorePoints();
         });
         this.databaseModel.restore.amazonS3Credentials().onCredentialsChange(() => {
             this.updateBackupDirectoryPathOptions();
-            this.databaseModel.fetchRestorePoints(true);
+            this.databaseModel.fetchRestorePoints();
         });
         this.databaseModel.restore.googleCloudCredentials().onCredentialsChange(() => {
             this.updateBackupDirectoryPathOptions();
-            this.databaseModel.fetchRestorePoints(true);
+            this.databaseModel.fetchRestorePoints();
         });
         this.databaseModel.restore.localServerCredentials().onCredentialsChange(() => {
             this.updateBackupDirectoryPathOptions();
-            this.databaseModel.fetchRestorePoints(true);
+            this.databaseModel.fetchRestorePoints();
         });
         
         this.databaseModel.restoreSourceObject.subscribe(() => {
@@ -594,7 +595,7 @@ class createDatabase extends dialogViewModelBase {
             });
     }
 
-    findRestoreSourceLabel(restoreSource: restoreSource) {
+    findRestoreSourceLabel() {
         return this.databaseModel.restoreSourceObject().backupStorageTypeText;
     }
 

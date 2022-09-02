@@ -75,7 +75,9 @@ class manualBackupConfiguration extends backupConfiguration {
             });
     }
 
-    setState(state: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskState): void {}
+    setState(): void {
+        // empty
+    }
 }
 
 export = manualBackupConfiguration;

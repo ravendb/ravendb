@@ -49,10 +49,10 @@ class queryCommand extends commandBase {
             return [undefined, undefined];
         }
 
-        let [parameters, rql] = queryCommand.extractQueryParameters(queryText);
+        const [parameters, rql] = queryCommand.extractQueryParameters(queryText);
 
         if (this.criteria.showFields()) {
-            rql = queryUtil.replaceSelectAndIncludeWithFetchAllStoredFields(rql);
+            return [parameters, queryUtil.replaceSelectAndIncludeWithFetchAllStoredFields(rql)];
         }
         
         return [parameters, rql];

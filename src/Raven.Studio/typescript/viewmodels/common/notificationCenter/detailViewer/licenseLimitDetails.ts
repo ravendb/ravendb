@@ -1,6 +1,5 @@
 import app = require("durandal/app");
 import abstractNotification = require("common/notifications/models/abstractNotification");
-import notificationCenter = require("common/notifications/notificationCenter");
 import recentLicenseLimitError = require("common/notifications/models/recentLicenseLimitError");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import alert = require("common/notifications/models/alert");
@@ -15,7 +14,7 @@ class licenseLimitDetails extends dialogViewModelBase {
     requestLicenseUrl: KnockoutComputed<string>;
     licenseRequestType: KnockoutComputed<string>;
 
-    constructor(licenseLimitNotification: alert | recentLicenseLimitError, notificationCenter: notificationCenter) {
+    constructor(licenseLimitNotification: alert | recentLicenseLimitError) {
         super();
         this.bindToCurrentInstance("close");
 
@@ -61,8 +60,8 @@ class licenseLimitDetails extends dialogViewModelBase {
         return isLicenceAlert || isRecentLicenseError;
     }
 
-    static showDetailsFor(licenseError: recentLicenseLimitError | alert, center: notificationCenter) {
-        return app.showBootstrapDialog(new licenseLimitDetails(licenseError, center));
+    static showDetailsFor(licenseError: recentLicenseLimitError | alert) {
+        return app.showBootstrapDialog(new licenseLimitDetails(licenseError));
     }
 }
 

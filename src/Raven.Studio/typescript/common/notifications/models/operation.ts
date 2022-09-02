@@ -75,6 +75,7 @@ class operation extends abstractNotification {
                 return false;
             }
 
+            // eslint-disable-next-line no-prototype-builtins
             return progress.hasOwnProperty("Processed") && progress.hasOwnProperty("Total");
         });
         

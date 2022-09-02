@@ -4,7 +4,6 @@ import getIndexEntriesFieldsCommand = require("commands/database/index/getIndexE
 import queryCriteria = require("models/database/query/queryCriteria");
 import recentQueriesStorage = require("common/storage/savedQueriesStorage");
 import queryUtil = require("common/queryUtil");
-import appUrl = require("common/appUrl");
 import eventsCollector = require("common/eventsCollector");
 import showDataDialog = require("viewmodels/common/showDataDialog");
 import copyToClipboard = require("common/copyToClipboard");

@@ -11,7 +11,7 @@ class saveServerWideBackupCommand extends commandBase {
         const isNewTask = this.configuration.TaskId === 0;
         
         return this.put<Raven.Client.ServerWide.Operations.Configuration.PutServerWideBackupConfigurationResponse>(url, JSON.stringify(this.configuration))
-            .done((results: Raven.Client.ServerWide.Operations.Configuration.PutServerWideBackupConfigurationResponse) => {
+            .done(() => {
                 const taskTypeText = isNewTask ? "created" : "updated";
                 this.reportSuccess(`The server-wide backup task was ${taskTypeText} successfully`);
             })

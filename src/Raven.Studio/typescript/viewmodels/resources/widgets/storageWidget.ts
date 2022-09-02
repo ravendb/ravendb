@@ -99,7 +99,7 @@ class storageWidget extends websocketBasedWidget<Raven.Server.Dashboard.Cluster.
         this.withStats(ws.nodeTag, x => x.disconnected(true));
     }
 
-    protected afterSyncUpdate(updatesCount: number) {
+    protected afterSyncUpdate() {
         const newElementsCount = this.nodeStats()
             .map(nodeStats => nodeStats.mountPoints().length)
             .reduce((a, b) => a + b, 0);

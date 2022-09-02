@@ -1340,6 +1340,7 @@ class ioStatsGraph {
         try {
             const importedData: Raven.Server.Utils.IoMetrics.IOMetricsResponse = JSON.parse(result);
             
+            // eslint-disable-next-line no-prototype-builtins
             const hasEnvironments = importedData.hasOwnProperty('Environments');
             
             // Check if data is an IOStats json data..

@@ -182,6 +182,7 @@ class graphQueryResults {
         let mouseDownPosition: [number, number] = null;
         let hasMouseDown = false; //used to control mouse button and down event
         
+        // eslint-disable-next-line @typescript-eslint/no-this-alias
         const self = this;
         
         enteringNodes
@@ -199,7 +200,6 @@ class graphQueryResults {
             })
             .on("mouseup", d => {
                 if (hasMouseDown) {
-                    const mouseEvent = d3.event as MouseEvent;
                     const upPosition = d3.mouse(this.nodesContainer.node());
 
                     const distanceSquared = Math.pow(mouseDownPosition[0] - upPosition[0], 2) + Math.pow(mouseDownPosition[1] - upPosition[1], 2);
@@ -226,7 +226,7 @@ class graphQueryResults {
             .attr("class", "node-name")
             .text(x => x.Id)
             .attr("y", 5)
-            .each(function (d, i) {
+            .each(function (d) {
                 const textWidth = this.getComputedTextLength();
                 const maxWidth = 2 * (graphQueryResults.circleRadius - graphQueryResults.circlePadding);
                 

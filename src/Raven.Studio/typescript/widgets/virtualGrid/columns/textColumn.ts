@@ -9,7 +9,7 @@ type preparedValue = {
     typeCssClass: string;
 }
 
-class textColumn<T> implements virtualColumn {
+class textColumn<T extends object> implements virtualColumn {
     constructor(
         protected gridController: virtualGridController<T>,
         public valueAccessor: ((item: T) => any) | string,
@@ -31,6 +31,7 @@ class textColumn<T> implements virtualColumn {
         return this.opts && !!this.opts.sortable;
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     canHandle(actionId: string) {
         return false;
     }
@@ -45,13 +46,13 @@ class textColumn<T> implements virtualColumn {
                     return this.opts.customComparator ? 
                         (input: Array<any>) => input.sort((a, b) => multiplier * this.opts.customComparator(this.getCellValue(a), this.getCellValue(b)))
                         : (input: Array<any>) => _.orderBy(input, x => this.getCellValue(x), mode);
-                default:
+                default: {
                     const provider = this.opts.sortable as valueProvider<T>;
-                    
+
                     return this.opts.customComparator ?
                         (input: Array<any>) => input.sort((a, b) => multiplier * this.opts.customComparator(provider(a), provider(b)))
                         : (input: Array<any>) => _.orderBy(input, x => provider(x), mode);
-                    
+                }
             }
         }
         return null;

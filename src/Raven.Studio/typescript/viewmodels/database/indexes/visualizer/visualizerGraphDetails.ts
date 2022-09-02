@@ -97,12 +97,12 @@ class documentItem extends layoutableItem {
 }
 
 class entryItem extends layoutableItem {
-    data: Object;
+    data: object;
     dataAsString: string;
     source: string;
     parent: pageItem;
 
-    constructor(source: string, data: Object) {
+    constructor(source: string, data: object) {
         super();
         this.data = data;
         this.source = source;
@@ -383,12 +383,12 @@ class reduceTreeItem {
     }
 
     filterAndLayoutVisibleItems(documents: documentItem[]): number {
-        this.cleanCache(documents);
+        this.cleanCache();
         this.filterVisibleItems(documents);
         return this.layout();
     }
 
-    private cleanCache(documents: documentItem[]) {
+    private cleanCache() {
         this.itemsAtDepth.clear();
     }
 
@@ -637,7 +637,7 @@ class visualizerGraphDetails {
     private svg: d3.Selection<void>;
     private zoom: d3.behavior.Zoom<void>;
     private currentPageItemHighlight: d3.Selection<void>;
-    private pageItemHighlightHandler: () => void = () => { };
+    private pageItemHighlightHandler: () => void = () => { /* empty */ };
     private animationInProgress = false;
 
     private xScale: d3.scale.Linear<number, number>;
@@ -735,7 +735,7 @@ class visualizerGraphDetails {
             .call(this.zoom)
             .call(d => this.setupEvents(d));
 
-        this.hitTest.init(item => this.onPageItemClicked(item), item => this.onPageItemEnter(item), item => this.onPageItemExit(item));
+        this.hitTest.init(item => this.onPageItemClicked(item), item => this.onPageItemEnter(item), () => this.onPageItemExit());
     }
 
     addDocument(documentName: string) {
@@ -1162,7 +1162,7 @@ class visualizerGraphDetails {
         this.pageItemHighlightHandler();
     }
 
-    private onPageItemExit(item: pageItem) {
+    private onPageItemExit() {
         if (this.animationInProgress) {
             return;
         }

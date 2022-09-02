@@ -130,7 +130,7 @@ class customColumnForm {
     }
 }
 
-class columnsSelector<T> {
+class columnsSelector<T extends object> {
 
     static readonly storagePrefix = "custom-columns-";
     

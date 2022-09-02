@@ -39,7 +39,7 @@ class statistics extends viewModelBase {
     
     attached() {
         super.attached();
-        this.statsSubscription = this.refreshStatsObservable.throttle(3000).subscribe((e) => this.fetchStats());
+        this.statsSubscription = this.refreshStatsObservable.throttle(3000).subscribe(() => this.fetchStats());
         this.updateHelpLink('H6GYYL');
     }
     
@@ -134,8 +134,8 @@ class statistics extends viewModelBase {
 
     afterClientApiConnected(): void {
         const changesApi = this.changesContext.databaseChangesApi();
-        this.addNotification(changesApi.watchAllDocs(e => this.refreshStatsObservable(new Date().getTime())));
-        this.addNotification(changesApi.watchAllIndexes((e) => this.refreshStatsObservable(new Date().getTime())))
+        this.addNotification(changesApi.watchAllDocs(() => this.refreshStatsObservable(new Date().getTime())));
+        this.addNotification(changesApi.watchAllIndexes(() => this.refreshStatsObservable(new Date().getTime())))
     }
 
     processStatsResults(dbStats: Raven.Client.Documents.Operations.DetailedDatabaseStatistics, indexesStats: Raven.Client.Documents.Indexes.IndexStats[]) {

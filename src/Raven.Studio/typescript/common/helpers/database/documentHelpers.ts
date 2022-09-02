@@ -186,6 +186,7 @@ class documentHelpers {
         result = isArray ? [] : {};
 
         for (const prop in firstDocument) {
+            // eslint-disable-next-line no-prototype-builtins
             if (firstDocument.hasOwnProperty(prop) === false)
                 continue;
 
@@ -225,6 +226,7 @@ class documentHelpers {
 
         const extractedValues = documents.map(doc => doc[property]);
         const extractedTypes = extractedValues.map(v => typeof (v));
+        // eslint-disable-next-line prefer-const
         let [firstType, ...restTypes] = extractedTypes;
         for (let i = 0; i < restTypes.length; i++) {
             if (firstType !== restTypes[i]) {

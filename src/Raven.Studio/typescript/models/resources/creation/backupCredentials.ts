@@ -395,18 +395,20 @@ export class ravenCloudCredentials extends restoreSettings {
                                        backupLocation: string) {
 
         switch (this.cloudBackupProvider()) {
-            case "S3":
+            case "S3": {
                 const s3Configuration = baseConfiguration as Raven.Client.Documents.Operations.Backups.RestoreFromS3Configuration;
                 s3Configuration.Settings = this.toAmazonS3Dto();
                 s3Configuration.Settings.RemoteFolderName = backupLocation;
                 (s3Configuration as any as restoreTypeAware).Type = "S3";
                 return s3Configuration;
-            case "Azure":
+            }
+            case "Azure": {
                 const azureConfiguration = baseConfiguration as Raven.Client.Documents.Operations.Backups.RestoreFromAzureConfiguration;
                 azureConfiguration.Settings = this.toAzureDto();
                 azureConfiguration.Settings.RemoteFolderName = backupLocation;
                 (azureConfiguration as any as restoreTypeAware).Type = "Azure";
                 return azureConfiguration;
+            }
             default:
                 throw new Error("Unable to get restore configuration, unknown provider: " + this.cloudBackupProvider());
         }

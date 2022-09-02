@@ -115,10 +115,12 @@ abstract class abstractWebSocketClient<T> {
         // empty by design
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     protected onClose(e: CloseEvent) {
         // empty by design
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     protected onError(e: Event) {
         // empty by design
     }

@@ -48,6 +48,7 @@ class recentError extends abstractNotification {
                 };
             }
         } catch (e) {
+            // ignore
         }
 
         // fallback to message with entire details

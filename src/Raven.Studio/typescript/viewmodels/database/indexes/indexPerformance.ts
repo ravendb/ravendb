@@ -870,7 +870,7 @@ class indexPerformance extends viewModelBase {
             context.translate(0, indexPerformance.brushSectionHeight);
             context.clearRect(0, 0, this.totalWidth, this.totalHeight - indexPerformance.brushSectionHeight);
 
-            this.drawTracksBackground(context, xScale);
+            this.drawTracksBackground(context);
 
             if (xScale.domain().length) {
                 const ticks = this.getTicks(xScale);
@@ -913,7 +913,7 @@ class indexPerformance extends viewModelBase {
         this.inProgressAnimator.animate(this.colors.progressStripes);
     }
 
-    private drawTracksBackground(context: CanvasRenderingContext2D, xScale: d3.time.Scale<number, number>) {
+    private drawTracksBackground(context: CanvasRenderingContext2D) {
         context.save();
 
         context.beginPath();

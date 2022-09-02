@@ -66,8 +66,8 @@ class indexes extends viewModelBase {
 
     resetsInProgress = new Set<string>();
 
-    throttledRefresh: Function;
-    indexesProgressRefreshThrottle: Function;
+    throttledRefresh: () => void;
+    indexesProgressRefreshThrottle: () => void;
 
     indexErrorsUrl = ko.pureComputed(() => appUrl.forIndexErrors(this.activeDatabase()));
 
@@ -597,10 +597,11 @@ class indexes extends viewModelBase {
                     this.indexesProgressRefreshThrottle();
                 }
                 break;
-            case "SideBySideReplace":
+            case "SideBySideReplace": {
                 const sideBySideIndexName = index.SideBySideIndexPrefix + e.Name;
                 this.removeSideBySideIndexesFromAllGroups(sideBySideIndexName);
                 break;
+            }
         }
 
         this.throttledRefresh();
