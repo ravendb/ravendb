@@ -16,6 +16,9 @@
     <PackageReference Include="BenchmarkDotNet.Diagnostics.Windows" Version="0.13.2" />
     <PackageReference Include="BenchmarkDotNet" Version="0.13.2" />
     <PackageReference Include="xunit" Version="2.4.2" />
+    <PackageReference Include="BenchmarkDotNet.Diagnostics.Windows" Version="0.13.1.1847" />
+    <PackageReference Include="BenchmarkDotNet" Version="0.13.1.1847" />
+    <PackageReference Include="xunit" Version="2.4.1" />
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.0.0" />
   </ItemGroup>
   <ItemGroup>

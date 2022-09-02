@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Runtime.Intrinsics.X86;
 using BenchmarkDotNet.Analysers;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Configs;
@@ -25,7 +27,7 @@ namespace Micro.Benchmark.Benchmarks
                 {
                     Environment =
                     {
-                        Runtime = CoreRuntime.Core50,
+                        Runtime = CoreRuntime.Core60,
                         Platform = Platform.X64,
                         Jit = Jit.RyuJit,
                     },
@@ -55,9 +57,20 @@ namespace Micro.Benchmark.Benchmarks
         [GlobalSetup]
         public void Setup()
         {
+            // We will try to follow the usual distribution we have during encoding. 
             var rnd = new Random(1337);
             for (int i = 0; i < Operations; i++)
-                _numbersToEncode[i] = (uint)rnd.Next();
+            {
+                int distribution = rnd.Next(100);
+                if (distribution < 50)
+                    _numbersToEncode[i] = (uint)rnd.Next(128);
+                else if (distribution < 75)
+                    _numbersToEncode[i] = (uint)rnd.Next(256);
+                else if (distribution < 90)
+                    _numbersToEncode[i] = (uint)rnd.Next((int)short.MaxValue);
+                else
+                    _numbersToEncode[i] = (uint)rnd.Next((int)int.MaxValue);
+            }
 
             Span<byte> encodedSpan = _encodedNumbers;
             for (int i = 0; i < Operations; i++)
@@ -68,6 +81,7 @@ namespace Micro.Benchmark.Benchmarks
         }
 
         [Benchmark(OperationsPerInvoke = Operations)]
+        [SkipLocalsInit]
         public void BasicEncoding()
         {
             byte* src = stackalloc byte[32];
@@ -89,6 +103,7 @@ namespace Micro.Benchmark.Benchmarks
         private const ulong ContinueMask = 0xFFFF_FFFF_FFFF_FF80;
 
         [Benchmark(OperationsPerInvoke = Operations)]
+        [SkipLocalsInit]
         public void UnrollEncoding()
         {
             Span<byte> dest = stackalloc byte[32];
@@ -132,7 +147,20 @@ namespace Micro.Benchmark.Benchmarks
         }
 
         [Benchmark(OperationsPerInvoke = Operations)]
-        public void CurrentEncoding()
+        [SkipLocalsInit]
+        public void CurrentEncodingPointer()
+        {
+            byte* dest = stackalloc byte[32];
+            // assume that we don't use negative values very often
+            foreach (uint value in _numbersToEncode)
+            {
+                VariableSizeEncoding.Write(dest, value);
+            }
+        }
+
+        [Benchmark(OperationsPerInvoke = Operations)]
+        [SkipLocalsInit]
+        public void CurrentEncodingSpan()
         {
             Span<byte> dest = stackalloc byte[32];
             // assume that we don't use negative values very often
@@ -142,8 +170,9 @@ namespace Micro.Benchmark.Benchmarks
             }
         }
 
+
         [Benchmark(OperationsPerInvoke = Operations)]
-        public void CurrentDecoding()
+        public void CurrentDecodingSpan()
         {
             ReadOnlySpan<byte> encodedSpan = _encodedNumbers;
             int pos = 0;
@@ -154,9 +183,51 @@ namespace Micro.Benchmark.Benchmarks
             }
         }
 
+        [Benchmark(OperationsPerInvoke = Operations)]
+        public void CurrentDecodingPointer()
+        {
+            fixed (byte* buffer = _encodedNumbers)
+            {
+                int pos = 0;
+                for (int i = 0; i < Operations; i++)
+                {
+                    VariableSizeEncoding.Read<int>(buffer + pos, out int length);
+                    pos += length;
+                }
+            }
+        }
 
         [Benchmark(OperationsPerInvoke = Operations)]
-        public void BasicDecoding()
+        public void CurrentDecodingCompactFixedEveryCall()
+        {
+            ReadOnlySpan<byte> encodedSpan = _encodedNumbers;
+            int pos = 0;
+            for (int i = 0; i < Operations; i++)
+            {
+                fixed (byte* buffer = encodedSpan)
+                {
+                    VariableSizeEncoding.ReadCompact<int>(buffer + pos, out int length, out var success);
+                    pos += length;
+                }
+            }
+        }
+
+        [Benchmark(OperationsPerInvoke = Operations)]
+        public void CurrentDecodingCompactPointer()
+        {
+            fixed (byte* buffer = _encodedNumbers)
+            {
+                int pos = 0;
+                for (int i = 0; i < Operations; i++)
+                {
+                    VariableSizeEncoding.ReadCompact<int>(buffer + pos, out int length, out var success);
+                    pos += length;
+                }
+            }
+        }
+
+        [Benchmark(OperationsPerInvoke = Operations)]
+        public void BlittableJsonDecoding()
         {
             fixed (byte* encodedPtr = _encodedNumbers)
             {
@@ -168,5 +239,59 @@ namespace Micro.Benchmark.Benchmarks
                 }
             }
         }
+
+        [Benchmark(OperationsPerInvoke = Operations)]
+        public void BlittableJsonDecodingAlt()
+        {
+            fixed (byte* encodedPtr = _encodedNumbers)
+            {
+                int pos = 0;
+                for (int i = 0; i < Operations; i++)
+                {
+                    ReadVariableSizeAlt(encodedPtr, pos, out var offset, out _);
+                    pos += offset;
+                }
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int ReadVariableSizeAlt(byte* buffer, int pos, out byte offset, out bool success)
+        {
+            offset = 0;
+
+            if (pos < 0)
+                goto Error;
+
+            // Read out an Int32 7 bits at a time.  The high bit 
+            // of the byte when on means to continue reading more bytes.
+            // we assume that the value shouldn't be zero very often
+            // because then we'll always take 5 bytes to store it
+
+            ulong count = 0;
+            byte shift = 0;
+            byte b;
+            do
+            {
+                if (shift == 35)
+                    goto Error; // PERF: Using goto to diminish the size of the loop.
+
+                b = buffer[pos];
+                pos++;
+                offset++;
+
+                count |= (b & 0x7Ful) << shift;
+                shift += 7;
+            }
+            while (b >= 0x80);
+
+            success = true;
+            return (int)count;
+
+            Error:
+            success = false;
+            return -1;
+        }
+
+
     }
 }

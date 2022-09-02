@@ -1355,29 +1355,32 @@ namespace Corax
             }
         }
         
-        private bool TryDeltaEncodingToBuffer(ReadOnlySpan<long> additions, Span<byte> tmpBuf, out Span<byte> encoded)
+        private unsafe bool TryDeltaEncodingToBuffer(ReadOnlySpan<long> additions, Span<byte> tmpBuf, out Span<byte> encoded)
         {
             // try to insert to container value
             //TODO: using simplest delta encoding, need to do better here
-            int pos = ZigZagEncoding.Encode(tmpBuf, additions.Length, forceInline: true);
-            pos += ZigZagEncoding.Encode(tmpBuf, additions[0], pos, forceInline: true);
-            for (int i = 1; i < additions.Length; i++)
+            fixed (byte* tmpBufferPtr = tmpBuf)
             {
-                if (pos + ZigZagEncoding.MaxEncodedSize >= tmpBuf.Length)
+                int pos = ZigZagEncoding.Encode(tmpBufferPtr, additions.Length);
+                pos += ZigZagEncoding.Encode(tmpBufferPtr, additions[0], pos);
+                for (int i = 1; i < additions.Length; i++)
                 {
-                    encoded = default;
-                    return false;
+                    if (pos + ZigZagEncoding.MaxEncodedSize >= tmpBuf.Length)
+                    {
+                        encoded = default;
+                        return false;
+                    }
+
+                    long entry = additions[i] - additions[i - 1];
+                    if (entry == 0)
+                        continue; // we don't need to store duplicates
+
+                    pos += ZigZagEncoding.Encode(tmpBufferPtr, entry, pos);
                 }
 
-                long entry = additions[i] - additions[i - 1];
-                if (entry == 0)
-                    continue; // we don't need to store duplicates
-
-                pos += ZigZagEncoding.Encode(tmpBuf, entry, pos, forceInline: true);
+                encoded = tmpBuf[..pos];
+                return true;
             }
-
-            encoded = tmpBuf[..pos];
-            return true;
         }
 
         private void AddNewTerm(in EntriesModifications entries, Span<byte> tmpBuf, out long termId, bool sortingNeeded = true)
