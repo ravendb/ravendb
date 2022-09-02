@@ -1894,7 +1894,7 @@ class ongoingTasksStats extends viewModelBase {
         const currentDatum = this.tooltip.datum();
 
         if (currentDatum !== context.item) {
-            let type = context.rootStats.Type;
+            const type = context.rootStats.Type;
             
             const isReplication = type === "OutgoingPull" || type === "OutgoingExternal" || type === "OutgoingInternal" ||
                                   type === "IncomingPull" || type === "IncomingExternal" || type === "IncomingInternal";

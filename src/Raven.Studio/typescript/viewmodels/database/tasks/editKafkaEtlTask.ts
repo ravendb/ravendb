@@ -377,7 +377,7 @@ class editKafkaEtlTask extends viewModelBase {
     saveKafkaEtl() {
         let hasAnyErrors = false;
         this.spinners.save(true);
-        let editedEtl = this.editedKafkaEtl();
+        const editedEtl = this.editedKafkaEtl();
         
         // 1. Validate *edited transformation script*
         if (editedEtl.showEditTransformationArea()) {
@@ -420,7 +420,7 @@ class editKafkaEtlTask extends viewModelBase {
         }
 
         // 4. All is well, Save connection string (if relevant..) 
-        let savingNewStringAction = $.Deferred<void>();
+        const savingNewStringAction = $.Deferred<void>();
         if (this.createNewConnectionString()) {
             this.newConnectionString()
                 .saveConnectionString(this.activeDatabase())

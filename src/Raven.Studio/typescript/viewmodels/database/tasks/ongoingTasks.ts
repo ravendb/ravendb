@@ -601,7 +601,7 @@ class ongoingTasks extends viewModelBase {
     }
 
     showItemPreview(item: ongoingTaskListModel, scriptName: string) {
-        let studioTaskType = item.studioTaskType;
+        const studioTaskType = item.studioTaskType;
         this.definitionsCache.showDefinitionFor(ongoingTaskModel.getStudioEtlTypeFromTaskType(studioTaskType), item.taskId, scriptName);
     }
     
