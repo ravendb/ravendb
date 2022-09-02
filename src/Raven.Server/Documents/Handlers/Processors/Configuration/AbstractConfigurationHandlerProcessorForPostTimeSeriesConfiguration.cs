@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.TimeSeries;
-using Raven.Client.Http;
-using Raven.Client.ServerWide;
 using Raven.Server.Documents.Handlers.Processors.Databases;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
@@ -55,6 +53,8 @@ namespace Raven.Server.Documents.Handlers.Processors.Configuration
             }
         }
 
+        protected abstract ValueTask WaitForIndexNotificationAsync(TransactionOperationContext context, long index);
+
         private async Task<(long, object)> ModifyTimeSeriesConfiguration(TransactionOperationContext context, string name, BlittableJsonReaderObject configurationJson, string raftRequestId)
         {
             var configuration = JsonDeserializationCluster.TimeSeriesConfiguration(configurationJson);
@@ -63,15 +63,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Configuration
             var editTimeSeries = new EditTimeSeriesConfigurationCommand(configuration, name, raftRequestId);
             var result = await ServerStore.SendToLeaderAsync(editTimeSeries);
 
-            DatabaseTopology topology;
-            ClusterTopology clusterTopology;
-            using (context.OpenReadTransaction())
-            {
-                topology = ServerStore.Cluster.ReadDatabaseTopology(context, name);
-                clusterTopology = ServerStore.GetClusterTopology(context);
-            }
-
-            await RequestHandler.WaitForExecutionOnRelevantNodes(context, name, clusterTopology, topology.Members, result.Index);
+            await WaitForIndexNotificationAsync(context, result.Index);
 
             return result;
         }
