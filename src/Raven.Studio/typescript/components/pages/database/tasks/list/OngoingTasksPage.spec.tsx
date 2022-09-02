@@ -1,6 +1,5 @@
 ﻿import { rtlRender } from "../../../../../test/rtlTestUtils";
 import React from "react";
-import { OngoingTasksPage } from "./OngoingTasksPage";
 
 import * as stories from "./OngoingTasksPage.stories";
 import { composeStories, composeStory } from "@storybook/testing-react";

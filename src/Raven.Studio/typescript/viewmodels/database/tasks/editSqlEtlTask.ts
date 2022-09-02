@@ -1,6 +1,5 @@
 import app = require("durandal/app");
 import appUrl = require("common/appUrl");
-import viewModelBase = require("viewmodels/viewModelBase");
 import router = require("plugins/router");
 import database = require("models/resources/database");
 import ongoingTaskSqlEtlEditModel = require("models/database/tasks/ongoingTaskSqlEtlEditModel");

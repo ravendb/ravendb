@@ -72,7 +72,7 @@ class importParent extends viewModelBase {
             .buildNavigationModel();
     }
     
-    wrapModuleId(item: Function) {
+    wrapModuleId(item: any) {
         const container = require('viewmodels/common/sharding/shardAwareContainer');
         return new container("both", item, this.context);
     }

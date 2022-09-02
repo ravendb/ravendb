@@ -17,7 +17,6 @@ import appUrl = require("common/appUrl");
 import getPeriodicBackupConfigCommand = require("commands/database/tasks/getPeriodicBackupConfigCommand");
 import backupSettings = require("models/database/tasks/periodicBackup/backupSettings");
 import testPeriodicBackupCredentialsCommand = require("commands/serverWide/testPeriodicBackupCredentialsCommand");
-import ongoingTaskModel from "models/database/tasks/ongoingTaskModel";
 import popoverUtils = require("common/popoverUtils");
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import TaskUtils from "../../../components/utils/TaskUtils";

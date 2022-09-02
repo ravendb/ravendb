@@ -1,8 +1,7 @@
 ﻿import changesContext from "common/changesContext";
-import { createContext, useContext, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import serverNotificationCenterClient from "common/serverNotificationCenterClient";
 import databaseNotificationCenterClient from "common/databaseNotificationCenterClient";
-import * as React from "react";
 import changesApi from "common/changesApi";
 
 export interface ChangesProps {

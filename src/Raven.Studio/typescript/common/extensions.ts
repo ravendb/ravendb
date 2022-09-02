@@ -222,11 +222,11 @@ class extensions {
                 };
             },
 
-            update: function (element, valueAccessor, allBindings) {
-                var options = ko.unwrap(valueAccessor());
+            update: function (element, valueAccessor) {
+                const options = ko.unwrap(valueAccessor());
 
                 if (options && options.component) {
-                    var componentInstance = ReactDOM.render(
+                    const componentInstance = ReactDOM.render(
                         React.createElement(options.component, options.props),
                         element
                     );

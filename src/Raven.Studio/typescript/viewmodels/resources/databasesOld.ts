@@ -1,17 +1,13 @@
 import app = require("durandal/app");
-import router = require("plugins/router");
 import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
 import accessManager = require("common/shell/accessManager");
-import deleteDatabaseConfirm = require("viewmodels/resources/deleteDatabaseConfirm");
 import createDatabase = require("viewmodels/resources/createDatabase");
 import disableDatabaseToggleConfirm = require("viewmodels/resources/disableDatabaseToggleConfirm");
 import toggleDatabaseCommand = require("commands/resources/toggleDatabaseCommand");
 import togglePauseIndexingCommand = require("commands/database/index/togglePauseIndexingCommand");
 import toggleDisableIndexingCommand = require("commands/database/index/toggleDisableIndexingCommand");
-import deleteDatabaseCommand = require("commands/resources/deleteDatabaseCommand");
 import loadDatabaseCommand = require("commands/resources/loadDatabaseCommand");
-import changesContext = require("common/changesContext");
 import databasesInfo = require("models/resources/info/databasesInfo");
 import getDatabasesCommand = require("commands/resources/getDatabasesCommand");
 import getDatabaseCommand = require("commands/resources/getDatabaseCommand");
@@ -149,7 +145,7 @@ class databases extends viewModelBase {
     }
 
     // Override canActivate: we can always load this page, regardless of any system db prompt.
-    canActivate(args: any): any {
+    canActivate(): any {
         return true;
     }
 
@@ -296,6 +292,7 @@ class databases extends viewModelBase {
     }
     
     private initTooltips() {
+        // eslint-disable-next-line @typescript-eslint/no-this-alias
         const self = this;
 
         const contentProvider = (dbInfo: databaseInfo) => {

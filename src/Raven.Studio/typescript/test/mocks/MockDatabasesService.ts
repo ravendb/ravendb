@@ -1,6 +1,5 @@
 import { AutoMockService, MockedValue } from "./AutoMockService";
 import DatabasesService from "../../components/services/DatabasesService";
-import { IndexesStubs } from "../stubs/IndexesStubs";
 import EssentialDatabaseStatistics = Raven.Client.Documents.Operations.EssentialDatabaseStatistics;
 import { DatabaseStubs } from "../DatabaseStubs";
 import DetailedDatabaseStatistics = Raven.Client.Documents.Operations.DetailedDatabaseStatistics;

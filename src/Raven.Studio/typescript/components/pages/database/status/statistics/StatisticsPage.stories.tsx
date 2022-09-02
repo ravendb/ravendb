@@ -1,5 +1,5 @@
 import { withStorybookContexts } from "../../../../../test/storybookTestUtils";
-import { ComponentMeta, ComponentStory } from "@storybook/react";
+import { ComponentMeta } from "@storybook/react";
 import { StatisticsPage } from "./StatisticsPage";
 import { DatabasesStubs } from "../../../../../test/stubs/DatabasesStubs";
 import accessManager from "common/shell/accessManager";

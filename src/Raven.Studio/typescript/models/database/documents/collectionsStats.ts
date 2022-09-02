@@ -1,4 +1,3 @@
-import database = require("models/resources/database");
 import collection = require("models/database/documents/collection");
 
 class collectionsStats  {
@@ -8,7 +7,7 @@ class collectionsStats  {
     collections: collection[];
 
     
-    constructor(statsDto: Raven.Client.Documents.Operations.CollectionStatistics, ownerDatabase: database) {
+    constructor(statsDto: Raven.Client.Documents.Operations.CollectionStatistics) {
         this.numberOfDocuments(statsDto.CountOfDocuments);
         this.numberOfConflicts = statsDto.CountOfConflicts;
 

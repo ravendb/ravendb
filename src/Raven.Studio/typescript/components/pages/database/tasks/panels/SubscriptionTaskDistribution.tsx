@@ -91,7 +91,7 @@ interface SubscriptionTaskProgressProps {
 }
 
 export function SubscriptionTaskProgress(props: SubscriptionTaskProgressProps) {
-    const { nodeInfo, task } = props;
+    const { nodeInfo } = props;
 
     if (nodeInfo.status === "error") {
         return <ProgressCircle state="running" icon="icon-warning" />;

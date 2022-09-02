@@ -1,4 +1,3 @@
-import database = require("models/resources/database");
 import generalUtils = require("common/generalUtils");
 
 class collection {
@@ -12,7 +11,7 @@ class collection {
     countPrefix: KnockoutComputed<string>;
     hasBounceClass = ko.observable<boolean>(false);
 
-    constructor(name: string, docCount: number = 0) {
+    constructor(name: string, docCount = 0) {
         this.name = name;
         this.documentCount(docCount);
 

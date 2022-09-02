@@ -11,7 +11,6 @@ import saveCompareExchangeItemCommand = require("commands/database/cmpXchg/saveC
 import deleteCompareExchangeConfirm = require("viewmodels/database/documents/deleteCompareExchangeConfirm");
 import deleteCompareExchangeProgress = require("viewmodels/database/documents/deleteCompareExchangeProgress");
 import editorWarningsConfirm = require("viewmodels/database/documents/editorWarningsConfirm");
-import viewModelBase = require("viewmodels/viewModelBase");
 import eventsCollector = require("common/eventsCollector");
 import popoverUtils = require("common/popoverUtils");
 import genUtils = require("common/generalUtils");

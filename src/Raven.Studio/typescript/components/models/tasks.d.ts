@@ -102,9 +102,9 @@ export interface OngoingTaskReplicationSinkSharedInfo extends OngoingTaskSharedI
     mode: PullReplicationMode;
 }
 
-export interface OngoingTaskKafkaEtlSharedInfo extends OngoingTaskQueueEtlSharedInfo {}
+export type OngoingTaskKafkaEtlSharedInfo = OngoingTaskQueueEtlSharedInfo
 
-export interface OngoingTaskRabbitMqEtlSharedInfo extends OngoingTaskQueueEtlSharedInfo {}
+export type OngoingTaskRabbitMqEtlSharedInfo = OngoingTaskQueueEtlSharedInfo
 
 export interface OngoingTaskQueueEtlSharedInfo extends OngoingTaskSharedInfo {
     connectionStringName: string;
@@ -125,29 +125,29 @@ export interface OngoingTaskSubscriptionSharedInfo extends OngoingTaskSharedInfo
     lastClientConnectionTime?: string;
 }
 
-export interface OngoingTaskElasticSearchEtlNodeInfoDetails extends OngoingTaskNodeInfoDetails {}
+export type OngoingTaskElasticSearchEtlNodeInfoDetails = OngoingTaskNodeInfoDetails
 
-export interface OngoingTaskExternalReplicationNodeInfoDetails extends OngoingTaskNodeInfoDetails {}
+export type OngoingTaskExternalReplicationNodeInfoDetails = OngoingTaskNodeInfoDetails
 
-export interface OngoingTaskOlapEtlNodeInfoDetails extends OngoingTaskNodeInfoDetails {}
+export type OngoingTaskOlapEtlNodeInfoDetails = OngoingTaskNodeInfoDetails
 
 export interface OngoingTaskPeriodicBackupNodeInfoDetails extends OngoingTaskNodeInfoDetails {
     onGoingBackup: Raven.Client.Documents.Operations.OngoingTasks.RunningBackup;
 }
 
-export interface OngoingTaskRavenEtlNodeInfoDetails extends OngoingTaskNodeInfoDetails {}
+export type OngoingTaskRavenEtlNodeInfoDetails = OngoingTaskNodeInfoDetails
 
-export interface OngoingTaskReplicationHubNodeInfoDetails extends OngoingTaskNodeInfoDetails {}
+export type OngoingTaskReplicationHubNodeInfoDetails = OngoingTaskNodeInfoDetails
 
-export interface OngoingTaskReplicationSinkNodeInfoDetails extends OngoingTaskNodeInfoDetails {}
+export type OngoingTaskReplicationSinkNodeInfoDetails = OngoingTaskNodeInfoDetails
 
-export interface OngoingTaskSqlEtlNodeInfoDetails extends OngoingTaskNodeInfoDetails {}
+export type OngoingTaskSqlEtlNodeInfoDetails = OngoingTaskNodeInfoDetails
 
-export interface OngoingTaskSubscriptionNodeInfoDetails extends OngoingTaskNodeInfoDetails {}
+export type OngoingTaskSubscriptionNodeInfoDetails = OngoingTaskNodeInfoDetails
 
-export interface OngoingTaskKafkaEtlNodeInfoDetails extends OngoingTaskNodeInfoDetails {}
+export type OngoingTaskKafkaEtlNodeInfoDetails = OngoingTaskNodeInfoDetails
 
-export interface OngoingTaskRabbitMqEtlNodeInfoDetails extends OngoingTaskNodeInfoDetails {}
+export type OngoingTaskRabbitMqEtlNodeInfoDetails = OngoingTaskNodeInfoDetails
 
 export type AnyEtlOngoingTaskInfo =
     | OngoingTaskSqlEtlInfo

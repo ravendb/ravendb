@@ -1,5 +1,4 @@
 import viewModelBase = require("viewmodels/viewModelBase");
-import database = require("models/resources/database");
 import adminJsScriptCommand = require("commands/maintenance/adminJsScriptCommand");
 import eventsCollector = require("common/eventsCollector");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");

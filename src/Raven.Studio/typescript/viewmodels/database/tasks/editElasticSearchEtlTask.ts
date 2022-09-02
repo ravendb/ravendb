@@ -1,6 +1,5 @@
 import app = require("durandal/app");
 import appUrl = require("common/appUrl");
-import viewModelBase = require("viewmodels/viewModelBase");
 import router = require("plugins/router");
 import database = require("models/resources/database");
 import ongoingTaskElasticSearchEtlEditModel = require("models/database/tasks/ongoingTaskElasticSearchEtlEditModel");
@@ -339,14 +338,6 @@ class editElasticSearchEtlTask extends shardViewModelBase {
                 dto.Name = "Test Elasticsearch Task"; // assign fake name
             }
             return dto;
-        };
-
-        const connectionStringProvider = () => {
-            if (this.createNewConnectionString()) {
-                return this.newConnectionString().toDto();
-            } else {
-                return null;
-            }
         };
 
         this.test = new elasticSearchTaskTestMode(this.db, () => {

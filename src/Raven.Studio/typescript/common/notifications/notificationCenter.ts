@@ -280,7 +280,7 @@ class notificationCenter {
             client.watchAllPerformanceHints(e => this.onPerformanceHintReceived(e, this.databaseNotifications, db)),
             client.watchAllOperations(e => this.onOperationChangeReceived(e, this.databaseNotifications, db)),
             client.watchAllNotificationUpdated(e => this.onNotificationUpdated(e, this.databaseNotifications)),
-            client.watchAllDatabaseStatsChanged(e => collectionsTracker.default.onDatabaseStatsChanged(e, db))
+            client.watchAllDatabaseStatsChanged(e => collectionsTracker.default.onDatabaseStatsChanged(e))
         ];
     }
 

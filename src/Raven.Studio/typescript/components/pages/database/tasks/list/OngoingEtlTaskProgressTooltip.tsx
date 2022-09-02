@@ -1,6 +1,6 @@
 ﻿import React from "react";
 import { PopoverWithHover } from "../../../../common/PopoverWithHover";
-import { OngoingEtlTaskNodeInfo, OngoingTaskInfo, OngoingTaskNodeInfo } from "../../../../models/tasks";
+import { OngoingEtlTaskNodeInfo, OngoingTaskInfo } from "../../../../models/tasks";
 import { NamedProgress, NamedProgressItem } from "../../../../common/NamedProgress";
 
 interface OngoingTaskEtlProgressTooltipProps {

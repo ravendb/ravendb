@@ -6,7 +6,6 @@ import appUrl = require("common/appUrl");
 import eventsCollector = require("common/eventsCollector");
 import accessManager = require("common/shell/accessManager");
 import shardViewModelBase from "viewmodels/shardViewModelBase";
-import database = require("models/resources/database");
 
 class clientConfiguration extends shardViewModelBase {
 

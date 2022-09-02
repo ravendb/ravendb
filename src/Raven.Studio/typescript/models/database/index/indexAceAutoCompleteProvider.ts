@@ -9,7 +9,6 @@ import getDocumentsPreviewCommand from "commands/database/documents/getDocuments
 class indexAceAutoCompleteProvider {
     constructor(private activeDatabase: database, private editedIndex: KnockoutObservable<indexDefinition>) {
         _.bindAll(this, "indexMapCompleter", "indexReduceCompleter")
-    
     }
 
     indexMapCompleter(editor: AceAjax.Editor, session: AceAjax.IEditSession, pos: AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) {

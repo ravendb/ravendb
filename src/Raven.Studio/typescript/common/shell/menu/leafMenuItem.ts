@@ -49,6 +49,7 @@ class leafMenuItem implements menuItem {
         this.badgeData = badgeData || ko.observable<number>();
         this.itemRouteToHighlight = itemRouteToHighlight;
         this.title = title;
+        this.tooltip = tooltip;
         this.route = route;
         this.moduleId = moduleId;
         this.nav = nav;

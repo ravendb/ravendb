@@ -3,10 +3,12 @@ type Feature = "Sharding";
 
 type TeamMember = "Marcin" | "Danielle" | "Kwiato" | "ANY";
 
-export function todo(feature: Feature, member: TeamMember, message: string = "TODO") {
-    
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function todo(feature: Feature, member: TeamMember, message = "TODO") {
+    // empty
 }
 
-export function shardingTodo(member: TeamMember = "ANY", message: string = "TODO") {
-    
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function shardingTodo(member: TeamMember = "ANY", message = "TODO") {
+    // empty
 }

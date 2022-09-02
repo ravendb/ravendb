@@ -195,7 +195,7 @@ class documents extends shardViewModelBase {
         this.resetGrid();
     }
     
-    private resetGrid(hard: boolean = true) {
+    private resetGrid(hard = true) {
         this.itemsSoFar(0);
         this.continuationToken = undefined;
         this.gridController().reset(hard);

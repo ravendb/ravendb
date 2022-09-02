@@ -179,7 +179,7 @@ export function BackupsPage(props: BackupsPageProps) {
         [database, tasksService, dispatch]
     );
 
-    const fetchManualBackup = async (silent: boolean = false) => {
+    const fetchManualBackup = async (silent = false) => {
         if (!silent) {
             setManualBackup({
                 data: null,

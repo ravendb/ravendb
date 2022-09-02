@@ -45,11 +45,6 @@ import fileDownloader = require("common/fileDownloader");
 import moment = require("moment");
 import shardViewModelBase from "viewmodels/shardViewModelBase";
 
-interface revisionToCompare {
-    date: string;
-    changeVector: string;
-}
-
 class editDocument extends shardViewModelBase {
 
     view = require("views/database/documents/editDocument.html");

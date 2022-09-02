@@ -1,6 +1,4 @@
-﻿import React from "react";
-
-export function DatabasesCounter(): JSX.Element {
+﻿export function DatabasesCounter(): JSX.Element {
     return null; //TODO:
 
     /* TODO:

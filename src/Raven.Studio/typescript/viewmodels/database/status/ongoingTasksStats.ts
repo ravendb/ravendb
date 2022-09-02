@@ -13,7 +13,6 @@ import inProgressAnimator = require("common/helpers/graph/inProgressAnimator");
 import colorsManager = require("common/colorsManager");
 import etlScriptDefinitionCache = require("models/database/stats/etlScriptDefinitionCache");
 import subscriptionQueryDefinitionCache = require("models/database/stats/subscriptionQueryDefinitionCache");
-import ongoingTaskModel from "models/database/tasks/ongoingTaskModel";
 import fileImporter = require("common/fileImporter");
 import moment = require("moment");
 import shardViewModelBase from "viewmodels/shardViewModelBase";
