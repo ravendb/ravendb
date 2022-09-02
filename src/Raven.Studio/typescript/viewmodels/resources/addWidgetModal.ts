@@ -37,6 +37,10 @@ class addWidgetModal extends dialogViewModelBase {
             icon: "list-icon",
             type: "DatabaseIndexing"
         }, {
+            name: "IO Stats",
+            icon: "graph-icon",
+            type: "IoStats"
+        }, {
             name: "Traffic",
             icon: "list-icon",
             type: "Traffic"

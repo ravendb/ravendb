@@ -1,4 +1,4 @@
-import lineChart = require("models/resources/clusterDashboard/lineChart");
+import { lineChart } from "models/resources/clusterDashboard/lineChart";
 import clusterDashboard = require("viewmodels/resources/clusterDashboard");
 import indexingSpeed = require("models/resources/widgets/indexingSpeed");
 import abstractChartsWebsocketWidget = require("viewmodels/resources/widgets/abstractChartsWebsocketWidget");

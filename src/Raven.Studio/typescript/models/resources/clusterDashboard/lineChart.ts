@@ -7,7 +7,7 @@ interface chartItemData {
     y: number;
 }
 
-interface chartData {
+export interface chartData {
     id: string;
     ranges: chartItemRange[];
 }
@@ -22,14 +22,14 @@ type chartOpts = {
     grid?: boolean;
     fillArea?: boolean;
     fillData?: boolean;
-    yMaxProvider?: () => number | null;
+    yMaxProvider?: (data: chartData[]) => number | null;
     useSeparateYScales?: boolean;
     topPaddingProvider?: (key: string) => number;
     tooltipProvider?: (date: Date|null) => string;
     onMouseMove?: (date: Date|null) => void;
 }
 
-class lineChart {
+export class lineChart {
     
     static readonly defaultTopPadding = 5;
     static readonly timeFormat = "h:mm:ss A";
@@ -387,7 +387,7 @@ class lineChart {
         };
         
         if (this.opts.yMaxProvider != null) {
-            const yScale = yScaleCreator(this.opts.yMaxProvider(), this.opts.topPaddingProvider(null));
+            const yScale = yScaleCreator(this.opts.yMaxProvider(this.data), this.opts.topPaddingProvider(null));
 
             const lineFunction = d3.svg.line<chartItemData>()
                 .x(x => this.xScale(x.x))
@@ -507,5 +507,3 @@ class lineChart {
         return [firstElement].concat(input, [lastElement]);
     } 
 }
-
-export = lineChart;
