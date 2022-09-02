@@ -8,7 +8,7 @@ class flagsColumn implements virtualColumn {
     constructor(protected gridController: virtualGridController<any>) {
     }
 
-    canHandle(actionId: string): boolean {
+    canHandle(): boolean {
         return false;
     }
     
@@ -24,7 +24,7 @@ class flagsColumn implements virtualColumn {
         return "Document Flags";
     }
 
-    renderCell(item: document, isSelected: boolean, isSorted: boolean): string {
+    renderCell(item: document): string {
         const metadata = item.__metadata;
         
         const extraClasses: string[] = [];

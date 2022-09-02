@@ -124,19 +124,21 @@ class searchBox {
         
         if (!highlight) {
             switch (direction) {
-                case "down":
+                case "down": {
                     this.highlightedItem({
                         index: 0,
                         listing: _.first(items).listName
                     });
                     break;
-                case "up":
+                }
+                case "up": {
                     const lastList = _.last(items);
                     this.highlightedItem({
                         index: lastList.list.length - 1,
                         listing: lastList.listName
                     });
                     break;
+                }
             }
             
             return;

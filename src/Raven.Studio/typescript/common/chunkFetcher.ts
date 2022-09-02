@@ -13,8 +13,8 @@ class chunkFetcher<T> {
 
 
     execute(): JQueryPromise<T[]> {
-        var skip = 0;
-        var take = 1024;
+        const skip = 0;
+        const take = 1024;
         this.fetchChunk(skip, take);
         return this.task;
     }

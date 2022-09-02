@@ -5,6 +5,7 @@ abstract class websocketBasedWidget<TData, TConfig = unknown, TState = unknown> 
     
     abstract onData(nodeTag: string, data: TData): void;
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     supportedOnNode(targetNodeTag: string, currentServerNodeTag: string): boolean {
         return true;
     }

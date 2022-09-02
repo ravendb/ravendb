@@ -8,7 +8,7 @@ import appUrl = require("common/appUrl");
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import databasesManager = require("common/shell/databasesManager");
 
-class legendColumn<T> implements virtualColumn {
+class legendColumn<T extends object> implements virtualColumn {
     constructor(
         protected gridController: virtualGridController<T>,
         public colorClassAccessor: (item: T) => string,
@@ -16,7 +16,7 @@ class legendColumn<T> implements virtualColumn {
         public width: string) {
     }
     
-    canHandle(actionId: string): boolean {
+    canHandle(): boolean {
         return false;
     }
 
@@ -32,7 +32,7 @@ class legendColumn<T> implements virtualColumn {
         return false;
     }
 
-    renderCell(item: T, isSelected: boolean, isSorted: boolean): string {
+    renderCell(item: T): string {
         const color = this.colorClassAccessor(item);
         return `<div class="cell text-cell" style="width: ${this.width}"><div class="legend-rect ${color}"></div></div>`;
     }
@@ -115,7 +115,7 @@ class driveUsage {
             grid.headerVisible(true);
             grid.setDefaultSortBy(1);
 
-            grid.init((s, t) => $.when({
+            grid.init(() => $.when({
                 totalResultCount: this.items().length,
                 items: this.items()
             }), () => {

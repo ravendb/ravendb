@@ -88,7 +88,7 @@ class timingsChart {
             .attr("class", "duration")
             .attr("y", -8);
         
-        const path = this.vis
+        this.vis
             .data([json])
             .selectAll("path")
             .data(nodes)
@@ -146,6 +146,7 @@ class timingsChart {
         this.levelDuration
             .text(this.totalSize.toLocaleString() + " ms");
         
+        // eslint-disable-next-line @typescript-eslint/no-this-alias
         const self = this;
         
         this.vis.selectAll("path").on("mouseover", null);
@@ -190,7 +191,7 @@ class timingsChart {
         // Given a node in a partition layout, return an array of all of its ancestor
         // nodes, highest first, but excluding the root.
         
-        let path: graphNode[] = [];
+        const path: graphNode[] = [];
         let current = node;
         while (current.parent) {
             path.unshift(current);

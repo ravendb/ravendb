@@ -3,6 +3,8 @@ import dialog = require("plugins/dialog");
 
 class ioStatsWidgetSettings extends dialogViewModelBase {
 
+    view = require("views/resources/widgets/settings/ioStatsWidgetSettings.html");
+    
     splitIops = ko.observable<boolean>();
     splitThroughput = ko.observable<boolean>();
 

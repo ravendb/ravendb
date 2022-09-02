@@ -57,7 +57,7 @@ class replicationAccessSinkModel extends replicationAccessBaseModel {
         });
     }
 
-    onCertificateSelected(certAsBase64: string, fileName: string) {
+    onCertificateSelected(certAsBase64: string) {
         this.selectedFileCertificate(certAsBase64);
         this.tryReadCertificate();
     }

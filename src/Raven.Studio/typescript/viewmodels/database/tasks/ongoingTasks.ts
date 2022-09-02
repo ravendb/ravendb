@@ -162,12 +162,13 @@ class ongoingTasks extends viewModelBase {
                                 matchingRavenTask.updateProgress(taskProgress);
                             }
                             break;
-                        case "ElasticSearch":
+                        case "ElasticSearch": {
                             const matchingElasticSearchTask = this.ravenEtlTasks().find(x => x.taskName() === taskProgress.TaskName);
                             if (matchingElasticSearchTask) {
                                 matchingElasticSearchTask.updateProgress(taskProgress);
                             }
                             break;
+                        }
                     }
                 });
                 

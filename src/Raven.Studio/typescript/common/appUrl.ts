@@ -160,7 +160,7 @@ class appUrl {
     }
 
     static forRunningQueries(db: database | databaseInfo = null): string {
-        let databasePart = appUrl.getEncodedDbPart(db);
+        const databasePart = appUrl.getEncodedDbPart(db);
         return "#admin/settings/runningQueries?" + databasePart;
     }
     
@@ -284,13 +284,13 @@ class appUrl {
 
     static forNewCmpXchg(db: database | databaseInfo) {
         const baseUrlPart = "#databases/cmpXchg/edit?";
-        let databasePart = appUrl.getEncodedDbPart(db);
+        const databasePart = appUrl.getEncodedDbPart(db);
         return baseUrlPart + databasePart;
     }
     
     static forNewDoc(db: database | databaseInfo, collection: string = null): string {
         const baseUrlPart = "#databases/edit?";
-        let databasePart = appUrl.getEncodedDbPart(db);
+        const databasePart = appUrl.getEncodedDbPart(db);
         if (collection) {
             const collectionPart = "&collection=" + encodeURIComponent(collection);
             const idPart = "&new=" + encodeURIComponent(collection);
@@ -486,7 +486,7 @@ class appUrl {
         return "#databases/indexes/edit/" + encodeURIComponent(indexName) + "?" + databasePart;
     }
 
-    static forQuery(db: database | databaseInfo, indexNameOrHashToQuery?: string | number, extraParameters: string = ""): string {
+    static forQuery(db: database | databaseInfo, indexNameOrHashToQuery?: string | number, extraParameters = ""): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         let indexToQueryComponent = indexNameOrHashToQuery as string;
         if (typeof indexNameOrHashToQuery === "number") {
@@ -714,7 +714,7 @@ class appUrl {
 
     static mapUnknownRoutes(router: DurandalRouter) {
         router.mapUnknownRoutes((instruction: DurandalRouteInstruction) => {
-            const queryString = !!instruction.queryString ? ("?" + instruction.queryString) : "";
+            const queryString = instruction.queryString ? ("?" + instruction.queryString) : "";
 
             messagePublisher.reportWarning("Unknown route", "The route " + instruction.fragment + queryString + " doesn't exist, redirecting...");
 
@@ -729,7 +729,7 @@ class appUrl {
     static urlEncodeArgs(args: any): string {
         const propNameAndValues: Array<string> = [];
         
-        for (let prop of Object.keys(args)) {
+        for (const prop of Object.keys(args)) {
             const value = args[prop];
 
             if (value instanceof Array) {

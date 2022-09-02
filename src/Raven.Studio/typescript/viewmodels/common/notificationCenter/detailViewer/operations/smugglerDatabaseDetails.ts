@@ -293,7 +293,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
         }));
     }
 
-    private mapToExportListItem(name: string, item: Raven.Client.Documents.Smuggler.SmugglerProgressBase.Counts, isNested: boolean = false): smugglerListItem {
+    private mapToExportListItem(name: string, item: Raven.Client.Documents.Smuggler.SmugglerProgressBase.Counts, isNested = false): smugglerListItem {
         let stage: smugglerListItemStatus = "processing";
         
         if (item.Skipped) {

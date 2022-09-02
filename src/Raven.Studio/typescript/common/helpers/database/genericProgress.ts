@@ -17,7 +17,7 @@ class genericProgress {
     constructor(processed: number,
         total: number,
         numberFormatter: (number: number) => string,
-        processedPerSecond: number = 0) {
+        processedPerSecond = 0) {
 
         this.processed(processed);
         this.total(total);
@@ -93,7 +93,7 @@ class genericProgress {
     // .toFixed() of 99.9924 => 100.0
     // expected: 99.9
     protected toFixed(number: number, fixed: number) {
-        const regExp = new RegExp(`^-?\\d+(?:\.\\d{0,${fixed || -1}})?`);
+        const regExp = new RegExp(`^-?\\d+(?:.\\d{0,${fixed || -1}})?`);
         return number.toString().match(regExp)[0];
     }
 }

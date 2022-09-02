@@ -40,7 +40,7 @@ class patchCommand extends commandBase {
             }
         };
         
-        let url = this.options.test ?
+        const url = this.options.test ?
             endpoints.databases.queries.queriesTest :
             endpoints.databases.queries.queries;
             

@@ -11,7 +11,9 @@
         "webpack-watch": "npm run fix-packages && webpack --config webpack.config.js --watch",
         "release": "npm run fix-packages && node scripts/typings.js && webpack --config webpack.config.js --mode production",
         "fix-packages": "node scripts/fix_packages.js",
-        "test": "jest"
+        "test": "jest",
+        "lint": "eslint typescript/**/*.{tsx,ts}",
+        "lint-fix": "eslint typescript/**/*.{tsx,ts} --fix"
     },
     "private": true,
     "devDependencies": {
@@ -36,6 +38,8 @@
         "@types/requirejs": "^2.1.31",
         "@types/sortablejs": "^1.13.0",
         "@types/toastr": "^2.1.39",
+        "@typescript-eslint/eslint-plugin": "^5.36.1",
+        "@typescript-eslint/parser": "^5.36.1",
         "acorn": "^8.8.0",
         "antlr4ts-cli": "^0.5.0-alpha.4",
         "circular-dependency-plugin": "^5.2.0",

@@ -177,11 +177,12 @@ class finish extends setupStep {
                 case "InProgress":
                     dto = operation.State.Progress as Raven.Server.Commercial.SetupProgressAndResult;
                     break;
-                case "Faulted":
+                case "Faulted": {
                     const failure = operation.State.Result as Raven.Client.Documents.Operations.OperationExceptionResult;
                     this.messages.push({ message: failure.Message, extraClass: "text-danger" });
                     this.messages.push({ message: failure.Error, extraClass: "text-danger" });
                     this.configurationTask.reject();
+                }
             }
             
             if (dto) {

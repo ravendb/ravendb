@@ -5,6 +5,7 @@ import ioStats = require("models/resources/widgets/ioStats");
 import IoStatsResult = Raven.Client.ServerWide.Operations.IoStatsResult;
 import app = require("durandal/app");
 import ioStatsWidgetSettings = require("./settings/ioStatsWidgetSettings");
+import d3 = require("d3");
 import { lineChart, chartData } from "models/resources/clusterDashboard/lineChart";
 
 interface ioStatsWidgetConfig {
@@ -13,6 +14,9 @@ interface ioStatsWidgetConfig {
 }
 
 class ioStatsWidget extends abstractChartsWebsocketWidget<Raven.Server.Dashboard.Cluster.Notifications.IoStatsPayload, ioStats, ioStatsWidgetConfig> {
+
+    view = require("views/resources/widgets/ioStatsWidget.html");
+    
     iopsChart: lineChart;
     iopsReadChart: lineChart;
     iopsWriteChart: lineChart;

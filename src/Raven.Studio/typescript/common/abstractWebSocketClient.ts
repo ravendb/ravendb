@@ -12,7 +12,7 @@ abstract class abstractWebSocketClient<T> {
     protected readonly resourcePath: string;
     protected webSocket: WebSocket;
     
-    protected disposed: boolean = false;
+    protected disposed = false;
 
     protected abstract get autoReconnect(): boolean;
    
@@ -43,9 +43,9 @@ abstract class abstractWebSocketClient<T> {
         return !e.data.trim();
     }
 
-    private connect(action: () => void, recoveringFromWebsocketFailure: boolean = false) {
+    private connect(action: () => void, recoveringFromWebsocketFailure = false) {
         if (this.disposed) {
-            if (!!this.connectToWebSocketTask)
+            if (this.connectToWebSocketTask)
                 this.connectToWebSocketTask.resolve();
             return;
         }
@@ -115,10 +115,12 @@ abstract class abstractWebSocketClient<T> {
         // empty by design
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     protected onClose(e: CloseEvent) {
         // empty by design
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     protected onError(e: Event) {
         // empty by design
     }

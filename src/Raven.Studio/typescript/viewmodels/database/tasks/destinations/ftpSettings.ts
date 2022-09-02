@@ -55,7 +55,7 @@ class ftpSettings extends backupSettings {
         ], false, jsonUtil.newLineNormalizingHashFunction);
     }
 
-    compositionComplete(view: Element, container: HTMLElement) {
+    compositionComplete() {
         popoverUtils.longWithHover($(".ftp-host-info"),
             {
                 content: tasksCommonContent.ftpHostInfo

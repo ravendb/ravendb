@@ -416,7 +416,7 @@ class editIndex extends viewModelBase {
         this.previewEditor.resize();
     }
 
-    getTimeTooltip(utcTime: string, isRevisionTime: boolean = false) {
+    getTimeTooltip(utcTime: string, isRevisionTime = false) {
         return ko.pureComputed(() => {
             if (utcTime) {
                 const clickInfo = `<div class="margin-top margin-top-sm">Click to load this index revision</div>`;
@@ -769,7 +769,7 @@ class editIndex extends viewModelBase {
                 indexDto.SourceType = typeInfo.IndexSourceType;
                 return new saveIndexDefinitionCommand(indexDto, typeInfo.IndexType === "JavaScriptMap" || typeInfo.IndexType === "JavaScriptMapReduce", db)
                     .execute()
-                    .done((savedIndexName) => {
+                    .done(() => {
                         this.resetDirtyFlag();
                         router.navigate(appUrl.forIndexes(db, this.editedIndex().name()));
                     });
@@ -881,6 +881,7 @@ class editIndex extends viewModelBase {
             const fileNameWoExtension = fileName.substr(0, extensionPosition);
             
             let idx = 1;
+            // eslint-disable-next-line no-constant-condition
             while (true) {
                 const suggestedName = fileNameWoExtension + idx + ".cs";
                 if (_.every(sources(), x => x.name() !== suggestedName)) {

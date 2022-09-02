@@ -246,7 +246,9 @@ class clusterDashboard extends viewModelBase {
                 });
         } else {
             this.addWidget(new cpuUsageWidget(this));
-            //this.addWidget(new ioStatsWidget(this)); - we don't show this by default - as it is only available on linux machines
+            if (clusterTopologyManager.default.hasAnyNodeWithOs("Linux")) {
+                this.addWidget(new ioStatsWidget(this));
+            }
             this.addWidget(new trafficWidget(this));
             this.addWidget(new databaseTrafficWidget(this));
             this.addWidget(new databaseIndexingWidget(this));
@@ -340,7 +342,7 @@ class clusterDashboard extends viewModelBase {
         }
     }
 
-    layout(withDelay: boolean = true, mode: "shift" | "full" = "full") {
+    layout(withDelay = true, mode: "shift" | "full" = "full") {
         const layoutAction = () => {
             mode === "full" ? this.packery.layout() : this.packery.shiftLayout();
         }
@@ -396,7 +398,7 @@ class clusterDashboard extends viewModelBase {
         app.showBootstrapDialog(addWidgetView);
     }
     
-    spawnWidget(type: widgetType, fullscreen: boolean = false, config: any = undefined, state: any = undefined) {
+    spawnWidget(type: widgetType, fullscreen = false, config: any = undefined, state: any = undefined) {
         let widget: widget<any>;
         
         switch (type) {

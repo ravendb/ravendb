@@ -62,7 +62,7 @@ class licenseWidget extends widget {
 
                 const nowPlusMonth = moment.utc().add(1, 'months');
                 
-                let expirationClass: string = "";
+                let expirationClass = "";
 
                 if (date.isBefore()) {
                     expirationClass = "text-danger";

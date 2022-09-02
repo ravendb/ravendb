@@ -52,10 +52,10 @@ class queryCommand extends commandBase {
             return [undefined, undefined];
         }
 
-        let [parameters, rql] = queryCommand.extractQueryParameters(queryText);
+        const [parameters, rql] = queryCommand.extractQueryParameters(queryText);
 
         if (this.criteria.showFields()) {
-            rql = queryUtil.replaceSelectAndIncludeWithFetchAllStoredFields(rql);
+            return [parameters, queryUtil.replaceSelectAndIncludeWithFetchAllStoredFields(rql)];
         }
         
         return [parameters, rql];
@@ -109,7 +109,7 @@ var f = function() {
 }
 f();
 `;
-        let parameters = eval(parametersJs);
+        const parameters = eval(parametersJs);
         const rql = queryText.substring(match.index);
         return [JSON.parse(parameters), rql];
     }

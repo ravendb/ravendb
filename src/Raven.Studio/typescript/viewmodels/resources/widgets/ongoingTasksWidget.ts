@@ -86,16 +86,16 @@ class ongoingTasksWidget extends websocketBasedWidget<Raven.Server.Dashboard.Clu
         
         grid.customRowClassProvider(item => item.even ? ["even"] : []);
         
-        grid.init(() => this.getGridData(), (containerWidth, results) => this.prepareColumns(containerWidth, results));
+        grid.init(() => this.getGridData(), () => this.prepareColumns());
 
         this.enableSyncUpdates();
 
-        for (let ws of this.controller.getConnectedLiveClients()) {
+        for (const ws of this.controller.getConnectedLiveClients()) {
             this.onClientConnected(ws);
     }
 }
 
-    protected afterSyncUpdate(updatesCount: number) {
+    protected afterSyncUpdate() {
         this.gridController().reset(false);
     }
     
@@ -182,7 +182,7 @@ class ongoingTasksWidget extends websocketBasedWidget<Raven.Server.Dashboard.Clu
         return "text-muted small";
         }
     
-    private prepareColumns(containerWidth: number, results: pagedResult<taskItem>): virtualColumn[] {
+    private prepareColumns(): virtualColumn[] {
         const grid = this.gridController();
         return [
             new iconsPlusTextColumn<taskItem>(grid, x => x.isTitleItem() ? this.getTaskTypeHtml(x) : "", "Task", "30%", {
@@ -252,7 +252,8 @@ class ongoingTasksWidget extends websocketBasedWidget<Raven.Server.Dashboard.Clu
         const tempRawData = rawDataWithoutIncomingNode;
             
         data.Items.forEach(x => {
-            for (let key in x) {
+            for (const key in x) {
+                // eslint-disable-next-line no-prototype-builtins
                 if (!x.hasOwnProperty(key))
                     continue;
 

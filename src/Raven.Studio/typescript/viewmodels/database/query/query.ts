@@ -148,7 +148,7 @@ class query extends viewModelBase {
 
     static readonly maxSpatialResultsToFetch = 5000;
     
-    autoOpenGraph: boolean = false;
+    autoOpenGraph = false;
 
     saveQueryFocus = ko.observable<boolean>(false);
 
@@ -364,8 +364,8 @@ class query extends viewModelBase {
             }
 
             const collectionRegex = /collection\/(.*)/;
-            let m;
-            if (m = indexName.match(collectionRegex)) {
+            const m = indexName.match(collectionRegex);
+            if (m) {
                 return m[1];
             }
 
@@ -695,7 +695,7 @@ class query extends viewModelBase {
         });
         
         this.columnsSelector.init(grid,
-            (s, t, c) => this.effectiveFetcher()(s, t),
+            (s, t) => this.effectiveFetcher()(s, t),
             (w, r) => {
                 const tab = this.currentTab();
                 if (tab === "results" || tab instanceof perCollectionIncludes) {
@@ -794,7 +794,7 @@ class query extends viewModelBase {
         if (!indexName) {
             this.queriedIndexInfo(null);
         } else {
-            let currentIndex = this.indexes() ? this.indexes().find(i => i.Name === indexName) : null;
+            const currentIndex = this.indexes() ? this.indexes().find(i => i.Name === indexName) : null;
             if (currentIndex) {
                 this.queriedIndexInfo(currentIndex);
             } else {
@@ -823,14 +823,14 @@ class query extends viewModelBase {
         };
         
         switch (timeSeriesQueryResult.detectResultType(tab.value)) {
-            case "grouped":
+            case "grouped": {
                 const groupedItems = tab.value.Results as Array<timeSeriesQueryGroupedItemResultDto>;
                 const groupKeys = timeSeriesQueryResult.detectGroupKeys(groupedItems);
-                
+
                 const aggregationColumns = groupKeys.map(key => {
                     return new textColumn<timeSeriesQueryGroupedItemResultDto>(grid, maybeArrayPresenter(key), key, (45 / groupKeys.length) + "%");
                 });
-                
+
                 return [
                     new textColumn<timeSeriesQueryGroupedItemResultDto>(grid, x => formatTimeSeriesDate(x.From), "From", "15%"),
                     new textColumn<timeSeriesQueryGroupedItemResultDto>(grid, x => formatTimeSeriesDate(x.To), "To", "15%"),
@@ -838,6 +838,7 @@ class query extends viewModelBase {
                     new textColumn<timeSeriesQueryGroupedItemResultDto>(grid, maybeArrayPresenter("Count"), "Count", "10%"),
                     ...aggregationColumns
                 ];
+            }
             case "raw":
                 return [
                     new textColumn<timeSeriesRawItemResultDto>(grid, x => formatTimeSeriesDate(x.Timestamp), "Timestamp", "30%"),
@@ -1076,6 +1077,7 @@ class query extends viewModelBase {
                             totalSkippedResults += queryResults.additionalResultInfo.SkippedResults;
                             
                             // find if query contains positive offset or limit, if so warn about paging.
+                            // eslint-disable-next-line @typescript-eslint/no-unused-vars
                             const [_, rqlWithoutParameters] = queryCommand.extractQueryParameters(criteriaForFetcher.queryText());
                             if (/\s+(offset|limit)\s+/img.test(rqlWithoutParameters)) {
                                 this.showFanOutWarning(true);

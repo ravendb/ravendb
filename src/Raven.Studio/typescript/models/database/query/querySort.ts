@@ -11,7 +11,7 @@ class querySort {
         return new querySort();
     }
 
-    bindOnUpdateAction(func: Function) {
+    bindOnUpdateAction(func: () => void) {
         this.fieldName.subscribe(() => func());
         this.sortType.subscribe(() => func());
     }

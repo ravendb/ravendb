@@ -31,9 +31,9 @@ class autoCompleteBindingHandler {
     }
 
     // Called by Knockout a single time when the binding handler is setup.
-    init(element: HTMLElement, valueAccessor: () => string, allBindings: () => any, viewModel: any, bindingContext: any) {
-        var inputId = valueAccessor();
-        var input = $(inputId);
+    init(element: HTMLElement, valueAccessor: () => string, allBindings: () => any) {
+        const inputId = valueAccessor();
+        const input = $(inputId);
         if (input.length !== 1) {
             // Don't throw an error here, because we may cancel navigation, and Durandal may pull the element out.
             // Instead, we'll just issue a warning in the console and return.
@@ -43,7 +43,7 @@ class autoCompleteBindingHandler {
         }
 
         // Hide the auto complete container and size it to the same size as the textbox.
-        var $element = $(element);
+        const $element = $(element);
         element.style.display = "none";
         element.style.position = "absolute";
         element.style.left = "auto";
@@ -56,15 +56,15 @@ class autoCompleteBindingHandler {
         $element.on('click', () => setTimeout(() => element.style.display = "none", 0));
 
         // Leaving the textbox should hide the auto complete list.
-        input.on('blur', (args: JQueryEventObject) => setTimeout(() => {
+        input.on('blur', () => setTimeout(() => {
             element.style.display = "none";
 
-            var newValue = $element.find(".active").find("span.text").text();
+            const newValue = $element.find(".active").find("span.text").text();
             if (newValue.length === 0) {
                 return;
             }
 
-            var oldValue = input.text();
+            const oldValue = input.text();
             if (oldValue === newValue) {
                 return;
             }
@@ -74,18 +74,18 @@ class autoCompleteBindingHandler {
         }, 200));
 
         // Putting the focus back on the textbox should show the auto complete list if we have items.
-        input.on('focus', (args: JQueryEventObject) => setTimeout(() =>
+        input.on('focus', () => setTimeout(() =>
             element.style.display = this.getAllAutoCompleteItems($element).length > 0 ? "block" : "none"));
 
         // Up, down, enter all have special meaning.
         input.on('keydown', (args: JQueryEventObject) => this.handleKeyPress(element, $element, input, args));
 
         // When the results change and we have 1 or more, display the auto complete container.
-        var results: KnockoutObservableArray<any> = allBindings()['foreach'];
+        const results: KnockoutObservableArray<any> = allBindings()['foreach'];
         if (!results) {
             throw new Error("Unable to find results list for auto complete.");
         }
-        var subscription = results.subscribe((array: any[]) => {
+        const subscription = results.subscribe((array: any[]) => {
             element.style.display = array.length === 0 || !input.is(":focus") ? "none" : "block";
         });
 
@@ -110,16 +110,16 @@ class autoCompleteBindingHandler {
     }
 
     handleKeyPress(element: HTMLElement, $element: JQuery, $input: JQuery, args: JQueryEventObject) {
-        var enter = 13;
-        var escape = 27;
-        var downArrow = 40;
-        var upArrow = 38;
+        const enter = 13;
+        const escape = 27;
+        const downArrow = 40;
+        const upArrow = 38;
 
         if (args.which === escape) {
             element.style.display = "none";
         }
 
-        var lis: JQuery, curSelected: JQuery, selected: JQuery;
+        let lis: JQuery, curSelected: JQuery, selected: JQuery;
         if (element.style.display == "none" && args.which === downArrow) {
             if ($element.children("li").length > 0 && $input.is(":focus")) {
                 setTimeout(() => element.style.display = "block", 0);
@@ -135,7 +135,7 @@ class autoCompleteBindingHandler {
         if (args.which === downArrow) {
             if (curSelected.length > 0) {
                 curSelected.removeClass("active");
-                var nextSelected = curSelected.next();
+                const nextSelected = curSelected.next();
 
                 if (nextSelected.length) {
                     selected = nextSelected;
@@ -157,7 +157,7 @@ class autoCompleteBindingHandler {
             args.preventDefault();
             if (curSelected.length > 0) {
                 curSelected.removeClass("active");
-                var prevSelected = curSelected.prev();
+                const prevSelected = curSelected.prev();
 
                 if (prevSelected.length) {
                     selected = prevSelected;
@@ -178,7 +178,7 @@ class autoCompleteBindingHandler {
         } else if (args.which === enter) {
             args.preventDefault();
             args.stopPropagation();
-            var itemToSelect = curSelected.length ? curSelected : $(this.findAutoCompleteItemMatching($element, $input.val()));
+            const itemToSelect = curSelected.length ? curSelected : $(this.findAutoCompleteItemMatching($element, $input.val()));
             if (itemToSelect.length) {
                 itemToSelect.click();
             }
@@ -186,13 +186,13 @@ class autoCompleteBindingHandler {
     }
 
     private updateInputElement(selected: JQuery, $input: JQuery) {
-        var selectedValue = selected.find("span.text");
+        const selectedValue = selected.find("span.text");
         if (selectedValue.length === 0) {
             return;
         }
 
         $input.val(selectedValue.text());
-        var htmlElement: HTMLElement = $input[0];
+        const htmlElement: HTMLElement = $input[0];
         htmlElement.scrollLeft = htmlElement.scrollWidth;
     }
 }

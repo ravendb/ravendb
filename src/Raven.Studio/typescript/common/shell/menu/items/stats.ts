@@ -4,7 +4,7 @@ import leafMenuItem = require("common/shell/menu/leafMenuItem");
 export = getStatsMenuItem;
 
 function getStatsMenuItem(appUrls: computedAppUrls) {
-    var statsItems: menuItem[] = [
+    const statsItems: menuItem[] = [
         new leafMenuItem({
             route: 'databases/status',
             moduleId: require('viewmodels/database/status/statistics'),

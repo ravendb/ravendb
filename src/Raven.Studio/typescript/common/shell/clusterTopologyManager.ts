@@ -5,6 +5,7 @@ import getClusterTopologyCommand = require("commands/database/cluster/getCluster
 import changesContext = require("common/changesContext");
 import licenseModel = require("models/auth/licenseModel");
 import getClusterNodeInfoCommand = require("commands/database/cluster/getClusterNodeInfoCommand");
+import OSType = Raven.Client.ServerWide.Operations.OSType;
 
 class clusterTopologyManager {
 
@@ -65,6 +66,18 @@ class clusterTopologyManager {
         }
         
         return topology.nodes().find(x => x.tag() === nodeTag);
+    }
+    
+    public hasAnyNodeWithOs(os: OSType) {
+        const topology = this.topology();
+        if (topology) {
+            const nodes = topology.nodes();
+            if (nodes && nodes.length) {
+                return nodes.some(node => node.osInfo() && node.osInfo().Type === os);
+            }
+        }
+        
+        return false;
     }
 
     private initObservables() {

@@ -80,11 +80,11 @@ class serverWideBackupListModel extends serverWideTaskListModel {
         this.showDetails.toggle();
 
         if (this.showDetails()) {
-            this.refreshBackupInfo(true);
+            this.refreshBackupInfo();
         } 
     }
 
-    refreshBackupInfo(reportFailure: boolean) {
+    refreshBackupInfo() {
         if (connectionStatus.showConnectionLost()) {
             // looks like we don't have connection to server, skip index progress update 
             return $.Deferred<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup>().fail();

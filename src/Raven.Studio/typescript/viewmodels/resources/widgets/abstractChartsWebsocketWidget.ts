@@ -28,7 +28,7 @@ abstract class abstractChartsWebsocketWidget<
         super.compositionComplete();
         this.enableSyncUpdates();
 
-        for (let ws of this.controller.getConnectedLiveClients()) {
+        for (const ws of this.controller.getConnectedLiveClients()) {
             this.onClientConnected(ws);
         }
 
@@ -83,7 +83,7 @@ abstract class abstractChartsWebsocketWidget<
         this.charts.forEach(chart => chart.recordNoData(now, abstractChartsWebsocketWidget.chartKey(ws.nodeTag)));
     }
 
-    protected afterSyncUpdate(updatesCount: number) {
+    protected afterSyncUpdate() {
         this.charts.forEach(chart => chart.draw());
     }
 

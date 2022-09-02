@@ -116,7 +116,7 @@ class cmpXchg extends viewModelBase {
         
         const gridColumns = this.isReadOnlyAccess() ? [keyColumn, valueColumn, metadataColumn, raftIndexColumn] :
                                                       [checkColumn, editColumn, keyColumn, valueColumn, metadataColumn, raftIndexColumn];
-        grid.init((s, _) => this.fetchItems(s), () => gridColumns);
+        grid.init((s) => this.fetchItems(s), () => gridColumns);
         
          this.columnPreview.install(".js-cmp-xchg-grid", ".js-cmp-xchg-tooltip", 
              (doc: Raven.Server.Web.System.CompareExchangeHandler.CompareExchangeListItem, column: virtualColumn, e: JQueryEventObject, onValue: (context: any, valueToCopy: string) => void) => {

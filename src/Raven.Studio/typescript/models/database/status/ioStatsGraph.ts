@@ -709,7 +709,7 @@ class ioStatsGraph {
                     const x1 = this.xBrushTimeScale(recentItem.StartedAsDate);
                     let dx = extentFunc(recentItem.Duration);
 
-                    let closeToPrevious = dx < 0.5 && x1 < lastRegisteredX1 + 0.5;
+                    const closeToPrevious = dx < 0.5 && x1 < lastRegisteredX1 + 0.5;
                     if (!closeToPrevious) {
                         lastRegisteredX1 = x1;
                         dx = dx < ioStatsGraph.minItemWidth ? ioStatsGraph.minItemWidth : dx;
@@ -1076,7 +1076,7 @@ class ioStatsGraph {
                 const x1 = xScale(recentItem.StartedAsDate);
                 const originalDx = extentFunc(recentItem.Duration);
 
-                let closeToPrevious = originalDx < 0.5 && x1 < lastRegisteredX1 + 1;
+                const closeToPrevious = originalDx < 0.5 && x1 < lastRegisteredX1 + 1;
                 // when item is really small and it is quite close to last *registered* item, skip it
                 // since we register bigger areas anyway
                 if (!closeToPrevious) {
@@ -1152,7 +1152,7 @@ class ioStatsGraph {
                 lastRegisteredX1 = -1e10;
             }
 
-            let closeToPrevious = originalDx < 0.5 && x1 < lastRegisteredX1 + 1;
+            const closeToPrevious = originalDx < 0.5 && x1 < lastRegisteredX1 + 1;
             // when item is really small and it is quite close to last *registered* item, skip it
             // since we register bigger areas anyway
             if (!closeToPrevious) {
@@ -1342,6 +1342,7 @@ class ioStatsGraph {
         try {
             const importedData: Raven.Server.Utils.IoMetrics.IOMetricsResponse = JSON.parse(result);
             
+            // eslint-disable-next-line no-prototype-builtins
             const hasEnvironments = importedData.hasOwnProperty('Environments');
             
             // Check if data is an IOStats json data..
