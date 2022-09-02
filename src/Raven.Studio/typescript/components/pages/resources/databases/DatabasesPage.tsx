@@ -10,7 +10,7 @@ import { DatabaseFilterCriteria, DatabaseSharedInfo } from "../../../models/data
 import { useChanges } from "hooks/useChanges";
 
 interface DatabasesPageProps {
-    activeDatabase: string;
+    activeDatabase?: string;
 }
 
 function filterDatabases(stats: DatabasesStatsState, criteria: DatabaseFilterCriteria) {
