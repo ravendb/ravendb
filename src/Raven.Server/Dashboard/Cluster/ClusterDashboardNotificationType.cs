@@ -11,6 +11,7 @@ namespace Raven.Server.Dashboard.Cluster
         Unknown,
         ServerTime, // used by studio to sync clocks
         CpuUsage,
+        IoStats,
         StorageUsage, 
         MemoryUsage,
         Traffic,
