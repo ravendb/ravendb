@@ -1,5 +1,4 @@
 ﻿import appUrl = require("common/appUrl");
-import viewModelBase = require("viewmodels/viewModelBase");
 import router = require("plugins/router");
 import getPeriodicBackupConfigurationCommand = require("commands/database/tasks/getPeriodicBackupConfigurationCommand");
 import getPeriodicBackupConfigCommand = require("commands/database/tasks/getPeriodicBackupConfigCommand");

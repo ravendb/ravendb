@@ -151,6 +151,26 @@ namespace Corax
                     MemoryExtensions.Sort(new Span<long>(_end - _removals + 1, _removals));
                     _sortingNeeded = false;
                 }
+                
+                ValidateNoDuplicateEntries();
+            }
+
+            [Conditional("DEBUG")]
+            private void ValidateNoDuplicateEntries()
+            {
+                var removals = Removals;
+                var additions = Additions;
+                foreach (var add in additions)
+                {
+                    if (removals.BinarySearch(add) >= 0)
+                        throw new InvalidOperationException("Found duplicate addition & removal item during indexing: " + add);
+                }
+
+                foreach (var reomval in removals)
+                {
+                    if (additions.BinarySearch(reomval) >= 0)
+                        throw new InvalidOperationException("Found duplicate addition & removal item during indexing: " + reomval);
+                }
             }
 
             public ReadOnlySpan<long> Additions => new(_start, _additions);
@@ -272,6 +292,9 @@ namespace Corax
             id.AsSpan().CopyTo(space);
             space = space.Slice(id.Size);
             data.CopyTo(space);
+            space = space.Slice(data.Length);
+            space.Clear(); // remove any extra data from old value
+          
             return entryId;
         }
 
@@ -412,6 +435,8 @@ namespace Corax
             id.CopyTo(space);
             space = space.Slice(id.Size);
             data.CopyTo(space);
+            space = space.Slice(data.Length);
+            space.Clear();// clean any old data that may have already been there
 
             var context = Transaction.Allocator;
             var entryReader = new IndexEntryReader(data);
@@ -1079,8 +1104,9 @@ namespace Corax
                 long termId;
                 ReadOnlySpan<byte> termsSpan = term.AsSpan();
                 if (fieldTree.TryGetNextValue(termsSpan, out var existing, out var encodedKey) == false)
-                {                    
-                    Debug.Assert(entries.TotalRemovals == 0, "entries.TotalRemovals == 0");
+                {
+                    if (entries.TotalRemovals != 0)
+                        throw new InvalidOperationException($"Attempt to remove entries from new term: '{term}' for field {fieldId}! This is a bug.");
                     AddNewTerm(entries, tmpBuf, out termId);
                     fieldTree.Add(termsSpan, termId, encodedKey);
                     continue;
@@ -1092,7 +1118,10 @@ namespace Corax
                         fieldTree.Add(termsSpan, termId, encodedKey);
                         break;
                     case AddEntriesToTermResult.RemoveTermId:
-                        fieldTree.TryRemove(termsSpan, out _);
+                        if (fieldTree.TryRemove(termsSpan, out var ttt) == false)
+                        {
+                            throw new InvalidOperationException($"Attempt to remove term: '{term}' for field {fieldId}, but it does not exists! This is a bug.");
+                        }
                         break;
                 }
             }

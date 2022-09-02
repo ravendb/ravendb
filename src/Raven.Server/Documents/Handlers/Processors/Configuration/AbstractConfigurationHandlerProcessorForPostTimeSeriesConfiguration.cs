@@ -20,7 +20,8 @@ namespace Raven.Server.Documents.Handlers.Processors.Configuration
 
         protected override Task<(long Index, object Result)> OnUpdateConfiguration(TransactionOperationContext context, BlittableJsonReaderObject configuration, string raftRequestId)
         {
-            return RequestHandler.ServerStore.ModifyTimeSeriesConfiguration(context, RequestHandler.DatabaseName, configuration, raftRequestId);
+            //TODO : return RequestHandler.ServerStore.ModifyTimeSeriesConfiguration(context, RequestHandler.DatabaseName, configuration, raftRequestId);
+            return null;
         }
 
         protected override void OnBeforeUpdateConfiguration(ref BlittableJsonReaderObject configuration, JsonOperationContext context)

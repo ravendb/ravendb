@@ -135,7 +135,7 @@ class databaseSettings extends shardViewModelBase {
                     const db: database = this.db;
                     this.fetchDatabaseSettings(db)
                         .done(() => deferred.resolve({can: true}))
-                        .fail((response: JQueryXHR) => {
+                        .fail(() => {
                             deferred.resolve({redirect: appUrl.forStatus(db)});
                         });
                 }
@@ -159,7 +159,7 @@ class databaseSettings extends shardViewModelBase {
 
         categoriesGrid.init(() => this.fetchCategoriesData(), () =>
             [
-                new hyperlinkColumn<categoryInfo>(categoriesGrid, x => this.getCategoryHtml(x), x => appUrl.forDatabaseSettings(this.db), "Category", "90%",
+                new hyperlinkColumn<categoryInfo>(categoriesGrid, x => this.getCategoryHtml(x), () => appUrl.forDatabaseSettings(this.db), "Category", "90%",
                     {
                         useRawValue: () => true,
                         sortable: "string",
@@ -535,7 +535,7 @@ class databaseSettings extends shardViewModelBase {
        
         this.allEntries().forEach(entry => {
             if (entry instanceof models.databaseEntry) {
-                entry.override.subscribe((override) => {
+                entry.override.subscribe(() => {
                     this.categoriesGridController().reset(false);
                     this.setCategory(entry.data.Metadata.Category);
                 });

@@ -1,5 +1,6 @@
 ﻿class eventsCollector {
-    initialize(version: string, build: number, env: string, fullVersion: string, enabled: boolean) {
+    initialize() {
+        // empty mock
     }
 
     static gaDefined() {
@@ -7,12 +8,12 @@
     }
 
     createTracker() {
-       
+       // empty mock
     }
 
    
-    reportEvent(category: string, action: string, label: string = null) {
-     
+    reportEvent() {
+        // empty mock
     }
 }
 

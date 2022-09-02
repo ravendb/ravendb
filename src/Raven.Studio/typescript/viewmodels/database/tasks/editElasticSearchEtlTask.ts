@@ -469,7 +469,7 @@ class editElasticSearchEtlTask extends shardViewModelBase {
         }
                 
         // 5. All is well, Save connection string (if relevant..) 
-        let savingNewStringAction = $.Deferred<void>();
+        const savingNewStringAction = $.Deferred<void>();
         if (this.createNewConnectionString()) {
             this.newConnectionString()
                 .saveConnectionString(this.db)

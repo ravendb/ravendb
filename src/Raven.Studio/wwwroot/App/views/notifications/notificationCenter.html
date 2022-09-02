@@ -190,7 +190,54 @@
     </div>
 </script>
 
+<script type="text/html" id="CumulativeBulkInsertFailures-template">
+    <div data-bind="attr: { class: 'notification-item ' + cssClass() }">
+        <div class="padding">
+            <button class="close" data-bind="visible: canBeDismissed, click: _.partial($parent.dismiss, $data), enable: !_.includes($parent.spinners.dismiss(), id), css: { 'btn-spinner': _.includes($parent.spinners.dismiss(), id) }">
+                <i class="icon-cancel"></i>
+            </button>
+            <div class="notification-header">
+                <i class="icon-database-cutout icon-addon-tick"></i>
+                <h3 data-bind="text: title"></h3>
+            </div>
+            <div class="notification-time" data-bind="text: displayDate().format('LLL')"></div>
+            <p data-bind="text: message"></p>
+            <div class="flex-horizontal">
+                <button data-bind="click: _.partial($parent.openDetails, $data)"
+                        class="btn btn-sm">
+                    <i class="icon-details"></i>
+                    <span>Details</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</script>
+
+
 <script type="text/html" id="CumulativeBulkInsert-template">
+    <div data-bind="attr: { class: 'notification-item ' + cssClass() }">
+        <div class="padding">
+            <button class="close" data-bind="visible: canBeDismissed, click: _.partial($parent.dismiss, $data), enable: !_.includes($parent.spinners.dismiss(), id), css: { 'btn-spinner': _.includes($parent.spinners.dismiss(), id) }">
+                <i class="icon-cancel"></i>
+            </button>
+            <div class="notification-header">
+                <i class="icon-database-cutout icon-addon-tick"></i>
+                <h3 data-bind="text: title"></h3>
+            </div>
+            <div class="notification-time" data-bind="text: displayDate().format('LLL')"></div>
+            <p data-bind="text: message"></p>
+            <div class="flex-horizontal">
+                <button data-bind="click: _.partial($parent.openDetails, $data)"
+                        class="btn btn-sm">
+                    <i class="icon-details"></i>
+                    <span>Details</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</script>
+
+<script type="text/html" id="CumulativeUpdateByQueryFailures-template">
     <div data-bind="attr: { class: 'notification-item ' + cssClass() }">
         <div class="padding">
             <button class="close" data-bind="visible: canBeDismissed, click: _.partial($parent.dismiss, $data), enable: !_.includes($parent.spinners.dismiss(), id), css: { 'btn-spinner': _.includes($parent.spinners.dismiss(), id) }">
@@ -225,6 +272,29 @@
             </div>
             <div class="notification-time" data-bind="text: displayDate().format('LLL')"></div>
             <p data-bind="text: message"></p>
+            <div class="flex-horizontal">
+                <button data-bind="click: _.partial($parent.openDetails, $data)"
+                        class="btn btn-sm">
+                    <i class="icon-details"></i>
+                    <span>Details</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</script>
+
+<script type="text/html" id="CumulativeDeleteByQueryFailures-template">
+    <div data-bind="attr: { class: 'notification-item ' + cssClass() }">
+        <div class="padding">
+            <button class="close" data-bind="visible: canBeDismissed, click: _.partial($parent.dismiss, $data), enable: !_.includes($parent.spinners.dismiss(), id), css: { 'btn-spinner': _.includes($parent.spinners.dismiss(), id) }">
+                <i class="icon-cancel"></i>
+            </button>
+            <div class="notification-header">
+                <i class="icon-database-cutout icon-addon-tick"></i>
+                <h3 data-bind="text: title"></h3>
+            </div>
+            <div class="notification-time" data-bind="text: displayDate().format('LLL')"></div>
+            <p data-bind="html: message"></p>
             <div class="flex-horizontal">
                 <button data-bind="click: _.partial($parent.openDetails, $data)"
                         class="btn btn-sm">

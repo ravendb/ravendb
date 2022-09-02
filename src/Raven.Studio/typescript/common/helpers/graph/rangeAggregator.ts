@@ -54,26 +54,26 @@ class rangeAggregator {
        
         if (this.ptrStart === this.workData.length) {
             // 1.1 Push new item in the end
-            let newValue = previousValue + 1;
+            const newValue = previousValue + 1;
             this.workData.push({ pointInTime: startTime, numberOfItems: newValue });
-            if (newValue > this.maxConcurrentItems) { this.maxConcurrentItems++; };
+            if (newValue > this.maxConcurrentItems) { this.maxConcurrentItems++; }
         } else if (this.workData[this.ptrStart].pointInTime === startTime) {
             // 1.2 Only increase counter
-            let newValue = ++(this.workData[this.ptrStart].numberOfItems);
-            if (newValue > this.maxConcurrentItems) { this.maxConcurrentItems++; };
+            const newValue = ++(this.workData[this.ptrStart].numberOfItems);
+            if (newValue > this.maxConcurrentItems) { this.maxConcurrentItems++; }
         } else if (this.workData[this.ptrStart].pointInTime !== startTime) {
             // 1.3 Create new element in the start/middle 
-            let newValue = previousValue + 1;
+            const newValue = previousValue + 1;
             this.workData.splice(this.ptrStart, 0, { pointInTime: startTime, numberOfItems: newValue });
-            if (newValue > this.maxConcurrentItems) { this.maxConcurrentItems++; };
+            if (newValue > this.maxConcurrentItems) { this.maxConcurrentItems++; }
         }
 
         // 2. Find appropriate end position for the new element AND update working items counter along the way...
         let i = this.ptrStart;
         while ((i < this.workData.length) && (endTime + 1 > this.workData[i].pointInTime)) {
             if ((i + 1 < this.workData.length) && (endTime + 1 > this.workData[i + 1].pointInTime)) {               
-                let newValue = ++(this.workData[i + 1].numberOfItems);
-                if (newValue > this.maxConcurrentItems) { this.maxConcurrentItems++; };
+                const newValue = ++(this.workData[i + 1].numberOfItems);
+                if (newValue > this.maxConcurrentItems) { this.maxConcurrentItems++; }
             }
             i++;
         }

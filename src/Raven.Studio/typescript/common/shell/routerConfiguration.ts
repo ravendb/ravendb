@@ -66,7 +66,7 @@ function getMenuItemDurandalRoutes(item: menuItem): Array<DurandalRouteConfigura
 }
 
 function generateAllMenuItems() {
-    let appUrls = appUrl.forCurrentDatabase();
+    const appUrls = appUrl.forCurrentDatabase();
     return [
         getDocumentsMenuItem(appUrls),
         getIndexesMenuItem(appUrls),

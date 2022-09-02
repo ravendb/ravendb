@@ -1,6 +1,5 @@
 ﻿import setupEncryptionKey = require("viewmodels/resources/setupEncryptionKey");
 import jsonUtil = require("common/jsonUtil");
-import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 
 class encryptionSettings {
     
@@ -103,7 +102,7 @@ class encryptionSettings {
 
         setupEncryptionKey.setupKeyValidation(this.key);
         
-        this.backupType.subscribe(backupType => {
+        this.backupType.subscribe(() => {
             const dbIsEncrypted = this.encryptedDatabase();
             if (dbIsEncrypted) {
                 if (this.backupType() === "Snapshot") {
@@ -201,10 +200,11 @@ class encryptionSettings {
             }]
         });
 
+        // eslint-disable-next-line @typescript-eslint/no-this-alias
         const self = this;
         this.enabled.extend({
             validation: [{
-                validator: function(enabled: boolean) {
+                validator: function() {
                     if (self.enabled() &&  !self.backupType()) {
                         this.message = "Backup Type was not selected. Select Backup Type to continue.";
                         return false;

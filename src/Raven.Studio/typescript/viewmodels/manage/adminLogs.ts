@@ -46,6 +46,7 @@ class heightCalculator {
         const initialHeight = row.element.height();
         let charactersInline = 1;
         
+        // eslint-disable-next-line no-constant-condition
         while (true) {
             row.populate(_.repeat("A", charactersInline), 0, -200, undefined);
             if (row.element.height() > initialHeight) {

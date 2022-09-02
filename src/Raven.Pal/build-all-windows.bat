@@ -3,24 +3,25 @@ if not exist "artifacts" mkdir "artifacts"
 if exist artifacts\librvnpal.x64.dll del artifacts\librvnpal.x64.dll
 if exist artifacts\librvnpal.x86.dll del artifacts\librvnpal.x86.dll
 
-set vcbin=C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\bin
 
-cmd.exe /c ""%vcbin%\vcvars32.bat" & "%vcbin%\cl" -Felibrvnpal.x86.dll -I inc /O2 /analyze /sdl /LD src\*.c src\win\*.c /link"
+set vcbin=C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build
+set clbin=C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.33.31629\bin\Hostx64
+
+cmd.exe /c ""%vcbin%\vcvars32.bat" & "%clbin%\x86\cl" -Felibrvnpal.x86.dll -I inc /O2 /analyze /sdl /LD src\*.c src\win\*.c /link"
 copy librvnpal.x86.dll artifacts\librvnpal.win.x86.dll
 del *.obj librvnpal.x*
 
-cmd.exe /c ""%vcbin%\amd64\vcvars64.bat" & "%vcbin%\amd64\cl" -Felibrvnpal.x64.dll -I inc /O2 /analyze /sdl /LD src\*.c src\win\*.c /link"
+cmd.exe /c ""%vcbin%\vcvars64.bat" & "%clbin%\x64\cl" -Felibrvnpal.x64.dll -I inc /O2 /analyze /sdl /LD src\*.c src\win\*.c /link"
 copy librvnpal.x64.dll artifacts\librvnpal.win.x64.dll
 del *.obj librvnpal.x*
 
-cmd.exe /c ""%vcbin%\vcvars32.bat" & "%vcbin%\cl" -Felibrvnpal.win7x86.dll -I inc /D RVN_WIN7 /D WINVER=0x0601 /D _WIN32_WINNT=0x0601 /D NTDDI_VERSION=0x6010000 /D WINNT=1 /O2 /analyze /sdl /LD src\*.c src\win\*.c /link"
+cmd.exe /c ""%vcbin%\vcvars32.bat" & "%clbin%\x86\cl" -Felibrvnpal.win7x86.dll -I inc /D RVN_WIN7 /D WINVER=0x0601 /D _WIN32_WINNT=0x0601 /D NTDDI_VERSION=0x6010000 /D WINNT=1 /O2 /analyze /sdl /LD src\*.c src\win\*.c /link"
 copy librvnpal.win7x86.dll artifacts\librvnpal.win7.x86.dll
 del *.obj librvnpal.win7x*
 
-cmd.exe /c ""%vcbin%\amd64\vcvars64.bat" & "%vcbin%\amd64\cl" -Felibrvnpal.win7x64.dll -I inc /D RVN_WIN7 /D WINVER=0x0601 /D _WIN32_WINNT=0x0601 /D NTDDI_VERSION=0x6010000 /D WINNT=1 /O2 /analyze /sdl /LD src\*.c src\win\*.c /link"
+cmd.exe /c ""%vcbin%\vcvars64.bat" & "%clbin%\x64\cl" -Felibrvnpal.win7x64.dll -I inc /D RVN_WIN7 /D WINVER=0x0601 /D _WIN32_WINNT=0x0601 /D NTDDI_VERSION=0x6010000 /D WINNT=1 /O2 /analyze /sdl /LD src\*.c src\win\*.c /link"
 copy librvnpal.win7x64.dll artifacts\librvnpal.win7.x64.dll
 del *.obj librvnpal.win7x*
-
 
 
 echo ===================================================

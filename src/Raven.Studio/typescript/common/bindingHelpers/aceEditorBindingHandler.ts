@@ -69,7 +69,8 @@ class aceEditorBindingHandler {
             const Editor = ace.require("ace/editor").Editor;
             ace.require("ace/config").defineOptions(Editor.prototype, "editor", {
                 editorType: {
-                    set: function (val :any) {
+                    set: function () {
+                        // empty
                     },
                     value: "general"
                 }
@@ -90,7 +91,7 @@ class aceEditorBindingHandler {
                         callback([{ error: "notext" }], null);
                     }
                 },
-                identifierRegexps: [/[a-zA-Z_0-9'"\$\-\u00A2-\uFFFF]/]
+                identifierRegexps: [/[a-zA-Z_0-9'"$\-\u00A2-\uFFFF]/]
             }]);
         }
     }
@@ -133,8 +134,6 @@ class aceEditorBindingHandler {
         this.allowResize = bindingValues.allowResize || false;
         const selectAll = bindingValues.selectAll || this.defaults.selectAll;
         const bubbleEscKey = bindingValues.bubbleEscKey || this.defaults.bubbleEscKey;
-        const bubbleEnterKey = bindingValues.bubbleEnterKey || this.defaults.bubbleEnterKey;
-        const getFocus = bindingValues.getFocus;
         const hasFocus = bindingValues.hasFocus;
 
         if (!ko.isObservable(code)) {
@@ -248,7 +247,7 @@ class aceEditorBindingHandler {
         }
     }
 
-    update(element: HTMLElement, valueAccessor: () => { code: (KnockoutObservable<string> | string); theme?: string; fontSize?: string; lang?: string; readOnly?: boolean }, allBindings: any, viewModel: any, bindingContext: any) {
+    update(element: HTMLElement, valueAccessor: () => { code: (KnockoutObservable<string> | string); theme?: string; fontSize?: string; lang?: string; readOnly?: boolean }) {
         const bindingValues = valueAccessor();
         const code = ko.unwrap(bindingValues.code);
         const aceEditor: AceAjax.Editor = ko.utils.domData.get(element, "aceEditor");

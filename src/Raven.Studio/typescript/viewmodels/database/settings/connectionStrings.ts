@@ -207,7 +207,7 @@ class connectionStrings extends viewModelBase {
             
             const studioTaskType = TaskUtils.ongoingTaskToStudioTaskType(task);
             
-            let taskData = {
+            const taskData = {
                 TaskId: task.TaskId,
                 TaskName: task.TaskName,
                 TaskType: studioTaskType

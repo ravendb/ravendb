@@ -77,7 +77,7 @@ abstract class database {
         this.name = incomingCopy.Name;
         this.disabled(incomingCopy.Disabled);
         this.environment(incomingCopy.Environment !== "None" ? incomingCopy.Environment : null);
-        if (!!incomingCopy.LoadError) {
+        if (incomingCopy.LoadError) {
             this.errored(true);
         }
         

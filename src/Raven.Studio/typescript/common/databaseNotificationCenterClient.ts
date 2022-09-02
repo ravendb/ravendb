@@ -23,10 +23,11 @@ class databaseNotificationCenterClient extends abstractNotificationCenterClient 
         const actionType = actionDto.Type;
 
         switch (actionType) {
-            case "DatabaseStatsChanged":
+            case "DatabaseStatsChanged": {
                 const statsChangedDto = actionDto as Raven.Server.NotificationCenter.Notifications.DatabaseStatsChanged;
                 this.fireEvents<Raven.Server.NotificationCenter.Notifications.DatabaseStatsChanged>(this.allDatabaseStatsChangedHandlers(), statsChangedDto, () => true);
                 break;
+            }
 
             default:
                 super.onMessage(actionDto);

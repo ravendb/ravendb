@@ -161,11 +161,14 @@ namespace Raven.Server.NotificationCenter.Handlers
         {
             var notificationSender = await _clusterDashboardNotifications.CreateNotificationSender(widgetId, type);
 
-            notificationSender.Start();
-
-            if (_activeNotificationSenders.TryAdd(widgetId, notificationSender) == false)
+            if (notificationSender != null)
             {
-                throw new ArgumentException($"Widget with id = {widgetId} already exists.");
+                notificationSender.Start();
+
+                if (_activeNotificationSenders.TryAdd(widgetId, notificationSender) == false)
+                {
+                    throw new ArgumentException($"Widget with id = {widgetId} already exists.");
+                }
             }
         }
 

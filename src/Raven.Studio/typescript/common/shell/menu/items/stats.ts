@@ -4,7 +4,7 @@ import leafMenuItem = require("common/shell/menu/leafMenuItem");
 export = getStatsMenuItem;
 
 function getStatsMenuItem(appUrls: computedAppUrls) {
-    var statsItems: menuItem[] = [
+    const statsItems: menuItem[] = [
         new leafMenuItem({
             route: 'databases/status',
             moduleId: require('viewmodels/database/status/statistics'),
@@ -36,7 +36,7 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: "virtual", // here we only redirect to global section with proper db set in url
-            moduleId: () => {},
+            moduleId: () => { /* empty */},
             title: 'Running Queries',
             nav: true,
             css: 'icon-stats-running-queries',

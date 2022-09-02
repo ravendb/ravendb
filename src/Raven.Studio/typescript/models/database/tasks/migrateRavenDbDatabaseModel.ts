@@ -181,7 +181,7 @@ class migrateRavenDbDatabaseModel {
             }
 
             let majorVersion: string;
-            let buildVersion = buildVersionInt.toString();
+            const buildVersion = buildVersionInt.toString();
             switch (serverMajorVersion) {
                 case "Unknown":
                     return "Unknown";

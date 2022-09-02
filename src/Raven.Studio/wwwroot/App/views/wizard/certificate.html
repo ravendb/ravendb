@@ -28,9 +28,9 @@
             </div>
             <div class="form-group margin-bottom margin-bottom-lg" data-bind="visible: certificateFileName() && certificateCNs().length !== 0">
                 <label class="control-label">CN names</label>
-                <div class="flex-grow form-control-static">
-                    <div data-bind="foreach: certificateCNs">
-                        <div data-bind="text: $data"></div>
+                <div class="flex-grow">
+                    <div class="d-flex flex-wrap flex-gap-gutter-xs" data-bind="foreach: certificateCNs">
+                        <span class="badge" data-bind="text: $data"></span>
                     </div>
                     <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: certificateCNs, visible: !$root.spinners.hosts()">
                         <div class="help-block" data-bind="validationMessage: certificateCNs"></div>

@@ -171,7 +171,7 @@ class genUtils {
         return dateToFormat.local().format(format);
     }
 
-    static formatDurationByDate(dateInUtc: moment.Moment, addTimeText: boolean = false): string {
+    static formatDurationByDate(dateInUtc: moment.Moment, addTimeText = false): string {
         const timeDiff = moment.utc().diff(dateInUtc);
         
         const futureTime = timeDiff < 0; 
@@ -236,7 +236,7 @@ class genUtils {
     // Format bytes to human size string
     static formatBytesToSize(bytes: number, digitsAfterDecimalPoint?: number, asArray?: false): string
     static formatBytesToSize(bytes: number, digitsAfterDecimalPoint?: number, asArray?: true): [string, string]
-    static formatBytesToSize(bytes: number, digitsAfterDecimalPoint = 2, asArray: boolean = false): string|[string, string] {
+    static formatBytesToSize(bytes: number, digitsAfterDecimalPoint = 2, asArray = false): string|[string, string] {
         const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
         if (bytes === 0) {
             return asArray ? ["0", "Bytes"] : "0 Bytes";
@@ -300,7 +300,7 @@ class genUtils {
             }
         }
         return result;
-    };
+    }
 
     static getSizeClass(input: number): string {
         if (input < 100000) {
@@ -346,7 +346,7 @@ class genUtils {
     
     /***  String Methods ***/
 
-    static trimMessage(message: any, limit: number = 256) {
+    static trimMessage(message: any, limit = 256) {
         if (!message) {
             return message;
         }
@@ -462,7 +462,7 @@ class genUtils {
             return string;
         }
         
-        return String(string).replace(/[&<>"'`=\/]/g, s => genUtils.entityMap[s]);
+        return String(string).replace(/[&<>"'`=/]/g, s => genUtils.entityMap[s]);
     }
     
     static unescapeHtml(string: string) {
@@ -476,7 +476,7 @@ class genUtils {
     // (e.g. for n==2: 2046430.45756 => "2,046,430.46")
     static formatNumberToStringFixed(inputNumber: number, n: number): string {
         return inputNumber.toLocaleString(undefined, { minimumFractionDigits: n, maximumFractionDigits: n });
-    };
+    }
 
     static getItemsListFormatted(items: Array<string>) {
         switch (items.length) {
@@ -491,7 +491,7 @@ class genUtils {
         }
     }
     
-    static stringify(obj: any, stripNullAndEmptyValues: boolean = false) {
+    static stringify(obj: any, stripNullAndEmptyValues = false) {
         const prettifySpacing = 4;
 
         if (stripNullAndEmptyValues) {
@@ -508,7 +508,7 @@ class genUtils {
         }
     }
     
-    static truncateDocumentId(documentId: string, charsToShow: number = 12): string {
+    static truncateDocumentId(documentId: string, charsToShow = 12): string {
         if (!documentId) {
             return null;
         }
@@ -610,7 +610,7 @@ class genUtils {
             return 0;
         }
         return code;
-    };
+    }
     
     static canConsumeDelegatedEvent(event: JQueryEventObject) {
         const target = event.target;
@@ -663,7 +663,7 @@ class genUtils {
     }
     
     static flattenObj(obj: any, parentKey: string, res = {}) {
-        for (let key in obj) {
+        for (const key in obj) {
             const propName = parentKey ? parentKey + "." + key : key;
             const value = obj[key];
 
@@ -697,7 +697,7 @@ class genUtils {
         return result;
     }
     
-    static scrollToElement(element: Element, containerSelector: string = ".js-scroll-container") {
+    static scrollToElement(element: Element, containerSelector = ".js-scroll-container") {
         const containerRect = document.querySelector(containerSelector).getBoundingClientRect();
         const rectTop = containerRect.top;
         const rectBottom = rectTop + containerRect.height;

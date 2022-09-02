@@ -2,7 +2,6 @@ import app = require("durandal/app");
 
 import abstractNotification = require("common/notifications/models/abstractNotification");
 import actionColumn = require("widgets/virtualGrid/columns/actionColumn");
-import notificationCenter = require("common/notifications/notificationCenter");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
@@ -31,7 +30,7 @@ class virtualDeleteByQueryDetails extends dialogViewModelBase {
         const grid = this.gridController();
         grid.headerVisible(true);
 
-        grid.init((s, t) => this.fetcher(s, t), () => {
+        grid.init(() => this.fetcher(), () => {
             return [
                 new textColumn<queryBasedVirtualBulkOperationItem>(grid, x => generalUtils.formatUtcDateAsLocal(x.date), "Date", "25%", {
                     sortable: x => x.date
@@ -69,7 +68,7 @@ class virtualDeleteByQueryDetails extends dialogViewModelBase {
             });
     }
 
-    private fetcher(skip: number, take: number): JQueryPromise<pagedResult<queryBasedVirtualBulkOperationItem>> {
+    private fetcher(): JQueryPromise<pagedResult<queryBasedVirtualBulkOperationItem>> {
         return $.Deferred<pagedResult<queryBasedVirtualBulkOperationItem>>()
             .resolve({
                 items: this.virtualNotification.operations(),
@@ -81,7 +80,7 @@ class virtualDeleteByQueryDetails extends dialogViewModelBase {
         return notification.type === "CumulativeDeleteByQuery";
     }
 
-    static showDetailsFor(virtualNotification: virtualDeleteByQuery, center: notificationCenter) {
+    static showDetailsFor(virtualNotification: virtualDeleteByQuery) {
         return app.showBootstrapDialog(new virtualDeleteByQueryDetails(virtualNotification));
     }
 

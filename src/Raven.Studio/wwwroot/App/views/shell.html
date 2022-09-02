@@ -335,8 +335,10 @@
                 </a>
             </div>
             <div class="footer-item" data-bind="visible: $root.clientCertificate(), with: $root.clientCertificate()">
-                <a class="btn btn-success btn-sm js-client-cert" data-bind="attr: { href: $root.urlForCertificates() }">
-                    <i class="icon-lock"></i>
+                <a class="btn btn-sm js-client-cert" 
+                   data-bind="attr: { href: $root.urlForCertificates() }, css: { 'btn-danger': $root.certificateExpirationState() === 'expired', 'btn-success': $root.certificateExpirationState() === 'valid', 'btn-warning': $root.certificateExpirationState() === 'aboutToExpire', 'pulse': $root.certificateExpirationState() === 'aboutToExpire'  }">
+                    <i class="icon-lock" data-bind="visible: $root.certificateExpirationState() === 'valid'"></i>
+                    <i class="icon-lock-cutout icon-addon-exclamation" data-bind="visible: $root.certificateExpirationState() !== 'valid'"></i>
                 </a>
             </div>
             <div class="footer-item" data-bind="visible: $root.clusterManager.nodesCount() === 1, if: $root.clusterManager.nodesCount() === 1" title="Local node tag">

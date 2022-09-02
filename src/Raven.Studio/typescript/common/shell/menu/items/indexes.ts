@@ -4,7 +4,7 @@ import footer = require("common/shell/footer");
 export = getIndexesMenuItem;
 
 function getIndexesMenuItem(appUrls: computedAppUrls) {
-    let indexesItems = [
+    const indexesItems = [
         new leafMenuItem({
             route: 'databases/query/index(/:indexNameOrRecentQueryIndex)',
             shardingMode: "allShards",

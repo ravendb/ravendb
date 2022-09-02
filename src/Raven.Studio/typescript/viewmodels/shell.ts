@@ -55,6 +55,7 @@ import genUtils = require("common/generalUtils");
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
 import connectionStatus from "models/resources/connectionStatus";
 import shard from "models/resources/shard";
+import moment from "moment";
 
 class shell extends viewModelBase {
 
@@ -101,6 +102,9 @@ class shell extends viewModelBase {
     allShardsUrl: KnockoutObservable<string>;
     
     clientCertificate = clientCertificateModel.certificateInfo;
+    certificateExpirationState = clientCertificateModel.certificateExpirationState;
+    
+    
 
     mainMenu = new menu(generateMenuItems(activeDatabaseTracker.default.database()));
     searchBox = new searchBox();
@@ -150,7 +154,7 @@ class shell extends viewModelBase {
         
         this.browserAlert = new detectBrowser(true);
         
-        window.addEventListener("hashchange", e => {
+        window.addEventListener("hashchange", () => {
             this.currentUrlHash(location.hash);
         });
         
@@ -190,7 +194,7 @@ class shell extends viewModelBase {
     }
     
     // Override canActivate: we can always load this page, regardless of any system db prompt.
-    canActivate(args: any): any {
+    canActivate(): any {
         return true;
     }
 
@@ -216,7 +220,9 @@ class shell extends viewModelBase {
             });
         
         $.when<any>(licenseTask, topologyTask, clientCertificateTask)
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             .done(([license]: [Raven.Server.Commercial.LicenseStatus], 
+                   // eslint-disable-next-line @typescript-eslint/no-unused-vars
                    [topology]: [Raven.Server.NotificationCenter.Notifications.Server.ClusterTopologyChanged],
                    [certificate]: [Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition]) => {
             
@@ -227,7 +233,7 @@ class shell extends viewModelBase {
                 studioSettings.default.globalSettings()
                     .done((settings: globalSettings) => this.onGlobalConfiguration(settings));
                 
-                studioSettings.default.registerOnSettingChangedHandler(name => true, (name: string, setting: studioSetting<any>) => {
+                studioSettings.default.registerOnSettingChangedHandler(() => true, (name: string, setting: studioSetting<any>) => {
                     // if any remote configuration was changed, then force reload
                     if (setting.saveLocation === "remote") {
                         studioSettings.default.globalSettings()
@@ -258,9 +264,9 @@ class shell extends viewModelBase {
                         this.accessManager.securityClearance(certificate.SecurityClearance);
                         accessManager.clientCertificateThumbprint(certificate.Thumbprint);
 
-                        let databasesAccess: dictionary<databaseAccessLevel> = {};
-                        for (let key in certificate.Permissions) {
-                            let access = certificate.Permissions[key];
+                        const databasesAccess: dictionary<databaseAccessLevel> = {};
+                        for (const key in certificate.Permissions) {
+                            const access = certificate.Permissions[key];
                             databasesAccess[`${key}`] = `Database${access}` as databaseAccessLevel;
                         }
                         accessManager.databasesAccess = databasesAccess;
@@ -296,7 +302,7 @@ class shell extends viewModelBase {
     }
     
     private setupRouting() {
-        const routes = allRoutes.get(this.appUrls);
+        const routes = allRoutes.get();
         routes.push(...routes);
         router.map(routes).buildNavigationModel();
 
@@ -318,9 +324,14 @@ class shell extends viewModelBase {
                                         </div>`).join("")
                 : "No access granted";
             
+            const notAfter = this.clientCertificate().NotAfter;
+            const notAfterUtc = moment(notAfter).utc();
+            
             const authenticationInfo = `<dl class="dl-horizontal margin-none client-certificate-info">
                             <dt>Client Certificate</dt>
                             <dd><strong>${this.clientCertificate().Name}</strong></dd>
+                            <dt>Expiration Date</dt>
+                            <dd><strong>${notAfter.substring(0, 10)} <span class="${this.getExpirationDurationClass()}">(${genUtils.formatDurationByDate(notAfterUtc, true)})</span></strong></dd>
                             <dt>Thumbprint</dt>
                             <dd><strong>${this.clientCertificate().Thumbprint}</strong></dd>
                             <dt><span>Security Clearance</span></dt>
@@ -352,11 +363,22 @@ class shell extends viewModelBase {
             messagePublisher.reportWarning("Failed to load routed module!", e);
         };
     }
+    
+    private getExpirationDurationClass() {
+        switch (this.certificateExpirationState()) {
+            case "expired":
+                return "text-danger";
+            case "aboutToExpire":
+                return "text-warning";
+            default:
+                return "text-success";
+        }
+    }
 
     private initializeShellComponents() {
         this.mainMenu.initialize();
-        let updateMenu = (db: database) => {
-            let items = generateMenuItems(db);
+        const updateMenu = (db: database) => {
+            const items = generateMenuItems(db);
             this.mainMenu.update(items);
         };
 

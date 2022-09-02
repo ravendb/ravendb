@@ -38,7 +38,7 @@ class slowWriteDetails extends abstractPerformanceHintDetails {
         const grid = this.gridController();
         grid.headerVisible(true);
 
-        grid.init((s, t) => this.fetcher(s, t), () =>
+        grid.init(() => this.fetcher(), () =>
             [
                 new textColumn<Raven.Server.NotificationCenter.Notifications.Details.SlowWritesDetails.SlowWriteInfo>(grid, x => x.Path, "Path", "45%", {
                     sortable: "string"
@@ -69,7 +69,7 @@ class slowWriteDetails extends abstractPerformanceHintDetails {
             });
     }
     
-    private fetcher(skip: number, take: number): JQueryPromise<pagedResult<Raven.Server.NotificationCenter.Notifications.Details.SlowWritesDetails.SlowWriteInfo>> {
+    private fetcher(): JQueryPromise<pagedResult<Raven.Server.NotificationCenter.Notifications.Details.SlowWritesDetails.SlowWriteInfo>> {
         return $.Deferred<pagedResult<Raven.Server.NotificationCenter.Notifications.Details.SlowWritesDetails.SlowWriteInfo>>()
             .resolve({
                 items: this.tableItems,

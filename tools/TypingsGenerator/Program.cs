@@ -345,6 +345,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(ServerTimePayload));
             scripter.AddType(typeof(MemoryUsagePayload));
             scripter.AddType(typeof(StorageUsagePayload));
+            scripter.AddType(typeof(IoStatsPayload));
             scripter.AddType(typeof(DatabaseIndexingSpeedPayload));
             scripter.AddType(typeof(DatabaseStorageUsagePayload));
             scripter.AddType(typeof(IndexingSpeedPayload));

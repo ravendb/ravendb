@@ -222,7 +222,7 @@ class editSubscriptionTask extends shardViewModelBase {
         
         this.columnsSelector.reset();
 
-        const fetcherMethod = (s: number, t: number) => this.fetchTestDocuments(s, t);
+        const fetcherMethod = () => this.fetchTestDocuments();
         this.effectiveFetcher(fetcherMethod);
 
         if (this.isFirstRun) {
@@ -241,7 +241,7 @@ class editSubscriptionTask extends shardViewModelBase {
             });
          
             this.columnsSelector.init(this.gridController(),
-                (s, t, c) => this.effectiveFetcher()(s, t),
+                (s, t) => this.effectiveFetcher()(s, t),
                 (w, r) => documentsProvider.findColumns(w, r, ["Exception", "__metadata"]),
                 (results: pagedResult<documentObject>) => documentBasedColumnsProvider.extractUniquePropertyNames(results));
 
@@ -276,7 +276,7 @@ class editSubscriptionTask extends shardViewModelBase {
         this.isFirstRun = false;
     }
 
-    private fetchTestDocuments(start: number, take: number): JQueryPromise<pagedResult<documentObject>> {
+    private fetchTestDocuments(): JQueryPromise<pagedResult<documentObject>> {
         const dto = this.editedSubscription().toDto();
         const resultsLimit = this.testResultsLimit() || 1;
         const timeLimit = this.testTimeLimit() || 15;
@@ -300,7 +300,7 @@ class editSubscriptionTask extends shardViewModelBase {
             totalResultCount: items.length
         };
         
-        this.resultsFetcher((s, t) => $.when(mappedResult));
+        this.resultsFetcher(() => $.when(mappedResult));
     }
 
     toggleTestArea() {

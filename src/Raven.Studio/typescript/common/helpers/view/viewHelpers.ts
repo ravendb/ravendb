@@ -51,7 +51,7 @@ class viewHelpers {
         }
     }
 
-    public static asyncValidationCompleted(context: KnockoutValidationGroup, callback?: Function) {
+    public static asyncValidationCompleted(context: KnockoutValidationGroup, callback?: (...args: any[]) => void) {
         const cb = (...args: any[]) => {
             return callback ? callback(...args) : undefined
         };

@@ -19,7 +19,7 @@ class document implements documentBase {
 
     constructor(dto: documentDto) {
         this.__metadata = new documentMetadata(dto["@metadata"]);
-        for (let property in dto) {
+        for (const property in dto) {
             if (property !== "@metadata") {
                 (<any>this)[property] = dto[property];
             }
@@ -40,7 +40,7 @@ class document implements documentBase {
 
     getDocumentPropertyNames(): Array<string> {
         const propertyNames: Array<string> = [];
-        for (let property in this) {
+        for (const property in this) {
             const isMeta = property === "__metadata" || property === "__moduleId__";
             const isFunction = _.isFunction((this as any)[property]);
             if (!isMeta && !isFunction) {
@@ -51,11 +51,11 @@ class document implements documentBase {
         return propertyNames;
     }
 
-    toDto(includeMeta: boolean = false): documentDto {
+    toDto(includeMeta = false): documentDto {
         const dto: any = { };
         const properties = this.getDocumentPropertyNames();
         for (let i = 0; i < properties.length; i++) {
-            let property = properties[i];
+            const property = properties[i];
             dto[property] = (<any>this)[property];
         }
 

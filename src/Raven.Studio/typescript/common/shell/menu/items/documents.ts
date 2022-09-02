@@ -6,7 +6,7 @@ import collectionsTracker = require("common/helpers/database/collectionsTracker"
 export = getDocumentsMenuItem;
 
 function getDocumentsMenuItem(appUrls: computedAppUrls) {
-    let documentsItems = [
+    const documentsItems = [
         new leafMenuItem({
             route: "databases/documents",
             moduleId: require("viewmodels/database/documents/documents"),
