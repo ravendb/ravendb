@@ -43,6 +43,10 @@ class addWidgetModal extends dialogViewModelBase {
             icon: require("../../../wwwroot/Content/img/widgets/graph-icon.svg"),
             type: "Indexing"
         }, {
+            name: "IO Stats",
+            icon: require("../../../wwwroot/Content/img/widgets/graph-icon.svg"),
+            type: "IoStats"
+        }, {
             name: "Traffic",
             icon: require("../../../wwwroot/Content/img/widgets/list-icon.svg"),
             type: "Traffic"

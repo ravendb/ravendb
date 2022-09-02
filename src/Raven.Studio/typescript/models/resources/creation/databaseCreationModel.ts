@@ -101,10 +101,12 @@ class databaseCreationModel {
                 // case 3: Restore points found
                 const restorePoint = this.restore.selectedRestorePoint();
                 if (!restorePoint) {
+                    // eslint-disable-next-line @typescript-eslint/no-inferrable-types
                     const text: string  = `Select restore point... (${count.toLocaleString()} ${count > 1 ? 'options' : 'option'})`;
                     return text;
                 }
                 
+                // eslint-disable-next-line @typescript-eslint/no-inferrable-types
                 const text: string = `${restorePoint.dateTime}, ${restorePoint.backupType()} Backup`;
                 return text;
             }
@@ -232,7 +234,7 @@ class databaseCreationModel {
         this.restoreSourceObject.subscribe(() =>  {
             this.clearRestorePoints();
             this.restore.restorePointError(null);
-            this.fetchRestorePoints(true);
+            this.fetchRestorePoints();
         });
         
         // Raven Cloud - Backup Link 
@@ -301,7 +303,7 @@ class databaseCreationModel {
             .done((cloudCredentials) => {
                 this.restore.ravenCloudCredentials().setCredentials(cloudCredentials);
                 this.restore.ravenCloudCredentials().isBackupLinkValid(true);
-                this.fetchRestorePoints(true);
+                this.fetchRestorePoints();
             })
             .always(() => this.spinners.backupCredentialsLoading(false));
     }
@@ -347,7 +349,7 @@ class databaseCreationModel {
         this.legacyMigration.journalsPathHasFocus(true);
     }
     
-    fetchRestorePoints(skipReportingError: boolean) {
+    fetchRestorePoints() {
         if (!this.restoreSourceObject().isValid()) {
             this.clearRestorePoints();
             return;
@@ -401,7 +403,7 @@ class databaseCreationModel {
     protected setupPathValidation(observable: KnockoutObservable<string>, name: string) {
         const maxLength = 248;
 
-        const rg1 = /^[^*?"<>\|]*$/; // forbidden characters * ? " < > |
+        const rg1 = /^[^*?"<>|]*$/; // forbidden characters * ? " < > |
         const rg3 = /^(nul|prn|con|lpt[0-9]|com[0-9])(\.|$)/i; // forbidden file names
         const invalidPrefixCheck = (dbName: string) => {
             const dbToLower = dbName ? dbName.toLocaleLowerCase() : "";
@@ -474,7 +476,7 @@ class databaseCreationModel {
     private setupReplicationValidation(maxReplicationFactor: number) {
         this.replication.nodes.extend({
             validation: [{
-                validator: (val: Array<clusterNode>) => !this.replication.manualMode() || this.replication.replicationFactor() > 0,
+                validator: () => !this.replication.manualMode() || this.replication.replicationFactor() > 0,
                 message: `Please select at least one node.`
             }]
         });

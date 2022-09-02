@@ -72,7 +72,7 @@ class changesApi extends eventsWebSocketClient<changesApiEventDto[]> {
     }
 
     watchAllIndexes(onChange: (e: Raven.Client.Documents.Changes.IndexChange) => void) {
-        var callback = new changesCallback<Raven.Client.Documents.Changes.IndexChange>(onChange);
+        const callback = new changesCallback<Raven.Client.Documents.Changes.IndexChange>(onChange);
         if (this.allIndexesHandlers().length === 0) {
             this.send("watch-indexes");
         }
@@ -86,14 +86,14 @@ class changesApi extends eventsWebSocketClient<changesApiEventDto[]> {
     }
 
     watchIndex(indexName: string, onChange: (e: Raven.Client.Documents.Changes.IndexChange) => void): changeSubscription {
-        let callback = new changesCallback<Raven.Client.Documents.Changes.IndexChange>(onChange);
+        const callback = new changesCallback<Raven.Client.Documents.Changes.IndexChange>(onChange);
 
         if (!this.watchedIndexes.has(indexName)) {
             this.send("watch-index", indexName);
             this.watchedIndexes.set(indexName, ko.observableArray<changesCallback<Raven.Client.Documents.Changes.IndexChange>>());
         }
 
-        let callbacks = this.watchedIndexes.get(indexName);
+        const callbacks = this.watchedIndexes.get(indexName);
         callbacks.push(callback);
 
         return new changeSubscription(() => {
@@ -106,7 +106,7 @@ class changesApi extends eventsWebSocketClient<changesApiEventDto[]> {
     }
 
     watchAllDocs(onChange: (e: Raven.Client.Documents.Changes.DocumentChange) => void) {
-        var callback = new changesCallback<Raven.Client.Documents.Changes.DocumentChange>(onChange);
+        const callback = new changesCallback<Raven.Client.Documents.Changes.DocumentChange>(onChange);
 
         if (this.allDocsHandlers().length === 0) {
             this.send("watch-docs");
@@ -123,14 +123,14 @@ class changesApi extends eventsWebSocketClient<changesApiEventDto[]> {
     }
 
     watchDocument(docId: string, onChange: (e: Raven.Client.Documents.Changes.DocumentChange) => void): changeSubscription {
-        let callback = new changesCallback<Raven.Client.Documents.Changes.DocumentChange>(onChange);
+        const callback = new changesCallback<Raven.Client.Documents.Changes.DocumentChange>(onChange);
 
         if (!this.watchedDocuments.has(docId)) {
             this.send("watch-doc", docId);
             this.watchedDocuments.set(docId, ko.observableArray<changesCallback<Raven.Client.Documents.Changes.DocumentChange>>());
         }
 
-        let callbacks = this.watchedDocuments.get(docId);
+        const callbacks = this.watchedDocuments.get(docId);
         callbacks.push(callback);
 
         return new changeSubscription(() => {
@@ -143,14 +143,14 @@ class changesApi extends eventsWebSocketClient<changesApiEventDto[]> {
     }
 
     watchDocsStartingWith(docIdPrefix: string, onChange: (e: Raven.Client.Documents.Changes.DocumentChange) => void): changeSubscription {
-        let callback = new changesCallback<Raven.Client.Documents.Changes.DocumentChange>(onChange);
+        const callback = new changesCallback<Raven.Client.Documents.Changes.DocumentChange>(onChange);
 
         if (!this.watchedPrefixes.has(docIdPrefix)) {
             this.send("watch-prefix", docIdPrefix);
             this.watchedPrefixes.set(docIdPrefix, ko.observableArray<changesCallback<Raven.Client.Documents.Changes.DocumentChange>>());
         }
 
-        let callbacks = this.watchedPrefixes.get(docIdPrefix);
+        const callbacks = this.watchedPrefixes.get(docIdPrefix);
         callbacks.push(callback);
 
         return new changeSubscription(() => {

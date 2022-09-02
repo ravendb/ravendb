@@ -68,7 +68,7 @@ class deleteDocumentsDetails extends abstractOperationDetails {
     }
 
     static tryHandle(operationDto: Raven.Server.NotificationCenter.Notifications.OperationChanged, notificationsContainer: KnockoutObservableArray<abstractNotification>,
-                     database: database, callbacks: { spinnersCleanup: Function, onChange: Function }): boolean {
+                     database: database, callbacks: { spinnersCleanup: () => void, onChange: () => void }): boolean {
         if (operationDto.Type === "OperationChanged" && (operationDto.TaskType === "DeleteByQuery" || operationDto.TaskType === "DeleteByCollection")) {
             if (operationDto.State.Status === "Completed") {
                 abstractOperationDetails.handleInternal(virtualDeleteByQuery, operationDto, notificationsContainer, database, callbacks);

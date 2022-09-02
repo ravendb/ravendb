@@ -37,7 +37,7 @@ dialog.addContext('bootstrapModal', {
             (theDialog as any).host = host.get(0);
             closeCalled = false;
         },
-        removeHost: (theDialog: dialog.Dialog) => {
+        removeHost: () => {
             closeCalled = true;
             $('#bootstrapModal').modal('hide');
             $('body').removeClass('modal-open');
@@ -45,8 +45,8 @@ dialog.addContext('bootstrapModal', {
         },
         attached: null,
         compositionComplete: (child: HTMLElement, parent: HTMLElement, context: composition.CompositionContext) => {
-            var theDialog = dialog.getDialog(context.model);
-            var options: ModalOptions = {};
+            const theDialog = dialog.getDialog(context.model);
+            const options: ModalOptions = {};
             options.show = true;
 
             if ($(child).hasClass('prevent-close')) {
@@ -60,7 +60,7 @@ dialog.addContext('bootstrapModal', {
                 $('.modal-backdrop').appendTo('.modal-root');   
             }
             
-            $('#bootstrapModal').on('hidden.bs.modal', (e) => {
+            $('#bootstrapModal').on('hidden.bs.modal', () => {
                 if (!closeCalled) {
                     theDialog.close();
                 }
@@ -70,7 +70,7 @@ dialog.addContext('bootstrapModal', {
         }
     } as any);
 
-var bootstrapMarkup = [
+const bootstrapMarkup = [
     '<div data-view="plugins/messageBox" data-bind="css: getClass(), style: getStyle()">',
     '<div class="modal-content">',
     '<div class="modal-header">',
@@ -110,7 +110,7 @@ class bootstrapModal {
                     settings || {}
                 ], 'bootstrapModal');
             }
-            var bootstrapDefaults = {
+            const bootstrapDefaults = {
                 buttonClass: "btn btn-default",
                 primaryButtonClass: "btn-primary autofocus",
                 secondaryButtonClass: "",
@@ -120,13 +120,13 @@ class bootstrapModal {
 
             (dialog.MessageBox as any).prototype.getView = () => viewEngine.processMarkup(bootstrapMarkup);
 
-            var bootstrapSettings = $.extend(bootstrapDefaults, settings);
+            const bootstrapSettings = $.extend(bootstrapDefaults, settings);
             return dialog.show(new (dialog.MessageBox as any)(message, title, options, autoclose, bootstrapSettings), {}, 'bootstrapModal');
         };
 
         (dialog.MessageBox as any).prototype.compositionComplete = (child: HTMLElement, parent: HTMLElement, context: composition.CompositionContext) => {
-            var theDialog = dialog.getDialog(context.model);
-            var $child = $(child);
+            const theDialog = dialog.getDialog(context.model);
+            const $child = $(child);
             if ($child.hasClass('autoclose') || context.model.autoclose) {
                 $((theDialog as any).blockout).click(() => {
                     theDialog.close();

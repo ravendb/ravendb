@@ -25,11 +25,12 @@ abstract class eventsWebSocketClient<T> extends abstractWebSocketClient<T> {
         this.ignoreWebSocketConnectionError(false);
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     protected onError(e: Event) {
         this.inErrorState(true);
     }
 
-    protected send(command: string, value?: string, needToSaveSentMessages: boolean = true) {
+    protected send(command: string, value?: string, needToSaveSentMessages = true) {
         this.connectToWebSocketTask.done(() => {
             const args: chagesApiConfigureRequestDto = {
                 Command: command

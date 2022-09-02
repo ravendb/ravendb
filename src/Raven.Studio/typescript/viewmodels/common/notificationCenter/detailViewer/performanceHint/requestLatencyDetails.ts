@@ -32,7 +32,7 @@ class requestLatencyDetails extends abstractPerformanceHintDetails {
         const grid = this.gridController();
         grid.headerVisible(true);
 
-        grid.init((s, t) => this.fetcher(s, t), () => {
+        grid.init(() => this.fetcher(), () => {
             return [
                 new textColumn<Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo>(grid, x => x.Action, "Action", "20%", {
                     sortable: "string"
@@ -64,7 +64,7 @@ class requestLatencyDetails extends abstractPerformanceHintDetails {
         });
     }
 
-    private fetcher(skip: number, take: number): JQueryPromise<pagedResult<Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo>> {
+    private fetcher(): JQueryPromise<pagedResult<Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo>> {
         return $.Deferred<pagedResult<Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo>>()
             .resolve({
                 items: this.tableItems,

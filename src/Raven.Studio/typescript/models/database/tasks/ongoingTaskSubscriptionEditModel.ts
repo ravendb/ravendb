@@ -107,13 +107,6 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
         return changeVector;
     }
     
-    toTestDto() {
-        const subscriptionToTest: Raven.Client.Documents.Subscriptions.SubscriptionTryout = {
-            ChangeVector: this.serializeChangeVector(),
-            Query: this.query()
-        };
-    }
-    
     toDto(): Raven.Client.Documents.Subscriptions.SubscriptionCreationOptions {
         return {
             Name: this.taskName(),

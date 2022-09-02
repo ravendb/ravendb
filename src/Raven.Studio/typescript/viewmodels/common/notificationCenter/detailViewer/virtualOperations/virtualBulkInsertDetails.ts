@@ -2,7 +2,6 @@ import app = require("durandal/app");
 
 import abstractNotification = require("common/notifications/models/abstractNotification");
 import actionColumn = require("widgets/virtualGrid/columns/actionColumn");
-import notificationCenter = require("common/notifications/notificationCenter");
 import virtualBulkInsert = require("common/notifications/models/virtualBulkInsert");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
@@ -31,7 +30,7 @@ class virtualBulkInsertDetails extends dialogViewModelBase {
         const grid = this.gridController();
         grid.headerVisible(true);
 
-        grid.init((s, t) => this.fetcher(s, t), () => {
+        grid.init(() => this.fetcher(), () => {
             return [
                 new textColumn<virtualBulkOperationItem>(grid, x => generalUtils.formatUtcDateAsLocal(x.date), "Date", "25%", {
                     sortable: x => x.date
@@ -72,7 +71,7 @@ class virtualBulkInsertDetails extends dialogViewModelBase {
             });
     }
 
-    private fetcher(skip: number, take: number): JQueryPromise<pagedResult<virtualBulkOperationItem>> {
+    private fetcher(): JQueryPromise<pagedResult<virtualBulkOperationItem>> {
         return $.Deferred<pagedResult<virtualBulkOperationItem>>()
             .resolve({
                 items: this.bulkInserts.operations(),
@@ -84,7 +83,7 @@ class virtualBulkInsertDetails extends dialogViewModelBase {
         return notification.type === "CumulativeBulkInsert";
     }
 
-    static showDetailsFor(bulkInserts: virtualBulkInsert, center: notificationCenter) {
+    static showDetailsFor(bulkInserts: virtualBulkInsert) {
         return app.showBootstrapDialog(new virtualBulkInsertDetails(bulkInserts));
     }
 

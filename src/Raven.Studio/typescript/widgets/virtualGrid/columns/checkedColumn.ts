@@ -17,7 +17,7 @@ class checkedColumn implements virtualColumn {
         this.withSelectAll = withSelectAll;
     }
     
-    canHandle(actionId: string): boolean {
+    canHandle(): boolean {
         return false;
     }
 
@@ -37,7 +37,7 @@ class checkedColumn implements virtualColumn {
         return this.withSelectAll ? "Toggle selection" : "";
     }
 
-    renderCell(item: Object, isSelected: boolean, isSorted: boolean): string {
+    renderCell(item: object, isSelected: boolean, isSorted: boolean): string {
         if (isSelected) {
             return `<div class="cell"><div class="checkbox checkbox-table-selector"><input class="checked-cell-input styled" type="checkbox" checked /><label></label></div></div>`;
         }

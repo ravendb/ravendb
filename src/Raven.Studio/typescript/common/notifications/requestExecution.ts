@@ -8,7 +8,7 @@ class requestExecution {
     private spinnerTimeout: number;
     private alertTimeout: number;
 
-    constructor(private timeForSpinner: number, private timeToAlert: number = 0, private sync: Function) {
+    constructor(private timeForSpinner: number, private timeToAlert: number = 0, private sync: () => void) {
         this.setTimeouts();
     }
 

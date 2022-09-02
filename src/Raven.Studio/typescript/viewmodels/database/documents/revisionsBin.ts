@@ -111,7 +111,7 @@ class revisionsBin extends viewModelBase {
         const deletionDateColumn = new textColumn<document>(grid, x => generalUtils.formatUtcDateAsLocal(x.__metadata.lastModified()), "Deletion date", "300px");
 
         const gridColumns = this.isAdminAccessOrAbove() ? [checkColumn, idColumn, changeVectorColumn, deletionDateColumn] : [idColumn, changeVectorColumn, deletionDateColumn];
-        grid.init((s, _) => this.fetchRevisionsBinEntries(s), () => gridColumns);
+        grid.init((s) => this.fetchRevisionsBinEntries(s), () => gridColumns);
 
         grid.dirtyResults.subscribe(dirty => this.dirtyResult(dirty));
 

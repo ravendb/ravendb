@@ -1,7 +1,7 @@
 import clusterDashboard = require("viewmodels/resources/clusterDashboard");
 import abstractChartsWebsocketWidget = require("viewmodels/resources/widgets/abstractChartsWebsocketWidget");
 
-import lineChart = require("models/resources/clusterDashboard/lineChart");
+import { lineChart } from "models/resources/clusterDashboard/lineChart";
 import memoryUsage = require("models/resources/widgets/memoryUsage");
 
 

@@ -12,7 +12,7 @@ class savePeriodicBackupConfigurationCommand extends commandBase {
 
         const isNewTask = this.configuration.TaskId === 0;
         return this.post(url, JSON.stringify(this.configuration), this.db)
-            .done((results: Raven.Client.Documents.Operations.OngoingTasks.ModifyOngoingTaskResult) => {
+            .done(() => {
                 const taskTypeText = isNewTask ? "created" : "updated";
                 this.reportSuccess(`Successfully ${taskTypeText} backup configuration`);
             })

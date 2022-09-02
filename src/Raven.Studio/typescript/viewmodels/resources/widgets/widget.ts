@@ -22,7 +22,7 @@ abstract class widget<TConfig = unknown, TState = unknown> {
     
     static resizeAnimationDuration = 300;
     
-    protected initialized: boolean = false;
+    protected initialized = false;
 
     controller: clusterDashboard;
     container: HTMLElement;
@@ -32,8 +32,8 @@ abstract class widget<TConfig = unknown, TState = unknown> {
     fullscreen = ko.observable<boolean>(false);
 
     syncUpdatesEnabled = false;
-    firstSyncUpdateTaskId: number = -1;
-    syncUpdateTaskId: number = -1;
+    firstSyncUpdateTaskId = -1;
+    syncUpdateTaskId = -1;
     pendingUpdates: Array<() => void> = [];
     
     configuredFor = ko.observableArray<clusterDashboardWebSocketClient>([]);
@@ -107,6 +107,7 @@ abstract class widget<TConfig = unknown, TState = unknown> {
         this.afterSyncUpdate(updatesCount);
     }
     
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     protected afterSyncUpdate(updatesCount: number) {
         // empty by default
     }
@@ -115,11 +116,12 @@ abstract class widget<TConfig = unknown, TState = unknown> {
         // empty by default
     }
     
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     restoreState(state: TState) {
         // empty by default
     }
     
-    // noinspection JSUnusedLocalSymbols
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     restoreConfiguration(config: TConfig) {
         // empty by default
     }

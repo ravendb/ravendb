@@ -65,7 +65,7 @@ class indexingReferencesDetails extends abstractPerformanceHintDetails {
         const grid = this.gridController();
         grid.headerVisible(true);
 
-        grid.init((s, t) => this.fetcher(s, t), () => {
+        grid.init(() => this.fetcher(), () => {
             return [
                     new textColumn<indexingReferencesItem>(grid, x => x.indexName, "Index Name", "40%", {
                         sortable: "number"
@@ -102,7 +102,7 @@ class indexingReferencesDetails extends abstractPerformanceHintDetails {
         this.currentDetails(item);
     }
     
-    private fetcher(skip: number, take: number): JQueryPromise<pagedResult<indexingReferencesItem>> {
+    private fetcher(): JQueryPromise<pagedResult<indexingReferencesItem>> {
         return $.Deferred<pagedResult<indexingReferencesItem>>()
             .resolve({
                 items: this.tableItems,

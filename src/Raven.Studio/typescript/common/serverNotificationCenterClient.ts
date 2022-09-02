@@ -28,7 +28,7 @@ class serverNotificationCenterClient extends abstractNotificationCenterClient {
         const actionType = actionDto.Type;
 
         switch (actionType) {
-            case "DatabaseChanged":
+            case "DatabaseChanged": {
                 const databaseDto = actionDto as Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged;
                 this.fireEvents<Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged>(this.allDatabaseChangedHandlers(), databaseDto, () => true);
 
@@ -40,12 +40,12 @@ class serverNotificationCenterClient extends abstractNotificationCenterClient {
                     this.fireEvents<Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged>(callbacks(), databaseDto, (event) => event.DatabaseName != null && event.DatabaseName.startsWith(key));
                 });
                 break;
-
-            case "ClusterTopologyChanged":
+            }
+            case "ClusterTopologyChanged": {
                 const topologyChangedDto = actionDto as Raven.Server.NotificationCenter.Notifications.Server.ClusterTopologyChanged;
                 this.fireEvents<Raven.Server.NotificationCenter.Notifications.Server.ClusterTopologyChanged>(this.clusterTopologyChangedHandlers(), topologyChangedDto, () => true);
                 break;
-
+            }
             default:
                 super.onMessage(actionDto);
 

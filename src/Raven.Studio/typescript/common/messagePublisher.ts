@@ -27,7 +27,7 @@ class messagePublisher {
         this.reportProgress("Info", title, details);
     }
 
-    static reportError(title: string, details?: string, httpStatusText?: string, displayInRecentErrors: boolean = true) {
+    static reportError(title: string, details?: string, httpStatusText?: string, displayInRecentErrors = true) {
         this.reportProgress("Error", title, details, httpStatusText, displayInRecentErrors);
         console.error("Error during command execution", title, details, httpStatusText);
     }
@@ -40,7 +40,7 @@ class messagePublisher {
         this.reportProgress("Warning", title, details, httpStatusText);
     }
 
-    private static reportProgress(type: Raven.Server.NotificationCenter.Notifications.NotificationSeverity, title: string, details?: string, httpStatusText?: string, displayInRecentErrors: boolean = false) {
+    private static reportProgress(type: Raven.Server.NotificationCenter.Notifications.NotificationSeverity, title: string, details?: string, httpStatusText?: string, displayInRecentErrors = false) {
         const toastrMethod = messagePublisher.getDisplayMethod(type);
 
         const messageAndOptionalException = recentError.tryExtractMessageAndException(details);

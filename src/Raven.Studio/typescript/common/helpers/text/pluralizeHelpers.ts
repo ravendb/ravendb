@@ -1,7 +1,7 @@
 /// <reference path="../../../../typings/tsd.d.ts" />
 
 class pluralizeHelpers {
-    static pluralize(count: number, singular: string, plural: string, onlyPostfix: boolean = false) {
+    static pluralize(count: number, singular: string, plural: string, onlyPostfix = false) {
         if (typeof(count) === "string") {
             count = parseInt(count);
         }

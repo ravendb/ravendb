@@ -202,7 +202,7 @@ class connectionStrings extends viewModelBase {
             
             const studioTaskType = ongoingTaskModel.getStudioTaskTypeFromServerType(task);
             
-            let taskData = { TaskId: task.TaskId,
+            const taskData = { TaskId: task.TaskId,
                              TaskName: task.TaskName,
                              TaskType: studioTaskType };
             

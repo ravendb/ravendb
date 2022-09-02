@@ -54,9 +54,9 @@ class statistics {
         const allIndexes = indexStats.map(x => new indexStatistics(x));
 
         // 2. Create an array where indexes are ordered by type
-        let indexesByTypeTemp = Array<indexesWithType>();
+        const indexesByTypeTemp = Array<indexesWithType>();
         allIndexes.forEach(index => {
-            let existingEntry = indexesByTypeTemp.find(x => x.indexType === index.indexType);
+            const existingEntry = indexesByTypeTemp.find(x => x.indexType === index.indexType);
             if (!existingEntry) {
                 // A new type encountered
                 const newType = new indexesWithType(index.indexType);

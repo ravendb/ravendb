@@ -359,7 +359,7 @@ class editRavenEtlTask extends viewModelBase {
     saveRavenEtl() {
         let hasAnyErrors = false;
         this.spinners.save(true);
-        let editedEtl = this.editedRavenEtl();
+        const editedEtl = this.editedRavenEtl();
 
         // 0. Save discovery URL if user forgot to hit 'add url' button
         if (this.createNewConnectionString() && 
@@ -398,7 +398,7 @@ class editRavenEtlTask extends viewModelBase {
         }
 
         // 4. All is well, Save connection string (if relevant..) 
-        let savingNewStringAction = $.Deferred<void>();
+        const savingNewStringAction = $.Deferred<void>();
         if (this.createNewConnectionString()) {
             this.newConnectionString()
                 .saveConnectionString(this.activeDatabase())
