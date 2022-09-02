@@ -198,7 +198,7 @@ namespace Raven.Server.Web
             }
         }
 
-        protected async Task WaitForExecutionOnRelevantNodes(JsonOperationContext context, string database, ClusterTopology clusterTopology, List<string> members, long index)
+        protected internal async Task WaitForExecutionOnRelevantNodes(JsonOperationContext context, string database, ClusterTopology clusterTopology, List<string> members, long index)
         {
             await ServerStore.Cluster.WaitForIndexNotification(index); // first let see if we commit this in the leader
             if (members.Count == 0)
