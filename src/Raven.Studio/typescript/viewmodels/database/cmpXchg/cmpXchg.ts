@@ -13,7 +13,6 @@ import checkedColumn = require("widgets/virtualGrid/columns/checkedColumn");
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import actionColumn = require("widgets/virtualGrid/columns/actionColumn");
-import continueTest = require("common/shell/continueTest");
 import { highlight, languages } from "prismjs";
 
 class cmpXchg extends viewModelBase {

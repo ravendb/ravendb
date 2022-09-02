@@ -30,7 +30,7 @@ class nodeStatsItem {
     osName = ko.observable<string>();
 
     disconnected = ko.observable<boolean>(true);
-    noData: boolean = true;
+    noData = true;
 
     constructor(tag: string) {
         this.nodeTag = tag;
@@ -134,7 +134,7 @@ class clusterOverviewWidget extends websocketBasedWidget<Raven.Server.Dashboard.
     }
 
     private prepareGridData(): JQueryPromise<pagedResult<nodeStatsItem>> {
-        let items = this.nodeStats();
+        const items = this.nodeStats();
         
         return $.when({
             totalResultCount: items.length,
@@ -259,7 +259,7 @@ class clusterOverviewWidget extends websocketBasedWidget<Raven.Server.Dashboard.
         }
     }
 
-    protected afterSyncUpdate(updatesCount: number) {
+    protected afterSyncUpdate() {
         this.gridController().reset(false);
     }
 }

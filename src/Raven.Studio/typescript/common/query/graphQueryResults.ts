@@ -33,7 +33,7 @@ class graphQueryResults {
     private svg: d3.Selection<void>;
     private zoom: d3.behavior.Zoom<void>;
     private d3cola: ID3StyleLayoutAdaptor & Layout;
-    private mousePressed: boolean = false;
+    private mousePressed = false;
 
     private edgesContainer: d3.Selection<void>;
     private nodesContainer: d3.Selection<void>;

@@ -33,7 +33,7 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: "virtual", // here we only redirect to global section with proper db set in url
-            moduleId: () => {},
+            moduleId: () => { /* empty */},
             title: 'Running Queries',
             nav: true,
             css: 'icon-stats-running-queries',

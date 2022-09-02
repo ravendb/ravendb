@@ -208,7 +208,7 @@ class query extends viewModelBase {
     cacheEnabled = ko.observable<boolean>(true);
     disableAutoIndexCreation = ko.observable<boolean>(true);
     
-    private indexEntriesStateWasTrue: boolean = false; // Used to save current query settings when switching to a 'dynamic' index
+    private indexEntriesStateWasTrue = false; // Used to save current query settings when switching to a 'dynamic' index
 
     columnsSelector = new columnsSelector<document>();
 
@@ -639,7 +639,7 @@ class query extends viewModelBase {
         const documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), grid, {
             enableInlinePreview: true,
             detectTimeSeries: true,
-            timeSeriesActionHandler: (type, documentId, name, value, event) => {
+            timeSeriesActionHandler: (type, documentId, name, value) => {
                 if (type === "plot") {
                     const newChart = new timeSeriesPlotDetails([{ documentId, value, name}]);
 
@@ -1687,7 +1687,7 @@ class query extends viewModelBase {
             const latitudeProperty = spatialProperties[i].LatitudeProperty;
             const longitudeProperty = spatialProperties[i].LongitudeProperty;
 
-            let pointsArray: geoPointInfo[] = [];
+            const pointsArray: geoPointInfo[] = [];
             for (let i = 0; i < this.allSpatialResultsItems().length; i++) {
                 const item = this.allSpatialResultsItems()[i];
 

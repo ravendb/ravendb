@@ -1,6 +1,5 @@
 /// <reference path="../../../typings/tsd.d.ts"/>
 
-import app = require("durandal/app");
 import EVENTS = require("common/constants/events");
 import router = require("plugins/router");
 import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
@@ -120,7 +119,7 @@ class menu {
             return false;
         }
 
-        let a = $event.currentTarget as HTMLAnchorElement;
+        const a = $event.currentTarget as HTMLAnchorElement;
 
         if ($event.ctrlKey) {
             window.open(a.href);

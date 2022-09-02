@@ -3,7 +3,7 @@
  */
 export class proxyMetadataProvider implements queryCompleterProviders {
     
-    private readonly pendingMessages = new Map<number, Function>();
+    private readonly pendingMessages = new Map<number, (payload: any) => void>();
     private readonly sender: (payload: MetadataRequestPayload) => number;
     
     constructor(sender: (payload: MetadataRequestPayload) => number) {

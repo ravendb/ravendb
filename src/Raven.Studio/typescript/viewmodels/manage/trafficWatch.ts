@@ -24,7 +24,7 @@ class runQueryFeature implements columnPreviewFeature {
 
     private queryList: string[] = [];
 
-    install($tooltip: JQuery, valueProvider: () => any, elementProvider: () => any, containerSelector: string): void {
+    install($tooltip: JQuery, valueProvider: () => any, elementProvider: () => any): void {
         $tooltip.on("click", ".run-query", () => {
             const value = valueProvider();
             const item: Raven.Client.Documents.Changes.TrafficWatchChangeBase = elementProvider();

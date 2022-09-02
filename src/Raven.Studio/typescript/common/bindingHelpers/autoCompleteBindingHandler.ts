@@ -103,7 +103,7 @@ class autoCompleteBindingHandler {
     }
 
     findAutoCompleteItemMatching(resultContainer: JQuery, text: string): HTMLElement {
-        var textLower = text.toLowerCase();
+        const textLower = text.toLowerCase();
         return this.getAllAutoCompleteItems(resultContainer)
             .toArray()
             .filter((el: HTMLElement) => el.textContent && el.textContent.trim().toLowerCase().indexOf(textLower) >= 0)[0];

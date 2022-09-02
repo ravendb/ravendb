@@ -206,7 +206,7 @@ class ongoingTasksWidget extends websocketBasedWidget<Raven.Server.Dashboard.Clu
     reducePerDatabase(itemsArray: rawTaskItem[]): taskItem[] {
         const output: taskItem[] = [];
         
-        for (let rawItem of itemsArray) {
+        for (const rawItem of itemsArray) {
             const existingItem = output.find(x => x.databaseName() === rawItem.dbName)
 
             if (existingItem) {

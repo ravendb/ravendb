@@ -17,7 +17,7 @@ class licenseWidget extends widget {
 
     view = require("views/resources/widgets/licenseWidget.html");
 
-    refreshIntervalId: number = -1;
+    refreshIntervalId = -1;
     isSecureServer = accessManager.default.secureServer();
     
     spinners = {

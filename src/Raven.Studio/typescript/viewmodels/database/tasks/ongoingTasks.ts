@@ -117,10 +117,6 @@ class ongoingTasks extends viewModelBase {
             .watchDatabaseChange(this.activeDatabase()?.name, () => this.refresh()));
         this.addNotification(this.changesContext.serverNotifications().watchReconnect(() => this.refresh()));
         
-        const db = this.activeDatabase();
-        
-        //this.updateUrl(appUrl.forOngoingTasks(db));
-
         this.selectedTaskType("All tasks"); 
         this.selectedNode("All nodes"); 
     }
@@ -144,24 +140,27 @@ class ongoingTasks extends viewModelBase {
             .done(results => {
                 results.Results.forEach(taskProgress => {
                     switch (taskProgress.EtlType) {
-                        case "Sql":
+                        case "Sql": {
                             const matchingSqlTask = this.sqlEtlTasks().find(x => x.taskName() === taskProgress.TaskName);
                             if (matchingSqlTask) {
                                 matchingSqlTask.updateProgress(taskProgress);
                             }
                             break;
-                        case "Olap":
+                        }
+                        case "Olap": {
                             const matchingOlapTask = this.olapEtlTasks().find(x => x.taskName() === taskProgress.TaskName);
                             if (matchingOlapTask) {
                                 matchingOlapTask.updateProgress(taskProgress);
                             }
                             break;
-                        case "Raven":
+                        }
+                        case "Raven": {
                             const matchingRavenTask = this.ravenEtlTasks().find(x => x.taskName() === taskProgress.TaskName);
                             if (matchingRavenTask) {
                                 matchingRavenTask.updateProgress(taskProgress);
                             }
                             break;
+                        }
                         case "ElasticSearch": {
                             const matchingElasticSearchTask = this.ravenEtlTasks().find(x => x.taskName() === taskProgress.TaskName);
                             if (matchingElasticSearchTask) {

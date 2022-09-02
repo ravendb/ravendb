@@ -50,7 +50,7 @@ class identity {
         });
         
         this.prefixWithoutPipe = ko.pureComputed(() => {
-            let prefix = this.prefix();
+            const prefix = this.prefix();
             
             if (prefix.endsWith("|")) {
                 return prefix.slice(0, -1);
@@ -208,7 +208,7 @@ class identities extends viewModelBase {
         });
     }
 
-    addNewIdentity($event: JQueryEventObject): void {
+    addNewIdentity(): void {
         eventsCollector.default.reportEvent("identity", "new");
 
         this.fetchIdentitySeparator().then(() => {
