@@ -30,7 +30,7 @@ class databaseStorageWidget extends abstractDatabaseAndNodeAwareTableWidget<Rave
         return data.Items.map(x => new databaseDiskUsage(nodeTag, x));
     }
 
-    protected prepareColumns(containerWidth: number, results: pagedResult<databaseDiskUsage>): virtualColumn[] {
+    protected prepareColumns(): virtualColumn[] {
         const grid = this.gridController();
         return [
             new textColumn<databaseDiskUsage>(grid, x => x.hideDatabaseName ? "" : x.database, "Database", "35%"),

@@ -156,7 +156,7 @@ class shell extends viewModelBase {
         
         this.browserAlert = new detectBrowser(true);
         
-        window.addEventListener("hashchange", e => {
+        window.addEventListener("hashchange", () => {
             this.currentUrlHash(location.hash);
         });
         
@@ -177,7 +177,7 @@ class shell extends viewModelBase {
     }
     
     // Override canActivate: we can always load this page, regardless of any system db prompt.
-    canActivate(args: any): any {
+    canActivate(): any {
         return true;
     }
 
@@ -198,7 +198,9 @@ class shell extends viewModelBase {
         });
         
         $.when<any>(licenseTask, topologyTask, clientCertificateTask)
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             .done(([license]: [Raven.Server.Commercial.LicenseStatus], 
+                   // eslint-disable-next-line @typescript-eslint/no-unused-vars
                    [topology]: [Raven.Server.NotificationCenter.Notifications.Server.ClusterTopologyChanged],
                    [certificate]: [Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition]) => {
             
@@ -209,7 +211,7 @@ class shell extends viewModelBase {
                 studioSettings.default.globalSettings()
                     .done((settings: globalSettings) => this.onGlobalConfiguration(settings));
                 
-                studioSettings.default.registerOnSettingChangedHandler(name => true, (name: string, setting: studioSetting<any>) => {
+                studioSettings.default.registerOnSettingChangedHandler(() => true, (name: string, setting: studioSetting<any>) => {
                     // if any remote configuration was changed, then force reload
                     if (setting.saveLocation === "remote") {
                         studioSettings.default.globalSettings()
@@ -278,7 +280,7 @@ class shell extends viewModelBase {
     }
     
     private setupRouting() {
-        const routes = allRoutes.get(this.appUrls);
+        const routes = allRoutes.get();
         routes.push(...routes);
         router.map(routes).buildNavigationModel();
 

@@ -67,7 +67,7 @@ class databaseOverviewWidget extends abstractDatabaseAndNodeAwareTableWidget<Rav
         }
     }
 
-    protected prepareColumns(containerWidth: number, results: pagedResult<databaseOverviewItem>): virtualColumn[] {
+    protected prepareColumns(): virtualColumn[] {
         const grid = this.gridController();
         return [
             new textColumn<databaseOverviewItem>(grid, x => x.hideDatabaseName ? "" : x.database, "Database", "20%"),

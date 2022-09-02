@@ -36,6 +36,7 @@ abstract class dialogViewModelBase {
         jwerty.key("enter", () => this.enterKeyPressed());
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     deactivate(args: any) {
         $(document).unbind('keydown.jwerty');
         
@@ -49,6 +50,7 @@ abstract class dialogViewModelBase {
         }
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     compositionComplete(view?: any, parent?: any) {
         setTimeout(() => this.setInitialFocus(), 100); // We have to time-delay this, else it never receives focus.
     }

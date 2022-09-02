@@ -133,7 +133,7 @@ class databaseSettings extends viewModelBase {
                     const db: database = this.activeDatabase();
                     this.fetchDatabaseSettings(db)
                         .done(() => deferred.resolve({can: true}))
-                        .fail((response: JQueryXHR) => {
+                        .fail(() => {
                             deferred.resolve({redirect: appUrl.forStatus(db)});
                         });
                 }
@@ -157,7 +157,7 @@ class databaseSettings extends viewModelBase {
 
         categoriesGrid.init(() => this.fetchCategoriesData(), () =>
             [
-                new hyperlinkColumn<categoryInfo>(categoriesGrid, x => this.getCategoryHtml(x), x => appUrl.forDatabaseSettings(this.activeDatabase()), "Category", "90%",
+                new hyperlinkColumn<categoryInfo>(categoriesGrid, x => this.getCategoryHtml(x), () => appUrl.forDatabaseSettings(this.activeDatabase()), "Category", "90%",
                     {
                         useRawValue: () => true,
                         sortable: "string",
@@ -533,7 +533,7 @@ class databaseSettings extends viewModelBase {
        
         this.allEntries().forEach(entry => {
             if (entry instanceof models.databaseEntry) {
-                entry.override.subscribe((override) => {
+                entry.override.subscribe(() => {
                     this.categoriesGridController().reset(false);
                     this.setCategory(entry.data.Metadata.Category);
                 });

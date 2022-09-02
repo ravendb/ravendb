@@ -33,7 +33,7 @@ class etlTransformOrLoadErrorDetails extends abstractAlertDetails {
         const grid = this.gridController();
         grid.headerVisible(true);
 
-        grid.init((s, t) => this.fetcher(s, t), () => {
+        grid.init(() => this.fetcher(), () => {
             
             const previewColumn = new actionColumn<Raven.Server.NotificationCenter.Notifications.Details.EtlErrorInfo>(
                 grid, item => this.showDetails(item), "Preview", `<i class="icon-preview"></i>`, "70px",
@@ -82,7 +82,7 @@ class etlTransformOrLoadErrorDetails extends abstractAlertDetails {
         copyToClipboard.copy(item.Error, "Error has been copied to clipboard", document.getElementById("js-etl-error-details"));
     }
 
-    private fetcher(skip: number, take: number): JQueryPromise<pagedResult<Raven.Server.NotificationCenter.Notifications.Details.EtlErrorInfo>> {
+    private fetcher(): JQueryPromise<pagedResult<Raven.Server.NotificationCenter.Notifications.Details.EtlErrorInfo>> {
         return $.Deferred<pagedResult<Raven.Server.NotificationCenter.Notifications.Details.EtlErrorInfo>>()
             .resolve({
                 items: this.tableItems,

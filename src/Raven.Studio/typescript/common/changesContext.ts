@@ -9,7 +9,6 @@ import serverNotificationCenterClient = require("common/serverNotificationCenter
 import databaseNotificationCenterClient = require("common/databaseNotificationCenterClient");
 import EVENTS = require("common/constants/events");
 
-import databaseDisconnectedEventArgs = require("viewmodels/resources/databaseDisconnectedEventArgs");
 import notificationCenter = require("common/notifications/notificationCenter");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 
@@ -20,7 +19,7 @@ class changesContext {
     databaseNotifications = ko.observable<databaseNotificationCenterClient>();
 
     databaseChangesApi = ko.observable<changesApi>();
-    private pendingAfterChangesApiConnectedHandlers: Function[] = [];
+    private pendingAfterChangesApiConnectedHandlers: Array<() => void> = [];
     private hasChangesApiConnected = false;
 
     private globalDatabaseSubscriptions: changeSubscription[] = [];
@@ -47,7 +46,7 @@ class changesContext {
         });
     }
 
-    afterChangesApiConnected(func: Function) {
+    afterChangesApiConnected(func: () => void) {
         if (this.hasChangesApiConnected) {
             func();
             return;

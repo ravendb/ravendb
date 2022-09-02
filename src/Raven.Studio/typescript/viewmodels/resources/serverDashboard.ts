@@ -131,7 +131,7 @@ class indexingSpeedSection {
         grid.headerVisible(true);
         grid.setDefaultSortBy(0);
 
-        grid.init((s, t) => $.when({
+        grid.init(() => $.when({
             totalResultCount: this.table.length,
             items: this.table
         }), () => {
@@ -275,7 +275,7 @@ class databasesSection {
             }
         };
         grid.setDefaultSortBy(0);
-        grid.init((s, t) => $.when({
+        grid.init(() => $.when({
             totalResultCount: this.table.length,
             items: this.table
         }), () => {
@@ -423,7 +423,7 @@ class trafficSection {
         grid.headerVisible(true);
         grid.setDefaultSortBy(0);
         
-        grid.init((s, t) => $.when({
+        grid.init(() => $.when({
             totalResultCount: this.table.length,
             items: this.table
         }), () => {
@@ -461,7 +461,7 @@ class trafficSection {
                     x => Math.round(x.averageDuration()).toLocaleString() + " ms",
                     "Avg Req Time",
                     "19%", {
-                        sortable: x => "number",
+                        sortable: () => "number",
                         defaultSortOrder: "desc",
                         title: () => "Average request time"
                     })
@@ -636,7 +636,7 @@ class driveUsageSection {
             });
         });
 
-        storageContainer.on("mouseleave", ".virtual-row", event => {
+        storageContainer.on("mouseleave", ".virtual-row", () => {
             this.storageChart.highlightDatabase(null, storageContainer);
         });
     }
@@ -644,7 +644,7 @@ class driveUsageSection {
     private highlightRowInTable(dbName: string) {
         this.table().forEach(usage => {
             if (dbName) {
-                const item = usage.gridController().findItem((item, idx) => item.database() === dbName);
+                const item = usage.gridController().findItem((item) => item.database() === dbName);
                 usage.gridController().setSelectedItems([item]);
             } else {
                 usage.gridController().setSelectedItems([]);
@@ -850,11 +850,12 @@ class serverDashboard extends viewModelBase {
             case "TrafficWatch":
                 this.trafficSection.onData(data as Raven.Server.Dashboard.TrafficWatch);
                 break;
-            case "DatabasesInfo":
+            case "DatabasesInfo": {
                 const databasesInfo = data as Raven.Server.Dashboard.DatabasesInfo;
                 this.noDatabases(databasesInfo.Items.length === 0);
                 this.databasesSection.onData(databasesInfo);
                 break;
+            }
             case "IndexingSpeed":
                 this.indexingSpeedSection.onData(data as Raven.Server.Dashboard.IndexingSpeed);
                 break;

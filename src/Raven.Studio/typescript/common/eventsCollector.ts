@@ -5,7 +5,7 @@
 
     // used for caching events fired before analytics initialization
     // if user don't agree on usage stats tracking we discard this data
-    preInitializationQueue: Function[] = [];
+    preInitializationQueue: Array<(ga: any) => void> = [];
 
     version: string;
     build: number;

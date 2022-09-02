@@ -32,6 +32,7 @@ class registrationInfoCommand extends commandBase {
                 return json.Error;
             }
         } catch (e) {
+            // ignore
         }
         return payload;
     }

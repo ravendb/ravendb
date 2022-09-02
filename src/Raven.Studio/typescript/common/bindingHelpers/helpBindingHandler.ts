@@ -18,12 +18,12 @@ class helpBindingHandler {
     }
 
     // Called by Knockout a single time when the binding handler is setup.
-    init(element: HTMLElement, valueAccessor: () =>  any, allBindings: any, viewModel: viewModelBase, bindingContext: KnockoutBindingContext) {
+    init(element: HTMLElement) {
         this.link = $('<a class="help_link"><i class="fa fa-question-circle"></i></a>').attr("target", "_blank");
         $(element).append(this.link);
     }
 
-    update(element: HTMLInputElement, valueAccessor: () => any, allBindingsAccessor: KnockoutAllBindingsAccessor, viewModel: viewModelBase, bindingContext: KnockoutBindingContext) {
+    update(element: HTMLInputElement, valueAccessor: () => any) {
         const value = valueAccessor();
         const hashUnwrapped = ko.unwrap(value.hash);
         const version = viewModelBase.clientVersion();

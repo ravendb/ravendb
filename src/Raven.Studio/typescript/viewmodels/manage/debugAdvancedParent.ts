@@ -1,7 +1,6 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import appUrl = require("common/appUrl");
 import durandalRouter = require("plugins/router");
-import accessManager = require("common/shell/accessManager");
 
 class debugAdvanced {
     router: DurandalRootRouter;

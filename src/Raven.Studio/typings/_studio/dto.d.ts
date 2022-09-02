@@ -899,6 +899,11 @@ interface rawTaskItem {
     node: string;
 }
 
+interface databaseDisconnectedEventArgs {
+    database: database;
+    cause: databaseDisconnectionCause;
+}
+
 interface taskInfo {
     nameForUI: string;
     icon: string;

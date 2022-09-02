@@ -18,7 +18,7 @@ import accessManager = require("common/shell/accessManager");
 type trafficChangeType = Raven.Client.Documents.Changes.TrafficWatchChangeType | Raven.Client.ServerWide.Tcp.TcpConnectionHeaderMessage.OperationTypes; 
 
 class runQueryFeature implements columnPreviewFeature {
-    install($tooltip: JQuery, valueProvider: () => any, elementProvider: () => any, containerSelector: string) {
+    install($tooltip: JQuery, valueProvider: () => any, elementProvider: () => any) {
         $tooltip.on("click", ".run-query", () => {
             const value = valueProvider();
 
@@ -420,7 +420,7 @@ class trafficWatch extends viewModelBase {
         
         const grid = this.gridController();
         grid.headerVisible(true);
-        grid.init((s, t) => this.fetchTraffic(s, t), () =>
+        grid.init(() => this.fetchTraffic(), () =>
             [
                 new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(grid,
                     x => generalUtils.formatUtcDateAsLocal(x.TimeStamp, trafficWatch.dateTimeFormat),
@@ -523,7 +523,7 @@ class trafficWatch extends viewModelBase {
         this.connectWebSocket();
     }
 
-    private fetchTraffic(skip: number, take: number): JQueryPromise<pagedResult<Raven.Client.Documents.Changes.TrafficWatchChangeBase>> {
+    private fetchTraffic(): JQueryPromise<pagedResult<Raven.Client.Documents.Changes.TrafficWatchChangeBase>> {
         const textFilterDefined = this.filter();
         
         const filterUsingTypeHttp = this.selectedTypeNamesHttp().length !== this.filteredTypeDataHttp.length;

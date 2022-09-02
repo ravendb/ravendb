@@ -135,24 +135,27 @@ class ongoingTasks extends viewModelBase {
             .done(results => {
                 results.Results.forEach(taskProgress => {
                     switch (taskProgress.EtlType) {
-                        case "Sql":
+                        case "Sql": {
                             const matchingSqlTask = this.sqlTasks().find(x => x.taskName() === taskProgress.TaskName);
                             if (matchingSqlTask) {
                                 matchingSqlTask.updateProgress(taskProgress);
                             }
                             break;
-                        case "Olap":
+                        }
+                        case "Olap": {
                             const matchingOlapTask = this.olapTasks().find(x => x.taskName() === taskProgress.TaskName);
                             if (matchingOlapTask) {
                                 matchingOlapTask.updateProgress(taskProgress);
                             }
                             break;
-                        case "Raven":
+                        }
+                        case "Raven": {
                             const matchingEtlTask = this.etlTasks().find(x => x.taskName() === taskProgress.TaskName);
                             if (matchingEtlTask) {
                                 matchingEtlTask.updateProgress(taskProgress);
                             }
                             break;
+                        }
                     }
                 });
                 

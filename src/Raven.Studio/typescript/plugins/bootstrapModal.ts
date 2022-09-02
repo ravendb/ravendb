@@ -37,7 +37,7 @@ dialog.addContext('bootstrapModal', {
             theDialog.host = host.get(0);
             closeCalled = false;
         },
-        removeHost: (theDialog: dialog.Dialog) => {
+        removeHost: () => {
             closeCalled = true;
             $('#bootstrapModal').modal('hide');
             $('body').removeClass('modal-open');
@@ -60,7 +60,7 @@ dialog.addContext('bootstrapModal', {
                 $('.modal-backdrop').appendTo('.modal-root');   
             }
             
-            $('#bootstrapModal').on('hidden.bs.modal', (e) => {
+            $('#bootstrapModal').on('hidden.bs.modal', () => {
                 if (!closeCalled) {
                     theDialog.close();
                 }

@@ -37,7 +37,7 @@ class spatialOptions {
         this.canSpecifyTreeLevel = ko.pureComputed(() => this.strategy() !== "BoundingBox");
         this.precision = ko.pureComputed(() => this.getPrecisionString());
         this.canSpecifyCoordinates = ko.pureComputed(() => this.type() === "Cartesian");
-        this.type.subscribe(newType => {
+        this.type.subscribe(() => {
             this.resetCoordinates();
             const availableStrategies = this.getAvailableStrategies(); 
             if (!_.includes(availableStrategies, this.strategy())) {

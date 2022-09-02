@@ -32,7 +32,7 @@ class slowSqlDetails extends abstractPerformanceHintDetails {
         const grid = this.gridController();
         grid.headerVisible(true);
 
-        grid.init((s, t) => this.fetcher(s, t), () => {
+        grid.init(() => this.fetcher(), () => {
             
             const previewColumn = new actionColumn<Raven.Server.NotificationCenter.Notifications.Details.SlowSqlStatementInfo>(
                 grid, item => this.showDetails(item), "Preview", `<i class="icon-preview"></i>`, "70px",
@@ -75,7 +75,7 @@ class slowSqlDetails extends abstractPerformanceHintDetails {
         this.currentDetails(item);
     }
     
-    private fetcher(skip: number, take: number): JQueryPromise<pagedResult<Raven.Server.NotificationCenter.Notifications.Details.SlowSqlStatementInfo>> {
+    private fetcher(): JQueryPromise<pagedResult<Raven.Server.NotificationCenter.Notifications.Details.SlowSqlStatementInfo>> {
         return $.Deferred<pagedResult<Raven.Server.NotificationCenter.Notifications.Details.SlowSqlStatementInfo>>()
             .resolve({
                 items: this.tableItems,

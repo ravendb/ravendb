@@ -31,7 +31,7 @@ class autoCompleteBindingHandler {
     }
 
     // Called by Knockout a single time when the binding handler is setup.
-    init(element: HTMLElement, valueAccessor: () => string, allBindings: () => any, viewModel: any, bindingContext: any) {
+    init(element: HTMLElement, valueAccessor: () => string, allBindings: () => any) {
         const inputId = valueAccessor();
         const input = $(inputId);
         if (input.length !== 1) {
@@ -56,7 +56,7 @@ class autoCompleteBindingHandler {
         $element.on('click', () => setTimeout(() => element.style.display = "none", 0));
 
         // Leaving the textbox should hide the auto complete list.
-        input.on('blur', (args: JQueryEventObject) => setTimeout(() => {
+        input.on('blur', () => setTimeout(() => {
             element.style.display = "none";
 
             const newValue = $element.find(".active").find("span.text").text();
@@ -74,7 +74,7 @@ class autoCompleteBindingHandler {
         }, 200));
 
         // Putting the focus back on the textbox should show the auto complete list if we have items.
-        input.on('focus', (args: JQueryEventObject) => setTimeout(() =>
+        input.on('focus', () => setTimeout(() =>
             element.style.display = this.getAllAutoCompleteItems($element).length > 0 ? "block" : "none"));
 
         // Up, down, enter all have special meaning.

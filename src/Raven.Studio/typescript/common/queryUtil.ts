@@ -193,6 +193,7 @@ class queryUtil {
                     }
                 }
             }
+            // eslint-disable-next-line no-constant-condition
         } while (true);
 
         const rangesReversed = rangesToDelete.reverse();

@@ -88,7 +88,7 @@ class timingsChart {
             .attr("class", "duration")
             .attr("y", -8);
         
-        const path = this.vis
+        this.vis
             .data([json])
             .selectAll("path")
             .data(nodes)
@@ -146,6 +146,7 @@ class timingsChart {
         this.levelDuration
             .text(this.totalSize.toLocaleString() + " ms");
         
+        // eslint-disable-next-line @typescript-eslint/no-this-alias
         const self = this;
         
         this.vis.selectAll("path").on("mouseover", null);

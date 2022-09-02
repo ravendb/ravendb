@@ -38,7 +38,7 @@ class shiftSelectionHandler implements disposable {
             }
         });
 
-        $document.on("keyup." + this.gridId, (e: JQueryKeyEventObject) => {
+        $document.on("keyup." + this.gridId, () => {
             if (this.moveHandler) {
                 this.moveHandler.dispose();
                 this.moveHandler = null;

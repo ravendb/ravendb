@@ -30,7 +30,7 @@ class infoPackage extends viewModelBase {
         })
     }
     
-    canDeactivate(isClose: boolean): boolean | JQueryPromise<canDeactivateResultDto> {
+    canDeactivate(): boolean | JQueryPromise<canDeactivateResultDto> {
         if (this.spinners.anyInProgress()) {
             return this.confirmLeavingPage();
         }

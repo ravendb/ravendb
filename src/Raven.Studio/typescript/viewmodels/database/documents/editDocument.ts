@@ -44,11 +44,6 @@ import studioSettings = require("common/settings/studioSettings");
 import globalSettings = require("common/settings/globalSettings");
 import fileDownloader = require("common/fileDownloader");
 
-interface revisionToCompare {
-    date: string;
-    changeVector: string;
-}
-
 class editDocument extends viewModelBase {
 
     static editDocSelector = ".edit-document";
@@ -771,10 +766,10 @@ class editDocument extends viewModelBase {
         
         const fetchCountersTask = documentHasCounters ?
             // Must get counter values from server since cloning counters is a 'create' operation (not copy)
-            this.normalActionProvider.fetchCounters("", 0, 1024 * 1024) :
+            this.normalActionProvider.fetchCounters("") :
             $.when<pagedResult<counterItem>>({ items: [], totalResultCount: 0 } as pagedResult<counterItem>);
         
-        const fetchTimeseriesTask = this.normalActionProvider.fetchTimeSeries("", 0, 1024 * 1024);
+        const fetchTimeseriesTask = this.normalActionProvider.fetchTimeSeries("");
 
         $.when<any>(fetchCountersTask, fetchTimeseriesTask)
             .done((counters: pagedResult<counterItem>, timeSeries: pagedResult<timeSeriesItem>) => {
@@ -949,6 +944,7 @@ class editDocument extends viewModelBase {
 
         const metadata = localDoc['@metadata'];
         for (const prop in savedDocumentDto) {
+            // eslint-disable-next-line no-prototype-builtins
             if (savedDocumentDto.hasOwnProperty(prop)) {
                 if (prop === "Type")
                     continue;
@@ -1418,7 +1414,7 @@ class normalCrudActions implements editDocumentCrudActions {
             });
     }
 
-    fetchAttachments(nameFilter: string, skip: number, take: number): JQueryPromise<pagedResult<attachmentItem>> {
+    fetchAttachments(nameFilter: string): JQueryPromise<pagedResult<attachmentItem>> {
         const doc = this.document();
 
         let attachments: documentAttachmentDto[] = doc.__metadata.attachments() || [];
@@ -1435,7 +1431,7 @@ class normalCrudActions implements editDocumentCrudActions {
         });
     }
     
-    fetchCounters(nameFilter: string, skip: number, take: number): JQueryPromise<pagedResult<counterItem>> {
+    fetchCounters(nameFilter: string): JQueryPromise<pagedResult<counterItem>> {
         const doc = this.document();
 
         if (doc.__metadata.hasFlag("Revision")) {
@@ -1484,7 +1480,7 @@ class normalCrudActions implements editDocumentCrudActions {
         return fetchTask.promise();
     }
     
-    fetchTimeSeries(nameFilter: string, skip: number, take: number): JQueryPromise<pagedResult<timeSeriesItem>> {
+    fetchTimeSeries(nameFilter: string): JQueryPromise<pagedResult<timeSeriesItem>> {
         const doc = this.document();
 
         if (!doc.__metadata.hasFlag("HasTimeSeries")) {
@@ -1552,7 +1548,7 @@ class normalCrudActions implements editDocumentCrudActions {
             });
     }
 
-    saveRelatedItems(targetDocumentId: string) {
+    saveRelatedItems() {
         // no action required
         return $.when<void>(null);
     }
@@ -1651,7 +1647,7 @@ class clonedDocumentCrudActions implements editDocumentCrudActions {
         this.reload();
     }
 
-    fetchAttachments(nameFilter: string, skip: number, take: number): JQueryPromise<pagedResult<attachmentItem>> {
+    fetchAttachments(nameFilter: string): JQueryPromise<pagedResult<attachmentItem>> {
         let attachments: attachmentItem[] = this.attachments();
 
         if (nameFilter) {
@@ -1664,7 +1660,7 @@ class clonedDocumentCrudActions implements editDocumentCrudActions {
         });
     }
 
-    fetchCounters(nameFilter: string, skip: number, take: number): JQueryPromise<pagedResult<counterItem>> {
+    fetchCounters(nameFilter: string): JQueryPromise<pagedResult<counterItem>> {
         let counters: counterItem[] = this.counters();
 
         if (nameFilter) {
@@ -1677,7 +1673,7 @@ class clonedDocumentCrudActions implements editDocumentCrudActions {
         });
     }
     
-    fetchTimeSeries(nameFilter: string, skip: number, take: number): JQueryPromise<pagedResult<timeSeriesItem>> {
+    fetchTimeSeries(nameFilter: string): JQueryPromise<pagedResult<timeSeriesItem>> {
         let timeseries: timeSeriesItem[] = this.timeSeries();
 
         if (nameFilter) {
@@ -1690,7 +1686,7 @@ class clonedDocumentCrudActions implements editDocumentCrudActions {
         });
     }
 
-    fetchRevisionsCount(docId: string, db: database): void {
+    fetchRevisionsCount(): void {
         // Not needed for clone view.
     }
     
@@ -1720,7 +1716,7 @@ class clonedDocumentCrudActions implements editDocumentCrudActions {
         }
     }
     
-    onDocumentSaved(saveResult: saveDocumentResponseDto, localDoc: any) {
+    onDocumentSaved(saveResult: saveDocumentResponseDto) {
         this.parentView.dirtyFlag().reset();
         router.navigate(appUrl.forEditDoc(saveResult.Results[0]["@id"], this.db()));
     }

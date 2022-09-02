@@ -4,6 +4,7 @@ import clusterDashboardWebSocketClient = require("common/clusterDashboardWebSock
 abstract class websocketBasedWidget<TData, TConfig = unknown, TState = unknown> extends widget<TConfig, TState> {
     abstract onData(nodeTag: string, data: TData): void;
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     supportedOnNode(targetNodeTag: string, currentServerNodeTag: string): boolean {
         return true;
     }

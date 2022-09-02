@@ -106,7 +106,7 @@ abstract class abstractOperationDetails extends dialogViewModelBase {
         operationDto: Raven.Server.NotificationCenter.Notifications.OperationChanged,
         notificationsContainer: KnockoutObservableArray<abstractNotification>,
         database: database,
-        callbacks: { spinnersCleanup: Function, onChange: Function }): void {
+        callbacks: { spinnersCleanup: () => void, onChange: () => void }): void {
 
         // find "in progress" operation and update it + remove from notification center
         // completed notification will be merged into grouped notification

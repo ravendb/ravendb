@@ -20,7 +20,7 @@ interface virtualColumn {
     /**
      * Renders a cell for this column. Returns a string, either text or HTML, containing the content.
      */
-    renderCell(item: Object, isSelected: boolean, isSorted: boolean): string;
+    renderCell(item: object, isSelected: boolean, isSorted: boolean): string;
 
     /**
      * Serialize column to json

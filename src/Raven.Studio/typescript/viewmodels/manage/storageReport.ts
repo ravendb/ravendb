@@ -316,7 +316,6 @@ class storageReport extends viewModelBase {
         this.transitioning = true;
 
         const oldContainer = this.svg.select(".treemap");
-        const oldCells = oldContainer.selectAll("g.cell");
 
         const newGroup = this.svg.append("g")
             .classed("treemap", true);
@@ -354,7 +353,6 @@ class storageReport extends viewModelBase {
         this.transitioning = true;
 
         const oldContainer = this.svg.select(".treemap");
-        const oldCells = oldContainer.selectAll("g.cell");
 
         const newGroup = this.svg.append("g")
             .classed("treemap", true);
@@ -373,6 +371,7 @@ class storageReport extends viewModelBase {
     }
 
     private drawNewTreeMap(nodes: storageReportItem[], container: d3.Selection<any>) {
+        // eslint-disable-next-line @typescript-eslint/no-this-alias
         const self = this;
         const showTypeOffset = 7;
         const showTypePredicate = (d: storageReportItem) => d.showType && d.dy > 22 && d.dx > 20;
@@ -384,8 +383,8 @@ class storageReport extends viewModelBase {
             .attr("transform", d => "translate(" + d.x + "," + d.y + ")")
             .on("click", d => this.onClick(d, true))
             .on("mouseover", d => this.onMouseOver(d))
-            .on("mouseout", d => this.onMouseOut(d))
-            .on("mousemove", d => this.onMouseMove(d));
+            .on("mouseout", () => this.onMouseOut())
+            .on("mousemove", () => this.onMouseMove());
 
         const rectangles = cell.append("svg:rect")
             .attr("width", d => Math.max(0, d.dx - 1))
@@ -421,9 +420,9 @@ class storageReport extends viewModelBase {
     }
 
     wrap($self: any, width: number) {
-        let self = d3.select($self),
-            textLength = (self.node() as any).getComputedTextLength(),
-            text = self.text();
+        const self = d3.select($self);
+        let textLength = (self.node() as any).getComputedTextLength();
+        let text = self.text();
         while (textLength > (width - 6) && text.length > 0) {
             text = text.slice(0, -1);
             self.text(text + '...');
@@ -454,7 +453,8 @@ class storageReport extends viewModelBase {
         $('#storage-report [data-toggle="tooltip"]').tooltip();
     }
 
-    private onMouseMove(d: storageReportItem) {
+    private onMouseMove() {
+        // eslint-disable-next-line prefer-const
         let [x, y] = d3.mouse(this.svg.node());
 
         const tooltipWidth = $(".chart-tooltip").width() + 20;
@@ -480,14 +480,14 @@ class storageReport extends viewModelBase {
         html += "<span class='size'>Size: <strong>" + generalUtils.formatBytesToSize(d.size) + "</strong></span>";
 
         this.tooltip.html(html);
-        this.onMouseMove(d);
+        this.onMouseMove();
     }
 
     private shouldDisplayNumberOfEntries(d: storageReportItem) {
         return d.type === "tree" || d.type === "table";
     }
 
-    private onMouseOut(d: storageReportItem) {
+    private onMouseOut() {
         this.tooltip.transition()
             .duration(500)
             .style("opacity", 0);

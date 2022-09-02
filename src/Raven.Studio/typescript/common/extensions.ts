@@ -122,7 +122,7 @@ class extensions {
         };
 
         (ko.validation.rules as any)['aceValidation'] = {
-            validator: (text: string) => {
+            validator: () => {
                 // we return true here, as validation is handled in aceEditorBindingHandler
                 return true; 
             }
@@ -139,6 +139,7 @@ class extensions {
         const subscribableFn: any = ko.subscribable.fn;
 
         subscribableFn.distinctUntilChanged = function () {
+            // eslint-disable-next-line @typescript-eslint/no-this-alias
             const observable: KnockoutObservable<any> = this;
             const matches = ko.observable();
             let lastMatch = observable();
@@ -152,11 +153,13 @@ class extensions {
         };
 
         subscribableFn.throttle = function (throttleTimeMs: number) {
+            // eslint-disable-next-line @typescript-eslint/no-this-alias
             const observable = this;
             return ko.pureComputed(() => observable()).extend({ throttle: throttleTimeMs });
         };
 
         subscribableFn.toggle = function () {
+            // eslint-disable-next-line @typescript-eslint/no-this-alias
             const observable: KnockoutObservable<boolean> = this;
             observable(!observable());
             return observable;
@@ -478,7 +481,7 @@ class extensions {
         }
 
         ko.bindingHandlers["checkboxTriple"] = {
-            update(element, valueAccessor, allBindings, viewModel, bindingContext) {
+            update(element, valueAccessor) {
                 const checkboxValue: checkbox = ko.unwrap(valueAccessor());
                 switch (checkboxValue) {
                     case "checked":

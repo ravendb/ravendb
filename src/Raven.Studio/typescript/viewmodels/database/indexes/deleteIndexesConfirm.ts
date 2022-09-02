@@ -51,6 +51,7 @@ class deleteIndexesConfirm extends dialogViewModelBase {
     deleteIndexes() {
         const deleteTasks = this.indexesInfoForDelete.map(indexItem => new deleteIndexCommand(indexItem.indexName, this.db).execute());
 
+        // eslint-disable-next-line prefer-spread
         $.when.apply($, deleteTasks)
             .done(() => {
                 if (this.indexesInfoForDelete.length > 1) {

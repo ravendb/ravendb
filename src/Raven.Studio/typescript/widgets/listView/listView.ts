@@ -1,6 +1,5 @@
 ﻿/// <reference path="../../../typings/tsd.d.ts"/>
 
-import itemFetch = require("widgets/virtualGrid/itemFetch");
 import listViewController = require("widgets/listView/listViewController");
 import virtualListRow = require("widgets/listView/virtualListRow");
 
@@ -204,7 +203,6 @@ class listView<T> {
         // Determine the view port.
         const scrollTop = this.$viewportElement.scrollTop();
         const scrollBottom = scrollTop + this.listElementHeight;
-        const positionCheck = scrollTop;
         
         const [firstVisibleIdx, lastVisibleIdx] = this.visibleItemsRange(scrollTop, scrollBottom);
 
@@ -229,7 +227,6 @@ class listView<T> {
         // now fill remaining rows
         
         if (missingIdx.length) {
-            const currentMissing = 0;
             // reuse rows which are not in rowsToUse
             for (let i = 0; i < this.virtualRows.length; i++) {
                 const row = this.virtualRows[i];
@@ -304,7 +301,6 @@ class listView<T> {
         
         for (let i = firstIdx; i < this.items.size; i++) {
             const itemEnd = this.cumulativeItemsHeight.get(i);
-            const itemStart = itemEnd - this.getItemHeight(i);
 
             if (itemEnd >= yEnd) {
                 lastIdx = i;

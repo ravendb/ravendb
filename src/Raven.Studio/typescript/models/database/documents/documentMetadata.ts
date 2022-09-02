@@ -177,6 +177,7 @@ class documentMetadata {
         }
 
         for (const property in metaDto) {
+            // eslint-disable-next-line no-prototype-builtins
             if (metaDto.hasOwnProperty(property) && _.includes(metaPropsToRemove, property)) {
                 if ((<any>metaDto)[property] && removedProps) {
                     removedProps.push({ name: property, value: (<any>metaDto)[property] });

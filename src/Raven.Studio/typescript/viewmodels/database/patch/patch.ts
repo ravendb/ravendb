@@ -23,8 +23,6 @@ import generalUtils = require("common/generalUtils");
 import queryCommand = require("commands/database/query/queryCommand");
 import queryCriteria = require("models/database/query/queryCriteria");
 
-type fetcherType = (skip: number, take: number, previewCols: string[], fullCols: string[]) => JQueryPromise<pagedResult<document>>;
-
 class patchList {
 
     private readonly recentPatchLimit = 6;

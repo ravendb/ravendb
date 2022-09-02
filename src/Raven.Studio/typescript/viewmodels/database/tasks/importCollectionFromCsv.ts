@@ -125,7 +125,7 @@ class importCollectionFromCsv extends viewModelBase {
 
     createPostboxSubscriptions(): Array<KnockoutSubscription> {
         return [
-            ko.postbox.subscribe(EVENTS.ChangesApi.Reconnected, (db: database) => {
+            ko.postbox.subscribe(EVENTS.ChangesApi.Reconnected, () => {
                 this.isUploading(false);
             })
         ];

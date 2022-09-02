@@ -160,7 +160,7 @@ class registration extends dialogViewModelBase {
                 registration.showRegistrationDialog(license, false, false);
                 break;
                 
-            case "None":
+            case "None": {
                 if (skipIfNoLicense) {
                     return;
                 }
@@ -191,6 +191,7 @@ class registration extends dialogViewModelBase {
                     registration.showRegistrationDialog(license, canDismiss, false);
                 }
                 break;
+            }
             default:
                 if (license.Expired) {
                     registration.showRegistrationDialog(license, false, false);

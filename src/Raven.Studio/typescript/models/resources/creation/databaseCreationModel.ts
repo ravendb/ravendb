@@ -234,7 +234,7 @@ class databaseCreationModel {
         this.restoreSourceObject.subscribe(() =>  {
             this.clearRestorePoints();
             this.restore.restorePointError(null);
-            this.fetchRestorePoints(true);
+            this.fetchRestorePoints();
         });
         
         // Raven Cloud - Backup Link 
@@ -303,7 +303,7 @@ class databaseCreationModel {
             .done((cloudCredentials) => {
                 this.restore.ravenCloudCredentials().setCredentials(cloudCredentials);
                 this.restore.ravenCloudCredentials().isBackupLinkValid(true);
-                this.fetchRestorePoints(true);
+                this.fetchRestorePoints();
             })
             .always(() => this.spinners.backupCredentialsLoading(false));
     }
@@ -349,7 +349,7 @@ class databaseCreationModel {
         this.legacyMigration.journalsPathHasFocus(true);
     }
     
-    fetchRestorePoints(skipReportingError: boolean) {
+    fetchRestorePoints() {
         if (!this.restoreSourceObject().isValid()) {
             this.clearRestorePoints();
             return;
@@ -476,7 +476,7 @@ class databaseCreationModel {
     private setupReplicationValidation(maxReplicationFactor: number) {
         this.replication.nodes.extend({
             validation: [{
-                validator: (val: Array<clusterNode>) => !this.replication.manualMode() || this.replication.replicationFactor() > 0,
+                validator: () => !this.replication.manualMode() || this.replication.replicationFactor() > 0,
                 message: `Please select at least one node.`
             }]
         });

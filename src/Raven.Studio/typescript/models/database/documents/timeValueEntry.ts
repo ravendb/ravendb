@@ -79,15 +79,16 @@ class timeValueEntry {
         switch (time.Unit) {
             case "Second":
                 return [time.Value, time.Value];
-            case "Month":
+            case "Month": {
                 const years = Math.floor(time.Value / 12);
                 let upperBound = years * timeValueEntry.SECONDS_IN_366_DAYS;
                 let lowerBound = years * timeValueEntry.SECONDS_IN_365_DAYS;
-                
+
                 const remainingMonths = time.Value % 12;
                 upperBound += remainingMonths * this.SECONDS_IN_31_DAYS;
                 lowerBound += remainingMonths * this.SECONDS_IN_28_DAYS;
                 return [upperBound, lowerBound];
+            }
             default:
                 throw new Error("Not supported time value unit " + time.Unit);
         }
@@ -111,7 +112,7 @@ class timeValueEntry {
         }
         
         switch (timeValue.Unit) {
-            case "Month":
+            case "Month": {
                 const totalMonths = timeValue.Value;
                 const months = totalMonths % 12;
                 const totalYears = (totalMonths - months) / 12;
@@ -129,7 +130,8 @@ class timeValueEntry {
                     result.amount(months);
                 }
                 break;
-            case "Second":
+            }
+            case "Second": {
                 const totalSeconds = timeValue.Value;
                 const seconds = totalSeconds % 60;
                 const totalMinutes = (totalSeconds - seconds) / 60;
@@ -137,9 +139,9 @@ class timeValueEntry {
                 const totalHours = (totalMinutes - minutes) / 60;
                 const hours = totalHours % 24;
                 const totalDays = (totalHours - hours) / 24;
-                
+
                 const signCount = Math.sign(seconds) + Math.sign(minutes) + Math.sign(hours) + Math.sign(totalDays);
-                
+
                 if (signCount > 1) {
                     result.unit("custom");
                     result.customSeconds(totalSeconds);
@@ -162,6 +164,7 @@ class timeValueEntry {
                     }
                 }
                 break;
+            }
         }
         
         return result;
@@ -173,7 +176,7 @@ class timeValueEntry {
         const resultTokens: string[] = [];
         
         switch (dto.Unit) {
-            case "Month":
+            case "Month": {
                 const months = dto.Value % 12;
                 const years = (dto.Value - months) / 12;
 
@@ -184,9 +187,9 @@ class timeValueEntry {
                     resultTokens.push(timeValueEntry.pluralizeMonths(months));
                 }
                 break;
+            }
                 
-                
-            case "Second":
+            case "Second": {
                 const totalSeconds = dto.Value;
                 const seconds = totalSeconds % 60;
                 const totalMinutes = (totalSeconds - seconds) / 60;
@@ -208,6 +211,7 @@ class timeValueEntry {
                     resultTokens.push(timeValueEntry.pluralizeSeconds(seconds));
                 }
                 break;
+            }
         }
 
         return resultTokens.join(" ");

@@ -6,7 +6,6 @@ import router = require("plugins/router");
 import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
 import studioSettings = require("common/settings/studioSettings");
-import globalSettings = require("common/settings/globalSettings");
 
 class menu {
 
@@ -392,14 +391,14 @@ class menu {
 const optionalParam = /\((.*?)\)/g;
 const namedParam = /(\(\?)?:\w+/g;
 const splatParam = /\*\w+/g;
-const escapeRegExp = /[\-{}\[\]+?.,\\\^$|#\s]/g;
+const escapeRegExp = /[-{}[\]+?.,\\^$|#\s]/g;
 const routesAreCaseSensitive = false;
 
 function routeStringToRegExp(routeString: string) {
     routeString = routeString.replace(escapeRegExp, '\\$&')
         .replace(optionalParam, '(?:$1)?')
         .replace(namedParam, function (match, optional) {
-            return optional ? match : '([^\/]+)';
+            return optional ? match : '([^/]+)';
         })
         .replace(splatParam, '(.*?)');
 
