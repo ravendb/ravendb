@@ -241,7 +241,9 @@ class clusterDashboard extends viewModelBase {
                 });
         } else {
             this.addWidget(new cpuUsageWidget(this));
-            //this.addWidget(new ioStatsWidget(this)); - we don't show this by default - as it is only available on linux machines
+            if (clusterTopologyManager.default.hasAnyNodeWithOs("Linux")) {
+                this.addWidget(new ioStatsWidget(this));
+            }
             this.addWidget(new trafficWidget(this));
             this.addWidget(new databaseTrafficWidget(this));
             this.addWidget(new databaseIndexingWidget(this));
