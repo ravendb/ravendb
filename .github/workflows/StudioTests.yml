@@ -4,10 +4,12 @@ on:
   push:
     branches:
         - feature/*
+        - v5.4
 
   pull_request:
     branches:
         - feature/*
+        - v5.4
 jobs:
   build:
     runs-on: ubuntu-latest
