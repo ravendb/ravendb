@@ -2,8 +2,8 @@ import websocketBasedWidget = require("viewmodels/resources/widgets/websocketBas
 import historyAwareNodeStats = require("models/resources/widgets/historyAwareNodeStats");
 import clusterDashboard = require("viewmodels/resources/clusterDashboard");
 import clusterDashboardWebSocketClient = require("common/clusterDashboardWebSocketClient");
-import lineChart = require("models/resources/clusterDashboard/lineChart");
 import moment = require("moment");
+import { lineChart } from "models/resources/clusterDashboard/lineChart";
 
 abstract class abstractChartsWebsocketWidget<
     TPayload extends Raven.Server.Dashboard.Cluster.AbstractClusterDashboardNotification, 
@@ -104,15 +104,25 @@ abstract class abstractChartsWebsocketWidget<
 
         this.scheduleSyncUpdate(() => {
             this.charts.forEach(chart => {
-                chart.onData(date, [{
-                    key: abstractChartsWebsocketWidget.chartKey(nodeTag),
-                    value: this.extractDataForChart(chart, data)
-                }]);
+                const extractedData = this.extractDataForChart(chart, data);
+                if (typeof extractedData !== "undefined") {
+                    chart.onData(date, [{
+                        key: abstractChartsWebsocketWidget.chartKey(nodeTag),
+                        value: extractedData
+                    }]);
+                }
             })
         });
     }
 
-    protected abstract extractDataForChart(chart: lineChart, data: TPayload): number;
+    /**
+     * extract data for given chart
+     * return undefined if data is not defined at given point
+     * @param chart target chart
+     * @param data source data
+     * @protected
+     */
+    protected abstract extractDataForChart(chart: lineChart, data: TPayload): number | undefined;
 }
 
 export = abstractChartsWebsocketWidget;
