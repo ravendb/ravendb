@@ -248,6 +248,8 @@ namespace Raven.Client.Documents.Operations.ETL
         internal bool IsAddingAttachments { get; private set; }
 
         internal bool IsLoadingAttachments { get; private set; }
+        
+        public string DocumentIdPostfix { get; set; }
 
         public Transformation()
         {

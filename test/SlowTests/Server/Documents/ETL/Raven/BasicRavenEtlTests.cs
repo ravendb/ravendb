@@ -68,6 +68,106 @@ namespace SlowTests.Server.Documents.ETL.Raven
                 }
             }
         }
+        
+        [Fact]
+        public void WithDocumentPrefix()
+        {
+            using (var src = GetDocumentStore())
+            using (var dest = GetDocumentStore())
+            {
+                AddEtl(src, new RavenEtlConfiguration()
+                    {
+                        Name = "with prefix",
+                        ConnectionStringName = "my-con",
+                        Transforms =
+                        {
+                            new Transformation
+                            {
+                                Name = $"ETL : my-con2",
+                                Collections = new List<string>{"Users"},
+                                Script = "loadToUsers2(this);",
+                                ApplyToAllDocuments = false,
+                                Disabled = false,
+                                DocumentIdPostfix = "chicago"
+                            },
+                            new Transformation
+                            {
+                                Name = $"ETL : my-con1",
+                                Collections = new List<string>{"Users"},
+                                Script = "loadToUsers(this); loadToUsers2(this);",
+                                ApplyToAllDocuments = false,
+                                Disabled = false,
+                                DocumentIdPostfix = ",Chicago"
+                            }
+                        },
+                    },
+                    new RavenConnectionString
+                    {
+                        Name = "my-con",
+                        Database = dest.Database,
+                        TopologyDiscoveryUrls = dest.Urls,
+                    }
+                );
+                
+                using (var session = src.OpenSession())
+                {
+                    session.Store(new User()
+                    {
+                        Name = "Joe Doe"
+                    });
+
+                    session.SaveChanges();
+                }
+
+                WaitForValue(() =>
+                {
+                    using (var session = dest.OpenSession())
+                    {
+                        var user = session.Load<User>("users/1-A,Chicago");
+                        return user != null;
+                    }
+                }, true);
+
+                using (var session = dest.OpenSession())
+                {
+                    var user = session.Load<User>("users/1-A,Chicago");
+
+                    Assert.NotNull(user);
+                    Assert.Equal("Joe Doe", user.Name);
+                    var other = session.Advanced.RawQuery<object>("from Users2 where startsWith(id(), 'users/1-A/')")
+                        .Single();
+                    
+                    Assert.StartsWith("users/1-A/users2/chicago/", session.Advanced.GetDocumentId(other));
+                }
+
+                using (var session = src.OpenSession())
+                {
+                    session.Delete("users/1-A");
+
+                    session.SaveChanges();
+                }
+
+                WaitForValue(() =>
+                {
+                    using (var session = dest.OpenSession())
+                    {
+                        var user = session.Load<User>("users/1-A,Chicago");
+                        return user == null;
+                    }
+                }, true);
+                
+                using (var session = dest.OpenSession())
+                {
+                    var user = session.Load<User>("users/1-A,Chicago");
+
+                    Assert.Null(user);
+                    
+                    var item = session.Advanced.RawQuery<object>("from Users2 where startsWith(id(), 'users/1-A/')")
+                        .SingleOrDefault();
+                    Assert.Null(item);
+                }
+            }
+        }
 
         [Fact]
         public void SetMentorToEtlAndFailover()
