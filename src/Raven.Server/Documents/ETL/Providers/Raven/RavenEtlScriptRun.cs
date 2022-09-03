@@ -4,7 +4,9 @@ using System.Diagnostics;
 using Jint.Native;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations.Counters;
+using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.TimeSeries;
+using Raven.Client.Extensions;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.TimeSeries;
 using Sparrow.Json;
@@ -14,7 +16,8 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
     public class RavenEtlScriptRun
     {
         private readonly EtlStatsScope _stats;
-        private readonly List<ICommandData> _deletes = new List<ICommandData>();
+        private readonly Transformation _transformation;
+        private readonly List<ICommandData> _deletes = new();
 
         private Dictionary<JsValue, (string Id, BlittableJsonReaderObject Document)> _putsByJsReference;
         
@@ -36,18 +39,22 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
         private Dictionary<string, List<ICommandData>> _fullDocuments;
 
-        public RavenEtlScriptRun(EtlStatsScope stats)
+        public RavenEtlScriptRun(EtlStatsScope stats, Transformation transformation)
         {
             _stats = stats;
+            _transformation = transformation;
         }
 
-        public void Delete(ICommandData command)
+        public void Delete(string documentId)
         {
-            Debug.Assert(command is DeleteCommandData || command is DeletePrefixedCommandData);
-
-            _deletes.Add(command);
+            _deletes.Add(new DeleteCommandData(GetRemoteDocumentId(documentId), null, null));
         }
 
+        public void DeleteByPrefix(string documentIdPrefix)
+        {
+            _deletes.Add(new DeletePrefixedCommandData(GetRemoteDocumentId(documentIdPrefix)));
+        }
+        
         public void PutFullDocument(
             string id, 
             BlittableJsonReaderObject doc, 
@@ -62,7 +69,8 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
             var commands = _fullDocuments[id] = new List<ICommandData>();
 
-            commands.Add(new PutCommandDataWithBlittableJson(id, null,null, doc));
+            string remoteDocumentId = GetRemoteDocumentId(id);
+            commands.Add(new PutCommandDataWithBlittableJson(remoteDocumentId, null,null, doc));
 
             _stats.IncrementBatchSize(doc.Size);
 
@@ -70,7 +78,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             {
                 foreach (var attachment in attachments)
                 {
-                    commands.Add(new PutAttachmentCommandData(id, attachment.Name, attachment.Stream, attachment.ContentType, null));
+                    commands.Add(new PutAttachmentCommandData(remoteDocumentId, attachment.Name, attachment.Stream, attachment.ContentType, null));
 
                     _stats.IncrementBatchSize(attachment.Stream.Length);
                 }
@@ -78,7 +86,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
             if (counterOperations?.Count > 0)
             {
-                commands.Add(new CountersBatchCommandData(id, counterOperations)
+                commands.Add(new CountersBatchCommandData(remoteDocumentId, counterOperations)
                 {
                     FromEtl = true
                 });
@@ -88,7 +96,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             {
                 foreach (var operation in timeSeriesOperations)
                 {
-                    commands.Add(new TimeSeriesBatchCommandData(id, operation.Name, operation.Appends, operation.Deletes)
+                    commands.Add(new TimeSeriesBatchCommandData(remoteDocumentId, operation.Name, operation.Appends, operation.Deletes)
                     {
                         FromEtl = true
                     });    
@@ -142,7 +150,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
         public void DeleteAttachment(string documentId, string name)
         {
-            _deletes.Add(new DeleteAttachmentCommandData(documentId, name, null));
+            _deletes.Add(new DeleteAttachmentCommandData(GetRemoteDocumentId(documentId), name, null));
         }
 
         public void AddCounter(JsValue instance, JsValue counterReference)
@@ -260,7 +268,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
             if (timeSeriesOperations.TryGetValue(timeSeriesName, out var timeSeriesOperation) == false)
             {
-                timeSeriesOperation = new TimeSeriesBatchCommandData(documentId, timeSeriesName, appends: null, deletes: null);
+                timeSeriesOperation = new TimeSeriesBatchCommandData(GetRemoteDocumentId(documentId), timeSeriesName, appends: null, deletes: null);
                 timeSeriesOperations.Add(timeSeriesName, timeSeriesOperation);
             }
 
@@ -284,20 +292,21 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             {
                 foreach (var put in _putsByJsReference)
                 {
-                    commands.Add(new PutCommandDataWithBlittableJson(put.Value.Id, null, null, put.Value.Document));
+                    string remoteDocumentId = GetRemoteDocumentId(put.Value.Id);
+                    commands.Add(new PutCommandDataWithBlittableJson(remoteDocumentId, null, null, put.Value.Document));
 
                     if (_addAttachments != null && _addAttachments.TryGetValue(put.Key, out var putAttachments))
                     {
                         foreach (var addAttachment in putAttachments)
                         {
-                            commands.Add(new PutAttachmentCommandData(put.Value.Id, addAttachment.Name, addAttachment.Attachment.Stream, addAttachment.Attachment.ContentType,
+                            commands.Add(new PutAttachmentCommandData(remoteDocumentId, addAttachment.Name, addAttachment.Attachment.Stream, addAttachment.Attachment.ContentType,
                                 null));
                         }
                     }
 
                     if (_countersByJsReference != null && _countersByJsReference.TryGetValue(put.Key, out var counterOperations))
                     {
-                        commands.Add(new CountersBatchCommandData(put.Value.Id, counterOperations)
+                        commands.Add(new CountersBatchCommandData(remoteDocumentId, counterOperations)
                         {
                             FromEtl = true
                         });
@@ -307,7 +316,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                     {
                         foreach (var (_, operation) in timeSeriesOperations)
                         {
-                            commands.Add(new TimeSeriesBatchCommandData(put.Value.Id, operation.Name, operation.Appends, operation.Deletes){FromEtl = true});
+                            commands.Add(new TimeSeriesBatchCommandData(remoteDocumentId, operation.Name, operation.Appends, operation.Deletes){FromEtl = true});
                         }
                     }
                 }
@@ -317,7 +326,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             {
                 foreach (var counter in _countersByDocumentId)
                 {
-                    commands.Add(new CountersBatchCommandData(counter.Key, counter.Value)
+                    commands.Add(new CountersBatchCommandData(GetRemoteDocumentId(counter.Key), counter.Value)
                     {
                         FromEtl = true
                     });
@@ -351,6 +360,20 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             }
 
             return false;
+        }
+
+        private string GetRemoteDocumentId(string localDocId)
+        {
+            if (_transformation.DocumentIdPostfix != null)
+            {
+                if (localDocId.EndsWith("/"))
+                {
+                    return localDocId + _transformation.DocumentIdPostfix + "/";
+                }
+
+                return localDocId + _transformation.DocumentIdPostfix;
+            }
+            return localDocId;
         }
     }
 }
