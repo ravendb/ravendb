@@ -1,8 +1,13 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Sharding;
 using Raven.Client.Http;
 using Raven.Server.Documents.Replication;
 using Sparrow.Json.Parsing;
@@ -53,6 +58,44 @@ namespace FastTests.Sharding
                     Assert.Null(u);
                 }
 
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Sharding)]
+        public void CanPutCounters()
+        {
+            using (var store = Sharding.GetDocumentStore())
+            {
+                using (var s = store.OpenSession())
+                {
+                    var u = new User();
+                    s.Store(u, "users/1");
+                    /*s.CountersFor(u).Increment("Likes", 555);
+                    s.CountersFor(u).Increment("Views", 100);
+                    s.TimeSeriesFor(u, "BPM").Append(DateTime.UtcNow, 120);
+                    s.TimeSeriesFor(u, "Price").Append(DateTime.UtcNow, 1000);*/
+                    s.SaveChanges();
+                }
+
+                store.Operations.Send(new CounterBatchOperation(new CounterBatch
+                {
+                    Documents = new List<DocumentCountersOperation>
+                    {
+                        new DocumentCountersOperation
+                        {
+                            DocumentId = "users/1",
+                            Operations = new List<CounterOperation>
+                            {
+                                new CounterOperation
+                                {
+                                    Type = CounterOperationType.Put,
+                                    CounterName = "likes",
+                                    Delta = 10
+                                }
+                            }
+                        }
+                    }
+                }));
             }
         }
 
@@ -258,6 +301,54 @@ namespace FastTests.Sharding
                     Assert.Equal("Potit", pets["pets/3"].Name);
 
                     Assert.Equal(numberOfResults, s.Advanced.NumberOfRequests);
+                }
+            }
+        }
+        
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Sharding)]
+        public async Task MoveAndCopyAttachmentShouldThrow()
+        {
+            using (var store = Sharding.GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    using (var ms = new MemoryStream(new byte[] { 1, 2, 3 }))
+                    {
+                        var user = new Raven.Tests.Core.Utils.Entities.User { Name = "User 1" };
+                        var user2 = new Raven.Tests.Core.Utils.Entities.User { Name = "User 1" };
+                        await session.StoreAsync(user, "users/1");
+                        await session.StoreAsync(user2, "users/2");
+                    
+                        session.Advanced.Attachments.Store(user, "foo", ms);
+                        await session.SaveChangesAsync();
+                    }
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Advanced.Attachments.Move("users/1","foo","users/2","bar");
+                    await Assert.ThrowsAsync<NotSupportedInShardingException>(() => session.SaveChangesAsync());
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Advanced.Attachments.Copy("users/1","foo","users/2","bar");
+                    await Assert.ThrowsAsync<NotSupportedInShardingException>(() => session.SaveChangesAsync());
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Sharding)]
+        public async Task CanGenerateIdFromEmptyString()
+        {
+            using (var store = Sharding.GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    var u = new Raven.Tests.Core.Utils.Entities.User();
+                    await session.StoreAsync(u, string.Empty);
+                    await session.SaveChangesAsync();
+                    Assert.Equal(36, u.Id.Length);
                 }
             }
         }
