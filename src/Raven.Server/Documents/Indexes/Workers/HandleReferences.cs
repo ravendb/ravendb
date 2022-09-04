@@ -168,12 +168,27 @@ namespace Raven.Server.Documents.Indexes.Workers
                         var keepRunning = true;
                         var earlyExit = false;
                         var lastCollectionEtag = -1L;
+
+                        if (CurrentIndexingScope.Current.ReferencesByCollection != null &&
+                            CurrentIndexingScope.Current.ReferencesByCollection.TryGetValue(collection, out var values))
+                        {
+                            // references were found during handling references of a previous collection (HandleReferences is the first worker that is running)
+                            // in case of a very rare race condition, the found reference was saved after we processed the parent document
+                            // we saved the reference in the ReferencesByCollection (in memory) but we process the references from the storage
+                            // at this point, we cannot find the reference in the storage, and we skip the reference document and mark it as processed
+
+                            _indexStorage.ReferencesForDocuments.WriteReferencesForSingleCollection(collection, values, indexContext.Transaction);
+                        }
+
+                        //TODO: compare exchange references
+
                         while (keepRunning)
                         {
                             var hasChanges = false;
                             earlyExit = false;
 
                             var indexed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
                             using (queryContext.OpenReadTransaction())
                             {
                                 sw.Restart();
@@ -389,29 +404,6 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                 yield return item;
             }
-
-            if (CurrentIndexingScope.Current.ReferencesByCollection != null &&
-                CurrentIndexingScope.Current.ReferencesByCollection.TryGetValue(collection, out var values))
-            {
-                // references were found during handling references
-                // in case of a very rare race condition the found reference was saved after we processed the parent document
-                // we saved the references in the ReferencesByCollection (in memory) but we process the references that we take from the storage
-                // at this point, we cannot find the references in the storage, we skip the reference document and mark it as processed
-
-                foreach (var key in new List<Slice>(values.Keys))
-                {
-                    if (indexed.Add(key.ToString()) == false)
-                        continue;
-
-                    var item = GetItem(queryContext.Documents, key);
-                    if (item == null)
-                        continue;
-
-                    yield return item;
-                }
-            }
-
-            //TODO: compare exchange references
         }
 
         protected virtual IEnumerable<Reference> GetItemReferences(QueryOperationContext queryContext, CollectionName referencedCollection, long lastEtag, long pageSize)
