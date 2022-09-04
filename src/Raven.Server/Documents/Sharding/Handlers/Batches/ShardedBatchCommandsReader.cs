@@ -1,8 +1,13 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Commands.Batches;
+using Raven.Client.Exceptions.Sharding;
+using Raven.Server.Documents.ETL.Providers.SQL.Test;
 using Raven.Server.Documents.Handlers.Batches;
+using Raven.Server.Documents.TransactionCommands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -51,10 +56,12 @@ public class ShardedBatchCommandsReader : AbstractBatchCommandsReader<ShardedBat
             using (_bufferedCommandCopier.UseCommand(bufferedCommand))
             {
                 result = await BatchRequestParser.ReadSingleCommand(ctx, stream, state, parser, buffer, modifier, token);
+                ValidateSupportedCommand(result);
             }
 
             bufferedCommand.IsIdentity = IsIdentityCommand(ref result);
             bufferedCommand.IsServerSideIdentity = bufferedCommand.IsIdentity == false && IsServerSideIdentityCommand(ref result, _databaseContext.IdentityPartsSeparator);
+            bufferedCommand.IsEmptyId = result.Id == string.Empty;
 
             BufferedCommands.Add(bufferedCommand);
 
@@ -64,6 +71,17 @@ public class ShardedBatchCommandsReader : AbstractBatchCommandsReader<ShardedBat
         {
             await ms.DisposeAsync();
             throw;
+        }
+    }
+
+    private static void ValidateSupportedCommand(BatchRequestParser.CommandData command)
+    {
+        switch (command.Type)
+        {
+            case CommandType.TimeSeriesCopy:
+            case CommandType.AttachmentMOVE:
+            case CommandType.AttachmentCOPY:
+                throw new NotSupportedInShardingException($"Command type {command.Type} for ID {command.Id} is not supported");
         }
     }
 
