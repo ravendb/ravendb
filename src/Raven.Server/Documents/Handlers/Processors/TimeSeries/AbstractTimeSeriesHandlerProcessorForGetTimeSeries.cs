@@ -45,6 +45,9 @@ namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
             {
                 rangeResult = await GetTimeSeriesAndWriteAsync(context, documentId, name, from, to, start, pageSize, includeDoc, includeTags, fullResults);
 
+                if (rangeResult == null)
+                    return; // not-modified or not-found
+
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
                 {
                     WriteRange(writer, rangeResult, rangeResult?.TotalResults);
