@@ -79,23 +79,15 @@ public class ShardedBatchCommand : IBatchCommand, IEnumerable<SingleShardedComma
                 continue;
             }
 
-            int shardNumber;
-            if (bufferedCommand.IsServerSideIdentity)
+            var commandStream = bufferedCommand.CommandStream;
+            if (bufferedCommand.ModifyIdentityStreamRequired)
             {
-                cmd.Id = ShardHelper.GenerateStickyId(cmd.Id, _databaseContext.IdentityPartsSeparator);                     // generated id is 'users/$BASE26$/'
-                shardNumber = _databaseContext.GetShardNumber(_context, cmd.Id.AsSpan(0, cmd.Id.Length - 2));   // here we are cheating by cutting '$/' from the end to detect shard number based on BASE26 part
-            }
-            else
-            {
-                shardNumber = _databaseContext.GetShardNumber(_context, cmd.Id);
+                ModifyId(ref cmd, bufferedCommand.IsServerSideIdentity);
+                commandStream = bufferedCommand.ModifyIdentityStream(cmd);
             }
 
+            int shardNumber = GetShardNumberForCommandType(cmd, bufferedCommand.IsServerSideIdentity);
             var stream = cmd.Type == CommandType.AttachmentPUT ? AttachmentStreams[streamPosition++] : null;
-            var commandStream = bufferedCommand.CommandStream;
-            if (bufferedCommand.IsIdentity || bufferedCommand.IsServerSideIdentity)
-            {
-                commandStream = bufferedCommand.ModifyIdentityStream(cmd.Id);
-            }
 
             yield return new SingleShardedCommand
             {
@@ -105,6 +97,28 @@ public class ShardedBatchCommand : IBatchCommand, IEnumerable<SingleShardedComma
                 PositionInResponse = positionInResponse++
             };
         }
+    }
+
+    private void ModifyId(ref BatchRequestParser.CommandData cmd, bool isServerSideIdentity)
+    {
+        if (isServerSideIdentity)
+            cmd.Id = ShardHelper.GenerateStickyId(cmd.Id, _databaseContext.IdentityPartsSeparator); // generated id is 'users/$BASE26$/'
+
+        if (string.Empty == cmd.Id)
+            cmd.Id = Guid.NewGuid().ToString();
+    }
+
+    private int GetShardNumberForCommandType(BatchRequestParser.CommandData cmd, bool isServerSideIdentity)
+    {
+        if (isServerSideIdentity)
+        {
+            return _databaseContext.GetShardNumber(_context, cmd.Id.AsSpan(0, cmd.Id.Length - 2));   // here we are cheating by cutting '$/' from the end to detect shard number based on BASE26 part
+        }
+
+        if (cmd.Type == CommandType.Counters)
+            return _databaseContext.GetShardNumber(_context, cmd.Id ?? cmd.Counters.DocumentId);
+
+        return _databaseContext.GetShardNumber(_context, cmd.Id);
     }
 
     IEnumerator IEnumerable.GetEnumerator()

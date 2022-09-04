@@ -179,7 +179,7 @@ public class MergedBatchCommand : TransactionMergedCommand
                         // attachment sent by Raven ETL, only prefix is defined
 
                         if (lastPutResult == null)
-                            ThrowUnexpectedOrderOfRavenEtlCommands();
+                            ThrowUnexpectedOrderOfRavenEtlCommands("Bulk Docs");
 
                         Debug.Assert(lastPutResult.Value.Id.StartsWith(docId));
 
@@ -460,7 +460,7 @@ public class MergedBatchCommand : TransactionMergedCommand
         // counter/time-series sent by Raven ETL, only prefix is defined
 
         if (lastPutResult == null)
-            ThrowUnexpectedOrderOfRavenEtlCommands();
+            ThrowUnexpectedOrderOfRavenEtlCommands("Raven ETL");
 
         Debug.Assert(lastPutResult.HasValue && lastPutResult.Value.Id.StartsWith(docId));
         return lastPutResult.Value.Id;
@@ -491,8 +491,8 @@ public class MergedBatchCommand : TransactionMergedCommand
         public Stream Stream;
     }
 
-    private void ThrowUnexpectedOrderOfRavenEtlCommands()
+    private void ThrowUnexpectedOrderOfRavenEtlCommands(string source)
     {
-        throw new InvalidOperationException($"Unexpected order of commands sent by Raven ETL. {CommandType.AttachmentPUT} needs to be preceded by {CommandType.PUT}");
+        throw new InvalidOperationException($"Unexpected order of commands sent by {source}. {CommandType.AttachmentPUT} needs to be preceded by {CommandType.PUT}");
     }
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using Raven.Client.Documents.Commands.Batches;
+using Raven.Server.Documents.Handlers.Batches;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Batches;
@@ -12,6 +13,7 @@ public class BufferedCommand
     public MemoryStream CommandStream;
     public bool IsIdentity;
     public bool IsServerSideIdentity;
+    public bool IsEmptyId;
     public bool IsBatchPatch;
 
     // for identities we should replace the id and the change vector
@@ -23,14 +25,19 @@ public class BufferedCommand
     public int IdsStartPosition;
     public int IdsEndPosition;
 
-    public MemoryStream ModifyIdentityStream(string newId)
+    public bool ModifyIdentityStreamRequired => IsServerSideIdentity || IsEmptyId || IsIdentity;
+
+    public MemoryStream ModifyIdentityStream(BatchRequestParser.CommandData cmd)
     {
-        if (IsIdentity == false && IsServerSideIdentity == false)
+        if (cmd.Type != CommandType.PUT)
+            throw new InvalidOperationException($"Expected command of type 'PUT', but got {cmd.Type}");
+
+        if (ModifyIdentityStreamRequired == false)
             throw new InvalidOperationException("Must be an identity");
 
         using (CommandStream)
         {
-            var modifier = new IdentityCommandModifier(IdStartPosition, IdLength, ChangeVectorPosition, newId);
+            var modifier = IdentityCommandModifier.Create(IdStartPosition, IdLength, ChangeVectorPosition, cmd.Id);
             return modifier.Rewrite(CommandStream);
         }
     }
@@ -133,7 +140,7 @@ public class BufferedCommand
             if (IdStartPosition <= 0)
                 BufferedCommandModifier.ThrowArgumentMustBePositive("Id position");
 
-            if (IdLength <= 0)
+            if (IdLength < 0) // can be zero, if requested ID is 'string.Empty'
                 BufferedCommandModifier.ThrowArgumentMustBePositive("Id length");
         }
 
@@ -158,7 +165,14 @@ public class BufferedCommand
 
     public class IdentityCommandModifier : BufferedCommandModifier
     {
-        public IdentityCommandModifier(int idStartPosition, int idLength, int changeVectorPosition, string newId)
+        public static IdentityCommandModifier Create(int idStartPosition, int idLength, int changeVectorPosition, string newId)
+        {
+            return changeVectorPosition == 0 ? 
+                new IdentityCommandModifier(idStartPosition, idLength, newId) : 
+                new IdentityCommandModifier(idStartPosition, idLength, changeVectorPosition, newId);
+        }
+
+        private IdentityCommandModifier(int idStartPosition, int idLength, int changeVectorPosition, string newId)
         {
             Items = new IItemModifier[2];
 
@@ -183,6 +197,20 @@ public class BufferedCommand
                 Items[1] = cvModifier;
                 Items[0] = idModifier;
             }
+        }
+
+        private IdentityCommandModifier(int idStartPosition, int idLength, string newId)
+        {
+            Items = new IItemModifier[1];
+
+            var idModifier = new IdModifier
+            {
+                IdLength = idLength,
+                IdStartPosition = idStartPosition,
+                NewId = newId
+            };
+           
+            Items[0] = idModifier;
         }
     }
 
