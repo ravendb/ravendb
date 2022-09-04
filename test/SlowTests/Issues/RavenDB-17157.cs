@@ -4,9 +4,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using Parquet.Thrift;
 using Raven.Client;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
+using Raven.Client.Exceptions;
 using Raven.Client.Json;
 using SlowTests.Core.Utils.Entities;
 using Tests.Infrastructure;
@@ -22,6 +26,33 @@ namespace SlowTests.Issues
         }
 
         [Fact]
+        public void OnSessionCreated_WaitForIndexesAfterSaveChanges_DisableIndexTest()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var userIndex = new UsersIndex();
+                string indexName = userIndex.IndexName;
+                userIndex.Execute(store);
+                store.Maintenance.Send(new DisableIndexOperation(indexName));
+                string[] indexes = { indexName };
+
+                store.OnSessionCreated += (sender, sessionCreatedEventArgs) =>
+                {
+                    sessionCreatedEventArgs.Session.WaitForIndexesAfterSaveChanges(timeout: TimeSpan.FromMilliseconds(500), throwOnTimeout: true, indexes: indexes);
+                };
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Foo" });
+                    session.Store(new User { Name = "Bar" });
+                    var exception = Assert.Throws<RavenTimeoutException>(() => session.SaveChanges());
+
+                    Assert.Contains("total stale indexes: 1", exception.Message);
+                }
+            }
+        }
+
+        [Fact]
         public void OnSessionCreated_WaitForIndexesAfterSaveChanges_Test()
         {
             using (var store = GetDocumentStore())
@@ -30,6 +61,8 @@ namespace SlowTests.Issues
                 {
                     sessionCreatedEventArgs.Session.WaitForIndexesAfterSaveChanges();
                 };
+                
+                new UsersIndex().Execute(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -38,10 +71,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
 
                     QueryStatistics stats;
-                    var results = session.Query<User>()
-                        .Statistics(out stats)
-                        .Where(x => x.Name.StartsWith("Foo"))
-                        .ToList();
+                    var results = ExecuteQuery();
 
                     Assert.Equal(1, results.Count);
                     Assert.False(stats.IsStale);
@@ -49,13 +79,19 @@ namespace SlowTests.Issues
                     session.Store(new User { Name = "FooBar" });
                     session.SaveChanges();
 
-                    results = session.Query<User>()
-                        .Statistics(out stats)
-                        .Where(x => x.Name.StartsWith("Foo"))
-                        .ToList();
+                    results = ExecuteQuery();
 
                     Assert.Equal(2, results.Count);
                     Assert.False(stats.IsStale);
+
+                    List<User> ExecuteQuery()
+                    {
+                        return session.Query<UsersIndex.Result, UsersIndex>()
+                            .Statistics(out stats)
+                            .Where(x => x.MyName.StartsWith("Foo"))
+                            .As<User>()
+                            .ToList();
+                    }
                 }
             }
         }
@@ -122,6 +158,24 @@ namespace SlowTests.Issues
                     Assert.NotNull(session.Load<User>("4"));
                     Assert.NotNull(session.Load<User>("1"));
                 }
+            }
+        }
+
+        private class UsersIndex : AbstractIndexCreationTask<User>
+        {
+            public class Result
+            {
+                public string MyName { get; set; }
+            }
+
+            public UsersIndex()
+            {
+                Map = users => 
+                    from user in users
+                    select new Result
+                    {
+                        MyName = user.Name
+                    };
             }
         }
     }
