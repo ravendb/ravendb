@@ -169,21 +169,22 @@ namespace Raven.Server.Documents.Indexes.Workers
                         var earlyExit = false;
                         var lastCollectionEtag = -1L;
 
-                        if (CurrentIndexingScope.Current.ReferencesByCollection != null &&
-                            CurrentIndexingScope.Current.ReferencesByCollection.TryGetValue(collection, out var values))
-                        {
-                            // references were found during handling references of a previous collection (HandleReferences is the first worker that is running)
-                            // in case of a very rare race condition, the found reference was saved after we processed the parent document
-                            // we saved the reference in the ReferencesByCollection (in memory) but we process the references from the storage
-                            // at this point, we cannot find the reference in the storage, and we skip the reference document and mark it as processed
-
-                            _indexStorage.ReferencesForDocuments.WriteReferencesForSingleCollection(collection, values, indexContext.Transaction);
-                        }
-
-                        //TODO: compare exchange references
-
                         while (keepRunning)
                         {
+                            if (CurrentIndexingScope.Current.ReferencesByCollection != null &&
+                                CurrentIndexingScope.Current.ReferencesByCollection.TryGetValue(collection, out var values))
+                            {
+                                // references were found during handling references run
+                                // (HandleReferences is the first worker that is running so those references were found here)
+                                // when we have a LoadDocument we save the referenced document in-memory (ReferencesByCollection) and at the end of the batch we store it in the storage
+                                // BUT we process the references from the storage only
+                                // in order to avoid skipping handling the found references, we must save them in the storage
+
+                                _indexStorage.ReferencesForDocuments.WriteReferencesForSingleCollection(collection, values, indexContext.Transaction);
+                            }
+
+                            //TODO: compare exchange references
+
                             var hasChanges = false;
                             earlyExit = false;
 
@@ -272,8 +273,6 @@ namespace Raven.Server.Documents.Indexes.Workers
                                                 {
                                                     var numberOfResults = _index.HandleMap(current, mapResults, writeOperation, indexContext, collectionStats);
 
-                                                    _index.DocumentDatabase.IndexStore.ForTestingPurposes?.AfterReferencedDocumentWasIndexed?.Invoke();
-
                                                     resultsCount += numberOfResults;
                                                     collectionStats.RecordMapReferenceSuccess();
                                                     _index.MapsPerSec?.MarkSingleThreaded(numberOfResults);
@@ -311,6 +310,8 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                                 if (hasChanges == false)
                                     break;
+
+                                _index._forTestingPurposes?.BeforeClosingDocumentsReadTransactionForHandleReferences?.Invoke();
                             }
 
                             bool CanContinueReferenceBatch()
