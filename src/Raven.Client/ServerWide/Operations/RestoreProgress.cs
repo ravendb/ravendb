@@ -5,7 +5,13 @@ namespace Raven.Client.ServerWide.Operations
 {
     public class RestoreProgress : SmugglerResult.SmugglerProgress
     {
-        public Counts SnapshotRestore => ((RestoreResult)_result).SnapshotRestore;
+        public Counts SnapshotRestore => (_result as RestoreResult)?.SnapshotRestore;
+
+        public RestoreProgress()
+            : this(null)
+        {
+            // for deserialization
+        }
 
         public RestoreProgress(RestoreResult result) : base(result)
         {
@@ -15,7 +21,7 @@ namespace Raven.Client.ServerWide.Operations
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
-            json[nameof(SnapshotRestore)] = SnapshotRestore.ToJson();
+            json[nameof(SnapshotRestore)] = SnapshotRestore?.ToJson();
             return json;
         }
     }
