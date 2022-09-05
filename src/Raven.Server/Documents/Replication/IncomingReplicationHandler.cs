@@ -481,6 +481,8 @@ namespace Raven.Server.Documents.Replication
 
             public TcpConnectionHeaderMessage.SupportedFeatures SupportedFeatures { get; set; }
 
+            public HashSet<Slice> AttachmentStreamsToDeleteAtTheEndOfBatch = new(SliceComparer.Instance);
+
             public Logger Logger { get; set; }
 
             public void Dispose()
@@ -1107,7 +1109,7 @@ namespace Raven.Server.Documents.Replication
                     HashSet<LazyStringValue> docCountersToRecreate = null;
                     var handledAttachmentStreams = new HashSet<Slice>(SliceComparer.Instance);
                     context.LastDatabaseChangeVector ??= DocumentsStorage.GetDatabaseChangeVector(context);
-                    database.DocumentsStorage.AttachmentsStorage.AttachmentStreamsToDeleteAtTheEndOfBatch.Clear();
+                    _replicationInfo.AttachmentStreamsToDeleteAtTheEndOfBatch.Clear();
 
                     foreach (var item in _replicationInfo.ReplicatedItems)
                     {
@@ -1182,13 +1184,15 @@ namespace Raven.Server.Documents.Replication
                                 break;
 
                             case AttachmentTombstoneReplicationItem attachmentTombstone:
-
                                 var tombstone = AttachmentsStorage.GetAttachmentTombstoneByKey(context, attachmentTombstone.Key);
                                 if (tombstone != null && ChangeVectorUtils.GetConflictStatus(item.ChangeVector, tombstone.ChangeVector) == ConflictStatus.AlreadyMerged)
                                     continue;
-
-                                database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, attachmentTombstone.Key, false, "$fromReplication", null,
-                                    rcvdChangeVector, attachmentTombstone.LastModifiedTicks, fromReplication: true);
+                                
+                                var hashSlice = database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, attachmentTombstone.Key, false, "$fromReplication", null,
+                                    rcvdChangeVector, attachmentTombstone.LastModifiedTicks, deleteAttachmentStream: false);
+                                
+                                if(hashSlice.HasValue)
+                                    _replicationInfo.AttachmentStreamsToDeleteAtTheEndOfBatch.Add(hashSlice);
 
                                 break;
 
@@ -1417,9 +1421,10 @@ namespace Raven.Server.Documents.Replication
                         }
                     }
 
-                    foreach (var hashSlice in database.DocumentsStorage.AttachmentsStorage.AttachmentStreamsToDeleteAtTheEndOfBatch)
+                    foreach (var hashSlice in _replicationInfo.AttachmentStreamsToDeleteAtTheEndOfBatch)
                     {
-                        database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentStream(context, hashSlice, expectedCount: 0, fromReplication: false);
+                        database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentStream(context, hashSlice, expectedCount: 0);
+                        hashSlice.Release(context.Allocator);
                     }
 
                     Debug.Assert(_replicationInfo.ReplicatedAttachmentStreams == null ||

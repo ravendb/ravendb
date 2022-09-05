@@ -42,8 +42,6 @@ namespace Raven.Server.Documents
 
         internal static readonly TableSchema AttachmentsSchema = new TableSchema();
         public static readonly string AttachmentsTombstones = "Attachments.Tombstones";
-        
-        public HashSet<Slice> AttachmentStreamsToDeleteAtTheEndOfBatch = new(SliceComparer.Instance);
 
         private enum AttachmentsTable
         {
@@ -437,8 +435,8 @@ namespace Raven.Server.Documents
             foreach (var attachment in attachmentsFromDocumentMetadata)
             {
                 using var _ = Slice.From(context.Allocator, attachment.Hash, out Slice hashSlice);
-                var contentType = context.GetLazyString(attachment.ContentType);
-                var name = context.GetLazyString(attachment.Name);
+                using var contentType = context.GetLazyString(attachment.ContentType);
+                using var name = context.GetLazyString(attachment.Name);
                 
                 PutRevisionAttachment(context, lowerId.Content.Ptr, lowerId.Size, changeVector, (name, contentType, hashSlice));
             }
@@ -512,17 +510,9 @@ namespace Raven.Server.Documents
             _documentDatabase.Metrics.Attachments.BytesPutsPerSec.MarkSingleThreaded(stream.Length);
         }
 
-        internal void DeleteAttachmentStream(DocumentsOperationContext context, Slice hash, int expectedCount = 1, bool fromReplication = false)
+        internal void DeleteAttachmentStream(DocumentsOperationContext context, Slice hash, int expectedCount = 1)
         {
-            if (fromReplication)
-            {
-                AttachmentStreamsToDeleteAtTheEndOfBatch.Add(hash.Clone(context.Allocator));
-                return;
-            }
-
-            var refCount = GetCountOfAttachmentsForHash(context, hash);
-            
-            if (refCount == expectedCount)
+            if (GetCountOfAttachmentsForHash(context, hash) == expectedCount)
             {
                 var tree = context.Transaction.InnerTransaction.CreateTree(AttachmentsSlice);
                 tree.DeleteStream(hash);
@@ -1215,8 +1205,8 @@ namespace Raven.Server.Documents
             return null;
         }
 
-        public void DeleteAttachmentDirect(DocumentsOperationContext context, Slice key, bool isPartialKey, string name,
-            string expectedChangeVector, string changeVector, long lastModifiedTicks, bool fromReplication = false)
+        public Slice DeleteAttachmentDirect(DocumentsOperationContext context, Slice key, bool isPartialKey, string name,
+            string expectedChangeVector, string changeVector, long lastModifiedTicks, bool deleteAttachmentStream = true)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
 
@@ -1245,14 +1235,15 @@ namespace Raven.Server.Documents
                     // We'll create a tombstones just to make sure that it would replicate the delete.
                     attachmentEtag = _documentsStorage.GenerateNextEtagForReplicatedTombstoneMissingDocument(context);
                 }
-
+                
                 CreateTombstone(context, key, attachmentEtag, changeVector, lastModifiedTicks);
-                return;
+                return default;
             }
 
             var currentChangeVector = TableValueToChangeVector(context, (int)AttachmentsTable.ChangeVector, ref tvr);
             var etag = TableValueToEtag((int)AttachmentsTable.Etag, ref tvr);
 
+            Slice result;
             using (isPartialKey ?
                 TableValueToSlice(context, (int)AttachmentsTable.LowerDocumentIdAndLowerNameAndTypeAndHashAndContentType, ref tvr, out key)
               : default(ByteStringContext.InternalScope))
@@ -1267,20 +1258,24 @@ namespace Raven.Server.Documents
                     };
                 }
 
-                DeleteInternal(context, key, etag, hash, changeVector, lastModifiedTicks, fromReplication);
+                result = hash.Clone(context.Allocator);
+                DeleteInternal(context, key, etag, hash, changeVector, lastModifiedTicks, deleteAttachmentStream);
             }
-
+            
             table.Delete(tvr.Id);
+            return result;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void DeleteInternal(DocumentsOperationContext context, Slice key, long etag, Slice hash, string changeVector, long lastModifiedTicks, bool fromReplication = false)
+        private void DeleteInternal(DocumentsOperationContext context, Slice key, long etag, Slice hash, string changeVector, long lastModifiedTicks, bool deleteAttachmentStream = true)
         {
             CreateTombstone(context, key, etag, changeVector, lastModifiedTicks);
 
-            // we are running just before the delete, so we may still have 1 entry there, the one just
-            // about to be deleted
-            DeleteAttachmentStream(context, hash, expectedCount: 1, fromReplication);
+            if (deleteAttachmentStream)
+            {
+                // we are running just before the delete, so we may still have 1 entry there, the one just about to be deleted
+                DeleteAttachmentStream(context, hash, expectedCount: 1);
+            }
         }
 
         private static void DeleteTombstoneIfNeeded(DocumentsOperationContext context, Slice keySlice)
