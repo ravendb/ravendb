@@ -5,6 +5,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Backups.Sharding;
 using Raven.Client.ServerWide;
@@ -14,6 +15,7 @@ using Raven.Server.Config;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.PeriodicBackup.Azure;
 using Raven.Server.Documents.PeriodicBackup.GoogleCloud;
+using Raven.Server.Documents.PeriodicBackup.Restore.Sharding;
 using Raven.Server.ServerWide;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
@@ -218,7 +220,7 @@ namespace SlowTests.Sharding.Backup
             }
         }
 
-        [AzureFactAttribute]
+        [AzureFact]
         public async Task CanBackupAndRestoreShardedDatabase_FromAzureBackup()
         {
             var azureSettings = GetAzureSettings();
@@ -701,6 +703,127 @@ namespace SlowTests.Sharding.Backup
             {
                 await DeleteObjects(s3Settings);
             }
+        }
+
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Sharding)]
+        public async Task RestoreShardedDatabase_ShouldHaveValidResultsAndProgress()
+        {
+            var cluster = await CreateRaftCluster(3, watcherCluster: true);
+            var options = Sharding.GetOptionsForCluster(cluster.Leader, shards: 3, shardReplicationFactor: 1, orchestratorReplicationFactor: 3);
+
+            using (var store = Sharding.GetDocumentStore(options))
+            {
+                await Sharding.Backup.InsertData(store);
+
+                var waitHandles = await Sharding.Backup.WaitForBackupsToComplete(cluster.Nodes, store.Database);
+
+                var backupPath = NewDataPath(suffix: "BackupFolder");
+
+                var config = Backup.CreateBackupConfiguration(backupPath);
+                await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(cluster.Nodes, store, config);
+
+                Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
+
+                var dirs = Directory.GetDirectories(backupPath);
+                Assert.Equal(3, dirs.Length);
+
+                var sharding = await Sharding.GetShardingConfigurationAsync(store);
+                var settings = GenerateShardRestoreSettings(dirs, sharding);
+
+                // restore the database with a different name
+                var databaseName = $"restored_database-{Guid.NewGuid()}";
+                using (Sharding.Backup.ReadOnly(backupPath))
+                using (Databases.EnsureDatabaseDeletion(databaseName, store))
+                {
+                    var restoreOperation = new RestoreBackupOperation(new RestoreBackupConfiguration
+                    {
+                        DatabaseName = databaseName,
+                        ShardRestoreSettings = settings
+                    });
+
+                    var operation = await store.Maintenance.Server.SendAsync(restoreOperation);
+
+                    var progresses = new List<IOperationProgress>();
+
+                    operation.OnProgressChanged += (_, progress) =>
+                    {
+                        progresses.Add(progress);
+                    };
+
+                    var result = await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(60));
+
+                    Assert.NotEmpty(progresses);
+
+                    ValidateRestoreResult(result, sharding);
+
+                    var databaseRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
+                    Assert.Equal(3, databaseRecord.Sharding.Shards.Length);
+                    Assert.Equal(1, databaseRecord.PeriodicBackups.Count);
+                    Assert.NotNull(databaseRecord.Revisions);
+
+                    var shardNodes = new HashSet<string>();
+                    for (var index = 0; index < databaseRecord.Sharding.Shards.Length; index++)
+                    {
+                        var shardTopology = databaseRecord.Sharding.Shards[index];
+                        Assert.Equal(1, shardTopology.Members.Count);
+                        Assert.Equal(sharding.Shards[index].Members[0], shardTopology.Members[0]);
+                        Assert.True(shardNodes.Add(shardTopology.Members[0]));
+                    }
+
+                    await Sharding.Backup.CheckData(store, RavenDatabaseMode.Sharded, expectedRevisionsCount: 16, database: databaseName);
+                }
+            }
+        }
+
+        private static void ValidateRestoreResult(IOperationResult result, ShardingConfiguration sharding)
+        {
+            var shardedRestoreResults = ((ShardedRestoreResult)result).Results.OrderBy(r => r.ShardNumber).ToList();
+            Assert.Equal(3, shardedRestoreResults.Count);
+
+            Assert.Equal(2, shardedRestoreResults[0].Result.Documents.ReadCount);
+            Assert.Equal(2, shardedRestoreResults[0].Result.Documents.Attachments.ReadCount);
+            Assert.Equal(1, shardedRestoreResults[0].Result.CompareExchange.ReadCount);
+            Assert.Equal(1, shardedRestoreResults[0].Result.CompareExchangeTombstones.ReadCount);
+            Assert.Equal(1, shardedRestoreResults[0].Result.Counters.ReadCount);
+            Assert.Equal(1, shardedRestoreResults[0].Result.TimeSeries.ReadCount);
+            Assert.Equal(6, shardedRestoreResults[0].Result.RevisionDocuments.ReadCount);
+            Assert.Equal(2, shardedRestoreResults[0].Result.RevisionDocuments.Attachments.ReadCount);
+            Assert.Equal(0, shardedRestoreResults[0].Result.Tombstones.ReadCount);
+            Assert.Equal(1, shardedRestoreResults[0].Result.Identities.ReadCount);
+            Assert.Equal(1, shardedRestoreResults[0].Result.Indexes.ReadCount);
+            Assert.Equal(1, shardedRestoreResults[0].Result.Subscriptions.ReadCount);
+
+            Assert.Equal(sharding.Shards[0].Members[0], shardedRestoreResults[0].NodeTag);
+
+            Assert.Equal(0, shardedRestoreResults[1].Result.Documents.ReadCount);
+            Assert.Equal(0, shardedRestoreResults[1].Result.Documents.Attachments.ReadCount);
+            Assert.Equal(1, shardedRestoreResults[1].Result.CompareExchange.ReadCount);
+            Assert.Equal(1, shardedRestoreResults[1].Result.CompareExchangeTombstones.ReadCount);
+            Assert.Equal(0, shardedRestoreResults[1].Result.Counters.ReadCount);
+            Assert.Equal(0, shardedRestoreResults[1].Result.TimeSeries.ReadCount);
+            Assert.Equal(2, shardedRestoreResults[1].Result.RevisionDocuments.ReadCount);
+            Assert.Equal(0, shardedRestoreResults[1].Result.RevisionDocuments.Attachments.ReadCount);
+            Assert.Equal(1, shardedRestoreResults[1].Result.Tombstones.ReadCount);
+            Assert.Equal(1, shardedRestoreResults[1].Result.Identities.ReadCount);
+            Assert.Equal(1, shardedRestoreResults[1].Result.Indexes.ReadCount);
+            Assert.Equal(0, shardedRestoreResults[1].Result.Subscriptions.ReadCount);
+
+            Assert.Equal(sharding.Shards[1].Members[0], shardedRestoreResults[1].NodeTag);
+
+            Assert.Equal(3, shardedRestoreResults[2].Result.Documents.ReadCount);
+            Assert.Equal(1, shardedRestoreResults[2].Result.Documents.Attachments.ReadCount);
+            Assert.Equal(3, shardedRestoreResults[2].Result.CompareExchange.ReadCount);
+            Assert.Equal(1, shardedRestoreResults[2].Result.CompareExchangeTombstones.ReadCount);
+            Assert.Equal(0, shardedRestoreResults[2].Result.Counters.ReadCount);
+            Assert.Equal(1, shardedRestoreResults[2].Result.TimeSeries.ReadCount);
+            Assert.Equal(6, shardedRestoreResults[2].Result.RevisionDocuments.ReadCount);
+            Assert.Equal(1, shardedRestoreResults[2].Result.RevisionDocuments.Attachments.ReadCount);
+            Assert.Equal(0, shardedRestoreResults[2].Result.Tombstones.ReadCount);
+            Assert.Equal(1, shardedRestoreResults[2].Result.Identities.ReadCount);
+            Assert.Equal(1, shardedRestoreResults[2].Result.Indexes.ReadCount);
+            Assert.Equal(0, shardedRestoreResults[2].Result.Subscriptions.ReadCount);
+
+            Assert.Equal(sharding.Shards[2].Members[0], shardedRestoreResults[2].NodeTag);
         }
 
         private static ShardedRestoreSettings GenerateShardRestoreSettings(IReadOnlyCollection<string> backupPaths, ShardingConfiguration sharding)
