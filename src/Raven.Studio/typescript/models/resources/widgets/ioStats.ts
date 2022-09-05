@@ -2,17 +2,16 @@ import IoStatsPayload = Raven.Server.Dashboard.Cluster.Notifications.IoStatsPayl
 
 import historyAwareNodeStats = require("models/resources/widgets/historyAwareNodeStats");
 import IoStatsResult = Raven.Client.ServerWide.Operations.IoStatsResult;
+import genUtils = require("common/generalUtils");
 
 class ioStats extends historyAwareNodeStats<IoStatsPayload> {
     
-    iopsFormatted = this.conditionalDataExtractorWithNoDataDetection(x => ioStats.sumUp(x, i => i.IoReadOperations + i.IoWriteOperations));
-    iopsDistribution = this.conditionalDataExtractor(x => {
-        const read = ioStats.sumUp(x, i => i.IoReadOperations);
-        const write = ioStats.sumUp(x, i => i.IoWriteOperations);
-        if (typeof read === "undefined" || typeof write === "undefined") {
+    iopsFormatted = this.conditionalDataExtractor(x => {
+        const total = ioStats.sumUp(x, i => i.IoReadOperations + i.IoWriteOperations);
+        if (typeof total === "undefined") {
             return "n/a";
         }
-        return "(read: " + read.toFixed(0) + ", write: " + write.toFixed(0) + ")";
+        return Math.ceil(total).toLocaleString();
     });
     
     iopsReadFormatted = this.conditionalDataExtractorWithNoDataDetection(x => ioStats.sumUp(x, i => i.IoReadOperations));
@@ -21,21 +20,51 @@ class ioStats extends historyAwareNodeStats<IoStatsPayload> {
     iopsWriteFormatted = this.conditionalDataExtractorWithNoDataDetection(x => ioStats.sumUp(x, i => i.IoWriteOperations));
     iopsWriteSplitInfo = this.conditionalDataExtractor(() => "write/s");
 
-    throughputFormatted = this.conditionalDataExtractorWithNoDataDetection(x => ioStats.sumUp(x, i => i.ReadThroughputInKb + i.WriteThroughputInKb), " KB/s");
-    throughputDistribution = this.conditionalDataExtractor(x => {
-        const read = ioStats.sumUp(x, i => i.ReadThroughputInKb);
-        const write = ioStats.sumUp(x, i => i.WriteThroughputInKb);
-        if (typeof read === "undefined" || typeof write === "undefined") {
+    throughputFormatted = this.conditionalDataExtractor(x => {
+        const total = ioStats.sumUp(x, i => i.ReadThroughputInKb + i.WriteThroughputInKb);
+        if (typeof total === "undefined") {
             return "n/a";
         }
-        return "(read: " + read.toFixed(0) + " KB/s, write: " + write.toFixed(0) + " KB/s)";
+        return genUtils.formatBytesToSize(total * 1024, 2, true)[0];
     });
     
-    throughputReadFormatted = this.conditionalDataExtractorWithNoDataDetection(x => ioStats.sumUp(x, i => i.ReadThroughputInKb));
-    throughputReadSplitInfo = this.conditionalDataExtractor(() => "read (KB/s)");
+    throughputUnit = this.conditionalDataExtractor(x => {
+        const total = ioStats.sumUp(x, i => i.ReadThroughputInKb + i.WriteThroughputInKb);
+        if (typeof total === "undefined") {
+            return "n/a";
+        }
+        return genUtils.formatBytesToSize(total * 1024, 2, true)[1] + "/s";
+    });
     
-    throughputWriteFormatted = this.conditionalDataExtractorWithNoDataDetection(x => ioStats.sumUp(x, i => i.WriteThroughputInKb));
-    throughputWriteSplitInfo = this.conditionalDataExtractor(() => "write (KB/s)");
+    throughputReadFormatted = this.conditionalDataExtractor(x => {
+        const total = ioStats.sumUp(x, i => i.ReadThroughputInKb);
+        if (typeof total === "undefined") {
+            return "n/a";
+        }
+        return genUtils.formatBytesToSize(total * 1024, 2, true)[0];
+    });
+    throughputReadSplitInfo = this.conditionalDataExtractor(x => {
+        const total = ioStats.sumUp(x, i => i.ReadThroughputInKb);
+        if (typeof total === "undefined") {
+            return "n/a";
+        }
+        return "read (" + genUtils.formatBytesToSize(total * 1024, 2, true)[1] + "/s)";
+    });
+    
+    throughputWriteFormatted = this.conditionalDataExtractor(x => {
+        const total = ioStats.sumUp(x, i => i.WriteThroughputInKb);
+        if (typeof total === "undefined") {
+            return "n/a";
+        }
+        return genUtils.formatBytesToSize(total * 1024, 2, true)[0];
+    });
+    throughputWriteSplitInfo = this.conditionalDataExtractor(x => {
+        const total = ioStats.sumUp(x, i => i.WriteThroughputInKb);
+        if (typeof total === "undefined") {
+            return "n/a";
+        }
+        return "write (" + genUtils.formatBytesToSize(total * 1024, 2, true)[1] + "/s)";
+    });
 
     diskQueueFormatted = this.conditionalDataExtractorWithNoDataDetection(x => ioStats.sumUp(x, i => i.QueueLength ?? 0));
     
@@ -47,15 +76,15 @@ class ioStats extends historyAwareNodeStats<IoStatsPayload> {
             .reduce((p, c) => p + c, 0);
     }
     
-    private conditionalDataExtractorWithNoDataDetection(accessor: (value: IoStatsPayload) => number | undefined, suffix?: string) {
+    private conditionalDataExtractorWithNoDataDetection(accessor: (value: IoStatsPayload) => number | undefined) {
         return this.conditionalDataExtractor(x => {
             const value = accessor(x);
             if (typeof value === "undefined") {
                 return "n/a";
             }
             
-            return value.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + (suffix ?? "");
-        })
+            return value.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+        });
     } 
 }
 
