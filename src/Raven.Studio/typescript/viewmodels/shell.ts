@@ -305,11 +305,13 @@ class shell extends viewModelBase {
             const notAfter = this.clientCertificate().NotAfter;
             const notAfterUtc = moment(notAfter).utc();
             
+            const expirationDate = notAfter ? `${notAfter.substring(0, 10)} <span class="${this.getExpirationDurationClass()}">(${genUtils.formatDurationByDate(notAfterUtc, true)})</span>` : "n/a";
+            
             const authenticationInfo = `<dl class="dl-horizontal margin-none client-certificate-info">
                             <dt>Client Certificate</dt>
                             <dd><strong>${this.clientCertificate().Name}</strong></dd>
                             <dt>Expiration Date</dt>
-                            <dd><strong>${notAfter.substring(0, 10)} <span class="${this.getExpirationDurationClass()}">(${genUtils.formatDurationByDate(notAfterUtc, true)})</span></strong></dd>
+                            <dd><strong>${expirationDate}</strong></dd>
                             <dt>Thumbprint</dt>
                             <dd><strong>${this.clientCertificate().Thumbprint}</strong></dd>
                             <dt><span>Security Clearance</span></dt>
