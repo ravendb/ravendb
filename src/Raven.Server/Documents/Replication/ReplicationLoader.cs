@@ -1493,7 +1493,7 @@ namespace Raven.Server.Documents.Replication
                     outgoingReplication = new OutgoingExternalReplicationHandler(this, Database, externalNode, info);
                     break;
                 case BucketMigrationReplication migrationNode:
-                    outgoingReplication = new OutgoingMigrationReplicationHandler(this, Database as ShardedDocumentDatabase, migrationNode, info);
+                    outgoingReplication = new OutgoingMigrationReplicationHandler(this, ShardedDocumentDatabase.CastToShardedDocumentDatabase(Database), migrationNode, info);
                     break;
                 default:
                     throw new ArgumentException($"Unknown node type {node.GetType().FullName}");

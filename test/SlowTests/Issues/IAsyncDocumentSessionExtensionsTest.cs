@@ -128,7 +128,7 @@ namespace SlowTests.Issues
                             count++;
                             tmp = DateTime.ParseExact(reader.Current.Metadata[Constants.Documents.Metadata.LastModified].ToString(), "yyyy-MM-dd'T'HH:mm:ss.fffffff'Z'",
                                 CultureInfo.InvariantCulture, DateTimeStyles.None);
-                            Assert.True(lastModified > tmp);
+                            Assert.True(lastModified >= tmp);
                             lastModified = tmp;
                             Assert.IsType<User>(reader.Current.Document);
                         }

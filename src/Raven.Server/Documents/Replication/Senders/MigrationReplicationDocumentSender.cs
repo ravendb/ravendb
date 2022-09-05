@@ -28,8 +28,8 @@ namespace Raven.Server.Documents.Replication.Senders
 
         protected override IEnumerable<ReplicationBatchItem> GetReplicationItems(DocumentsOperationContext ctx, long etag, ReplicationStats stats, bool caseInsensitiveCounters)
         {
-            var database = ctx.DocumentDatabase as ShardedDocumentDatabase;
-            var documentsStorage = database.DocumentsStorage as ShardedDocumentsStorage;
+            var database = ShardedDocumentDatabase.CastToShardedDocumentDatabase(ctx.DocumentDatabase);
+            var documentsStorage = database.ShardedDocumentsStorage;
 
             var bucket = Destination.Bucket;
             _lastBatchChangeVector = ctx.GetChangeVector(string.Empty);

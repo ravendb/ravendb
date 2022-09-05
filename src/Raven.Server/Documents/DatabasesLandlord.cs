@@ -714,15 +714,28 @@ namespace Raven.Server.Documents
         public IEnumerable<Task<ShardedDocumentDatabase>> TryGetOrCreateShardedResourcesStore(StringSegment databaseName, DateTime? wakeup = null, bool ignoreDisabledDatabase = false, bool ignoreBeenDeleted = false, bool ignoreNotRelevant = false)
         {
             // create all database shards on this node
-            List<string> relevantDatabases;
+            List<string> relevantDatabases = new List<string>();
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             using (var databaseRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, databaseName.Value))
             {
-                relevantDatabases = databaseRecord.Topologies.Where(x => x.Topology.RelevantFor(_serverStore.NodeTag)).Select(x => x.Name).ToList();
+                foreach (var shard in databaseRecord.Topologies)
+                {
+                    if (shard.Topology.RelevantFor(_serverStore.NodeTag))
+                        relevantDatabases.Add(shard.Name);
+                }
             }
 
-            return relevantDatabases.Select(db => TryGetOrCreateResourceStore(db, wakeup, ignoreDisabledDatabase, ignoreBeenDeleted, ignoreNotRelevant).ContinueWith(t=> t.Result as ShardedDocumentDatabase));
+            foreach (var shardedDatabase in relevantDatabases)
+            {
+                yield return TryGetOrCreateShardedResourceStore(shardedDatabase, wakeup, ignoreDisabledDatabase, ignoreBeenDeleted, ignoreNotRelevant);
+            }
+        }
+
+        public Task<ShardedDocumentDatabase> TryGetOrCreateShardedResourceStore(StringSegment databaseName, DateTime? wakeup = null, bool ignoreDisabledDatabase = false, bool ignoreBeenDeleted = false, bool ignoreNotRelevant = false, [CallerMemberName] string caller = null)
+        {
+            var t = TryGetOrCreateResourceStore(databaseName, wakeup, ignoreDisabledDatabase, ignoreBeenDeleted, ignoreNotRelevant, caller);
+            return t.ContinueWith(database => ShardedDocumentDatabase.CastToShardedDocumentDatabase(database.Result), TaskContinuationOptions.OnlyOnRanToCompletion);
         }
 
         public Task<DocumentDatabase> TryGetOrCreateResourceStore(StringSegment databaseName, DateTime? wakeup = null, bool ignoreDisabledDatabase = false, bool ignoreBeenDeleted = false, bool ignoreNotRelevant = false, [CallerMemberName] string caller = null)

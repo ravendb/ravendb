@@ -142,6 +142,8 @@ public class ShardedDocumentDatabase : DocumentDatabase
             $"{bucket}@{migrationIndex}-Cleaned-{ServerStore.NodeTag}");
     }
 
+    public static ShardedDocumentDatabase CastToShardedDocumentDatabase(DocumentDatabase database) => database as ShardedDocumentDatabase ?? throw new ArgumentException($"Database {database.Name} must be sharded!");
+
     private class DeleteBucketCommand : TransactionOperationsMerger.MergedTransactionCommand
     {
         private readonly int _bucket;

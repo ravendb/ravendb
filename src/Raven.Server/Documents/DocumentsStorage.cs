@@ -18,7 +18,6 @@ using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Revisions;
 using Raven.Server.Documents.Sharding.Handlers.Processors.Replication;
-using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Storage.Layout;
@@ -45,7 +44,7 @@ namespace Raven.Server.Documents
     public unsafe class DocumentsStorage : IDisposable
     {
         public static readonly TableSchema DocsSchema = Schemas.Documents.Current;
-        public static readonly TableSchema CompressedDocsSchema = CurrentCompressed;
+        public static readonly TableSchema CompressedDocsSchema = Schemas.Documents.CurrentCompressed;
         public static readonly TableSchema TombstonesSchema = Schemas.Tombstones.Current;
         public static readonly TableSchema CollectionsSchema = Schemas.Collections.Current;
         public readonly DocumentDatabase DocumentDatabase;
