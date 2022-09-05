@@ -4,7 +4,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands;
 
-public class GetNextServerOperationIdCommand : RavenCommand<long>
+internal class GetNextServerOperationIdCommand : RavenCommand<long>
 {
     public string NodeTag { get; private set; }
 
