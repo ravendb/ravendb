@@ -50,7 +50,7 @@ class awesomeMultiselect {
     }
 
     private static fixAwesomeCheckboxes(object: JQuery) {
-        var instanceId = <number> object.data('instanceData');
+        const instanceId = <number> object.data('instanceData');
         $('.multiselect-container .checkbox', object.parent()).each(function (index) {
             const $self = $(this);
             const id = 'multiselect-' + instanceId + "-" + index;

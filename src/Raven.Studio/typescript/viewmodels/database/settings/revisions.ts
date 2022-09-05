@@ -1,4 +1,3 @@
-import viewModelBase = require("viewmodels/viewModelBase");
 import revisionsConfigurationEntry = require("models/database/documents/revisionsConfigurationEntry");
 import appUrl = require("common/appUrl");
 import database = require("models/resources/database");

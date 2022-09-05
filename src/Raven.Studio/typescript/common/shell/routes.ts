@@ -3,7 +3,7 @@ import MENU_BASED_ROUTER_CONFIGURATION = require("common/shell/routerConfigurati
 
 class Routes {
 
-    static get(appUrls: computedAppUrls): Array<DurandalRouteConfiguration> {
+    static get(): Array<DurandalRouteConfiguration> {
         return MENU_BASED_ROUTER_CONFIGURATION;
     }
 }

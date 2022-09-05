@@ -1,7 +1,7 @@
 ﻿import { ComponentMeta } from "@storybook/react";
 import { boundCopy } from "../utils/common";
 import { RichPanel, RichPanelDetailItem, RichPanelDetails, RichPanelHeader, RichPanelSelect } from "./RichPanel";
-import React, { useState } from "react";
+import React from "react";
 import { Checkbox } from "./Checkbox";
 import useBoolean from "hooks/useBoolean";
 

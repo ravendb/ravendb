@@ -1,6 +1,5 @@
 ﻿/// <reference path="../../../typings/tsd.d.ts"/>
 
-import itemFetch = require("widgets/virtualGrid/itemFetch");
 import listViewController = require("widgets/listView/listViewController");
 import virtualListRow = require("widgets/listView/virtualListRow");
 
@@ -204,18 +203,17 @@ class listView<T> {
         // Determine the view port.
         const scrollTop = this.$viewportElement.scrollTop();
         const scrollBottom = scrollTop + this.listElementHeight;
-        let positionCheck = scrollTop;
         
         const [firstVisibleIdx, lastVisibleIdx] = this.visibleItemsRange(scrollTop, scrollBottom);
 
-        let usedRows: virtualListRow<T>[] = [];
-        let missingIdx: number[] = [];
+        const usedRows: virtualListRow<T>[] = [];
+        const missingIdx: number[] = [];
         
         // first try to reuse existing row - useful when user uses mouse scroll
         
         let currentIdx = firstVisibleIdx;
         while (currentIdx <= lastVisibleIdx) {
-            let rowAtPosition = this.findRowForIdx(currentIdx);
+            const rowAtPosition = this.findRowForIdx(currentIdx);
             if (rowAtPosition) {
                 usedRows.push(rowAtPosition);
                 this.populate(currentIdx, rowAtPosition);
@@ -229,7 +227,6 @@ class listView<T> {
         // now fill remaining rows
         
         if (missingIdx.length) {
-            let currentMissing = 0;
             // reuse rows which are not in rowsToUse
             for (let i = 0; i < this.virtualRows.length; i++) {
                 const row = this.virtualRows[i];
@@ -280,7 +277,7 @@ class listView<T> {
         let maxIdx = this.items.size;
         
         while (minIdx !== maxIdx) {
-            let idxToTest = Math.floor((minIdx + maxIdx) / 2);
+            const idxToTest = Math.floor((minIdx + maxIdx) / 2);
             
             const itemEnd = this.cumulativeItemsHeight.get(idxToTest);
             const itemStart = itemEnd - this.getItemHeight(idxToTest);
@@ -299,12 +296,11 @@ class listView<T> {
             }
         }
         
-        let firstIdx = minIdx;
+        const firstIdx = minIdx;
         let lastIdx = 0;
         
         for (let i = firstIdx; i < this.items.size; i++) {
             const itemEnd = this.cumulativeItemsHeight.get(i);
-            const itemStart = itemEnd - this.getItemHeight(i);
 
             if (itemEnd >= yEnd) {
                 lastIdx = i;

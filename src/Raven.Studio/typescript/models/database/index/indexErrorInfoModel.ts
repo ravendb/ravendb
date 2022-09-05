@@ -17,7 +17,7 @@ class indexErrorInfoModel {
     dbName: string;
     location: databaseLocationSpecifier;
 
-    gridWasInitialized: boolean = false;
+    gridWasInitialized = false;
     gridId: string;
     
     state = ko.observable<indexErrorInfoModelState>("loading");
@@ -55,7 +55,7 @@ class indexErrorInfoModel {
             const errorsDto = this.indexErrorsCountDto();
 
             if (errorsDto) {
-                for (let error of errorsDto) {
+                for (const error of errorsDto) {
                     count += error.Errors.reduce((count, val) => val.NumberOfErrors + count, 0);
                 }
             }

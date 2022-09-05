@@ -42,7 +42,7 @@ class indexingDetails extends abstractPerformanceHintDetails {
         const grid = this.gridController();
         grid.headerVisible(true);
 
-        grid.init((s, t) => this.fetcher(s, t), () => {
+        grid.init(() => this.fetcher(), () => {
             return [
                 new textColumn<indexingDetailsItemDto>(grid, x => x.IndexName, "Index Name", "20%", {
                     sortable: "string"
@@ -76,7 +76,7 @@ class indexingDetails extends abstractPerformanceHintDetails {
             });
     }
 
-    private fetcher(skip: number, take: number): JQueryPromise<pagedResult<indexingDetailsItemDto>> {
+    private fetcher(): JQueryPromise<pagedResult<indexingDetailsItemDto>> {
         return $.Deferred<pagedResult<indexingDetailsItemDto>>()
             .resolve({
                 items: this.tableItems,

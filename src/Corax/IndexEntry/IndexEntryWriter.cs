@@ -565,7 +565,7 @@ public unsafe partial struct IndexEntryWriter : IDisposable
         var buffer = Buffer;
 
         // The size of the known fields metadata section
-        int metadataSection = (int)encodeSize * _knownFields.Count;
+        int metadataSection = IndexEntryReader.TableEncodingLookupTable[(int)encodeSize] * _knownFields.Count;
         // The size of the unknown/dynamic fields metadata section            
         int dynamicMetadataSection = _dynamicFieldIndex * sizeof(uint);
         int dynamicMetadataSectionOffset = buffer.Length - dynamicMetadataSection - 1;

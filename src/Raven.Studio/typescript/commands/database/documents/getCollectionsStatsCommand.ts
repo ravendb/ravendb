@@ -17,7 +17,7 @@ class getCollectionsStatsCommand extends commandBase {
         const finalResult = $.Deferred<collectionsStats>();
         this.query<Raven.Client.Documents.Operations.CollectionStatistics>(endpoints.databases.collections.collectionsStats, null, this.ownerDb)
             .done(results => {
-                const stats = new collectionsStats(results, this.ownerDb);
+                const stats = new collectionsStats(results);
                 finalResult.resolve(stats);
             })
             .fail((response) => {

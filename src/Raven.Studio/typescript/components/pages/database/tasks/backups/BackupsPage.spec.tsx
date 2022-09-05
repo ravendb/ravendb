@@ -7,11 +7,6 @@ import { boundCopy } from "../../../../utils/common";
 
 const { EmptyView, FullView } = composeStories(stories);
 
-const selectors = {
-    deleteTaskTitle: /Delete task/,
-    editTaskTitle: /Edit task/,
-} as const;
-
 describe("BackupsPage", function () {
     it("can render empty view", async () => {
         const { screen } = rtlRender(<EmptyView />);

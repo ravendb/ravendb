@@ -4,7 +4,6 @@ import DatabaseInfo = Raven.Client.ServerWide.Operations.DatabaseInfo;
 import { produce } from "immer";
 import { DatabaseSharedInfo } from "../../../models/databases";
 import DatabaseUtils from "../../../utils/DatabaseUtils";
-import { data } from "jquery";
 
 interface ActionStatsLoaded {
     stats: DatabasesInfo;

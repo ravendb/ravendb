@@ -1,4 +1,4 @@
-﻿import { ComponentMeta, Story, StoryFn } from "@storybook/react";
+﻿import { ComponentMeta } from "@storybook/react";
 import React from "react";
 import {
     DistributionItem,

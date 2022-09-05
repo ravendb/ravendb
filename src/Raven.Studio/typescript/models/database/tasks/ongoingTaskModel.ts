@@ -1,7 +1,5 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 
-import genUtils from "common/generalUtils";
-
 abstract class ongoingTaskModel { 
 
     taskId: number;

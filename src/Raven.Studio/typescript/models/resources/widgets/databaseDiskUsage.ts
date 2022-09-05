@@ -11,7 +11,7 @@ class databaseDiskUsage implements databaseAndNodeAwareStats {
     noData: boolean;
     
     hideDatabaseName: boolean;
-    even: boolean = false;
+    even = false;
     
     constructor(nodeTag: string, data: Raven.Server.Dashboard.DatabaseDiskUsage) {
         this.nodeTag = nodeTag;

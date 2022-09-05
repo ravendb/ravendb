@@ -9,7 +9,6 @@ import getDocumentsPreviewCommand from "commands/database/documents/getDocuments
 class indexAceAutoCompleteProvider {
     constructor(private activeDatabase: database, private editedIndex: KnockoutObservable<indexDefinition>) {
         _.bindAll(this, "indexMapCompleter", "indexReduceCompleter")
-    
     }
 
     indexMapCompleter(editor: AceAjax.Editor, session: AceAjax.IEditSession, pos: AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) {
@@ -97,7 +96,7 @@ class indexAceAutoCompleteProvider {
         // find the matching alias and get list of fields
         if (collectionAliases.length > 0) {
             const matchingAliasKeyValue = collectionAliases.find(x => x.aliasKey.replace('.', '').trim() === currentToken.value.replace('.', '').trim());
-            if (!!matchingAliasKeyValue) {
+            if (matchingAliasKeyValue) {
                 // get list of fields according to it's collection's first row
                 if (matchingAliasKeyValue.aliasValuePrefix.toLowerCase() === "docs") {
                     new getDocumentsPreviewCommand(this.activeDatabase, 0, 1, matchingAliasKeyValue.aliasValueSuffix)
@@ -137,7 +136,7 @@ class indexAceAutoCompleteProvider {
                 const currentToken = curRowTokens[curTokenInRow];
                 if (currentToken.type == "from.alias") {
                     curAliasKey = curRowTokens[curTokenInRow].value.trim();
-                } else if (!!curAliasKey) {
+                } else if (curAliasKey) {
                     if (curRowTokens[curTokenInRow].type == "docs" || currentToken.type == "collections") {
                         curAliasValuePrefix = currentToken.value;
                     } else if (curRowTokens[curTokenInRow].type == "collectionName") {

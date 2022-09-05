@@ -104,7 +104,7 @@ namespace Voron.Data.Sets
                 }
                 if(_rawValuesIndex >= 0)// maybe we have no raw values?
                 {
-                    if (v <= (_parent.RawValues[_rawValuesIndex] & ~int.MaxValue))
+                    if (v <= (_parent.RawValues[_rawValuesIndex] & int.MaxValue))
                         return false; // need to get v as the next call
                 }
                 if (v <= _lastVal)// we expect to get v on the _next_ MoveNext()
@@ -376,7 +376,8 @@ namespace Voron.Data.Sets
 
         public bool Add(LowLevelTransaction tx, long value)
         {
-            Debug.Assert(IsValidValue(value));
+            if (IsValidValue(value) == false)
+                throw new InvalidOperationException($"The specified value {value} does not match the baseline: {Header->Baseline} for page {_page.PageNumber}");
             return AddInternal(tx, (int)value & int.MaxValue);
         }
 
@@ -387,7 +388,10 @@ namespace Voron.Data.Sets
 
         public bool Remove(LowLevelTransaction tx, long value)
         {
-            Debug.Assert((value & ~int.MaxValue) == Header->Baseline);
+            if ((value & ~int.MaxValue) != Header->Baseline)
+                throw new InvalidOperationException(
+                    $"Attempt to remove value ({value}) from set leaf page ({_page.PageNumber}) that doesn't share the same baseline {Header->Baseline}");
+            
             return AddInternal(tx, int.MinValue | ((int)value & int.MaxValue));
         }
 
@@ -632,13 +636,13 @@ namespace Voron.Data.Sets
             {
                 int value = values[0];
                 if (value < 0)
-                    value &= ~int.MaxValue;
+                    value &= int.MaxValue;
                 if (last == null || last.Value < value)
                     last = value;
 
                 value = values[^1];
                 if (value < 0)
-                    value &= ~int.MaxValue;
+                    value &= int.MaxValue;
                 if (first == null || first > value)
                     first = value;
             }

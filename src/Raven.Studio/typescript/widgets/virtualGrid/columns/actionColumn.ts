@@ -12,7 +12,7 @@ type actionColumnOpts<T> = {
 }
 type provider<T> = (item: T) => string;
 
-class actionColumn<T> implements virtualColumn {
+class actionColumn<T extends object> implements virtualColumn {
     private readonly action: (obj: T, idx: number, event: JQueryEventObject, actionId: string) => void;
 
     protected gridController: virtualGridController<T>;

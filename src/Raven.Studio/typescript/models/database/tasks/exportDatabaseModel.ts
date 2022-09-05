@@ -101,7 +101,7 @@ class exportDatabaseModel {
         })
 
         this.itemsToWarnAbout = ko.pureComputed(() => {
-            let items = [];
+            const items = [];
 
             if (!this.includeDocuments()) {
                 if (this.includeCounters()) {

@@ -1,7 +1,6 @@
 ﻿import EtlType = Raven.Client.Documents.Operations.ETL.EtlType;
 import OngoingTaskType = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType;
 import OngoingTask = Raven.Client.Documents.Operations.OngoingTasks.OngoingTask;
-import OngoingTaskQueueEtlDetails = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtlDetails;
 import OngoingTaskQueueEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtlListView;
 import assertUnreachable from "./assertUnreachable";
 

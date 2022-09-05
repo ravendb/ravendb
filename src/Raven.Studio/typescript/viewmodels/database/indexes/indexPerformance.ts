@@ -584,7 +584,7 @@ class indexPerformance extends shardViewModelBase {
     }
 
     private cancelLiveView() {
-        if (!!this.liveViewClient()) {
+        if (this.liveViewClient()) {
             this.liveViewClient().dispose();
             this.liveViewClient(null);
         }
@@ -650,7 +650,7 @@ class indexPerformance extends shardViewModelBase {
         context.lineWidth = indexPerformance.brushSectionLineWidth;
 
         // Draw area chart showing indexes work
-        let x1: number, x2: number, y0: number = 0, y1: number;
+        let x1: number, x2: number, y0 = 0, y1: number;
         context.beginPath();
         
         x2 = this.xBrushTimeScale(new Date(workData[0].pointInTime));
@@ -878,7 +878,7 @@ class indexPerformance extends shardViewModelBase {
             context.translate(0, indexPerformance.brushSectionHeight);
             context.clearRect(0, 0, this.totalWidth, this.totalHeight - indexPerformance.brushSectionHeight);
 
-            this.drawTracksBackground(context, xScale);
+            this.drawTracksBackground(context);
 
             if (xScale.domain().length) {
                 const ticks = this.getTicks(xScale);
@@ -921,7 +921,7 @@ class indexPerformance extends shardViewModelBase {
         this.inProgressAnimator.animate(this.colors.progressStripes);
     }
 
-    private drawTracksBackground(context: CanvasRenderingContext2D, xScale: d3.time.Scale<number, number>) {
+    private drawTracksBackground(context: CanvasRenderingContext2D) {
         context.save();
 
         context.beginPath();
@@ -1192,7 +1192,7 @@ class indexPerformance extends shardViewModelBase {
         }
     } 
 
-    private handleTrackTooltip(element: Raven.Client.Documents.Indexes.IndexingPerformanceOperation, position: { x: number, y: number }, reuseTooltip: boolean = false) {
+    private handleTrackTooltip(element: Raven.Client.Documents.Indexes.IndexingPerformanceOperation, position: { x: number, y: number }, reuseTooltip = false) {
         if (!reuseTooltip) {
             this.currentTrackTooltipPosition = position;
         }

@@ -1,5 +1,5 @@
 ﻿import { ComponentMeta } from "@storybook/react";
-import React, { useState } from "react";
+import React from "react";
 import { StatePill } from "./StatePill";
 import { boundCopy } from "../utils/common";
 

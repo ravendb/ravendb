@@ -1,5 +1,4 @@
-﻿import React from "react";
-import useInterval from "hooks/useInterval";
+﻿import useInterval from "hooks/useInterval";
 import { useServices } from "hooks/useServices";
 import database from "models/resources/database";
 import EtlTaskProgress = Raven.Server.Documents.ETL.Stats.EtlTaskProgress;

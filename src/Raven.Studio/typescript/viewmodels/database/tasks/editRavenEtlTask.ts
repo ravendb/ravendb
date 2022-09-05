@@ -1,6 +1,5 @@
 import app = require("durandal/app");
 import appUrl = require("common/appUrl");
-import viewModelBase = require("viewmodels/viewModelBase");
 import router = require("plugins/router");
 import database = require("models/resources/database");
 import getOngoingTaskInfoCommand = require("commands/database/tasks/getOngoingTaskInfoCommand");
@@ -361,7 +360,7 @@ class editRavenEtlTask extends shardViewModelBase {
     saveRavenEtl() {
         let hasAnyErrors = false;
         this.spinners.save(true);
-        let editedEtl = this.editedRavenEtl();
+        const editedEtl = this.editedRavenEtl();
 
         // 0. Save discovery URL if user forgot to hit 'add url' button
         if (this.createNewConnectionString() && 
@@ -400,7 +399,7 @@ class editRavenEtlTask extends shardViewModelBase {
         }
 
         // 4. All is well, Save connection string (if relevant..) 
-        let savingNewStringAction = $.Deferred<void>();
+        const savingNewStringAction = $.Deferred<void>();
         if (this.createNewConnectionString()) {
             this.newConnectionString()
                 .saveConnectionString(this.db)

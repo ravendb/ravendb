@@ -572,7 +572,14 @@ interface sqlMigrationAdvancedSettingsDto {
     DetectManyToMany: boolean 
 }
 
-type virtualNotificationType = "CumulativeBulkInsert" | "AttachmentUpload" | "CumulativeUpdateByQuery" | "CumulativeDeleteByQuery";
+type virtualNotificationType = 
+    "CumulativeBulkInsert" 
+    | "CumulativeBulkInsertFailures" 
+    | "AttachmentUpload" 
+    | "CumulativeUpdateByQuery" 
+    | "CumulativeUpdateByQueryFailures" 
+    | "CumulativeDeleteByQuery"
+    | "CumulativeDeleteByQueryFailures";
 
 declare module Raven.Server.NotificationCenter.Notifications {
     interface Notification {
@@ -596,9 +603,23 @@ interface virtualBulkOperationItem {
     timeSeriesProcessed: number;
 }
 
+interface virtualBulkOperationFailureItem {
+    id: string;
+    date: string;
+    duration: number;
+    errorMsg: string;
+    error: string;
+}
+
 interface queryBasedVirtualBulkOperationItem extends virtualBulkOperationItem {
     query: string;
     indexOrCollectionUsed: string;
+}
+
+interface queryBasedVirtualBulkOperationFailureItem extends virtualBulkOperationItem {
+    query: string;
+    errorMsg: string;
+    error: string;
 }
 
 type adminLogsHeaderType = "Source" | "Logger";
@@ -870,6 +891,11 @@ interface cachedDateValue<T> {
 
 type widgetType = Raven.Server.Dashboard.Cluster.ClusterDashboardNotificationType | "Welcome" | "License";
 
+interface ioStatsWidgetConfig {
+    splitIops?: boolean;
+    splitThroughput?: boolean;
+}
+
 type databaseAccessLevel = `Database${Raven.Client.ServerWide.Operations.Certificates.DatabaseAccess}`;
 type securityClearance = Raven.Client.ServerWide.Operations.Certificates.SecurityClearance;
 type accessLevel = databaseAccessLevel | securityClearance;
@@ -923,6 +949,11 @@ interface rawTaskItem {
     dbName: string;
     count: number;
     node: string;
+}
+
+interface databaseDisconnectedEventArgs {
+    databaseName: string;
+    cause: databaseDisconnectionCause;
 }
 
 interface taskInfo {

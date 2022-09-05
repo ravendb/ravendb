@@ -4,13 +4,15 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Server.Documents.Handlers.Processors.Databases;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Configuration
 {
     internal abstract class AbstractConfigurationHandlerProcessorForPostTimeSeriesConfiguration<TRequestHandler, TOperationContext> : AbstractHandlerProcessorForUpdateDatabaseConfiguration<BlittableJsonReaderObject, TRequestHandler, TOperationContext>
-        where TOperationContext : JsonOperationContext 
+        where TOperationContext : JsonOperationContext
         where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
         protected AbstractConfigurationHandlerProcessorForPostTimeSeriesConfiguration([NotNull] TRequestHandler requestHandler)
@@ -20,7 +22,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Configuration
 
         protected override Task<(long Index, object Result)> OnUpdateConfiguration(TransactionOperationContext context, BlittableJsonReaderObject configuration, string raftRequestId)
         {
-            return RequestHandler.ServerStore.ModifyTimeSeriesConfiguration(context, RequestHandler.DatabaseName, configuration, raftRequestId);
+            return ModifyTimeSeriesConfiguration(context, RequestHandler.DatabaseName, configuration, raftRequestId);
         }
 
         protected override void OnBeforeUpdateConfiguration(ref BlittableJsonReaderObject configuration, JsonOperationContext context)
@@ -49,6 +51,21 @@ namespace Raven.Server.Documents.Handlers.Processors.Configuration
                                                         $"Collection name : '{prop.Name}'");
                 }
             }
+        }
+
+        protected abstract ValueTask WaitForIndexNotificationAsync(TransactionOperationContext context, long index);
+
+        private async Task<(long, object)> ModifyTimeSeriesConfiguration(TransactionOperationContext context, string name, BlittableJsonReaderObject configurationJson, string raftRequestId)
+        {
+            var configuration = JsonDeserializationCluster.TimeSeriesConfiguration(configurationJson);
+            configuration?.InitializeRollupAndRetention();
+            ServerStore.LicenseManager.AssertCanAddTimeSeriesRollupsAndRetention(configuration);
+            var editTimeSeries = new EditTimeSeriesConfigurationCommand(configuration, name, raftRequestId);
+            var result = await ServerStore.SendToLeaderAsync(editTimeSeries);
+
+            await WaitForIndexNotificationAsync(context, result.Index);
+
+            return result;
         }
     }
 }

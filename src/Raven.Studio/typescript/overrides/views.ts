@@ -6,7 +6,7 @@ const viewEngine = require("durandal/viewEngine");
 export function overrideViews() {
 // Allow using `function` or bare HTML string as a view
     const locateView = viewLocator.locateView;
-    viewLocator.locateView = function(viewOrUrlOrId: any, area: string) {
+    viewLocator.locateView = function(viewOrUrlOrId: any) {
         // HTML here will be passed into `processMarkup`
         const possibleViewToUse = viewOrUrlOrId && viewOrUrlOrId.default ? viewOrUrlOrId.default : viewOrUrlOrId;
         
@@ -18,6 +18,7 @@ export function overrideViews() {
         }
 
         // super()
+        // eslint-disable-next-line prefer-rest-params
         return locateView.apply(this, arguments);
     };
 

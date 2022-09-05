@@ -1,7 +1,7 @@
 ﻿import React, { ChangeEvent } from "react";
 import classNames from "classnames";
 import { shardingTodo } from "common/developmentHelper";
-import { IndexStatus, IndexFilterCriteria, IndexGroup, IndexSharedInfo } from "../../../../models/indexes";
+import { IndexStatus, IndexFilterCriteria, IndexSharedInfo } from "../../../../models/indexes";
 import pluralizeHelpers from "common/helpers/text/pluralizeHelpers";
 import IndexUtils from "../../../../utils/IndexUtils";
 import { DropdownPanel } from "../../../../common/DropdownPanel";
@@ -48,7 +48,7 @@ interface IndexFilterDescriptionProps {
 export function IndexFilterDescription(props: IndexFilterDescriptionProps) {
     const { filter, indexes } = props;
 
-    let indexesCount = indexes.length;
+    const indexesCount = indexes.length;
 
     shardingTodo();
     /* TODO
@@ -87,7 +87,7 @@ export function IndexFilterDescription(props: IndexFilterDescriptionProps) {
             <div>
                 <small className="on-base-background">
                     All <strong>Index Status</strong> options are unchecked. Please select options under{" "}
-                    <strong>'Index Status'</strong> to view indexes list.
+                    <strong>&apos;Index Status&apos;</strong> to view indexes list.
                 </small>
             </div>
         );

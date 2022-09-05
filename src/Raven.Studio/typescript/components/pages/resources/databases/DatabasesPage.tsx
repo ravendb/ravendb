@@ -9,7 +9,9 @@ import { NoDatabases } from "./NoDatabases";
 import { DatabaseFilterCriteria, DatabaseSharedInfo } from "../../../models/databases";
 import { useChanges } from "hooks/useChanges";
 
-interface DatabasesPageProps {}
+interface DatabasesPageProps {
+    activeDatabase?: string;
+}
 
 function filterDatabases(stats: DatabasesStatsState, criteria: DatabaseFilterCriteria) {
     if (criteria.searchText) {
@@ -20,6 +22,8 @@ function filterDatabases(stats: DatabasesStatsState, criteria: DatabaseFilterCri
 }
 
 export function DatabasesPage(props: DatabasesPageProps) {
+    //TODO: highlight active database
+
     const [stats, dispatch] = useReducer(databasesStatsReducer, null, databasesStatsReducerInitializer);
 
     const [filter, setFilter] = useState<DatabaseFilterCriteria>(() => ({

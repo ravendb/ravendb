@@ -142,7 +142,7 @@ class serverSetup {
 
     toUnsecuredDto() : Raven.Server.Commercial.UnsecuredSetupInfo {
         const nodesInfo = {} as dictionary<Raven.Server.Commercial.NodeInfo>;
-        this.nodes().forEach((node, idx) => {
+        this.nodes().forEach((node) => {
             nodesInfo[node.nodeTag()] = node.toDto();
         });
         
@@ -157,7 +157,7 @@ class serverSetup {
     
     toSecuredDto(): Raven.Server.Commercial.SetupInfo {
         const nodesInfo = {} as dictionary<Raven.Server.Commercial.NodeInfo>;
-        this.nodes().forEach((node, idx) => {
+        this.nodes().forEach((node) => {
             nodesInfo[node.nodeTag()] = node.toDto();
         });
 
@@ -195,12 +195,12 @@ class serverSetup {
         switch (this.mode()) {
             case "Continue":
                 return this.continueSetup().serverUrl();
-            case "Unsecured":
+            case "Unsecured": {
                 const setupPort = this.getLocalNode().port() || '8080';
                 const setupAddress = this.getLocalNode().ips()[0].ip();
-                
-                let host, 
-                    port = setupPort;
+
+                let host;
+                const port = setupPort;
                 if (setupAddress === "0.0.0.0") {
                     host = document.location.hostname;
                 } else {
@@ -208,11 +208,11 @@ class serverSetup {
                 }
 
                 return `http://${host}:${port}`;
-                
+            }
             case "LetsEncrypt":
                 return "https://" + this.getLocalNode().nodeTag().toLocaleLowerCase() + "." + this.domain().domain() + "." + this.domain().rootDomain() + this.getPortPart();
                 
-            case "Secured":
+            case "Secured": {
                 const wildcard = this.certificate().wildcardCertificate();
                 if (wildcard) {
                     const domain = this.getDomainForWildcard(this.getLocalNode().nodeTag().toLocaleLowerCase());
@@ -220,6 +220,7 @@ class serverSetup {
                 } else {
                     return this.nodes()[0].getServerUrl();
                 }
+            }
                 
             default:
                 return null;
@@ -242,15 +243,15 @@ class serverSetup {
                 case "LetsEncrypt":
                     return this.domain().fullDomain().toLocaleLowerCase();
                     
-                case "Secured":
+                case "Secured": {
                     const wildcard = this.certificate().wildcardCertificate();
-                    
+
                     if (wildcard) {
                         return this.getDomainForWildcard(null);
                     } else {
                         return node.hostname() || "<select hostname below>";
                     }
-                    
+                }
                 default:
                     return null;
             }

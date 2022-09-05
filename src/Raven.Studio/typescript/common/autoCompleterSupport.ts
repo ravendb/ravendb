@@ -9,7 +9,7 @@ class autoCompleterSupport {
   searchForCompletions(input: JQuery) {
     this.autoCompleteResults([]);
 
-    var typedWord = this.getWordUserIsTyping(input);
+    const typedWord = this.getWordUserIsTyping(input);
 
       if (typedWord.length >= 1 || this.showAllOptionOnEmptyInput) {
       this.autoCompleteResults(this.autoCompleteBase().filter((value) =>
@@ -23,14 +23,13 @@ class autoCompleterSupport {
 
   completeTheWord(input: JQuery, selectedCompletion: string, updateObservableClouse: (newValue: string) => void = null) {
     if (input.length > 0) {
-      var inputValue: string = input.val();
-      var typedWord = this.getWordUserIsTyping(input);
+      const inputValue: string = input.val();
 
-      var cursorPosition = inputCursor.getPosition(input);
-      var beginIndex = this.findWordStartWithEndPosition(inputValue, cursorPosition - 1) + 1;
+      const cursorPosition = inputCursor.getPosition(input);
+      const beginIndex = this.findWordStartWithEndPosition(inputValue, cursorPosition - 1) + 1;
 
       // update observable here as input has on key up update
-      var newValue = inputValue.substring(0, beginIndex) +
+      const newValue = inputValue.substring(0, beginIndex) +
             selectedCompletion +
             inputValue.substring(cursorPosition);
 
@@ -39,7 +38,7 @@ class autoCompleterSupport {
           updateObservableClouse(newValue);
       }
 
-      var positionCorrection = 0;
+      let positionCorrection = 0;
       if (selectedCompletion[selectedCompletion.length-1] === ")" ) {
         positionCorrection = -1;
       }
@@ -49,9 +48,9 @@ class autoCompleterSupport {
   }
 
   private findWordStartWithEndPosition(inputValue: string, endPosition: number): number {
-    var beginIndex = 0;
+    let beginIndex = 0;
     for (beginIndex = endPosition; beginIndex >= 0; beginIndex--) {
-      var charCode = inputValue.charCodeAt(beginIndex);
+      const charCode = inputValue.charCodeAt(beginIndex);
       // going back skip every alphanumeric characters
       if ((48 <= charCode && charCode <= 57) // char in range from '0' to '9'
         || (65 <= charCode && charCode <= 90) // char in range from 'A' to 'Z'
@@ -67,11 +66,11 @@ class autoCompleterSupport {
 
   }
   private getWordUserIsTyping($input: JQuery) {
-    var cursorPosition = inputCursor.getPosition($input);
+    const cursorPosition = inputCursor.getPosition($input);
     //var beginIndex = $input.val().lastIndexOf(' ', cursorPosition-1);
-    var beginIndex = this.findWordStartWithEndPosition($input.val(), cursorPosition - 1) + 1;
+    const beginIndex = this.findWordStartWithEndPosition($input.val(), cursorPosition - 1) + 1;
 
-    var endIndex = $input.val().indexOf(' ', cursorPosition);
+    let endIndex = $input.val().indexOf(' ', cursorPosition);
     if (endIndex === -1) {
       endIndex = $input.val().length;
     }
@@ -84,8 +83,8 @@ class autoCompleterSupport {
     toMatch = toMatch.toLowerCase();
 
     // match as long as the letters are in correct order
-    var matchedChars = 0;
-    for (var i = 0; i < toMatch.length; i++) {
+    let matchedChars = 0;
+    for (let i = 0; i < toMatch.length; i++) {
       if (toCheck[matchedChars] === toMatch[i]) {
         matchedChars++;
       }

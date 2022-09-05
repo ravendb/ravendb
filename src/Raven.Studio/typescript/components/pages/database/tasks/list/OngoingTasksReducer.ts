@@ -216,7 +216,7 @@ function mapSharedInfo(task: OngoingTask): OngoingTaskSharedInfo {
             };
             return result;
         }
-        case "PullReplicationAsSink":
+        case "PullReplicationAsSink": {
             const incoming = task as OngoingTaskPullReplicationAsSink;
             // noinspection UnnecessaryLocalVariableJS
             const result: OngoingTaskReplicationSinkSharedInfo = {
@@ -229,6 +229,7 @@ function mapSharedInfo(task: OngoingTask): OngoingTaskSharedInfo {
                 mode: incoming.Mode,
             };
             return result;
+        }
         case "PullReplicationAsHub": {
             const incoming = task as OngoingTaskPullReplicationAsHub;
 
@@ -314,6 +315,7 @@ export const ongoingTasksReducer: Reducer<OngoingTasksState, OngoingTaskReducerA
                     };
 
                     if (existingNodeInfo) {
+                        // eslint-disable-next-line @typescript-eslint/no-unused-vars
                         const { location, status, details, ...restProps } = existingNodeInfo;
                         // retain other props - like etlProgress
                         Object.assign(newNodeInfo, restProps);

@@ -31,7 +31,7 @@ class collectionsTracker {
         
         this.loadStatsTask = new getCollectionsStatsCommand(db)
             .execute()
-            .done(stats => this.collectionsLoaded(stats, db));
+            .done(stats => this.collectionsLoaded(stats));
 
         this.configureRevisions(db);
 
@@ -46,7 +46,7 @@ class collectionsTracker {
         }
     }
 
-    private collectionsLoaded(collectionsStats: collectionsStats, db: database) {
+    private collectionsLoaded(collectionsStats: collectionsStats) {
         const collections = collectionsStats.collections;
 
         _.remove(collections, c => !c.documentCount());
@@ -73,7 +73,7 @@ class collectionsTracker {
         // 6 is the number of classes that I have defined in etl.less for colors...
     }    
     
-    onDatabaseStatsChanged(notification: Raven.Server.NotificationCenter.Notifications.DatabaseStatsChanged, db: database) {
+    onDatabaseStatsChanged(notification: Raven.Server.NotificationCenter.Notifications.DatabaseStatsChanged) {
         const removedCollections = notification.ModifiedCollections.filter(x => x.Count < 1);
         const changedCollections = notification.ModifiedCollections.filter(x => x.Count >= 1);
         const totalCount = notification.CountOfDocuments;
@@ -96,7 +96,7 @@ class collectionsTracker {
             if (existingCollection) {
                 this.onCollectionChanged(existingCollection, c);
             } else {
-                this.onCollectionCreated(c, db);
+                this.onCollectionCreated(c);
             }
         });
         
@@ -149,7 +149,7 @@ class collectionsTracker {
         }
     }
 
-    private onCollectionCreated(incomingItem: Raven.Server.NotificationCenter.Notifications.DatabaseStatsChanged.ModifiedCollection, db: database) {
+    private onCollectionCreated(incomingItem: Raven.Server.NotificationCenter.Notifications.DatabaseStatsChanged.ModifiedCollection) {
         const newCollection = new collection(incomingItem.Name, incomingItem.Count);
         this.collections.push(newCollection);
         this.collections.sort((a, b) => this.sortAlphaNumericCollection(a.name, b.name));

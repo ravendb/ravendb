@@ -35,7 +35,7 @@ export abstract class restoreSettings {
 
 export class localServerCredentials extends restoreSettings {
     backupStorageType: restoreSource = 'local'; 
-    backupStorageTypeText: string ='Local Server Directory';
+    backupStorageTypeText ='Local Server Directory';
     mandatoryFieldsText = "Backup Directory";
 
     backupDirectory = ko.observable<string>();
@@ -107,7 +107,7 @@ export class amazonS3Credentials extends restoreSettings {
             CustomServerUrl: this.useCustomS3Host() ? this.customServerUrl() : null,
             ForcePathStyle: this.useCustomS3Host() ? this.forcePathStyle() : false,
         }
-    };
+    }
 
     useAwsRegion(awsRegionEndpoint: { label: string, value: string }) {
         this.regionName(amazonSettings.getDisplayRegionName(awsRegionEndpoint));
@@ -200,7 +200,7 @@ export class azureCredentials extends restoreSettings {
             Disabled: false,
             GetBackupConfigurationScript: null
         }
-    };
+    }
 
     fetchRestorePointsCommand = () => getRestorePointsCommand.forAzureBackup(this.toDto(), true);
 
@@ -243,7 +243,7 @@ export class azureCredentials extends restoreSettings {
 
 export class googleCloudCredentials extends restoreSettings {
     backupStorageType: restoreSource = 'googleCloud';
-    backupStorageTypeText: string ='Google Cloud Platform';
+    backupStorageTypeText ='Google Cloud Platform';
     mandatoryFieldsText = "required fields";
     
     remoteFolder = ko.observable<string>();
@@ -260,7 +260,7 @@ export class googleCloudCredentials extends restoreSettings {
             Disabled: false,
             GetBackupConfigurationScript: null
         }
-    };
+    }
 
     fetchRestorePointsCommand = () => getRestorePointsCommand.forGoogleCloudBackup(this.toDto(), true);
 
@@ -396,18 +396,20 @@ export class ravenCloudCredentials extends restoreSettings {
                                        backupLocation: string) {
 
         switch (this.cloudBackupProvider()) {
-            case "S3":
+            case "S3": {
                 const s3Configuration = baseConfiguration as Raven.Client.Documents.Operations.Backups.RestoreFromS3Configuration;
                 s3Configuration.Settings = this.toAmazonS3Dto();
                 s3Configuration.Settings.RemoteFolderName = backupLocation;
                 (s3Configuration as any as restoreTypeAware).Type = "S3";
                 return s3Configuration;
-            case "Azure":
+            }
+            case "Azure": {
                 const azureConfiguration = baseConfiguration as Raven.Client.Documents.Operations.Backups.RestoreFromAzureConfiguration;
                 azureConfiguration.Settings = this.toAzureDto();
                 azureConfiguration.Settings.RemoteFolderName = backupLocation;
                 (azureConfiguration as any as restoreTypeAware).Type = "Azure";
                 return azureConfiguration;
+            }
             default:
                 throw new Error("Unable to get restore configuration, unknown provider: " + this.cloudBackupProvider());
         }

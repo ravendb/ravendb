@@ -33,7 +33,7 @@ class databaseIndexingWidget extends abstractDatabaseAndNodeAwareTableWidget<Rav
         return data.Items.map(x => new indexingSpeedItem(nodeTag, x));
     }
 
-    protected prepareColumns(containerWidth: number, results: pagedResult<indexingSpeedItem>): virtualColumn[] {
+    protected prepareColumns(): virtualColumn[] {
         const grid = this.gridController();
         return [
             new textColumn<indexingSpeedItem>(grid, x => x.hideDatabaseName ? "" : x.database, "Database", "35%"),

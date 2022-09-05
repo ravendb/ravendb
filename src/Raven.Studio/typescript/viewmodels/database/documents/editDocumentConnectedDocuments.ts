@@ -19,7 +19,6 @@ import downloader = require("common/downloader");
 import viewHelpers = require("common/helpers/view/viewHelpers");
 import editDocumentUploader = require("viewmodels/database/documents/editDocumentUploader");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
-import timeSeriesEntryModel = require("models/database/timeSeries/timeSeriesEntryModel");
 
 type connectedDocsTabs = "attachments" | "counters" | "revisions" | "related" | "recent" | "timeSeries";
 type connectedItemType = connectedDocumentItem | attachmentItem | counterItem | timeSeriesItem;
@@ -283,11 +282,11 @@ class connectedDocuments {
 
         switch (connectedDocuments.currentTab()) {
             case "related":
-                return this.fetchRelatedDocs(skip, take);
+                return this.fetchRelatedDocs();
             case "attachments":
                 return this.crudActionsProvider().fetchAttachments(this.searchInput().toLocaleLowerCase(), skip, take);
             case "recent":
-                return this.fetchRecentDocs(skip, take);
+                return this.fetchRecentDocs();
             case "revisions":
                 return this.fetchRevisionDocs(skip, take);
             case "counters": 
@@ -298,7 +297,7 @@ class connectedDocuments {
         }
     }
 
-    fetchRelatedDocs(skip: number, take: number): JQueryPromise<pagedResult<connectedDocumentItem>> {
+    fetchRelatedDocs(): JQueryPromise<pagedResult<connectedDocumentItem>> {
         const deferred = $.Deferred<pagedResult<connectedDocumentItem>>();
         const search = this.searchInput().toLocaleLowerCase();
 
@@ -321,7 +320,7 @@ class connectedDocuments {
         return deferred.promise();
     }
     
-    fetchRecentDocs(skip: number, take: number): JQueryPromise<pagedResult<connectedDocumentItem>> {
+    fetchRecentDocs(): JQueryPromise<pagedResult<connectedDocumentItem>> {
         const doc = this.document();
 
         const recentDocs = this.recentDocuments.getTopRecentDocuments(this.db, doc.getId(), this.isClone());

@@ -38,7 +38,7 @@ class revisionsConfigurationEntry {
     private static readonly revisionsDelta = 100;
     private static readonly revisionsByAgeDelta = 604800; // 7 days
     
-    limitWarningHtml = (byAge: boolean = false) => `The new limit is much lower than the current value (delta > 
+    limitWarningHtml = (byAge = false) => `The new limit is much lower than the current value (delta > 
                         ${byAge ? generalUtils.formatTimeSpan(revisionsConfigurationEntry.revisionsByAgeDelta * 1000, true) : revisionsConfigurationEntry.revisionsDelta}).<br>
                         It is advised to set the # of revisions to delete upon document update.`
     
@@ -105,7 +105,7 @@ class revisionsConfigurationEntry {
             const purgeOnText = `<li>A revision will be created anytime a document is modified.</li>
                                  <li>When a document is deleted all its revisions will be removed.</li>`;
 
-            let description = this.purgeOnDelete() ? purgeOnText : purgeOffText;
+            const description = this.purgeOnDelete() ? purgeOnText : purgeOffText;
             return `<ul class="margin-top-sm">${description}</ul>`; 
         });
 

@@ -1,21 +1,10 @@
 import { rtlRender } from "../../../../../test/rtlTestUtils";
-import { DatabasesStubs } from "../../../../../test/stubs/DatabasesStubs";
-import { IndexesPage } from "./IndexesPage";
 import React from "react";
 import { composeStories } from "@storybook/testing-react";
 
 import * as stories from "./IndexesPage.stories";
+
 const { EmptyView, SampleDataCluster, FaultyIndexSharded, FaultyIndexSingleNode } = composeStories(stories);
-
-function render() {
-    const db = DatabasesStubs.shardedDatabase();
-    return rtlRender(
-        <div className="indexes content-margin no-transition">
-            <IndexesPage database={db} />
-        </div>
-    );
-}
-
 describe("IndexesPage", function () {
     it("can render empty view", async () => {
         const { screen } = rtlRender(<EmptyView />);

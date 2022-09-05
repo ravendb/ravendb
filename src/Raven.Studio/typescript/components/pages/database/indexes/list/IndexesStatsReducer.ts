@@ -220,7 +220,7 @@ export const indexesStatsReducer: Reducer<IndexesStatsState, IndexesStatsReducer
                 });
             });
         }
-        case "StatsLoaded":
+        case "StatsLoaded": {
             const incomingLocation = action.location;
             const incomingStats = action.stats;
 
@@ -259,6 +259,7 @@ export const indexesStatsReducer: Reducer<IndexesStatsState, IndexesStatsReducer
                     draft.indexes = draft.indexes.filter((x) => !toDelete.includes(x.name));
                 }
             });
+        }
         case "DeleteIndexes":
             return produce(state, (draft) => {
                 draft.indexes = draft.indexes.filter((x) => !action.indexNames.includes(x.name));

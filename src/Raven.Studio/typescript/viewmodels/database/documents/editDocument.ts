@@ -45,11 +45,6 @@ import fileDownloader = require("common/fileDownloader");
 import moment = require("moment");
 import shardViewModelBase from "viewmodels/shardViewModelBase";
 
-interface revisionToCompare {
-    date: string;
-    changeVector: string;
-}
-
 class editDocument extends shardViewModelBase {
 
     view = require("views/database/documents/editDocument.html");
@@ -157,7 +152,7 @@ class editDocument extends shardViewModelBase {
     showHugeDocumentWarning: KnockoutComputed<boolean>;
     
     sizeOnDiskActual = ko.observable<string>();
-    sizeOnDiskAllocated = ko.observable<String>();
+    sizeOnDiskAllocated = ko.observable<string>();
     documentSizeHtml: KnockoutComputed<string>;
     
     editedDocId: KnockoutComputed<string>;
@@ -173,7 +168,7 @@ class editDocument extends shardViewModelBase {
 
     collapseDocsWhenOpening = ko.observable<boolean>(false);
     isDocumentCollapsed = ko.observable<boolean>(false);
-    forceFold: boolean = false;
+    forceFold = false;
     
     constructor(db: database) {
         super(db);
@@ -809,7 +804,7 @@ class editDocument extends shardViewModelBase {
         }
     }
     
-    createClone(keepChanges: boolean = false) {
+    createClone(keepChanges = false) {
         const attachments = this.document().__metadata.attachments()
             ? this.document().__metadata.attachments().map(x => editDocument.mapToAttachmentItem(this.editedDocId(), x))
             : [];
@@ -818,10 +813,10 @@ class editDocument extends shardViewModelBase {
         
         const fetchCountersTask = documentHasCounters ?
             // Must get counter values from server since cloning counters is a 'create' operation (not copy)
-            this.normalActionProvider.fetchCounters("", 0, 1024 * 1024) :
+            this.normalActionProvider.fetchCounters("") :
             $.when<pagedResult<counterItem>>({ items: [], totalResultCount: 0 } as pagedResult<counterItem>);
         
-        const fetchTimeseriesTask = this.normalActionProvider.fetchTimeSeries("", 0, 1024 * 1024);
+        const fetchTimeseriesTask = this.normalActionProvider.fetchTimeSeries("");
 
         $.when<any>(fetchCountersTask, fetchTimeseriesTask)
             .done((counters: pagedResult<counterItem>, timeSeries: pagedResult<timeSeriesItem>) => {
@@ -829,7 +824,7 @@ class editDocument extends shardViewModelBase {
             })
     }
     
-    private createCloneInternal(attachments: attachmentItem[], timeseries: timeSeriesItem[], counters: counterItem[], keepChanges: boolean = false) {
+    private createCloneInternal(attachments: attachmentItem[], timeseries: timeSeriesItem[], counters: counterItem[], keepChanges = false) {
         // Show current document as a clone document...
         router.navigate(window.location.hash + "&isClone=true", { trigger: false, replace: false });
         
@@ -907,7 +902,7 @@ class editDocument extends shardViewModelBase {
         return true;
     }
     
-    private saveInternal(documentId: string, forceRevisionCreation: boolean = false) {
+    private saveInternal(documentId: string, forceRevisionCreation = false) {
         let message = "";
         let updatedDto: any;
 
@@ -953,7 +948,7 @@ class editDocument extends shardViewModelBase {
 
         // skip some not necessary meta in headers
         const metaToSkipInHeaders = ['Raven-Replication-History'];
-        for (let i in metaToSkipInHeaders) {
+        for (const i in metaToSkipInHeaders) {
             const skippedHeader = metaToSkipInHeaders[i];
             delete meta[skippedHeader];
         }
@@ -995,7 +990,8 @@ class editDocument extends shardViewModelBase {
         const currentSelection = this.docEditor.getSelectionRange();
 
         const metadata = localDoc['@metadata'];
-        for (let prop in savedDocumentDto) {
+        for (const prop in savedDocumentDto) {
+            // eslint-disable-next-line no-prototype-builtins
             if (savedDocumentDto.hasOwnProperty(prop)) {
                 if (prop === "Type")
                     continue;
@@ -1466,7 +1462,7 @@ class normalCrudActions implements editDocumentCrudActions {
             });
     }
 
-    fetchAttachments(nameFilter: string, skip: number, take: number): JQueryPromise<pagedResult<attachmentItem>> {
+    fetchAttachments(nameFilter: string): JQueryPromise<pagedResult<attachmentItem>> {
         const doc = this.document();
 
         let attachments: documentAttachmentDto[] = doc.__metadata.attachments() || [];
@@ -1483,7 +1479,7 @@ class normalCrudActions implements editDocumentCrudActions {
         });
     }
     
-    fetchCounters(nameFilter: string, skip: number, take: number): JQueryPromise<pagedResult<counterItem>> {
+    fetchCounters(nameFilter: string): JQueryPromise<pagedResult<counterItem>> {
         const doc = this.document();
 
         if (doc.__metadata.hasFlag("Revision")) {
@@ -1532,7 +1528,7 @@ class normalCrudActions implements editDocumentCrudActions {
         return fetchTask.promise();
     }
     
-    fetchTimeSeries(nameFilter: string, skip: number, take: number): JQueryPromise<pagedResult<timeSeriesItem>> {
+    fetchTimeSeries(nameFilter: string): JQueryPromise<pagedResult<timeSeriesItem>> {
         const doc = this.document();
 
         if (doc.__metadata.hasFlag("Revision")) {
@@ -1586,7 +1582,7 @@ class normalCrudActions implements editDocumentCrudActions {
     private static resultItemToCounterItem(counterDetail: Raven.Client.Documents.Operations.Counters.CounterDetail): counterItem {
         const counter = counterDetail;
 
-        let valuesPerNode = Array<nodeCounterValue>();
+        const valuesPerNode = Array<nodeCounterValue>();
         for (const nodeDetails in counter.CounterValues) {
             const [nodeTag, dbId] = _.split(nodeDetails, '-', 2);
             valuesPerNode.unshift({
@@ -1621,7 +1617,7 @@ class normalCrudActions implements editDocumentCrudActions {
             });
     }
 
-    saveRelatedItems(targetDocumentId: string) {
+    saveRelatedItems() {
         // no action required
         return $.when<void>(null);
     }
@@ -1720,7 +1716,7 @@ class clonedDocumentCrudActions implements editDocumentCrudActions {
         this.reload();
     }
 
-    fetchAttachments(nameFilter: string, skip: number, take: number): JQueryPromise<pagedResult<attachmentItem>> {
+    fetchAttachments(nameFilter: string): JQueryPromise<pagedResult<attachmentItem>> {
         let attachments: attachmentItem[] = this.attachments();
 
         if (nameFilter) {
@@ -1733,7 +1729,7 @@ class clonedDocumentCrudActions implements editDocumentCrudActions {
         });
     }
 
-    fetchCounters(nameFilter: string, skip: number, take: number): JQueryPromise<pagedResult<counterItem>> {
+    fetchCounters(nameFilter: string): JQueryPromise<pagedResult<counterItem>> {
         let counters: counterItem[] = this.counters();
 
         if (nameFilter) {
@@ -1746,7 +1742,7 @@ class clonedDocumentCrudActions implements editDocumentCrudActions {
         });
     }
     
-    fetchTimeSeries(nameFilter: string, skip: number, take: number): JQueryPromise<pagedResult<timeSeriesItem>> {
+    fetchTimeSeries(nameFilter: string): JQueryPromise<pagedResult<timeSeriesItem>> {
         let timeseries: timeSeriesItem[] = this.timeSeries();
 
         if (nameFilter) {
@@ -1759,7 +1755,7 @@ class clonedDocumentCrudActions implements editDocumentCrudActions {
         });
     }
 
-    fetchRevisionsCount(docId: string, db: database): void {
+    fetchRevisionsCount(): void {
         // Not needed for clone view.
     }
     
@@ -1789,7 +1785,7 @@ class clonedDocumentCrudActions implements editDocumentCrudActions {
         }
     }
     
-    onDocumentSaved(saveResult: saveDocumentResponseDto, localDoc: any) {
+    onDocumentSaved(saveResult: saveDocumentResponseDto) {
         this.parentView.dirtyFlag().reset();
         router.navigate(appUrl.forEditDoc(saveResult.Results[0]["@id"], this.db));
     }

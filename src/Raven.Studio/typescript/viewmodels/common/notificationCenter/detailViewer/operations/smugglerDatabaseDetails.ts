@@ -437,7 +437,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
         }));
     }
 
-    private mapToExportListItem(name: string, item: Counts, isNested: boolean = false): smugglerListItem {
+    private mapToExportListItem(name: string, item: Counts, isNested = false): smugglerListItem {
         let stage: smugglerListItemStatus = "processing";
         
         if (item.Skipped) {

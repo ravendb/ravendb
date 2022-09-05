@@ -22,6 +22,7 @@ class recentLicenseLimitError extends recentError {
                 return parsedDetails.Type;
             }
         } catch (e) {
+            // ignore
         }
 
         return null;

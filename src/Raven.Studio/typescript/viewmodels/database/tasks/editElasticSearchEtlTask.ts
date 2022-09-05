@@ -1,6 +1,5 @@
 import app = require("durandal/app");
 import appUrl = require("common/appUrl");
-import viewModelBase = require("viewmodels/viewModelBase");
 import router = require("plugins/router");
 import database = require("models/resources/database");
 import ongoingTaskElasticSearchEtlEditModel = require("models/database/tasks/ongoingTaskElasticSearchEtlEditModel");
@@ -341,14 +340,6 @@ class editElasticSearchEtlTask extends shardViewModelBase {
             return dto;
         };
 
-        const connectionStringProvider = () => {
-            if (this.createNewConnectionString()) {
-                return this.newConnectionString().toDto();
-            } else {
-                return null;
-            }
-        };
-
         this.test = new elasticSearchTaskTestMode(this.db, () => {
             return this.isValid(this.editedTransformationScriptSandbox().validationGroup);
         }, dtoProvider);
@@ -469,7 +460,7 @@ class editElasticSearchEtlTask extends shardViewModelBase {
         }
                 
         // 5. All is well, Save connection string (if relevant..) 
-        let savingNewStringAction = $.Deferred<void>();
+        const savingNewStringAction = $.Deferred<void>();
         if (this.createNewConnectionString()) {
             this.newConnectionString()
                 .saveConnectionString(this.db)

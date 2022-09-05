@@ -24,7 +24,7 @@ const Template = (args: { withProgress: boolean; shardedLocation: boolean }) => 
             <LocationSpecificDetails location={location}>
                 <LocationSpecificDetailsItemsContainer>
                     <LocationSpecificDetailsItem>
-                        <StatePill color="success">I'm feeling good!</StatePill>
+                        <StatePill color="success">I&apos;m feeling good!</StatePill>
                     </LocationSpecificDetailsItem>
                     <LocationSpecificDetailsItem>
                         <i className="icon-list" /> 1,234,567 entries

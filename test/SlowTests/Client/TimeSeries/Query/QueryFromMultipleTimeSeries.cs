@@ -1043,7 +1043,89 @@ select out()
                     }
 
                     var expected = 8;
-                    if (now.Hour == 23 && (now.Minute > 0 || now.Second > 0))
+                    if (now.Hour == 23 && (now.Minute > 0 || now.Second >= 0))
+                        expected--; // if now is 23:00:34, we will not get any result for that day, only for the next one
+
+                    Assert.Equal(expected, days.Count);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task RavenDB_18384()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var raw = new RawTimeSeriesPolicy(TimeSpan.FromHours(24));
+                var p1 = new TimeSeriesPolicy("By1Day", TimeSpan.FromDays(1));
+
+                var config = new TimeSeriesConfiguration
+                {
+                    Collections = new Dictionary<string, TimeSeriesCollectionConfiguration>
+                    {
+                        ["Users"] = new TimeSeriesCollectionConfiguration
+                        {
+                            RawPolicy = raw,
+                            Policies = new List<TimeSeriesPolicy>
+                            {
+                                p1
+                            }
+                        }
+                    }
+                };
+                await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+                var now = new DateTime(2022, 8, 31, 23, 0, 0);
+                now = now.AddMilliseconds(1);
+                database.Time.UtcDateTime = () => now;
+
+                var baseline = now.AddDays(-12);
+                var total = TimeSpan.FromDays(12).TotalMinutes;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Karmel" }, "users/karmel");
+                    for (int i = 0; i <= total; i++)
+                    {
+                        session.TimeSeriesFor("users/karmel", "Heartrate")
+                            .Append(baseline.AddMinutes(i), i, "watches/fitbit");
+                    }
+                    session.SaveChanges();
+                }
+
+                await database.TimeSeriesPolicyRunner.RunRollups();
+                await database.TimeSeriesPolicyRunner.DoRetention();
+
+                await TimeSeries.VerifyPolicyExecutionAsync(store, config.Collections["Users"], 12);
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
+
+declare timeseries out() 
+{
+    from Heartrate
+    between $start and $end
+    group by 1h
+    select avg()
+}
+from Users as u
+select out()
+")
+                        .AddParameter("start", now.AddDays(-7))
+                        .AddParameter("end", now);
+
+                    var aggregationResult = query.Single();
+
+                    var days = new HashSet<DateTime>();
+                    foreach (var g in aggregationResult.Results.GroupBy(r => new DateTime(r.From.Year, r.From.Month, r.From.Day)))
+                    {
+                        days.Add(g.Key);
+                    }
+
+                    var expected = 8;
+                    if (now.Hour == 23 && (now.Minute > 0 || now.Second >= 0))
                         expected--; // if now is 23:00:34, we will not get any result for that day, only for the next one
 
                     Assert.Equal(expected, days.Count);

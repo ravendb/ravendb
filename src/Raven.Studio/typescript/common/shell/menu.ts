@@ -1,12 +1,10 @@
 /// <reference path="../../../typings/tsd.d.ts"/>
 
-import app = require("durandal/app");
 import EVENTS = require("common/constants/events");
 import router = require("plugins/router");
 import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
 import studioSettings = require("common/settings/studioSettings");
-import globalSettings = require("common/settings/globalSettings");
 
 class menu {
 
@@ -17,7 +15,7 @@ class menu {
     deepestOpenItem: KnockoutObservable<intermediateMenuItem> = ko.observable(null);
     level: KnockoutComputed<number> =
         ko.pureComputed(() => {
-            let item = this.deepestOpenItem();
+            const item = this.deepestOpenItem();
             return item ? item.depth() + 1 : 0;
         });
 
@@ -26,7 +24,7 @@ class menu {
     private menuResizeElement: HTMLElement;
     width = ko.observable<number>(280);
 
-    private type: string = 'menu';
+    private type = 'menu';
     private items: KnockoutObservable<Array<menuItem>> = ko.observable(null);
 
     private resetMenuLevelToActiveItem: {
@@ -52,7 +50,7 @@ class menu {
                     return result;
                 }
 
-                let route = (next as leafMenuItem).route;
+                const route = (next as leafMenuItem).route;
                 if (typeof(route) === 'string') {
                     cacheItem(route, next as leafMenuItem);
                 } else if (Array.isArray(route)) {
@@ -65,7 +63,7 @@ class menu {
                 return result;
 
                 function cacheItem(route: string, item: leafMenuItem) {
-                    let regex = routeStringToRegExp(route);
+                    const regex = routeStringToRegExp(route);
                     if (result.has(regex)) {
                         throw new Error(`Duplicate menu item '${item.title}' for route: ${route}.`);
                     }
@@ -84,13 +82,13 @@ class menu {
     }
 
     handleIntermediateItemClick($data: { item: intermediateMenuItem }, $event: JQueryEventObject) {
-        let { item } = $data;
+        const { item } = $data;
         if (item.isOpen()) {
             item.close();
             return;
         }
 
-        let currentItem = this.deepestOpenItem();
+        const currentItem = this.deepestOpenItem();
         if (currentItem && currentItem !== item) {
             currentItem.close();
         }
@@ -121,7 +119,7 @@ class menu {
             return false;
         }
 
-        let a = $event.currentTarget as HTMLAnchorElement;
+        const a = $event.currentTarget as HTMLAnchorElement;
 
         if ($event.ctrlKey) {
             window.open(a.href);
@@ -131,7 +129,7 @@ class menu {
     }
 
     back($data: any, $event: JQueryEventObject) {
-        let { item } = $data;
+        const { item } = $data;
         $event.stopPropagation();
         item.isOpen(false);
         this.deepestOpenItem(item.parent());
@@ -154,8 +152,8 @@ class menu {
     handleLevelClick($data: any, $event: JQueryEventObject) {
         $event.stopPropagation();
 
-        let $targetLevel = $($event.currentTarget);
-        let targetLevelValue = parseInt($targetLevel.attr('data-level'));
+        const $targetLevel = $($event.currentTarget);
+        const targetLevelValue = parseInt($targetLevel.attr('data-level'));
 
         if (this.level() === targetLevelValue) {
             return;
@@ -278,9 +276,9 @@ class menu {
     }
 
     private setActiveMenuItem() {
-        let flattenedItems = this.itemsFlattened();
+        const flattenedItems = this.itemsFlattened();
         for (let i = 0; i < flattenedItems.length; i++) {
-            let item = flattenedItems[i];
+            const item = flattenedItems[i];
             if (item.type === 'intermediate') {
                 (item as intermediateMenuItem).isOpen(false);
             }
@@ -290,20 +288,20 @@ class menu {
             return;
         }
 
-        let { fragment } = router.activeInstruction();
-        let matchingRoute = this.registeredRoutes()
+        const { fragment } = router.activeInstruction();
+        const matchingRoute = this.registeredRoutes()
             .find(routeRegex => routeRegex.test(fragment));
 
         if (!matchingRoute) {
             return;
         }
 
-        let itemMatchingRoute = this.routeToItemCache().get(matchingRoute);
+        const itemMatchingRoute = this.routeToItemCache().get(matchingRoute);
         if (itemMatchingRoute.itemRouteToHighlight) {
                 // Highlight/Activate a different menu item
                 const matchingRoute = this.registeredRoutes()
                     .find(routeRegex => routeRegex.test(itemMatchingRoute.itemRouteToHighlight));
-                let itemToActivate = this.routeToItemCache().get(matchingRoute);
+                const itemToActivate = this.routeToItemCache().get(matchingRoute);
                 this.activeItem(itemToActivate);
         } else {
             this.activeItem(itemMatchingRoute);
@@ -313,7 +311,7 @@ class menu {
     }    
 
     private setLevelToActiveItem() {
-        let active = this.activeItem();
+        const active = this.activeItem();
         if (!active) {
             return;
         }
@@ -334,8 +332,8 @@ class menu {
                     return nextEl;
                 }
 
-                var resultLevel = this.parseLevel(result);
-                var curLevel = this.parseLevel(nextEl);
+                const resultLevel = this.parseLevel(result);
+                const curLevel = this.parseLevel(nextEl);
 
                 if (resultLevel > curLevel) {
                     return result;
@@ -380,14 +378,14 @@ class menu {
 const optionalParam = /\((.*?)\)/g;
 const namedParam = /(\(\?)?:\w+/g;
 const splatParam = /\*\w+/g;
-const escapeRegExp = /[\-{}\[\]+?.,\\\^$|#\s]/g;
+const escapeRegExp = /[-{}[\]+?.,\\^$|#\s]/g;
 const routesAreCaseSensitive = false;
 
 function routeStringToRegExp(routeString: string) {
     routeString = routeString.replace(escapeRegExp, '\\$&')
         .replace(optionalParam, '(?:$1)?')
         .replace(namedParam, function (match, optional) {
-            return optional ? match : '([^\/]+)';
+            return optional ? match : '([^/]+)';
         })
         .replace(splatParam, '(.*?)');
 

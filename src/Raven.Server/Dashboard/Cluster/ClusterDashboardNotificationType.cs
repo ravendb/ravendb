@@ -13,6 +13,7 @@ namespace Raven.Server.Dashboard.Cluster
         
         CpuUsage,
         MemoryUsage,
+        IoStats,
         
         StorageUsage,
         DatabaseStorageUsage,

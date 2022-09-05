@@ -187,6 +187,7 @@ class importDatabaseFromSql extends viewModelBase {
         }
 
         // Check correctness of data
+        // eslint-disable-next-line no-prototype-builtins
         if (!importedData.hasOwnProperty('Schema') || !importedData.hasOwnProperty('Configuration')) {
             messagePublisher.reportError("Invalid SQL migration file format", undefined, undefined);
         } else {

@@ -36,6 +36,8 @@ namespace Raven.Server.Dashboard.Cluster
                     return new StorageUsageNotificationSender(topicId, ClusterDashboardPayloadType.Server, _databasesInfoRetriever, watcher, _shutdown);
                 case ClusterDashboardNotificationType.DatabaseStorageUsage:
                     return new StorageUsageNotificationSender(topicId, ClusterDashboardPayloadType.Database, _databasesInfoRetriever, watcher, _shutdown);
+                case ClusterDashboardNotificationType.IoStats:
+                    return new IoStatsNotificationSender(topicId, _databasesInfoRetriever, watcher, _shutdown);
                 case ClusterDashboardNotificationType.Traffic:
                     return new TrafficNotificationSender(topicId, ClusterDashboardPayloadType.Server, _databasesInfoRetriever, watcher, _shutdown);
                 case ClusterDashboardNotificationType.DatabaseTraffic:
@@ -49,7 +51,8 @@ namespace Raven.Server.Dashboard.Cluster
                 case ClusterDashboardNotificationType.OngoingTasks:
                     return new OngoingTasksNotificationSender(topicId, _databasesInfoRetriever, watcher, _shutdown);
                 default:
-                    throw new NotSupportedException($"Unsupported cluster dashboard notification type: {type}");
+                    // we don't want to throw here - it allows mixed clusters to partially show data
+                    return null;
             }
         }
 

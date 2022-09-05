@@ -4,7 +4,6 @@ import database = require("models/resources/database");
 import d3 = require("d3");
 import abstractWebSocketClient = require("common/abstractWebSocketClient");
 import endpoints = require("endpoints");
-import ongoingTaskModel from "models/database/tasks/ongoingTaskModel";
 import TaskUtils from "../components/utils/TaskUtils";
 
 class liveEtlStatsWebSocketClient extends abstractWebSocketClient<resultsDto<Raven.Server.Documents.ETL.Stats.EtlTaskPerformanceStats>> {

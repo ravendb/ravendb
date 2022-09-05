@@ -1,4 +1,3 @@
-import database = require("models/resources/database");
 import collection = require("models/database/documents/collection");
 
 class collectionsStats  {
@@ -8,13 +7,14 @@ class collectionsStats  {
     collections: collection[];
 
     
-    constructor(statsDto: Raven.Client.Documents.Operations.CollectionStatistics, ownerDatabase: database) {
+    constructor(statsDto: Raven.Client.Documents.Operations.CollectionStatistics) {
         this.numberOfDocuments(statsDto.CountOfDocuments);
         this.numberOfConflicts = statsDto.CountOfConflicts;
 
         this.collections = [];
 
-        for (var key in statsDto.Collections) {
+        for (const key in statsDto.Collections) {
+            // eslint-disable-next-line no-prototype-builtins
             if (!statsDto.Collections.hasOwnProperty(key))
                 continue;
             this.collections.push(new collection(key, statsDto.Collections[key]));

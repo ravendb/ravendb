@@ -1,5 +1,8 @@
 class MockCollector {
-    reportEvent(category: string, action: string, label: string = null) {}
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    reportEvent(category: string, action: string, label: string = null) {
+        // empty
+    }
 }
 
 export function useEventsCollector() {

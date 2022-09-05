@@ -20,7 +20,7 @@ namespace EmbeddedTests.TestDriver
             });
         }
 
-        private static string GetServerPath()
+        public static string GetServerPath()
         {
             var prefix = PosixHelper.RunningOnPosix ? "file://" : "file:///";
 

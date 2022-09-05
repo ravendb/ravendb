@@ -1,7 +1,7 @@
 ﻿import { MouseEvent, MouseEventHandler } from "react";
 import { Story, StoryFn } from "@storybook/react";
 
-export function withPreventDefault(action: Function): MouseEventHandler<HTMLElement> {
+export function withPreventDefault(action: (...args: any[]) => void): MouseEventHandler<HTMLElement> {
     return (e: MouseEvent<HTMLElement>) => {
         e.preventDefault();
         action();

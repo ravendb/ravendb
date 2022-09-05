@@ -64,6 +64,7 @@ class popoverUtils {
         return popover
             .on("mouseenter", function () {
                 overElement = true;
+                // eslint-disable-next-line @typescript-eslint/no-this-alias
                 const self = this;
                 
                 const sinceLastHide = new Date().getTime() - lastHideTime;
@@ -78,6 +79,7 @@ class popoverUtils {
                     maybeCancelHide();
                 }
             }).on("mouseleave", function () {
+                // eslint-disable-next-line @typescript-eslint/no-this-alias
                 const self = this;
                 const $tip = $(self).data('bs.popover').$tip;
                 overElement = false;

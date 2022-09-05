@@ -227,7 +227,7 @@ class editTimeSeries extends viewModelBase {
 
         const timestampColumn = new textColumn<Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry>(grid, x => formatTimeSeriesDate(x.Timestamp), "Date", "20%");
         
-        grid.init((s, t) => this.fetchSeries(s).done(result => this.checkColumns(result)), () => {
+        grid.init((s) => this.fetchSeries(s).done(result => this.checkColumns(result)), () => {
             const { valuesCount, hasTag } = this.columnsCacheInfo;
             
             const columnNames = this.getColumnNamesToUse(valuesCount);
