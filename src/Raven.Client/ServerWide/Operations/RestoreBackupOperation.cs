@@ -31,7 +31,7 @@ namespace Raven.Client.ServerWide.Operations
             return new RestoreBackupCommand(_restoreConfiguration, NodeTag);
         }
 
-        private class RestoreBackupCommand : RavenCommand<OperationIdResult>
+        internal class RestoreBackupCommand : RavenCommand<OperationIdResult>
         {
             public override bool IsReadRequest => false;
             private readonly RestoreBackupConfigurationBase _restoreConfiguration;
