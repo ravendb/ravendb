@@ -429,6 +429,7 @@ namespace Raven.Client.Documents.Operations.ETL
                 [nameof(Script)] = Script,
                 [nameof(Collections)] = new DynamicJsonArray(Collections),
                 [nameof(ApplyToAllDocuments)] = ApplyToAllDocuments,
+                [nameof(DocumentIdPostfix)] = DocumentIdPostfix,
                 [nameof(Disabled)] = Disabled
             };
         }
@@ -462,6 +463,9 @@ namespace Raven.Client.Documents.Operations.ETL
             if (transformation.ApplyToAllDocuments != ApplyToAllDocuments)
                 differences |= EtlConfigurationCompareDifferences.TransformationApplyToAllDocuments;
 
+            if (transformation.DocumentIdPostfix != DocumentIdPostfix)
+                differences |= EtlConfigurationCompareDifferences.TransformationDocumentIdPostfix;
+            
             if (transformation.Disabled != Disabled)
                 differences |= EtlConfigurationCompareDifferences.TransformationDisabled;
 
