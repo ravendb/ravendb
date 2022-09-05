@@ -112,7 +112,8 @@ public class ShardedBatchCommand : IBatchCommand, IEnumerable<SingleShardedComma
     {
         if (isServerSideIdentity)
         {
-            return _databaseContext.GetShardNumber(_context, cmd.Id.AsSpan(0, cmd.Id.Length - 2));   // here we are cheating by cutting '$/' from the end to detect shard number based on BASE26 part
+            var bucket = ShardHelper.GetBucketOfIdentity(_context, cmd.Id, _databaseContext.IdentityPartsSeparator);
+            return _databaseContext.GetShardNumber(bucket);
         }
 
         if (cmd.Type == CommandType.Counters)

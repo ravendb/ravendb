@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
@@ -70,10 +69,8 @@ namespace FastTests.Sharding
                 {
                     var u = new User();
                     s.Store(u, "users/1");
-                    /*s.CountersFor(u).Increment("Likes", 555);
+                    s.CountersFor(u).Increment("Likes", 555);
                     s.CountersFor(u).Increment("Views", 100);
-                    s.TimeSeriesFor(u, "BPM").Append(DateTime.UtcNow, 120);
-                    s.TimeSeriesFor(u, "Price").Append(DateTime.UtcNow, 1000);*/
                     s.SaveChanges();
                 }
 
@@ -88,7 +85,7 @@ namespace FastTests.Sharding
                             {
                                 new CounterOperation
                                 {
-                                    Type = CounterOperationType.Put,
+                                    Type = CounterOperationType.Increment,
                                     CounterName = "likes",
                                     Delta = 10
                                 }
@@ -96,6 +93,13 @@ namespace FastTests.Sharding
                         }
                     }
                 }));
+
+                using (var s = store.OpenSession())
+                {
+                    var u = s.Load<User>("users/1");
+                    Assert.Equal(565,s.CountersFor(u).Get("Likes"));
+                    Assert.Equal(100,s.CountersFor(u).Get("Views"));
+                }
             }
         }
 
