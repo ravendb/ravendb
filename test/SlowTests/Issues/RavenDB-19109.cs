@@ -29,6 +29,8 @@ public class RavenDB_19109 : RavenTestBase
     [Fact]
     public void DatabaseThrowsOnOpenWhenDisableMarkerIsInDirectory()
     {
+        DoNotReuseServer();
+
         using var store = GetDocumentStore(out var databasePath);
 
         DoCommand(store, true, out var exception);
@@ -62,6 +64,8 @@ public class RavenDB_19109 : RavenTestBase
     [Fact]
     public void IndexThrowsOnOpenWhenDisableMarkerIsInDirectory()
     {
+        DoNotReuseServer();
+
         using var store = GetDocumentStore(out var databasePath);
         var index = new IndexToDisable();
         index.Execute(store);
