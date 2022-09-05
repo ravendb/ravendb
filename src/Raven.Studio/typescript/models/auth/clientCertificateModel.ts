@@ -14,6 +14,11 @@ class clientCertificateModel {
         if (!info) {
             return "unknown";
         }
+
+        if (!info.NotAfter) {
+            // master key case
+            return "valid";
+        }
         
         const notAfter = moment(info.NotAfter);
         if (notAfter.isBefore()) {
