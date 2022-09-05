@@ -105,7 +105,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 topology = ServerStore.GetClusterTopology(ctx);
 
             var timeoutInSecPerNode = GetIntValueQueryString("timeoutInSecPerNode", false) ?? 60;
-            var clusterOperationToken = CreateOperationToken(TimeSpan.FromSeconds(timeoutInSecPerNode * topology.AllNodes.Count));
+            var clusterOperationToken = CreateOperationToken();
             var operationId = GetLongQueryString("operationId", false) ?? ServerStore.Operations.GetNextOperationId();
             
             await ServerStore.Operations.AddOperation(null, "Created debug package for all cluster nodes", Operations.Operations.OperationType.DebugPackage, async _ =>
@@ -224,38 +224,35 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
         }
 
-        private async Task<Stream> GetDebugInfoFromNodeAsync(JsonOperationContext context, RequestExecutor requestExecutor, long operationId, OperationCancelToken token, int timeoutInSec)
+        private async Task<Stream> GetDebugInfoFromNodeAsync(JsonOperationContext context, RequestExecutor requestExecutor, long operationId, OperationCancelToken token,
+            int timeoutInSec)
         {
             var rawStreamCommand = new GetRawStreamResultCommand($"/admin/debug/info-package?operationId={operationId}");
             var requestExecutionTask = requestExecutor.ExecuteAsync(rawStreamCommand, context);
 
-            using (var delayTaskCts = new CancellationTokenSource())
-            using (var mergedCts = CancellationTokenSource.CreateLinkedTokenSource(delayTaskCts.Token, token.Token))
-            {
-                var delayTask = Task.Delay(TimeSpan.FromSeconds(timeoutInSec), mergedCts.Token);
+            var delayTask = Task.Delay(TimeSpan.FromSeconds(timeoutInSec), token.Token);
 
-                try
-                {
-                    var result = await Task.WhenAny(requestExecutionTask, delayTask);
-                    if (result == delayTask)
-                    {
-                        await KillOperation();
-                    }
-                    else
-                    {
-                        delayTaskCts.Cancel();
-                    }
-                }
-                catch (OperationCanceledException)
+            try
+            {
+                var result = await Task.WhenAny(requestExecutionTask, delayTask);
+                if (result == delayTask)
                 {
                     await KillOperation();
                 }
-
-                await requestExecutionTask;
-
-                rawStreamCommand.Result.Position = 0;
-                return rawStreamCommand.Result;
+                else
+                {
+                    token.Cancel();
+                }
             }
+            catch (OperationCanceledException)
+            {
+                await KillOperation();
+            }
+
+            await requestExecutionTask;
+
+            rawStreamCommand.Result.Position = 0;
+            return rawStreamCommand.Result;
 
             async Task KillOperation()
             {
@@ -381,6 +378,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                             await writer.FlushAsync(token);
                         }
                     }
+
                     await entryStream.FlushAsync(token);
                 }
             }
