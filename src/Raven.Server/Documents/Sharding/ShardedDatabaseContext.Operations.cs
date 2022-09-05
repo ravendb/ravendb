@@ -77,7 +77,7 @@ public partial class ShardedDatabaseContext
 
             return AddOperationInternalAsync(operation, 
                 onProgress => CreateTaskAsync<TResult, TOrchestratorResult, TOperationProgress>(
-                    new DatabaseMultiOperation(id, _context, onProgress),
+                    new ShardedDatabaseMultiOperation(id, _context, onProgress),
                     commandFactory,
                     token)
                 );
@@ -92,12 +92,12 @@ public partial class ShardedDatabaseContext
             where TOrchestratorResult : IOperationResult, new()
             where TOperationProgress : IOperationProgress, new()
         {
-            var multiOperation = new ServerWideMultiOperation(id, _context, onProgress);
+            var multiOperation = new ShardedServerMultiOperation(id, _context, onProgress);
             return CreateTaskAsync<TResult, TOrchestratorResult, TOperationProgress>(multiOperation, commandFactory, token);
         }
 
         private async Task<IOperationResult> CreateTaskAsync<TResult, TOrchestratorResult, TOperationProgress>(
-            MultiOperation multiOperation,
+            AbstractShardedMultiOperation multiOperation,
             Func<JsonOperationContext, int, RavenCommand<TResult>> commandFactory,
             OperationCancelToken token)
             where TResult : OperationIdResult

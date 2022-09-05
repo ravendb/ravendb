@@ -9,12 +9,12 @@ using Raven.Client.Http;
 
 namespace Raven.Server.Documents.Sharding.Operations;
 
-public abstract class MultiOperation
+public abstract class AbstractShardedMultiOperation
 {
     private readonly object _locker = new();
 
     protected readonly long Id;
-    protected readonly ShardedDatabaseContext Context;
+    protected readonly ShardedDatabaseContext ShardedDatabaseContext;
 
     private readonly Action<IOperationProgress> _onProgress;
 
@@ -22,12 +22,12 @@ public abstract class MultiOperation
 
     private IOperationProgress[] _progresses;
 
-    protected MultiOperation(long id, ShardedDatabaseContext context, Action<IOperationProgress> onProgress)
+    protected AbstractShardedMultiOperation(long id, ShardedDatabaseContext shardedDatabaseContext, Action<IOperationProgress> onProgress)
     {
         Id = id;
         _onProgress = onProgress;
         Operations = new Dictionary<ShardedDatabaseIdentifier, Operation>();
-        Context = context;
+        ShardedDatabaseContext = shardedDatabaseContext;
     }
 
     public abstract ValueTask<TResult> ExecuteCommandForShard<TResult>(RavenCommand<TResult> command, int shardNumber, CancellationToken token);
