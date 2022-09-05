@@ -3,32 +3,38 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Extensions;
+using Raven.Client.Http;
 
 namespace Raven.Server.Documents.Sharding.Operations;
 
-public class MultiOperation
+public abstract class MultiOperation
 {
     private readonly object _locker = new();
 
-    private readonly long _id;
-    private readonly ShardedDatabaseContext _context;
+    protected readonly long Id;
+    protected readonly ShardedDatabaseContext Context;
 
     private readonly Action<IOperationProgress> _onProgress;
 
-    private readonly Dictionary<ShardedDatabaseIdentifier, Operation> _operations;
+    protected readonly Dictionary<ShardedDatabaseIdentifier, Operation> Operations;
 
     private IOperationProgress[] _progresses;
 
-    public MultiOperation(long id, ShardedDatabaseContext context, Action<IOperationProgress> onProgress)
+    protected MultiOperation(long id, ShardedDatabaseContext context, Action<IOperationProgress> onProgress)
     {
-        _id = id;
-        _context = context;
+        Id = id;
         _onProgress = onProgress;
-        _operations = new Dictionary<ShardedDatabaseIdentifier, Operation>();
+        Operations = new Dictionary<ShardedDatabaseIdentifier, Operation>();
+        Context = context;
     }
+
+    public abstract ValueTask<TResult> ExecuteCommandForShard<TResult>(RavenCommand<TResult> command, int shardNumber, CancellationToken token);
+
+    public abstract Operation CreateOperationInstance(ShardedDatabaseIdentifier key, long operationId);
+
+    public abstract ValueTask KillAsync(CancellationToken token);
 
     public void Watch<TOperationProgress>(ShardedDatabaseIdentifier key, Operation operation)
         where TOperationProgress : IOperationProgress, new()
@@ -39,7 +45,7 @@ public class MultiOperation
 
         lock (_locker)
         {
-            _operations.Add(key, operation);
+            Operations.Add(key, operation);
         }
 
         void OnProgressChanged(ShardedDatabaseIdentifier k, IOperationProgress progress)
@@ -93,17 +99,17 @@ public class MultiOperation
     public async Task<IOperationResult> WaitForCompletionAsync<TOrchestratorResult>(CancellationToken token)
         where TOrchestratorResult : IOperationResult, new()
     {
-        _progresses = new IOperationProgress[_operations.Count];
+        _progresses = new IOperationProgress[Operations.Count];
 
         var tasks = new Dictionary<ShardedDatabaseIdentifier, Task<IOperationResult>>(_progresses.Length);
 
-        foreach (var operation in _operations)
+        foreach (var operation in Operations)
         {
             tasks.Add(operation.Key, operation.Value.WaitForCompletionAsync());
         }
 
         await Task.WhenAll(tasks.Values).WithCancellation(token);
-        
+
         var result = new TOrchestratorResult();
 
         if (result is IShardedOperationResult shardedResult)
@@ -119,7 +125,7 @@ public class MultiOperation
         foreach (var task in tasks)
         {
             var r = task.Value.Result;
-            
+
             if (r.CanMerge == false)
                 throw new NotSupportedException();
             else
@@ -127,15 +133,5 @@ public class MultiOperation
         }
 
         return result;
-    }
-
-    public async ValueTask KillAsync(bool waitForCompletion, CancellationToken token)
-    {
-        var tasks = new List<Task>(_operations.Count);
-        foreach (var key in _operations.Keys)
-            tasks.Add(_context.ShardExecutor.ExecuteSingleShardAsync(new KillOperationCommand(_id, key.NodeTag), key.ShardNumber, token));
-
-        if (waitForCompletion)
-            await Task.WhenAll(tasks).WithCancellation(token);
     }
 }

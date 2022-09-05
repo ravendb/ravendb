@@ -647,11 +647,11 @@ namespace Raven.Server.Web.System
                     OperationType.DatabaseRestore,
                     $"Database restore: {restoreConfiguration.DatabaseName}",
                     detailedDescription: null,
-                    taskFactory: onProgress => Task.Run(async () =>
+                    taskFactory: async onProgress =>
                     {
-                        var restoreBackupTask = await RestoreUtils.CreateBackupTaskAsync(ServerStore, restoreConfiguration, restoreSource, cancelToken);
+                        var restoreBackupTask = await RestoreUtils.CreateBackupTaskAsync(ServerStore, restoreConfiguration, restoreSource, operationId, cancelToken);
                         return await restoreBackupTask.ExecuteAsync(onProgress);
-                    }, cancelToken.Token),
+                    },
                     token: cancelToken);
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))

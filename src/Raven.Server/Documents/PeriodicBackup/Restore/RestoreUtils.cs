@@ -60,10 +60,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             return configuration;
         }
 
-        public static async Task<AbstractRestoreBackupTask> CreateBackupTaskAsync(ServerStore serverStore, RestoreBackupConfigurationBase configuration, IRestoreSource restoreSource, OperationCancelToken token)
+        public static async Task<AbstractRestoreBackupTask> CreateBackupTaskAsync(ServerStore serverStore, RestoreBackupConfigurationBase configuration,
+            IRestoreSource restoreSource, long operationId, OperationCancelToken token)
         {
             if (configuration.ShardRestoreSettings?.Shards.Length > 0)
-                return new ShardedRestoreOrchestrationTask(serverStore, configuration, token);
+                return new ShardedRestoreOrchestrationTask(serverStore, configuration, operationId, token);
             
             var singleShardRestore = ShardHelper.IsShardedName(configuration.DatabaseName);
 

@@ -44,7 +44,7 @@ public abstract class AbstractOperation
         return task == null || task.IsCompleted;
     }
 
-    public virtual async Task KillAsync(bool waitForCompletion, CancellationToken token)
+    public async Task KillAsync(bool waitForCompletion, CancellationToken token)
     {
         if (IsCompleted())
             return;

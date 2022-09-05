@@ -1,36 +1,33 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
-using Nito.AsyncEx;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
-using Raven.Client.Documents.Operations.Backups.Sharding;
-using Raven.Client.Documents.Smuggler;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Sharding;
-using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Sparrow.Json;
 using Sparrow.Server;
-using Sparrow.Utils;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore.Sharding
 {
     public class ShardedRestoreOrchestrationTask : AbstractRestoreBackupTask
     {
+        private readonly long _operationId;
         private IOperationResult _result;
 
         public ShardedRestoreOrchestrationTask(ServerStore serverStore,
             RestoreBackupConfigurationBase configuration,
+            long operationId,
             OperationCancelToken operationCancelToken) : base(serverStore, configuration, restoreSource: null, filesToRestore: null, operationCancelToken)
         {
+            _operationId = operationId;
         }
 
         protected override async Task InitializeAsync()
@@ -65,7 +62,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore.Sharding
             var dbSearchResult = ServerStore.DatabasesLandlord.TryGetOrCreateDatabase(DatabaseName);
             var shardedDbContext = dbSearchResult.DatabaseContext;
 
-            _result = await RestoreOnAllShardsAsync(Progress, RestoreConfiguration, shardedDbContext);
+            var multiOperationTask = shardedDbContext.Operations.CreateServerWideMultiOperationTask<OperationIdResult, ShardedRestoreResult, ShardedRestoreProgress>(
+                id: _operationId,
+                commandFactory: (context, i) => GenerateCommandForShard(shardNumber: i, configuration: RestoreConfiguration.Clone()),
+                onProgress: Progress,
+                token: OperationCancelToken);
+
+            _result = await multiOperationTask;
         }
 
         protected override async Task OnAfterRestoreAsync()
@@ -109,7 +112,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore.Sharding
             for (var i = 0; i < RestoreConfiguration.ShardRestoreSettings.Shards.Length; i++)
             {
                 var shardRestoreSetting = RestoreConfiguration.ShardRestoreSettings.Shards[i];
-                databaseRecord.Sharding.Shards[i] = new DatabaseTopology
+                var shardNumber = shardRestoreSetting.ShardNumber;
+
+                Debug.Assert(shardNumber < databaseRecord.Sharding.Shards.Length, "invalid ShardRestoreSettings");
+
+                databaseRecord.Sharding.Shards[shardNumber] = new DatabaseTopology
                 {
                     Members = new List<string>
                     {
@@ -129,40 +136,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore.Sharding
             databaseRecord.Sharding.Orchestrator.Topology.ReplicationFactor = databaseRecord.Sharding.Orchestrator.Topology.Members.Count;
         }
 
-        private async Task<IOperationResult> RestoreOnAllShardsAsync(Action<IOperationProgress> onProgress, RestoreBackupConfigurationBase configuration,
-            ShardedDatabaseContext shardedDatabaseContext)
+
+        private static RavenCommand<OperationIdResult> GenerateCommandForShard(int shardNumber, RestoreBackupConfigurationBase configuration)
         {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Normal, "try to replace this with a proper impl. of ServerStore.AddRemoteOperation");
+            Debug.Assert(shardNumber < configuration.ShardRestoreSettings?.Shards.Length);
 
-            var shardSettings = configuration.ShardRestoreSettings.Shards;
-            var tasks = new Task<IOperationResult>[shardSettings.Length];
-
-            for (int i = 0; i < tasks.Length; i++)
-            {
-                using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
-                {
-                    var cmd = GenerateCommandForShard(ctx, position: i, configuration.Clone());
-                    var nodeTag = shardSettings[i].NodeTag;
-                    var executor = shardedDatabaseContext.AllNodesExecutor.GetRequestExecutorForNode(nodeTag);
-                    await executor.ExecuteAsync(cmd, ctx, token: OperationCancelToken.Token);
-                    var operationIdResult = cmd.Result;
-
-                    var serverOp = new ServerWideOperation(executor, DocumentConventions.DefaultForServer, operationIdResult.OperationId, nodeTag);
-                    tasks[i] = serverOp.WaitForCompletionAsync();
-                }
-            }
-
-            await tasks.WhenAll();
-
-            return CombineResults(tasks, shardSettings);
-        }
-
-        private static RavenCommand<OperationIdResult> GenerateCommandForShard(JsonOperationContext context, int position, RestoreBackupConfigurationBase configuration)
-        {
-            Debug.Assert(position < configuration.ShardRestoreSettings?.Shards.Length);
-
-            var shardRestoreSetting = configuration.ShardRestoreSettings.Shards[position];
-            configuration.DatabaseName = ShardHelper.ToShardName(configuration.DatabaseName, shardRestoreSetting.ShardNumber);
+            var shardRestoreSetting = configuration.ShardRestoreSettings.Shards.Single(s => s.ShardNumber == shardNumber);
+            configuration.DatabaseName = ShardHelper.ToShardName(configuration.DatabaseName, shardNumber);
             configuration.ShardRestoreSettings = null;
 
             switch (configuration)
@@ -183,19 +163,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore.Sharding
                     throw new ArgumentOutOfRangeException(nameof(configuration));
             }
 
-            return new RestoreBackupOperation(configuration).GetCommand(DocumentConventions.DefaultForServer, context);
-        }
-
-        private static IOperationResult CombineResults(IReadOnlyList<Task<IOperationResult>> tasks, IReadOnlyList<SingleShardRestoreSetting> shardSettings)
-        {
-            var result = new ShardedSmugglerResult();
-            for (var i = 0; i < tasks.Count; i++)
-            {
-                var r = tasks[i].Result;
-                result.CombineWith(r, shardSettings[i].ShardNumber, shardSettings[i].NodeTag);
-            }
-
-            return result;
+            return new RestoreBackupOperation.RestoreBackupCommand(configuration);
         }
     }
 }
