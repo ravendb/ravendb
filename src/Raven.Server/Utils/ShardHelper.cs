@@ -13,6 +13,7 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Server;
 using Sparrow.Threading;
+using Sparrow.Utils;
 using Voron;
 
 namespace Raven.Server.Utils
@@ -355,6 +356,18 @@ namespace Raven.Server.Utils
                 .Append(identityPartsSeparator);
 
             return builder.ToString();
+        }
+
+        public static int GetBucketOfIdentity(TransactionOperationContext context, string id, char identityPartsSeparator)
+        {
+            // the expected id format here is users/$BASE26$/
+            // so we cut the '$/' from the end to detect shard number based on BASE26 part
+            Debug.Assert(id[^1] == identityPartsSeparator, $"id[^1] != {identityPartsSeparator} for {id}");
+            Debug.Assert(id[^2] == '$', $"id[^2] != $ for {id}");
+            var actualId = id.AsSpan(0, id.Length - 2);
+
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Pawel, DevelopmentHelper.Severity.Normal, "RavenDB-19086 Optimize this");
+            return GetBucket(context, actualId.ToString());
         }
 
         public static unsafe void ExtractStickyId(ref char* buffer, ref int size)
