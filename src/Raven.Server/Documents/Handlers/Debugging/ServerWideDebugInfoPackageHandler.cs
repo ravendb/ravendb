@@ -27,7 +27,6 @@ namespace Raven.Server.Documents.Handlers.Debugging
     public class ServerWideDebugInfoPackageHandler : RequestHandler
     {
         internal const string _serverWidePrefix = "server-wide";
-        internal const int _defaultTimeoutForEachNodeInSec = 60;
 
         internal static readonly string[] FieldsThatShouldBeExposedForDebug = new string[]
         {
@@ -100,43 +99,43 @@ namespace Raven.Server.Documents.Handlers.Debugging
             HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
             HttpContext.Response.Headers["Content-Type"] = "application/zip";
 
+            ClusterTopology topology;
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (ctx.OpenReadTransaction())
+                topology = ServerStore.GetClusterTopology(ctx);
+
+            var timeoutInSecPerNode = GetIntValueQueryString("timeoutInSecPerNode", false) ?? 60;
+            var clusterOperationToken = CreateOperationToken(TimeSpan.FromSeconds(timeoutInSecPerNode * topology.AllNodes.Count));
+            var operationId = GetLongQueryString("operationId", false) ?? ServerStore.Operations.GetNextOperationId();
+            
+            await ServerStore.Operations.AddOperation(null, "Created debug package for all cluster nodes", Operations.Operations.OperationType.DebugPackage, async _ =>
             {
-                var operationId = GetLongQueryString("operationId", false) ?? ServerStore.Operations.GetNextOperationId();
-                
-                var topology = ServerStore.GetClusterTopology(ctx);
-                var timeoutInSec = GetIntValueQueryString("timeoutInSec", false) / topology.AllNodes.Count;
-                var token = CreateOperationToken(TimeSpan.FromSeconds(timeoutInSec ?? _defaultTimeoutForEachNodeInSec * topology.AllNodes.Count));
-
-                await ServerStore.Operations.AddOperation(null, "Created debug package for all cluster nodes", Operations.Operations.OperationType.DebugPackage, async _ =>
+                using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext jsonOperationContext))
+                await using (var ms = new MemoryStream())
+                using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, true))
                 {
-                    await using (var ms = new MemoryStream())
-                    using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, true))
+                    foreach (var (tag, url) in topology.AllNodes)
                     {
-                        foreach (var (tag, url) in topology.AllNodes)
+                        try
                         {
-                            try
-                            {
-                                await WriteDebugInfoPackageForNodeAsync(ctx, archive, tag, url, token, timeoutInSec);
-                            }
-                            catch (Exception e)
-                            {
-                                await DebugInfoPackageUtils.WriteExceptionAsZipEntryAsync(e, archive, $"Node - [{ServerStore.NodeTag}]");
-                            }
+                            await WriteDebugInfoPackageForNodeAsync(jsonOperationContext, archive, tag, url, clusterOperationToken, timeoutInSecPerNode);
                         }
-
-                        ms.Position = 0;
-                        await ms.CopyToAsync(ResponseBodyStream());
+                        catch (Exception e)
+                        {
+                            await DebugInfoPackageUtils.WriteExceptionAsZipEntryAsync(e, archive, $"Node - [{ServerStore.NodeTag}]");
+                        }
                     }
 
-                    return null;
-                }, operationId, token: token);
-            }
+                    ms.Position = 0;
+                    await ms.CopyToAsync(ResponseBodyStream());
+                }
+
+                return null;
+            }, operationId, token: clusterOperationToken);
         }
 
-        private async Task WriteDebugInfoPackageForNodeAsync(JsonOperationContext context, ZipArchive archive, string tag, string url, OperationCancelToken token,
-            int? timeoutInSec)
+
+        private async Task WriteDebugInfoPackageForNodeAsync(JsonOperationContext context, ZipArchive archive, string tag, string url, OperationCancelToken clusterOperationToken, int timeoutInSecPerNode)
         {
             //note : theoretically GetDebugInfoFromNodeAsync() can throw, error handling is done at the level of WriteDebugInfoPackageForNodeAsync() calls
             using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(url, Server.Certificate.Certificate))
@@ -144,7 +143,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 var nextOperationId = new GetNextServerOperationIdCommand();
                 await requestExecutor.ExecuteAsync(nextOperationId, context);
 
-                await using (var responseStream = await GetDebugInfoFromNodeAsync(context, requestExecutor, nextOperationId.Result, token, timeoutInSec))
+                await using (var responseStream = await GetDebugInfoFromNodeAsync(context, requestExecutor, nextOperationId.Result, clusterOperationToken, timeoutInSecPerNode))
                 {
                     var entry = archive.CreateEntry($"Node - [{tag}].zip");
                     entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
@@ -166,8 +165,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             HttpContext.Response.Headers["Content-Type"] = "application/zip";
 
             var operationId = GetLongQueryString("operationId", false) ?? ServerStore.Operations.GetNextOperationId();
-            var timeout = TimeSpan.FromSeconds(GetIntValueQueryString("timeoutInSec", false) ?? _defaultTimeoutForEachNodeInSec);
-            var token = CreateOperationToken(timeout);
+            var token = CreateOperationToken();
 
             await ServerStore.Operations.AddOperation(null, "Created debug package for current server only", Operations.Operations.OperationType.DebugPackage, async _ =>
             {
@@ -226,16 +224,15 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
         }
 
-        private async Task<Stream> GetDebugInfoFromNodeAsync(JsonOperationContext context, RequestExecutor requestExecutor, long operationId, OperationCancelToken token, int? timeoutInSec)
+        private async Task<Stream> GetDebugInfoFromNodeAsync(JsonOperationContext context, RequestExecutor requestExecutor, long operationId, OperationCancelToken token, int timeoutInSec)
         {
-            var rawStreamCommand = new GetRawStreamResultCommand($"/admin/debug/info-package?operationId={operationId}&timeoutInSec={timeoutInSec}");
-            
+            var rawStreamCommand = new GetRawStreamResultCommand($"/admin/debug/info-package?operationId={operationId}");
             var requestExecutionTask = requestExecutor.ExecuteAsync(rawStreamCommand, context);
 
             using (var delayTaskCts = new CancellationTokenSource())
             using (var mergedCts = CancellationTokenSource.CreateLinkedTokenSource(delayTaskCts.Token, token.Token))
             {
-                var delayTask = Task.Delay(TimeSpan.FromSeconds(timeoutInSec ?? _defaultTimeoutForEachNodeInSec), mergedCts.Token);
+                var delayTask = Task.Delay(TimeSpan.FromSeconds(timeoutInSec), mergedCts.Token);
 
                 try
                 {
