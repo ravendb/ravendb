@@ -1,8 +1,10 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Config;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +17,7 @@ public class RavenDB_19016 : RavenTestBase
     }
 
     [Fact]
-    public async Task Can_Index_Nested_Document_Change()
+    public async Task Can_Index_Nested_Document_Change_Different_Collections()
     {
         using (var server = GetNewServer())
         using (var store = GetDocumentStore(new Options { Server = server }))
@@ -26,7 +28,8 @@ public class RavenDB_19016 : RavenTestBase
             const string companyName = "Hibernating Rhinos";
             const int orderCount = 10;
 
-            await new UsersIndex().ExecuteAsync(store);
+            var deployedIndex = new UsersIndex();
+            await deployedIndex.ExecuteAsync(store);
 
             using (var session = store.OpenAsyncSession())
             {
@@ -41,18 +44,14 @@ public class RavenDB_19016 : RavenTestBase
             }
 
             var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-            var indexStore = database.IndexStore;
+            var index = database.IndexStore.GetIndex(deployedIndex.IndexName);
 
             using (var session = store.OpenAsyncSession())
             {
-                var runOnce = false;
-
-                indexStore.ForTestingPurposesOnly().AfterReferencedDocumentWasIndexed = () =>
+                index.ForTestingPurposesOnly().BeforeClosingDocumentsReadTransactionForHandleReferences = () =>
                 {
-                    if (runOnce)
-                        return;
+                    index.ForTestingPurposesOnly().BeforeClosingDocumentsReadTransactionForHandleReferences = null;
 
-                    runOnce = true;
                     using (var session2 = store.OpenSession())
                     {
                         session2.Store(new Order
@@ -90,6 +89,120 @@ public class RavenDB_19016 : RavenTestBase
         }
     }
 
+    [Fact]
+    public async Task Can_Index_Nested_Document_Change_Same_Collection()
+    {
+        using (var server = GetNewServer())
+        using (var store = GetDocumentStore(new Options
+        {
+            Server = server,
+            ModifyDatabaseRecord = x =>
+            {
+                x.Settings[RavenConfiguration.GetKey(x => x.Indexing.MaxTimeForDocumentTransactionToRemainOpen)] = "1";
+            }
+        }))
+        {
+            const string userId1 = "users/1";
+            const string userId2 = "users/2";
+            const string userId3 = "users/3";
+            const string userId4 = "users/4";
+            const string userId5 = "users/5";
+            const string userName1 = "Grisha";
+            const string userName2 = "Igal";
+            const string userName3 = "Egor";
+            const string userName4 = "Lev";
+            const string userName5 = "Yonatan";
+
+            var deployedIndex = new RelatedUsersIndex();
+            await deployedIndex.ExecuteAsync(store);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                // users/1 -> users/2
+                await session.StoreAsync(new User
+                {
+                    Name = userName1,
+                    RelatedUser = userId2
+                }, userId1);
+
+                // users/4 -> users/5
+                await session.StoreAsync(new User
+                {
+                    Name = userName4,
+                    RelatedUser = userId5
+                }, userId4);
+
+                session.Advanced.WaitForIndexesAfterSaveChanges();
+                await session.SaveChangesAsync();
+            }
+
+            var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+            var index = database.IndexStore.GetIndex(deployedIndex.IndexName);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                index.ForTestingPurposesOnly().BeforeClosingDocumentsReadTransactionForHandleReferences = () =>
+                {
+                    index.ForTestingPurposesOnly().BeforeClosingDocumentsReadTransactionForHandleReferences = null;
+
+                    index._numberOfDocumentsToCheckForCanContinueBatch = 1;
+
+                    using (var session2 = store.OpenSession())
+                    {
+                        session2.Store(new User
+                        {
+                            Name = userName3,
+                            RelatedUser = null
+                        }, userId3);
+
+                        session2.Store(new User
+                        {
+                            Name = userName5,
+                            RelatedUser = null
+                        }, userId5);
+
+                        session2.SaveChanges();
+                    }
+                };
+
+                // saving users/2
+                await session.StoreAsync(new User
+                {
+                    Name = userName2,
+                    RelatedUser = userId3
+                }, userId2);
+
+                session.Advanced.WaitForIndexesAfterSaveChanges(TimeSpan.MaxValue);
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var results = await session
+                    .Query<RelatedUsersIndex.Result, RelatedUsersIndex>()
+                    .ProjectInto<RelatedUsersIndex.Result>()
+                    .ToListAsync();
+
+                Assert.Equal(5, results.Count);
+                Assert.Equal(userName1, results[0].UserName1);
+                Assert.Equal(userName2, results[0].UserName2);
+                Assert.Equal(userName3, results[0].UserName3);
+                Assert.Equal(userName4, results[1].UserName1);
+                Assert.Equal(userName5, results[1].UserName2);
+                Assert.Equal(null, results[1].UserName3);
+                Assert.Equal(userName2, results[2].UserName1);
+                Assert.Equal(userName3, results[2].UserName2);
+                Assert.Equal(null, results[2].UserName3);
+                Assert.Equal(userName3, results[3].UserName1);
+                Assert.Equal(null, results[3].UserName2);
+                Assert.Equal(null, results[3].UserName3);
+                Assert.Equal(userName5, results[4].UserName1);
+                Assert.Equal(null, results[4].UserName2);
+                Assert.Equal(null, results[4].UserName3);
+            }
+        }
+    }
+
     private class User
     {
         public string Id { get; set; }
@@ -97,6 +210,8 @@ public class RavenDB_19016 : RavenTestBase
         public string Name { get; set; }
 
         public string CompanyId { get; set; }
+
+        public string RelatedUser { get; set; }
     }
 
     private class Order
@@ -139,6 +254,32 @@ public class RavenDB_19016 : RavenTestBase
                     CompanyId = user.CompanyId,
                     CompanyName = company.Name,
                     OrderCount = order.Count
+                };
+
+            StoreAllFields(FieldStorage.Yes);
+        }
+    }
+
+    private class RelatedUsersIndex : AbstractIndexCreationTask<User>
+    {
+        public class Result
+        {
+            public string UserName1 { get; set; }
+            public string UserName2 { get; set; }
+            public string UserName3 { get; set; }
+        }
+
+        public RelatedUsersIndex()
+        {
+            Map = users =>
+                from user in users
+                let user2 = LoadDocument<User>(user.RelatedUser)
+                let user3 = LoadDocument<User>(user2.RelatedUser)
+                select new Result
+                {
+                    UserName1 = user.Name,
+                    UserName2 = user2.Name,
+                    UserName3 = user3.Name
                 };
 
             StoreAllFields(FieldStorage.Yes);

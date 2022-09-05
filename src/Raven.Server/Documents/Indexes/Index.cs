@@ -16,7 +16,6 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
-using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Operations;
@@ -234,6 +233,8 @@ namespace Raven.Server.Documents.Indexes
         private readonly ConcurrentDictionary<string, SpatialField> _spatialFields = new ConcurrentDictionary<string, SpatialField>(StringComparer.OrdinalIgnoreCase);
 
         internal readonly QueryBuilderFactories _queryBuilderFactories;
+
+        internal int _numberOfDocumentsToCheckForCanContinueBatch = 128;
 
         private string IndexingThreadName => "Indexing of " + Name + " of " + _indexStorage.DocumentDatabase.Name;
 
@@ -4277,7 +4278,7 @@ namespace Raven.Server.Documents.Indexes
                 return CanContinueBatchResult.False;
             }
 
-            if (parameters.Count % 128 != 0)
+            if (parameters.Count % _numberOfDocumentsToCheckForCanContinueBatch != 0)
             {
                 // do the actual check only every N ops
                 return CanContinueBatchResult.True;
@@ -5077,7 +5078,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private TestingStuff _forTestingPurposes;
+        internal TestingStuff _forTestingPurposes;
 
         internal TestingStuff ForTestingPurposesOnly()
         {
@@ -5092,6 +5093,8 @@ namespace Raven.Server.Documents.Indexes
             internal Action ActionToCallInFinallyOfExecuteIndexing;
 
             internal bool ShouldRenewTransaction;
+
+            internal Action BeforeClosingDocumentsReadTransactionForHandleReferences;
 
             internal IDisposable CallDuringFinallyOfExecuteIndexing(Action action)
             {
