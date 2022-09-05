@@ -1,4 +1,5 @@
-﻿using Raven.Client.Documents.Replication.Messages;
+﻿using System;
+using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.TcpHandlers;
@@ -10,18 +11,14 @@ namespace Raven.Server.Documents.Replication.Incoming
 {
     public class IncomingMigrationReplicationHandler : IncomingReplicationHandler
     {
-        private readonly ReplicationLoader _parent;
         private readonly long _currentMigrationIndex;
-        private readonly ShardedDocumentDatabase _database;
 
         public const string MigrationTag = "MOVE";
 
         public IncomingMigrationReplicationHandler(TcpConnectionOptions options, ReplicationLatestEtagRequest replicatedLastEtag, ReplicationLoader parent,
             JsonOperationContext.MemoryBuffer bufferToCopy, ReplicationLatestEtagRequest.ReplicationType replicationType, long migrationIndex) : base(options, replicatedLastEtag, parent, bufferToCopy, replicationType)
         {
-            _parent = parent;
             _currentMigrationIndex = migrationIndex;
-            _database = parent.Database as ShardedDocumentDatabase;
         }
 
         protected override TransactionOperationsMerger.MergedTransactionCommand GetMergeDocumentsCommand(DataForReplicationCommand data, long lastDocumentEtag)
@@ -60,7 +57,7 @@ namespace Raven.Server.Documents.Replication.Incoming
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
-                _shardedDatabase = context.DocumentDatabase as ShardedDocumentDatabase;
+                _shardedDatabase = ShardedDocumentDatabase.CastToShardedDocumentDatabase(context.DocumentDatabase);
                
                 // TODO: delete current items in the bucket?
                 // TODO: handle the incoming properly

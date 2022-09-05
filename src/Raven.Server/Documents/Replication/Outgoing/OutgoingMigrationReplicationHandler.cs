@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.ServerWide.Commands;
 using Raven.Server.Documents.Replication.Senders;
@@ -25,7 +26,9 @@ namespace Raven.Server.Documents.Replication.Outgoing
 
         private void TryNotifySourceMigrationCompleted(DatabaseOutgoingReplicationHandler handler)
         {
-            var current = handler as OutgoingMigrationReplicationHandler;
+            var current = handler as OutgoingMigrationReplicationHandler ??
+                          throw new ArgumentException($"Handler must be of type 'OutgoingMigrationReplicationHandler', but is actually {handler.GetType().FullName}");
+
             var bucket = current.BucketMigrationNode.Bucket;
             var migrationIndex = current.BucketMigrationNode.MigrationIndex;
             var lastSentChangeVector = current.LastChangeVectorInBucket;

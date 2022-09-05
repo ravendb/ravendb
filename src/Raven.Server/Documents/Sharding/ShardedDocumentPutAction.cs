@@ -54,21 +54,3 @@ public class ShardedDocumentPutAction : DocumentPutAction
             valueWritePosition[j + 1] = idSuffixPtr[j];
     }
 }
-
-public class BucketUnderMoveException : ConcurrencyException
-{
-    public BucketUnderMoveException()
-    {
-
-    }
-
-    public BucketUnderMoveException(string message) : base(message)
-    {
-
-    }
-
-    public BucketUnderMoveException(string message, Exception inner) : base(message, inner)
-    {
-
-    }
-}
