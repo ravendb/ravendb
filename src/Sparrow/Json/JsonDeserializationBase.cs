@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -698,33 +697,15 @@ namespace Sparrow.Json
             if (json.TryGet(name, out BlittableJsonReaderArray array) == false || array == null)
                 return hashset;
 
-            foreach (var item in array)
+            foreach (BlittableJsonReaderObject item in array)
             {
                 if (item == null)
                 {
                     hashset.Add(default);
                     continue;
                 }
-
-                if (item is BlittableJsonReaderObject bjro)
-                {
-                    hashset.Add(converter(bjro));
-                    continue;
-                }
-
-                if (typeof(T).IsEnum)
-                {
-                    hashset.Add((T)Enum.Parse(typeof(T), item.ToString()));
-                    continue;
-                }
-
-                if (IsNumeric<T>())
-                {
-                    hashset.Add((T)Convert.ChangeType(item, typeof(T), CultureInfo.InvariantCulture)); 
-                    continue;
-                }
-
-                throw new ArgumentOutOfRangeException( $"Type of \"{item.GetType()}\" is not supported yet.");
+                
+                hashset.Add(converter(item));
             }
 
             return hashset;
@@ -748,6 +729,12 @@ namespace Sparrow.Json
                 if (item is BlittableJsonReaderObject bjro)
                 {
                     list.Add(converter(bjro));
+                    continue;
+                }
+
+                if (item is LazyStringValue enumItem && typeof(T).IsEnum)
+                {
+                    list.Add((T) Enum.Parse(typeof(T), enumItem));
                     continue;
                 }
 

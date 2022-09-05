@@ -5,16 +5,12 @@
 // -----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Net.WebSockets;
 using System.Threading.Tasks;
-using Raven.Server.Config.Categories;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.Web;
-using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -81,24 +77,7 @@ namespace Raven.Server.TrafficWatch
             {
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    var djv = new DynamicJsonValue
-                    {
-                        [nameof(TrafficWatchConfiguration.TrafficWatchMode)] = TrafficWatchToLog.Instance.Configuration.TrafficWatchMode,
-                        [nameof(TrafficWatchConfiguration.Databases)] = TrafficWatchToLog.Instance.Configuration.Databases == null ? null :
-                            new DynamicJsonArray(TrafficWatchToLog.Instance.Configuration.Databases),
-                        [nameof(TrafficWatchConfiguration.StatusCodes)] = TrafficWatchToLog.Instance.Configuration.StatusCodes == null ? null :
-                            new DynamicJsonArray(TrafficWatchToLog.Instance.Configuration.StatusCodes),
-                        [nameof(TrafficWatchConfiguration.MinimumResponseSize)] =
-                            TrafficWatchToLog.Instance.Configuration.MinimumResponseSize.GetValue(SizeUnit.Bytes),
-                        [nameof(TrafficWatchConfiguration.MinimumRequestSize)] = TrafficWatchToLog.Instance.Configuration.MinimumRequestSize.GetValue(SizeUnit.Bytes),
-                        [nameof(TrafficWatchConfiguration.MinimumDuration)] = TrafficWatchToLog.Instance.Configuration.MinimumDuration,
-                        [nameof(TrafficWatchConfiguration.HttpMethods)] = TrafficWatchToLog.Instance.Configuration.HttpMethods == null ? null :
-                            new DynamicJsonArray(TrafficWatchToLog.Instance.Configuration.HttpMethods),
-                        [nameof(TrafficWatchConfiguration.ChangeTypes)] = TrafficWatchToLog.Instance.Configuration.ChangeTypes == null ? null :
-                            new DynamicJsonArray(TrafficWatchToLog.Instance.Configuration.ChangeTypes.Select(x => x.ToString()))
-                    };
-
-                    var json = context.ReadObject(djv, "traffic-watch/configuration");
+                    var json = context.ReadObject(TrafficWatchToLog.Instance.ToJson(), "traffic-watch/configuration");
                     writer.WriteObject(json);
                 }
             }

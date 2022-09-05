@@ -250,6 +250,6 @@ namespace Raven.Client.Json.Serialization
 
         internal static readonly Func<BlittableJsonReaderObject, DatabaseSettings> DatabaseSettings = GenerateJsonDeserializationRoutine<DatabaseSettings>();
         
-        public static readonly Func<BlittableJsonReaderObject, TrafficWatchConfigurationResult> GetTrafficWatchConfigurationResult = GenerateJsonDeserializationRoutine<TrafficWatchConfigurationResult>();
+        public static readonly Func<BlittableJsonReaderObject, PutTrafficWatchConfigurationOperation.Parameters> GetTrafficWatchConfigurationResult = GenerateJsonDeserializationRoutine<PutTrafficWatchConfigurationOperation.Parameters>();
     }
 }

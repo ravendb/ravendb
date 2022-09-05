@@ -6,14 +6,15 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Sparrow.Json;
+using Size = Sparrow.Size;
 
 namespace Raven.Client.ServerWide.Operations.TrafficWatch
 {
-    internal class PutTrafficWatchConfigurationOperation : IServerOperation
+    public class PutTrafficWatchConfigurationOperation : IServerOperation
     {
-        private readonly TrafficWatchConfigurationResult _parameters;
+        private readonly Parameters _parameters;
 
-        public PutTrafficWatchConfigurationOperation(TrafficWatchConfigurationResult parameters)
+        public PutTrafficWatchConfigurationOperation(Parameters parameters)
         {
             _parameters = parameters ?? throw new ArgumentNullException(nameof(parameters));
         }
@@ -25,9 +26,9 @@ namespace Raven.Client.ServerWide.Operations.TrafficWatch
 
         private class SetTrafficWatchConfigurationCommand : RavenCommand
         {
-            private readonly TrafficWatchConfigurationResult _parameters;
+            private readonly Parameters _parameters;
 
-            public SetTrafficWatchConfigurationCommand(TrafficWatchConfigurationResult parameters)
+            public SetTrafficWatchConfigurationCommand(Parameters parameters)
             {
                 _parameters = parameters ?? throw new ArgumentNullException(nameof(parameters));
             }
@@ -41,6 +42,49 @@ namespace Raven.Client.ServerWide.Operations.TrafficWatch
                     Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_parameters, ctx)).ConfigureAwait(false))
                 };
             }
+        }
+
+        public class Parameters
+        {
+            /// <summary>
+            /// Traffic Watch logging mode.
+            /// </summary>
+            public TrafficWatchMode TrafficWatchMode { get; set; }
+
+            /// <summary>
+            /// Database names by which the Traffic Watch logging entities will be filtered.
+            /// </summary>
+            public List<string> Databases { get; set; }
+
+            /// <summary>
+            /// Response status codes by which the Traffic Watch logging entities will be filtered.
+            /// </summary>
+            public List<int> StatusCodes { get; set; }
+
+            /// <summary>
+            /// Minimum response size by which the Traffic Watch logging entities will be filtered.
+            /// </summary>
+            public Size MinimumResponseSizeInBytes { get; set; }
+
+            /// <summary>
+            /// Minimum request size by which the Traffic Watch logging entities will be filtered.
+            /// </summary>
+            public Size MinimumRequestSizeInBytes { get; set; }
+
+            /// <summary>
+            /// Minimum duration by which the Traffic Watch logging entities will be filtered.
+            /// </summary>
+            public long MinimumDurationInMs { get; set; }
+
+            /// <summary>
+            /// Request HTTP methods by which the Traffic Watch logging entities will be filtered.
+            /// </summary>
+            public List<string> HttpMethods { get; set; }
+
+            /// <summary>
+            /// Traffic Watch change types by which the Traffic Watch logging entities will be filtered.
+            /// </summary>
+            public List<TrafficWatchChangeType> ChangeTypes { get; set; }
         }
     }
 }
