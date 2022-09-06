@@ -17,7 +17,6 @@ using Raven.Server.Documents.Handlers.Processors.Replication;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Revisions;
-using Raven.Server.Documents.Sharding.Handlers.Processors.Replication;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Storage.Layout;
@@ -1142,8 +1141,6 @@ namespace Raven.Server.Documents
                 var tombstone = TableValueToTombstone(context, ref result.Reader);
                 tombstones.Add(tombstone);
             }
-
-            tombstones.Sort(ShardedReplicationHandlerProcessorForGetTombstones.TombstonesPreviewComparer.Instance);
 
             return new GetTombstonesPreviewResult
             {
