@@ -4,12 +4,10 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Corax.Utils;
-using Corax.Utils.Spatial;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Compression;
 using Sparrow.Server;
-using Sparrow.Server.Compression;
 using Voron.Impl;
 
 namespace Corax;
@@ -543,8 +541,9 @@ public unsafe partial struct IndexEntryWriter : IDisposable
     {
         // Since we are at the end of the process, as long as we hve 2 longs of space we can
         // finish the preprocessing to write the data into the new allocated buffer. 
-        if (FreeSpace < 2 * sizeof(long))
-            UnlikelyGrowAuxiliaryBuffer();
+        int requiredSpace = (_knownFields.Count + 2) * sizeof(long);
+        if (FreeSpace < requiredSpace)
+            UnlikelyGrowAuxiliaryBuffer(requiredSpace);
         
         var knownFieldsLocations = KnownFieldsLocations;
 
@@ -659,11 +658,16 @@ public unsafe partial struct IndexEntryWriter : IDisposable
         return count * offset;
     }
 
-    private void UnlikelyGrowAuxiliaryBuffer(long requiredSize = 0)
+    private void UnlikelyGrowAuxiliaryBuffer(long extraRequiredSpace = 0)
     {
+        // The new buffer has to have at least an extra over the current free-space.
+        // Therefore, the size must be (conservatively) as big as the current buffer
+        // plus the extra we are going to be needing. 
+        extraRequiredSpace += _rawBuffer.Length;
+
         // Since we are duplicating we need to ensure that the extension will fit.
         var newSize = _rawBuffer.Length * 2;
-        while (newSize - _rawBuffer.Length < requiredSize)
+        while (newSize - _rawBuffer.Length < extraRequiredSpace)
             newSize *= 2;
 
         var newBufferScope = _context.Allocate(newSize, out var newBuffer);
