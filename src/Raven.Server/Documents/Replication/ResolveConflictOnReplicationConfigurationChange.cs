@@ -482,7 +482,8 @@ namespace Raven.Server.Documents.Replication
         private bool ResolveAttachmentsConflicts(DocumentsOperationContext context, DocumentConflict resolved, bool resolvedToLatest)
         {
             using var scope = Slice.External(context.Allocator, resolved.LowerId, out var lowerIdSlice);
-            var storageAttachmentsDetails = _database.DocumentsStorage.AttachmentsStorage.GetAttachmentDetailsForDocument(context, resolved.LowerId);
+            var attachmentStorage = _database.DocumentsStorage.AttachmentsStorage;
+            var storageAttachmentsDetails = attachmentStorage.GetAttachmentDetailsForDocument(context, resolved.LowerId);
             var resolvedAttachmentsMetadata = AttachmentsStorage.GetAttachmentsFromDocumentMetadata(resolved.Doc).Select(attachment => JsonDeserializationClient.AttachmentName(attachment)).ToList();
             
             //we only insert the resolved metadata if we resolve to latest. changing attachment metadata through script is not supported
@@ -495,12 +496,12 @@ namespace Raven.Server.Documents.Replication
                             x.DocumentId.ToLower() == resolved.LowerId && x.Name == attachment.Name && x.Hash == attachment.Hash &&
                             x.ContentType == attachment.ContentType) == false)
                     {
-                        using var scope2 = _database.DocumentsStorage.AttachmentsStorage.GetAttachmentKeyForDocumentType(context, resolved.LowerId, attachment.Name,
+                        using var scope2 = attachmentStorage.GetAttachmentKeyForDocumentType(context, resolved.LowerId, attachment.Name,
                             attachment.Hash,
                             attachment.ContentType, out Slice key);
                         using var _ = Slice.From(context.Allocator, attachment.Hash, out Slice hashSlice);
 
-                        if (_database.DocumentsStorage.AttachmentsStorage.AttachmentExists(context, hashSlice) == false)
+                        if (attachmentStorage.AttachmentExists(context, hashSlice) == false)
                         {
                             var error =
                                 $"Trying to resolve attachment conflict for doc {resolved.Id} and attachment '{attachment.Name}' but its attachment stream {attachment.Hash} is missing from storage. Adding to unresolved conflicts.";
@@ -522,15 +523,16 @@ namespace Raven.Server.Documents.Replication
 
                         using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.Name, out Slice _, out Slice attachmentName))
                         using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.ContentType, out Slice _, out Slice contentType))
-
-                        //put attachment metadata with new change vector
-                        _database.DocumentsStorage.AttachmentsStorage.PutDirect(context, key, attachmentName, contentType, hashSlice);
+                        {
+                            //put attachment metadata with new change vector
+                            attachmentStorage.PutDirect(context, key, attachmentName, contentType, hashSlice);
+                        }
                     }
                 }
             }
 
-            storageAttachmentsDetails = _database.DocumentsStorage.AttachmentsStorage.GetAttachmentDetailsForDocument(context, resolved.LowerId); //refresh storage state
-           
+            storageAttachmentsDetails = attachmentStorage.GetAttachmentDetailsForDocument(context, resolved.LowerId); //refresh storage state
+            
             //goes over all name groups for existing attachments in storage for this doc id
             foreach (var group in storageAttachmentsDetails.GroupBy(x => x.Name))
             {
@@ -553,7 +555,7 @@ namespace Raven.Server.Documents.Replication
                     if (resolvedToLatest)
                     {
                         // delete duplicates
-                        _database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, resolved.LowerId, attachment.Name, expectedChangeVector: null, updateDocument: false,
+                        attachmentStorage.DeleteAttachment(context, resolved.LowerId, attachment.Name, expectedChangeVector: null, updateDocument: false,
                             attachment.Hash, attachment.ContentType, usePartialKey: false);
                     }
                     else
@@ -565,8 +567,8 @@ namespace Raven.Server.Documents.Replication
                             continue;
                         }
                         // rename duplicates
-                        var newName = _database.DocumentsStorage.AttachmentsStorage.ResolveAttachmentName(context, lowerIdSlice, attachment.Name);
-                        _database.DocumentsStorage.AttachmentsStorage.MoveAttachment(context, resolved.LowerId, attachment.Name, resolved.LowerId, newName, changeVector: null,
+                        var newName = attachmentStorage.ResolveAttachmentName(context, lowerIdSlice, attachment.Name);
+                        attachmentStorage.MoveAttachment(context, resolved.LowerId, attachment.Name, resolved.LowerId, newName, changeVector: null,
                             attachment.Hash, attachment.ContentType, usePartialKey: false, updateDocument: false);
                     }
                 }

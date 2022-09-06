@@ -1187,9 +1187,9 @@ namespace Raven.Server.Documents.Replication
                                 var tombstone = AttachmentsStorage.GetAttachmentTombstoneByKey(context, attachmentTombstone.Key);
                                 if (tombstone != null && ChangeVectorUtils.GetConflictStatus(item.ChangeVector, tombstone.ChangeVector) == ConflictStatus.AlreadyMerged)
                                     continue;
-                                
-                                var hashSlice = database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, attachmentTombstone.Key, false, "$fromReplication", null,
-                                    rcvdChangeVector, attachmentTombstone.LastModifiedTicks, deleteAttachmentStream: false);
+
+                                var hashSlice = database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, attachmentTombstone.Key, isPartialKey: false,
+                                    "$fromReplication", expectedChangeVector: null, rcvdChangeVector, attachmentTombstone.LastModifiedTicks, deleteAttachmentStream: false);
                                 
                                 if(hashSlice.HasValue)
                                     _replicationInfo.AttachmentStreamsToDeleteAtTheEndOfBatch.Add(hashSlice);
