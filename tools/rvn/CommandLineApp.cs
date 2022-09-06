@@ -9,8 +9,11 @@ using McMaster.Extensions.CommandLineUtils;
 using Newtonsoft.Json;
 using Raven.Server.Commercial;
 using Raven.Server.Commercial.SetupWizard;
+using Sparrow.Json;
 using Sparrow.Platform;
 using Voron.Global;
+using YamlDotNet.Serialization;
+using YamlDotNet.Serialization.NamingConventions;
 
 namespace rvn
 {
@@ -127,7 +130,8 @@ namespace rvn
                 cmd.Description = "This command creates a RavenDB setup ZIP file";
                 cmd.ExtendedHelpText = "Usage example:" +
                                        Environment.NewLine + 
-                                       "rvn create-setup-package -m=\"lets-encrypt\" -s=\"json-file-path\" -o=\"output-zip-file-name\"" + Environment.NewLine;
+                                       "rvn create-setup-package -m=\"lets-encrypt\" -s=\"json-file-path\" -o=\"output-zip-file-name\" -g=\"values.yaml\"" +
+                                       Environment.NewLine;
                 
                 cmd.HelpOption(HelpOptionString);
 
@@ -136,6 +140,7 @@ namespace rvn
                 var packageOutPath = ConfigurePackageOutputFile(cmd);
                 var certPath = ConfigureCertPath(cmd);
                 var certPass = ConfigureCertPassword(cmd);
+                var generateHelmValues = ConfigureGenerateValues(cmd);
 
                 cmd.OnExecuteAsync(async token =>
                 {
@@ -144,6 +149,7 @@ namespace rvn
                     var packageOutPathVal = packageOutPath.Value();
                     var certPathVal = certPath.Value();
                     var certPassTuple = certPass.Value() ?? Environment.GetEnvironmentVariable("RVN_CERT_PASS");
+                    var generateHelmValuesVal = generateHelmValues.Value();
 
                     return await CreateSetupPackage(new CreateSetupPackageParameters
                     {
@@ -153,6 +159,7 @@ namespace rvn
                         Mode = modeVal,
                         CertificatePath = certPathVal,
                         CertPassword = certPassTuple,
+                        HelmValuesOutputPath = generateHelmValuesVal,
                         Progress = new SetupProgressAndResult(tuple =>
                         {
                             if (tuple.Message != null)
@@ -210,6 +217,30 @@ namespace rvn
 
             parameters.Progress.AddInfo($"ZIP file was successfully added to this location: {parameters.PackageOutputPath}");
 
+            if (parameters.HelmValuesOutputPath is null) return 0;
+
+            string extractedValues;
+            
+            try
+            {
+                ValidateHelmValuesPath(parameters);
+                extractedValues = GenerateHelmValues(parameters);
+            }
+            catch (Exception e)
+            {
+                return ExitWithError($"Failed to create helm values : {parameters.HelmValuesOutputPath} file. Error: {e}", parameters.Command);
+            }
+
+            try
+            {
+                await File.WriteAllTextAsync(parameters.HelmValuesOutputPath, extractedValues,parameters.CancellationToken);
+            }
+            catch (Exception e)
+            {
+                return ExitWithError($"Failed to write YAML file to this path: {parameters.HelmValuesOutputPath}\nError: {e}", parameters.Command);
+            }
+            
+            parameters.Progress.AddInfo($"YAML file was successfully added to this location: {parameters.HelmValuesOutputPath}");
             return 0;
         }
 
@@ -575,6 +606,11 @@ namespace rvn
             return cmd.Option("-p|--password", $"Certificate password{Environment.NewLine}Password can be set from ENV:{Environment.NewLine}Windows - $env:RVN_CERT_PASS=password\nLinux - export RVN_CERT_PASS=password", CommandOptionType.SingleValue);
         }
 
+        private static CommandOption ConfigureGenerateValues(CommandLineApplication cmd)
+        {
+            return cmd.Option("--generate-helm-values", "Path to values.yaml", CommandOptionType.SingleValue);
+        }
+
         private static CommandOption ConfigureServiceNameOption(CommandLineApplication cmd)
         {
             return cmd.Option("--service-name", "RavenDB Server Windows Service name", CommandOptionType.SingleValue);
@@ -645,6 +681,41 @@ namespace rvn
             }
         }
 
+
+        private static void ValidateHelmValuesPath(CreateSetupPackageParameters parameters)
+        {
+            if (string.IsNullOrWhiteSpace(parameters.HelmValuesOutputPath))
+            {
+                throw new InvalidOperationException("Please provide a valid file name for the helm values yaml.");
+            }
+            
+            if (Path.HasExtension(parameters.HelmValuesOutputPath) == false)
+            {
+                parameters.HelmValuesOutputPath += ".yaml";
+            }
+            else if (Path.GetExtension(parameters.HelmValuesOutputPath)?.Equals(".yaml", StringComparison.OrdinalIgnoreCase) == false)
+            {
+                throw new InvalidOperationException("--generate-helm-values file name must end with an extension of .yaml");
+            }
+        }
+
+        private static string GenerateHelmValues(CreateSetupPackageParameters parameters)
+        {
+            using var context = JsonOperationContext.ShortTermSingleUse();
+            var jsonBlittable = context.ReadObject(parameters.SetupInfo.License.ToJson(), "license");
+            HelmInfo helmInfo = new()
+            {
+                Domain = $"{parameters.SetupInfo.Domain}.{parameters.SetupInfo.RootDomain}",
+                Email = parameters.SetupInfo.Email,
+                License = jsonBlittable.ToString(),
+                NodeTags = parameters.SetupInfo.NodeSetupInfos.Keys.ToList(),
+                SetupMode = parameters.Mode == "lets-encrypt" ? "LetsEncrypt" : "Secured"
+            };
+            
+            var serializer = new SerializerBuilder().WithNamingConvention(CamelCaseNamingConvention.Instance).Build();
+            var yaml = serializer.Serialize(helmInfo);
+            return yaml;
+        }
         private static int PerformOfflineOperation(Func<string> offlineOperation, CommandArgument systemDirArg, CommandLineApplication cmd)
         {
             try
