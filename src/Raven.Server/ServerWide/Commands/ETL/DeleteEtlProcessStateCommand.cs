@@ -1,5 +1,6 @@
 ﻿using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -27,7 +28,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
             return EtlProcessState.GenerateItemName(DatabaseName, ConfigurationName, TransformationName);
         }
 
-        protected override BlittableJsonReaderObject GetUpdatedValue(long index, RawDatabaseRecord record, JsonOperationContext context,
+        protected override BlittableJsonReaderObject GetUpdatedValue(long index, RawDatabaseRecord record, ClusterOperationContext context,
             BlittableJsonReaderObject existingValue)
         {
             return null; // it's going to delete the value

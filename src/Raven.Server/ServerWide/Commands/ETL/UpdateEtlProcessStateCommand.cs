@@ -4,6 +4,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Server.Rachis;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -123,7 +124,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
             return null;
         }
 
-        protected override BlittableJsonReaderObject GetUpdatedValue(long index, RawDatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue)
+        protected override BlittableJsonReaderObject GetUpdatedValue(long index, RawDatabaseRecord record, ClusterOperationContext context, BlittableJsonReaderObject existingValue)
         {
             EtlProcessState etlState;
 

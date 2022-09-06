@@ -33,7 +33,8 @@ namespace Raven.Server.ServerWide.Commands
             throw new NotSupportedException();
         }
 
-        protected override BlittableJsonReaderObject GetUpdatedValue(long index, RawDatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue)
+        protected override BlittableJsonReaderObject GetUpdatedValue(long index, RawDatabaseRecord record, ClusterOperationContext context,
+            BlittableJsonReaderObject existingValue)
         {
             throw new NotSupportedException();
         }

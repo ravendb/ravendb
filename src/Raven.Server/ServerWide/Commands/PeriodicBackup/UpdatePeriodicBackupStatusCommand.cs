@@ -1,5 +1,6 @@
 ﻿using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -24,7 +25,8 @@ namespace Raven.Server.ServerWide.Commands.PeriodicBackup
             return PeriodicBackupStatus.GenerateItemName(DatabaseName, PeriodicBackupStatus.TaskId);
         }
 
-        protected override BlittableJsonReaderObject GetUpdatedValue(long index, RawDatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue)
+        protected override BlittableJsonReaderObject GetUpdatedValue(long index, RawDatabaseRecord record, ClusterOperationContext context,
+            BlittableJsonReaderObject existingValue)
         {
             return context.ReadObject(PeriodicBackupStatus.ToJson(), GetItemId());
         }
