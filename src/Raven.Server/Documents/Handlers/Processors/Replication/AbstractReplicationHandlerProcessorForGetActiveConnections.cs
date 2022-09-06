@@ -1,13 +1,12 @@
 ﻿using System.Collections.Generic;
-using System.Net.Http;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Http;
+using Raven.Server.Documents.Commands.Replication;
 using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.Json;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using static Raven.Server.Documents.Handlers.Processors.Replication.ReplicationActiveConnectionsPreview;
 
 namespace Raven.Server.Documents.Handlers.Processors.Replication
 {
@@ -21,60 +20,6 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
         }
 
         protected override RavenCommand<ReplicationActiveConnectionsPreview> CreateCommandForNode(string nodeTag) => new GetReplicationActiveConnectionsInfoCommand(nodeTag);
-    }
-
-    internal class GetReplicationActiveConnectionsInfoCommand : RavenCommand<ReplicationActiveConnectionsPreview>
-    {
-        public GetReplicationActiveConnectionsInfoCommand()
-        {
-        }
-
-        public GetReplicationActiveConnectionsInfoCommand(string nodeTag)
-        {
-            SelectedNodeTag = nodeTag;
-        }
-
-        public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
-        {
-            url = $"{node.Url}/databases/{node.Database}/replication/active-connections";
-
-            var request = new HttpRequestMessage
-            {
-                Method = HttpMethod.Get
-            };
-
-            return request;
-        }
-
-        public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
-        {
-            if (response == null)
-                ThrowInvalidResponse();
-
-            var incomingConnectionsInfo = new List<IncomingConnectionInfo>();
-            if (response.TryGet(nameof(ReplicationActiveConnectionsPreview.IncomingConnections), out BlittableJsonReaderArray bjra))
-            {
-                foreach (BlittableJsonReaderObject bjro in bjra)
-                {
-                    var incomingConnectionInfo = IncomingConnectionInfo.FromJson(bjro);
-                    incomingConnectionsInfo.Add(incomingConnectionInfo);
-                }
-            }
-
-            var outgoingConnectionsInfo = new List<OutgoingConnectionInfo>();
-            if (response.TryGet(nameof(ReplicationActiveConnectionsPreview.OutgoingConnections), out bjra))
-            {
-                foreach (BlittableJsonReaderObject bjro in bjra)
-                {
-                    var outgoingConnectionInfo = OutgoingConnectionInfo.FromJson(bjro);
-                    outgoingConnectionsInfo.Add(outgoingConnectionInfo);
-                }
-            }
-           
-            Result = new ReplicationActiveConnectionsPreview { IncomingConnections = incomingConnectionsInfo, OutgoingConnections = outgoingConnectionsInfo };
-        }
-
-        public override bool IsReadRequest => true;
     }
 
     public class ReplicationActiveConnectionsPreview
