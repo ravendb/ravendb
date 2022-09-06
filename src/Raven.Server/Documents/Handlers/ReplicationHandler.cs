@@ -55,38 +55,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/replication/debug/outgoing-failures", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
         public async Task GetReplicationOutgoingFailureStats()
         {
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
-            {
-                var data = new DynamicJsonArray();
-                foreach (var item in Database.ReplicationLoader.OutgoingFailureInfo)
-                {
-                    data.Add(new DynamicJsonValue
-                    {
-                        ["Key"] = new DynamicJsonValue
-                        {
-                            [nameof(item.Key)] = item.Key.GetType().ToString(),
-                            [nameof(item.Key.Url)] = item.Key.Url,
-                            [nameof(item.Key.Database)] = item.Key.Database,
-                            [nameof(item.Key.Disabled)] = item.Key.Disabled
-                        },
-                        ["Value"] = new DynamicJsonValue
-                        {
-                            ["ErrorsCount"] = item.Value.Errors.Count,
-                            [nameof(item.Value.Errors)] = new DynamicJsonArray(item.Value.Errors.Select(e => e.ToString())),
-                            [nameof(item.Value.NextTimeout)] = item.Value.NextTimeout,
-                            [nameof(item.Value.RetryOn)] = item.Value.RetryOn,
-                            [nameof(item.Value.DestinationDbId)] = item.Value.DestinationDbId,
-                            [nameof(item.Value.LastHeartbeatTicks)] = item.Value.LastHeartbeatTicks,
-                        }
-                    });
-                }
-
-                context.Write(writer, new DynamicJsonValue
-                {
-                    ["Stats"] = data
-                });
-            }
+            using (var processor = new ReplicationHandlerProcessorForGetOutgoingFailureStats(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/replication/debug/incoming-last-activity-time", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
