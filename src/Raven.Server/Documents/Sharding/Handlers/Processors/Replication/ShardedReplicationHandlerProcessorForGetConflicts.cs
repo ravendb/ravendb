@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
@@ -59,18 +58,27 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Replication
 
             public GetConflictsPreviewResult Combine(Memory<GetConflictsPreviewResult> results)
             {
-                var span = results.Span;
-                var final = new GetConflictsPreviewResult();
-
-                final.Results = _handler.DatabaseContext.Streaming.PagedShardedItem(
-                    results,
-                    selector: r => r.Results,
-                    comparer: ConflictsLastModifiedComparer.Instance,
-                    _token).ToList();
-
-                foreach (var s in span)
+                var totalResults = 0L;
+                foreach (var conflictResult in results.Span)
+                    totalResults += conflictResult.TotalResults;
+                
+                var final = new GetConflictsPreviewResult
                 {
-                    final.TotalResults += s.TotalResults;
+                    Results = new List<GetConflictsPreviewResult.ConflictPreview>(),
+                    TotalResults = totalResults
+                };
+
+                var pageSize = _token.PageSize;
+                foreach (var res in _handler.DatabaseContext.Streaming.CombinedResults(results, r => r.Results, ConflictsLastModifiedComparer.Instance))
+                {
+                    final.Results.Add(res.Item);
+                    pageSize--;
+
+                    if (pageSize <= 0)
+                        break;
+
+                    var shard = res.Shard;
+                    _token.Pages[shard].Start += (int)res.Item.ScannedResults;
                 }
 
                 return final;
