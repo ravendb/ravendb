@@ -35,7 +35,8 @@ namespace Raven.Server.ServerWide.Commands
             return $"{databaseName.ToLowerInvariant()}/{prefix?.ToLowerInvariant()}";
         }
 
-        protected override BlittableJsonReaderObject GetUpdatedValue(long index, RawDatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue)
+        protected override BlittableJsonReaderObject GetUpdatedValue(long index, RawDatabaseRecord record, ClusterOperationContext context,
+            BlittableJsonReaderObject existingValue)
         {
             throw new NotImplementedException();
         }

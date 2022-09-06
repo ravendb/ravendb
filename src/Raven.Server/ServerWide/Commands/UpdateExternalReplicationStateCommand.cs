@@ -1,5 +1,6 @@
 ﻿using Raven.Client.ServerWide;
 using Raven.Server.Documents.Replication;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -23,7 +24,8 @@ namespace Raven.Server.ServerWide.Commands
             return ExternalReplicationState.GenerateItemName(DatabaseName, ExternalReplicationState.TaskId);
         }
 
-        protected override BlittableJsonReaderObject GetUpdatedValue(long index, RawDatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue)
+        protected override BlittableJsonReaderObject GetUpdatedValue(long index, RawDatabaseRecord record, ClusterOperationContext context,
+            BlittableJsonReaderObject existingValue)
         {
             return context.ReadObject(ExternalReplicationState.ToJson(), GetItemId());
         }
