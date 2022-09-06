@@ -18,7 +18,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
         {
             using (context.OpenReadTransaction())
             {
-                return ValueTask.FromResult(RequestHandler.Database.DocumentsStorage.ConflictsStorage.GetConflictsPreviewResult(context, start));
+                return ValueTask.FromResult(RequestHandler.Database.DocumentsStorage.ConflictsStorage.GetConflictsPreviewResult(context, start, pageSize));
             }
         }
 

@@ -8,20 +8,19 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
-using Raven.Server.Documents.Handlers.Processors.Replication;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Sparrow.Json;
-using Voron;
-using Voron.Data.Tables;
-using Voron.Impl;
 using Sparrow;
 using Sparrow.Binary;
+using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
+using Voron;
+using Voron.Data.Tables;
+using Voron.Impl;
 using Voron.Util;
 using static Raven.Server.Documents.DocumentsStorage;
 using static Raven.Server.Documents.Schemas.Conflicts;
@@ -107,21 +106,28 @@ namespace Raven.Server.Documents
             }
         }
 
-        internal GetConflictsPreviewResult GetConflictsPreviewResult(DocumentsOperationContext context, long skip = 0)
+        internal GetConflictsPreviewResult GetConflictsPreviewResult(DocumentsOperationContext context, long skip = 0, int pageSize = int.MaxValue)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, ConflictsSlice);
 
             var conflictsDictionary = new Dictionary<string, GetConflictsPreviewResult.ConflictPreview>();
-            foreach (var tvr in table.SeekBackwardFromLast(ConflictsSchema.FixedSizeIndexes[AllConflictedDocsEtagsSlice]))
+            foreach (var tvr in table.SeekBackwardFromLast(ConflictsSchema.FixedSizeIndexes[AllConflictedDocsEtagsSlice], skip))
             {
+                if (pageSize <= 0)
+                    break;
+
                 var documentConflict = TableValueToConflictDocument(context, ref tvr.Reader);
 
-                conflictsDictionary.TryAdd(documentConflict.Id, new GetConflictsPreviewResult.ConflictPreview {Id = documentConflict.Id, LastModified = documentConflict.LastModified});
+                if (conflictsDictionary.TryAdd(documentConflict.Id,
+                        new GetConflictsPreviewResult.ConflictPreview {Id = documentConflict.Id, LastModified = documentConflict.LastModified, ScannedResults = 0}))
+                {
+                    pageSize--;
+                }
+
+                conflictsDictionary[documentConflict.Id].ScannedResults++;
             }
 
             var conflicts = conflictsDictionary.Values.ToList();
-            conflicts = conflicts.GetRange((int)skip, conflicts.Count - (int)skip);
-            conflicts.Sort(ConflictsPreviewComparer.Instance);
           
             return new GetConflictsPreviewResult
             {

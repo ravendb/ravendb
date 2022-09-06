@@ -2,7 +2,6 @@
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Commands;
-using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -32,14 +31,14 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
                 if (string.IsNullOrWhiteSpace(docId))
                 {
                     var result = await GetConflictsPreviewAsync(context, start, pageSize);
-                    await WriteResultsAsync(context, result, pageSize);
+                    await WriteResultsAsync(context, result);
                 }
                 else
                     await GetConflictsForDocumentAsync(context, docId);
             }
         }
 
-        protected async ValueTask WriteResultsAsync(JsonOperationContext context, GetConflictsPreviewResult previewResult, int pageSize)
+        protected async ValueTask WriteResultsAsync(JsonOperationContext context, GetConflictsPreviewResult previewResult)
         {
             await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
             {
@@ -47,14 +46,12 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
 
                 foreach (var conflict in previewResult.Results)
                 {
-                    if (pageSize-- <= 0)
-                        break;
-
                     array.Add(new DynamicJsonValue
                     {
                         [nameof(GetConflictsPreviewResult.ConflictPreview.Id)] = conflict.Id,
                         [nameof(GetConflictsPreviewResult.ConflictPreview.LastModified)] = conflict.LastModified,
-                        [nameof(GetConflictsPreviewResult.ConflictPreview.ConflictsPerDocument)] = conflict.ConflictsPerDocument
+                        [nameof(GetConflictsPreviewResult.ConflictPreview.ConflictsPerDocument)] = conflict.ConflictsPerDocument,
+                        [nameof(GetConflictsPreviewResult.ConflictPreview.ScannedResults)] = conflict.ScannedResults
                     });
                 }
 

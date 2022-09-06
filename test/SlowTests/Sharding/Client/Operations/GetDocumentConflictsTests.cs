@@ -8,8 +8,6 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Commands.Replication;
-using Raven.Server.Documents.Operations;
-using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
@@ -60,10 +58,14 @@ namespace SlowTests.Sharding.Client.Operations
                     expected = 10;
                     Assert.Equal(expected, totalResults);
 
-                    var documentsConflict = await store.Maintenance.SendAsync(new GetConflictsOperation(start: 0));
-                    Assert.Equal(expected, documentsConflict.Results.Count);
+                    var documentsConflict = await store.Maintenance.SendAsync(new GetConflictsOperation(start: 0, pageSize: 2));
+                    Assert.Equal(2, documentsConflict.Results.Count);
 
-                    documentsConflict = await store.Maintenance.SendAsync(new GetConflictsOperation(start: 2));
+                    var nextStart = 0L;
+                    foreach (var conflict in documentsConflict.Results)
+                        nextStart += conflict.ScannedResults;
+                    
+                    documentsConflict = await store.Maintenance.SendAsync(new GetConflictsOperation(start: nextStart + 1 /*skip scanned entries and start from next one*/, pageSize: 10));
                     Assert.Equal(8, documentsConflict.Results.Count);
 
                     documentsConflict = await store.Maintenance.SendAsync(new GetConflictsOperation(start: 0, pageSize: 5));
@@ -108,6 +110,73 @@ namespace SlowTests.Sharding.Client.Operations
                     Assert.Equal(10, documentsConflict.TotalResults);
                 }
             }
+        }
+
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Sharding)]
+        public async Task CanGetReplicationDocumentConflictsForSharding2()
+        {
+            using var store = Sharding.GetDocumentStore();
+
+            using (var session = store.OpenAsyncSession())
+            {
+                for (int j = 0; j < 100; j++)
+                {
+                    await session.StoreAsync(new User(), $"users/{j}");
+                }
+
+                await session.SaveChangesAsync();
+            }
+
+            DateTime now = DateTime.UtcNow;
+            var rand = new Random();
+            var totalResults = 0;
+
+            var dbs = Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store.Database);
+            foreach (var task in dbs)
+            {
+                var db = await task;
+
+                using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                {
+                    var ids = new LazyStringValue[10];
+                    int i = 0;
+                    using (context.OpenReadTransaction())
+                    {
+                        var docCount = db.DocumentsStorage.GetNumberOfDocuments(context);
+                        if (docCount == 0)
+                            continue;
+
+                        foreach (var docId in db.DocumentsStorage.GetAllIds(context))
+                        {
+                            ids[i++] = docId;
+                            if(i > 9)
+                                break;
+                        }
+                    }
+
+                    using (context.OpenWriteTransaction())
+                    {
+                        i = 0;
+                        foreach (var id in ids)
+                        {
+                            var doc = context.ReadObject(new DynamicJsonValue(), id);
+                            db.DocumentsStorage.ConflictsStorage.AddConflict(context, id, now.AddMinutes(rand.Next(100, 10000)).Ticks, doc, $"A:{i}-A1B2C3D4E5F6G7H8I9", "users",
+                                DocumentFlags.None);
+                            i++;
+                        }
+
+                        totalResults += i;
+                        context.Transaction.Commit();
+                    }
+                }
+            }
+           
+            var documentsConflict = await store.Maintenance.SendAsync(new GetConflictsOperation(start: 0, pageSize: 5));
+            Assert.Equal(5, documentsConflict.Results.Count);
+
+            documentsConflict = await store.Maintenance.SendAsync(new GetConflictsOperation(continuationToken: documentsConflict.ContinuationToken));
+            Assert.Equal(5, documentsConflict.Results.Count);
+            Assert.Equal(totalResults, documentsConflict.TotalResults);
         }
 
         [RavenFact(RavenTestCategory.Replication)]
