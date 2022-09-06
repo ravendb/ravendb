@@ -54,4 +54,11 @@ public class ShardedReplicationHandler : ShardedDatabaseRequestHandler
         using (var processor = new ShardedReplicationHandlerProcessorForGetPulsesLive(this))
             await processor.ExecuteAsync();
     }
+
+    [RavenShardedAction("/databases/*/replication/debug/outgoing-failures", "GET")]
+    public async Task GetReplicationOutgoingFailureStats()
+    {
+        using (var processor = new ShardedReplicationHandlerProcessorForGetOutgoingFailureStats(this))
+            await processor.ExecuteAsync();
+    }
 }
