@@ -68,7 +68,7 @@ class ongoingTasksWidget extends websocketBasedWidget<Raven.Server.Dashboard.Clu
             nameForUI: "Subscription",
             icon: "icon-subscription",
             colorClass: "subscription"
-    }
+        }
     }
 
     protected gridController = ko.observable<virtualGridController<taskItem>>();
