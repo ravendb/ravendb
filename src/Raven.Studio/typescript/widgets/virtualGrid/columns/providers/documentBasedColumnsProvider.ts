@@ -193,7 +193,7 @@ class documentBasedColumnsProvider {
         const docDto = doc.toDto(true);
         
         const text = JSON.stringify(docDto, null, 4);
-        const title = doc.getId() ? "Document: " + doc.getId() : "Document preview";
+        const title = doc.getId() ? "Document: " + doc.getId() : "Index Entry preview";
         app.showBootstrapDialog(new showDataDialog(title, text, "javascript"));
     }
 
