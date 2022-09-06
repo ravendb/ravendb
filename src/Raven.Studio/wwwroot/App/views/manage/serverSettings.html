@@ -1,0 +1,37 @@
+<div id="server-settings-view" class="flex-vertical absolute-fill">
+    <!-- ko if: isForbidden-->
+    <div class="text-center">
+        <h4 class="page-header text-info">You are not authorized to view this page!</h4>
+    </div>
+    <!-- /ko -->
+    <!-- ko if: !isForbidden() -->
+    <div class="flex-horizontal flex-wrap margin-top margin-top-lg margin-left margin-left-lg margin-bottom margin-bottom-lg">
+        <div class="filter-entries">
+            <input class="form-control" placeholder="Filter Keys" data-bind="textInput: filterKeys" />
+        </div>
+        <div class="btn-group">
+            <button class="btn btn-default" data-bind="click: refresh, css: { 'btn-spinner': spinners.refresh }, disable: spinners.refresh()" title="Reload settings">
+                <i class="icon-refresh"></i><span>Refresh</span>
+            </button>
+        </div>
+    </div>
+    <div class="flex-horizontal flex-stretch-items content-margin entries-grid">
+        <div class="flex-grow flex-vertical slidein-style">
+            <div class="summary-list-container flex-vertical flex-grow" style="position:relative;">
+                <virtual-grid class="resizable"
+                              params="controller: gridController, emptyTemplate: 'server-settings-no-matching-entries-template'">
+                </virtual-grid>
+            </div>
+        </div>
+    </div>
+    <!-- /ko -->
+</div>
+
+<div class="tooltip json-preview js-summary-details-tooltip" style="opacity: 0">
+</div>
+
+<script type="text/html" id="server-settings-no-matching-entries-template">
+    <div class="panel">
+        <div class="panel-body">No matching entries.</div>
+    </div>
+</script>

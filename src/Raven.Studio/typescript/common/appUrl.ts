@@ -181,6 +181,10 @@ class appUrl {
     }
 
     static forGlobalStudioConfiguration(): string {
+        return "#admin/settings/serverSettings";
+    }
+
+    static forServerSettings(): string {
         return "#admin/settings/studioConfiguration";
     }
 
