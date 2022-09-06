@@ -134,7 +134,6 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }, operationId, token: clusterOperationToken);
         }
 
-
         private async Task WriteDebugInfoPackageForNodeAsync(JsonOperationContext context, ZipArchive archive, string tag, string url, OperationCancelToken clusterOperationToken, int timeoutInSecPerNode)
         {
             //note : theoretically GetDebugInfoFromNodeAsync() can throw, error handling is done at the level of WriteDebugInfoPackageForNodeAsync() calls
@@ -224,29 +223,31 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
         }
 
-        private async Task<Stream> GetDebugInfoFromNodeAsync(JsonOperationContext context, RequestExecutor requestExecutor, long operationId, OperationCancelToken token,
-            int timeoutInSec)
+        private async Task<Stream> GetDebugInfoFromNodeAsync(JsonOperationContext context, RequestExecutor requestExecutor, long operationId, OperationCancelToken token, int timeoutInSec)
         {
             var rawStreamCommand = new GetRawStreamResultCommand($"/admin/debug/info-package?operationId={operationId}");
             var requestExecutionTask = requestExecutor.ExecuteAsync(rawStreamCommand, context);
 
-            var delayTask = Task.Delay(TimeSpan.FromSeconds(timeoutInSec), token.Token);
-
-            try
+            using (var cts = CancellationTokenSource.CreateLinkedTokenSource(token.Token))
             {
-                var result = await Task.WhenAny(requestExecutionTask, delayTask);
-                if (result == delayTask)
+                try
+                {
+                    var delayTask = Task.Delay(TimeSpan.FromSeconds(timeoutInSec), cts.Token);
+                    var result = await Task.WhenAny(requestExecutionTask, delayTask);
+
+                    if (result == delayTask)
+                    {
+                        await KillOperation();
+                    }
+                    else
+                    {
+                        cts.Cancel();
+                    }
+                }
+                catch (OperationCanceledException)
                 {
                     await KillOperation();
                 }
-                else
-                {
-                    token.Cancel();
-                }
-            }
-            catch (OperationCanceledException)
-            {
-                await KillOperation();
             }
 
             await requestExecutionTask;
