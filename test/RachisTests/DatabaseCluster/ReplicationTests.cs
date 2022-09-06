@@ -19,13 +19,14 @@ using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
-using Raven.Server.Documents.Replication.Incoming;
 using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Tests.Infrastructure;
+using Voron;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -967,7 +968,7 @@ namespace RachisTests.DatabaseCluster
         }
 
         [Fact]
-        public async Task ExternalReplicationFailoverFromNonShardedToShardedDatabase()
+        public async Task ExternalReplicationFailOverFromNonShardedToShardedDatabase()
         {
             var clusterSize = 3;
             var replicationFactor = 3;
@@ -1061,6 +1062,7 @@ namespace RachisTests.DatabaseCluster
                     var outgoingHandler = db.ReplicationLoader?.OutgoingHandlers.Where(o => o is OutgoingExternalReplicationHandler).ToList();
                     Assert.NotNull(outgoingHandler);
 
+                    // checking that after the replication resumes we don't start from scratch
                     var stats = outgoingHandler[0].GetReplicationPerformance().Where(p => p.Network.DocumentOutputCount > 0)?.Single();
                     Assert.Equal(1, stats.Network.DocumentOutputCount);
                 }
@@ -1068,7 +1070,7 @@ namespace RachisTests.DatabaseCluster
         }
 
         [Fact]
-        public async Task ExternalReplicationFailoverFromNonShardedToShardedDatabase2()
+        public async Task BidirectionalReplicationWithFailOver_NonShardedAndShardedDatabases()
         {
             var clusterSize = 3;
             var replicationFactor = 3;
@@ -1125,6 +1127,7 @@ namespace RachisTests.DatabaseCluster
                             TimeSpan.FromSeconds(60)));
                     }
 
+                    await ShardingCluster.WaitForShardedChangeVectorInClusterAsync(dstNodes, dstDB, replicationFactor);
                     var responsibale = srcLeader.ServerStore.GetClusterTopology().GetUrlFromTag("B");
                     var server = Servers.Single(s => s.WebUrl == responsibale);
                     using (var processor = await Databases.InstantiateOutgoingTaskProcessor(srcDB, server))
@@ -1194,7 +1197,107 @@ namespace RachisTests.DatabaseCluster
         }
 
         [Fact]
-        public async Task ExternalReplicationFailoverFromShardedToNonShardedDatabase()
+        public async Task ReplicationShouldResumeAfterDeletingAndRestartingShardDatabase()
+        {
+            var src = GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseName = s => "Src_" + s
+            });
+            var dst = Sharding.GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseName = s => "Dst_" + s
+            });
+  
+            var watcher = new ExternalReplication(dst.Database, "connection");
+            await AddWatcherToReplicationTopology(src, watcher, dst.Urls);
+
+            var dstServers = await ShardingCluster.GetShardsDocumentDatabaseInstancesFor(dst, new List<RavenServer>{ Server });
+            while (Sharding.AllShardHaveDocs(dstServers) == false)
+            {
+                using (var session = src.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "Oren"
+                    });
+                    await session.SaveChangesAsync();
+                }
+            }
+
+            var shardedDb=  await GetDocumentDatabaseInstanceFor(dst, dst.Database + "$0");
+            var environmentOptions = (StorageEnvironmentOptions.PureMemoryStorageEnvironmentOptions)shardedDb.DocumentsStorage.Environment.Options;
+            using (await Server.ServerStore.DatabasesLandlord.UnloadAndLockDatabase(shardedDb.Name, "Want to test removal of data from disk"))
+            {
+                IOExtensions.DeleteDirectory(environmentOptions.BasePath.ToFullPath());
+            }
+
+            var databaseTask = shardedDb.ServerStore.DatabasesLandlord.TryGetOrCreateDatabase(shardedDb.Name).DatabaseTask;
+            await databaseTask;
+
+            dstServers = await ShardingCluster.GetShardsDocumentDatabaseInstancesFor(dst, new List<RavenServer>(){Server});
+            using (var session = src.OpenSession())
+            {
+                var sourceDocs = session.Query<User>()
+                    .Customize(x=>x.WaitForNonStaleResults())
+                    .Count();
+
+                var dstDocs = WaitForValue(() => Sharding.GetDocsCountForCollectionInAllShards(dstServers, "users"), sourceDocs);
+                Assert.Equal(sourceDocs, dstDocs);
+            }
+        }
+
+        [Fact]
+        public async Task ReplicationShouldResumeAfterDeletingAndRestartingShardDatabase2()
+        {
+            var src = Sharding.GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseName = s => "Src_" + s
+            });
+            var dst = Sharding.GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseName = s => "Dst_" + s
+            });
+
+            var watcher = new ExternalReplication(dst.Database, "connection");
+            await AddWatcherToReplicationTopology(src, watcher, dst.Urls);
+
+            var dstServers = await ShardingCluster.GetShardsDocumentDatabaseInstancesFor(dst, new List<RavenServer> { Server });
+            while (Sharding.AllShardHaveDocs(dstServers) == false)
+            {
+                using (var session = src.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "Oren"
+                    });
+                    await session.SaveChangesAsync();
+                }
+            }
+
+            var shardedDb = await GetDocumentDatabaseInstanceFor(dst, dst.Database + "$0");
+            var environmentOptions = (StorageEnvironmentOptions.PureMemoryStorageEnvironmentOptions)shardedDb.DocumentsStorage.Environment.Options;
+            using (await Server.ServerStore.DatabasesLandlord.UnloadAndLockDatabase(shardedDb.Name, "Want to test removal of data from disk"))
+            {
+                IOExtensions.DeleteDirectory(environmentOptions.BasePath.ToFullPath());
+            }
+
+            var databaseTask = shardedDb.ServerStore.DatabasesLandlord.TryGetOrCreateDatabase(shardedDb.Name).DatabaseTask;
+            await databaseTask;
+
+            dstServers = await ShardingCluster.GetShardsDocumentDatabaseInstancesFor(dst, new List<RavenServer>() { Server });
+            using (var session = src.OpenSession())
+            {
+                var sourceDocs = session.Query<User>()
+                    .Customize(x => x.WaitForNonStaleResults())
+                    .Count();
+
+                var dstDocs = WaitForValue(() => Sharding.GetDocsCountForCollectionInAllShards(dstServers, "users"), sourceDocs);
+                Assert.Equal(sourceDocs, dstDocs);
+            }
+        }
+
+        [Fact]
+        public async Task ExternalReplicationFailOverFromShardedToNonShardedDatabase()
         {
             var clusterSize = 3;
             var replicationFactor = 3;
@@ -1224,7 +1327,7 @@ namespace RachisTests.DatabaseCluster
                     session.SaveChanges();
                 }
 
-                // add watcher with invalid url to test the failover on database topology discovery
+                // add watcher with invalid url to test the failOver on database topology discovery
                 var watcher = new ExternalReplication(dstDB, "connection")
                 {
                     MentorNode = "B"
@@ -1280,7 +1383,7 @@ namespace RachisTests.DatabaseCluster
         }
 
         [Fact]
-        public async Task ExternalReplicationFailoverFromShardedToShardedDatabase()
+        public async Task ExternalReplicationFailOverFromShardedToShardedDatabase()
         {
             var clusterSize = 3;
             var replicationFactor = 3;

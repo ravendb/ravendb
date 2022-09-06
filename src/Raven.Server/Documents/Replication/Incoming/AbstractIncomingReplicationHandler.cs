@@ -225,10 +225,7 @@ namespace Raven.Server.Documents.Replication.Incoming
             }
         }
 
-        internal void HandleSingleReplicationBatch(
-    TOperationContext context,
-    BlittableJsonReaderObject message,
-    BlittableJsonTextWriter writer)
+        internal void HandleSingleReplicationBatch(TOperationContext context, BlittableJsonReaderObject message, BlittableJsonTextWriter writer)
         {
             message.BlittableValidation();
             //note: at this point, the valid messages are heartbeat and replication batch.

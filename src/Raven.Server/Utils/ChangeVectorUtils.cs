@@ -269,6 +269,28 @@ namespace Raven.Server.Utils
             return _mergeVectorBuffer.SerializeVector();
         }
 
+        public static string MergeVectorsDown(List<string> changeVectors)
+        {
+            if (_mergeVectorBuffer == null)
+                _mergeVectorBuffer = new EquatableList<ChangeVectorEntry>();
+            _mergeVectorBuffer.Clear();
+
+            if (changeVectors.Count == 0 || string.IsNullOrEmpty(changeVectors[0]))
+                return null;
+
+            ChangeVectorParser.MergeChangeVector(changeVectors[0], _mergeVectorBuffer);
+            
+            for (int i = 1; i < changeVectors.Count; i++)
+            {
+                if (string.IsNullOrEmpty(changeVectors[i]))
+                    return null;
+
+                ChangeVectorParser.MergeChangeVectorDown(changeVectors[i], _mergeVectorBuffer);
+            }
+
+            return _mergeVectorBuffer.SerializeVector();
+        }
+
         public static ChangeVector NewChangeVector(DocumentDatabase database, long etag, IChangeVectorOperationContext context)
         {
             return context.GetChangeVector(NewChangeVector(database.ServerStore.NodeTag, etag, database.DbBase64Id));
