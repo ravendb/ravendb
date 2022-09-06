@@ -179,6 +179,25 @@ public partial class RavenTestBase
             return true;
         }
 
+        public long GetDocsCountForCollectionInAllShards(IDictionary<string, List<DocumentDatabase>> servers, string collection)
+        {
+            var sum = 0L;
+            foreach (var kvp in servers)
+            {
+                foreach (var documentDatabase in kvp.Value)
+                {
+                    using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        var ids = documentDatabase.DocumentsStorage.GetCollectionDetails(context, collection).CountOfDocuments;
+                        sum += ids;
+                    }
+                }
+            }
+
+            return sum;
+        }
+
         internal async Task<ShardedOngoingTasksHandlerProcessorForGetOngoingTasks> InstantiateShardedOutgoingTaskProcessor(string name, RavenServer server)
         {
             Assert.True(server.ServerStore.DatabasesLandlord.ShardedDatabasesCache.TryGetValue(name, out var db));

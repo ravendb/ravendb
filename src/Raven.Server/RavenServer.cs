@@ -2429,7 +2429,7 @@ namespace Raven.Server
                     {
                         var shardedReplicationLoader = tcp.DatabaseContext.Replication;
 
-                        shardedReplicationLoader.AcceptIncomingConnection(tcp, header, bufferToCopy);
+                        await shardedReplicationLoader.AcceptIncomingConnectionAsync(tcp, header, bufferToCopy).ConfigureAwait(false);
                         break;
                     }
 

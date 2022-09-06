@@ -13,7 +13,6 @@ using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Utils;
@@ -23,18 +22,16 @@ namespace Raven.Server.Documents.Sharding.Handlers
 {
     public class ShardedOutgoingReplicationHandler : AbstractOutgoingReplicationHandler<TransactionContextPool, TransactionOperationContext>
     {
+        private readonly string _sourceDatabaseId;
         private readonly ShardedDatabaseContext.ShardedReplicationContext _parent;
-        private readonly BlockingCollection<ReplicationBatch> _batches = new BlockingCollection<ReplicationBatch>();
+        private readonly BlockingCollection<ReplicationBatch> _batches = new();
         private readonly byte[] _tempBuffer = new byte[32 * 1024];
         private long _lastEtag;
-
-        internal string _lastDatabaseChangeVector { get; set; }
-        internal string _lastSourceChangeVector { get; set; }
-        internal long _lastDocumentEtagFromSource { get; set; }
+        private string _lastAcceptedChangeVectorFromShard;
+        private readonly TaskCompletionSource<(string, long)> _firstChangeVector = new(TaskContinuationOptions.RunContinuationsAsynchronously);
 
         public string MissingAttachmentMessage { get; set; }
         public bool MissingAttachmentsInLastBatch { get; set; }
-        public string SourceDatabaseId;
 
         public ShardedOutgoingReplicationHandler(ShardedDatabaseContext.ShardedReplicationContext parent, ShardReplicationNode node, TcpConnectionInfo connectionInfo, string sourceDatabaseId) :
             base(connectionInfo, parent.Server, parent.Context.DatabaseName, node, parent.Context.DatabaseShutdown, parent.Server.ContextPool)
@@ -45,8 +42,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 DatabaseContext = _parent.Context,
                 Operation = TcpConnectionHeaderMessage.OperationTypes.Replication
             };
-
-            SourceDatabaseId = sourceDatabaseId;
+            _sourceDatabaseId = sourceDatabaseId;
         }
 
         protected override void Replicate()
@@ -56,7 +52,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
             {
                 while (_cts.Token.IsCancellationRequested == false)
                 {
-                    var hasBatch = _batches.TryTake(out batch, TimeSpan.FromSeconds(3));
+                    batch = _batches.Take(_cts.Token);
 
                     using (_parent.Server.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     {
@@ -64,20 +60,10 @@ namespace Raven.Server.Documents.Sharding.Handlers
                         AddReplicationPerformance(stats);
 
                         _lastEtag = _lastSentDocumentEtag;
-       
-                        if (_lastDocumentEtagFromSource > _lastEtag)
-                            _lastEtag = _lastDocumentEtagFromSource;
 
                         using (var scope = stats.CreateScope())
                         {
                             EnsureValidStats(scope);
-
-                            if (hasBatch == false)
-                            {
-                                _lastSentDocumentEtag = _lastEtag;
-                                SendHeartbeat(_lastSourceChangeVector);
-                                continue;
-                            }
 
                             MissingAttachmentsInLastBatch = false;
 
@@ -101,7 +87,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 {
                     // nothing we can do
                 }
-                
+
                 throw;
             }
         }
@@ -111,6 +97,16 @@ namespace Raven.Server.Documents.Sharding.Handlers
             try
             {
                 DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "Unify this with the ReplicationDocumentSenderBase.SendDocumentsBatch");
+
+                if (batch.LastSentEtagFromSource > _lastEtag)
+                    _lastEtag = _lastSentDocumentEtag = batch.LastSentEtagFromSource;
+
+                if (batch.Items.Count == 0)
+                {
+                    SendHeartbeat(batch.LastAcceptedChangeVector ?? _lastAcceptedChangeVectorFromShard);
+                    batch.LastAcceptedChangeVector = LastAcceptedChangeVector;
+                    return;
+                }
 
                 var sw = Stopwatch.StartNew();
                 var headerJson = new DynamicJsonValue
@@ -165,14 +161,14 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
                 var (type, reply) = HandleServerResponse(getFullResponse: true);
 
+                batch.LastAcceptedChangeVector = _lastAcceptedChangeVectorFromShard = reply.DatabaseChangeVector;
+                batch.LastEtagAccepted = _lastSentDocumentEtag = reply.LastEtagAccepted;
+
                 if (type == ReplicationMessageReply.ReplyType.MissingAttachments)
                 {
                     MissingAttachmentsInLastBatch = true;
                     MissingAttachmentMessage = reply?.Exception;
-                    return;
                 }
-
-                _lastSentDocumentEtag = _lastEtag;
             }
             finally
             {
@@ -183,23 +179,22 @@ namespace Raven.Server.Documents.Sharding.Handlers
             }
         }
 
-        internal override ReplicationMessageReply HandleServerResponse(BlittableJsonReaderObject replicationBatchReplyMessage, bool allowNotify)
+        protected override void UpdateDestinationChangeVectorHeartbeat(ReplicationMessageReply replicationBatchReply)
         {
-            var replicationBatchReply = base.HandleServerResponse(replicationBatchReplyMessage, allowNotify);
-            if (replicationBatchReply != null)
+            base.UpdateDestinationChangeVectorHeartbeat(replicationBatchReply);
+            if (_firstChangeVector.Task.IsCompleted == false)
             {
-                _lastDatabaseChangeVector = replicationBatchReply.DatabaseChangeVector;
-                _lastDocumentEtagFromSource = replicationBatchReply.LastEtagAccepted;
+                _firstChangeVector.TrySetResult((replicationBatchReply.DatabaseChangeVector, replicationBatchReply.LastEtagAccepted));
             }
-
-            return replicationBatchReply;
         }
+
+        public async Task<(string AcceptedChangeVector, long LastAcceptedEtag)> GetFirstChangeVectorFromShardAsync() => await _firstChangeVector.Task;
 
         protected override DynamicJsonValue GetInitialHandshakeRequest()
         {
             var initialRequest = base.GetInitialHandshakeRequest();
 
-            initialRequest[nameof(ReplicationLatestEtagRequest.SourceDatabaseId)] = SourceDatabaseId;
+            initialRequest[nameof(ReplicationLatestEtagRequest.SourceDatabaseId)] = _sourceDatabaseId;
             return initialRequest;
         }
 
@@ -226,6 +221,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
         protected override void OnBeforeDispose()
         {
+            _firstChangeVector.TrySetCanceled();
             _batches.CompleteAdding();
             foreach (var batch in _batches)
             {
@@ -240,6 +236,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
         protected override void OnFailed(Exception e)
         {
+            _firstChangeVector.TrySetException(e);
             _batches.CompleteAdding();
             foreach (var batch in _batches)
             {

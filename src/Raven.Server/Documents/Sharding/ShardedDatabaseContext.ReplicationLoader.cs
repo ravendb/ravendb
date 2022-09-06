@@ -32,17 +32,14 @@ namespace Raven.Server.Documents.Sharding
                 _context = context ?? throw new ArgumentNullException(nameof(context));
             }
 
-            public void AcceptIncomingConnection(TcpConnectionOptions tcpConnectionOptions,
-                TcpConnectionHeaderMessage header,
-                JsonOperationContext.MemoryBuffer buffer)
+            public async Task AcceptIncomingConnectionAsync(TcpConnectionOptions tcpConnectionOptions, TcpConnectionHeaderMessage header, JsonOperationContext.MemoryBuffer buffer)
             {
                 var supportedVersions = GetSupportedVersions(tcpConnectionOptions);
                 GetReplicationInitialRequest(tcpConnectionOptions, supportedVersions, buffer);
 
                 AssertCanExecute(header);
 
-                var shardedIncomingHandler = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer);
-                AddAndStartIncomingInstance(shardedIncomingHandler);
+                await CreateIncomingReplicationHandlerAsync(tcpConnectionOptions, buffer);
             }
 
             private void AssertCanExecute(TcpConnectionHeaderMessage header)
@@ -83,26 +80,27 @@ namespace Raven.Server.Documents.Sharding
                 }
             }
 
-            private ShardedIncomingReplicationHandler CreateIncomingReplicationHandler(TcpConnectionOptions tcpConnectionOptions,
-                JsonOperationContext.MemoryBuffer buffer)
+            private async Task CreateIncomingReplicationHandlerAsync(TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.MemoryBuffer buffer)
             {
                 var getLatestEtagMessage = GetLatestEtagMessage(tcpConnectionOptions, buffer);
                 var shardedIncomingHandler = new ShardedIncomingReplicationHandler(tcpConnectionOptions, this, buffer, getLatestEtagMessage);
-               
+
                 try
                 {
                     using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     using (var writer = new BlittableJsonTextWriter(context, tcpConnectionOptions.Stream))
                     {
-                        var (databaseChangeVector, lastReplicateEtag) = shardedIncomingHandler.GetInitialHandshakeResponseFromShards();
+                        var (databaseChangeVector, lastEtag) = await shardedIncomingHandler.GetInitialHandshakeResponseFromShards();
 
                         var request = base.GetInitialRequestMessage(getLatestEtagMessage);
                         request[nameof(ReplicationMessageReply.DatabaseChangeVector)] = databaseChangeVector;
-                        request[nameof(ReplicationMessageReply.LastEtagAccepted)] = lastReplicateEtag;
+                        request[nameof(ReplicationMessageReply.LastEtagAccepted)] = lastEtag;
 
                         context.Write(writer, request);
                         writer.Flush();
                     }
+
+                    AddAndStartIncomingInstance(shardedIncomingHandler);
                 }
                 catch (Exception)
                 {
@@ -117,8 +115,17 @@ namespace Raven.Server.Documents.Sharding
 
                     throw;
                 }
+            }
 
-                return shardedIncomingHandler;
+            public void InvokeOnFailed(ShardedIncomingReplicationHandler handler, Exception e)
+            {
+                using (handler)
+                {
+                    _incoming.TryRemove(handler.ConnectionInfo.SourceDatabaseId, out _);
+
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info($"Sharded incoming replication handler has thrown an unhandled exception. ({handler.FromToString})", e);
+                }
             }
         }
     }
@@ -128,6 +135,9 @@ namespace Raven.Server.Documents.Sharding
         public List<ReplicationBatchItem> Items = new();
         public Dictionary<Slice, AttachmentReplicationItem> Attachments;
         public TaskCompletionSource BatchSent;
+        public string LastAcceptedChangeVector;
+        public long LastEtagAccepted;
+        public long LastSentEtagFromSource;
     }
 
     public class ShardReplicationNode : ExternalReplication
