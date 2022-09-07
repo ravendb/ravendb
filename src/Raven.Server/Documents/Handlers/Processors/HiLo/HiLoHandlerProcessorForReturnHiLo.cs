@@ -1,9 +1,7 @@
 ﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Identity;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Web.Http;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -15,9 +13,7 @@ internal class HiLoHandlerProcessorForReturnHiLo : AbstractHiLoHandlerProcessorF
     {
     }
 
-    protected override bool SupportsCurrentNode => true;
-
-    protected override async ValueTask HandleCurrentNodeAsync()
+    public override async ValueTask ExecuteAsync()
     {
         var tag = GetTag();
         var end = RequestHandler.GetLongQueryString("end");
@@ -33,8 +29,6 @@ internal class HiLoHandlerProcessorForReturnHiLo : AbstractHiLoHandlerProcessorF
 
         await RequestHandler.Database.TxMerger.Enqueue(cmd);
     }
-
-    protected override Task HandleRemoteNodeAsync(ProxyCommand<object> command, OperationCancelToken token) => RequestHandler.ExecuteRemoteAsync(command, token.Token);
 
     internal class MergedHiLoReturnCommand : TransactionOperationsMerger.MergedTransactionCommand
     {

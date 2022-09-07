@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.HiLo;
 
-internal abstract class AbstractHiLoHandlerProcessorForGetNextHiLo<TRequestHandler, TOperationContext> : AbstractHandlerProxyReadProcessor<HiLoResult, TRequestHandler, TOperationContext>
+internal abstract class AbstractHiLoHandlerProcessorForGetNextHiLo<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
     where TOperationContext : JsonOperationContext
     where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
 {
@@ -34,15 +34,4 @@ internal abstract class AbstractHiLoHandlerProcessorForGetNextHiLo<TRequestHandl
     protected char GetIdentityPartsSeparator() => RequestHandler.GetCharQueryString("identityPartsSeparator", false) ?? RequestHandler.IdentityPartsSeparator;
 
     protected long GetLastMax() => RequestHandler.GetLongQueryString("lastMax", false) ?? 0;
-
-    protected override RavenCommand<HiLoResult> CreateCommandForNode(string nodeTag)
-    {
-        var tag = GetTag();
-        var lastSize = GetLastBatchSize();
-        var lastRangeAt = GetLastRangeAt();
-        var identityPartsSeparator = GetIdentityPartsSeparator();
-        var lastMax = GetLastMax();
-
-        return new NextHiLoCommand(tag, lastSize, lastRangeAt, identityPartsSeparator, lastMax, nodeTag);
-    }
 }
