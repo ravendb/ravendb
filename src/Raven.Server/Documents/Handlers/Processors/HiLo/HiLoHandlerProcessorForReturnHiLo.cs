@@ -36,7 +36,7 @@ internal class HiLoHandlerProcessorForReturnHiLo : AbstractHiLoHandlerProcessorF
 
     protected override Task HandleRemoteNodeAsync(ProxyCommand<object> command, OperationCancelToken token) => RequestHandler.ExecuteRemoteAsync(command, token.Token);
 
-    private class MergedHiLoReturnCommand : TransactionOperationsMerger.MergedTransactionCommand
+    internal class MergedHiLoReturnCommand : TransactionOperationsMerger.MergedTransactionCommand
     {
         public string Key;
         public DocumentDatabase Database;
@@ -80,7 +80,7 @@ internal class HiLoHandlerProcessorForReturnHiLo : AbstractHiLoHandlerProcessorF
         }
     }
 
-    private class MergedHiLoReturnCommandDto : TransactionOperationsMerger.IReplayableCommandDto<MergedHiLoReturnCommand>
+    internal class MergedHiLoReturnCommandDto : TransactionOperationsMerger.IReplayableCommandDto<MergedHiLoReturnCommand>
     {
         public string Key;
         public long End;
