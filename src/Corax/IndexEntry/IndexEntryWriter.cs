@@ -667,7 +667,7 @@ public unsafe partial struct IndexEntryWriter : IDisposable
 
         // Since we are duplicating we need to ensure that the extension will fit.
         var newSize = _rawBuffer.Length * 2;
-        while (newSize - _rawBuffer.Length < extraRequiredSpace)
+        while (newSize <= extraRequiredSpace)
             newSize *= 2;
 
         var newBufferScope = _context.Allocate(newSize, out var newBuffer);
