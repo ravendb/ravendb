@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Globalization;
 using System.IO;
 using System.Net;
 using System.Threading.Tasks;
@@ -8,29 +7,33 @@ using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Identity;
 using Raven.Client.Exceptions.Documents;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.TrafficWatch;
-using Sparrow;
+using Raven.Server.Web.Http;
 using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.Processors.HiLo;
 
-internal class HiLoHandlerProcessorForGetNextHiLo : AbstractHiLoHandlerProcessor<DatabaseRequestHandler, DocumentsOperationContext>
+internal class HiLoHandlerProcessorForGetNextHiLo : AbstractHiLoHandlerProcessorForGetNextHiLo<DatabaseRequestHandler, DocumentsOperationContext>
 {
     public HiLoHandlerProcessorForGetNextHiLo([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {
     }
 
-    protected override async ValueTask HandleHiLoAsync(string tag)
+    protected override bool SupportsCurrentNode => true;
+
+    protected override async ValueTask HandleCurrentNodeAsync()
     {
         using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
         {
-            var lastSize = RequestHandler.GetLongQueryString("lastBatchSize", false) ?? 0;
-            var lastRangeAt = RequestHandler.GetStringQueryString("lastRangeAt", false);
-            var identityPartsSeparator = RequestHandler.GetCharQueryString("identityPartsSeparator", false) ?? RequestHandler.Database.IdentityPartsSeparator;
-            var lastMax = RequestHandler.GetLongQueryString("lastMax", false) ?? 0;
+            var tag = GetTag();
+            var lastSize = GetLastBatchSize();
+            var lastRangeAt = GetLastRangeAt();
+            var identityPartsSeparator = GetIdentityPartsSeparator();
+            var lastMax = GetLastMax();
 
             var capacity = CalculateCapacity(lastSize, lastRangeAt);
 
@@ -58,18 +61,21 @@ internal class HiLoHandlerProcessorForGetNextHiLo : AbstractHiLoHandlerProcessor
                     [nameof(HiLoResult.ServerTag)] = RequestHandler.ServerStore.NodeTag,
                     [nameof(HiLoResult.LastRangeAt)] = DateTime.UtcNow.GetDefaultRavenFormat()
                 });
+
                 if (TrafficWatchManager.HasRegisteredClients)
                     RequestHandler.AddStringToHttpContext(writer.ToString(), TrafficWatchChangeType.Hilo);
             }
         }
     }
 
-    private static long CalculateCapacity(long lastSize, string lastRangeAtStr)
+    protected override Task HandleRemoteNodeAsync(ProxyCommand<HiLoResult> command, OperationCancelToken token) => RequestHandler.ExecuteRemoteAsync(command, token.Token);
+
+    private static long CalculateCapacity(long lastSize, DateTime? lastRangeAt)
     {
-        if (DateTime.TryParseExact(lastRangeAtStr, DefaultFormat.DateTimeOffsetFormatsToWrite, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTime lastRangeAt) == false)
+        if (lastRangeAt == null)
             return Math.Max(32, lastSize);
 
-        var span = DateTime.UtcNow - lastRangeAt;
+        var span = DateTime.UtcNow - lastRangeAt.Value;
 
         if (span.TotalSeconds < 30)
         {
@@ -84,7 +90,7 @@ internal class HiLoHandlerProcessorForGetNextHiLo : AbstractHiLoHandlerProcessor
         return Math.Max(32, lastSize);
     }
 
-    internal class MergedNextHiLoCommand : TransactionOperationsMerger.MergedTransactionCommand
+    private class MergedNextHiLoCommand : TransactionOperationsMerger.MergedTransactionCommand
     {
         public string Key;
         public DocumentDatabase Database;
@@ -164,7 +170,7 @@ internal class HiLoHandlerProcessorForGetNextHiLo : AbstractHiLoHandlerProcessor
         }
     }
 
-    internal class MergedNextHiLoCommandDto : TransactionOperationsMerger.IReplayableCommandDto<HiLoHandlerProcessorForGetNextHiLo.MergedNextHiLoCommand>
+    private class MergedNextHiLoCommandDto : TransactionOperationsMerger.IReplayableCommandDto<MergedNextHiLoCommand>
     {
         public string Key;
         public long Capacity;
@@ -173,9 +179,9 @@ internal class HiLoHandlerProcessorForGetNextHiLo : AbstractHiLoHandlerProcessor
         public string Prefix;
         public long OldMax;
 
-        public HiLoHandlerProcessorForGetNextHiLo.MergedNextHiLoCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
+        public MergedNextHiLoCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
-            return new HiLoHandlerProcessorForGetNextHiLo.MergedNextHiLoCommand
+            return new MergedNextHiLoCommand
             {
                 Key = Key,
                 Capacity = Capacity,
