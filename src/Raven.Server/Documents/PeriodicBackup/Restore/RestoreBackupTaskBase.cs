@@ -349,9 +349,20 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     databaseRecord.DatabaseState = DatabaseStateStatus.Normal;
                     await SaveDatabaseRecordAsync(databaseName, databaseRecord, null, result, onProgress);
 
-                    result.AddInfo($"Loading the database after restore");
-                    var databasesLandlord = this._serverStore.DatabasesLandlord;
-                    _ = databasesLandlord.TryGetOrCreateResourceStore(databaseName).IgnoreUnobservedExceptions();
+                    result.AddInfo($"Loading the {databaseName} database after restore");
+
+                    try
+                    {
+                        await _serverStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName, addToInitLog: message => result.AddInfo(message));
+                    }
+                    catch (Exception e)
+                    {
+                        // we failed to load the database after restore, we don't want to fail the entire restore process since it will delete the database if we throw here
+                        result.AddError($"FAILED, {e}");
+
+                        if (Logger.IsOperationsEnabled)
+                            Logger.Operations($"Failed to load the {databaseName} database after restore", e);
+                    }
 
                     return result;
                 }
