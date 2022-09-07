@@ -234,8 +234,6 @@ namespace Raven.Server.Documents.Indexes
 
         internal readonly QueryBuilderFactories _queryBuilderFactories;
 
-        internal int _numberOfDocumentsToCheckForCanContinueBatch = 128;
-
         private string IndexingThreadName => "Indexing of " + Name + " of " + _indexStorage.DocumentDatabase.Name;
 
         private readonly WarnIndexOutputsPerDocument.WarningDetails _indexOutputsPerDocumentWarning = new WarnIndexOutputsPerDocument.WarningDetails
@@ -4278,7 +4276,7 @@ namespace Raven.Server.Documents.Indexes
                 return CanContinueBatchResult.False;
             }
 
-            if (parameters.Count % _numberOfDocumentsToCheckForCanContinueBatch != 0)
+            if (parameters.Count % 128 != 0)
             {
                 // do the actual check only every N ops
                 return CanContinueBatchResult.True;
