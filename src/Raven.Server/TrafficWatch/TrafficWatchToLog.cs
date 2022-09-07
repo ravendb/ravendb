@@ -113,9 +113,9 @@ internal class TrafficWatchToLog : IDynamicJson
         _trafficWatchMode = configuration.TrafficWatchMode;
         _databases = configuration.Databases;
         _statusCodes = configuration.StatusCodes;
-        _minimumResponseSizeInBytes = configuration.MinimumResponseSizeInBytes.GetValue(SizeUnit.Bytes);
-        _minimumRequestSizeInBytes = configuration.MinimumRequestSizeInBytes.GetValue(SizeUnit.Bytes);
-        _minimumDurationInMs = configuration.MinimumDurationInMs.GetValue(TimeUnit.Milliseconds);
+        _minimumResponseSizeInBytes = configuration.MinimumResponseSize.GetValue(SizeUnit.Bytes);
+        _minimumRequestSizeInBytes = configuration.MinimumRequestSize.GetValue(SizeUnit.Bytes);
+        _minimumDurationInMs = configuration.MinimumDuration.GetValue(TimeUnit.Milliseconds);
         _httpMethods = configuration.HttpMethods;
         _changeTypes = configuration.ChangeTypes;
     }

@@ -32,20 +32,20 @@ public class TrafficWatchConfiguration : ConfigurationCategory
     [MinValue(0)]
     [SizeUnit(SizeUnit.Bytes)]
     [ConfigurationEntry("TrafficWatch.MinimumResponseSizeInBytes", ConfigurationEntryScope.ServerWideOnly)]
-    public Size MinimumResponseSizeInBytes { get; set; }
+    public Size MinimumResponseSize { get; set; }
 
     [Description("Minimum request size by which the Traffic Watch logging entities will be filtered.")]
     [DefaultValue(0)]
     [MinValue(0)]
     [SizeUnit(SizeUnit.Bytes)]
     [ConfigurationEntry("TrafficWatch.MinimumRequestSizeInBytes", ConfigurationEntryScope.ServerWideOnly)]
-    public Size MinimumRequestSizeInBytes { get; set; }
+    public Size MinimumRequestSize { get; set; }
     
     [Description("Minimum duration by which the Traffic Watch logging entities will be filtered.")]
     [DefaultValue(0)]
     [TimeUnit(TimeUnit.Milliseconds)]
     [ConfigurationEntry("TrafficWatch.MinimumDurationInMs", ConfigurationEntryScope.ServerWideOnly)]
-    public TimeSetting MinimumDurationInMs { get; set; }
+    public TimeSetting MinimumDuration { get; set; }
 
     [Description("A semicolon-separated list of request HTTP methods by which the Traffic Watch logging entities will be filtered. If not specified, Traffic Watch entities with any HTTP request method will be included. Example list: \"GET;POST\".")]
     [DefaultValue(null)]
