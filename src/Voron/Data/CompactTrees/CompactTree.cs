@@ -407,7 +407,7 @@ namespace Voron.Data.CompactTrees
             if (shouldBeInCurrentPage)
             {
                 // we didn't find the key, but we found a _greater_ key in the page
-                // therefor, we don't have it (we know the previous key was in this page
+                // therefore, we don't have it (we know the previous key was in this page
                 // so if there is a greater key in this page, we didn't find it
                 value = default;
                 return false;

@@ -41,7 +41,7 @@ namespace Corax
         Set = 2
     }
 
-    public class IndexWriter : IDisposable // single threaded, controlled by caller
+    public partial class IndexWriter : IDisposable // single threaded, controlled by caller
     {
         private long _numberOfModifications;
         private readonly IndexFieldsMapping _fieldsMapping;
@@ -1094,6 +1094,8 @@ namespace Corax
             Sorter<Slice, SliceStructComparer> sorter = default;
             sorter.Sort(sortedTermsBuffer, 0, termsCount);
 
+            using var dumper = new IndexTermDumper(fieldsTree, fieldId);
+
             fieldTree.InitializeStateForTryGetNextValue();
             for (var index = 0; index < termsCount; index++)
             {
@@ -1107,8 +1109,13 @@ namespace Corax
                 if (fieldTree.TryGetNextValue(termsSpan, out var existing, out var encodedKey) == false)
                 {
                     if (entries.TotalRemovals != 0)
+                    {
                         throw new InvalidOperationException($"Attempt to remove entries from new term: '{term}' for field {fieldId}! This is a bug.");
+                    }
+
                     AddNewTerm(entries, tmpBuf, out termId);
+
+                    dumper.WriteAddition(term, termId);
                     fieldTree.Add(termsSpan, termId, encodedKey);
                     continue;
                 }
@@ -1116,13 +1123,16 @@ namespace Corax
                 switch (AddEntriesToTerm(tmpBuf, existing, ref entries, out termId))
                 {
                     case AddEntriesToTermResult.UpdateTermId:
+                        dumper.WriteAddition(term, termId);
                         fieldTree.Add(termsSpan, termId, encodedKey);
                         break;
                     case AddEntriesToTermResult.RemoveTermId:
                         if (fieldTree.TryRemove(termsSpan, out var ttt) == false)
                         {
+                            dumper.WriteRemoval(term, termId);
                             throw new InvalidOperationException($"Attempt to remove term: '{term}' for field {fieldId}, but it does not exists! This is a bug.");
                         }
+                        dumper.WriteRemoval(term, ttt);
                         break;
                 }
             }
