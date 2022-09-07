@@ -15,10 +15,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Subscriptions
 
         protected override async ValueTask CreateInternalAsync(BlittableJsonReaderObject bjro, SubscriptionCreationOptions options, TransactionOperationContext context, long? id, bool? disabled)
         {
-            using (context.OpenReadTransaction())
-            {
-                await RequestHandler.CreateSubscriptionInternalAsync(bjro, id, disabled, options, context);
-            }
+            await RequestHandler.CreateSubscriptionInternalAsync(bjro, id, disabled, options, context);
         }
     }
 }
