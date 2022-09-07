@@ -1,20 +1,25 @@
 ﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Identity;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Web.Http;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.Processors.HiLo;
 
-internal class HiLoHandlerProcessorForReturnHiLo : AbstractHiLoHandlerProcessor<DatabaseRequestHandler, DocumentsOperationContext>
+internal class HiLoHandlerProcessorForReturnHiLo : AbstractHiLoHandlerProcessorForReturnHiLo<DatabaseRequestHandler, DocumentsOperationContext>
 {
     public HiLoHandlerProcessorForReturnHiLo([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {
     }
 
-    protected override async ValueTask HandleHiLoAsync(string tag)
+    protected override bool SupportsCurrentNode => true;
+
+    protected override async ValueTask HandleCurrentNodeAsync()
     {
+        var tag = GetTag();
         var end = RequestHandler.GetLongQueryString("end");
         var last = RequestHandler.GetLongQueryString("last");
 
@@ -27,11 +32,11 @@ internal class HiLoHandlerProcessorForReturnHiLo : AbstractHiLoHandlerProcessor<
         };
 
         await RequestHandler.Database.TxMerger.Enqueue(cmd);
-
-        RequestHandler.NoContentStatus();
     }
 
-    internal class MergedHiLoReturnCommand : TransactionOperationsMerger.MergedTransactionCommand
+    protected override Task HandleRemoteNodeAsync(ProxyCommand<object> command, OperationCancelToken token) => RequestHandler.ExecuteRemoteAsync(command, token.Token);
+
+    private class MergedHiLoReturnCommand : TransactionOperationsMerger.MergedTransactionCommand
     {
         public string Key;
         public DocumentDatabase Database;
@@ -75,8 +80,7 @@ internal class HiLoHandlerProcessorForReturnHiLo : AbstractHiLoHandlerProcessor<
         }
     }
 
-
-    internal class MergedHiLoReturnCommandDto : TransactionOperationsMerger.IReplayableCommandDto<MergedHiLoReturnCommand>
+    private class MergedHiLoReturnCommandDto : TransactionOperationsMerger.IReplayableCommandDto<MergedHiLoReturnCommand>
     {
         public string Key;
         public long End;
