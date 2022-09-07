@@ -374,12 +374,14 @@ namespace Raven.Server.Documents.Indexes.Workers
                 CurrentIndexingScope.Current.ReferencesByCollection.TryGetValue(collection, out var values))
             {
                 _indexStorage.ReferencesForDocuments.WriteReferencesForSingleCollection(collection, values, indexContext.Transaction);
+                values.Clear();
             }
 
             if (CurrentIndexingScope.Current.ReferencesByCollectionForCompareExchange != null &&
                 CurrentIndexingScope.Current.ReferencesByCollectionForCompareExchange.TryGetValue(collection, out values))
             {
                 _indexStorage.ReferencesForCompareExchange.WriteReferencesForSingleCollection(collection, values, indexContext.Transaction);
+                values.Clear();
             }
         }
 
