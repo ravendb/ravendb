@@ -90,7 +90,7 @@ internal class HiLoHandlerProcessorForGetNextHiLo : AbstractHiLoHandlerProcessor
         return Math.Max(32, lastSize);
     }
 
-    private class MergedNextHiLoCommand : TransactionOperationsMerger.MergedTransactionCommand
+    internal class MergedNextHiLoCommand : TransactionOperationsMerger.MergedTransactionCommand
     {
         public string Key;
         public DocumentDatabase Database;
@@ -170,7 +170,7 @@ internal class HiLoHandlerProcessorForGetNextHiLo : AbstractHiLoHandlerProcessor
         }
     }
 
-    private class MergedNextHiLoCommandDto : TransactionOperationsMerger.IReplayableCommandDto<MergedNextHiLoCommand>
+    internal class MergedNextHiLoCommandDto : TransactionOperationsMerger.IReplayableCommandDto<MergedNextHiLoCommand>
     {
         public string Key;
         public long Capacity;
