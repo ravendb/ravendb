@@ -171,19 +171,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                         while (keepRunning)
                         {
-                            if (CurrentIndexingScope.Current.ReferencesByCollection != null &&
-                                CurrentIndexingScope.Current.ReferencesByCollection.TryGetValue(collection, out var values))
-                            {
-                                // references were found during handling references run
-                                // (HandleReferences is the first worker that is running so those references were found here)
-                                // when we have a LoadDocument we save the referenced document in-memory (ReferencesByCollection) and at the end of the batch we store it in the storage
-                                // BUT we process the references from the storage only
-                                // in order to avoid skipping handling the found references, we must save them in the storage
-
-                                _indexStorage.ReferencesForDocuments.WriteReferencesForSingleCollection(collection, values, indexContext.Transaction);
-                            }
-
-                            //TODO: compare exchange references
+                            UpdateReferences(indexContext, collection);
 
                             var hasChanges = false;
                             earlyExit = false;
@@ -372,6 +360,27 @@ namespace Raven.Server.Documents.Indexes.Workers
                 _referencesState.Clear(actionType);
 
             return (moreWorkFound, batchContinuationResult);
+        }
+
+        private void UpdateReferences(TransactionOperationContext indexContext, string collection)
+        {
+            // References were found during handling references
+            // (HandleReferences is the first worker that is running so those references were found here).
+            // When we have a LoadDocument we save the referenced document in-memory (ReferencesByCollection) and at the end of the batch we store it in the storage
+            // BUT we process the references from the storage only
+            // In order to avoid skipping handling the found references, we must save them in the storage
+
+            if (CurrentIndexingScope.Current.ReferencesByCollection != null &&
+                CurrentIndexingScope.Current.ReferencesByCollection.TryGetValue(collection, out var values))
+            {
+                _indexStorage.ReferencesForDocuments.WriteReferencesForSingleCollection(collection, values, indexContext.Transaction);
+            }
+
+            if (CurrentIndexingScope.Current.ReferencesByCollectionForCompareExchange != null &&
+                CurrentIndexingScope.Current.ReferencesByCollectionForCompareExchange.TryGetValue(collection, out values))
+            {
+                _indexStorage.ReferencesForCompareExchange.WriteReferencesForSingleCollection(collection, values, indexContext.Transaction);
+            }
         }
 
         private IEnumerable<IndexItem> GetItemsFromCollectionThatReference(QueryOperationContext queryContext, TransactionOperationContext indexContext,
