@@ -19,17 +19,20 @@ internal class ShardedHiLoHandlerProcessorForGetNextHiLo : AbstractHiLoHandlerPr
 
     public override async ValueTask ExecuteAsync()
     {
-        var tag = GetTag();
-        var hiloDocId = HiLoHandler.RavenHiloIdPrefix + tag;
+        using (var token = RequestHandler.CreateOperationToken())
+        {
+            var tag = GetTag();
+            var hiloDocId = HiLoHandler.RavenHiloIdPrefix + tag;
 
-        int shardNumber;
-        using (RequestHandler.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            shardNumber = RequestHandler.DatabaseContext.GetShardNumber(context, hiloDocId);
+            int shardNumber;
+            using (RequestHandler.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                shardNumber = RequestHandler.DatabaseContext.GetShardNumber(context, hiloDocId);
 
-        var command = CreateCommand();
-        var proxyCommand = new ProxyCommand<HiLoResult>(command, HttpContext.Response);
+            var command = CreateCommand();
+            var proxyCommand = new ProxyCommand<HiLoResult>(command, HttpContext.Response);
 
-        await RequestHandler.DatabaseContext.ShardExecutor.ExecuteSingleShardAsync(proxyCommand, shardNumber);
+            await RequestHandler.DatabaseContext.ShardExecutor.ExecuteSingleShardAsync(proxyCommand, shardNumber, token.Token);
+        }
     }
 
     private RavenCommand<HiLoResult> CreateCommand()
