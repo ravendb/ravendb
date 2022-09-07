@@ -21,6 +21,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server.Platform.Posix;
+using Sparrow.Threading;
 
 namespace Raven.Server.Documents.Handlers.Debugging
 {
@@ -257,8 +258,11 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
             async Task KillOperation()
             {
-                var killOperation = new KillServerOperationCommand(operationId);
-                await requestExecutor.ExecuteAsync(killOperation, context);
+                using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
+                {
+                    var killOperation = new KillServerOperationCommand(operationId);
+                    await requestExecutor.ExecuteAsync(killOperation, ctx);
+                }
             }
         }
 
