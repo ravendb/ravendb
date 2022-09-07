@@ -1415,5 +1415,20 @@ namespace Voron
                 }
             }
         }
+
+        internal TestingStuff ForTestingPurposes;
+
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (ForTestingPurposes != null)
+                return ForTestingPurposes;
+
+            return ForTestingPurposes = new TestingStuff();
+        }
+
+        internal class TestingStuff
+        {
+            public int? WriteToJournalCompressionAcceleration = null;
+        }
     }
 }
