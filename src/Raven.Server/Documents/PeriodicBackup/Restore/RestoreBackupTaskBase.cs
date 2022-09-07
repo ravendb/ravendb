@@ -10,6 +10,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
@@ -350,7 +351,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
                     result.AddInfo($"Loading the database after restore");
                     var databasesLandlord = this._serverStore.DatabasesLandlord;
-                    _ = databasesLandlord.TryGetOrCreateResourceStore(databaseName);
+                    _ = databasesLandlord.TryGetOrCreateResourceStore(databaseName).IgnoreUnobservedExceptions();
 
                     return result;
                 }
