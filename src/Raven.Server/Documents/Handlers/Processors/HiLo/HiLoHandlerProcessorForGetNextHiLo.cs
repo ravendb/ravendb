@@ -23,9 +23,7 @@ internal class HiLoHandlerProcessorForGetNextHiLo : AbstractHiLoHandlerProcessor
     {
     }
 
-    protected override bool SupportsCurrentNode => true;
-
-    protected override async ValueTask HandleCurrentNodeAsync()
+    public override async ValueTask ExecuteAsync()
     {
         using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
         {
@@ -67,8 +65,6 @@ internal class HiLoHandlerProcessorForGetNextHiLo : AbstractHiLoHandlerProcessor
             }
         }
     }
-
-    protected override Task HandleRemoteNodeAsync(ProxyCommand<HiLoResult> command, OperationCancelToken token) => RequestHandler.ExecuteRemoteAsync(command, token.Token);
 
     private static long CalculateCapacity(long lastSize, DateTime? lastRangeAt)
     {

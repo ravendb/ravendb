@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client.Documents.Commands;
+using Raven.Client.Http;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Handlers.Processors.HiLo;
 using Raven.Server.ServerWide;
@@ -14,11 +16,8 @@ internal class ShardedHiLoHandlerProcessorForReturnHiLo : AbstractHiLoHandlerPro
     public ShardedHiLoHandlerProcessorForReturnHiLo([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {
     }
-    protected override bool SupportsCurrentNode => false;
 
-    protected override ValueTask HandleCurrentNodeAsync() => throw new NotSupportedException();
-
-    protected override Task HandleRemoteNodeAsync(ProxyCommand<object> command, OperationCancelToken token)
+    public override async ValueTask ExecuteAsync()
     {
         var tag = GetTag();
         var hiloDocId = HiLoHandler.RavenHiloIdPrefix + tag;
@@ -27,6 +26,18 @@ internal class ShardedHiLoHandlerProcessorForReturnHiLo : AbstractHiLoHandlerPro
         using (RequestHandler.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             shardNumber = RequestHandler.DatabaseContext.GetShardNumber(context, hiloDocId);
 
-        return RequestHandler.DatabaseContext.ShardExecutor.ExecuteSingleShardAsync(command, shardNumber, token.Token);
+        var command = CreateCommand();
+        var proxyCommand = new ProxyCommand(command, HttpContext.Response);
+
+        await RequestHandler.DatabaseContext.ShardExecutor.ExecuteSingleShardAsync(proxyCommand, shardNumber);
+    }
+
+    private RavenCommand CreateCommand()
+    {
+        var tag = GetTag();
+        var last = GetLast();
+        var end = GetEnd();
+
+        return new HiLoReturnCommand(tag, last, end);
     }
 }
