@@ -1,26 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Subscriptions;
-using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Sharding.Handlers.Processors.Subscriptions;
 using Raven.Server.Documents.Sharding.Operations;
-using Raven.Server.Documents.Sharding.Subscriptions;
-using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
-using Raven.Server.Json;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.Sharding;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.TrafficWatch;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Handlers
 {
@@ -176,6 +169,13 @@ namespace Raven.Server.Documents.Sharding.Handlers
         public async Task GetAll()
         {
             using (var processor = new ShardedSubscriptionsHandlerProcessorForGetSubscription(this))
+                await processor.ExecuteAsync();
+        }
+
+        [RavenShardedAction("/databases/*/subscriptions/performance/live", "GET")]
+        public async Task PerformanceLive()
+        {
+            using (var processor = new ShardedSubscriptionsHandlerProcessorForPerformanceLive(this))
                 await processor.ExecuteAsync();
         }
 

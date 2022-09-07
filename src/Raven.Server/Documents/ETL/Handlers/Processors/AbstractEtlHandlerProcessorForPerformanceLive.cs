@@ -12,5 +12,5 @@ internal abstract class AbstractEtlHandlerProcessorForPerformanceLive<TRequestHa
     {
     }
 
-    protected override string GetRemoteEndpointUrl(string databaseName) => $"/databases/{databaseName}/etl/performance/live";
+    protected override string GetRemoteEndpointUrl(string databaseName) => $"/databases/{databaseName}/subscriptions/performance/live";
 }

@@ -70,29 +70,9 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/subscriptions/performance/live", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, SkipUsagesCount = true)]
         public async Task PerformanceLive()
         {
-            using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
-            {
-                var receiveBuffer = new ArraySegment<byte>(new byte[1024]);
-                var receive = webSocket.ReceiveAsync(receiveBuffer, Database.DatabaseShutdown);
-
-                using (var ms = new MemoryStream())
-                using (var collector = new LiveSubscriptionPerformanceCollector(Database))
-                {
-                    // 1. Send data to webSocket without making UI wait upon opening webSocket
-                    await collector.SendStatsOrHeartbeatToWebSocket(receive, webSocket, ContextPool, ms, 100);
-
-                    // 2. Send data to webSocket when available
-                    while (Database.DatabaseShutdown.IsCancellationRequested == false)
-                    {
-                        if (await collector.SendStatsOrHeartbeatToWebSocket(receive, webSocket, ContextPool, ms, 4000) == false)
-                        {
-                            break;
-                        }
-                    }
-                }
-            }
+            using (var processor = new SubscriptionsHandlerProcessorForPerformanceLive(this))
+                await processor.ExecuteAsync();
         }
-
 
         [RavenAction("/databases/*/subscriptions/drop", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public async Task DropSubscriptionConnection()
