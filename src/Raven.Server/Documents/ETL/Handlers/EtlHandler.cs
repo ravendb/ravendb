@@ -32,30 +32,8 @@ namespace Raven.Server.Documents.ETL.Handlers
         [RavenAction("/databases/*/etl/performance/live", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, SkipUsagesCount = true)]
         public async Task PerformanceLive()
         {
-            using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
-            {
-                var names = GetStringValuesQueryString("name", required: false);
-                var etls = EtlHandlerProcessorForStats.GetProcessesToReportOn(Database, names);
-
-                var receiveBuffer = new ArraySegment<byte>(new byte[1024]);
-                var receive = webSocket.ReceiveAsync(receiveBuffer, Database.DatabaseShutdown);
-
-                await using (var ms = new MemoryStream())
-                using (var collector = new LiveEtlPerformanceCollector(Database, etls))
-                {
-                    // 1. Send data to webSocket without making UI wait upon opening webSocket
-                    await collector.SendStatsOrHeartbeatToWebSocket(receive, webSocket, ContextPool, ms, 100);
-
-                    // 2. Send data to webSocket when available
-                    while (Database.DatabaseShutdown.IsCancellationRequested == false)
-                    {
-                        if (await collector.SendStatsOrHeartbeatToWebSocket(receive, webSocket, ContextPool, ms, 4000) == false)
-                        {
-                            break;
-                        }
-                    }
-                }
-            }
+            using (var processor = new EtlHandlerProcessorForPerformanceLive(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/etl/progress", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
