@@ -2568,6 +2568,7 @@ namespace Raven.Server.Documents.Indexes
 
             internal Action<Index> BeforeIndexThreadExit;
             internal Action<Index> BeforeIndexStart;
+
             public TestingStuff(IndexStore parent)
             {
                 _parent = parent;

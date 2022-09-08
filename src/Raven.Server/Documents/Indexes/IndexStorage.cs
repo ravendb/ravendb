@@ -678,20 +678,31 @@ namespace Raven.Server.Documents.Indexes
 
                 foreach (var collections in referencesByCollection)
                 {
-                    var collectionTree = tx.InnerTransaction.CreateTree(_referenceCollectionPrefix + collections.Key); // #collection
-
-                    foreach (var keys in collections.Value)
-                    {
-                        var key = keys.Key;
-                        foreach (var referenceKey in keys.Value)
-                        {
-                            collectionTree.MultiAdd(referenceKey, key);
-                            referencesTree.MultiAdd(key, referenceKey);
-                        }
-
-                        RemoveReferences(key, collections.Key, keys.Value, tx);
-                    }
+                    WriteReferencesForSingleCollectionInternal(referencesTree, collections.Key, collections.Value, tx);
                 }
+            }
+
+            private void WriteReferencesForSingleCollectionInternal(Tree referencesTree, string collection, Dictionary<Slice, HashSet<Slice>> references, RavenTransaction tx)
+            {
+                var collectionTree = tx.InnerTransaction.CreateTree(_referenceCollectionPrefix + collection); // #collection
+
+                foreach (var keys in references)
+                {
+                    var key = keys.Key;
+                    foreach (var referenceKey in keys.Value)
+                    {
+                        collectionTree.MultiAdd(referenceKey, key);
+                        referencesTree.MultiAdd(key, referenceKey);
+                    }
+
+                    RemoveReferences(key, collection, keys.Value, tx);
+                }
+            }
+
+            public void WriteReferencesForSingleCollection(string collection, Dictionary<Slice, HashSet<Slice>> references, RavenTransaction tx)
+            {
+                var referencesTree = tx.InnerTransaction.ReadTree(_referenceTreeName);
+                WriteReferencesForSingleCollectionInternal(referencesTree, collection, references, tx);
             }
 
             internal (long ReferenceTableCount, long CollectionTableCount) GetReferenceTablesCount(string collection, RavenTransaction tx)

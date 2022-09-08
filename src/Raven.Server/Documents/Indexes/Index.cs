@@ -5121,7 +5121,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private TestingStuff _forTestingPurposes;
+        internal TestingStuff _forTestingPurposes;
 
         internal TestingStuff ForTestingPurposesOnly()
         {
@@ -5136,6 +5136,8 @@ namespace Raven.Server.Documents.Indexes
             internal Action ActionToCallInFinallyOfExecuteIndexing;
 
             internal bool ShouldRenewTransaction;
+
+            internal Action BeforeClosingDocumentsReadTransactionForHandleReferences;
 
             internal IDisposable CallDuringFinallyOfExecuteIndexing(Action action)
             {

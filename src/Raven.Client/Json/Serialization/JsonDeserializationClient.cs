@@ -35,6 +35,7 @@ using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Operations.DocumentsCompression;
 using Raven.Client.ServerWide.Operations.Logs;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
+using Raven.Client.ServerWide.Operations.TrafficWatch;
 using Raven.Client.ServerWide.Tcp;
 using Sparrow.Json;
 
@@ -256,6 +257,8 @@ namespace Raven.Client.Json.Serialization
         internal static readonly Func<BlittableJsonReaderObject, GetRevisionsCountOperation.DocumentRevisionsCount> DocumentRevisionsCount = GenerateJsonDeserializationRoutine<GetRevisionsCountOperation.DocumentRevisionsCount>();
 
         internal static readonly Func<BlittableJsonReaderObject, DatabaseSettings> DatabaseSettings = GenerateJsonDeserializationRoutine<DatabaseSettings>();
+        
+        public static readonly Func<BlittableJsonReaderObject, PutTrafficWatchConfigurationOperation.Parameters> GetTrafficWatchConfigurationResult = GenerateJsonDeserializationRoutine<PutTrafficWatchConfigurationOperation.Parameters>();
 
         internal static readonly Func<BlittableJsonReaderObject, ConfigurePostgreSqlOperationResult> ConfigurePostgreSqlOperationResult = GenerateJsonDeserializationRoutine<ConfigurePostgreSqlOperationResult>();
     }
