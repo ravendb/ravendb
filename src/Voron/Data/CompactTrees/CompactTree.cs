@@ -869,6 +869,13 @@ namespace Voron.Data.CompactTrees
                 }
             }
 
+            AddEntryToPage(key, state, requiredSize, keySizeBufferPtr, keySizeLength, valueBufferPtr, valueBufferLength);
+            return key;
+        }
+
+        private void AddEntryToPage(EncodedKey key, CursorState state, int requiredSize,
+            byte* keySizeBufferPtr, int keySizeLength, byte* valueBufferPtr, int valueBufferLength)
+        {
             // Ensure that the key has already been 'updated' this is internal and shouldn't check explicitly that.
             // It is the responsibility of the method to ensure that is the case. 
             Debug.Assert(key.Dictionary == state.Header->DictionaryId);
@@ -878,7 +885,7 @@ namespace Voron.Data.CompactTrees
             var newNumberOfEntries = state.Header->NumberOfEntries;
 
             ushort* newEntriesOffsetsPtr = state.EntriesOffsetsPtr;
-            for (int i =  newNumberOfEntries- 1; i >= state.LastSearchPosition; i--)
+            for (int i = newNumberOfEntries - 1; i >= state.LastSearchPosition; i--)
                 newEntriesOffsetsPtr[i] = newEntriesOffsetsPtr[i - 1];
 
             if (state.Header->PageFlags.HasFlag(CompactPageFlags.Leaf))
@@ -897,10 +904,9 @@ namespace Voron.Data.CompactTrees
             Unsafe.CopyBlockUnaligned(writePos, valueBufferPtr, (uint)valueBufferLength);
             newEntriesOffsets[state.LastSearchPosition] = state.Header->Upper;
             VerifySizeOf(ref state);
-            return key;
         }
 
-        private EncodedKey SplitPage(EncodedKey causeForSplit, long value)
+        private EncodedKey SplitPage(EncodedKey currentCauseForSplit, long value)
         {
             if (_internalCursor._pos == 0) // need to create a root page
             {
@@ -913,7 +919,7 @@ namespace Voron.Data.CompactTrees
 
             // Ensure that the key has already been 'updated' this is internal and shouldn't check explicitly that.
             // It is the responsibility of the caller to ensure that is the case. 
-            Debug.Assert(causeForSplit.Dictionary == state.Header->DictionaryId);
+            Debug.Assert(currentCauseForSplit.Dictionary == state.Header->DictionaryId);
 
             var page = _llt.AllocatePage(1);
             var header = (CompactPageHeader*)page.Pointer;
@@ -935,20 +941,13 @@ namespace Voron.Data.CompactTrees
             header->DictionaryId = state.Header->DictionaryId;
 
             // We need to ensure that we have the correct key before we change the page. 
-            var splitKey = SplitPageEncodedEntries(causeForSplit, page, header, ref state);
+            var splitKey = SplitPageEncodedEntries(currentCauseForSplit, page, header, value, ref state);
 
             PopPage(ref _internalCursor); // add to parent
             splitKey = EncodedKey.Get(splitKey, this, _internalCursor._stk[_internalCursor._pos].Header->DictionaryId);
 
             SearchInCurrentPage(splitKey, ref _internalCursor._stk[_internalCursor._pos]);
             AddToPage(splitKey, page.PageNumber);
-
-            // now actually add the value to the location
-            causeForSplit = EncodedKey.Get(causeForSplit, this, _internalCursor._stk[_internalCursor._pos].Header->DictionaryId);
-            causeForSplit = SearchPageAndPushNext(causeForSplit, ref _internalCursor);
-
-            SearchInCurrentPage(causeForSplit, ref _internalCursor._stk[_internalCursor._pos]);
-            causeForSplit = AddToPage(causeForSplit, value);
 
             if (_internalCursor._stk[_internalCursor._pos].Header->PageFlags == CompactPageFlags.Leaf)
             {
@@ -959,22 +958,33 @@ namespace Voron.Data.CompactTrees
             }
 
             VerifySizeOf(ref state);
-            return causeForSplit;
+            return currentCauseForSplit;
         }
 
-        private EncodedKey SplitPageEncodedEntries(EncodedKey causeForSplit, Page page, CompactPageHeader* header, ref CursorState state)
+        private EncodedKey SplitPageEncodedEntries(EncodedKey causeForSplit, Page page, CompactPageHeader* header, long value, ref CursorState state)
         {
+            var valueBufferPtr = stackalloc byte[10];
+            int valueBufferLength = ZigZagEncoding.Encode(valueBufferPtr, value);
+            var keySizeBufferPtr = stackalloc byte[10];
+            var keySizeBuffer = new Span<byte>(keySizeBufferPtr, 10);
+            int keySizeLength = VariableSizeEncoding.Write(keySizeBuffer, causeForSplit.Encoded.Length);
+            var requiredSize = causeForSplit.Encoded.Length + keySizeLength + valueBufferLength;
+          
+            var newPageState = new CursorState { Page = page };
+
             // sequential write up, no need to actually split
             int numberOfEntries = state.Header->NumberOfEntries;
             if (numberOfEntries == state.LastSearchPosition && state.LastMatch > 0)
             {
+                newPageState.LastSearchPosition = 0; // add as first
+                AddEntryToPage(causeForSplit, newPageState, requiredSize, keySizeBufferPtr, keySizeLength, valueBufferPtr, valueBufferLength);
                 return causeForSplit;
             }
 
             // non sequential write, let's just split in middle
             int entriesCopied = 0;
             int sizeCopied = 0;
-            ushort* offsets = (ushort*)(page.Pointer + header->Lower);
+            ushort* offsets = newPageState.EntriesOffsetsPtr;
             for (int i = numberOfEntries / 2; i < numberOfEntries; i++)
             {
                 header->Lower += sizeof(ushort);
@@ -987,7 +997,20 @@ namespace Voron.Data.CompactTrees
             }
             state.Header->Lower -= (ushort)(sizeof(ushort) * entriesCopied);
             state.Header->FreeSpace += (ushort)(sizeCopied);
+
+            var lastEntryFromPreviousPage = GetEncodedKey(state.Page, state.EntriesOffsets[state.Header->NumberOfEntries - 1]);
+            ref CursorState updatedPageState = ref newPageState; // start with the new page
+            if (lastEntryFromPreviousPage.SequenceCompareTo(causeForSplit.Encoded) >= 0)
+            {
+                // the new entry belong on the *old* page
+                updatedPageState = ref state;
+            }
             
+            SearchInCurrentPage(causeForSplit, ref updatedPageState);
+            Debug.Assert(updatedPageState.LastSearchPosition < 0, "There should be no updates here");
+            updatedPageState.LastSearchPosition = ~updatedPageState.LastSearchPosition;
+            AddEntryToPage(causeForSplit, updatedPageState, requiredSize, keySizeBufferPtr, keySizeLength, valueBufferPtr, valueBufferLength);
+
             VerifySizeOf(ref state);
             
             var pageEntries = new Span<ushort>(page.Pointer + PageHeader.SizeOf, header->NumberOfEntries);
@@ -1386,7 +1409,7 @@ namespace Voron.Data.CompactTrees
 
         internal static bool GetEntry(CompactTree tree, Page page, ushort entriesOffset, out Span<byte> key, out long value)
         {
-            var result = GetEncodedEntry(page, entriesOffset, out key, out value);
+            GetEncodedEntry(page, entriesOffset, out key, out value);
             if (key.Length == 0)
                 return false;
             
