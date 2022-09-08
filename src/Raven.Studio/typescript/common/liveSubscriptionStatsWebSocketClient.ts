@@ -4,6 +4,7 @@ import database = require("models/resources/database");
 import d3 = require("d3");
 import abstractWebSocketClient = require("common/abstractWebSocketClient");
 import endpoints = require("endpoints");
+import appUrl from "common/appUrl";
 
 class liveSubscriptionStatsWebSocketClient extends abstractWebSocketClient<resultsDto<Raven.Server.Documents.Subscriptions.SubscriptionTaskPerformanceStats>> {
 
@@ -19,9 +20,10 @@ class liveSubscriptionStatsWebSocketClient extends abstractWebSocketClient<resul
     private firstTime = true;
 
     constructor(db: database,
+                location: databaseLocationSpecifier,
                 onData: (data: Raven.Server.Documents.Subscriptions.SubscriptionTaskPerformanceStats[]) => void,
                 dateCutOff?: Date) {
-        super(db);
+        super(db, location);
         this.onData = onData;
         this.dateCutOff = dateCutOff;
     }
@@ -30,8 +32,9 @@ class liveSubscriptionStatsWebSocketClient extends abstractWebSocketClient<resul
         return "Live Subscription Stats";
     }
 
-    protected webSocketUrlFactory() {
-        return endpoints.databases.subscriptions.subscriptionsPerformanceLive;
+    protected webSocketUrlFactory(location: databaseLocationSpecifier) {
+        const args = appUrl.urlEncodeArgs(location);
+        return endpoints.databases.subscriptions.subscriptionsPerformanceLive + args;
     }
 
     get autoReconnect() {

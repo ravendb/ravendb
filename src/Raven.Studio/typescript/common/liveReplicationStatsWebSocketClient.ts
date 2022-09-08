@@ -4,6 +4,7 @@ import database = require("models/resources/database");
 import d3 = require("d3");
 import abstractWebSocketClient = require("common/abstractWebSocketClient");
 import endpoints = require("endpoints");
+import appUrl from "common/appUrl";
 
 class liveReplicationStatsWebSocketClient extends abstractWebSocketClient<resultsDto<Raven.Server.Documents.Replication.Stats.LiveReplicationPerformanceCollector.ReplicationPerformanceStatsBase<Raven.Client.Documents.Replication.ReplicationPerformanceBase>>> {
 
@@ -17,10 +18,11 @@ class liveReplicationStatsWebSocketClient extends abstractWebSocketClient<result
     private updatesPaused = false;
     loading = ko.observable<boolean>(true);
 
-    constructor(db: database, 
+    constructor(db: database,
+                location: databaseLocationSpecifier,
                 onData: (data: Raven.Server.Documents.Replication.Stats.LiveReplicationPerformanceCollector.ReplicationPerformanceStatsBase<Raven.Client.Documents.Replication.ReplicationPerformanceBase>[]) => void,
                 dateCutOff?: Date) {
-        super(db);
+        super(db, location);
         this.onData = onData;
         this.dateCutOff = dateCutOff;
     }
@@ -29,8 +31,9 @@ class liveReplicationStatsWebSocketClient extends abstractWebSocketClient<result
         return "Live Replication Stats";
     }
 
-    protected webSocketUrlFactory() {
-        return endpoints.databases.replication.replicationPerformanceLive;
+    protected webSocketUrlFactory(location: databaseLocationSpecifier) {
+        const args = appUrl.urlEncodeArgs(location);
+        return endpoints.databases.replication.replicationPerformanceLive + args;
     }
 
     get autoReconnect() {

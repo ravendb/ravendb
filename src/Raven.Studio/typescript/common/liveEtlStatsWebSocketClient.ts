@@ -5,6 +5,7 @@ import d3 = require("d3");
 import abstractWebSocketClient = require("common/abstractWebSocketClient");
 import endpoints = require("endpoints");
 import TaskUtils from "../components/utils/TaskUtils";
+import appUrl from "common/appUrl";
 
 class liveEtlStatsWebSocketClient extends abstractWebSocketClient<resultsDto<Raven.Server.Documents.ETL.Stats.EtlTaskPerformanceStats>> {
 
@@ -18,10 +19,11 @@ class liveEtlStatsWebSocketClient extends abstractWebSocketClient<resultsDto<Rav
     private updatesPaused = false;
     loading = ko.observable<boolean>(true);
 
-    constructor(db: database, 
+    constructor(db: database,
+                location: databaseLocationSpecifier,
                 onData: (data: Raven.Server.Documents.ETL.Stats.EtlTaskPerformanceStats[]) => void,
                 dateCutOff?: Date) {
-        super(db);
+        super(db, location);
         this.onData = onData;
         this.dateCutOff = dateCutOff;
     }
@@ -30,8 +32,9 @@ class liveEtlStatsWebSocketClient extends abstractWebSocketClient<resultsDto<Rav
         return "Live Etl Stats";
     }
 
-    protected webSocketUrlFactory() {
-        return endpoints.databases.etl.etlPerformanceLive;
+    protected webSocketUrlFactory(location: databaseLocationSpecifier) {
+        const args = appUrl.urlEncodeArgs(location);
+        return endpoints.databases.etl.etlPerformanceLive + args;
     }
 
     get autoReconnect() {
