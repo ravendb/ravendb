@@ -125,7 +125,132 @@ public class RavenDB_19278 : StorageTest
 
         Configure(Options); // when we stop db we always call _options.NullifyHandlers() so we need to hook them up again
 
-        StartDatabase(); // TODO arek - currently fails with InvalidJournalException: No such journal '0000000000000000008.journal' - that is true, we removed it in the process of (partial) recovery
+        StartDatabase();
+    }
+
+    [Theory]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(false, false)]
+    [InlineData(true, true)]
+    public void PartialRecoveryMustUpdateEnvironmentHeaderAndEraseCorruptedDataInJournal(bool syncAfterRestart, bool limitMaxJournalSizeAfterRestart)
+    {
+        RequireFileBasedPager();
+
+        using (var tx = Env.WriteTransaction())
+        {
+            tx.CreateTree("tree");
+
+            tx.Commit();
+        }
+
+        const long corruptedTx = 9;
+
+        var random = new Random(3);
+
+        var itemsToReadAfterRecovery = new List<string>();
+
+        for (var i = 0; i < 10; i++)
+        {
+            var buffer = new byte[2 * Constants.Size.Megabyte];
+            random.NextBytes(buffer);
+
+            byte[] smallBuffer = new byte[1337];
+
+            using (var tx = Env.WriteTransaction())
+            {
+                if (tx.LowLevelTransaction.Id is corruptedTx + 1 or corruptedTx + 2)
+                {
+                    random.NextBytes(smallBuffer);
+                    buffer = smallBuffer;
+                }
+
+                for (int j = 0; j < 10; j++)
+                {
+                    string key = "a" + i + j;
+                    tx.CreateTree("tree").Add(key, new MemoryStream(buffer));
+
+                    if (tx.LowLevelTransaction.Id < corruptedTx)
+                    {
+                        itemsToReadAfterRecovery.Add(key);
+                    }
+                }
+
+                tx.Commit();
+            }
+        }
+
+        var journalToCorrupt = Env.Journal.GetCurrentJournalInfo().CurrentJournal - 1;
+
+        StopDatabase();
+
+        CorruptJournal(journalToCorrupt, 10 * Constants.Size.Kilobyte * 4 - 1000); // it will corrupt tx 9
+
+        if (limitMaxJournalSizeAfterRestart)
+        {
+            // this will force deletion of journals due to their size
+            Options.MaxLogFileSize = 4 * Constants.Size.Megabyte;
+        }
+
+        StartDatabase(); // it must not throw, it should partially recover the database
+
+        Assert.Equal(2, _onRecoveryErrorMessages.Count);
+
+        Assert.Contains($"Invalid hash signature for transaction: HeaderMarker: Valid, TransactionId: {corruptedTx}", _onRecoveryErrorMessages[0]);
+        Assert.Contains("Database recovered partially. Some data was lost.", _onRecoveryErrorMessages[1]);
+
+        if (syncAfterRestart)
+        {
+            using (var operation = new WriteAheadJournal.JournalApplicator.SyncOperation(Env.Journal.Applicator))
+            {
+                operation.SyncDataFile(); // force the sync so it will delete already synced journals
+            }
+
+            var journalPath = Env.Options.JournalPath.FullPath;
+
+            // older journals should be deleted, newer but not processed should be deleted too due to partial recovery 
+            Assert.True(SpinWait.SpinUntil(() => new DirectoryInfo(journalPath).GetFiles($"*.journal").Length == 1,
+                TimeSpan.FromSeconds(30)));
+        }
+
+        using (var tx = Env.ReadTransaction())
+        {
+            foreach (var key in itemsToReadAfterRecovery)
+            {
+                var readA = tx.ReadTree("tree").Read(key);
+
+                Assert.NotNull(readA);
+            }
+        }
+
+        for (int i = 0; i < 4; i++)
+        {
+            using (var tx = Env.WriteTransaction())
+            {
+                Assert.Equal(corruptedTx + i, tx.LowLevelTransaction.Id);
+
+                var buffer = new byte[123];
+                random.NextBytes(buffer);
+
+                tx.CreateTree("tree").Add("new", new MemoryStream(buffer));
+
+                tx.Commit();
+            }
+
+            StopDatabase();
+
+            Configure(Options); // when we stop db we always call _options.NullifyHandlers() so we need to hook them up again
+
+            if (syncAfterRestart)
+            {
+                using (var operation = new WriteAheadJournal.JournalApplicator.SyncOperation(Env.Journal.Applicator))
+                {
+                    operation.SyncDataFile(); // force the sync so it will delete already synced journals
+                }
+            }
+
+            StartDatabase();
+        }
     }
 
     private void CorruptJournal(long journal, long position, int numberOfCorruptedBytes = Constants.Size.Kilobyte * 4, byte value = 42, bool preserveValue = false)
