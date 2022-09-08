@@ -437,8 +437,8 @@ class ongoingTasksStats extends shardViewModelBase {
         }
     };
     
-    constructor(db: database) {
-        super(db);
+    constructor(db: database, location: databaseLocationSpecifier) {
+        super(db, location);
 
         this.bindToCurrentInstance("clearGraphWithConfirm");
         
@@ -690,15 +690,15 @@ class ongoingTasksStats extends shardViewModelBase {
             }
         }, 1000, { maxWait: 3000 });
 
-        this.liveViewReplicationClient(new liveReplicationStatsWebSocketClient(this.db, d => {
+        this.liveViewReplicationClient(new liveReplicationStatsWebSocketClient(this.db, this.location, d => {
             this.replicationData = d;
             onDataUpdatedThrottle();
         }, this.dateCutoff));
-        this.liveViewEtlClient(new liveEtlStatsWebSocketClient(this.db, d => {
+        this.liveViewEtlClient(new liveEtlStatsWebSocketClient(this.db, this.location, d => {
             this.etlData = d;
             onDataUpdatedThrottle();
         }, this.dateCutoff));
-        this.liveViewSubscriptionClient(new liveSubscriptionStatsWebSocketClient(this.db, d => {
+        this.liveViewSubscriptionClient(new liveSubscriptionStatsWebSocketClient(this.db, this.location, d => {
             this.subscriptionData = d;
             onDataUpdatedThrottle();
         }, this.dateCutoff));
