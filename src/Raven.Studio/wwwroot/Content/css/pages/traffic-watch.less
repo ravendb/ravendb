@@ -13,19 +13,25 @@
             text-transform: uppercase;
             content: attr(data-label);
         }
+        
+        .right-border {
+            border-right: solid 1px @gray-dark;
+        }
     }
 
     #trafficFilter {
         width: 220px;
     }
     
+    
+    
     .dropdown {
         .dropdown-menu.stats-menu {
             width: max-content;
         }
         
-        .stats-property {
-            margin-left: 3px;
+        .property {
+            min-width: 90px;
         }
     }
 }

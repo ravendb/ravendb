@@ -6,9 +6,9 @@ namespace Raven.Server.TrafficWatch
 {
     internal static class TrafficWatchManager
     {
-        private static readonly ConcurrentSet<TrafficWatchConnection> ServerHttpTrace = new ConcurrentSet<TrafficWatchConnection>();
+        private static readonly ConcurrentSet<TrafficWatchConnection> ServerHttpTrace = new();
         
-        public static bool HasRegisteredClients => ServerHttpTrace.Count != 0;
+        public static bool HasRegisteredClients => ServerHttpTrace.Count != 0 || TrafficWatchToLog.Instance.LogToFile ;
 
         public static void AddConnection(TrafficWatchConnection connection)
         {
@@ -23,6 +23,8 @@ namespace Raven.Server.TrafficWatch
 
         public static void DispatchMessage(TrafficWatchChangeBase trafficWatchData)
         {
+            TrafficWatchToLog.Instance.Log(trafficWatchData);
+
             foreach (var connection in ServerHttpTrace)
             {
                 if (connection.IsAlive == false)
