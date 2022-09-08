@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using McMaster.Extensions.CommandLineUtils;
 using Microsoft.Diagnostics.Tools.Dump;
 using Microsoft.Diagnostics.Tools.GCDump;
@@ -15,7 +16,7 @@ using Raven.Debug.Utils;
 
 namespace Raven.Debug
 {
-    internal class CommandLineApp
+    public class CommandLineApp
     {
         private const string HelpOptionString = "-h | -? | --help";
 
@@ -370,18 +371,23 @@ namespace Raven.Debug
                     }
                     else
                     {
-                        Console.WriteLine($"[{DateTime.UtcNow:O}] number of threads wasn't specified, so we will use '{concurrentThreadsCount}' threads");
+                        Console.WriteLine($"[{DateTime.UtcNow:O}] Number of threads wasn't specified, so we will use '{concurrentThreadsCount}' threads");
                     }
 
 
                     var cert = certArg.HasValue() ? certArg.Value() : null;
                     var certPass = certPassArg.HasValue() ? certPassArg.Value() : null;
 
-                    var logTrafficWatchReply = new TrafficWatchReplay(path, cert, certPass, host, port, threads );
+                    using (var logTrafficWatchReply = new TrafficWatchReplay(path, cert, certPass, host, port, threads))
+                    {
+                        Console.CancelKeyPress += (sender, args) =>
+                        {
+                            args.Cancel = true;
+                            logTrafficWatchReply.Stop();
+                        };
 
-                    Console.CancelKeyPress += (sender, args) => logTrafficWatchReply.Stop();
-
-                    await logTrafficWatchReply.Start();
+                        await logTrafficWatchReply.Start();
+                    }
 
                     return 0;
                 });

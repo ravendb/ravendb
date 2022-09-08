@@ -8,6 +8,7 @@ using System;
 using System.IO;
 using System.Net.WebSockets;
 using System.Threading.Tasks;
+using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.Web;
 using Sparrow.Json;
@@ -67,6 +68,34 @@ namespace Raven.Server.TrafficWatch
                     }
                 }
             }
+        }
+
+        [RavenAction("/admin/traffic-watch/configuration", "GET", AuthorizationStatus.Operator)]
+        public async Task GetConfiguration()
+        {
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    var json = context.ReadObject(TrafficWatchToLog.Instance.ToJson(), "traffic-watch/configuration");
+                    writer.WriteObject(json);
+                }
+            }
+        }
+
+        [RavenAction("/admin/traffic-watch/configuration", "POST", AuthorizationStatus.Operator)]
+        public async Task SetConfiguration()
+        {
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {
+                var json = await context.ReadForMemoryAsync(RequestBodyStream(), "traffic-watch/configuration");
+
+                var configuration = JsonDeserializationServer.Parameters.PutTrafficWatchConfigurationParameters(json);
+                
+                TrafficWatchToLog.Instance.UpdateConfiguration(configuration);
+            }
+
+            NoContentStatus();
         }
     }
 }
