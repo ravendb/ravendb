@@ -654,7 +654,7 @@ namespace Voron.Impl.Journal
 
         private bool IsOldTransactionFromRecycledJournal(TransactionHeader* currentTx)
         {
-            // when reusing journal we might encounter a transaction with valid Id but it comes from already deleted (and reused journal - recyclable one)
+            // when reusing journal we might encounter a transaction with valid Id but it comes from already deleted (and reused) journal - recyclable one
 
             if (_firstValidTransactionHeader != null && currentTx->TransactionId < _firstValidTransactionHeader->TransactionId)
                 return true;
