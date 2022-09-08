@@ -21,6 +21,7 @@ using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Operations.Integrations.PostgreSQL;
 using Raven.Client.ServerWide.Operations.Logs;
 using Raven.Client.ServerWide.Operations.Migration;
+using Raven.Client.ServerWide.Operations.TrafficWatch;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Commercial;
 using Raven.Server.Documents.ETL.Providers.ElasticSearch.Test;
@@ -49,6 +50,9 @@ using Sparrow.Json;
 using FacetSetup = Raven.Client.Documents.Queries.Facets.FacetSetup;
 using Raven.Server.Documents.ETL.Providers.OLAP.Test;
 using Raven.Server.Integrations.PostgreSQL.Handlers;
+using BackupConfiguration = Raven.Client.Documents.Operations.Backups.BackupConfiguration;
+using MigrationConfiguration = Raven.Server.Smuggler.Migration.MigrationConfiguration;
+using StudioConfiguration = Raven.Client.Documents.Operations.Configuration.StudioConfiguration;
 
 namespace Raven.Server.Json
 {
@@ -237,6 +241,8 @@ namespace Raven.Server.Json
             public static readonly Func<BlittableJsonReaderObject, ConfigureTimeSeriesValueNamesOperation.Parameters> TimeSeriesValueNamesParameters = GenerateJsonDeserializationRoutine<ConfigureTimeSeriesValueNamesOperation.Parameters>();
 
             public static readonly Func<BlittableJsonReaderObject, SetDatabasesLockOperation.Parameters> SetDatabaseLockParameters = GenerateJsonDeserializationRoutine<SetDatabasesLockOperation.Parameters>();
+
+            public static readonly Func<BlittableJsonReaderObject, PutTrafficWatchConfigurationOperation.Parameters> PutTrafficWatchConfigurationParameters = GenerateJsonDeserializationRoutine<PutTrafficWatchConfigurationOperation.Parameters>();
         }
     }
 }

@@ -123,6 +123,24 @@ type certificateInfo = {
     clearance: Raven.Client.ServerWide.Operations.Certificates.SecurityClearance;
 }
 
+interface statistics {
+    min: string;
+    avg: string;
+    max: string;
+    percentile_90: string;
+    percentile_99: string;
+    percentile_99_9: string;
+}
+
+const notAvailableStats: statistics = {
+    min: "N/A",
+    avg: "N/A",
+    percentile_90: "N/A",
+    percentile_99: "N/A",
+    percentile_99_9: "N/A",
+    max: "N/A"
+}
+
 class trafficWatch extends viewModelBase {
     
     view = require("views/manage/trafficWatch.html");
@@ -165,12 +183,8 @@ class trafficWatch extends viewModelBase {
         sourceIpsCount: ko.observable<string>(),
         httpRequestCount: ko.observable<string>(),
         tcpOperationCount: ko.observable<string>(),
-        min: ko.observable<string>(),
-        avg: ko.observable<string>(),
-        max: ko.observable<string>(),
-        percentile_90: ko.observable<string>(),
-        percentile_99: ko.observable<string>(),
-        percentile_99_9: ko.observable<string>()
+        requestDuration: ko.observable<statistics>(notAvailableStats),
+        responseSize: ko.observable<statistics>(notAvailableStats)
     };
     
     filter = ko.observable<string>();
@@ -328,76 +342,57 @@ class trafficWatch extends viewModelBase {
         this.stats.httpRequestCount(this.filteredDataHttp.length.toLocaleString());
         this.stats.tcpOperationCount(this.filteredDataTcp.length.toLocaleString());
 
-        if (!this.filteredDataHttp.length) {
-            this.httpStatsNotAvailable();
-        } else {
-            const filteredDataHttpNoWebSockets = this.filteredDataHttp.filter(x => x.ResponseStatusCode !== 101);
+        const filteredDataHttpNoWebSockets = this.filteredTypeDataHttp.length ? this.filteredDataHttp.filter(x => x.ResponseStatusCode !== 101) : [];
             
-            if (filteredDataHttpNoWebSockets.length === 0) {
-                this.httpStatsNotAvailable();
-            } else {
-                this.updateDurationStats(filteredDataHttpNoWebSockets);
-                this.updatePercentiles(filteredDataHttpNoWebSockets);
+        this.stats.requestDuration(trafficWatch.computeStats(filteredDataHttpNoWebSockets, x => x.ElapsedMilliseconds, x => generalUtils.formatTimeSpan(x, false)));
+        this.stats.responseSize(trafficWatch.computeStats(filteredDataHttpNoWebSockets, x => x.ResponseSizeInBytes, x => generalUtils.formatBytesToSize(x, 1)));
             }
-        }
-    }
                 
-    private httpStatsNotAvailable(): void {
-        this.stats.avg("N/A");
-        this.stats.min("N/A");
-        this.stats.max("N/A");
-
-        this.stats.percentile_90("N/A");
-        this.stats.percentile_99("N/A");
-        this.stats.percentile_99_9("N/A");
+    private static computeStats(data: TrafficWatchHttpChange[],
+                                accessor: (item: TrafficWatchHttpChange) => number,
+                                formatter: (value: number) => string): statistics {
+        if (data.length === 0) {
+            return notAvailableStats;
                 }
 
-    private updateDurationStats(data: Raven.Client.Documents.Changes.TrafficWatchHttpChange[]): void {
-        const firstItem = data[0];
-
+        const scalars: number[] = [];
+        let min = accessor(data[0]);
+        let max = accessor(data[0]);
         let sum = 0;
-        let min = firstItem.ElapsedMilliseconds;
-        let max = firstItem.ElapsedMilliseconds;
-
-        for (let i = 0; i < data.length; i++) {
-            const item = data[i];
-
-                if (item.ElapsedMilliseconds < min) {
-                    min = item.ElapsedMilliseconds;
-                }
-
-                if (item.ElapsedMilliseconds > max) {
-                    max = item.ElapsedMilliseconds;
-                }
-
-                sum += item.ElapsedMilliseconds;
-            }
-
-            this.stats.min(generalUtils.formatTimeSpan(min, false));
-            this.stats.max(generalUtils.formatTimeSpan(max, false));
-        this.stats.avg(generalUtils.formatTimeSpan(sum / data.length));
-            }
-    
-    private updatePercentiles(data: Raven.Client.Documents.Changes.TrafficWatchHttpChange[]): void {
-        const timings: number[] = [];
 
         for (let i = data.length - 1; i >= 0; i--) {
             const item = data[i];
+            const value = accessor(item);
 
-            if (timings.length === 2048) {
+            if (scalars.length === 2048) {
                 // compute using max 2048 latest values
                 break;
+                }
+
+            if (value < min) {
+                min = value;
+                }
+
+            if (value > max) {
+                max = value;
             }
 
-            timings.push(item.ElapsedMilliseconds);
-        }
+            sum += value;
 
-        timings.sort((a, b) => a - b);
-        
-        this.stats.percentile_90(generalUtils.formatTimeSpan(timings[Math.ceil(90 / 100 * timings.length) - 1]));
-        this.stats.percentile_99(generalUtils.formatTimeSpan(timings[Math.ceil(99 / 100 * timings.length) - 1]));
-        this.stats.percentile_99_9(generalUtils.formatTimeSpan(timings[Math.ceil(99.9 / 100 * timings.length) - 1]));
-    }
+            scalars.push(value);
+            }
+    
+        scalars.sort((a, b) => a - b);
+
+        return {
+            min: formatter(min),
+            avg: formatter(sum / scalars.length),
+            percentile_90: formatter(scalars[Math.ceil(90 / 100 * scalars.length) - 1]),
+            percentile_99: formatter(scalars[Math.ceil(99 / 100 * scalars.length) - 1]),
+            percentile_99_9: formatter(scalars[Math.ceil(99.9 / 100 * scalars.length) - 1]),
+            max: formatter(max)
+            }
+        }
 
     private formatSource(item: Raven.Client.Documents.Changes.TrafficWatchChangeBase, asHtml: boolean): string {
         const thumbprint = item.CertificateThumbprint;

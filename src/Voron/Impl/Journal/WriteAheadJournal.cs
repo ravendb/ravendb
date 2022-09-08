@@ -80,6 +80,7 @@ namespace Voron.Impl.Journal
 
             _compressionPager = CreateCompressionPager(_env.Options.InitialFileSize ?? _env.Options.InitialLogFileSize);
             _journalApplicator = new JournalApplicator(this);
+            _lastCompressionAccelerationInfo = new CompressionAccelerationStats(env.Options);
 
             _disposeRunner = new DisposeOnce<SingleAttempt>(() =>
             {
@@ -1938,16 +1939,28 @@ namespace Voron.Impl.Journal
 
         private class CompressionAccelerationStats
         {
+            private readonly StorageEnvironmentOptions _options;
             public TimeSpan CompressionDuration;
             public TimeSpan WriteDuration;
 
             private int _lastAcceleration = 1;
             private int _flux; // allow us to ignore fluctuations by requiring several consecutive operations to change 
 
+            public CompressionAccelerationStats(StorageEnvironmentOptions options)
+            {
+                _options = options;
+            }
+
             public int LastAcceleration => _lastAcceleration;
 
             public void CalculateOptimalAcceleration()
             {
+                if (_options.ForTestingPurposes?.WriteToJournalCompressionAcceleration.HasValue == true)
+                {
+                    _lastAcceleration = _options.ForTestingPurposes.WriteToJournalCompressionAcceleration.Value;
+                    return;
+                }
+
                 // if comression is _much_ higher than write time, increase acceleration
                 if (CompressionDuration > WriteDuration.Add(WriteDuration))
                 {
@@ -1996,7 +2009,7 @@ namespace Voron.Impl.Journal
         }
 
         private DateTime _lastCompressionBufferReduceCheck = DateTime.UtcNow;
-        private CompressionAccelerationStats _lastCompressionAccelerationInfo = new CompressionAccelerationStats();
+        private readonly CompressionAccelerationStats _lastCompressionAccelerationInfo;
         private readonly bool _is32Bit;
 
         private void ReduceSizeOfCompressionBufferIfNeeded(bool forceReduce = false)

@@ -791,7 +791,7 @@ namespace Sparrow.Json
                     hashset.Add(default);
                     continue;
                 }
-
+                
                 hashset.Add(converter(item));
             }
 
@@ -816,6 +816,12 @@ namespace Sparrow.Json
                 if (item is BlittableJsonReaderObject bjro)
                 {
                     list.Add(converter(bjro));
+                    continue;
+                }
+
+                if (item is LazyStringValue enumItem && typeof(T).IsEnum)
+                {
+                    list.Add((T) Enum.Parse(typeof(T), enumItem));
                     continue;
                 }
 
