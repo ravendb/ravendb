@@ -97,7 +97,7 @@ function BuildStudio ( $srcDir, $version ) {
         Write-Host "Update version.txt..."
         $versionJsonPath = [io.path]::combine($srcDir, "wwwroot", "version.txt")
 
-        "{ ""Version"": ""$version"" }" | Out-File $versionJsonPath -Encoding UTF8
+        "{ ""Version"": ""$version"" }" | Out-File $versionJsonPath -Encoding ASCII
 
         exec { npm run release }
         CheckLastExitCode
