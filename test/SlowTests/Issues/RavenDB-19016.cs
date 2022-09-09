@@ -175,22 +175,28 @@ public class RavenDB_19016 : RavenTestBase
             {
                 var results = await session
                     .Query<RelatedUsersIndex.Result, RelatedUsersIndex>()
+                    .OrderBy(x => x.UserName1)
                     .ProjectInto<RelatedUsersIndex.Result>()
                     .ToListAsync();
 
                 Assert.Equal(5, results.Count);
-                Assert.Equal(userName1, results[0].UserName1);
-                Assert.Equal(userName2, results[0].UserName2);
-                Assert.Equal(userName3, results[0].UserName3);
-                Assert.Equal(userName4, results[1].UserName1);
-                Assert.Equal(userName5, results[1].UserName2);
-                Assert.Equal(null, results[1].UserName3);
+
+                Assert.Equal(userName3, results[0].UserName1);
+                Assert.Equal(null, results[0].UserName2);
+                Assert.Equal(null, results[0].UserName3);
+
+                Assert.Equal(userName1, results[1].UserName1);
+                Assert.Equal(userName2, results[1].UserName2);
+                Assert.Equal(userName3, results[1].UserName3);
+
                 Assert.Equal(userName2, results[2].UserName1);
                 Assert.Equal(userName3, results[2].UserName2);
                 Assert.Equal(null, results[2].UserName3);
-                Assert.Equal(userName3, results[3].UserName1);
-                Assert.Equal(null, results[3].UserName2);
+
+                Assert.Equal(userName4, results[3].UserName1);
+                Assert.Equal(userName5, results[3].UserName2);
                 Assert.Equal(null, results[3].UserName3);
+
                 Assert.Equal(userName5, results[4].UserName1);
                 Assert.Equal(null, results[4].UserName2);
                 Assert.Equal(null, results[4].UserName3);
