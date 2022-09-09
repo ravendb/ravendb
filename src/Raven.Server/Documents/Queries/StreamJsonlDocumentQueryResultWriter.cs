@@ -2,7 +2,9 @@
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Session;
 using Raven.Server.Json;
+using Sparrow.Extensions;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries
@@ -37,7 +39,11 @@ namespace Raven.Server.Documents.Queries
 
         public async ValueTask AddResultAsync(Document res, CancellationToken token)
         {
+            _writer.WriteStartObject();
+            _writer.WritePropertyName("Item");
             _writer.WriteDocument(_context, res, metadataOnly: false);
+            _writer.WriteEndObject();
+
             _writer.WriteNewLine();
             await _writer.MaybeFlushAsync(token);
         }
@@ -48,20 +54,60 @@ namespace Raven.Server.Documents.Queries
 
         public ValueTask WriteErrorAsync(Exception e)
         {
-            throw new NotSupportedException();
+            _writer.WriteStartObject();
+            _writer.WritePropertyName("Error");
+            _writer.WriteString(e.ToString());
+            _writer.WriteEndObject();
+
+            _writer.WriteNewLine();
+
+            return default;
         }
 
         public ValueTask WriteErrorAsync(string error)
         {
-            throw new NotSupportedException();
+            _writer.WriteStartObject();
+            _writer.WritePropertyName("Error");
+            _writer.WriteString(error);
+            _writer.WriteEndObject();
+
+            _writer.WriteNewLine();
+
+            return default;
         }
 
         public void WriteQueryStatistics(long resultEtag, bool isStale, string indexName, long totalResults, DateTime timestamp)
         {
-            throw new NotSupportedException();
+            _writer.WriteStartObject();
+            _writer.WritePropertyName("Stats");
+            _writer.WriteStartObject();
+
+            _writer.WritePropertyName(nameof(StreamQueryStatistics.ResultEtag));
+            _writer.WriteInteger(resultEtag);
+            _writer.WriteComma();
+
+            _writer.WritePropertyName(nameof(StreamQueryStatistics.IsStale));
+            _writer.WriteBool(isStale);
+            _writer.WriteComma();
+
+            _writer.WritePropertyName(nameof(StreamQueryStatistics.IndexName));
+            _writer.WriteString(indexName);
+            _writer.WriteComma();
+
+            _writer.WritePropertyName(nameof(StreamQueryStatistics.TotalResults));
+            _writer.WriteInteger(totalResults);
+            _writer.WriteComma();
+
+            _writer.WritePropertyName(nameof(StreamQueryStatistics.IndexTimestamp));
+            _writer.WriteString(timestamp.GetDefaultRavenFormat(isUtc: true));
+
+            _writer.WriteEndObject();
+            _writer.WriteEndObject();
+
+            _writer.WriteNewLine();
         }
 
-        public bool SupportError => false;
-        public bool SupportStatistics => false;
+        public bool SupportError => true;
+        public bool SupportStatistics => true;
     }
 }
