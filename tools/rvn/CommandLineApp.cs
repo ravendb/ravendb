@@ -2,11 +2,14 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using McMaster.Extensions.CommandLineUtils;
 using Newtonsoft.Json;
+using Raven.Client.Documents;
+using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Commercial;
 using Raven.Server.Commercial.SetupWizard;
 using Sparrow.Json;
@@ -52,6 +55,7 @@ namespace rvn
             ConfigureLogsCommand();
             ConfigureSetupPackage();
             ConfigureInitSetupParams();
+            ConfigurePutClientCertificateCommand();
 
             _app.OnExecute(() =>
             {
@@ -258,6 +262,7 @@ namespace rvn
 
             try
             {
+                
                 using (StreamReader file = File.OpenText(parameters.SetupJsonPath))
                 {
                     JsonSerializer serializer = new();
@@ -303,6 +308,47 @@ namespace rvn
                     using (logStream)
                         logStream.Connect().Wait();
 
+                    return 0;
+                });
+            });
+        }
+
+        private static void ConfigurePutClientCertificateCommand()
+        {
+            _app.Command("put-client-certificate", cmd =>
+            {
+                cmd.ExtendedHelpText = cmd.Description = "Register certificate as the valid client certificate for the RavenDB server.";
+                cmd.HelpOption(HelpOptionString);
+                var ravenServerUrlArg= cmd.Argument("ServerUrl", "RavenDB server url");
+                var serverCertificatePathArg = cmd.Argument("ServerCertificateFilePath", "Server PFX certificate path");
+                var clientCertificatePathArg = cmd.Argument("ClientCertificateFilePath", "Client PFX certificate path");
+                
+                cmd.OnExecute(() =>
+                {
+                    if (string.IsNullOrWhiteSpace(serverCertificatePathArg.Value))
+                    {
+                        return ExitWithError("Server certificate file path is invalid.", cmd);
+                    }
+                    if (string.IsNullOrWhiteSpace(clientCertificatePathArg.Value))
+                    {
+                        return ExitWithError("Client certificate file path is invalid.", cmd);
+                    }
+
+                    
+                    X509Certificate2 clientCertificate = new(clientCertificatePathArg.Value);
+                    X509Certificate2 serverCertificate = new(serverCertificatePathArg.Value);
+                    var name = Path.GetFileNameWithoutExtension(clientCertificatePathArg.Value);
+                    try
+                    {
+                        DocumentStore store = new() {Certificate = serverCertificate, Urls = new[] {ravenServerUrlArg.Value}};
+                        store.Initialize();
+                        var operation = new PutClientCertificateOperation(name, clientCertificate, new Dictionary<string,DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+                        store.Maintenance.Server.Send(operation);
+                    }
+                    catch (Exception e)
+                    {
+                        return ExitWithError($"Failed to put client certificate to the RavenDB server under the address: {ravenServerUrlArg.Value}{Environment.NewLine}{e}", cmd);
+                    }
                     return 0;
                 });
             });
