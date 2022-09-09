@@ -10,6 +10,7 @@ class collection {
     static readonly hiloCollectionName = "@hilo";
 
     documentCount: KnockoutObservable<number> = ko.observable(0);
+    lastDocumentChangeVector = ko.observable<string>();
     name: string;
     sizeClass: KnockoutComputed<string>;
     countPrefix: KnockoutComputed<string>;

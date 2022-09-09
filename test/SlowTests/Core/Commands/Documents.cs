@@ -17,6 +17,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Extensions;
+using xRetry;
 using Xunit;
 
 using Company = SlowTests.Core.Utils.Entities.Company;
@@ -31,7 +32,7 @@ namespace SlowTests.Core.Commands
         {
         }
 
-        [Fact]
+        [RetryFact(delayBetweenRetriesMs: 1000)]
         public void CanCancelPutDocument()
         {
             var document = new { Name = "John" };
@@ -139,7 +140,7 @@ namespace SlowTests.Core.Commands
                         });
 
                     await commands.PutAsync("users/2", null, new User { Name = "testname2" }, null);
-                    
+
                     var documents = await commands.GetAsync(10, 25);
                     Assert.Equal(0, documents.Count());
 
