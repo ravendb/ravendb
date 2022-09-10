@@ -52,7 +52,7 @@ namespace Raven.Server.Documents.Queries
         {
         }
 
-        public ValueTask WriteErrorAsync(Exception e)
+        public async ValueTask WriteErrorAsync(Exception e)
         {
             _writer.WriteStartObject();
             _writer.WritePropertyName("Error");
@@ -61,10 +61,10 @@ namespace Raven.Server.Documents.Queries
 
             _writer.WriteNewLine();
 
-            return default;
+            await _writer.FlushAsync();
         }
 
-        public ValueTask WriteErrorAsync(string error)
+        public async ValueTask WriteErrorAsync(string error)
         {
             _writer.WriteStartObject();
             _writer.WritePropertyName("Error");
@@ -73,7 +73,7 @@ namespace Raven.Server.Documents.Queries
 
             _writer.WriteNewLine();
 
-            return default;
+            await _writer.FlushAsync();
         }
 
         public void WriteQueryStatistics(long resultEtag, bool isStale, string indexName, long totalResults, DateTime timestamp)
