@@ -71,6 +71,10 @@ namespace Voron.Data.CompactTrees
                 var encodedKeySpan = encodedKey.ToSpan();
                 dictionary.Encode(key, ref encodedKeySpan);
 
+                // guard against a scenario where compression actually increase the size of the key beyond our limits
+                if (encodedKeySpan.Length > Constants.CompactTree.MaximumKeySize)
+                    throw new ArgumentOutOfRangeException(nameof(key), Encoding.UTF8.GetString(key),$"key (both encoded and plain) must be less than {Constants.CompactTree.MaximumKeySize} bytes in size, but the **encoded** key was larger than that!");
+
                 return new EncodedKey(key, encodedKeySpan, dictionaryId);
             }
 
@@ -769,7 +773,7 @@ namespace Voron.Data.CompactTrees
         }
 
         [SkipLocalsInit]
-        private EncodedKey AddToPage(EncodedKey key, long value)
+        private void AddToPage(EncodedKey key, long value)
         {
             ref var state = ref _internalCursor._stk[_internalCursor._pos];
 
@@ -791,7 +795,7 @@ namespace Voron.Data.CompactTrees
                 {
                     Debug.Assert(valueBufferLength <= sizeof(long));
                     Unsafe.CopyBlockUnaligned(b, valueBufferPtr, (uint)valueBufferLength);
-                    return key;
+                    return;
                 }
 
                 // remove the entry, we'll need to add it as new
@@ -865,13 +869,13 @@ namespace Voron.Data.CompactTrees
                 if (splitAnyways)
                 {
                     // DebugStuff.RenderAndShow(this);
-                    return SplitPage(key, value); // still can't do that, need to split the page
+                    SplitPage(key, value);
+                    return;
                     // DebugStuff.RenderAndShow(this);
                 }
             }
 
             AddEntryToPage(key, state, requiredSize, keySizeBufferPtr, keySizeLength, valueBufferPtr, valueBufferLength);
-            return key;
         }
 
         private void AddEntryToPage(EncodedKey key, CursorState state, int requiredSize,
