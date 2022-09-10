@@ -84,7 +84,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     return;
                 }
                 
-                _indexWriter.Update(keyFieldName, key.AsSpan(), lowerId, data.ToSpan());
+                _indexWriter.Update(keyFieldName, key.AsSpan(), lowerId, data.ToSpan(), ref _entriesCount);
             }
         }
 
