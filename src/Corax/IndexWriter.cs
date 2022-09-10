@@ -246,10 +246,11 @@ namespace Corax
             return Index(idSlice, data);
         }
 
-        public long Update(string field, Span<byte> key, LazyStringValue id, Span<byte> data)
+        public long Update(string field, Span<byte> key, LazyStringValue id, Span<byte> data, ref long numberOfEntries)
         {
             if (TryGetEntryTermId(field, key, out var entryId) == false)
             {
+                numberOfEntries++;
                 return Index(id, data);
             }
             // if there is more than a single entry for this key, delete & index from scratch
@@ -257,6 +258,7 @@ namespace Corax
             if((entryId & (long)TermIdMask.EnsureIsSingleMask) != 0)
             {
                 RecordDeletion(entryId);
+                numberOfEntries++;
                 return Index(id, data);
             }
 
@@ -269,10 +271,11 @@ namespace Corax
             Span<byte> buf = stackalloc byte[10];
             var idLen = ZigZagEncoding.Encode(buf, id.Size);
 
-            // can fit in old size, have to remove anyway
+            // can't fit in old size, have to remove anyway
             if (rawSize < idLen + id.Size + data.Length)
             {
                 RecordDeletion(entryId);
+                numberOfEntries++;
                 return Index(id, data);
             }
             var context = Transaction.Allocator;
