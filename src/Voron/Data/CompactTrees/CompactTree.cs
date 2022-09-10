@@ -99,15 +99,16 @@ namespace Voron.Data.CompactTrees
             public int ComputeFreeSpace()
             {
                 var usedSpace = PageHeader.SizeOf + sizeof(ushort) * Header->NumberOfEntries;
-                var sb = usedSpace + Environment.NewLine;
                 for (int i = 0; i < Header->NumberOfEntries; i++)
                 {
                     GetEntryBuffer(Page, EntriesOffsets[i], out _, out var len);
-                    sb += len + Environment.NewLine;
+                    Debug.Assert(len < Constants.CompactTree.MaximumKeySize);
                     usedSpace += len;
                 }
 
-                return (Constants.Storage.PageSize - usedSpace);
+                int computedFreeSpace = (Constants.Storage.PageSize - usedSpace);
+                Debug.Assert(computedFreeSpace >= 0);
+                return computedFreeSpace;
             }
             public string DumpPageDebug(CompactTree tree)
             {
@@ -985,7 +986,9 @@ namespace Voron.Data.CompactTrees
             int entriesCopied = 0;
             int sizeCopied = 0;
             ushort* offsets = newPageState.EntriesOffsetsPtr;
-            for (int i = numberOfEntries / 2; i < numberOfEntries; i++)
+            int i = FindPositionToSplitPageInHalfBasedOfEntriesSize(ref state);
+
+            for (; i < numberOfEntries; i++)
             {
                 header->Lower += sizeof(ushort);
                 GetEntryBuffer(state.Page, state.EntriesOffsets[i], out var b, out var len);
@@ -998,6 +1001,8 @@ namespace Voron.Data.CompactTrees
             state.Header->Lower -= (ushort)(sizeof(ushort) * entriesCopied);
             state.Header->FreeSpace += (ushort)(sizeCopied);
 
+            DefragPage(_llt, ref state); // need to ensure that we have enough space to add the new entry in the source page
+            
             var lastEntryFromPreviousPage = GetEncodedKey(state.Page, state.EntriesOffsets[state.Header->NumberOfEntries - 1]);
             ref CursorState updatedPageState = ref newPageState; // start with the new page
             if (lastEntryFromPreviousPage.SequenceCompareTo(causeForSplit.Encoded) >= 0)
@@ -1009,14 +1014,36 @@ namespace Voron.Data.CompactTrees
             SearchInCurrentPage(causeForSplit, ref updatedPageState);
             Debug.Assert(updatedPageState.LastSearchPosition < 0, "There should be no updates here");
             updatedPageState.LastSearchPosition = ~updatedPageState.LastSearchPosition;
+            Debug.Assert(updatedPageState.Header->Upper - updatedPageState.Header->Lower >= requiredSize);
             AddEntryToPage(causeForSplit, updatedPageState, requiredSize, keySizeBufferPtr, keySizeLength, valueBufferPtr, valueBufferLength);
 
+            VerifySizeOf(ref newPageState);
             VerifySizeOf(ref state);
             
             var pageEntries = new Span<ushort>(page.Pointer + PageHeader.SizeOf, header->NumberOfEntries);
             GetEncodedEntry(page, pageEntries[0], out var splitKey, out _);
 
             return EncodedKey.From(splitKey, this, ((CompactPageHeader*)page.Pointer)->DictionaryId);
+        }
+
+        private static int FindPositionToSplitPageInHalfBasedOfEntriesSize(ref CursorState state)
+        {
+            int sizeUsed = 0;
+            var halfwaySizeMark = (Constants.Storage.PageSize - state.Header->FreeSpace) / 2;
+            int numberOfEntries = state.Header->NumberOfEntries;
+            // here we have to guard against wildly unbalanced page structure, if the first 6 entries are 1KB each
+            // and we have another 100 entries that are a byte each, if we split based on entry count alone, we'll 
+            // end up unbalanced, so we compute the halfway mark based on the _size_ of the entries, not their count
+            for (int i =0; i < numberOfEntries; i++)
+            {
+                GetEntryBuffer(state.Page, state.EntriesOffsets[i], out var b, out var len);
+                sizeUsed += len;
+                if (sizeUsed >= halfwaySizeMark)
+                    return i;
+            }
+            // we should never reach here, but let's have a reasonable default
+            Debug.Assert(false, "How did we reach here?");
+            return numberOfEntries / 2;
         }
 
         public void VerifySizeOf(long page)
