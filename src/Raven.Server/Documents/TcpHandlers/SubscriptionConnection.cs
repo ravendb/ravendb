@@ -1113,7 +1113,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
                 var resultingTask = await Task
                     .WhenAny(hasMoreDocsTask, pendingReply, TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(WaitForChangedDocumentsTimeoutInMs))).ConfigureAwait(false);
-              
+
                 TcpConnection.DocumentDatabase.ForTestingPurposes?.Subscription_ActionToCallDuringWaitForChangedDocuments?.Invoke();
 
                 if (CancellationTokenSource.IsCancellationRequested)
@@ -1482,7 +1482,7 @@ namespace Raven.Server.Documents.TcpHandlers
             // verify that the JS code parses
             try
             {
-                new JavaScriptParser(script).ParseScript();
+                new JavaScriptParser().ParseScript(script);
             }
             catch (Exception e)
             {

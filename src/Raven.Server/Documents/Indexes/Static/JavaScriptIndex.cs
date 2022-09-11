@@ -351,12 +351,12 @@ function map(name, lambda) {
 
         private MapMetadata ExecuteCodeAndCollectReferencedCollections(string code, string additionalSources)
         {
-            var javascriptParser = new JavaScriptParser(code, DefaultParserOptions);
-            var program = javascriptParser.ParseScript();
+            var javascriptParser = new JavaScriptParser(DefaultParserOptions);
+            var program = javascriptParser.ParseScript(code);
             _engine.ExecuteWithReset(program);
             var loadVisitor = new EsprimaReferencedCollectionVisitor();
             if (string.IsNullOrEmpty(additionalSources) == false)
-                loadVisitor.Visit(new JavaScriptParser(additionalSources, DefaultParserOptions).ParseScript());
+                loadVisitor.Visit(new JavaScriptParser(DefaultParserOptions).ParseScript(additionalSources));
 
             loadVisitor.Visit(program);
             return new MapMetadata

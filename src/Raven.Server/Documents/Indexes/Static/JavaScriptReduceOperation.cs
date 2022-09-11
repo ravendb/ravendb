@@ -340,7 +340,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
                     if (blockBody.Count == 1 && blockBody[0] is ReturnStatement returnStmt)
                     {
-                        if (returnStmt.ChildNodes.Count == 1 && returnStmt.ChildNodes[0] is ObjectExpression returnObjectExpression)
+                        if (returnStmt.Argument is ObjectExpression returnObjectExpression)
                         {
                             return _groupByFields = CreateFieldsFromObjectExpression(returnObjectExpression);
                         }

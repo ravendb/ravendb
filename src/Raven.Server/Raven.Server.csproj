@@ -154,7 +154,7 @@
     <PackageReference Include="AWSSDK.S3" Version="3.7.9.43" />
     <PackageReference Include="Azure.Storage.Blobs" Version="12.13.1" />
     <PackageReference Include="CloudNative.CloudEvents.NewtonsoftJson" Version="2.3.1" />
-    <PackageReference Include="CloudNative.CloudEvents" Version="2.3.1" />    
+    <PackageReference Include="CloudNative.CloudEvents" Version="2.3.1" />
     <PackageReference Include="CloudNative.CloudEvents.Amqp" Version="2.3.1" />
     <PackageReference Include="CloudNative.CloudEvents.Kafka" Version="2.3.1" />
     <PackageReference Include="Confluent.Kafka" Version="1.9.2" />
@@ -163,7 +163,7 @@
     <PackageReference Include="JetBrains.Annotations" Version="2022.1.0">
       <PrivateAssets>All</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Jint" Version="3.0.30-ravendb" />
+    <PackageReference Include="Jint" Version="3.0.0-beta-2041" />
     <PackageReference Include="Google.Api.Gax.Rest" Version="4.0.0" />
     <PackageReference Include="Google.Cloud.Storage.V1" Version="4.1.0" />
     <PackageReference Include="Lextm.SharpSnmpLib.Engine" Version="11.3.102" />

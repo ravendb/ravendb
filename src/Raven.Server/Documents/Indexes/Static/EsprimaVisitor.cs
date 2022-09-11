@@ -341,7 +341,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 generator: false,
                 StrictModeScope.IsStrictModeCode,
                 async: false);
-            
+
             VisitFunctionExpression(func);
         }
 
@@ -562,9 +562,6 @@ namespace Raven.Server.Documents.Indexes.Static
                 case Nodes.ObjectPattern:
                     VisitObjectPattern(node.As<ObjectPattern>());
                     break;
-                case Nodes.ArrowParameterPlaceHolder:
-                    VisitArrowParameterPlaceHolder(node.As<ArrowParameterPlaceHolder>());
-                    break;
                 case Nodes.MetaProperty:
                     VisitMetaProperty(node.As<MetaProperty>());
                     break;
@@ -693,10 +690,6 @@ namespace Raven.Server.Documents.Indexes.Static
         }
 
         public virtual void VisitMetaProperty(MetaProperty metaProperty)
-        {
-        }
-
-        public virtual void VisitArrowParameterPlaceHolder(ArrowParameterPlaceHolder arrowParameterPlaceHolder)
         {
         }
 

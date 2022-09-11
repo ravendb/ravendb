@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using Jint;
 using Jint.Native;
 using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
@@ -456,7 +457,7 @@ namespace Raven.Server.Documents.Patch
             if (string.IsNullOrEmpty(id) || id.EndsWith(database.IdentityPartsSeparator) || id.EndsWith('|'))
                 throw new ArgumentException($"The ID argument has invalid value: '{id}'", nameof(id));
         }
-        
+
         protected override long ExecuteCmd(DocumentsOperationContext context)
         {
             ScriptRunner.SingleRun runIfMissing = null;

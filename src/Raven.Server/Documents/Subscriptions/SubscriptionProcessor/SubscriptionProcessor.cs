@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using Jint;
 using Jint.Native;
 using Jint.Native.Object;
 using Jint.Runtime;
@@ -54,7 +55,7 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
                 return (result, null);
             }
 
-            if (Logger.IsInfoEnabled) 
+            if (Logger.IsInfoEnabled)
                 Logger.Info(reason, exception);
 
             if (exception != null)
@@ -75,7 +76,7 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
         protected readonly ServerStore Server;
         protected readonly DocumentDatabase Database;
         protected readonly SubscriptionConnection Connection;
-        
+
         protected EndPoint RemoteEndpoint;
         protected readonly Size MaximumAllowedMemory;
         protected SubscriptionState SubscriptionState;

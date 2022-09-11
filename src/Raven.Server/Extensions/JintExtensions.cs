@@ -26,14 +26,14 @@ namespace Raven.Server.Extensions
 
         public static IDisposable ChangeMaxStatements(this Engine engine, int value)
         {
-            var maxStatements = engine.FindConstraint<MaxStatements>();
-            if (maxStatements == null)
+            var constraint = engine.FindConstraint<MaxStatementsConstraint>();
+            if (constraint == null)
                 return null;
 
-            var oldMaxStatements = maxStatements.Max;
-            maxStatements.Change(value);
+            var oldMaxStatements = constraint.MaxStatements;
+            constraint.MaxStatements = value;
 
-            return new DisposableAction(() => maxStatements.Change(oldMaxStatements));
+            return new DisposableAction(() => constraint.MaxStatements = oldMaxStatements);
         }
 
         public static IDisposable DisableMaxStatements(this Engine engine)
@@ -69,7 +69,7 @@ namespace Raven.Server.Extensions
 
         public static string TryGetFieldFromSimpleLambdaExpression(this IFunction function)
         {
-            if (!(function.Params.FirstOrDefault() is Identifier identifier))
+            if (function.Params.Count == 0 || function.Params[0] is not Identifier identifier)
                 return null;
 
             var me = GetMemberExpression(function);

@@ -73,7 +73,7 @@ namespace Raven.Server.Documents.Queries
             IsGraph = Query.GraphQuery != null;
             IsDistinct = Query.IsDistinct;
             IsGroupBy = Query.GroupBy != null;
-            
+
             if (query.Filter != null)
             {
                 BuildFilterScript(query);
@@ -2810,7 +2810,7 @@ function execute(doc, args){
                         parameters.TryGet(identifier.Substring(1), out object _) == false);
             }
 
-            void RemoveFromUnknowns(NodeList<Expression> functionParameters)
+            void RemoveFromUnknowns(NodeList<Node> functionParameters)
             {
                 if (maybeUnknowns == null || maybeUnknowns.Count == 0)
                     return;
@@ -2824,7 +2824,11 @@ function execute(doc, args){
                 }
             }
 
-            return new JavaScriptParser("return " + Query.SelectFunctionBody.FunctionText, new ParserOptions(), VerifyKnownAliases).ParseScript();
+            ParserOptions options = new()
+            {
+                OnNodeCreated = VerifyKnownAliases
+            };
+            return new JavaScriptParser(options).ParseScript("return " + Query.SelectFunctionBody.FunctionText);
         }
 
         private bool NotInRootAliasPaths(string key)

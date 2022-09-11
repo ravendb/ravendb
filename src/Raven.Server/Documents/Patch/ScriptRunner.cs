@@ -1935,7 +1935,7 @@ namespace Raven.Server.Documents.Patch
 
                 try
                 {
-                    var call = ScriptEngine.GetValue(method).TryCast<ICallable>();
+                    var call = (FunctionInstance) ScriptEngine.GetValue(method);
                     var result = call.Call(Undefined.Instance, _args);
                     return new ScriptRunnerResult(this, result);
                 }
@@ -1993,7 +1993,9 @@ namespace Raven.Server.Documents.Patch
                 else
                     msg = e.Error.ToString();
 
-                msg = "At " + e.Column + ":" + e.LineNumber + " " + msg;
+                msg = "At " + e.Location.Start.Column + ":" + e.Location.Start.Line + " " + msg;
+                msg += e.JavaScriptStackTrace;
+
                 var javaScriptException = new Client.Exceptions.Documents.Patching.JavaScriptException(msg, e);
                 return javaScriptException;
             }

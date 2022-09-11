@@ -32,7 +32,7 @@ namespace SlowTests.Issues
                 var indexInstance1 = (MapIndex)database.IndexStore.GetIndex(index.IndexName);
                 var compiled1 = (JavaScriptIndex)indexInstance1._compiled;
 
-                Assert.Equal(initialMaxStepsForScript, compiled1._engine.FindConstraint<MaxStatements>().Max);
+                Assert.Equal(initialMaxStepsForScript, compiled1._engine.FindConstraint<MaxStatementsConstraint>().MaxStatements);
 
                 const int maxStepsForScript = 1000;
                 index = new MyJSIndex(maxStepsForScript);
@@ -46,7 +46,7 @@ namespace SlowTests.Issues
                 Assert.NotEqual(indexInstance1, indexInstance2);
                 Assert.NotEqual(compiled1, compiled2);
 
-                Assert.Equal(maxStepsForScript, compiled2._engine.FindConstraint<MaxStatements>().Max);
+                Assert.Equal(maxStepsForScript, compiled2._engine.FindConstraint<MaxStatementsConstraint>().MaxStatements);
 
                 using (var session = store.OpenSession())
                 {

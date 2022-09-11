@@ -74,11 +74,11 @@ namespace Raven.Server.Documents.Patch
                 else if (js.IsDate())
                 {
                     var jsDate = js.AsDate();
-                    if (double.IsNaN(jsDate.PrimitiveValue) ||
-                        jsDate.PrimitiveValue > MaxJsDateMs ||
-                        jsDate.PrimitiveValue < MinJsDateMs)
+                    if (double.IsNaN(jsDate.DateValue) ||
+                        jsDate.DateValue > MaxJsDateMs ||
+                        jsDate.DateValue < MinJsDateMs)
                         // not a valid Date. 'ToDateTime()' will throw
-                        throw new InvalidOperationException($"Invalid '{nameof(DateInstance)}' on property '{propertyName}'. Date value : '{jsDate.PrimitiveValue}'. " +
+                        throw new InvalidOperationException($"Invalid '{nameof(DateInstance)}' on property '{propertyName}'. Date value : '{jsDate.DateValue}'. " +
                                                             "Note that JavaScripts 'Date' measures time as the number of milliseconds that have passed since the Unix epoch.");
 
                     _writer.WriteValue(jsDate.ToDateTime().ToString(DefaultFormat.DateTimeOffsetFormatsToWrite));

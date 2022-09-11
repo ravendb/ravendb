@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
+using Jint;
 using Jint.Native;
 using Jint.Runtime;
 using Jint.Runtime.Interop;
@@ -18,7 +19,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
     internal class SqlDocumentTransformer : EtlTransformer<ToSqlItem, SqlTableWithRecords, EtlStatsScope, EtlPerformanceOperation>
     {
         private static readonly JsValue DefaultVarCharSize = 50;
-        
+
         private readonly Transformation _transformation;
         private readonly SqlEtlConfiguration _config;
         private readonly Dictionary<string, SqlTableWithRecords> _tables;
@@ -56,7 +57,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
         public override void Initialize(bool debugMode)
         {
             base.Initialize(debugMode);
-            
+
             DocumentScript.ScriptEngine.SetValue("varchar",
                 new ClrFunctionInstance(DocumentScript.ScriptEngine, "varchar", (value, values) => ToVarcharTranslator(VarcharFunctionCall.AnsiStringType, values)));
 
@@ -86,7 +87,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
                     Type = prop.Token
                 };
 
-                if (_transformation.IsLoadingAttachments && 
+                if (_transformation.IsLoadingAttachments &&
                     prop.Token == BlittableJsonToken.String && IsLoadAttachment(prop.Value as LazyStringValue, out var attachmentName))
                 {
                     var attachment = _loadedAttachments[attachmentName].Dequeue();

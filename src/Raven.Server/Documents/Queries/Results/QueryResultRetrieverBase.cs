@@ -5,6 +5,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Corax;
+using Jint;
 using Jint.Native;
 using Jint.Native.Object;
 using Jint.Runtime;
@@ -185,7 +186,7 @@ namespace Raven.Server.Documents.Queries.Results
                         fields[kvp.Key] = kvp.Value;
                     }
                 }
-                
+
                 if (fields is not null)
                 {
                     foreach (var fieldToFetch in fields?.Values)
@@ -193,12 +194,12 @@ namespace Raven.Server.Documents.Queries.Results
                         if (fieldToFetch.CanExtractFromIndex && // skip `id()` fields here
                             TryExtractValueFromIndex(ref retrieverInput, fieldToFetch, result))
                             continue;
-                        
+
                         if (FieldsToFetch.Projection.MustExtractFromIndex)
                         {
                             if (FieldsToFetch.Projection.MustExtractOrThrow)
                             {
-                                if (TryExtractValueFromIndex(ref retrieverInput, fieldToFetch, result)) 
+                                if (TryExtractValueFromIndex(ref retrieverInput, fieldToFetch, result))
                                     continue; // here we try again, for `id()` fields
 
                                 FieldsToFetch.Projection
@@ -594,7 +595,7 @@ namespace Raven.Server.Documents.Queries.Results
         private static unsafe bool TryGetValueFromCoraxIndex(JsonOperationContext context, int fieldId, ref RetrieverInput retrieverInput, out object value)
         {
             var type = retrieverInput.CoraxEntry.GetFieldType(fieldId, out var intOffset);
-            
+
             switch (type)
             {
                 case IndexEntryFieldType.Tuple:
@@ -638,14 +639,14 @@ namespace Raven.Server.Documents.Queries.Results
                             break;
                         }
                     }
-                    
+
                     value = Encodings.Utf8.GetString(data);
                     break;
                 default:
                     value = null;
                     return false;
             }
-            
+
             return true;
         }
 

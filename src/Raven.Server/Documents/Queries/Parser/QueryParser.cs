@@ -72,7 +72,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 QueryText = Scanner.Input
             };
             message = string.Empty;
-            
+
             while (Scanner.TryScan("DECLARE"))
             {
                 var func = DeclaredFunction();
@@ -169,8 +169,8 @@ namespace Raven.Server.Documents.Queries.Parser
 
             if (Scanner.TryScan("LOAD"))
                 query.Load = SelectClauseExpressions("LOAD", false);
-            
-                
+
+
             if (Scanner.TryScan("FILTER") && Expression(out query.Filter) == false)
             {
                 message = "Unable to parse FILTER clause";
@@ -268,8 +268,8 @@ namespace Raven.Server.Documents.Queries.Parser
 
             return new DeclaredFunction
             {
-                Type = AST.DeclaredFunction.FunctionType.TimeSeries, 
-                FunctionText = functionText, 
+                Type = AST.DeclaredFunction.FunctionType.TimeSeries,
+                FunctionText = functionText,
                 TimeSeries = ts
             };
         }
@@ -453,7 +453,7 @@ namespace Raven.Server.Documents.Queries.Parser
             else
             {
                 if (Field(out var collection) == false)
-                {                    
+                {
                     if (isEdge)
                     {
                         if (Scanner.TryPeek(']'))
@@ -466,7 +466,7 @@ namespace Raven.Server.Documents.Queries.Parser
 
                     if (Scanner.TryPeek(')')) // anonymous alias () accepts everything
                     {
-                        alias = "__alias" + (++_counter);                        
+                        alias = "__alias" + (++_counter);
                         AddWithQuery(new FieldExpression(new List<StringSegment>()), null, alias, null, false, start, false);
                         return true;
                     }
@@ -535,7 +535,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 }
                 else
                 {
-                    alias = maybeAlias.Value;                    
+                    alias = maybeAlias.Value;
                 }
 
 
@@ -721,7 +721,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 new MatchPath
                 {
                     Alias = alias,
-                    EdgeType = EdgeType.Right,                    
+                    EdgeType = EdgeType.Right,
                     Field = field,
                     IsImplicit = isImplicit
                 }
@@ -1080,7 +1080,7 @@ namespace Raven.Server.Documents.Queries.Parser
             {
                 var hasFoundJunction = false;
 
-                //the first two and the last two cannot have different directions, since 
+                //the first two and the last two cannot have different directions, since
                 //minimal query with different directions will look like (node1)-[edge1]->(node2)<-[edge2]-(node3)
                 for (var i = 0; i < matchPaths.Count - 2; i++)
                 {
@@ -1224,8 +1224,8 @@ namespace Raven.Server.Documents.Queries.Parser
 
         private static Esprima.Ast.Program ValidateScript(string script)
         {
-            var javaScriptParser = new JavaScriptParser(script);
-            return javaScriptParser.ParseScript();
+            var javaScriptParser = new JavaScriptParser();
+            return javaScriptParser.ParseScript(script);
         }
 
         private static void ThrowUnknownQueryType(QueryType queryType)
@@ -1280,7 +1280,7 @@ namespace Raven.Server.Documents.Queries.Parser
             // because of how we are processing them, we don't actually care for
             // parsing the function directly. We have implemented a minimal parser
             // here that find the _boundary_ of the function call, and then we hand
-            // all of that code directly to the js code. 
+            // all of that code directly to the js code.
 
             var functionStart = Scanner.Position;
 
@@ -1299,7 +1299,7 @@ namespace Raven.Server.Documents.Queries.Parser
 
             // this reads the signature of the method: (a,b,c), etc.
             // we are technically allowing more complex stuff there that isn't
-            // allowed by JS, but that is fine, since the JS parser will break 
+            // allowed by JS, but that is fine, since the JS parser will break
             // when it try it, so we are good with false positives here
 
             if (Scanner.TryScan('(') == false)
@@ -1362,7 +1362,7 @@ namespace Raven.Server.Documents.Queries.Parser
         private TimeSeriesFunction ParseTimeSeriesBody(string name)
         {
             _insideTimeSeriesBody = true;
-         
+
             var tsf = new TimeSeriesFunction();
 
             if (Scanner.TryScan("from") == false)
@@ -1373,7 +1373,7 @@ namespace Raven.Server.Documents.Queries.Parser
             {
                 if (Value(out var valueExpression) == false)
                     ThrowParseException($"Unable to parse time series query for {name}, missing FROM");
-                
+
                 source = valueExpression;
             }
             else
@@ -1452,7 +1452,7 @@ namespace Raven.Server.Documents.Queries.Parser
             {
                 if (Expression(out var filter) == false)
                     ThrowInvalidQueryException($"Failed to parse filter expression after WHERE in time series function '{name}'");
-                
+
                 tsf.Where = filter;
             }
 
@@ -1864,10 +1864,10 @@ Grouping by 'Tag' or Field is supported only as a second grouping-argument.";
             var oldPos = Scanner.Position;
             if (Field(out var token))
             {
-                if (required == false && // need to check that this is a real alias 
+                if (required == false && // need to check that this is a real alias
                     token.FieldValue.Equals("FILTER", StringComparison.OrdinalIgnoreCase))
                 {
-                    // if the alias is 'filter' *and* the next term is *not* a keyword, we have a filter clause so not an alias 
+                    // if the alias is 'filter' *and* the next term is *not* a keyword, we have a filter clause so not an alias
                     if (Scanner.TryPeek(AliasKeywords) == false)
                     {
                         Scanner.Reset(oldPos);
@@ -2441,7 +2441,7 @@ Grouping by 'Tag' or Field is supported only as a second grouping-argument.";
                 {
                     if (Scanner.String(out var str, fieldPath: part > 1))
                     {
-                        if (part == 1 || 
+                        if (part == 1 ||
                             part == 2 && _insideTimeSeriesBody && parts[0].Value == _fromAlias)
                             quoted = true;
                         parts.Add(str);

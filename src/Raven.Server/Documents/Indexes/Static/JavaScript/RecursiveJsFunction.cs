@@ -28,7 +28,7 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
             if (_item == null)
                 return _engine.Array.Construct(0);
 
-            var current = NullIfEmptyEnumerable(_func.Invoke(_item));
+            var current = NullIfEmptyEnumerable(_engine.Invoke(_func, _item));
             if (current == null)
             {
                 _result.Add(_item);
@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
                 return;
 
             _result.Add(current);
-            var result = NullIfEmptyEnumerable(_func.Invoke(current));
+            var result = NullIfEmptyEnumerable(_engine.Invoke(_func, current));
             if (result != null)
                 _queue.Enqueue(result);
         }
@@ -100,7 +100,7 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
                 if (x is DynamicJsNull dx)
                     return dx.Equals(y);
 
-                if (y is DynamicJsNull dy) 
+                if (y is DynamicJsNull dy)
                     return dy.Equals(x);
 
                 if (x is null)

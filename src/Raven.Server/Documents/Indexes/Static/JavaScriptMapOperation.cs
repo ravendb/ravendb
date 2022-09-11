@@ -8,7 +8,6 @@ using Jint.Native;
 using Jint.Native.Array;
 using Jint.Native.Function;
 using Jint.Runtime;
-using Jint.Runtime.Environments;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Extensions;
@@ -146,7 +145,7 @@ namespace Raven.Server.Documents.Indexes.Static
                         else if (CompareFields(oe) == false)
                         {
                             throw new InvalidOperationException($"Index {IndexName} contains different return structure from different code paths," +
-                                                                $" expected properties: {string.Join(", ", Fields)} but also got:{string.Join(", ", oe.Properties.Select(x => x.GetKey(engine)))}");
+                                                                $" expected properties: {string.Join(", ", Fields)} but also got:{string.Join(", ", oe.Properties.OfType<IProperty>().Select(x => x.GetKey(engine)))}");
                         }
 
                         break;
@@ -166,7 +165,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 }
             }
 
-            static bool IsBoostExpression(Expression expression)
+            static bool IsBoostExpression(Node expression)
             {
                 return expression is CallExpression ce && ce.Callee is Identifier identifier && identifier.Name == "boost";
             }
@@ -177,17 +176,17 @@ namespace Raven.Server.Documents.Indexes.Static
             var field = function.TryGetFieldFromSimpleLambdaExpression();
             if (field == null)
                 return null;
-            var properties = new List<Expression>
+            var properties = new List<Node>
             {
                 new Property(PropertyKind.Data, new Identifier(field), false,
-                    new StaticMemberExpression(new Identifier("self"), new Identifier(field)), false, false)
+                    new StaticMemberExpression(new Identifier("self"), new Identifier(field), optional: false), false, false)
             };
 
             if (MoreArguments != null)
             {
-                for (int i = 0; i < MoreArguments.Length; i++)
+                for (uint i = 0; i < MoreArguments.Length; i++)
                 {
-                    var arg = MoreArguments.Get(i.ToString()).As<FunctionInstance>();
+                    var arg = MoreArguments.Get(i).As<FunctionInstance>();
 
                     if (!(arg is ScriptFunctionInstance sfi))
                         continue;
@@ -196,27 +195,29 @@ namespace Raven.Server.Documents.Indexes.Static
                     if (field != null)
                     {
                         properties.Add(new Property(PropertyKind.Data, new Identifier(field), false,
-                        new StaticMemberExpression(new Identifier("self"), new Identifier(field)), false, false));
+                        new StaticMemberExpression(new Identifier("self"), new Identifier(field), optional: false), false, false));
                     }
                 }
             }
 
             var functionExp = new FunctionExpression(
                 function.Id,
-                NodeList.Create(new List<Expression> { new Identifier("self") }),
+                NodeList.Create<Node>(new List<Expression> { new Identifier("self") }),
                 new BlockStatement(NodeList.Create(new List<Statement>
                 {
-                    new ReturnStatement(new ObjectExpression(NodeList.Create(properties)))
+                    new ReturnStatement(new ObjectExpression(NodeList.Create<Node>(properties)))
                 })),
                 generator: false,
                 function.Strict,
                 async: false);
+
             var functionObject = new ScriptFunctionInstance(
                     engine,
                     functionExp,
-                    LexicalEnvironment.NewDeclarativeEnvironment(engine, engine.ExecutionContext.LexicalEnvironment),
+                    engine.CreateNewDeclarativeEnvironment(),
                     function.Strict
                 );
+
             return (functionObject, functionExp);
         }
 
@@ -229,10 +230,13 @@ namespace Raven.Server.Documents.Indexes.Static
                 return false;
             foreach (var p in oe.Properties)
             {
-                var key = p.GetKey(_engine);
-                var keyAsString = key.AsString();
-                if (Fields.Contains(keyAsString) == false)
-                    return false;
+                if (p is Property property)
+                {
+                    var key = property.GetKey(_engine);
+                    var keyAsString = key.AsString();
+                    if (Fields.Contains(keyAsString) == false)
+                        return false;
+                }
             }
 
             return true;
