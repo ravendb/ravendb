@@ -349,7 +349,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     databaseRecord.DatabaseState = DatabaseStateStatus.Normal;
                     await SaveDatabaseRecordAsync(databaseName, databaseRecord, null, result, onProgress);
 
-                    result.AddInfo($"Loading the {databaseName} database after restore");
+                    result.AddInfo($"Loading the database after restore");
 
                     try
                     {
@@ -358,10 +358,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     catch (Exception e)
                     {
                         // we failed to load the database after restore, we don't want to fail the entire restore process since it will delete the database if we throw here
-                        result.AddError($"FAILED, {e}");
+                        result.AddError($"FAILED to load the database after restore, {e}");
 
                         if (Logger.IsOperationsEnabled)
-                            Logger.Operations($"Failed to load the {databaseName} database after restore", e);
+                            Logger.Operations($"Failed to load the database '{databaseName}' after restore", e);
                     }
 
                     return result;
