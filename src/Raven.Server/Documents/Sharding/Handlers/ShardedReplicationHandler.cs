@@ -68,4 +68,11 @@ public class ShardedReplicationHandler : ShardedDatabaseRequestHandler
         using (var processor = new ShardedReplicationHandlerProcessorForGetIncomingActivityTimes(this))
             await processor.ExecuteAsync();
     }
+
+    [RavenShardedAction("/databases/*/replication/debug/incoming-rejection-info", "GET")]
+    public async Task GetReplicationIncomingRejectionInfo()
+    {
+        using (var processor = new ShardedReplicationHandlerProcessorForGetIncomingRejectionInfo(this))
+            await processor.ExecuteAsync();
+    }
 }
