@@ -7,6 +7,7 @@ using Raven.Client.Exceptions.Sharding;
 using SlowTests.Client.Subscriptions;
 using SlowTests.Core.Utils.Entities;
 using SlowTests.Issues;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -18,7 +19,7 @@ public class ShardedSubscriptionConcurrentTests : RavenTestBase
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.Sharding)]
     public async Task ShouldThrow()
     {
         using (var store = Sharding.GetDocumentStore())
