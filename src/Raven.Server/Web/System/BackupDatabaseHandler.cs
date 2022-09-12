@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
-using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Server.Documents;
-using Raven.Server.Documents.PeriodicBackup;
+using Raven.Server.Documents.Commands.OngoingTasks;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
 using Sparrow.Json;
 
 namespace Raven.Server.Web.System
@@ -61,94 +61,29 @@ namespace Raven.Server.Web.System
         [RavenAction("/admin/debug/periodic-backup/timers", "GET", AuthorizationStatus.Operator)]
         public async Task GetAllPeriodicBackupsTimers()
         {
-            var first = true;
-            var count = 0;
-
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                WriteStartOfTimers(writer);
+                var result = new GetPeriodicBackupTimersCommand.PeriodicBackupTimersResponse();
 
-                foreach ((var name, Task<DocumentDatabase> task) in ServerStore.DatabasesLandlord.DatabasesCache)
+                foreach ((StringSegment _, Task<DocumentDatabase> task) in ServerStore.DatabasesLandlord.DatabasesCache)
                 {
                     if (task.Status != TaskStatus.RanToCompletion)
                         continue;
 
                     var database = await task;
-                    if (database.PeriodicBackupRunner.PeriodicBackups.Count == 0)
-                        continue;
 
-                    if (first == false)
-                        writer.WriteComma();
+                    var backups = database.PeriodicBackupRunner.GetPeriodicBackupsInformation();
 
-                    first = false;
-                    WritePeriodicBackups(database, writer, context, out int c);
-                    count += c;
+                    result.Timers.AddRange(backups);
                 }
 
-                WriteEndOfTimers(writer, count);
-            }
-        }
+                result.Count = result.Timers.Count;
 
-        internal static void WriteEndOfTimers(AbstractBlittableJsonTextWriter writer, int count)
-        {
-            writer.WriteEndArray();
-            writer.WriteComma();
-            writer.WritePropertyName("TimersCount");
-            writer.WriteInteger(count);
-            writer.WriteEndObject();
-        }
+                var json = result.ToJson();
 
-        internal static void WriteStartOfTimers(AbstractBlittableJsonTextWriter writer)
-        {
-            writer.WriteStartObject();
-            writer.WritePropertyName("TimersList");
-            writer.WriteStartArray();
-        }
-
-        internal static void WritePeriodicBackups(DocumentDatabase db, AbstractBlittableJsonTextWriter writer, JsonOperationContext context, out int count)
-        {
-            count = 0;
-            var first = true;
-            foreach (var periodicBackup in db.PeriodicBackupRunner.PeriodicBackups)
-            {
-                if (first == false)
-                    writer.WriteComma();
-
-                first = false;
-                writer.WriteStartObject();
-                writer.WritePropertyName("DatabaseName");
-                writer.WriteString(db.Name);
-                writer.WriteComma();
-                writer.WritePropertyName(nameof(periodicBackup.Configuration.TaskId));
-                writer.WriteInteger(periodicBackup.Configuration.TaskId);
-                writer.WriteComma();
-                writer.WritePropertyName(nameof(periodicBackup.Configuration.Name));
-                writer.WriteString(periodicBackup.Configuration.Name);
-                writer.WriteComma();
-                writer.WritePropertyName(nameof(periodicBackup.Configuration.FullBackupFrequency));
-                writer.WriteString(periodicBackup.Configuration.FullBackupFrequency);
-                writer.WriteComma();
-                writer.WritePropertyName(nameof(periodicBackup.Configuration.IncrementalBackupFrequency));
-                writer.WriteString(periodicBackup.Configuration.IncrementalBackupFrequency);
-                writer.WriteComma();
-                writer.WritePropertyName(nameof(NextBackup));
-                using (var nextBackup = context.ReadObject(periodicBackup.GetNextBackup().ToJson(), "nextBackup"))
-                    writer.WriteObject(nextBackup);
-                writer.WriteComma();
-                writer.WritePropertyName(nameof(PeriodicBackup.BackupTimer.CreatedAt));
-                var createdAt = periodicBackup.GetCreatedAt();
-                if (createdAt.HasValue == false)
-                    writer.WriteNull();
-                else
-                    writer.WriteDateTime(createdAt.Value, isUtc: true);
-                writer.WriteComma();
-                writer.WritePropertyName(nameof(PeriodicBackup.Disposed));
-                writer.WriteBool(periodicBackup.Disposed);
-                writer.WriteEndObject();
-
-                count++;
+                context.Write(writer, json);
             }
         }
     }

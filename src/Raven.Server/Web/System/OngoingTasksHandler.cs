@@ -8,6 +8,7 @@ using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Http;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Commands.OngoingTasks;
 using Raven.Server.Documents.Handlers.Processors.OngoingTasks;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -54,16 +55,10 @@ namespace Raven.Server.Web.System
         }
 
         [RavenAction("/databases/*/admin/debug/periodic-backup/timers", "GET", AuthorizationStatus.DatabaseAdmin)]
-        public async Task GetPeriodicBackupTimer()
+        public async Task GetPeriodicBackupTimers()
         {
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                BackupDatabaseHandler.WriteStartOfTimers(writer);
-                BackupDatabaseHandler.WritePeriodicBackups(Database, writer, context, out int count);
-                BackupDatabaseHandler.WriteEndOfTimers(writer, count);
-            }
+            using (var processor = new OngoingTasksHandlerProcessorForGetPeriodicBackupTimers(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/admin/periodic-backup", "POST", AuthorizationStatus.DatabaseAdmin)]

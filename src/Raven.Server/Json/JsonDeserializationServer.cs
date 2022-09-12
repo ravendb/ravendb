@@ -27,6 +27,7 @@ using Raven.Server.Commercial;
 using Raven.Server.Documents.Commands;
 using Raven.Server.Documents.Commands.ETL;
 using Raven.Server.Documents.Commands.Indexes;
+using Raven.Server.Documents.Commands.OngoingTasks;
 using Raven.Server.Documents.Commands.Revisions;
 using Raven.Server.Documents.ETL.Providers.ElasticSearch.Test;
 using Raven.Server.Documents.ETL.Providers.OLAP.Test;
@@ -259,6 +260,8 @@ namespace Raven.Server.Json
         internal static readonly Func<BlittableJsonReaderObject, GetEtlTaskDebugStatsCommand.EtlTaskDebugStatsResponse> EtlTaskDebugStatsResponse = GenerateJsonDeserializationRoutine<GetEtlTaskDebugStatsCommand.EtlTaskDebugStatsResponse>();
 
         internal static readonly Func<BlittableJsonReaderObject, GetEtlTaskPerformanceStatsCommand.EtlTaskPerformanceStatsResponse> EtlTaskPerformanceStatsResponse = GenerateJsonDeserializationRoutine<GetEtlTaskPerformanceStatsCommand.EtlTaskPerformanceStatsResponse>();
+
+        internal static readonly Func<BlittableJsonReaderObject, GetPeriodicBackupTimersCommand.PeriodicBackupTimersResponse> GetPeriodicBackupTimersCommandResponse = GenerateJsonDeserializationRoutine<GetPeriodicBackupTimersCommand.PeriodicBackupTimersResponse>();
 
         public class Parameters
         {
