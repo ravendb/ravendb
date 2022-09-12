@@ -59,7 +59,7 @@ public class KafkaConnectionString
                 var config = new AdminClientConfig() { BootstrapServers = url };
                 using var adminClient = new AdminClientBuilder(config).Build(); 
                 
-                adminClient.GetMetadata(TimeSpan.FromSeconds(10));
+                adminClient.GetMetadata(TimeSpan.FromSeconds(2));
                 exception = null;
 
                 return true;
