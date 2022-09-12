@@ -89,7 +89,7 @@ namespace SlowTests.Issues
 
             using var store1 = GetDocumentStore(new Options
             {
-                Server = leader, 
+                Server = leader,
                 ReplicationFactor = 1
             });
 
@@ -132,11 +132,12 @@ namespace SlowTests.Issues
 
             // restore backup
             var databaseCopyName = store1.Database + "_Copy";
-            using var d = Backup.RestoreDatabase(store1, 
-                new RestoreBackupConfiguration { 
-                    BackupLocation = Directory.GetDirectories(backupPath).First(), 
+            using var d = Backup.RestoreDatabase(store1,
+                new RestoreBackupConfiguration
+                {
+                    BackupLocation = Directory.GetDirectories(backupPath).First(),
                     DatabaseName = databaseCopyName,
-                }, nodeTag: dbServer.ServerStore.NodeTag );
+                }, nodeTag: dbServer.ServerStore.NodeTag);
 
             // add second node to databaseCopy
             using var store2 = GetDocumentStore(new Options
@@ -154,7 +155,7 @@ namespace SlowTests.Issues
             await AssertWaitForValueAsync(async () => await GetMembersCount(store1, databaseName: databaseCopyName), 2);
         }
 
-        public class User
+        private class User
         {
             public string Id { get; set; }
             public string Name { get; set; }

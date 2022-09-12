@@ -29,6 +29,7 @@ using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Exceptions.Security;
+using Raven.Client.Exceptions.Sharding;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
@@ -42,7 +43,7 @@ using Sparrow.Utils;
 
 namespace Raven.Client.Documents.Subscriptions
 {
-    public abstract class AbstractSubscriptionWorker<TBatch, TType> : IAsyncDisposable, IDisposable 
+    public abstract class AbstractSubscriptionWorker<TBatch, TType> : IAsyncDisposable, IDisposable
         where TBatch : SubscriptionBatchBase<TType>
         where TType : class
     {
@@ -401,6 +402,8 @@ namespace Raven.Client.Documents.Subscriptions
             {
                 if (connectionStatus.Exception.Contains(nameof(DatabaseDoesNotExistException))/* || connectionStatus.Exception.Contains("unloaded and locked by DeleteDatabase")*/)
                     DatabaseDoesNotExistException.ThrowWithMessage(_dbName, connectionStatus.Message);
+                else if (connectionStatus.Exception.Contains(nameof(NotSupportedInShardingException)))
+                    throw new NotSupportedInShardingException(connectionStatus.Message);
             }
 
             if (connectionStatus.Type != SubscriptionConnectionServerMessage.MessageType.ConnectionStatus)
@@ -900,6 +903,7 @@ namespace Raven.Client.Documents.Subscriptions
                 case AuthorizationException _:
                 case AllTopologyNodesDownException _:
                 case SubscriberErrorException _:
+                case NotSupportedInShardingException _:
                 case RavenException _:
                     processingCts?.Cancel();
                     return (false, null);
@@ -941,7 +945,7 @@ namespace Raven.Client.Documents.Subscriptions
         }
 
         protected abstract RequestExecutor GetRequestExecutor();
-       
+
         protected abstract void SetLocalRequestExecutor(string url, X509Certificate2 cert);
 
         protected abstract TBatch CreateEmptyBatch();
