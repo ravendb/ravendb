@@ -6,11 +6,9 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using NCrontab.Advanced;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.OngoingTasks;
-using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
@@ -21,9 +19,9 @@ using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Raven.Server.Web.System;
 using Sparrow.Collections;
 using Sparrow.Logging;
-using Sparrow.LowMemory;
 using Sparrow.Utils;
 using Constants = Raven.Client.Constants;
 
@@ -1055,6 +1053,23 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
 
             return result;
+        }
+
+        internal List<PeriodicBackupInfo> GetPeriodicBackupsInformation()
+        {
+            return PeriodicBackups
+                .Select(x => new PeriodicBackupInfo
+                {
+                    Database = _database.Name,
+                    TaskId = x.Configuration.TaskId,
+                    Name = x.Configuration.Name,
+                    FullBackupFrequency = x.Configuration.FullBackupFrequency,
+                    IncrementalBackupFrequency = x.Configuration.IncrementalBackupFrequency,
+                    NextBackup = x.GetNextBackup(),
+                    CreatedAt = x.GetCreatedAt(),
+                    Disposed = x.Disposed
+                })
+                .ToList();
         }
 
         internal TestingStuff _forTestingPurposes;

@@ -107,6 +107,13 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 await processor.ExecuteAsync();
         }
 
+        [RavenShardedAction("/databases/*/admin/debug/periodic-backup/timers", "GET")]
+        public async Task GetPeriodicBackupTimers()
+        {
+            using (var processor = new ShardedOngoingTasksHandlerProcessorForGetPeriodicBackupTimers(this))
+                await processor.ExecuteAsync();
+        }
+
         [RavenShardedAction("/databases/*/admin/backup-data-directory", "GET")]
         public async Task FullBackupDataDirectory()
         {
