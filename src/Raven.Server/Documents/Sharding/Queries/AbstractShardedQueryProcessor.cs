@@ -76,18 +76,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
 
         if (queryTemplates == null)
         {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal,
-                "RavenDB-19084 Use a single rewrite method in order to avoid cloning the query twice");
-
-            // * For paging queries, we modify the limits on the query to include all the results from all
-            //   shards if there is an offset. But if there isn't an offset, we can just get the limit from
-            //   each node and then merge them
-            RewriteQueryForPaging(ref queryTemplate);
-
-            // * If we have a projection in a map-reduce index,
-            //   the shards will send the query result and the orchestrator will re-reduce and apply the projection
-            //   in that case we must send the query without the projection
-            RewriteQueryForProjection(ref queryTemplate);
+            RewriteQueryIfNeeded(ref queryTemplate);
 
             queryTemplates = new(_requestHandler.DatabaseContext.ShardCount);
 
@@ -97,9 +86,9 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
             }
         }
 
-        // * For collection queries that specify startsWith by id(), we need to send to all shards
-        // * For collection queries without any where clause, we need to send to all shards
-        // * For indexes, we sent to all shards
+        // For collection queries that specify startsWith by id(), we need to send to all shards
+        // For collection queries without any where clause, we need to send to all shards
+        // For indexes, we sent to all shards
         _commands = CreateQueryCommands(queryTemplates);
     }
 
@@ -134,69 +123,81 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
         }
     }
 
-    private void RewriteQueryForPaging(ref BlittableJsonReaderObject queryTemplate)
+    private void RewriteQueryIfNeeded(ref BlittableJsonReaderObject queryTemplate)
     {
-        if (_query.Offset is null or <= 0)
-            return;
+        var rewriteForPaging = _query.Offset is > 0;
+        var rewriteForProjection = true;
 
-        var clone = _query.Metadata.Query.ShallowCopy();
-        
-        clone.Offset = null; // sharded queries has to start from 0 on all nodes
-        clone.Limit = new ValueExpression(LimitToken, ValueTokenType.Parameter);
-        queryTemplate.Modifications = new DynamicJsonValue(queryTemplate)
-        {
-            [nameof(IndexQuery.Query)] = clone.ToString()
-        };
-
-        DynamicJsonValue modifiedArgs;
-        if (queryTemplate.TryGet(nameof(IndexQuery.QueryParameters), out BlittableJsonReaderObject args))
-        {
-            modifiedArgs = new DynamicJsonValue(args);
-            args.Modifications = modifiedArgs;
-        }
-        else
-        {
-            queryTemplate.Modifications[nameof(IndexQuery.QueryParameters)] = modifiedArgs = new DynamicJsonValue();
-        }
-
-        var limit = ((_query.Limit ?? 0) + (_query.Offset ?? 0)) * (long)_requestHandler.DatabaseContext.ShardCount;
-
-        if (limit > int.MaxValue) // overflow
-            limit = int.MaxValue;
-
-        modifiedArgs[LimitToken] = limit;
-
-        queryTemplate.Modifications.Remove(nameof(IndexQueryServerSide.Start));
-        queryTemplate.Modifications.Remove(nameof(IndexQueryServerSide.PageSize));
-
-        queryTemplate = _context.ReadObject(queryTemplate, "modified-query");
-    }
-
-    private void RewriteQueryForProjection(ref BlittableJsonReaderObject queryTemplate)
-    {
         var query = _query.Metadata.Query;
         if (query.Select?.Count > 0 == false &&
             query.SelectFunctionBody.FunctionText == null)
-            return;
-
-        if (_query.Metadata.IndexName == null || _isMapReduceIndex == false)
-            return;
-
-        if (query.Load is { Count: > 0 })
         {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "https://issues.hibernatingrhinos.com/issue/RavenDB-17887");
-            throw new NotSupportedInShardingException("Loading a document inside a projection from a map-reduce index isn't supported");
+            rewriteForProjection = false;
         }
 
-        var clone = query.ShallowCopy();
-        clone.Select = null;
-        clone.SelectFunctionBody = default;
-        clone.DeclaredFunctions = null;
-
-        queryTemplate.Modifications = new DynamicJsonValue(queryTemplate)
+        if (_query.Metadata.IndexName == null || _isMapReduceIndex == false)
         {
-            [nameof(IndexQuery.Query)] = clone.ToString()
-        };
+            rewriteForProjection = false;
+        }
+
+        if (rewriteForPaging == false && rewriteForProjection == false)
+            return;
+
+        var clone = _query.Metadata.Query.ShallowCopy();
+
+        DynamicJsonValue modifications = new(queryTemplate);
+
+        if (rewriteForPaging)
+        {
+            // For paging queries, we modify the limits on the query to include all the results from all
+            // shards if there is an offset. But if there isn't an offset, we can just get the limit from
+            // each node and then merge them
+
+            clone.Offset = null; // sharded queries has to start from 0 on all nodes
+            clone.Limit = new ValueExpression(LimitToken, ValueTokenType.Parameter);
+
+            DynamicJsonValue modifiedArgs;
+            if (queryTemplate.TryGet(nameof(IndexQuery.QueryParameters), out BlittableJsonReaderObject args))
+            {
+                modifiedArgs = new DynamicJsonValue(args);
+                args.Modifications = modifiedArgs;
+            }
+            else
+            {
+                modifications[nameof(IndexQuery.QueryParameters)] = modifiedArgs = new DynamicJsonValue();
+            }
+
+            var limit = ((_query.Limit ?? 0) + (_query.Offset ?? 0)) * (long)_requestHandler.DatabaseContext.ShardCount;
+
+            if (limit > int.MaxValue) // overflow
+                limit = int.MaxValue;
+
+            modifiedArgs[LimitToken] = limit;
+
+            modifications.Remove(nameof(IndexQueryServerSide.Start));
+            modifications.Remove(nameof(IndexQueryServerSide.PageSize));
+        }
+
+        if (rewriteForProjection)
+        {
+            // If we have a projection in a map-reduce index,
+            // the shards will send the query result and the orchestrator will re-reduce and apply the projection
+            // in that case we must send the query without the projection
+
+            if (query.Load is { Count: > 0 })
+            {
+                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "https://issues.hibernatingrhinos.com/issue/RavenDB-17887");
+                throw new NotSupportedInShardingException("Loading a document inside a projection from a map-reduce index isn't supported");
+            }
+
+            clone.Select = null;
+            clone.SelectFunctionBody = default;
+            clone.DeclaredFunctions = null;
+        }
+
+        modifications[nameof(IndexQuery.Query)] = clone.ToString();
+
+        queryTemplate.Modifications = modifications;
 
         queryTemplate = _context.ReadObject(queryTemplate, "modified-query");
     }
