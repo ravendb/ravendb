@@ -2458,7 +2458,17 @@ namespace Raven.Server.Documents.Indexes
                 if (Type == IndexType.Faulty)
                     return 1;
 
-                return _indexStorage.ReadErrorsCount();
+                try
+                {
+                    return _indexStorage.ReadErrorsCount();
+                }
+                catch (Exception e)
+                {
+                    if (_logger.IsOperationsEnabled)
+                        _logger.Operations("Failed to get index error count", e);
+
+                    return 1;
+                }
             }
         }
 
