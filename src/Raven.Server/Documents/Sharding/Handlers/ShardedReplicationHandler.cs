@@ -75,4 +75,11 @@ public class ShardedReplicationHandler : ShardedDatabaseRequestHandler
         using (var processor = new ShardedReplicationHandlerProcessorForGetIncomingRejectionInfo(this))
             await processor.ExecuteAsync();
     }
+
+    [RavenShardedAction("/databases/*/replication/debug/outgoing-reconnect-queue", "GET")]
+    public async Task GetReplicationReconnectionQueue()
+    {
+        using (var processor = new ShardedReplicationHandlerProcessorForGetOutgoingReconnectionQueue(this))
+            await processor.ExecuteAsync();
+    }
 }
