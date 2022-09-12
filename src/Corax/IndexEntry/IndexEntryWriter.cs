@@ -1,5 +1,6 @@
 using System;
 using System.Buffers;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -14,7 +15,7 @@ namespace Corax;
 
 // The rationale to use ref structs is not allowing to copy those around so easily. They should be cheap to construct
 // and cheaper to use. 
-public unsafe partial struct IndexEntryWriter : IDisposable
+public unsafe struct IndexEntryWriter : IDisposable
 {
     private static int Invalid = unchecked(~0);
 
@@ -26,7 +27,7 @@ public unsafe partial struct IndexEntryWriter : IDisposable
     private ByteStringContext<ByteStringMemoryCache>.InternalScope _bufferScope;
     private ByteString _rawBuffer;
 
-    private int FreeSpace => _rawBuffer.Length - KnownFieldMetadataSize - _dataIndex - _dynamicFieldIndex;
+    private int FreeSpace => _rawBuffer.Length - KnownFieldMetadataSize - _dataIndex;
 
     // The usable part of the buffer, the metadata space will be removed from the usable space.
     private Span<byte> Buffer => new (_rawBuffer.Ptr, _rawBuffer.Length - KnownFieldMetadataSize);
@@ -37,6 +38,8 @@ public unsafe partial struct IndexEntryWriter : IDisposable
     // for the rest we will use a uint.
     private Span<int> KnownFieldsLocations => new (_rawBuffer.Ptr + _rawBuffer.Length - KnownFieldMetadataSize, _knownFields.Count);
 
+    private List<int> _dynamicFieldsLocations; 
+
     private int KnownFieldMetadataSize => _knownFields.Count * sizeof(uint);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -44,10 +47,6 @@ public unsafe partial struct IndexEntryWriter : IDisposable
 
     // Current pointer.        
     private int _dataIndex;
-
-    // Dynamic fields will use a full integer to store the pointer location at the metadata table. They are supposed to be rare 
-    // so we wont even try to make the process more complex just to deal with them efficiently.
-    private int _dynamicFieldIndex;
 
     public IndexEntryWriter(LowLevelTransaction llt, IndexFieldsMapping knownFields) 
         : this(llt.Allocator, knownFields)
@@ -61,9 +60,10 @@ public unsafe partial struct IndexEntryWriter : IDisposable
 
         _bufferScope = _context.Allocate(16 * Sparrow.Global.Constants.Size.Kilobyte, out _rawBuffer);
 
-        _dynamicFieldIndex = 0;
         _dataIndex = Unsafe.SizeOf<IndexEntryHeader>();
 
+        _dynamicFieldsLocations = null;
+        
         // We prepare the table in order to avoid tracking the writes. 
         KnownFieldsLocations.Fill(Invalid);
     }
@@ -110,6 +110,64 @@ public unsafe partial struct IndexEntryWriter : IDisposable
         _dataIndex += length;
         value.CopyTo(buffer.Slice(_dataIndex, value.Length));
         _dataIndex += value.Length;
+    }
+
+    public void WriteDynamic(string name, ReadOnlySpan<byte> value, long longValue, double doubleValue)
+    {
+        using var _ = _context.From(name, ByteStringType.Immutable, out var fieldNameStr);
+        Span<byte> tmpBuffer = stackalloc byte[10];
+        int fieldLenLen = VariableSizeEncoding.Write(tmpBuffer, fieldNameStr.Length);
+        long requiredSize = fieldLenLen +
+                            fieldNameStr.Length +
+                            sizeof(IndexEntryFieldType) + 
+                            value.Length + 4 * sizeof(long);
+        
+        if (FreeSpace < requiredSize)
+            UnlikelyGrowAuxiliaryBuffer(requiredSize);
+
+        WriteDynamicFieldName(fieldNameStr);
+        WriteTuple(value, longValue, doubleValue);
+    }
+    
+    /// <summary>
+    /// Writes a textual value to the buffer, as a named value
+    /// </summary>
+    public void WriteDynamic(string name, ReadOnlySpan<byte> value)
+    {
+        using var _ = _context.From(name, ByteStringType.Immutable, out var fieldNameStr);
+        long requiredSize = VariableSizeEncoding.MaximumSizeOf<int>() + // max field len size 
+                            fieldNameStr.Length +
+                            sizeof(IndexEntryFieldType) +
+                            VariableSizeEncoding.MaximumSizeOf<int>() + // max val len size
+                            value.Length;
+        
+        if (FreeSpace < requiredSize)
+            UnlikelyGrowAuxiliaryBuffer(requiredSize);
+        
+        WriteDynamicFieldName(fieldNameStr);
+
+        Span<byte> buffer = Buffer;
+        Unsafe.WriteUnaligned(ref buffer[_dataIndex], IndexEntryFieldType.Raw);
+        _dataIndex += sizeof(IndexEntryFieldType);
+        _dataIndex += VariableSizeEncoding.Write(buffer, value.Length, _dataIndex);
+        value.CopyTo(buffer[_dataIndex..]);
+        _dataIndex += value.Length;
+    }
+
+    private void WriteDynamicFieldName(ByteString fieldNameStr)
+    {
+        Span<byte> tmpBuffer = stackalloc byte[5];
+        
+        int fieldLenLen = VariableSizeEncoding.Write(tmpBuffer, fieldNameStr.Length);
+
+        _dynamicFieldsLocations ??= new();
+        _dynamicFieldsLocations.Add(_dataIndex);
+        
+        var buffer = Buffer;
+        tmpBuffer[..fieldLenLen].CopyTo(buffer[_dataIndex..]);
+        _dataIndex += fieldLenLen;
+        fieldNameStr.CopyTo(buffer[_dataIndex..]);
+        _dataIndex += fieldNameStr.Length;
     }
 
     /// <summary>
@@ -274,14 +332,20 @@ public unsafe partial struct IndexEntryWriter : IDisposable
         if (FreeSpace < sizeof(IndexEntryFieldType) + value.Length + 4 * sizeof(long))
             UnlikelyGrowAuxiliaryBuffer(sizeof(IndexEntryFieldType) + value.Length + 4 * sizeof(long));
 
-        int dataLocation = _dataIndex;
-        var buffer = Buffer;        
 
         // Write known field pointer.
         ref int fieldLocation = ref KnownFieldsLocations[field];
-        fieldLocation = dataLocation | Constants.IndexWriter.IntKnownFieldMask;
+        fieldLocation = _dataIndex | Constants.IndexWriter.IntKnownFieldMask;
 
         // Write the tuple information. 
+        WriteTuple(value, longValue, doubleValue);
+    }
+
+    private void WriteTuple(ReadOnlySpan<byte> value, long longValue, double doubleValue)
+    {
+        int dataLocation = _dataIndex;
+        var buffer = Buffer;        
+        
         ref var indexEntryField = ref Unsafe.AsRef<IndexEntryFieldType>(Unsafe.AsPointer(ref buffer[dataLocation]));
         indexEntryField = IndexEntryFieldType.Tuple;
         dataLocation += sizeof(IndexEntryFieldType);
@@ -455,7 +519,7 @@ public unsafe partial struct IndexEntryWriter : IDisposable
         return dataLocation;
     }
 
-    public unsafe void Write(int field, IReadOnlySpanIndexer values, ReadOnlySpan<long> longValues, ReadOnlySpan<double> doubleValues)
+    public void Write(int field, IReadOnlySpanIndexer values, ReadOnlySpan<long> longValues, ReadOnlySpan<double> doubleValues)
     {
         Debug.Assert(field < _knownFields.Count, "The field must be known");
         Debug.Assert(KnownFieldsLocations[field] == Invalid, "The field has been written before.");
@@ -539,9 +603,13 @@ public unsafe partial struct IndexEntryWriter : IDisposable
 
     public ByteStringContext<ByteStringMemoryCache>.InternalScope Finish(out ByteString output)
     {
-        // Since we are at the end of the process, as long as we hve 2 longs of space we can
-        // finish the preprocessing to write the data into the new allocated buffer. 
-        int requiredSpace = (_knownFields.Count + 2) * sizeof(long);
+        // Since we are at the end of the process, as long as we have 2 longs of space we can
+        // finish the preprocessing to write the data into the new allocated buffer. We also
+        // need to figure out how many dynamic entries we need
+        
+        int numberOfDynamicFields = (_dynamicFieldsLocations?.Count ?? 0);
+
+        int requiredSpace = (_knownFields.Count + 2) * sizeof(long) + (numberOfDynamicFields + 1) * 5;
         if (FreeSpace < requiredSpace)
             UnlikelyGrowAuxiliaryBuffer(requiredSpace);
         
@@ -566,32 +634,26 @@ public unsafe partial struct IndexEntryWriter : IDisposable
 
         // The size of the known fields metadata section
         int metadataSection = IndexEntryReader.TableEncodingLookupTable[(int)encodeSize] * _knownFields.Count;
-        // The size of the unknown/dynamic fields metadata section            
-        int dynamicMetadataSection = _dynamicFieldIndex * sizeof(uint);
-        int dynamicMetadataSectionOffset = buffer.Length - dynamicMetadataSection - 1;
 
         ref var header = ref MemoryMarshal.AsRef<IndexEntryHeader>(buffer);
-        header.Length = (uint)(_dataIndex + dynamicMetadataSection + metadataSection + 1);
 
         // The known field count is encoded as xxxxxxyy where:
-        // x: the count
+        // x: the count (1 ... 16K should be enough, using checked math to verify it anyway)
         // y: the encode size
-        header.KnownFieldCount = (ushort)(_knownFields.Count << 2 | (int)encodeSize);
-        header.DynamicTable = (uint)_dataIndex;
+        header.KnownFieldCount = checked((ushort)(_knownFields.Count << 2 | (int)encodeSize));
 
         // The dynamic metadata fields count. 
-        Unsafe.WriteUnaligned(ref buffer[_dataIndex], (byte)_dynamicFieldIndex);
-        _dataIndex += sizeof(byte);
-
-        if (dynamicMetadataSection != 0)
+        header.DynamicTable = (uint)_dataIndex;
+        _dataIndex += VariableSizeEncoding.Write(buffer, numberOfDynamicFields, _dataIndex);
+        if (_dynamicFieldsLocations != null)
         {
-            // From the offset to the end... move the data toward the closest position
-            var metadataTable = buffer[dynamicMetadataSectionOffset..];
-            metadataTable.CopyTo(buffer[_dataIndex..]);
-
-            // Move the pointer to the end of the copied section.
-            _dataIndex += dynamicMetadataSection;
+            foreach (int fieldsLocation in _dynamicFieldsLocations!)
+            {
+                _dataIndex += VariableSizeEncoding.Write(buffer, fieldsLocation, _dataIndex);
+            }
         }
+
+        header.Length = (uint)(_dataIndex + metadataSection);
 
         switch (encodeSize)
         {
@@ -616,7 +678,7 @@ public unsafe partial struct IndexEntryWriter : IDisposable
         // prepare for the next after finish instead of explicitly call something like `.Reset()`
         // if we dont know if are going to be write another entry. The usage pattern is to write
         // as many as possible with the same instance, so overall the performance impact is negligible. 
-        _dynamicFieldIndex = 0;
+        _dynamicFieldsLocations?.Clear();
         _dataIndex = Unsafe.SizeOf<IndexEntryHeader>();
         KnownFieldsLocations.Fill(Invalid); 
 
@@ -674,9 +736,9 @@ public unsafe partial struct IndexEntryWriter : IDisposable
 
         // We need to copy the data over to the new buffer.
         Unsafe.CopyBlock(newBuffer.Ptr, _rawBuffer.Ptr, (uint)_rawBuffer.Length);
-        Unsafe.CopyBlock(newBuffer.Ptr + newBuffer.Length - KnownFieldMetadataSize - _dynamicFieldIndex,
-                         _rawBuffer.Ptr + _rawBuffer.Length - KnownFieldMetadataSize - _dynamicFieldIndex,
-                         (uint)(_dynamicFieldIndex + KnownFieldMetadataSize));
+        Unsafe.CopyBlock(newBuffer.Ptr + newBuffer.Length - KnownFieldMetadataSize,
+                         _rawBuffer.Ptr + _rawBuffer.Length - KnownFieldMetadataSize,
+                         (uint)(KnownFieldMetadataSize));
 
         _bufferScope.Dispose();
         _bufferScope = newBufferScope;
