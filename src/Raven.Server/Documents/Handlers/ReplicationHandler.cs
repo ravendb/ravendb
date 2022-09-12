@@ -69,34 +69,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/replication/debug/incoming-rejection-info", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
         public async Task GetReplicationIncomingRejectionInfo()
         {
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
-            {
-                var stats = new DynamicJsonArray();
-                foreach (var statItem in Database.ReplicationLoader.IncomingRejectionStats)
-                {
-                    stats.Add(new DynamicJsonValue
-                    {
-                        ["Key"] = new DynamicJsonValue
-                        {
-                            ["SourceDatabaseId"] = statItem.Key.SourceDatabaseId,
-                            ["SourceDatabaseName"] = statItem.Key.SourceDatabaseName,
-                            ["SourceMachineName"] = statItem.Key.SourceMachineName,
-                            ["SourceUrl"] = statItem.Key.SourceUrl
-                        },
-                        ["Value"] = new DynamicJsonArray(statItem.Value.Select(x => new DynamicJsonValue
-                        {
-                            ["Reason"] = x.Reason,
-                            ["When"] = x.When
-                        }))
-                    });
-                }
-
-                context.Write(writer, new DynamicJsonValue
-                {
-                    ["Stats"] = stats
-                });
-            }
+            using (var processor = new ReplicationHandlerProcessorForGetIncomingRejectionInfo(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/replication/debug/outgoing-reconnect-queue", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
