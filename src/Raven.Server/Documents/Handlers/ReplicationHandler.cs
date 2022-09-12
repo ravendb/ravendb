@@ -62,30 +62,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/replication/debug/incoming-last-activity-time", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
         public async Task GetReplicationIncomingActivityTimes()
         {
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
-            {
-                var data = new DynamicJsonArray();
-                foreach (var item in Database.ReplicationLoader.IncomingLastActivityTime)
-                {
-                    data.Add(new DynamicJsonValue
-                    {
-                        ["Key"] = new DynamicJsonValue
-                        {
-                            ["SourceDatabaseId"] = item.Key.SourceDatabaseId,
-                            ["SourceDatabaseName"] = item.Key.SourceDatabaseName,
-                            ["SourceMachineName"] = item.Key.SourceMachineName,
-                            ["SourceUrl"] = item.Key.SourceUrl
-                        },
-                        ["Value"] = item.Value
-                    });
-                }
-
-                context.Write(writer, new DynamicJsonValue
-                {
-                    ["Stats"] = data
-                });
-            }
+            using (var processor = new ReplicationHandlerProcessorForGetIncomingActivityTimes(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/replication/debug/incoming-rejection-info", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
