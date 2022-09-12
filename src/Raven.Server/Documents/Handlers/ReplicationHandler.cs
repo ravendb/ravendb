@@ -76,25 +76,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/replication/debug/outgoing-reconnect-queue", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
         public async Task GetReplicationReconnectionQueue()
         {
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
-            {
-                var data = new DynamicJsonArray();
-                foreach (var queueItem in Database.ReplicationLoader.ReconnectQueue)
-                {
-                    data.Add(new DynamicJsonValue
-                    {
-                        ["Url"] = queueItem.Url,
-                        ["Database"] = queueItem.Database,
-                        ["Disabled"] = queueItem.Disabled
-                    });
-                }
-
-                context.Write(writer, new DynamicJsonValue
-                {
-                    ["Queue-Info"] = data
-                });
-            }
+            using (var processor = new ReplicationHandlerProcessorForGetOutgoingReconnectionQueue(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/replication/conflicts/solver", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
