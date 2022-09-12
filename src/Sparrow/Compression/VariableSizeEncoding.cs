@@ -364,6 +364,12 @@ namespace Sparrow.Compression
             return pos - startPos;
         }
 
+        public static unsafe int MaximumSizeOf<T>() where T: unmanaged
+        {
+            int i = (sizeof(T) * 8 / 7) +1;
+            return i;
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static unsafe int Write<T>(byte* dest, T value) where T : unmanaged
         {

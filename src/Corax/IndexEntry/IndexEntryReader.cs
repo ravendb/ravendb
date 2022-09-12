@@ -40,6 +40,59 @@ public ref struct IndexEntryReader
         Unsafe.SkipInit(out _lastFieldAccessedIsTyped);
     }
 
+    public bool ReadDynamic<T>(ReadOnlySpan<byte> name, out T value) where T : unmanaged
+    {
+        return ReadDynamic(name, out _, out value);
+    }
+    
+    public bool ReadDynamic<T>(ReadOnlySpan<byte> name, out IndexEntryFieldType type, out T value) where T: unmanaged
+    {
+        if (ReadDynamicValueOffset(name, out var valueOffset))
+        {
+            return ReadFromOffset(valueOffset, out type, out value);
+        }
+        value = default;
+        type = default;
+        return false;
+    }
+    
+    public bool ReadDynamic(ReadOnlySpan<byte> name, out Span<byte> value)
+    {
+        if (ReadDynamicValueOffset(name, out var valueOffset))
+        {
+            valueOffset += sizeof(IndexEntryFieldType);
+            var valLen = VariableSizeEncoding.Read<int>(_buffer, out var offset, valueOffset);
+            valueOffset += offset;
+            value = _buffer[valueOffset..(valueOffset + valLen)];
+            return true;
+        }
+        value = default;
+        return false;
+    }
+
+    private bool ReadDynamicValueOffset(ReadOnlySpan<byte> name, out int valueOffset)
+    {
+        ref var header = ref MemoryMarshal.AsRef<IndexEntryHeader>(_buffer);
+        int position = checked((int)header.DynamicTable);
+        int numberOfDynamicEntries = VariableSizeEncoding.Read<int>(_buffer, out var offset, position);
+        position += offset;
+        for (int i = 0; i < numberOfDynamicEntries; i++)
+        {
+            int dynamicEntryOffset = VariableSizeEncoding.Read<int>(_buffer, out offset, position);
+            position += offset;
+            var len = VariableSizeEncoding.Read<int>(_buffer, out offset, dynamicEntryOffset);
+            Span<byte> fieldName = _buffer[(dynamicEntryOffset + offset)..(dynamicEntryOffset + offset + len)];
+            if (fieldName.SequenceEqual(name))
+            {
+                valueOffset = dynamicEntryOffset + offset + len ;
+                return true;
+            }
+        }
+
+        valueOffset = default;
+        return false;
+    }
+
     /// <summary>
     /// Read unmanaged field entry from buffer.
     /// To get coordinates from Spatial entry you've to set T as (double Latitude, double Longitude)
@@ -50,6 +103,16 @@ public ref struct IndexEntryReader
         if (intOffset == Invalid || isTyped == false)
             goto Fail;
 
+        return ReadFromOffset(intOffset, out type, out value);
+        
+        Fail:
+        Unsafe.SkipInit(out value);
+        type = IndexEntryFieldType.Invalid;
+        return false;
+    }
+
+    private bool ReadFromOffset<T>(int intOffset, out IndexEntryFieldType type, out T value) where T : unmanaged
+    {
         type = Unsafe.ReadUnaligned<IndexEntryFieldType>(ref _buffer[intOffset]);
         if (type == IndexEntryFieldType.Null)
             goto IsNull;
@@ -140,11 +203,7 @@ public ref struct IndexEntryReader
 
         throw new NotSupportedException($"The type {nameof(T)} is unsupported.");
 
-    Fail:
-        Unsafe.SkipInit(out value);
-        type = IndexEntryFieldType.Invalid;
-        return false;
-    IsNull:
+        IsNull:
         Unsafe.SkipInit(out value);
         type = IndexEntryFieldType.Null;
         return true;
