@@ -6,6 +6,8 @@
 
 using System;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Exceptions.Sharding;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.Subscriptions.Stats;
 using Raven.Server.Documents.Subscriptions.SubscriptionProcessor;
@@ -36,7 +38,7 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
         public SubscriptionConnectionsStateOrchestrator GetOrchestratedSubscriptionConnectionState()
         {
             var subscriptions = _databaseContext.Subscriptions.SubscriptionsConnectionsState;
-            return  _state = subscriptions.GetOrAdd(SubscriptionId, subId => new SubscriptionConnectionsStateOrchestrator(_serverStore, _databaseContext, subId));
+            return _state = subscriptions.GetOrAdd(SubscriptionId, subId => new SubscriptionConnectionsStateOrchestrator(_serverStore, _databaseContext, subId));
         }
 
         public override void FinishProcessing()
@@ -105,13 +107,21 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
             return Task.CompletedTask;
         }
 
+        protected override void AssertSupportedFeatures()
+        {
+            base.AssertSupportedFeatures();
+
+            if (_options.Strategy == SubscriptionOpeningStrategy.Concurrent)
+                throw new NotSupportedInShardingException("Concurrent subscriptions are not supported in sharding.");
+        }
+
         protected override void OnError(Exception e) => _processor?.CurrentBatch?.SetException(e);
 
         public override void Dispose()
         {
             if (_isDisposed)
                 return;
-            
+
             _isDisposed = true;
 
             _tokenRegisterDisposable?.Dispose();

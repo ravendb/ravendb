@@ -548,7 +548,7 @@ namespace Raven.Server.Documents.Subscriptions
 
         public void RecordConnectionInfo() => Stats.ConnectionScope.RecordConnectionInfo(SubscriptionState, ClientUri, Options.Strategy, WorkerId);
 
-        private void AssertSupportedFeatures()
+        protected virtual void AssertSupportedFeatures()
         {
             if (_options.Strategy == SubscriptionOpeningStrategy.Concurrent)
             {
