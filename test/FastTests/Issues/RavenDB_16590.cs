@@ -75,7 +75,7 @@ namespace FastTests.Issues
                 "Indexing.TransactionSizeLimitInMb",
                 "Indexing.OrderByScoreAutomaticallyWhenBoostingIsInvolved",
                 "Indexing.Lucene.UseCompoundFileInMerging",
-                "Indexing.Lucene.IndexInputType"
+                "Indexing.Lucene.IndexInputType",
 
                 
                 //Obsolete studio keys:
