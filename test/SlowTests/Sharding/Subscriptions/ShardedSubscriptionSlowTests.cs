@@ -569,7 +569,7 @@ namespace SlowTests.Sharding.Subscriptions
             }
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-18568")]
         public async Task ConcurrentSubscriptions()
         {
             using (var store = Sharding.GetDocumentStore())
@@ -624,7 +624,7 @@ namespace SlowTests.Sharding.Subscriptions
             }
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-18568")]
         public async Task CanGetSubscriptionsResendItems()
         {
             using (var store = Sharding.GetDocumentStore())
@@ -660,7 +660,7 @@ namespace SlowTests.Sharding.Subscriptions
                                 amre2.Set();
                                 await amre.WaitAsync(_reasonableWaitTime);
                             }
-                            
+
                             con1Docs.Add(item.Id);
                         }
                     });
@@ -671,7 +671,7 @@ namespace SlowTests.Sharding.Subscriptions
                         var batches = await store.Maintenance.SendAsync(new GetSubscriptionBatchesStateOperation(subscription.SubscriptionName));
                         return batches.Results.ToList().Exists(b => b.Id == "user/6");
                     });
-                    
+
                     amre.Set();
 
                     await AssertWaitForTrueAsync(() => Task.FromResult(con1Docs.Count == 6), 6000);
