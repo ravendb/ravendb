@@ -61,4 +61,11 @@ public class ShardedReplicationHandler : ShardedDatabaseRequestHandler
         using (var processor = new ShardedReplicationHandlerProcessorForGetOutgoingFailureStats(this))
             await processor.ExecuteAsync();
     }
+
+    [RavenShardedAction("/databases/*/replication/debug/incoming-last-activity-time", "GET")]
+    public async Task GetReplicationIncomingActivityTimes()
+    {
+        using (var processor = new ShardedReplicationHandlerProcessorForGetIncomingActivityTimes(this))
+            await processor.ExecuteAsync();
+    }
 }
