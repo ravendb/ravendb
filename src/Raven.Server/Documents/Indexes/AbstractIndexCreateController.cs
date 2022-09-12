@@ -43,7 +43,7 @@ public abstract class AbstractIndexCreateController
 
     protected abstract ValueTask WaitForIndexNotificationAsync(long index);
 
-    public async ValueTask ValidateStaticIndexAsync(IndexDefinition definition)
+    public virtual async ValueTask ValidateStaticIndexAsync(IndexDefinition definition)
     {
         if (IndexStore.IsValidIndexName(definition.Name, true, out var errorMessage) == false)
         {

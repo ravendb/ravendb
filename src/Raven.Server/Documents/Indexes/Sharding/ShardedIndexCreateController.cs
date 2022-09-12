@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Exceptions.Sharding;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents.Sharding;
@@ -51,4 +53,12 @@ public class ShardedIndexCreateController : AbstractIndexCreateController
     protected override IEnumerable<IndexInformationHolder> GetIndexes() => _context.Indexes.GetIndexes();
 
     protected override ValueTask WaitForIndexNotificationAsync(long index) => _context.Cluster.WaitForExecutionOnAllNodesAsync(index);
+
+    public override async ValueTask ValidateStaticIndexAsync(IndexDefinition definition)
+    {
+        await base.ValidateStaticIndexAsync(definition);
+
+        if (string.IsNullOrEmpty(definition.OutputReduceToCollection) == false)
+            throw new NotSupportedInShardingException("Index with output reduce to collection is not supported in sharding.");
+    }
 }

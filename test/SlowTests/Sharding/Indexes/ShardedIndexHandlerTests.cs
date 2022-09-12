@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Exceptions.Sharding;
 using SlowTests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
@@ -71,6 +72,17 @@ namespace SlowTests.Sharding.Indexes
             }
         }
 
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Sharding)]
+        public void Index_With_OutputReduceToCollection_ShouldThrow()
+        {
+            using (var store = Sharding.GetDocumentStore())
+            {
+                var e = Assert.Throws<NotSupportedInShardingException>(() => new User_OutputReduceToCollection_Index().Execute(store));
+
+                Assert.Contains("Index with output reduce to collection is not supported in sharding.", e.Message);
+            }
+        }
+
         private class UserIndex : AbstractIndexCreationTask<User>
         {
             public UserIndex()
@@ -80,6 +92,36 @@ namespace SlowTests.Sharding.Indexes
                                {
                                    user.Name
                                };
+            }
+        }
+
+        private class User_OutputReduceToCollection_Index : AbstractIndexCreationTask<User, User_OutputReduceToCollection_Index.Result>
+        {
+            public class Result
+            {
+                public string Name { get; set; }
+
+                public int Count { get; set; }
+            }
+
+            public User_OutputReduceToCollection_Index()
+            {
+                Map = users => from user in users
+                               select new
+                               {
+                                   user.Name,
+                                   Count = 1
+                               };
+
+                Reduce = results => from result in results
+                                    group result by result.Name into g
+                                    select new
+                                    {
+                                        Name = g.Key,
+                                        Count = g.Sum(x => x.Count)
+                                    };
+
+                OutputReduceToCollection = "Results";
             }
         }
     }
