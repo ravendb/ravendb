@@ -63,7 +63,7 @@ public class RawCoraxFlag : StorageTest
             var match = searcher.SearchQuery("Id", "1", Constants.Search.Operator.Or, false, IndexId);
             Assert.Equal(1, match.Fill(mem));
             var result = searcher.GetReaderFor(mem[0]);
-            result.Read(1, out Span<byte> blittableBinary);
+            result.GetReaderFor(1).Read(out Span<byte> blittableBinary);
 
             fixed (byte* ptr = &blittableBinary.GetPinnableReference())
             {

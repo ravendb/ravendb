@@ -80,7 +80,7 @@ public class SpatialTests : StorageTest
                 var fieldType = reader.GetFieldType(CoordinatesIndex, out int intOffset);
                 Assert.Equal(IndexEntryFieldType.SpatialPoint, fieldType);
                 
-                reader.Read(CoordinatesIndex, out (double, double) coords);
+                reader.GetReaderFor(CoordinatesIndex).Read(out (double, double) coords);
                 Assert.Equal(coords.Item1, latitude);
                 Assert.Equal(coords.Item2, longitude);
             }

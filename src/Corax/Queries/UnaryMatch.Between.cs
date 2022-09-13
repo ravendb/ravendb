@@ -37,7 +37,7 @@ namespace Corax.Queries
                 for (int i = 0; i < results; i++)
                 {
                     var reader = searcher.GetReaderFor(currentMatches[i]);
-                    var read = reader.Read(match._fieldId, out var resultX);
+                    var read = reader.GetReaderFor(match._fieldId).Read(out var resultX);
                     if (read && leftSideComparer!.Compare(currentType1, resultX) && rightSideComparer!.Compare(currentType2, resultX))
                     {
                         // We found a match.
@@ -86,13 +86,13 @@ namespace Corax.Queries
                     bool isMatch = false;
                     if (typeof(TValueType) == typeof(long))
                     {
-                        var read = reader.Read<long>(match._fieldId, out var rx);
+                        var read = reader.GetReaderFor(match._fieldId).Read<long>(out var rx);
                         if (read)
                             isMatch = leftSideComparer!.Compare((long)(object)currentType1, rx) && rightSideComparer!.Compare((long)(object)currentType2, rx);
                     }
                     else if (typeof(TValueType) == typeof(double))
                     {
-                        var read = reader.Read<double>(match._fieldId, out var rx);
+                        var read = reader.GetReaderFor(match._fieldId).Read<double>(out var rx);
                         if (read)
                             isMatch = leftSideComparer!.Compare((double)(object)currentType1, rx) && rightSideComparer!.Compare((double)(object)currentType2, rx);
                     }
@@ -197,7 +197,7 @@ namespace Corax.Queries
                 for (int i = 0; i < results; i++)
                 {
                     var reader = searcher.GetReaderFor(currentMatches[i]);
-                    var read = reader.Read(match._fieldId, out var resultX);
+                    var read = reader.GetReaderFor(match._fieldId).Read(out var resultX);
                     if (read && leftSideComparer!.Compare(currentType1, resultX) && rightSideComparer!.Compare(currentType2, resultX))
                     {
                         // We found a match so we have to skip it.
@@ -247,13 +247,13 @@ namespace Corax.Queries
                     bool isMatch = false;
                     if (typeof(TValueType) == typeof(long))
                     {
-                        var read = reader.Read<long>(match._fieldId, out var rx);
+                        var read = reader.GetReaderFor(match._fieldId).Read<long>(out var rx);
                         if (read)
                             isMatch = leftSideComparer!.Compare((long)(object)currentType1, rx) && rightSideComparer!.Compare((long)(object)currentType2, rx);
                     }
                     else if (typeof(TValueType) == typeof(double))
                     {
-                        var read = reader.Read<double>(match._fieldId, out var rx);
+                        var read = reader.GetReaderFor(match._fieldId).Read<double>(out var rx);
                         if (read)
                             isMatch = leftSideComparer!.Compare((double)(object)currentType1, rx) && rightSideComparer!.Compare((double)(object)currentType2, rx);
                     }

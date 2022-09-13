@@ -181,7 +181,7 @@ namespace Corax.Queries
                 if (comparer is not SpatialAscendingMatchComparer spatialAscendingMatchComparer)
                     goto Failed;
 
-                var readX = reader.Read(fieldId, out (double lat, double lon) coordinates);
+                var readX = reader.GetReaderFor(fieldId).Read( out (double lat, double lon) coordinates);
                 var distance = SpatialUtils.GetGeoDistance(in coordinates, in spatialAscendingMatchComparer);
                 
                 storedValue = (TOut)(object)new NumericalItem<double>(distance);
@@ -192,7 +192,7 @@ namespace Corax.Queries
                 if (comparer is not SpatialDescendingMatchComparer spatialDescendingMatchComparer)
                     goto Failed;
                 
-                var readX = reader.Read(fieldId, out (double lat, double lon) coordinates);
+                var readX = reader.GetReaderFor(fieldId).Read( out (double lat, double lon) coordinates);
                 var distance = SpatialUtils.GetGeoDistance(in coordinates, in spatialDescendingMatchComparer);
 
                 storedValue = (TOut)(object)new NumericalItem<double>(distance);
@@ -200,7 +200,7 @@ namespace Corax.Queries
             }
             else if (typeof(TOut) == typeof(SequenceItem))
             {
-                var readX = reader.Read(fieldId, out var sv);
+                var readX = reader.GetReaderFor(fieldId).Read( out var sv);
                 fixed (byte* svp = sv)
                 {
                     storedValue = (TOut)(object)new SequenceItem(svp, sv.Length);
@@ -210,13 +210,13 @@ namespace Corax.Queries
             }
             else if (typeof(TOut) == typeof(NumericalItem<long>))
             {
-                var readX = reader.Read<long>(fieldId, out var value);
+                var readX = reader.GetReaderFor(fieldId).Read<long>( out var value);
                 storedValue = (TOut)(object)new NumericalItem<long>(value);
                 return readX;
             }
             else if (typeof(TOut) == typeof(NumericalItem<double>))
             {
-                var readX = reader.Read<double>(fieldId, out var value);
+                var readX = reader.GetReaderFor(fieldId).Read<double>(out var value);
                 storedValue = (TOut)(object)new NumericalItem<double>(value);
                 return readX;
             }
@@ -531,10 +531,10 @@ namespace Corax.Queries
         {
             var comparer = (TComparer)GetComparer(ref current, comparerIdx);
             var readerX = new IndexEntryReader(item1);
-            var readX = readerX.Read(comparer.FieldId, out (double lat, double lon) resultX);
+            var readX = readerX.GetReaderFor(comparer.FieldId).Read(out (double lat, double lon) resultX);
 
             var readerY = new IndexEntryReader(item2);
-            var readY = readerY.Read(comparer.FieldId, out (double lat, double lon) resultY);
+            var readY = readerY.GetReaderFor(comparer.FieldId).Read(out (double lat, double lon) resultY);
 
             if (readX && readY)
             {
@@ -562,8 +562,8 @@ namespace Corax.Queries
             var comp1Reader = new IndexEntryReader(item1);
             var comp2Reader = new IndexEntryReader(item2);
 
-            bool read1 = comp1Reader.Read(comparer.FieldId, out var sv1);
-            bool read2 = comp2Reader.Read(comparer.FieldId, out var sv2);
+            bool read1 = comp1Reader.GetReaderFor(comparer.FieldId).Read(out var sv1);
+            bool read2 = comp2Reader.GetReaderFor(comparer.FieldId).Read(out var sv2);
             if (read1 && read2)
             {
                 var result = comparer.CompareSequence(sv1, sv2);
@@ -592,8 +592,8 @@ namespace Corax.Queries
 
             if (typeof(T) == typeof(long))
             {
-                read1 = comp1Reader.Read<long>(comparer.FieldId, out var si1);
-                read2 = comp2Reader.Read<long>(comparer.FieldId, out var si2);
+                read1 = comp1Reader.GetReaderFor(comparer.FieldId).Read<long>(out var si1);
+                read2 = comp2Reader.GetReaderFor(comparer.FieldId).Read<long>(out var si2);
                 if (read1 && read2)
                 {
                     var result = comparer.CompareNumerical(si1, si2);
@@ -607,8 +607,8 @@ namespace Corax.Queries
             }
             else
             {
-                read1 = comp1Reader.Read<double>(comparer.FieldId, out var sd1);
-                read2 = comp2Reader.Read<double>(comparer.FieldId, out var sd2);
+                read1 = comp1Reader.GetReaderFor(comparer.FieldId).Read<double>(out var sd1);
+                read2 = comp2Reader.GetReaderFor(comparer.FieldId).Read<double>(out var sd2);
                 if (read1 && read2)
                 {
                     var result = comparer.CompareNumerical<double>(sd1, sd2);

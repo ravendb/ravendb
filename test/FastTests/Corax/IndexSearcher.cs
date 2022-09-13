@@ -1287,7 +1287,7 @@ namespace FastTests.Corax
             void Check(long id, long left, long right, UnaryMatchOperation leftComparer, UnaryMatchOperation rightComparer)
             {
                 var entry = searcher.GetReaderFor(id);
-                Assert.True(entry.Read(ContentIndex, out _, out long number));
+                Assert.True(entry.GetReaderFor(ContentIndex).Read(out _, out long number));
                 Assert.True(PerformUnaryMatch(number));
 
 
@@ -1580,7 +1580,7 @@ namespace FastTests.Corax
                 Span<long> ids = stackalloc long[256];
                 Assert.Equal(1, andNotMatch.Fill(ids));
                 var item = searcher.GetReaderFor(ids[0]);
-                item.Read(IdIndex, out Span<byte> value);
+                item.GetReaderFor(IdIndex).Read(out Span<byte> value);
                 Assert.Equal("entry/1", Encodings.Utf8.GetString(value));
             }
 

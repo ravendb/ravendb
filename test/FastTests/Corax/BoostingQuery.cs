@@ -318,7 +318,7 @@ namespace FastTests.Corax
                 List<long> sortedByCorax = new();
                 for (int i = 0; i < read; ++i)
                 {
-                    searcher.GetReaderFor(ids[i]).Read(Content1, out long value);
+                    searcher.GetReaderFor(ids[i]).GetReaderFor(Content1).Read(out long value);
                     sortedByCorax.Add(value);
                 }                    
 

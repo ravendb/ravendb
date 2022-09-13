@@ -404,7 +404,7 @@ public struct MultiUnaryMatch<TInner> : IQueryMatch
                         break;
 
                     case IndexEntryFieldType.TupleList:
-                        if (reader.TryReadMany(comparer.FieldId, out var iterator) == false)
+                        if (reader.GetReaderFor(comparer.FieldId).TryReadMany(out var iterator) == false)
                             goto NotMatch;
 
                         while (iterator.ReadNext())
@@ -419,7 +419,7 @@ public struct MultiUnaryMatch<TInner> : IQueryMatch
                         break;
 
                     case IndexEntryFieldType.Tuple:
-                        if (reader.Read(comparer.FieldId, out _, out long lVal, out double dVal, out Span<byte> valueInEntry) == false)
+                        if (reader.GetReaderFor(comparer.FieldId).Read(out _, out long lVal, out double dVal, out Span<byte> valueInEntry) == false)
                             goto NotMatch;
 
                         isAccepted = IsAcceptedItem(comparer, valueInEntry, in lVal, in dVal);
@@ -434,7 +434,7 @@ public struct MultiUnaryMatch<TInner> : IQueryMatch
                     case IndexEntryFieldType.TupleListWithNulls:
                     case IndexEntryFieldType.ListWithNulls:
                     case IndexEntryFieldType.List:
-                        if (reader.TryReadMany(comparer.FieldId, out iterator) == false)
+                        if (reader.GetReaderFor(comparer.FieldId).TryReadMany(out iterator) == false)
                             goto NotMatch;
 
                         while (iterator.ReadNext())
@@ -489,7 +489,7 @@ public struct MultiUnaryMatch<TInner> : IQueryMatch
                     case IndexEntryFieldType.Invalid:
                         break;
                     default:
-                        if (reader.Read(comparer.FieldId, out var value) == false)
+                        if (reader.GetReaderFor(comparer.FieldId).Read(out var value) == false)
                             goto NotMatch;
 
                         using (_searcher.ApplyAnalyzer(value, comparer.FieldId, out var analyzedTerm))
