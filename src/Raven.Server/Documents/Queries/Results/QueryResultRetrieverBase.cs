@@ -598,18 +598,18 @@ namespace Raven.Server.Documents.Queries.Results
             switch (type)
             {
                 case IndexEntryFieldType.Tuple:
-                    retrieverInput.CoraxEntry.Read(fieldId, out var data);
+                    retrieverInput.CoraxEntry.GetReaderFor(fieldId).Read(out var data);
                     value = Encodings.Utf8.GetString(data);
                     break;
                 case IndexEntryFieldType.List:
-                    var iterator = retrieverInput.CoraxEntry.ReadMany(fieldId);
+                    var iterator = retrieverInput.CoraxEntry.GetReaderFor(fieldId).ReadMany();
                     var array = new DynamicJsonArray();
                     while (iterator.ReadNext())
                         array.Add(Encodings.Utf8.GetString(iterator.Sequence));
                     value = array;
                     break;
                 case IndexEntryFieldType.RawList:
-                    iterator = retrieverInput.CoraxEntry.ReadMany(fieldId);
+                    iterator = retrieverInput.CoraxEntry.GetReaderFor(fieldId).ReadMany();
                     array = new DynamicJsonArray();
                     while (iterator.ReadNext())
                     {
@@ -619,12 +619,12 @@ namespace Raven.Server.Documents.Queries.Results
                     value = array;
                     break;
                 case IndexEntryFieldType.Raw:
-                    retrieverInput.CoraxEntry.Read(fieldId, out Span<byte> blittableBinary);
+                    retrieverInput.CoraxEntry.GetReaderFor(fieldId).Read(out Span<byte> blittableBinary);
                     fixed (byte* ptr = &blittableBinary.GetPinnableReference())
                         value = new BlittableJsonReaderObject(ptr, blittableBinary.Length, context);
                     break;
                 case IndexEntryFieldType.Simple:
-                    retrieverInput.CoraxEntry.Read(fieldId, out data);
+                    retrieverInput.CoraxEntry.GetReaderFor(fieldId).Read(out data);
                     if (data.Length is 10 or 12)
                     {
                         if (data.SequenceCompareTo(CoraxDocumentConverterBase.NullValue) == 0)

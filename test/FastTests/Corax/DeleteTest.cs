@@ -211,10 +211,10 @@ namespace FastTests.Corax
                 for (int i = 0; i < read; i++)
                 {
                     var entry = indexSearcher.GetReaderFor(ids[i]);
-                    Assert.True(entry.Read(0, out Span<byte> id));
+                    Assert.True(entry.GetReaderFor(0).Read(out Span<byte> id));
                     if (idAsBytes.SequenceEqual(id))
                     {
-                        entry.Read(ContentId, out Span<byte> content);
+                        entry.GetReaderFor(ContentId).Read(out Span<byte> content);
                        // Assert.False(nine.SequenceEqual(content));
                     }
                 }
@@ -289,7 +289,7 @@ namespace FastTests.Corax
                 var match = indexSearcher.TermQuery("Content", "0");
                 Assert.Equal(1, match.Fill(ids));
                 var entity = indexSearcher.GetReaderFor(ids[0]);
-                Assert.True(entity.Read(IndexId, out var idInIndex));
+                Assert.True(entity.GetReaderFor(IndexId).Read(out var idInIndex));
                 Assert.True(Encodings.Utf8.GetBytes("list/0").AsSpan().SequenceEqual(idInIndex));
 
             }

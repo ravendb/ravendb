@@ -328,8 +328,8 @@ namespace Corax
                 case IndexEntryFieldType.ListWithNulls:
                 case IndexEntryFieldType.List:
                 {
-                    bool oldHasIterator = oldEntryReader.TryReadMany(fieldBinding.FieldId, out var oldIterator);
-                    bool newHasIterator = newEntryReader.TryReadMany(fieldBinding.FieldId, out var newIterator);
+                    bool oldHasIterator = oldEntryReader.GetReaderFor(fieldBinding.FieldId).TryReadMany(out var oldIterator);
+                    bool newHasIterator = newEntryReader.GetReaderFor(fieldBinding.FieldId).TryReadMany(out var newIterator);
                     bool areEqual = oldHasIterator == newHasIterator;
                     while (true)
                     {
@@ -369,8 +369,8 @@ namespace Corax
                 case IndexEntryFieldType.SpatialPoint:
                 case IndexEntryFieldType.Simple:
                 {
-                    bool hasOld = oldEntryReader.Read(fieldBinding.FieldId, out var oldVal);
-                    bool hasNew = newEntryReader.Read(fieldBinding.FieldId, out var newVal);
+                    bool hasOld = oldEntryReader.GetReaderFor(fieldBinding.FieldId).Read(out var oldVal);
+                    bool hasNew = newEntryReader.GetReaderFor(fieldBinding.FieldId).Read(out var newVal);
                     if (hasOld != hasNew || hasOld && oldVal.SequenceEqual(newVal) == false)
                     {
                         RemoveSingleTerm(fieldBinding, entryId, oldEntryReader, oldType);
@@ -385,8 +385,8 @@ namespace Corax
 
                 case IndexEntryFieldType.SpatialPointList:
                 {
-                    bool oldHasIterator = oldEntryReader.TryReadManySpatialPoint(fieldBinding.FieldId, out var oldIterator);
-                    bool newHasIterator = newEntryReader.TryReadManySpatialPoint(fieldBinding.FieldId, out var newIterator);
+                    bool oldHasIterator = oldEntryReader.GetReaderFor(fieldBinding.FieldId).TryReadManySpatialPoint(out var oldIterator);
+                    bool newHasIterator = newEntryReader.GetReaderFor(fieldBinding.FieldId).TryReadManySpatialPoint(out var newIterator);
                     bool areEqual = oldHasIterator == newHasIterator;
                     while (true)
                     {
@@ -453,7 +453,50 @@ namespace Corax
                 InsertToken(context, ref entryReader, entryId, binding);
             }
 
+            var it = new IndexEntryReader.DynamicFieldEnumerator(entryReader);
+            while (it.MoveNext())
+            {
+                IndexDynamicToken(it);
+            }
+
             return entryId;
+        }
+
+        private void IndexDynamicToken(IndexEntryReader.DynamicFieldEnumerator it)
+        {
+            switch (it.CurrentFieldType)
+            {
+                case IndexEntryFieldType.Null:
+                    break;
+                case IndexEntryFieldType.Simple:
+                    break;
+                case IndexEntryFieldType.Tuple:
+                    break;
+                case IndexEntryFieldType.List:
+                    break;
+                case IndexEntryFieldType.Raw:
+                    break;
+                case IndexEntryFieldType.SpatialPoint:
+                    break;
+                case IndexEntryFieldType.Empty:
+                    break;
+                case IndexEntryFieldType.HasNulls:
+                    break;
+                case IndexEntryFieldType.Invalid:
+                    break;
+                case IndexEntryFieldType.ListWithNulls:
+                    break;
+                case IndexEntryFieldType.TupleListWithNulls:
+                    break;
+                case IndexEntryFieldType.SpatialPointList:
+                    break;
+                case IndexEntryFieldType.TupleList:
+                    break;
+                case IndexEntryFieldType.RawList:
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
         }
 
         public long GetNumberOfEntries() => (_indexMetadata.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0) + _numberOfModifications;
@@ -534,7 +577,7 @@ namespace Corax
                 
                 case IndexEntryFieldType.TupleListWithNulls:
                 case IndexEntryFieldType.TupleList:
-                    if (entryReader.TryReadMany(binding.FieldId, out var iterator) == false)
+                    if (entryReader.GetReaderFor(binding.FieldId).TryReadMany(out var iterator) == false)
                         break;
 
                     while (iterator.ReadNext())
@@ -558,7 +601,7 @@ namespace Corax
                     break;
 
                 case IndexEntryFieldType.Tuple:
-                    if (entryReader.Read(binding.FieldId, out _,  out long lVal, out double dVal,out Span<byte> valueInEntry) == false)
+                    if (entryReader.GetReaderFor(binding.FieldId).Read(out _,  out long lVal, out double dVal,out Span<byte> valueInEntry) == false)
                         break;
 
                     ExactInsert(valueInEntry);
@@ -566,7 +609,7 @@ namespace Corax
                     break;
 
                 case IndexEntryFieldType.SpatialPointList:
-                    if (entryReader.TryReadManySpatialPoint(binding.FieldId, out var spatialIterator) == false)
+                    if (entryReader.GetReaderFor(binding.FieldId).TryReadManySpatialPoint(out var spatialIterator) == false)
                         break;
 
                     while (spatialIterator.ReadNext())
@@ -578,7 +621,7 @@ namespace Corax
                     break;
 
                 case IndexEntryFieldType.SpatialPoint:
-                    if (entryReader.Read(binding.FieldId, out valueInEntry) == false)
+                    if (entryReader.GetReaderFor(binding.FieldId).Read(out valueInEntry) == false)
                         break;
 
                     for (int i = 1; i <= valueInEntry.Length; ++i)
@@ -588,7 +631,7 @@ namespace Corax
 
                 case IndexEntryFieldType.ListWithNulls:
                 case IndexEntryFieldType.List:
-                    if (entryReader.TryReadMany(binding.FieldId, out iterator) == false)
+                    if (entryReader.GetReaderFor(binding.FieldId).TryReadMany(out iterator) == false)
                         break;
 
                     while (iterator.ReadNext())
@@ -612,7 +655,7 @@ namespace Corax
                 case IndexEntryFieldType.Invalid:
                     break;
                 default:
-                    if (entryReader.Read(fieldId, out var value) == false)
+                    if (entryReader.GetReaderFor(fieldId).Read(out var value) == false)
                         break;
 
                     Insert(value);
@@ -768,7 +811,7 @@ namespace Corax
                 case IndexEntryFieldType.TupleListWithNulls:
                 case IndexEntryFieldType.TupleList:
                 {
-                    if (entryReader.TryReadMany(indexFieldBinding.FieldId, out var iterator) == false)
+                    if (entryReader.GetReaderFor(indexFieldBinding.FieldId).TryReadMany(out var iterator) == false)
                         break;
 
                     while (iterator.ReadNext())
@@ -790,13 +833,13 @@ namespace Corax
                     break;
                 }
                 case IndexEntryFieldType.Tuple:
-                    if (entryReader.Read(indexFieldBinding.FieldId, out _, out long l, out double d, out Span<byte> valueInEntry) == false)
+                    if (entryReader.GetReaderFor(indexFieldBinding.FieldId).Read(out _, out long l, out double d, out Span<byte> valueInEntry) == false)
                         break;
                     RecordTupleToDelete(indexFieldBinding, valueInEntry, d, l);
                     break;
 
                 case IndexEntryFieldType.SpatialPointList:
-                    if (entryReader.TryReadManySpatialPoint(indexFieldBinding.FieldId, out var spatialIterator) == false)
+                    if (entryReader.GetReaderFor(indexFieldBinding.FieldId).TryReadManySpatialPoint(out var spatialIterator) == false)
                         break;
 
                     while (spatialIterator.ReadNext())
@@ -816,7 +859,7 @@ namespace Corax
                 case IndexEntryFieldType.List:
                 case IndexEntryFieldType.ListWithNulls:
                 {
-                    if (entryReader.TryReadMany(indexFieldBinding.FieldId, out var iterator) == false)
+                    if (entryReader.GetReaderFor(indexFieldBinding.FieldId).TryReadMany(out var iterator) == false)
                         break;
 
                     while (iterator.ReadNext())
@@ -839,7 +882,7 @@ namespace Corax
                 }
 
                 case IndexEntryFieldType.SpatialPoint:
-                    if (entryReader.Read(indexFieldBinding.FieldId, out valueInEntry) == false)
+                    if (entryReader.GetReaderFor(indexFieldBinding.FieldId).Read(out valueInEntry) == false)
                         break;
 
                     for (int i = 1; i <= valueInEntry.Length; ++i)
@@ -850,7 +893,7 @@ namespace Corax
 
                     break;
                 default:
-                    if (entryReader.Read(indexFieldBinding.FieldId, out var value) == false)
+                    if (entryReader.GetReaderFor(indexFieldBinding.FieldId).Read(out var value) == false)
                         break;
 
                     if (value.IsEmpty)

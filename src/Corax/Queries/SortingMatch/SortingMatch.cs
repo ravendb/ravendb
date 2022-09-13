@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Corax.Utils;
@@ -74,7 +75,7 @@ namespace Corax.Queries
                 if (comparer is not SpatialAscendingMatchComparer spatialAscendingMatchComparer)
                     goto Failed;
 
-                var readX = reader.Read(fieldId, out (double lat, double lon) coordinates);
+                var readX = reader.GetReaderFor(fieldId).Read(out (double lat, double lon) coordinates);
                 var distance = SpatialUtils.GetGeoDistance(in coordinates, in spatialAscendingMatchComparer);
                 
                 storedValue = (TOut)(object)new NumericalItem<double>(distance);
@@ -85,7 +86,7 @@ namespace Corax.Queries
                 if (comparer is not SpatialDescendingMatchComparer spatialDescendingMatchComparer)
                     goto Failed;
                 
-                var readX = reader.Read(fieldId, out (double lat, double lon) coordinates);
+                var readX = reader.GetReaderFor(fieldId).Read( out (double lat, double lon) coordinates);
                 var distance = SpatialUtils.GetGeoDistance(in coordinates, in spatialDescendingMatchComparer);
 
                 storedValue = (TOut)(object)new NumericalItem<double>(distance);
@@ -93,7 +94,7 @@ namespace Corax.Queries
             }
             else if (typeof(TOut) == typeof(SequenceItem))
             {
-                var readX = reader.Read(fieldId, out var sv);
+                var readX = reader.GetReaderFor(fieldId).Read( out var sv);
                 fixed (byte* svp = sv)
                 {
                     storedValue = (TOut)(object)new SequenceItem(svp, sv.Length);
@@ -102,13 +103,13 @@ namespace Corax.Queries
             }
             else if (typeof(TOut) == typeof(NumericalItem<long>))
             {
-                var readX = reader.Read<long>(fieldId, out var value);
+                var readX = reader.GetReaderFor(fieldId).Read<long>(out var value);
                 storedValue = (TOut)(object)new NumericalItem<long>(value);
                 return readX;
             }
             else if (typeof(TOut) == typeof(NumericalItem<double>))
             {
-                var readX = reader.Read<double>(fieldId, out var value);
+                var readX = reader.GetReaderFor(fieldId).Read<double>(out var value);
                 storedValue = (TOut)(object)new NumericalItem<double>(value);
                 return readX;
             }

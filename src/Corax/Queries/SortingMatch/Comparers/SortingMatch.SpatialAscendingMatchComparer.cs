@@ -45,10 +45,10 @@ unsafe partial struct SortingMatch
             static int CompareWithSpatialLoad<T>(ref SpatialAscendingMatchComparer comparer, long x, long y) where T : unmanaged
             {
                 var readerX = comparer._searcher.GetReaderFor(x);
-                var readX = readerX.Read(comparer._fieldId, out (double lat, double lon) resultX);
+                var readX = readerX.GetReaderFor(comparer._fieldId).Read( out (double lat, double lon) resultX);
 
                 var readerY = comparer._searcher.GetReaderFor(y);
-                var readY = readerY.Read(comparer._fieldId, out (double lat, double lon) resultY);
+                var readY = readerY.GetReaderFor(comparer._fieldId).Read( out (double lat, double lon) resultY);
 
                 if (readX && readY)
                 {
