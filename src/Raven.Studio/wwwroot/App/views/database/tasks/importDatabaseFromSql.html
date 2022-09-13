@@ -29,7 +29,12 @@
                             <div data-bind="visible: databaseType() === 'MsSQL', with: sqlServer">
                                 <div class="form-group"
                                      data-bind="validationElement: connectionString">
-                                    <label class="control-label">Connection string<i class="required"></i></label>
+                                    <label class="control-label">
+                                        Connection string<i class="required"></i>
+                                        <br />
+                                        <br />
+                                        <small id="js-mssql-syntax" class="text-primary">Syntax <i class="icon-help"></i></small>
+                                    </label>
                                     <div class="flex-grow">
                                         <textarea class="form-control"
                                                   data-bind="textInput: connectionString" rows="3"
@@ -48,7 +53,12 @@
                             <div data-bind="visible: databaseType() === 'MySQL', with: mySql">
                                 <div class="form-group"
                                      data-bind="validationElement: connectionString">
-                                    <label class="control-label">Connection string<i class="required"></i></label>
+                                    <label class="control-label">
+                                        Connection string<i class="required"></i>
+                                        <br />
+                                        <br />
+                                        <small id="js-mysql-syntax" class="text-primary">Syntax <i class="icon-help"></i></small>
+                                    </label>
                                     <div class="flex-grow">
                                         <textarea class="form-control"
                                                   data-bind="textInput: connectionString" rows="3"
@@ -67,7 +77,12 @@
                             <div data-bind="visible: databaseType() === 'NpgSQL', with: npgSql">
                                 <div class="form-group"
                                      data-bind="validationElement: connectionString">
-                                    <label class="control-label">Connection string<i class="required"></i></label>
+                                    <label class="control-label">
+                                        Connection string<i class="required"></i>
+                                        <br />
+                                        <br />
+                                        <small id="js-npgsql-syntax" class="text-primary">Syntax <i class="icon-help"></i></small>
+                                    </label>
                                     <div class="flex-grow">
                                         <textarea class="form-control"
                                                   data-bind="textInput: connectionString" rows="3"
@@ -86,7 +101,12 @@
                             <div data-bind="visible: databaseType() === 'Oracle', with: oracle">
                                 <div class="form-group"
                                      data-bind="validationElement: connectionString">
-                                    <label class="control-label">Connection string<i class="required"></i></label>
+                                    <label class="control-label">
+                                        Connection string<i class="required"></i>
+                                        <br />
+                                        <br />
+                                        <small id="js-oracle-syntax" class="text-primary">Syntax <i class="icon-help"></i></small>
+                                    </label>
                                     <div class="flex-grow">
                                         <textarea class="form-control"
                                                   data-bind="textInput: connectionString" rows="3"
