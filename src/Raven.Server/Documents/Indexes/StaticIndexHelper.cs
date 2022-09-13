@@ -177,7 +177,7 @@ namespace Raven.Server.Documents.Indexes
                             }
 
                             var lastProcessedTombstoneEtag = index._indexStorage.ReferencesForCompareExchange.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction.InnerTransaction, collection, referencedCollection: IndexStorage.CompareExchangeReferences.CompareExchange);
-                            var hasTombstones = queryContext.Documents.DocumentDatabase.ServerStore.Cluster.HasCompareExchangeTombstonesWithEtagGreaterThanStartAndLowerThanOrEqualToEnd(queryContext.Server, queryContext.Documents.DocumentDatabase.Name,
+                            var hasTombstones = queryContext.Documents.DocumentDatabase.CompareExchangeStorage.HasCompareExchangeTombstonesWithEtagGreaterThanStartAndLowerThanOrEqualToEnd(queryContext.Server,
                                     lastProcessedTombstoneEtag,
                                     compareExchangeReferenceCutoff.Value);
 

@@ -2444,7 +2444,7 @@ namespace Raven.Server.Documents.Indexes
 
         protected virtual void HandleCompareExchangeChange(CompareExchangeChange change)
         {
-            if (string.Equals(DocumentDatabase.Name, change.Database, StringComparison.OrdinalIgnoreCase) == false)
+            if (DocumentDatabase.CompareExchangeStorage.ShouldHandleChange(change) == false)
                 return;
             _mre.Set();
         }
