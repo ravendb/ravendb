@@ -134,7 +134,7 @@ namespace rvn
                 cmd.Description = "This command creates a RavenDB setup ZIP file";
                 cmd.ExtendedHelpText = "Usage example:" +
                                        Environment.NewLine + 
-                                       "rvn create-setup-package -m=\"lets-encrypt\" -s=\"json-file-path\" -o=\"output-zip-file-name\" -g=\"values.yaml\"" +
+                                       "rvn create-setup-package -m=\"lets-encrypt\" -s=\"json-file-path\" -o=\"output-zip-file-name\" --generate-helm-values[=\"values.yaml\"]" +
                                        Environment.NewLine;
                 
                 cmd.HelpOption(HelpOptionString);
@@ -153,7 +153,7 @@ namespace rvn
                     var packageOutPathVal = packageOutPath.Value();
                     var certPathVal = certPath.Value();
                     var certPassTuple = certPass.Value() ?? Environment.GetEnvironmentVariable("RVN_CERT_PASS");
-                    var generateHelmValuesVal = generateHelmValues.Value();
+                    var generateHelmValuesVal = generateHelmValues.HasValue() && generateHelmValues.Value() is null ? "values.yaml" : generateHelmValues.Value(); 
 
                     return await CreateSetupPackage(new CreateSetupPackageParameters
                     {
@@ -654,7 +654,7 @@ namespace rvn
 
         private static CommandOption ConfigureGenerateValues(CommandLineApplication cmd)
         {
-            return cmd.Option("--generate-helm-values", "Path to values.yaml", CommandOptionType.SingleValue);
+            return cmd.Option("--generate-helm-values", "Path to values.yaml", CommandOptionType.SingleOrNoValue);
         }
 
         private static CommandOption ConfigureServiceNameOption(CommandLineApplication cmd)
