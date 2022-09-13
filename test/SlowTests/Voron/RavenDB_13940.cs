@@ -398,7 +398,7 @@ namespace SlowTests.Voron
 
             using (var operation = new WriteAheadJournal.JournalApplicator.SyncOperation(Env.Journal.Applicator))
             {
-                operation.SyncDataFile();
+                operation.SyncDataFile(); // this will sync up to tx 5
             }
 
             for (var i = 0; i < 2; i++)
@@ -418,9 +418,98 @@ namespace SlowTests.Voron
 
             StopDatabase();
 
-            CorruptJournal(lastJournal, sizeof(TransactionHeader) + 5, Constants.Size.Kilobyte * 4 * 5);
+            // this is going to corrupt the journal from tx 1 to tx 6 while the last synced tx is 5
+            // on startup we expect to get error since tx 6 wasn't synced yet
+            CorruptJournal(lastJournal, sizeof(TransactionHeader) + 5, Constants.Size.Kilobyte * 4 * 5); 
 
             Assert.Throws<InvalidJournalException>(StartDatabase);
+        }
+
+        [Fact]
+        public unsafe void ShouldNotFailBecauseAllCorruptedTransactionsWereSynced()
+        {
+            // similar test like above but all corrupted transactions were synced so no errors on startup
+            RequireFileBasedPager();
+
+            using (var tx = Env.WriteTransaction())
+            {
+                tx.CreateTree("tree");
+
+                tx.Commit();
+            }
+
+            var random = new Random(1);
+
+            for (var i = 0; i < 3; i++)
+            {
+                var buffer = new byte[1000];
+                random.NextBytes(buffer);
+                using (var tx = Env.WriteTransaction())
+                {
+                    for (int j = 0; j < 100; j++)
+                    {
+                        tx.CreateTree("tree").Add("a" + i.ToString() + j.ToString(), new MemoryStream(buffer));
+                    }
+
+                    tx.Commit();
+                }
+            }
+
+            var lastJournal = Env.Journal.GetCurrentJournalInfo().CurrentJournal;
+
+            // let's flush and sync
+            Env.FlushLogToDataFile();
+
+            using (var operation = new WriteAheadJournal.JournalApplicator.SyncOperation(Env.Journal.Applicator))
+            {
+                operation.SyncDataFile(); // this will sync up to tx 5
+            }
+
+            for (var i = 0; i < 2; i++)
+            {
+                var buffer = new byte[1000];
+                random.NextBytes(buffer);
+                using (var tx = Env.WriteTransaction())
+                {
+                    for (int j = 0; j < 100; j++)
+                    {
+                        tx.CreateTree("tree").Add("b" + i.ToString() + j.ToString(), new MemoryStream(buffer));
+                    }
+
+                    tx.Commit();
+                }
+            }
+
+            StopDatabase();
+
+            // this is going to corrupt the journal from tx 1 to tx 5
+            // the last synced tx is 5 so on startup we'll ignore all corrupted transactions and
+            // do the recovery from tx 6
+            CorruptJournal(lastJournal, sizeof(TransactionHeader) + 5, Constants.Size.Kilobyte * 4 * 4);
+
+            StartDatabase();
+
+            using (var tx = Env.ReadTransaction())
+            {
+                for (var i = 0; i < 3; i++)
+                {
+                    for (int j = 0; j < 100; j++)
+                    {
+                        var readA = tx.ReadTree("tree").Read("a" + i.ToString() + j.ToString());
+
+                        Assert.NotNull(readA);
+
+                        if (i < 2)
+                        {
+                            var readB = tx.ReadTree("tree").Read("b" + i.ToString() + j.ToString());
+
+                            Assert.NotNull(readB);
+                        }
+                    }
+
+                    tx.Commit();
+                }
+            }
         }
 
         [Theory]
