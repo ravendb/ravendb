@@ -360,9 +360,9 @@ namespace Voron.Impl.Journal
             current = (TransactionHeader*)
                 (_journalPager.AcquirePagePointer(this, pageNumber) + positionInsidePage);
             
-            if (current->HeaderMarker != Constants.TransactionHeaderMarker)
+            if (current->HeaderMarker != Constants.TransactionHeaderMarker || IsOldTransactionFromRecycledJournal(current))
             {
-                // If the header marker is zero or garbage, we are probably in the area at the end of the log file.
+                // If the header marker is zero or garbage or we got old transaction, we are probably in the area at the end of the log file.
                 // So we don't expect to have any additional transaction log records to read from it.
                 // This can happen if the next transaction was too big to fit in the current log file.
 
@@ -447,7 +447,7 @@ namespace Voron.Impl.Journal
                         }
 
                         // we didn't find any valid transaction when reading the rest of the journal in ReadExpectation.ZerosOrGarbage mode
-                        // it means we can continue the recovery process
+                        // it means we can stop reading current journal and continue the recovery process using next ones (if there are any)
 
                         _readAt4Kb = lastRead4Kb;
                         LastTransactionHeader = lastReadTransactionHeader;
@@ -466,9 +466,6 @@ namespace Voron.Impl.Journal
             if (readExpectation == ReadExpectation.ZerosOrGarbage)
             {
                 if (current->TransactionId < 0)
-                    return false;
-
-                if (IsOldTransactionFromRecycledJournal(current))
                     return false;
             }
 
