@@ -195,7 +195,7 @@ namespace FastTests.Corax
                 var match = indexSearcher.TermQuery("Content", "0");
                 Assert.Equal(1, match.Fill(ids));
                 var entity = indexSearcher.GetReaderFor(ids[0]);
-                Assert.True(entity.Read(IndexId, out var idInIndex));
+                Assert.True(entity.GetReaderFor(IndexId).Read(out var idInIndex));
                 Assert.True(Encodings.Utf8.GetBytes("list/0").AsSpan().SequenceEqual(idInIndex));
 
             }

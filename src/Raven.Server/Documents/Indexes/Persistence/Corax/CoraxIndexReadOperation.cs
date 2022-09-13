@@ -686,7 +686,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         var enumerableEntries = new List<object>();
                         if ((type & IndexEntryFieldType.SpatialPoint) != 0)
                         {
-                            reader.TryReadManySpatialPoint(binding.FieldId, out var spatialIterator);
+                            reader.GetReaderFor(binding.FieldId).TryReadManySpatialPoint(out var spatialIterator);
                             while (spatialIterator.ReadNext())
                             {
                                 for (int i = 1; i <= spatialIterator.Geohash.Length; ++i)
@@ -697,7 +697,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         }
                         
                         
-                        reader.TryReadMany(binding.FieldId, out var iterator);
+                        reader.GetReaderFor(binding.FieldId).TryReadMany(out var iterator);
                         while (iterator.ReadNext())
                         {
                             if (iterator.IsNull || iterator.IsEmpty)
@@ -715,7 +715,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     }
                     else
                     {
-                        reader.Read(binding.FieldId, out Span<byte> value);
+                        reader.GetReaderFor(binding.FieldId).Read(out Span<byte> value);
                         if ((type & IndexEntryFieldType.SpatialPoint) != 0)
                         {
                             var enumerableEntries = new List<object>();

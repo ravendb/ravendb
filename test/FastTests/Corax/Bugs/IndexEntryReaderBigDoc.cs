@@ -51,7 +51,7 @@ public class IndexEntryReaderBigDoc : NoDisposalNeeded
 
         indexEntryWriter.Finish(out var output);
 
-        new IndexEntryReader(output.ToSpan()).Read(0, out var id);
+        new IndexEntryReader(output.ToSpan()).GetReaderFor(0).Read(out var id);
     }
     
     private static JArray  ReadDocFromResource(string file)
