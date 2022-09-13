@@ -1,10 +1,10 @@
-﻿using System.Threading.Tasks;
+﻿using System.Linq;
+using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.Http;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.Processors.Replication
 {
@@ -18,26 +18,16 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
 
         protected override async ValueTask HandleCurrentNodeAsync()
         {
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
             {
-                var incomings = new DynamicJsonArray();
-                foreach (var item in RequestHandler.Database.ReplicationLoader.IncomingConnections)
+                var activeConnectionsPreview = new ReplicationActiveConnectionsPreview
                 {
-                    incomings.Add(item.ToJson());
-                }
+                    IncomingConnections = RequestHandler.Database.ReplicationLoader.IncomingConnections.ToList(),
+                    OutgoingConnections = RequestHandler.Database.ReplicationLoader.OutgoingConnections.ToList()
+                };
 
-                var outgoings = new DynamicJsonArray();
-                foreach (var item in RequestHandler.Database.ReplicationLoader.OutgoingConnections)
-                {
-                    outgoings.Add(ReplicationActiveConnectionsPreview.OutgoingConnectionInfo.ToJson(item));
-                }
-
-                context.Write(writer, new DynamicJsonValue
-                {
-                    [nameof(ReplicationActiveConnectionsPreview.IncomingConnections)] = incomings,
-                    [nameof(ReplicationActiveConnectionsPreview.OutgoingConnections)] = outgoings
-                });
+                context.Write(writer, activeConnectionsPreview.ToJson());
             }
         }
 

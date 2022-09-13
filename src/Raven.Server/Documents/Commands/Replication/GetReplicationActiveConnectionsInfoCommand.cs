@@ -1,8 +1,7 @@
-﻿using System.Collections.Generic;
-using System.Net.Http;
+﻿using System.Net.Http;
 using Raven.Client.Http;
 using Raven.Server.Documents.Handlers.Processors.Replication;
-using Raven.Server.Documents.Replication.Stats;
+using Raven.Server.Json;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Commands.Replication
@@ -35,27 +34,7 @@ namespace Raven.Server.Documents.Commands.Replication
             if (response == null)
                 ThrowInvalidResponse();
 
-            var incomingConnectionsInfo = new List<IncomingConnectionInfo>();
-            if (response.TryGet(nameof(ReplicationActiveConnectionsPreview.IncomingConnections), out BlittableJsonReaderArray bjra))
-            {
-                foreach (BlittableJsonReaderObject bjro in bjra)
-                {
-                    var incomingConnectionInfo = IncomingConnectionInfo.FromJson(bjro);
-                    incomingConnectionsInfo.Add(incomingConnectionInfo);
-                }
-            }
-
-            var outgoingConnectionsInfo = new List<ReplicationActiveConnectionsPreview.OutgoingConnectionInfo>();
-            if (response.TryGet(nameof(ReplicationActiveConnectionsPreview.OutgoingConnections), out bjra))
-            {
-                foreach (BlittableJsonReaderObject bjro in bjra)
-                {
-                    var outgoingConnectionInfo = ReplicationActiveConnectionsPreview.OutgoingConnectionInfo.FromJson(bjro);
-                    outgoingConnectionsInfo.Add(outgoingConnectionInfo);
-                }
-            }
-
-            Result = new ReplicationActiveConnectionsPreview { IncomingConnections = incomingConnectionsInfo, OutgoingConnections = outgoingConnectionsInfo };
+            Result = JsonDeserializationServer.ReplicationActiveConnectionsPreview(response);
         }
 
         public override bool IsReadRequest => true;

@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Raven.Client.Documents.Replication;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Replication
 {
@@ -48,6 +50,19 @@ namespace Raven.Server.Documents.Replication
             NextTimeout *= 2;
             NextTimeout = TimeSpan.FromMilliseconds(Math.Min(NextTimeout.TotalMilliseconds, MaxConnectionTimeout));
             RetryOn = DateTime.UtcNow + NextTimeout;
+        }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                ["ErrorsCount"] = Errors.Count,
+                [nameof(Errors)] = new DynamicJsonArray(Errors.Select(e => e.ToString())),
+                [nameof(NextTimeout)] = NextTimeout,
+                [nameof(RetryOn)] = RetryOn,
+                [nameof(DestinationDbId)] = DestinationDbId,
+                [nameof(LastHeartbeatTicks)] = LastHeartbeatTicks
+            };
         }
     }
 }

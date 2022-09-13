@@ -1,10 +1,10 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Http;
 using Raven.Server.Documents.Commands.Replication;
 using Raven.Server.Documents.Replication.Stats;
-using Raven.Server.Json;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -26,33 +26,15 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
     {
         public List<IncomingConnectionInfo> IncomingConnections;
 
-        public List<OutgoingConnectionInfo> OutgoingConnections;
+        public List<ReplicationNode> OutgoingConnections;
 
-        public class OutgoingConnectionInfo
+        public DynamicJsonValue ToJson()
         {
-            public string Url;
-
-            public string Database;
-
-            public bool Disabled;
-
-            public static DynamicJsonValue ToJson(ReplicationNode replicationNode)
+            return new DynamicJsonValue
             {
-                return new DynamicJsonValue
-                {
-                    [nameof(Url)] = replicationNode.Url,
-                    [nameof(Database)] = replicationNode.Database,
-                    [nameof(Disabled)] = replicationNode.Disabled
-                };
-            }
-
-            public static OutgoingConnectionInfo FromJson(BlittableJsonReaderObject json)
-            {
-                if (json == null)
-                    return null;
-
-                return JsonDeserializationServer.ReplicationOutgoingConnectionInfo(json);
-            }
+                [nameof(IncomingConnections)] = new DynamicJsonArray(IncomingConnections.Select(i => i.ToJson())),
+                [nameof(OutgoingConnections)] = new DynamicJsonArray(OutgoingConnections.Select(o => o.ToJson()))
+            };
         }
     }
 }
