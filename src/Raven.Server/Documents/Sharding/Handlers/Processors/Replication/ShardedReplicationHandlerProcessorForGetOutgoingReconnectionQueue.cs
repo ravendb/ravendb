@@ -18,7 +18,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Replication
 
         protected override ValueTask HandleCurrentNodeAsync() => throw new NotSupportedException();
 
-        protected override Task HandleRemoteNodeAsync(ProxyCommand<object> command, OperationCancelToken token)
+        protected override Task HandleRemoteNodeAsync(ProxyCommand<ReplicationOutgoingReconnectionQueuePreview> command, OperationCancelToken token)
         {
             var shardNumber = GetShardNumber();
             return RequestHandler.ShardExecutor.ExecuteSingleShardAsync(command, shardNumber, token.Token);

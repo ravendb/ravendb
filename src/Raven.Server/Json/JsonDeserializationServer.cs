@@ -36,6 +36,7 @@ using Raven.Server.Documents.ETL.Providers.Raven.Test;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Handlers.Debugging;
+using Raven.Server.Documents.Handlers.Processors.Replication;
 using Raven.Server.Documents.Handlers.Processors.Subscriptions;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.PeriodicBackup.Restore;
@@ -58,7 +59,6 @@ using Raven.Server.Utils;
 using Raven.Server.Web.Studio;
 using Raven.Server.Web.System;
 using Sparrow.Json;
-using static Raven.Server.Documents.Handlers.Processors.Replication.ReplicationActiveConnectionsPreview;
 using FacetSetup = Raven.Client.Documents.Queries.Facets.FacetSetup;
 
 namespace Raven.Server.Json
@@ -83,9 +83,17 @@ namespace Raven.Server.Json
 
         public static readonly Func<BlittableJsonReaderObject, ReplicationInitialRequest> ReplicationInitialRequest = GenerateJsonDeserializationRoutine<ReplicationInitialRequest>();
 
-        public static readonly Func<BlittableJsonReaderObject, IncomingConnectionInfo> ReplicationIncomingConnectionInfo = GenerateJsonDeserializationRoutine<IncomingConnectionInfo>();
+        public static readonly Func<BlittableJsonReaderObject, ReplicationActiveConnectionsPreview> ReplicationActiveConnectionsPreview = GenerateJsonDeserializationRoutine<ReplicationActiveConnectionsPreview>();
 
-        public static readonly Func<BlittableJsonReaderObject, OutgoingConnectionInfo> ReplicationOutgoingConnectionInfo = GenerateJsonDeserializationRoutine<OutgoingConnectionInfo>();
+        public static readonly Func<BlittableJsonReaderObject, ReplicationOutgoingReconnectionQueuePreview> ReplicationOutgoingReconnectionQueuePreview = GenerateJsonDeserializationRoutine<ReplicationOutgoingReconnectionQueuePreview>();
+
+        public static readonly Func<BlittableJsonReaderObject, ReplicationOutgoingsFailurePreview> ReplicationOutgoingsFailurePreview = GenerateJsonDeserializationRoutine<ReplicationOutgoingsFailurePreview>();
+
+        public static readonly Func<BlittableJsonReaderObject, ReplicationIncomingLastActivityTimePreview> ReplicationIncomingLastActivityTimePreview = GenerateJsonDeserializationRoutine<ReplicationIncomingLastActivityTimePreview>();
+
+        public static readonly Func<BlittableJsonReaderObject, ReplicationIncomingRejectionInfoPreview> ReplicationIncomingRejectionInfoPreview = GenerateJsonDeserializationRoutine<ReplicationIncomingRejectionInfoPreview>();
+
+        public static readonly Func<BlittableJsonReaderObject, IncomingConnectionInfo> ReplicationIncomingConnectionInfo = GenerateJsonDeserializationRoutine<IncomingConnectionInfo>();
 
         public static readonly Func<BlittableJsonReaderObject, SubscriptionConnectionClientMessage> SubscriptionConnectionClientMessage = GenerateJsonDeserializationRoutine<SubscriptionConnectionClientMessage>();
 

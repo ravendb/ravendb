@@ -1,11 +1,16 @@
-﻿using JetBrains.Annotations;
+﻿using System.Collections.Generic;
+using System.Linq;
+using JetBrains.Annotations;
+using Raven.Client.Documents.Replication;
 using Raven.Client.Http;
 using Raven.Server.Documents.Commands.Replication;
+using Raven.Server.Documents.Replication;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.Processors.Replication
 {
-    internal abstract class AbstractReplicationHandlerProcessorForGetOutgoingFailureStats<TRequestHandler, TOperationContext> : AbstractHandlerProxyReadProcessor<object, TRequestHandler, TOperationContext>
+    internal abstract class AbstractReplicationHandlerProcessorForGetOutgoingFailureStats<TRequestHandler, TOperationContext> : AbstractHandlerProxyReadProcessor<ReplicationOutgoingsFailurePreview, TRequestHandler, TOperationContext>
         where TOperationContext : JsonOperationContext
         where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
@@ -14,9 +19,38 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
         {
         }
 
-        protected override RavenCommand<object> CreateCommandForNode(string nodeTag)
+        protected override RavenCommand<ReplicationOutgoingsFailurePreview> CreateCommandForNode(string nodeTag)
         {
             return new GetReplicationOutgoingsFailureInfoCommand(nodeTag);
+        }
+    }
+
+    public class ReplicationOutgoingsFailurePreview
+    {
+        public IDictionary<ReplicationNode, ConnectionShutdownInfo> OutgoingsFailureInfo;
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                ["Stats"] = new DynamicJsonArray(OutgoingsFailureInfo.Select(OutgoingFailureInfoToJson))
+            };
+        }
+
+        private DynamicJsonValue OutgoingFailureInfoToJson(KeyValuePair<ReplicationNode, ConnectionShutdownInfo> kvp)
+        {
+            return new DynamicJsonValue
+            {
+                ["Key"] = ReplicationNodeToJson(kvp.Key),
+                ["Value"] = kvp.Value
+            };
+        }
+    
+        private DynamicJsonValue ReplicationNodeToJson(ReplicationNode replicationNode)
+        {
+            var json = replicationNode.ToJson();
+            json[nameof(ReplicationNode)] = replicationNode.GetType().ToString();
+            return json;
         }
     }
 }

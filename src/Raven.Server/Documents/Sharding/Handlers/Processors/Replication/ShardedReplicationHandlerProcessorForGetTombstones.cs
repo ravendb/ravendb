@@ -51,11 +51,6 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Replication
             {
                 var final = new GetTombstonesPreviewResult();
 
-                foreach (var result in results.Span)
-                {
-                    result.Tombstones.Sort(TombstonesPreviewComparer.Instance);
-                }
-
                 final.Tombstones = _handler.DatabaseContext.Streaming.PagedShardedItem(
                     results,
                     selector: r => r.Tombstones,

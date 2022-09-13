@@ -1,10 +1,12 @@
 ﻿using System.Net.Http;
 using Raven.Client.Http;
+using Raven.Server.Documents.Handlers.Processors.Replication;
+using Raven.Server.Json;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Commands.Replication
 {
-    internal class GetReplicationOutgoingsFailureInfoCommand : RavenCommand<object>
+    internal class GetReplicationOutgoingsFailureInfoCommand : RavenCommand<ReplicationOutgoingsFailurePreview>
     {
         public GetReplicationOutgoingsFailureInfoCommand()
         {
@@ -32,7 +34,7 @@ namespace Raven.Server.Documents.Commands.Replication
             if (response == null)
                 ThrowInvalidResponse();
 
-            Result = response;
+            Result = JsonDeserializationServer.ReplicationOutgoingsFailurePreview(response);
         }
 
         public override bool IsReadRequest => true;
