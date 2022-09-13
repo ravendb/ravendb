@@ -50,7 +50,7 @@ class documentBasedColumnsProvider {
     private readonly detectTimeSeries: boolean;
     private readonly showSelectAllCheckbox: boolean;
     private readonly columnOptions: columnOptionsDto;
-    private readonly customInlinePreview: (doc: document) => void;
+    private readonly customInlinePreview: (doc: document, title?: string) => void;
     private readonly collectionTracker: collectionsTracker;
     private readonly customColumnProvider: () => virtualColumn[];
     private readonly timeSeriesActionHandler: (type: timeSeriesColumnEventType, documentId: string, name: string, value: timeSeriesQueryResultDto, event: JQueryEventObject) => void;
@@ -108,7 +108,8 @@ class documentBasedColumnsProvider {
         }
 
         if (this.enableInlinePreview) {
-            const previewColumn = new actionColumn<document>(this.gridController, this.customInlinePreview, "Preview", `<i class="icon-preview"></i>`, "75px",
+            const previewColumn = new actionColumn<document>(this.gridController,
+                    doc => this.customInlinePreview(doc, doc.getId() ? null : "Index Entry Preview"), "Preview", `<i class="icon-preview"></i>`, "75px",
             {
                 title: () => 'Show item preview'
             });
@@ -188,12 +189,12 @@ class documentBasedColumnsProvider {
         }
     }
     
-    static showPreview(doc: document) {
+    static showPreview(doc: document, title?: string) {
         const docDto = doc.toDto(true);
         
         const text = JSON.stringify(docDto, null, 4);
-        const title = doc.getId() ? "Document: " + doc.getId() : "Document preview";
-        app.showBootstrapDialog(new showDataDialog(title, text, "javascript"));
+        const titleToUse = title ?? doc.getId() ? "Document: " + doc.getId() : "Document Preview";
+        app.showBootstrapDialog(new showDataDialog(titleToUse, text, "javascript"));
     }
 
     static extractUniquePropertyNames(results: pagedResult<document>) {

@@ -98,6 +98,7 @@ namespace Raven.Server.Config.Categories
         [ReadOnlyPath]
         public virtual PathSetting StoragePath => _indexStoragePath ??= _root.ResourceType == ResourceType.Server ? null : _root.Core.DataDirectory.Combine("Indexes");
 
+        [Description("Use this setting to specify a different path for the indexes' temporary files. By default, temporary files are created under the Temp folder inside the index data directory.")]
         [DefaultValue(null)]
         [IndexUpdateType(IndexUpdateType.Reset)]
         [ConfigurationEntry("Indexing.TempPath", ConfigurationEntryScope.ServerWideOrPerDatabase)]
