@@ -23,7 +23,6 @@ using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
-using Org.BouncyCastle.Pkcs;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.Replication;
@@ -36,7 +35,6 @@ using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Commercial;
-using Raven.Server.Commercial.LetsEncrypt;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Patch;
@@ -2646,6 +2644,7 @@ namespace Raven.Server
                 }
 
                 ea.Execute(() => ServerStore?.Dispose());
+                ea.Execute(() => Certificate?.Dispose());
                 ea.Execute(() =>
                 {
                     try
