@@ -13,6 +13,7 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Extensions;
 using Tests.Infrastructure.Operations;
 using Xunit;
 using Xunit.Abstractions;
@@ -26,7 +27,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanLoadCompareExchangeInIndexes(Options options)
         {
             CanLoadCompareExchangeInIndexes<Index_With_CompareExchange>(options);
@@ -52,10 +53,11 @@ namespace SlowTests.Issues
 
                 RavenTestHelper.AssertNoIndexErrors(store);
 
-                store.Maintenance.Send(new StopIndexingOperation());
+                store.Maintenance.ForTesting(() => new StopIndexingOperation())
+                    .ExecuteOnAll();
 
-                var staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
-                Assert.False(staleness.IsStale);
+                store.Maintenance.ForTesting(() => new GetIndexStalenessOperation(indexName))
+                    .AssertAll((_, result) => Assert.False(result.IsStale));
 
                 var terms = store.Maintenance.Send(new GetTermsOperation(indexName, "City", null));
                 Assert.Equal(0, terms.Length);
@@ -68,24 +70,56 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
-                Assert.True(staleness.IsStale);
-                Assert.Equal(1, staleness.StalenessReasons.Count);
-                Assert.Contains("There are still some documents to process from collection", staleness.StalenessReasons[0]);
+                using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    // waiting for the value to be applied in the cluster using returned header with raft index from previous save changes
+                    var companies = session
+                        .Query<Company>()
+                        .ToList();
 
-                store.Maintenance.Send(new StartIndexingOperation());
+                    Assert.Equal(1, companies.Count);
+                }
+
+                store.Maintenance.ForTesting(() => new GetIndexStalenessOperation(indexName))
+                    .AssertAll((key, result) =>
+                    {
+                        switch (key.ShardNumber)
+                        {
+                            case 0:
+                                {
+                                    Assert.False(result.IsStale);
+                                    break;
+                                }
+                            case 2:
+                                {
+                                    Assert.False(result.IsStale);
+                                    break;
+                                }
+                            default:
+                                {
+                                    Assert.True(result.IsStale);
+                                    Assert.Equal(1, result.StalenessReasons.Count);
+                                    Assert.Contains("There are still some documents to process from collection", result.StalenessReasons[0]);
+                                    break;
+                                }
+                        }
+                    });
+
+                store.Maintenance.ForTesting(() => new StartIndexingOperation())
+                    .ExecuteOnAll();
 
                 Indexes.WaitForIndexing(store);
 
                 RavenTestHelper.AssertNoIndexErrors(store);
 
-                staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
-                Assert.False(staleness.IsStale);
+                store.Maintenance.ForTesting(() => new GetIndexStalenessOperation(indexName))
+                    .AssertAll((_, result) => Assert.False(result.IsStale));
 
                 terms = store.Maintenance.Send(new GetTermsOperation(indexName, "City", null));
                 Assert.Equal(0, terms.Length);
 
-                store.Maintenance.Send(new StopIndexingOperation());
+                store.Maintenance.ForTesting(() => new StopIndexingOperation())
+                    .ExecuteOnAll();
 
                 // add compare
                 using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
@@ -95,25 +129,57 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
-                Assert.True(staleness.IsStale);
-                Assert.Equal(1, staleness.StalenessReasons.Count);
-                Assert.Contains("There are still some compare exchange references to process for collection", staleness.StalenessReasons[0]);
+                using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    // waiting for the value to be applied in the cluster using returned header with raft index from previous save changes
+                    var companies = session
+                        .Query<Company>()
+                        .ToList();
 
-                store.Maintenance.Send(new StartIndexingOperation());
+                    Assert.Equal(1, companies.Count);
+                }
+
+                store.Maintenance.ForTesting(() => new GetIndexStalenessOperation(indexName))
+                    .AssertAll((key, result) =>
+                    {
+                        switch (key.ShardNumber)
+                        {
+                            case 0:
+                                {
+                                    Assert.False(result.IsStale);
+                                    break;
+                                }
+                            case 2:
+                                {
+                                    Assert.False(result.IsStale);
+                                    break;
+                                }
+                            default:
+                                {
+                                    Assert.True(result.IsStale);
+                                    Assert.Equal(1, result.StalenessReasons.Count);
+                                    Assert.Contains("There are still some compare exchange references to process for collection", result.StalenessReasons[0]);
+                                    break;
+                                }
+                        }
+                    });
+
+                store.Maintenance.ForTesting(() => new StartIndexingOperation())
+                    .ExecuteOnAll();
 
                 Indexes.WaitForIndexing(store);
 
                 RavenTestHelper.AssertNoIndexErrors(store);
 
-                staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
-                Assert.False(staleness.IsStale);
+                store.Maintenance.ForTesting(() => new GetIndexStalenessOperation(indexName))
+                    .AssertAll((_, result) => Assert.False(result.IsStale));
 
                 terms = store.Maintenance.Send(new GetTermsOperation(indexName, "City", null));
                 Assert.Equal(1, terms.Length);
                 Assert.Contains("torun", terms);
 
-                store.Maintenance.Send(new StopIndexingOperation());
+                store.Maintenance.ForTesting(() => new StopIndexingOperation())
+                    .ExecuteOnAll();
 
                 // add doc and compare
                 using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
@@ -124,27 +190,59 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
-                Assert.True(staleness.IsStale);
-                Assert.Equal(2, staleness.StalenessReasons.Count);
-                Assert.Contains("There are still some documents to process from collection", staleness.StalenessReasons[0]);
-                Assert.Contains("There are still some compare exchange references to process for collection", staleness.StalenessReasons[1]);
+                using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    // waiting for the value to be applied in the cluster using returned header with raft index from previous save changes
+                    var companies = session
+                        .Query<Company>()
+                        .ToList();
 
-                store.Maintenance.Send(new StartIndexingOperation());
+                    Assert.Equal(2, companies.Count);
+                }
+
+                store.Maintenance.ForTesting(() => new GetIndexStalenessOperation(indexName))
+                    .AssertAll((key, result) =>
+                    {
+                        switch (key.ShardNumber)
+                        {
+                            case 0:
+                                {
+                                    Assert.False(result.IsStale);
+                                    break;
+                                }
+                            case 2:
+                                {
+                                    Assert.False(result.IsStale);
+                                    break;
+                                }
+                            default:
+                                {
+                                    Assert.True(result.IsStale);
+                                    Assert.Equal(2, result.StalenessReasons.Count);
+                                    Assert.Contains("There are still some documents to process from collection", result.StalenessReasons[0]);
+                                    Assert.Contains("There are still some compare exchange references to process for collection", result.StalenessReasons[1]);
+                                    break;
+                                }
+                        }
+                    });
+
+                store.Maintenance.ForTesting(() => new StartIndexingOperation())
+                    .ExecuteOnAll();
 
                 Indexes.WaitForIndexing(store);
 
                 RavenTestHelper.AssertNoIndexErrors(store);
 
-                staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
-                Assert.False(staleness.IsStale);
+                store.Maintenance.ForTesting(() => new GetIndexStalenessOperation(indexName))
+                    .AssertAll((_, result) => Assert.False(result.IsStale));
 
                 terms = store.Maintenance.Send(new GetTermsOperation(indexName, "City", null));
                 Assert.Equal(2, terms.Length);
                 Assert.Contains("torun", terms);
                 Assert.Contains("cesarea", terms);
 
-                store.Maintenance.Send(new StopIndexingOperation());
+                store.Maintenance.ForTesting(() => new StopIndexingOperation())
+                    .ExecuteOnAll();
 
                 // update
                 using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
@@ -155,26 +253,58 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
-                Assert.True(staleness.IsStale);
-                Assert.Equal(1, staleness.StalenessReasons.Count);
-                Assert.Contains("There are still some compare exchange references to process for collection", staleness.StalenessReasons[0]);
+                using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    // waiting for the value to be applied in the cluster using returned header with raft index from previous save changes
+                    var companies = session
+                        .Query<Company>()
+                        .ToList();
 
-                store.Maintenance.Send(new StartIndexingOperation());
+                    Assert.Equal(2, companies.Count);
+                }
+
+                store.Maintenance.ForTesting(() => new GetIndexStalenessOperation(indexName))
+                    .AssertAll((key, result) =>
+                    {
+                        switch (key.ShardNumber)
+                        {
+                            case 0:
+                            {
+                                Assert.False(result.IsStale);
+                                break;
+                            }
+                            case 2:
+                            {
+                                Assert.False(result.IsStale);
+                                break;
+                            }
+                            default:
+                            {
+                                Assert.True(result.IsStale);
+                                Assert.Equal(1, result.StalenessReasons.Count);
+                                Assert.Contains("There are still some compare exchange references to process for collection", result.StalenessReasons[0]);
+                                break;
+                            }
+                        }
+                    });
+
+                store.Maintenance.ForTesting(() => new StartIndexingOperation())
+                    .ExecuteOnAll();
 
                 Indexes.WaitForIndexing(store);
 
                 RavenTestHelper.AssertNoIndexErrors(store);
 
-                staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
-                Assert.False(staleness.IsStale);
+                store.Maintenance.ForTesting(() => new GetIndexStalenessOperation(indexName))
+                    .AssertAll((_, result) => Assert.False(result.IsStale));
 
                 terms = store.Maintenance.Send(new GetTermsOperation(indexName, "City", null));
                 Assert.Equal(2, terms.Length);
                 Assert.Contains("torun", terms);
                 Assert.Contains("hadera", terms);
 
-                store.Maintenance.Send(new StopIndexingOperation());
+                store.Maintenance.ForTesting(() => new StopIndexingOperation())
+                    .ExecuteOnAll();
 
                 // delete
                 using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
@@ -185,19 +315,50 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
-                Assert.True(staleness.IsStale);
-                Assert.Equal(1, staleness.StalenessReasons.Count);
-                Assert.Contains("There are still some compare exchange tombstone references to process for collection", staleness.StalenessReasons[0]);
+                using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    // waiting for the value to be applied in the cluster using returned header with raft index from previous save changes
+                    var companies = session
+                        .Query<Company>()
+                        .ToList();
 
-                store.Maintenance.Send(new StartIndexingOperation());
+                    Assert.Equal(2, companies.Count);
+                }
+
+                store.Maintenance.ForTesting(() => new GetIndexStalenessOperation(indexName))
+                    .AssertAll((key, result) =>
+                    {
+                        switch (key.ShardNumber)
+                        {
+                            case 0:
+                            {
+                                Assert.False(result.IsStale);
+                                break;
+                            }
+                            case 2:
+                            {
+                                Assert.False(result.IsStale);
+                                break;
+                            }
+                            default:
+                            {
+                                Assert.True(result.IsStale);
+                                Assert.Equal(1, result.StalenessReasons.Count);
+                                Assert.Contains("There are still some compare exchange tombstone references to process for collection", result.StalenessReasons[0]);
+                                break;
+                            }
+                        }
+                    });
+
+                store.Maintenance.ForTesting(() => new StartIndexingOperation())
+                    .ExecuteOnAll();
 
                 Indexes.WaitForIndexing(store);
 
                 RavenTestHelper.AssertNoIndexErrors(store);
 
-                staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
-                Assert.False(staleness.IsStale);
+                store.Maintenance.ForTesting(() => new GetIndexStalenessOperation(indexName))
+                    .AssertAll((_, result) => Assert.False(result.IsStale));
 
                 terms = store.Maintenance.Send(new GetTermsOperation(indexName, "City", null));
                 Assert.Equal(1, terms.Length);
@@ -211,12 +372,30 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store, timeout: TimeSpan.FromSeconds(5));
+                using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    // waiting for the value to be applied in the cluster using returned header with raft index from previous save changes
+                    var companies = session
+                        .Query<Company>()
+                        .ToList();
+
+                    Assert.Equal(2, companies.Count);
+                }
+
+                try
+                {
+                    Indexes.WaitForIndexing(store, timeout: TimeSpan.FromSeconds(5));
+                }
+                catch (Exception e)
+                {
+                    store.Maintenance.ForTesting(() => new GetIndexStalenessOperation(indexName))
+                        .AssertAll((_, result) => Assert.False(result.IsStale));
+                }
 
                 RavenTestHelper.AssertNoIndexErrors(store);
 
-                staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
-                Assert.False(staleness.IsStale);
+                store.Maintenance.ForTesting(() => new GetIndexStalenessOperation(indexName))
+                    .AssertAll((_, result) => Assert.False(result.IsStale));
 
                 terms = store.Maintenance.Send(new GetTermsOperation(indexName, "City", null));
                 Assert.Equal(2, terms.Length);
