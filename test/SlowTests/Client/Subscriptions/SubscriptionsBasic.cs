@@ -1429,6 +1429,51 @@ namespace SlowTests.Client.Subscriptions
         }
 
         [Fact]
+        public async Task ShouldContinueSubscriptionOnClientException()
+        {
+            using var server = GetNewServer();
+            using var store = GetDocumentStore(new Options { Server = server });
+
+            var subscriptionDocuments = await store.Subscriptions.GetSubscriptionsAsync(0, 10);
+
+            Assert.Equal(0, subscriptionDocuments.Count);
+
+            await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>());
+
+            subscriptionDocuments = await store.Subscriptions.GetSubscriptionsAsync(0, 10);
+
+            Assert.Equal(1, subscriptionDocuments.Count);
+            Assert.Equal("from 'Users' as doc", subscriptionDocuments[0].Query);
+
+            using var subscription = store.Subscriptions.GetSubscriptionWorker(
+                new SubscriptionWorkerOptions(subscriptionDocuments[0].SubscriptionName) { TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(1) });
+
+            server.Dispose();
+            var unexpected = new AsyncManualResetEvent();
+            var retry = new AsyncManualResetEvent();
+            Exception onUnexpectedSubscriptionError = null;
+            Exception onSubscriptionConnectionRetry = null;
+            subscription.OnUnexpectedSubscriptionError += exception =>
+            {
+                onUnexpectedSubscriptionError = exception;
+                unexpected.Set();
+            };
+            subscription.OnSubscriptionConnectionRetry += exception =>
+            {
+                onSubscriptionConnectionRetry = exception;
+                retry.Set();
+            };
+            var t =  subscription.Run(x => { });
+            Assert.True(await unexpected.WaitAsync(_reasonableWaitTime));
+            Assert.True(await retry.WaitAsync(_reasonableWaitTime));
+            Assert.False(t.IsFaulted);
+            Assert.Equal(onSubscriptionConnectionRetry.GetType().FullName, onUnexpectedSubscriptionError.GetType().FullName);
+            Assert.NotNull(onSubscriptionConnectionRetry.InnerException);
+            Assert.NotNull(onUnexpectedSubscriptionError.InnerException);
+            Assert.Equal(onSubscriptionConnectionRetry.InnerException.GetType().FullName, onUnexpectedSubscriptionError.InnerException.GetType().FullName);
+        }
+
+        [Fact]
         public async Task DeletingSubscriptionShouldRemoveItsState()
         {
             using var server = GetNewServer(new ServerCreationOptions

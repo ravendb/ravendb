@@ -1,10 +1,12 @@
 ﻿using System.Collections.Generic;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using NetTopologySuite.GeometriesGraph;
 
 namespace Raven.Server.Documents.Indexes.IndexMerging
 {
-    internal class IndexVisitor : CSharpSyntaxVisitor
+    internal class IndexVisitor : CSharpSyntaxRewriter
     {
         private readonly IndexData _indexData;
 
@@ -12,38 +14,39 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
         {
             _indexData = indexData;
             indexData.NumberOfFromClauses = 0;
-            indexData.SelectExpressions = new Dictionary<string, ExpressionSyntax>();
+            indexData.SelectExpressions = new();
+            _indexData.Collection = null;
         }
 
-        public override void VisitQueryExpression(QueryExpressionSyntax queryFromClause)
+        public override SyntaxNode VisitQueryExpression(QueryExpressionSyntax node)
         {
-            _indexData.FromExpression = queryFromClause.FromClause.Expression;
-            _indexData.FromIdentifier = queryFromClause.FromClause.Identifier.ValueText;
+            _indexData.FromExpression = node.FromClause.Expression;
+            _indexData.FromIdentifier = node.FromClause.Identifier.ValueText;
             _indexData.NumberOfFromClauses++;
+         //   VisitQueryBody(node.Body);
 
-            VisitQueryBody(queryFromClause.Body);
+
+            return base.VisitQueryExpression(node);
         }
 
-        public override void VisitMemberAccessExpression(MemberAccessExpressionSyntax memberAccessExp)
+        public override SyntaxNode VisitMemberAccessExpression(MemberAccessExpressionSyntax node)
         {
-            base.VisitMemberAccessExpression(memberAccessExp);
-            _indexData.Collection = memberAccessExp.Name.Identifier.ValueText;
+            _indexData.Collection ??= node.Name.Identifier.ValueText;
+            return base.VisitMemberAccessExpression(node);
         }
 
-        public override void VisitInvocationExpression(InvocationExpressionSyntax invocationExpression)
+        public override SyntaxNode VisitInvocationExpression(InvocationExpressionSyntax invocationExpression)
         {
-            base.VisitInvocationExpression(invocationExpression);
-
             var selectExpressions = new Dictionary<string, ExpressionSyntax>();
             var visitor = new CaptureSelectExpressionsAndNewFieldNamesVisitor(false, new HashSet<string>(), selectExpressions);
             invocationExpression.Accept(visitor);
 
             var memberAccessExpression = invocationExpression.Expression as MemberAccessExpressionSyntax;
 
-            if (memberAccessExpression == null)
+            // select new { x = t.Select(x)
+            if (memberAccessExpression == null || invocationExpression?.Parent is AnonymousObjectMemberDeclaratorSyntax)
             {
-                base.VisitInvocationExpression(invocationExpression);
-                return;
+                return base.VisitInvocationExpression(invocationExpression);
             }
 
             if (memberAccessExpression.Name.Identifier.ValueText == "Where")
@@ -56,22 +59,24 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
             if (memberAccessExpression.Expression is IdentifierNameSyntax identifierNameSyntax)
             {
                 _indexData.Collection = identifierNameSyntax.Identifier.ValueText;
-                return;
+                return base.VisitInvocationExpression(invocationExpression);
             }
 
             if (memberAccessExpression.Expression is MemberAccessExpressionSyntax innerMemberAccessExpression)
             {
                 _indexData.Collection = innerMemberAccessExpression.Name.Identifier.ValueText;
             }
+
+            return base.VisitInvocationExpression(invocationExpression);
         }
 
-        public override void VisitQueryBody(QueryBodySyntax node)
+        public override SyntaxNode VisitQueryBody(QueryBodySyntax node)
         {
             if ((node.SelectOrGroup is SelectClauseSyntax) == false)
             {
-               VisitGroupClause(node.SelectOrGroup as GroupClauseSyntax);
-                return;
+                return base.VisitQueryBody(node);
             }
+
 
             var selectExpressions = new Dictionary<string, ExpressionSyntax>();
             var visitor = new CaptureSelectExpressionsAndNewFieldNamesVisitor(false, new HashSet<string>(), selectExpressions);
@@ -79,35 +84,37 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
 
             _indexData.SelectExpressions = selectExpressions;
             _indexData.NumberOfSelectClauses++;
+            return base.VisitQueryBody(node);
         }
 
-        public override void VisitWhereClause(WhereClauseSyntax queryWhereClause)
+        public override SyntaxNode VisitWhereClause(WhereClauseSyntax queryWhereClause)
         {
-            base.VisitWhereClause(queryWhereClause);
             _indexData.HasWhere = true;
+            return base.VisitWhereClause(queryWhereClause);
         }
 
-        public override void VisitOrderByClause(OrderByClauseSyntax queryOrderClause)
+        public override SyntaxNode VisitOrderByClause(OrderByClauseSyntax queryOrderClause)
         {
-            base.VisitOrderByClause(queryOrderClause);
             _indexData.HasOrder = true;
+            return base.VisitOrderByClause(queryOrderClause);
         }
 
-        public override void VisitOrdering(OrderingSyntax queryOrdering)
+        public override SyntaxNode VisitOrdering(OrderingSyntax queryOrdering)
         {
-            base.VisitOrdering(queryOrdering);
             _indexData.HasOrder = true;
+            return base.VisitOrdering(queryOrdering);
         }
-        public override void VisitGroupClause(GroupClauseSyntax queryGroupClause)
+
+        public override SyntaxNode VisitGroupClause(GroupClauseSyntax queryGroupClause)
         {
-            base.VisitGroupClause(queryGroupClause);
             _indexData.HasGroup = true;
+            return base.VisitGroupClause(queryGroupClause);
         }
-        public override void VisitLetClause(LetClauseSyntax queryLetClause)
+
+        public override SyntaxNode VisitLetClause(LetClauseSyntax queryLetClause)
         {
-            base.VisitLetClause(queryLetClause);
             _indexData.HasLet = true;
+            return base.VisitLetClause(queryLetClause);
         }
     }
-
 }

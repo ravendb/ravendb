@@ -17,6 +17,7 @@ import accessManager = require("common/shell/accessManager");
 import TrafficWatchHttpChange = Raven.Client.Documents.Changes.TrafficWatchHttpChange;
 import trafficWatchQueriesDialog from "viewmodels/manage/trafficWatchQueriesDialog";
 import app = require("durandal/app");
+import appUrl = require("common/appUrl");
 
 type trafficChangeType = Raven.Client.Documents.Changes.TrafficWatchChangeType | Raven.Client.ServerWide.Tcp.TcpConnectionHeaderMessage.OperationTypes;
 
@@ -178,6 +179,8 @@ class trafficWatch extends viewModelBase {
     private selectedTypeNamesTcp = ko.observableArray<string>(this.allTypeDataTcp.splice(0));
     
     onlyErrors = ko.observable<boolean>(false);
+
+    adminLogsUrl = appUrl.forAdminLogs() + "?highlightTrafficWatch=true"
 
     stats = {
         sourceIpsCount: ko.observable<string>(),

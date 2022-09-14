@@ -1264,10 +1264,20 @@ namespace Voron.Data.BTrees
 
                             using (p.GetNodeKey(_llt, i, out Slice fixedSizeTreeName))
                             {
-                                var fixedSizeTree = new FixedSizeTree(_llt, this, fixedSizeTreeName, valueSize);
+                                FixedSizeTree fixedSizeTree;
 
-                                var pages = fixedSizeTree.AllPages();
-                                results.AddRange(pages);
+                                try
+                                {
+                                    fixedSizeTree = new FixedSizeTree(_llt, this, fixedSizeTreeName, valueSize);
+
+                                    var pages = fixedSizeTree.AllPages();
+                                    results.AddRange(pages);
+                                }
+                                catch (InvalidFixedSizeTree)
+                                {
+                                    // ignored - we sometimes have trees with mixed types of values - regular values reside next to fixed size tree headers
+                                    continue;
+                                }
 
                                 if ((State.Flags & TreeFlags.Streams) == TreeFlags.Streams)
                                 {
