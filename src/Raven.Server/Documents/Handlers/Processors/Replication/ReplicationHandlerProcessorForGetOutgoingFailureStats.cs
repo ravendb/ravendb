@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
             {
                 var stats = new ReplicationOutgoingsFailurePreview
                 {
-                    OutgoingsFailureInfo = new Dictionary<ReplicationNode, ConnectionShutdownInfo>(RequestHandler.Database.ReplicationLoader.OutgoingFailureInfo)
+                    Stats = new Dictionary<ReplicationNode, ConnectionShutdownInfo>(RequestHandler.Database.ReplicationLoader.OutgoingFailureInfo)
                 };
        
                 context.Write(writer, stats.ToJson());

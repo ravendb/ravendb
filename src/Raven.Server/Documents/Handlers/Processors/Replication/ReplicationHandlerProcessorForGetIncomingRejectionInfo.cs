@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
             {
                 var stats = new ReplicationIncomingRejectionInfoPreview
                 {
-                    IncomingRejectionStats = new Dictionary<IncomingConnectionInfo, ConcurrentQueue<ReplicationLoader.IncomingConnectionRejectionInfo>>(RequestHandler.Database.ReplicationLoader.IncomingRejectionStats)
+                    Stats = new Dictionary<IncomingConnectionInfo, ConcurrentQueue<ReplicationLoader.IncomingConnectionRejectionInfo>>(RequestHandler.Database.ReplicationLoader.IncomingRejectionStats)
                 };
               
                 context.Write(writer, stats.ToJson());

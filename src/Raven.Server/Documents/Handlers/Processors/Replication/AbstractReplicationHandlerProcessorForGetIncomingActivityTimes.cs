@@ -27,13 +27,13 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
 
     public class ReplicationIncomingLastActivityTimePreview
     {
-        public IDictionary<IncomingConnectionInfo, DateTime> IncomingActivityTimes;
+        public IDictionary<IncomingConnectionInfo, DateTime> Stats;
 
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
-                ["Stats"] = new DynamicJsonArray(IncomingActivityTimes.Select(IncomingActivityTimeToJson))
+                [nameof(Stats)] = new DynamicJsonArray(Stats.Select(IncomingActivityTimeToJson))
             };
         }
 

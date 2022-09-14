@@ -27,13 +27,13 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
 
     public class ReplicationOutgoingsFailurePreview
     {
-        public IDictionary<ReplicationNode, ConnectionShutdownInfo> OutgoingsFailureInfo;
+        public IDictionary<ReplicationNode, ConnectionShutdownInfo> Stats;
 
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
-                ["Stats"] = new DynamicJsonArray(OutgoingsFailureInfo.Select(OutgoingFailureInfoToJson))
+                [nameof(Stats)] = new DynamicJsonArray(Stats.Select(OutgoingFailureInfoToJson))
             };
         }
 
@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
         private DynamicJsonValue ReplicationNodeToJson(ReplicationNode replicationNode)
         {
             var json = replicationNode.ToJson();
-            json[nameof(ReplicationNode)] = replicationNode.GetType().ToString();
+            json["Type"] = replicationNode.GetType().ToString();
             return json;
         }
     }
