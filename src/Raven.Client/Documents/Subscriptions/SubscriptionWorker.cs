@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
@@ -885,7 +886,14 @@ namespace Raven.Client.Documents.Subscriptions
                 case AuthorizationException _:
                 case AllTopologyNodesDownException _:
                 case SubscriberErrorException _:
-                case RavenException _:
+                    _processingCts.Cancel();
+                    return false;
+                case RavenException re:
+                    if (re.InnerException is HttpRequestException or TimeoutException)
+                    {
+                        goto default;
+                    }
+
                     _processingCts.Cancel();
                     return false;
 

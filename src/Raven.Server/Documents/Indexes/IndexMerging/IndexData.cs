@@ -11,7 +11,6 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
     {
         private readonly IndexDefinition _index;
         public Dictionary<string, ExpressionSyntax> SelectExpressions = new Dictionary<string, ExpressionSyntax>();
-
         public IndexData(IndexDefinition index)
         {
             _index = index;
@@ -40,6 +39,8 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
 
         public string BuildExpression(Dictionary<string, ExpressionSyntax> selectExpressions)
         {
+            const string DocumentIdentifier = "doc";
+            var documentIdentifier = SyntaxFactory.IdentifierName(DocumentIdentifier);
             var memberDeclarators = new SeparatedSyntaxList<AnonymousObjectMemberDeclaratorSyntax>();
 
             foreach (var curExpr in selectExpressions.OrderBy(x => x.Key))
@@ -51,6 +52,7 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
 
             var anonymousObjectCreationExpression = SyntaxFactory.AnonymousObjectCreationExpression(memberDeclarators);
 
+            string resultMapOfMerging = null;
             if (InvocationExpression != null)
             {
                 ExpressionSyntax expression = null;
@@ -69,21 +71,20 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
                             SyntaxFactory.SingletonSeparatedList(
                                 SyntaxFactory.Argument(
                                     SyntaxFactory.SimpleLambdaExpression(
-                                        SyntaxFactory.Parameter(SyntaxFactory.Identifier("doc")),
+                                        SyntaxFactory.Parameter(SyntaxFactory.Identifier(DocumentIdentifier)),
                                         anonymousObjectCreationExpression)))));
-                return invocExp.ToString().Normalize();
+                resultMapOfMerging = invocExp.NormalizeWhitespace().ToFullString().Normalize();
             }
 
             if (FromExpression != null)
             {
                 var queryExpr = SyntaxFactory.QueryExpression(
-                    SyntaxFactory.FromClause("doc", FromExpression),
+                    SyntaxFactory.FromClause(DocumentIdentifier, FromExpression),
                     SyntaxFactory.QueryBody(SyntaxFactory.SelectClause(anonymousObjectCreationExpression)));
-                return queryExpr.ToString().Normalize();
+                resultMapOfMerging = queryExpr.NormalizeWhitespace().ToFullString().Normalize();
             }
-
-            return null;
-
+            
+            return resultMapOfMerging;
         }
 
         public override string ToString()
