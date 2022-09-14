@@ -49,6 +49,7 @@ using Raven.Client.ServerWide.Operations.Integrations.PostgreSQL;
 using Raven.Client.ServerWide.Operations.Logs;
 using Raven.Client.ServerWide.Operations.Migration;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
+using Raven.Client.ServerWide.Operations.TrafficWatch;
 using Raven.Client.Util;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
@@ -513,7 +514,8 @@ namespace TypingsGenerator
             // admin logs
             scripter.AddType(typeof(LogMode));
             scripter.AddType(typeof(SetLogsConfigurationOperation.Parameters));
-
+            scripter.AddType(typeof(PutTrafficWatchConfigurationOperation.Parameters));
+            
             // adminJs console
             scripter.AddType(typeof(AdminJsScript));
 
