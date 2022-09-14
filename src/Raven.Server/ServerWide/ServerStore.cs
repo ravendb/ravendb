@@ -2527,13 +2527,13 @@ namespace Raven.Server.ServerWide
                     maxLastWork = env.Environment.LastWorkTime;
             }
 
-            if ((now - maxLastWork).CompareTo(Configuration.Server.DeepDatabaseCleanupThreshold.AsTimeSpan) > 0)
+            if ((now - maxLastWork).CompareTo(database.Configuration.Databases.DeepCleanupThreshold.AsTimeSpan) > 0)
             {
                 mode = DatabaseCleanupMode.Deep;
                 return true;
             }
 
-            if ((now - database.LastIdleTime).CompareTo(Configuration.Server.RegularDatabaseCleanupThreshold.AsTimeSpan) > 0)
+            if ((now - database.LastIdleTime).CompareTo(database.Configuration.Databases.RegularCleanupThreshold.AsTimeSpan) > 0)
             {
                 mode = DatabaseCleanupMode.Regular;
                 return true;
