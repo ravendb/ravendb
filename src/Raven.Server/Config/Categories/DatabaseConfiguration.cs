@@ -119,5 +119,17 @@ namespace Raven.Server.Config.Categories
         [SizeUnit(SizeUnit.Megabytes)]
         [ConfigurationEntry("Databases.PulseReadTransactionLimitInMb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public Size PulseReadTransactionLimit { get; set; }
+
+        [Description("EXPERT: A deep database cleanup will be done when this number of minutes has passed since the last time work was done on the database.")]
+        [DefaultValue(5)]
+        [TimeUnit(TimeUnit.Minutes)]
+        [ConfigurationEntry("Databases.DeepCleanupThresholdInMin", ConfigurationEntryScope.ServerWideOnly)]
+        public TimeSetting DeepCleanupThreshold { get; set; }
+
+        [Description("EXPERT: A regular database cleanup will be done when this number of minutes has passed since the last database idle time.")]
+        [DefaultValue(10)]
+        [TimeUnit(TimeUnit.Minutes)]
+        [ConfigurationEntry("Databases.RegularCleanupThresholdInMin", ConfigurationEntryScope.ServerWideOnly)]
+        public TimeSetting RegularCleanupThreshold { get; set; }
     }
 }

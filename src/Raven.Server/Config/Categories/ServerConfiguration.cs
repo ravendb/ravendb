@@ -109,17 +109,5 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(false)]
         [ConfigurationEntry("Server.LogsStream.Disable", ConfigurationEntryScope.ServerWideOnly)]
         public bool DisableLogsStream { get; set; }
-
-        [Description("EXPERT: A deep database cleanup will be done when this number of minutes has passed since the last time work was done on the database.")]
-        [DefaultValue(5)]
-        [TimeUnit(TimeUnit.Minutes)]
-        [ConfigurationEntry("Server.DeepDatabaseCleanupThresholdInMin", ConfigurationEntryScope.ServerWideOnly)]
-        public TimeSetting DeepDatabaseCleanupThreshold { get; set; }
-
-        [Description("EXPERT: A regular database cleanup will be done when this number of minutes has passed since the last database idle time.")]
-        [DefaultValue(10)]
-        [TimeUnit(TimeUnit.Minutes)]
-        [ConfigurationEntry("Server.RegularDatabaseCleanupThresholdInMin", ConfigurationEntryScope.ServerWideOnly)]
-        public TimeSetting RegularDatabaseCleanupThreshold { get; set; }
     }
 }
