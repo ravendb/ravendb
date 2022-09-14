@@ -24,11 +24,6 @@ public static class Program
             {
                 using (var testOutputHelper = new ConsoleTestOutputHelper())
                 {
-                    new IndexSearcherTest(testOutputHelper).SimpleAndOrForBiggerSet(201, 128);
-
-                    //new SetTests(testOutputHelper).CanDeleteAndInsertInRandomOrder(73014, 35);
-                    //new SetAddRemoval(testOutputHelper).AdditionsAndRemovalWork();
-
                     int minFailure = int.MaxValue;
                     int failureRandom = -1;
 
@@ -39,8 +34,7 @@ public static class Program
                         int seed = rnd.Next(100000);
                         try
                         {
-                            //new CompactTreeTests(testOutputHelper).CanDeleteLargeNumberOfItemsInRandomInsertionOrder(2023, 13878);
-                            new SetTests(testOutputHelper).CanDeleteAndInsertInRandomOrder(number, seed);
+                           // new SetTests(testOutputHelper).CanDeleteAndInsertInBulk(seed, number, 1000, includeDuplicates:true);
                         }
                         catch (Exception ex)
                         {
