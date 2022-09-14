@@ -232,10 +232,11 @@ namespace Voron.Data.Sets
                     }
                     _state.NumberOfEntries--;
                 }
-                
-                // because we are in bulk mode, we only want to try to do a merge if the 
-                // page is 75% empty, rather than try to be eager about this
-                if (leafPage.SpaceUsed < (Constants.Storage.PageSize / 4) * 3) 
+
+                // because we are in bulk mode, rather than try to be eager about this
+                // we only want to try to do a merge if the  page is 75% empty or the
+                // space used is less than 25% of the total size 
+                if (leafPage.SpaceUsed < Constants.Storage.PageSize / 4) 
                     MaybeMergeLeafPage(in leafPage);
             }
         }
