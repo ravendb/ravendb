@@ -353,6 +353,9 @@ namespace Raven.Server.Documents
                 if (record == null)
                     DatabaseDoesNotExistException.Throw(Name);
 
+                InitializeSubscriptionStorage();
+                InitializeCompareExchangeStorage();
+
                 PeriodicBackupRunner = new PeriodicBackupRunner(this, _serverStore, wakeup);
 
                 _addToInitLog("Initializing IndexStore (async)");
@@ -380,8 +383,7 @@ namespace Raven.Server.Documents
                 }
 
                 DatabaseShutdown.ThrowIfCancellationRequested();
-                InitializeSubscriptionStorage();
-                InitializeCompareExchangeStorage();
+
                 _addToInitLog("Initializing SubscriptionStorage completed");
 
                 _serverStore.StorageSpaceMonitor.Subscribe(this);
