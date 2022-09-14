@@ -28,13 +28,13 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
 
     public class ReplicationIncomingRejectionInfoPreview
     {
-        public IDictionary<IncomingConnectionInfo, ConcurrentQueue<ReplicationLoader.IncomingConnectionRejectionInfo>> IncomingRejectionStats;
+        public IDictionary<IncomingConnectionInfo, ConcurrentQueue<ReplicationLoader.IncomingConnectionRejectionInfo>> Stats;
 
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
-                ["Stats"] = new DynamicJsonArray(IncomingRejectionStats.Select(IncomingRejectionInfoToJson))
+                [nameof(Stats)] = new DynamicJsonArray(Stats.Select(IncomingRejectionInfoToJson))
             };
         }
 

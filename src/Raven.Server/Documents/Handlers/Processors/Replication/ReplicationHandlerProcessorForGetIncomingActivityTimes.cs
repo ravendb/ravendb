@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
             {
                 var stats = new ReplicationIncomingLastActivityTimePreview
                 {
-                    IncomingActivityTimes = new Dictionary<IncomingConnectionInfo, DateTime>(RequestHandler.Database.ReplicationLoader.IncomingLastActivityTime)
+                    Stats = new Dictionary<IncomingConnectionInfo, DateTime>(RequestHandler.Database.ReplicationLoader.IncomingLastActivityTime)
                 };
 
                 context.Write(writer, stats.ToJson());
