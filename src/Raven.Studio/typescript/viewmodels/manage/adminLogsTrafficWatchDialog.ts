@@ -7,6 +7,8 @@ import TrafficWatchChangeType = Raven.Client.Documents.Changes.TrafficWatchChang
 
 class adminLogsTrafficWatchDialog extends dialogViewModelBase {
     
+    view = require("views/manage/adminLogsTrafficWatchDialog.html");
+
     private readonly model: trafficWatchConfiguration;
 
     private allDatabaseNames = ko.observableArray<string>();
