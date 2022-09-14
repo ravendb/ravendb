@@ -27,13 +27,27 @@ public interface IShardedReadOperation<TResult, TCombinedResult> : IShardedOpera
             CombinedEtag = actualEtag
         };
 
+        var span = commands.Span;
+
         if (ExpectedEtag == result.CombinedEtag)
         {
-            result.StatusCode = (int)HttpStatusCode.NotModified;
-            return result;
+            var allNodModified = true;
+            foreach (var cmd in span)
+            {
+                if (cmd.StatusCode == HttpStatusCode.NotModified) 
+                    continue;
+                
+                allNodModified = false;
+                break;
+            }
+
+            if (allNodModified)
+            {
+                result.StatusCode = (int)HttpStatusCode.NotModified;
+                return result;
+            }
         }
 
-        var span = commands.Span;
         for (int i = 0; i < span.Length; i++)
         {
             results.Span[i] = span[i].Result;

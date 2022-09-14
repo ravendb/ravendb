@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
@@ -82,23 +83,22 @@ public class ShardedQueryProcessor : AbstractShardedQueryProcessor<ShardedQueryC
             documentsComparer = new ShardedDocumentsComparer(_query.Metadata, _isMapReduceIndex || _isAutoMapReduceQuery);
         }
 
-        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "RavenDB-19084 TODO arek - ExpectedEtag");
+        var operation = new ShardedQueryOperation(_context, _requestHandler, _commands, _includeCompareExchangeValues, documentsComparer, _existingResultEtag?.ToString());
 
-        var operation = new ShardedQueryOperation(_context, _requestHandler, _commands, _includeCompareExchangeValues, documentsComparer, null);
+        var shardedReadResult = await _requestHandler.ShardExecutor.ExecuteParallelForShardsAsync(_commands.Keys.ToArray(), operation, _token);
 
-        var result = (await _requestHandler.ShardExecutor.ExecuteParallelForShardsAsync(_commands.Keys.ToArray(), operation, _token)).Result;
-        
+        if (shardedReadResult.StatusCode == (int)HttpStatusCode.NotModified)
+        {
+            return new ShardedQueryResult { NotModified = true };
+        }
+
+        var result = shardedReadResult.Result;
+
         if (_isAutoMapReduceQuery && result.RaftCommandIndex.HasValue)
         {
             // we are waiting here for all nodes, we should wait for all of the orchestrators at least to apply that
             // so further queries would not throw index does not exist in case of a failover
             await _requestHandler.DatabaseContext.Cluster.WaitForExecutionOnAllNodesAsync(result.RaftCommandIndex.Value);
-        }
-
-        if (_existingResultEtag != null && _query.Metadata.HasOrderByRandom == false)
-        {
-            if (_existingResultEtag == result.ResultEtag)
-                return new ShardedQueryResult { NotModified = true };
         }
 
         if (operation.MissingIncludes is {Count: > 0})

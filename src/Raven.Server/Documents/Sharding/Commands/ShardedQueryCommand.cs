@@ -1,4 +1,5 @@
-﻿using System.Net.Http;
+﻿using System.Diagnostics;
+using System.Net.Http;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions.Documents.Indexes;
@@ -14,7 +15,7 @@ public class ShardedQueryCommand : AbstractQueryCommand<BlittableJsonReaderObjec
     private readonly BlittableJsonReaderObject _query;
     private readonly string _indexName;
 
-    public ShardedQueryCommand(BlittableJsonReaderObject query, IndexQueryServerSide indexQuery, bool metadataOnly, bool indexEntriesOnly, string indexName) : base(indexQuery, false, metadataOnly, indexEntriesOnly)
+    public ShardedQueryCommand(BlittableJsonReaderObject query, IndexQueryServerSide indexQuery, bool metadataOnly, bool indexEntriesOnly, string indexName) : base(indexQuery, true, metadataOnly, indexEntriesOnly)
     {
         _query = query;
         _indexName = indexName;
@@ -44,6 +45,9 @@ public class ShardedQueryCommand : AbstractQueryCommand<BlittableJsonReaderObjec
             // is null only when index doesn't exist
             throw new IndexDoesNotExistException($"Index `{_indexName}` was not found");
         }
+
+        if (fromCache) 
+            response = HandleCachedResponse(context, response);
 
         Result = JsonDeserializationClient.QueryResult(response);
     }

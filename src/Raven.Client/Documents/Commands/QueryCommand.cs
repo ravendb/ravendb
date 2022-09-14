@@ -76,6 +76,14 @@ namespace Raven.Client.Documents.Commands
         }
 
         protected abstract HttpContent GetContent(JsonOperationContext ctx);
+
+        protected static BlittableJsonReaderObject HandleCachedResponse(JsonOperationContext context, BlittableJsonReaderObject response)
+        {
+            // we have to clone the response here because  otherwise the cached item might be freed while
+            // we are still looking at this result, so we clone it to the side
+            response = response.Clone(context);
+            return response;
+        }
     }
 
     public class QueryCommand : AbstractQueryCommand<Parameters, QueryResult>
@@ -118,12 +126,9 @@ namespace Raven.Client.Documents.Commands
                 return;
             }
             _session.AssertNotDisposed(); // verify that we don't have async query with the user closing the session
-            if (fromCache)
-            {
-                // we have to clone the response here because  otherwise the cached item might be freed while
-                // we are still looking at this result, so we clone it to the side
-                response = response.Clone(context);
-            }
+            if (fromCache) 
+                response = HandleCachedResponse(context, response);
+            
             Result = JsonDeserializationClient.QueryResult(response);
 
             if (fromCache)
