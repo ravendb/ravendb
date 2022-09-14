@@ -1,0 +1,136 @@
+<div class="modal-dialog modal-lg prevent-close" role="document">
+    <div class="modal-content admin-logs-traffic-watch-dialog" tabindex="-1">
+        <div class="modal-header">
+            <button type="button" class="close" data-bind="click: close" aria-hidden="true">
+                <i class="icon-cancel"></i>
+            </button>
+            <h4 class="modal-title">Configure Traffic Watch Logs on disk</h4>
+        </div>
+        <div class="modal-body">
+            <form class="flex-form form-inline" autocomplete="off">
+                <div class="modal-details" data-bind="with: model">
+                    <div class="margin-left">
+                        <div class="toggle">
+                            <input id="enableAdminLogsTrafficWatch" type="checkbox" data-bind="checked: enabled">
+                            <label for="enableAdminLogsTrafficWatch">Enable traffic watch logging to server logs</label>
+                        </div>
+                    </div>
+                    
+                    <div data-bind="collapse: enabled">
+                        <div class="form-group">
+                            <label class="control-label">&nbsp;</label>
+                            <div class="flex-grow margin-left">
+                                <div class="toggle toggle-primary margin-top">
+                                    <input id="filterChangeType" class="styled" type="checkbox" data-bind="checked: filterChangeTypes">
+                                    <label for="filterChangeType">
+                                        Filter by Change Type
+                                    </label>
+                                </div>
+                                <div class="toggle-margin" data-bind="collapse: filterChangeTypes">
+                                    <div data-bind="validationElement: changeTypes">
+                                        <select id="trafficChangeTypes" size="5" multiple="multiple"
+                                                data-bind="options: $root.constructor.allChangeTypes, selectedOptions: changeTypes"></select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="control-label">&nbsp;</label>
+                            <div class="flex-grow margin-left">
+                                <div class="toggle toggle-primary margin-top">
+                                    <input id="filterStatusCodes" class="styled" type="checkbox" data-bind="checked: filterStatusCodes">
+                                    <label for="filterStatusCodes">
+                                        Filter by HTTP Status Code
+                                    </label>
+                                </div>
+                                <div class="toggle-margin" data-bind="collapse: filterStatusCodes">
+                                    <div data-bind="validationElement: statusCodes">
+                                        <select id="trafficStatusCodes" size="5" multiple="multiple"
+                                                data-bind="options: $root.constructor.allStatusCodes, selectedOptions: statusCodes"></select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="control-label">&nbsp;</label>
+                            <div class="flex-grow margin-left">
+                                <div class="toggle toggle-primary margin-top">
+                                    <input id="filterDatabases" class="styled" type="checkbox" data-bind="checked: filterDatabases">
+                                    <label for="filterDatabases">
+                                        Filter by Database
+                                    </label>
+                                </div>
+                                <div class="toggle-margin" data-bind="collapse: filterDatabases">
+                                    <div data-bind="validationElement: databases">
+                                        <select id="trafficDatabaseNames" multiple="multiple"
+                                                data-bind="options: $root.allDatabaseNames, selectedOptions: databases"></select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="control-label">&nbsp;</label>
+                            <div class="flex-grow margin-left">
+                                <div class="toggle toggle-primary margin-top">
+                                    <input id="filterHttpMethods" class="styled" type="checkbox" data-bind="checked: filterHttpMethods">
+                                    <label for="filterHttpMethods">
+                                        Filter by HTTP Method
+                                    </label>
+                                </div>
+                                <div class="toggle-margin" data-bind="collapse: filterHttpMethods">
+                                    <div data-bind="validationElement: httpMethods">
+                                        <select id="trafficHttpMethods" multiple="multiple"
+                                                data-bind="options: $root.constructor.allHttpMethods, selectedOptions: httpMethods"></select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="margin-bottom margin-top-lg">
+                            <div class="form-group">
+                                <label class="control-label">Minimum Request Size</label>
+                                <div class="margin-left">
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" data-bind="numericInput: minimumRequestSize" />
+                                        <div class="input-group-addon">bytes</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="margin-bottom">
+                            <div class="form-group margin-bottom">
+                                <label class="control-label">Minimum Request Duration</label>
+                                <div class="margin-left">
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" data-bind="numericInput: minimumDuration" />
+                                        <div class="input-group-addon">msec</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="margin-bottom">
+                            <div class="form-group margin-bottom">
+                                <label class="control-label">Minimum Response Size</label>
+                                <div class="margin-left">
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" data-bind="numericInput: minimumResponseSize" />
+                                        <div class="input-group-addon">bytes</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-bind="click: close">Cancel</button>
+            <button type="button" class="btn btn-primary" data-bind="click: save">
+                <i class="icon-save"></i>
+                <span>Save</span>
+            </button>
+        </div>
+    </div>
+</div>
