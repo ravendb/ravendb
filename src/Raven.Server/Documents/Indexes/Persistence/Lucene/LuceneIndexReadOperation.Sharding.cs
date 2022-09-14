@@ -32,6 +32,9 @@ public partial class LuceneIndexReadOperation
                 case OrderByFieldType.Double:
                     documentWithOrderByFields.AddDoubleOrderByField(_searcher.IndexReader.GetDoubleValueFor(field.OrderByName, FieldCache_Fields.NUMERIC_UTILS_DOUBLE_PARSER, doc, _state));
                     break;
+                case OrderByFieldType.Random:
+                    // we order by random when merging results from shards
+                    break;
                 default:
                     documentWithOrderByFields.AddStringOrderByField(_searcher.IndexReader.GetStringValueFor(field.OrderByName, doc, _state));
                     break;

@@ -17,7 +17,7 @@ namespace FastTests.Server.Documents.Queries
         }
         
         [RavenTheory(RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Returns_correct_results_from_cache_if_server_response_was_not_modified(Options options)
         {
             using (var store = GetDocumentStore(options))

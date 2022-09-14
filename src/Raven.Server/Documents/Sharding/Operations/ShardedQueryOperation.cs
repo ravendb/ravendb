@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries.Sharding;
@@ -23,6 +25,7 @@ public class ShardedQueryOperation : IShardedReadOperation<QueryResult, ShardedQ
     private readonly Dictionary<int, ShardedQueryCommand> _queryCommands;
     private readonly IncludeCompareExchangeValuesCommand _includeCompareExchangeValues;
     private readonly ShardedDocumentsComparer _sortingComparer;
+    private long _combinedResultEtag;
 
     public ShardedQueryOperation(TransactionOperationContext context, ShardedDatabaseRequestHandler requestHandler, Dictionary<int, ShardedQueryCommand> queryCommands, IncludeCompareExchangeValuesCommand includeCompareExchangeValues, ShardedDocumentsComparer sortingComparer, string expectedEtag)
     {
@@ -42,11 +45,24 @@ public class ShardedQueryOperation : IShardedReadOperation<QueryResult, ShardedQ
 
     public HashSet<string> MissingIncludes { get; private set; }
 
+    public string CombineCommandsEtag(Memory<RavenCommand<QueryResult>> commands)
+    {
+        _combinedResultEtag = 0;
+
+        foreach (var cmd in commands.Span)
+        {
+            _combinedResultEtag = Hashing.Combine(_combinedResultEtag, cmd.Result.ResultEtag);
+        }
+
+        return CharExtensions.ToInvariantString(_combinedResultEtag);
+    }
+
     public ShardedQueryResult CombineResults(Memory<QueryResult> results)
     {
         var result = new ShardedQueryResult
         {
-            Results = new List<BlittableJsonReaderObject>()
+            Results = new List<BlittableJsonReaderObject>(),
+            ResultEtag = _combinedResultEtag
         };
 
         DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Arek, DevelopmentHelper.Severity.Normal, "Check if we could handle this in streaming manner so we won't need to materialize all blittables and do Clone() here");
@@ -58,7 +74,6 @@ public class ShardedQueryOperation : IShardedReadOperation<QueryResult, ShardedQ
             result.SkippedResults += cmdResult.SkippedResults;
             result.IndexName = cmdResult.IndexName;
             result.IncludedPaths = cmdResult.IncludedPaths;
-            result.ResultEtag = Hashing.Combine(result.ResultEtag, cmdResult.ResultEtag);
 
             if (result.IndexTimestamp < cmdResult.IndexTimestamp) 
                 result.IndexTimestamp = cmdResult.IndexTimestamp;
