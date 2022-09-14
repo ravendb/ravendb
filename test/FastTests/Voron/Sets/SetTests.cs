@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Tests.Infrastructure;
@@ -242,6 +242,51 @@ namespace FastTests.Voron.Sets
                 }
 
                 Assert.False(it.MoveNext());
+            }
+        }
+
+        [Fact]
+        public void CanAddHugeOffsets_Large()
+        {
+            HashSet<long> valuesInSet = new();
+
+            using (var wtx = Env.WriteTransaction())
+            {
+                var tree = wtx.OpenSet("test");
+
+                Span<long> buffer = stackalloc long[16];
+
+                Random rnd = new(1337);
+                for (int i = 0; i < 100; i++)
+                {
+                    int j = 0;
+                    while (j < buffer.Length)
+                    {
+                        long valueToAdd = (long)rnd.Next(10) * int.MaxValue + rnd.Next(100000);
+                        if (!valuesInSet.Contains(valueToAdd))
+                        {
+                            buffer[j] = valueToAdd;
+                            valuesInSet.Add(valueToAdd);
+                            j++;
+                        }
+                    }
+
+                    var valuesToAdd = buffer.Slice(0, j);
+                    valuesToAdd.Sort();
+
+                    tree.Add(valuesToAdd);
+                }
+
+                wtx.Commit();
+            }
+
+            using (var rtx = Env.ReadTransaction())
+            {
+                var tree = rtx.OpenSet("test");
+                var it = tree.DumpAllValues();
+                
+                foreach( long item in valuesInSet)
+                    Assert.True(it.Contains(item));
             }
         }
 
