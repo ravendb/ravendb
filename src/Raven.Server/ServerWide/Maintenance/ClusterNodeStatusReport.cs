@@ -61,6 +61,8 @@ namespace Raven.Server.ServerWide.Maintenance
         public Dictionary<string, ObservedIndexStatus> LastIndexStats = new Dictionary<string, ObservedIndexStatus>();
         public Dictionary<string, long> LastSentEtag = new Dictionary<string, long>();
 
+        public long LastExecutedRaftIndex { get; set; }
+
         public class ObservedIndexStatus
         {
             public bool IsSideBySide;
@@ -101,7 +103,8 @@ namespace Raven.Server.ServerWide.Maintenance
                 [nameof(LastCompletedClusterTransaction)] = LastCompletedClusterTransaction,
                 [nameof(LastSentEtag)] = DynamicJsonValue.Convert(LastSentEtag),
                 [nameof(Error)] = Error,
-                [nameof(UpTime)] = UpTime
+                [nameof(UpTime)] = UpTime,
+                [nameof(LastExecutedRaftIndex)] = LastExecutedRaftIndex
             };
             var indexStats = new DynamicJsonValue();
             foreach (var stat in LastIndexStats)

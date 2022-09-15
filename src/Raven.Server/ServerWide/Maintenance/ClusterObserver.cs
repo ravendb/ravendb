@@ -1376,6 +1376,28 @@ namespace Raven.Server.ServerWide.Maintenance
                 return (false, null);
             }
 
+            var mentorsLastRaftIndex = mentorPrevDbStats.LastExecutedRaftIndex;
+            var promotableRaftIndex = promotableDbStats.LastExecutedRaftIndex;
+
+            if (mentorsLastRaftIndex > promotableRaftIndex)
+            {
+                var msg = $"The database '{dbName}' on {promotable} not ready to be promoted, because the mentor hasn't sent all commands yet." + Environment.NewLine +
+                          $"Last Raft Index: {promotableRaftIndex}" + Environment.NewLine +
+                          $"Mentor's Raft Index: {mentorsLastRaftIndex}";
+
+                LogMessage($"Node {promotable} hasn't been promoted because it's raft index isn't updated yet", database: dbName);
+
+                if (topology.DemotionReasons.TryGetValue(promotable, out var demotionReason) == false ||
+                    msg.Equals(demotionReason) == false)
+                {
+                    topology.DemotionReasons[promotable] = msg;
+                    topology.PromotablesStatus[promotable] = DatabasePromotionStatus.RaftIndexNotUpToDate;
+                    return (false, msg);
+                }
+                return (false, null);
+            }
+
+
             var indexesCaughtUp = CheckIndexProgress(
                 promotablePrevDbStats.LastEtag,
                 promotablePrevDbStats.LastIndexStats,

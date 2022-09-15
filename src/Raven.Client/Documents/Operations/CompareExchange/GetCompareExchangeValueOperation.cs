@@ -14,9 +14,17 @@ namespace Raven.Client.Documents.Operations.CompareExchange
 
         private readonly bool _materializeMetadata;
 
+        private readonly string _nodeTag;
+
         public GetCompareExchangeValueOperation(string key)
             : this(key, materializeMetadata: true)
         {
+        }
+
+        internal GetCompareExchangeValueOperation(string key, string nodeTag)
+            : this(key, materializeMetadata: true)
+        {
+            _nodeTag = nodeTag;
         }
 
         internal GetCompareExchangeValueOperation(string key, bool materializeMetadata)
@@ -29,7 +37,7 @@ namespace Raven.Client.Documents.Operations.CompareExchange
 
         public RavenCommand<CompareExchangeValue<T>> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new GetCompareExchangeValueCommand(_key, _materializeMetadata, conventions);
+            return new GetCompareExchangeValueCommand(_key, _materializeMetadata, conventions, _nodeTag);
         }
 
         private class GetCompareExchangeValueCommand : RavenCommand<CompareExchangeValue<T>>
@@ -37,6 +45,12 @@ namespace Raven.Client.Documents.Operations.CompareExchange
             private readonly string _key;
             private readonly bool _materializeMetadata;
             private readonly DocumentConventions _conventions;
+
+            internal GetCompareExchangeValueCommand(string key, bool materializeMetadata, DocumentConventions conventions, string selectedNodeTag)
+                : this(key, materializeMetadata, conventions)
+            {
+                SelectedNodeTag = selectedNodeTag;
+            }
 
             public GetCompareExchangeValueCommand(string key, bool materializeMetadata, DocumentConventions conventions)
             {

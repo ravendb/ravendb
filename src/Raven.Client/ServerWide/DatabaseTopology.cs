@@ -22,7 +22,8 @@ namespace Raven.Client.ServerWide
         Ok,
         OutOfCpuCredits,
         EarlyOutOfMemory,
-        HighDirtyMemory
+        HighDirtyMemory,
+        RaftIndexNotUpToDate
     }
 
     public interface IDatabaseTask
