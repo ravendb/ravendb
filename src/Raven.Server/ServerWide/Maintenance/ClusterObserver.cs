@@ -1376,14 +1376,14 @@ namespace Raven.Server.ServerWide.Maintenance
                 return (false, null);
             }
 
-            var mentorsLastRaftIndex = mentorPrevDbStats.LastExecutedRaftIndex;
-            var promotableRaftIndex = promotableDbStats.LastExecutedRaftIndex;
+            var mentorsLastCompareExchangeIndex = mentorCurrDbStats.LastCompareExchangeIndex;
+            var promotableLastCompareExchangeIndex = promotableDbStats.LastCompareExchangeIndex;
 
-            if (mentorsLastRaftIndex > promotableRaftIndex)
+            if (mentorsLastCompareExchangeIndex > promotableLastCompareExchangeIndex)
             {
                 var msg = $"The database '{dbName}' on {promotable} not ready to be promoted, because the mentor hasn't sent all commands yet." + Environment.NewLine +
-                          $"Last Raft Index: {promotableRaftIndex}" + Environment.NewLine +
-                          $"Mentor's Raft Index: {mentorsLastRaftIndex}";
+                          $"Last Raft Index: {promotableLastCompareExchangeIndex}" + Environment.NewLine +
+                          $"Mentor's Raft Index: {mentorsLastCompareExchangeIndex}";
 
                 LogMessage($"Node {promotable} hasn't been promoted because it's raft index isn't updated yet", database: dbName);
 
