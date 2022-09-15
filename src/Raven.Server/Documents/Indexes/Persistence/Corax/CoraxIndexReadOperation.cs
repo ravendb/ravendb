@@ -338,25 +338,27 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
                     tokenEnd += index; // Adjusting to absolute positioning
 
-                    int highlightingLength = tokenEnd - tokenStart;                    
-                    int fragmentRestLength = Math.Min(current.FragmentLength - highlightingLength, fieldFragment.Length);
-                    if (fragmentRestLength < 0)
+                    int expectedFragmentRestEnd = Math.Min(current.FragmentLength - tokenEnd, fieldFragment.Length);
+                    string fragment;
+                    if (expectedFragmentRestEnd < 0)
                     {
-                        fragmentRestLength = 0;
-                    }                        
-                    else if (fragmentRestLength != fieldFragment.Length)
-                    {
-                        // We may have a fragment we can find a space near the end. 
-                        int fragmentEnd = fieldFragment.Slice(tokenEnd)
-                            .LastIndexOf(' ');
-
-                        // We need to discard the space used to separate the token itself.
-                        if (fragmentEnd > 0)
-                            fragmentRestLength = tokenEnd + fragmentEnd;
+                        fragment = $"{preTag}{fieldFragment[tokenStart..tokenEnd]}{postTag}";
                     }
+                    else
+                    {
+                        var fieldFragmentSpan = fieldFragment.Length - tokenEnd < expectedFragmentRestEnd
+                                                    ? fieldFragment.Slice(tokenEnd)
+                                                    : fieldFragment.Slice(tokenEnd, expectedFragmentRestEnd);
 
-                    var fragmentRest = fragmentRestLength != 0 ? fieldFragment[tokenEnd..fragmentRestLength] : string.Empty;
-                    var fragment = $"{preTag}{fieldFragment[tokenStart..tokenEnd]}{postTag}{fragmentRest}";
+                        int fragmentEnd = fieldFragmentSpan.LastIndexOf(' ');
+                        if (fragmentEnd > 0)
+                            expectedFragmentRestEnd = tokenEnd + fragmentEnd;
+                        else
+                            expectedFragmentRestEnd = fieldFragment.Length;
+
+                        fragment = $"{preTag}{fieldFragment[tokenStart..tokenEnd]}{postTag}{fieldFragment[tokenEnd..expectedFragmentRestEnd]}";
+                    }
+                    
                     fragments.Add(fragment);
 
                     totalFragments++;
