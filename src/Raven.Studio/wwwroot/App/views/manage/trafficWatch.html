@@ -60,23 +60,19 @@
         </div>
     </div>
     <div class="flex-grow">
-        <div class="results-error" data-bind="visible: !isConnectedToWebSocket()">
-            <div class="help-block bg-warning text-warning">
-                <span data-bind="visible: isPauseLogs"><i class="icon-warning"></i><span>Traffic Watch log is paused</span></span>
-                <span data-bind="visible: !isPauseLogs()"><i class="btn-spinner"></i><span class="margin-left">Trying to Connect</span></span>
-            </div>
-        </div>
-        <div class="has-error results-error" data-bind="visible: isBufferFull">
-            <div class="help-block">
-                <i class="icon-danger"></i><span> The log buffer is full. <a href="#" data-bind="click: clear">Clear all entries.</a></span>
-            </div>
-        </div>
-        <div class="scroll-stretch">
-            <div class="panel-body">
-                <virtual-grid class="resizable" params="controller: gridController, emptyTemplate: 'empty-traffic-watch-template'"></virtual-grid>
-            </div>
+        <virtual-grid class="resizable" params="controller: gridController, emptyTemplate: 'empty-traffic-watch-template'"></virtual-grid>
+    </div>
+
+    <div class="help-block bg-warning text-warning" data-bind="visible: !isConnectedToWebSocket()">
+        <span data-bind="visible: isPauseLogs"><i class="icon-warning"></i><span>Traffic Watch log is paused</span></span>
+        <span data-bind="visible: !isPauseLogs()"><i class="btn-spinner"></i><span class="margin-left">Trying to Connect</span></span>
+    </div>
+    <div class="has-error" data-bind="visible: isBufferFull">
+        <div class="help-block">
+            <i class="icon-danger"></i><span> The log buffer is full. <a href="#" data-bind="click: clear">Clear all entries.</a></span>
         </div>
     </div>
+
 </div>
 
 <script type="text/html" id="empty-traffic-watch-template">
