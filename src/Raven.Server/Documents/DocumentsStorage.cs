@@ -1687,7 +1687,7 @@ namespace Raven.Server.Documents
                 table.Delete(doc.StorageId);
 
                 if ((flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
-                    AttachmentsStorage.DeleteAttachmentsOfDocument(context, lowerId, changeVector, modifiedTicks);
+                    AttachmentsStorage.DeleteAttachmentsOfDocument(context, lowerId, changeVector, modifiedTicks, artificial: flags.Contain(DocumentFlags.Artificial));
 
                 CountersStorage.DeleteCountersForDocument(context, id, collectionName);
                 TimeSeriesStorage.DeleteAllTimeSeriesForDocument(context, id, collectionName);

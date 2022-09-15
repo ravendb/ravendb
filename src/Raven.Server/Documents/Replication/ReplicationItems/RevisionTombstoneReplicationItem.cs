@@ -1,7 +1,6 @@
 ﻿using System.Diagnostics;
 using System.IO;
 using Raven.Server.Documents.Replication.Stats;
-using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Server;
@@ -13,6 +12,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
     {
         public LazyStringValue Collection;
         public LazyStringValue Id;
+        public DocumentFlags Flags;
 
         public override long AssertChangeVectorSize()
         {

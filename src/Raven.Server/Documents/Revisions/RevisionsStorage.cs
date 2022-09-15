@@ -581,7 +581,7 @@ namespace Raven.Server.Documents.Revisions
             return moreRevisionToDelete && deletedRevisionsCount == numberOfRevisionsToDelete;
         }
 
-        public void DeleteRevisionsFor(DocumentsOperationContext context, string id, long? maximumRevisionsToDeleteUponDocumentUpdate = long.MaxValue)
+        public void DeleteRevisionsFor(DocumentsOperationContext context, string id, long? maximumRevisionsToDeleteUponDocumentUpdate = long.MaxValue, bool artificial = false)
         {
             using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
             using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
@@ -599,7 +599,7 @@ namespace Raven.Server.Documents.Revisions
                 var changeVector = _documentsStorage.GetNewChangeVector(context, newEtag);
                 context.LastDatabaseChangeVector = changeVector;
                 var lastModifiedTicks = _database.Time.GetUtcNow().Ticks;
-                DeleteRevisions(context, table, prefixSlice, collectionName, maximumRevisionsToDeleteUponDocumentUpdate ?? long.MaxValue, null, changeVector, lastModifiedTicks);
+                DeleteRevisions(context, table, prefixSlice, collectionName, maximumRevisionsToDeleteUponDocumentUpdate ?? long.MaxValue, null, changeVector, lastModifiedTicks, artificial);
                 DeleteCountOfRevisions(context, prefixSlice);
             }
         }
@@ -659,7 +659,7 @@ namespace Raven.Server.Documents.Revisions
         }
 
         private long DeleteRevisions(DocumentsOperationContext context, Table table, Slice prefixSlice, CollectionName collectionName,
-            long numberOfRevisionsToDelete, TimeSpan? minimumTimeToKeep, string changeVector, long lastModifiedTicks)
+            long numberOfRevisionsToDelete, TimeSpan? minimumTimeToKeep, string changeVector, long lastModifiedTicks, bool artificial = false)
         {
             long maxEtagDeleted = 0;
             Table writeTable = null;
@@ -686,12 +686,12 @@ namespace Raven.Server.Documents.Revisions
 
                         using (Slice.From(context.Allocator, revision.ChangeVector, out var keySlice))
                         {
-                            CreateTombstone(context, keySlice, revision.Etag, collectionName, changeVector, lastModifiedTicks);
+                            CreateTombstone(context, keySlice, revision.Etag, collectionName, changeVector, lastModifiedTicks, artificial);
 
                             maxEtagDeleted = Math.Max(maxEtagDeleted, revision.Etag);
                             if ((revision.Flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
                             {
-                                _documentsStorage.AttachmentsStorage.DeleteRevisionAttachments(context, revision, changeVector, lastModifiedTicks);
+                                _documentsStorage.AttachmentsStorage.DeleteRevisionAttachments(context, revision, changeVector, lastModifiedTicks, artificial);
                             }
 
                             var docCollection = CollectionName.GetCollectionName(revision.Data);
@@ -760,13 +760,15 @@ namespace Raven.Server.Documents.Revisions
         }
 
         private unsafe void CreateTombstone(DocumentsOperationContext context, Slice keySlice, long revisionEtag,
-            CollectionName collectionName, string changeVector, long lastModifiedTicks)
+            CollectionName collectionName, string changeVector, long lastModifiedTicks, bool artificial = false)
         {
             var newEtag = _documentsStorage.GenerateNextEtag();
 
             var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, RevisionsTombstonesSlice);
             if (table.VerifyKeyExists(keySlice))
                 return; // revisions (and revisions tombstones) are immutable, we can safely ignore this
+
+            var flags = artificial ? DocumentFlags.Artificial : DocumentFlags.None;
 
             using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
             using (Slice.From(context.Allocator, changeVector, out var cv))
@@ -778,7 +780,7 @@ namespace Raven.Server.Documents.Revisions
                 tvb.Add(context.GetTransactionMarker());
                 tvb.Add((byte)Tombstone.TombstoneType.Revision);
                 tvb.Add(collectionSlice);
-                tvb.Add((int)DocumentFlags.None);
+                tvb.Add((int)flags);
                 tvb.Add(cv.Content.Ptr, cv.Size);
                 tvb.Add(lastModifiedTicks);
                 table.Set(tvb);
