@@ -595,7 +595,6 @@ namespace Raven.Server.Documents.Replication.Senders
                     }
 
                     break;
-
                 case AttachmentReplicationItem attachment:
                     if (MissingAttachmentsInLastBatch)
                         return false;
@@ -604,6 +603,22 @@ namespace Raven.Server.Documents.Replication.Senders
                     if (type == AttachmentType.Revision)
                     {
                         return false;
+                    }
+                    break;
+                case AttachmentTombstoneReplicationItem attachmentTombstone:
+                    if (attachmentTombstone.Flags.Contain(DocumentFlags.Artificial))
+                    {
+                        stats.RecordArtificialDocumentSkip();
+                        skippedReplicationItemsInfo.Update(item, isArtificial: true);
+                        return true;
+                    }
+                    break;
+                case RevisionTombstoneReplicationItem revisionTombstone:
+                    if (revisionTombstone.Flags.Contain(DocumentFlags.Artificial))
+                    {
+                        stats.RecordArtificialDocumentSkip();
+                        skippedReplicationItemsInfo.Update(item, isArtificial: true);
+                        return true;
                     }
                     break;
             }

@@ -76,16 +76,19 @@ namespace Raven.Server.Documents.Replication.Senders
 
         protected override bool ShouldSkip(DocumentsOperationContext context, ReplicationBatchItem item, OutgoingReplicationStatsScope stats, SkippedReplicationItemsInfo skippedReplicationItemsInfo)
         {
-            switch (item)
+            var flags = item switch
             {
-                case DocumentReplicationItem doc:
-                    if (doc.Flags.Contain(DocumentFlags.Artificial))
-                    {
-                        stats.RecordArtificialDocumentSkip();
-                        skippedReplicationItemsInfo.Update(item, isArtificial: true);
-                        return true;
-                    }
-                    break;
+                DocumentReplicationItem doc => doc.Flags,
+                AttachmentTombstoneReplicationItem attachmentTombstone => attachmentTombstone.Flags,
+                RevisionTombstoneReplicationItem revisionTombstone => revisionTombstone.Flags,
+                _ => DocumentFlags.None
+            };
+
+            if (flags.Contain(DocumentFlags.Artificial))
+            {
+                stats.RecordArtificialDocumentSkip();
+                skippedReplicationItemsInfo.Update(item, isArtificial: true);
+                return true;
             }
 
             _lastBatchChangeVector = _lastBatchChangeVector.MergeWith(item.ChangeVector, context);

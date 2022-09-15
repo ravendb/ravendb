@@ -1227,9 +1227,10 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void DeleteInternal(DocumentsOperationContext context, Slice key, long etag, Slice hash, string changeVector, long lastModifiedTicks)
+        private void DeleteInternal(DocumentsOperationContext context, Slice key, long etag, Slice hash, 
+            string changeVector, long lastModifiedTicks, bool artificial = false)
         {
-            CreateTombstone(context, key, etag, changeVector, lastModifiedTicks);
+            CreateTombstone(context, key, etag, changeVector, lastModifiedTicks, artificial);
 
             // we are running just before the delete, so we may still have 1 entry there, the one just
             // about to be deleted
@@ -1242,7 +1243,8 @@ namespace Raven.Server.Documents
             table.DeleteByKey(keySlice);
         }
 
-        private void CreateTombstone(DocumentsOperationContext context, Slice keySlice, long attachmentEtag, string changeVector, long lastModifiedTicks)
+        private void CreateTombstone(DocumentsOperationContext context, Slice keySlice, long attachmentEtag, 
+            string changeVector, long lastModifiedTicks, bool artificial = false)
         {
             var newEtag = _documentsStorage.GenerateNextEtag();
 
@@ -1250,6 +1252,8 @@ namespace Raven.Server.Documents
 
             if (table.VerifyKeyExists(keySlice))
                 return; // attachments (and attachment tombstones) are immutable, we can safely ignore this
+
+            var flags = artificial ? DocumentFlags.Artificial : DocumentFlags.None;
 
             using (table.Allocate(out TableValueBuilder tvb))
             using (Slice.From(context.Allocator, changeVector, out var cv))
@@ -1260,14 +1264,15 @@ namespace Raven.Server.Documents
                 tvb.Add(context.GetTransactionMarker());
                 tvb.Add((byte)Tombstone.TombstoneType.Attachment);
                 tvb.Add(null, 0);
-                tvb.Add((int)DocumentFlags.None);
+                tvb.Add((int)flags);
                 tvb.Add(cv.Content.Ptr, cv.Size);
                 tvb.Add(lastModifiedTicks);
                 table.Insert(tvb);
             }
         }
 
-        private void DeleteAttachmentsOfDocumentInternal(DocumentsOperationContext context, Slice prefixSlice, string changeVector, long lastModifiedTicks)
+        private void DeleteAttachmentsOfDocumentInternal(DocumentsOperationContext context, Slice prefixSlice, string changeVector, 
+            long lastModifiedTicks, bool artificial = false)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
             {
@@ -1277,26 +1282,27 @@ namespace Raven.Server.Documents
                     using (TableValueToSlice(context, (int)AttachmentsTable.Hash, ref before.Reader, out Slice hash))
                     {
                         var etag = TableValueToEtag((int)AttachmentsTable.Etag, ref before.Reader);
-                        DeleteInternal(context, key, etag, hash, changeVector, lastModifiedTicks);
+                        DeleteInternal(context, key, etag, hash, changeVector, lastModifiedTicks, artificial);
                     }
                 });
             }
         }
 
-        public void DeleteRevisionAttachments(DocumentsOperationContext context, Document revision, string changeVector, long lastModifiedTicks)
+        public void DeleteRevisionAttachments(DocumentsOperationContext context, Document revision, string changeVector, long lastModifiedTicks, bool artificial)
         {
             using (Slice.From(context.Allocator, revision.ChangeVector, out Slice changeVectorSlice))
             using (GetAttachmentPrefix(context, revision.LowerId.Buffer, revision.LowerId.Size, AttachmentType.Revision, changeVectorSlice, out Slice prefixSlice))
             {
-                DeleteAttachmentsOfDocumentInternal(context, prefixSlice, changeVector, lastModifiedTicks);
+                DeleteAttachmentsOfDocumentInternal(context, prefixSlice, changeVector, lastModifiedTicks, artificial);
             }
         }
 
-        public void DeleteAttachmentsOfDocument(DocumentsOperationContext context, Slice lowerId, string changeVector, long lastModifiedTicks)
+        public void DeleteAttachmentsOfDocument(DocumentsOperationContext context, Slice lowerId, string changeVector, 
+            long lastModifiedTicks, bool artificial = false)
         {
             using (GetAttachmentPrefix(context, lowerId.Content.Ptr, lowerId.Size, AttachmentType.Document, Slices.Empty, out Slice prefixSlice))
             {
-                DeleteAttachmentsOfDocumentInternal(context, prefixSlice, changeVector, lastModifiedTicks);
+                DeleteAttachmentsOfDocumentInternal(context, prefixSlice, changeVector, lastModifiedTicks, artificial);
             }
         }
 

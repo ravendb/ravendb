@@ -132,7 +132,7 @@ public class ShardedDocumentDatabase : DocumentDatabase
 
     public async Task DeleteBucket(int bucket, long migrationIndex, string uptoChangeVector)
     {
-        var cmd = new DeleteBucketCommand(bucket, uptoChangeVector);
+        var cmd = new DeleteBucketCommand(this, bucket, uptoChangeVector);
         while (cmd.HasMore)
         {
             await TxMerger.Enqueue(cmd);
@@ -146,12 +146,14 @@ public class ShardedDocumentDatabase : DocumentDatabase
 
     private class DeleteBucketCommand : TransactionOperationsMerger.MergedTransactionCommand
     {
+        private readonly ShardedDocumentDatabase _database;
         private readonly int _bucket;
         private readonly string _uptoChangeVector;
         public bool HasMore = true;
 
-        public DeleteBucketCommand(int bucket, string uptoChangeVector)
+        public DeleteBucketCommand(ShardedDocumentDatabase database, int bucket, string uptoChangeVector)
         {
+            _database = database;
             _bucket = bucket;
             _uptoChangeVector = uptoChangeVector;
         }
@@ -160,8 +162,7 @@ public class ShardedDocumentDatabase : DocumentDatabase
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Critical, "We need to create here proper tombstones so backup can pick it up RavenDB-19197");
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "Delete revision/attachments/ etc.. RavenDB-19197");
 
-            var database = context.DocumentDatabase as ShardedDocumentDatabase;
-            var result = database.ShardedDocumentsStorage.DeleteBucket(context, _bucket, context.GetChangeVector(_uptoChangeVector));
+            var result = _database.ShardedDocumentsStorage.DeleteBucket(context, _bucket, context.GetChangeVector(_uptoChangeVector));
             HasMore = result > 0;
             return result;
         }

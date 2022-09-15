@@ -30,7 +30,8 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                         Type = ReplicationBatchItem.ReplicationItemType.AttachmentTombstone,
                         Etag = doc.Etag,
                         TransactionMarker = doc.TransactionMarker,
-                        ChangeVector = doc.ChangeVector
+                        ChangeVector = doc.ChangeVector,
+                        Flags = doc.Flags
                     };
 
                     item.ToDispose(Slice.From(context.Allocator, doc.LowerId.Buffer, doc.LowerId.Size, ByteStringType.Immutable, out item.Key));
@@ -44,7 +45,8 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                         Id = doc.LowerId,
                         TransactionMarker = doc.TransactionMarker,
                         ChangeVector = doc.ChangeVector,
-                        Collection = doc.Collection
+                        Collection = doc.Collection,
+                        Flags = doc.Flags
                     };
                 default:
                     throw new ArgumentOutOfRangeException(nameof(doc.Type));
