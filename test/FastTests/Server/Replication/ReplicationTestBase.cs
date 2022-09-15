@@ -226,7 +226,7 @@ namespace FastTests.Server.Replication
             }
         }
 
-        protected static async Task<ModifyOngoingTaskResult> AddWatcherToReplicationTopology<T>(
+        internal static async Task<ModifyOngoingTaskResult> AddWatcherToReplicationTopology<T>(
             IDocumentStore store,
             T watcher,
             string[] urls = null) where T : ExternalReplicationBase
