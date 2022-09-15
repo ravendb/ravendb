@@ -76,7 +76,7 @@
         </div>
         <div class="btn-group-label margin-left margin-left-lg" data-label="Logs on disk" role="group">
             <div class="btn-group dropdown-menu-right">
-                <button class="btn btn-info dropdown-toggle" type="button" data-toggle="dropdown" data-bind="click: onOpenSettings">
+                <button class="btn btn-info dropdown-toggle" id="js-settings-btn" type="button" data-toggle="dropdown" data-bind="click: onOpenSettings">
                     <i class="icon-config"></i><span>Settings</span>
                     <span class="caret"></span>
                 </button>
@@ -122,6 +122,19 @@
                                     <p class="form-control-static" data-bind="text: retentionSizeText"></p>
                                 </div>
                             </div>
+                            <div class="row">
+                                <label class="col-md-3 control-label">Traffic Watch Log:</label>
+                                <div class="col-md-9">
+                                    <div class="form-control-static">
+                                        <button type="button" class="btn btn-default btn-sm close-panel margin-right" id="js-traffic-watch-config" data-bind="click: $root.configureTrafficWatch">
+                                            <i class="icon-settings"></i>
+                                            <span>Configure</span>
+                                        </button>
+                                        <span class="text-success" data-bind="visible: $root.trafficWatchEnabled()">Active</span>
+                                        <span class="text-default" data-bind="visible: !$root.trafficWatchEnabled()">Disabled</span>
+                                    </div>
+                                </div>
+                            </div>
                         </form>
                         <div class="flex-horizontal">
                             <div class="flex-separator"></div>
@@ -137,7 +150,7 @@
                 </button>
                 <div class="dropdown-menu slidein-style" data-bind="dropdownPanel: true">
                     <form class="flex-form" autocomplete="off">
-                        <div class="modal-dialog modal-lg">
+                        <div class="modal-dialog">
                             <div class="modal-content">
                                 <div class="modal-header">
                                     <div class="margin-bottom margin-left">
@@ -186,7 +199,7 @@
                                     <div class="flex-horizontal margin-top-sm margin-bottom-sm margin-right-sm">
                                         <div class="flex-separator"></div>
                                         <div class="btn-group">
-                                            <button class="btn btn-default btn-sm margin-right-xs close-panel" title="Click to close dropdown">
+                                            <button type="button" class="btn btn-default btn-sm margin-right-xs close-panel" title="Click to close dropdown">
                                                 <span>Close</span>
                                             </button>
                                             <button class="btn btn-success btn-sm" title="Click to download log files" data-bind="click: onDownloadLogs">

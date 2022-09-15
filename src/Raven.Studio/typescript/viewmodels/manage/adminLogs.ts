@@ -15,6 +15,11 @@ import adminLogsOnDiskConfig = require("models/database/debug/adminLogsOnDiskCon
 import moment = require("moment");
 import endpoints = require("endpoints");
 import appUrl = require("common/appUrl");
+import adminLogsTrafficWatchDialog = require("./adminLogsTrafficWatchDialog");
+import app = require("durandal/app");
+import getTrafficWatchConfigurationCommand = require("commands/maintenance/getTrafficWatchConfigurationCommand");
+import trafficWatchConfiguration = require("models/resources/trafficWatchConfiguration");
+import saveTrafficWatchConfigurationCommand = require("commands/maintenance/saveTrafficWatchConfigurationCommand");
 
 class heightCalculator {
     
@@ -88,6 +93,7 @@ class adminLogs extends viewModelBase {
     
     private onDiskConfiguration = ko.observable<adminLogsOnDiskConfig>();
     private configuration = ko.observable<adminLogsConfig>(adminLogsConfig.empty());
+    private trafficWatchConfiguration = ko.observable<trafficWatchConfiguration>();
     
     editedConfiguration = ko.observable<adminLogsConfig>(adminLogsConfig.empty());
     editedHeaderName = ko.observable<adminLogsHeaderType>("Source");
@@ -122,13 +128,19 @@ class adminLogs extends viewModelBase {
     startDateToUse: KnockoutComputed<string>;
     endDateToUse: KnockoutComputed<string>;
 
+    trafficWatchEnabled: KnockoutComputed<boolean>;
+
+    // show user location of traffic watch in logs configuration button
+    highlightTrafficWatch: boolean;
+
     static utcTimeFormat = "YYYY-MM-DD HH:mm:ss.SSS";
     
     constructor() {
         super();
         
         this.bindToCurrentInstance("toggleTail", "itemHeightProvider", "applyConfiguration", "loadLogsConfig",
-            "includeFilter", "excludeFilter", "removeConfigurationEntry", "itemHtmlProvider", "setAdminLogMode");
+            "includeFilter", "excludeFilter", "removeConfigurationEntry", "itemHtmlProvider", "setAdminLogMode", 
+            "configureTrafficWatch");
         
         this.initObservables();
         this.initValidation();
@@ -168,6 +180,11 @@ class adminLogs extends viewModelBase {
 
         this.endDateToUse = ko.pureComputed(() => {
             return this.useMaxEndDate() ? null : this.endDate().utc().format(generalUtils.utcFullDateFormat);
+        });
+        
+        this.trafficWatchEnabled = ko.pureComputed(() => {
+            const config = this.trafficWatchConfiguration();
+            return config?.enabled() ?? false;
         });
     }
     
@@ -251,8 +268,10 @@ class adminLogs extends viewModelBase {
     activate(args: any) {
         super.activate(args);
         this.updateHelpLink('57BGF7');
+
+        this.highlightTrafficWatch = !!args?.highlightTrafficWatch;
         
-        return this.loadLogsConfig(); 
+        return this.loadConfigs();
     }
     
     deactivate() {
@@ -263,9 +282,21 @@ class adminLogs extends viewModelBase {
         }
     }
     
+    loadConfigs() {
+        const logConfigsTask = this.loadLogsConfig();
+        const trafficWatchConfigTask = this.loadTrafficWatchConfig();
+        
+        return $.when<any>(logConfigsTask, trafficWatchConfigTask);
+    }
+    
     loadLogsConfig() {
         return new getAdminLogsConfigurationCommand().execute()
             .done(result => this.onDiskConfiguration(new adminLogsOnDiskConfig(result)));
+    }
+    
+    loadTrafficWatchConfig() {
+        return new getTrafficWatchConfigurationCommand().execute()
+            .done(result => this.trafficWatchConfiguration(new trafficWatchConfiguration(result)))
     }
 
     setAdminLogMode(newMode: Sparrow.Logging.LogMode) {
@@ -365,9 +396,15 @@ class adminLogs extends viewModelBase {
             .prepend(`<span ${addedClassHtml}>${generalUtils.escapeHtml(item)}</span>`)
             .prepend(`<a href="#" class="copy-item-button margin-right margin-right-sm flex-start" title="Copy log msg to clipboard"><i class="icon-copy"></i></a>`);
     }
-    
+
     compositionComplete() {
         super.compositionComplete();
+        
+        
+        if (this.highlightTrafficWatch) {
+            this.showTrafficWatchConfigurationLocation();
+        }
+        
         this.connectWebSocket();
         
         $(".admin-logs .viewport").on("scroll", () => {
@@ -383,6 +420,22 @@ class adminLogs extends viewModelBase {
             event.stopImmediatePropagation();
             copyToClipboard.copy($(this).next().text(), "Log message has been copied to clipboard");
         });
+    }
+    
+    private showTrafficWatchConfigurationLocation() {
+        setTimeout(() => {
+            $("#js-settings-btn").click();
+            
+            const blink = () => {
+                const element = $("#js-traffic-watch-config");
+                element.removeClass("blink-style");
+                setTimeout(() => element.addClass("blink-style"), 1);
+            }
+            
+            setTimeout(blink, 1000);
+            setTimeout(blink, 2000);
+        }, 400);
+        
     }
     
     connectWebSocket() {
@@ -401,10 +454,7 @@ class adminLogs extends viewModelBase {
     }
 
     isConnectedToWebSocket() {
-        if (this.liveClient() && this.liveClient().isConnected()) {
-            return true;
-        }
-        return false;
+        return this.liveClient() && this.liveClient().isConnected();
     }
     
     pauseLogs() {
@@ -579,6 +629,19 @@ class adminLogs extends viewModelBase {
     updateMouseStatus(pressed: boolean) {
         this.mouseDown(pressed);
         return true;  // we want bubble and execute default action (selection)
+    }
+    
+    configureTrafficWatch() {
+        const configurationCopy = new trafficWatchConfiguration(this.trafficWatchConfiguration().toDto());
+
+        app.showBootstrapDialog(new adminLogsTrafficWatchDialog(configurationCopy))
+            .done(result => {
+                if (result) {
+                    this.trafficWatchConfiguration(result);
+                    new saveTrafficWatchConfigurationCommand(this.trafficWatchConfiguration().toDto())
+                        .execute();
+                }
+            });
     }
 }
 

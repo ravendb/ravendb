@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using Tests.Infrastructure;
+using xRetry;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -11,7 +12,7 @@ namespace SlowTests.Client
         {
         }
 
-        [Fact]
+        [RetryFact]
         public async Task Simple_Bulk_Insert_With_Ssl()
         {
             using (var x = new FastTests.Client.BulkInserts(Output))

@@ -843,7 +843,7 @@ namespace RachisTests
 
             using (server2.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             {
-                var logs = ctx.ReadObject(server2.ServerStore.Engine.InMemoryDebug.ToJson(),"watcher-logs").ToString();
+                var logs = ctx.ReadObject(server2.ServerStore.Engine.InMemoryDebug.ToJson(), "watcher-logs").ToString();
                 Assert.False(logs.Contains("Exception"), logs);
             }
         }
@@ -879,7 +879,7 @@ namespace RachisTests
             Assert.Equal(3, topology.AllNodes.Count);
         }
 
-        private async Task WaitForAssertionAsync(Func<Task> action)
+        private static async Task WaitForAssertionAsync(Func<Task> action, int timeoutInMs = 15_000)
         {
             var sp = Stopwatch.StartNew();
             while (true)
@@ -891,7 +891,7 @@ namespace RachisTests
                 }
                 catch
                 {
-                    if (sp.ElapsedMilliseconds > 10_000)
+                    if (sp.ElapsedMilliseconds > timeoutInMs)
                         throw;
 
                     await Task.Delay(100);
