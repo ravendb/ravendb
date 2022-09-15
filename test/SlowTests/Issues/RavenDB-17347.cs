@@ -131,7 +131,7 @@ namespace SlowTests.Issues
             Assert.True(await WaitUntilDatabaseHasState(store, timeout: TimeSpan.FromSeconds(15), predicate: record =>
             {
                 var members = record?.Topology?.Members;
-                return members != null && members.Count == expectedMembers.Count && ContainsAll(members, expectedMembers);
+                return members != null && ContainsAll(members, expectedMembers);
             }), "Members are not as expected");
         }
 

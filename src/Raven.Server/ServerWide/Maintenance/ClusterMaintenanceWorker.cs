@@ -228,7 +228,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 var dbInstance = dbTask.Result;
                 var currentHash = dbInstance.GetEnvironmentsHash();
                 report.EnvironmentsHash = currentHash;
-                report.LastExecutedRaftIndex = dbInstance.LastDatabaseRecordChangeIndex;
+                report.LastCompareExchangeIndex = _server.Cluster.GetLastCompareExchangeIndexForDatabase(ctx, dbName);
 
                 var documentsStorage = dbInstance.DocumentsStorage;
                 var indexStorage = dbInstance.IndexStore;
