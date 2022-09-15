@@ -54,14 +54,22 @@ namespace Raven.Server.Web.System
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var configurationBlittable = await context.ReadForMemoryAsync(RequestBodyStream(), "server-wide-backup-configuration");
-                var configuration = JsonDeserializationCluster.ServerWideBackupConfiguration(configurationBlittable);
+                var observedConfiguration = JsonDeserializationCluster.ServerWideBackupConfiguration(configurationBlittable);
 
-                ServerStore.LicenseManager.AssertCanAddPeriodicBackup(configuration);
-                BackupConfigurationHelper.UpdateLocalPathIfNeeded(configuration, ServerStore);
-                BackupConfigurationHelper.AssertBackupConfiguration(configuration);
-                BackupConfigurationHelper.AssertDestinationAndRegionAreAllowed(configuration, ServerStore);
+                ServerStore.LicenseManager.AssertCanAddPeriodicBackup(observedConfiguration);
 
-                var (newIndex, _) = await ServerStore.PutServerWideBackupConfigurationAsync(configuration, GetRaftRequestIdFromQuery());
+                var existingTasks = GetTaskConfigurationsAsync(OngoingTaskType.Backup, JsonDeserializationCluster.ServerWideBackupConfiguration, false).Result.Results;
+
+                if (existingTasks
+                    .Where(existingTask => existingTask.Name.Equals(observedConfiguration.Name, StringComparison.OrdinalIgnoreCase))
+                    .Any(existingTask => existingTask.TaskId != observedConfiguration.TaskId))
+                    throw new InvalidOperationException($"Can't use task name '{observedConfiguration.Name}', there is already a Periodic ServerWide Backup task with that name");
+
+                BackupConfigurationHelper.UpdateLocalPathIfNeeded(observedConfiguration, ServerStore);
+                BackupConfigurationHelper.AssertBackupConfiguration(observedConfiguration);
+                BackupConfigurationHelper.AssertDestinationAndRegionAreAllowed(observedConfiguration, ServerStore);
+                
+                var (newIndex, _) = await ServerStore.PutServerWideBackupConfigurationAsync(observedConfiguration, GetRaftRequestIdFromQuery());
                 await ServerStore.Cluster.WaitForIndexNotification(newIndex);
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -137,7 +145,7 @@ namespace Raven.Server.Web.System
         public Task GetServerWideBackupConfigurations()
         {
             // backward compatibility
-            return GetTaskConfigurationsAsync(OngoingTaskType.Backup, JsonDeserializationCluster.ServerWideBackupConfiguration);
+            return GetTaskConfigurationsAsync(OngoingTaskType.Backup, JsonDeserializationCluster.ServerWideBackupConfiguration, true);
         }
 
         [RavenAction("/admin/configuration/server-wide/tasks", "GET", AuthorizationStatus.ClusterAdmin)]
@@ -162,7 +170,7 @@ namespace Raven.Server.Web.System
                     throw new ArgumentOutOfRangeException($"Task type '{type} isn't suppported");
             }
 
-            await GetTaskConfigurationsAsync(type, converter);
+            await GetTaskConfigurationsAsync(type, converter, true);
         }
 
         [RavenAction("/admin/configuration/server-wide/state", "POST", AuthorizationStatus.ClusterAdmin)]
@@ -229,7 +237,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private async Task GetTaskConfigurationsAsync<T>(OngoingTaskType type, Func<BlittableJsonReaderObject, T> converter)
+        private async Task<ServerWideTasksResult<T>> GetTaskConfigurationsAsync<T>(OngoingTaskType type, Func<BlittableJsonReaderObject, T> converter, bool writeResponseBodyStream)
             where T : IDynamicJsonValueConvertible
         {
             var taskName = GetStringQueryString("name", required: false);
@@ -247,7 +255,10 @@ namespace Raven.Server.Web.System
                     result.Results.Add(configuration);
                 }
 
-                context.Write(writer, result.ToJson());
+                if(writeResponseBodyStream)
+                    context.Write(writer, result.ToJson());
+
+                return result;
             }
         }
     }
