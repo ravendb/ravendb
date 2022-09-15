@@ -31,17 +31,17 @@ public interface IShardedReadOperation<TResult, TCombinedResult> : IShardedOpera
 
         if (ExpectedEtag == result.CombinedEtag)
         {
-            var allNodModified = true;
+            var allNotModified = true;
             foreach (var cmd in span)
             {
                 if (cmd.StatusCode == HttpStatusCode.NotModified) 
                     continue;
                 
-                allNodModified = false;
+                allNotModified = false;
                 break;
             }
 
-            if (allNodModified)
+            if (allNotModified)
             {
                 result.StatusCode = (int)HttpStatusCode.NotModified;
                 return result;
