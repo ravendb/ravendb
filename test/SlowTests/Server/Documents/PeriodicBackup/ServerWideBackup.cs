@@ -102,6 +102,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var record2 = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(newDbName));
                 ValidateBackupConfiguration(serverWideConfiguration, record2.PeriodicBackups.First(), newDbName);
 
+                var serverWideBackups = await store.Maintenance.Server.SendAsync(new GetServerWideBackupConfigurationsOperation());
+                putConfiguration = serverWideBackups.First();
+
                 // update the backup configuration
                 putConfiguration.FullBackupFrequency = "3 2 * * 1";
                 putConfiguration.LocalSettings.FolderPath += "/folder1";
@@ -109,7 +112,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 putConfiguration.AzureSettings.RemoteFolderName += "/folder3";
                 putConfiguration.FtpSettings.Url += "/folder4";
                 putConfiguration.Name = serverWideConfiguration.Name;
-
+                
                 result = await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(putConfiguration));
                 serverWideConfiguration = await store.Maintenance.Server.SendAsync(new GetServerWideBackupConfigurationOperation(result.Name));
                 ValidateServerWideConfiguration(serverWideConfiguration, putConfiguration);
@@ -726,6 +729,56 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         }
 
         [Fact, Trait("Category", "Smuggler")]
+        public async Task CantCreateServerWideBackupWithExistingNameButCanEdit()
+        {
+            var backupName = "TestServerWideBackup";
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            
+            using (var store = GetDocumentStore())
+            {
+                var serverWideBackupConfiguration = new ServerWideBackupConfiguration
+                {
+                    Name = backupName,
+                    Disabled = false,
+                    FullBackupFrequency = "*/15 * * * *",
+                    LocalSettings = new LocalSettings { FolderPath = backupPath }
+                };
+
+                await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(serverWideBackupConfiguration));
+                
+                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                Assert.Equal(1, record.PeriodicBackups.Count);
+
+                var serverWideBackups = await store.Maintenance.Server.SendAsync(new GetServerWideBackupConfigurationsOperation());
+                Assert.Equal(1, serverWideBackups.Length);
+
+                var serverWideBackupConfiguration2 = new ServerWideBackupConfiguration
+                {
+                    Name = backupName,
+                    Disabled = false,
+                    FullBackupFrequency = "*/30 * * * *",
+                    LocalSettings = new LocalSettings { FolderPath = backupPath }
+                };
+
+                var e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(serverWideBackupConfiguration2)));
+                var expectedError = $"Can't use task name '{backupName}', there is already a Periodic ServerWide Backup task with that name";
+                Assert.Contains(expectedError, e.Message);
+
+                serverWideBackups = await store.Maintenance.Server.SendAsync(new GetServerWideBackupConfigurationsOperation());
+                Assert.Equal(1, serverWideBackups.Length);
+
+                Assert.NotEqual(serverWideBackups.First().FullBackupFrequency, "*/45 * * * *");
+                var serverWideBackupConfigurationToEdit = serverWideBackups.First();
+                serverWideBackupConfigurationToEdit.FullBackupFrequency = "*/45 * * * *";
+                
+                await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(serverWideBackupConfigurationToEdit));
+                serverWideBackups = await store.Maintenance.Server.SendAsync(new GetServerWideBackupConfigurationsOperation());
+                Assert.Equal(1, serverWideBackups.Length);
+                Assert.Equal(serverWideBackups.First().FullBackupFrequency, "*/45 * * * *");
+            }
+        }
+
+            [Fact, Trait("Category", "Smuggler")]
         public async Task CanExcludeDatabase()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -754,6 +807,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
                 Assert.Equal(2, record.PeriodicBackups.Count);
 
+                var serverWideBackups = await store.Maintenance.Server.SendAsync(new GetServerWideBackupConfigurationsOperation());
+                serverWideBackupConfiguration = serverWideBackups.First();
                 serverWideBackupConfiguration.ExcludedDatabases = new[] {store.Database};
                 await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(serverWideBackupConfiguration));
 
@@ -798,6 +853,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(newDbName));
                 Assert.Equal(1, record.PeriodicBackups.Count);
 
+                var serverWideBackups = await store.Maintenance.Server.SendAsync(new GetServerWideBackupConfigurationsOperation());
+                serverWideBackupConfiguration = serverWideBackups.First();
                 serverWideBackupConfiguration.ExcludedDatabases = new[] {store.Database};
                 await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(serverWideBackupConfiguration));
 
@@ -806,6 +863,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Assert.Equal(backupConfiguration.Name, record.PeriodicBackups[0].Name);
                 Assert.Equal(PutServerWideBackupConfigurationCommand.GetTaskName(serverWideBackupConfiguration.Name), record.PeriodicBackups[1].Name);
 
+                serverWideBackups = await store.Maintenance.Server.SendAsync(new GetServerWideBackupConfigurationsOperation());
+                serverWideBackupConfiguration = serverWideBackups.First();
                 serverWideBackupConfiguration.ExcludedDatabases = null;
                 await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(serverWideBackupConfiguration));
 
