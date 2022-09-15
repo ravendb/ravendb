@@ -590,8 +590,7 @@ public partial class RavenTestBase
 
                 using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, location)))
                 {
-                    var user = await session.Advanced.ExistsAsync(id);
-                    Assert.NotNull(user);
+                    Assert.True(await session.Advanced.ExistsAsync(id));
                 }
 
                 await server.Sharding.StartBucketMigration(store.Database, bucket, location, newLocation);
