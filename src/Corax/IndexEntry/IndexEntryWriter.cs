@@ -123,6 +123,7 @@ public unsafe struct IndexEntryWriter : IDisposable
         if (FreeSpace < requiredSize)
             UnlikelyGrowAuxiliaryBuffer(requiredSize);
         
+        WriteDynamicFieldName(fieldNameStr, true);
         Unsafe.WriteUnaligned(ref Buffer[_dataIndex], IndexEntryFieldType.Null);
         _dataIndex += sizeof(IndexEntryFieldType);
     }
@@ -142,7 +143,7 @@ public unsafe struct IndexEntryWriter : IDisposable
         
         if (FreeSpace < requiredSize)
             UnlikelyGrowAuxiliaryBuffer(requiredSize);
-        WriteDynamicFieldName(fieldNameStr);
+        WriteDynamicFieldName(fieldNameStr, true);
         WriteSpatialValues(entries, maxGeohashLength);
     }
     public void WriteSpatialDynamic(string name, CoraxSpatialPointEntry entry)
@@ -164,7 +165,7 @@ public unsafe struct IndexEntryWriter : IDisposable
         if (FreeSpace < requiredSize)
             UnlikelyGrowAuxiliaryBuffer(requiredSize);
         
-        WriteDynamicFieldName(fieldNameStr);
+        WriteDynamicFieldName(fieldNameStr, true);
         WriteSpatialValue(entry,   maxGeohashLength);
 
     }
@@ -182,7 +183,7 @@ public unsafe struct IndexEntryWriter : IDisposable
         if (FreeSpace < requiredSize)
             UnlikelyGrowAuxiliaryBuffer(requiredSize);
 
-        WriteDynamicFieldName(fieldNameStr);
+        WriteDynamicFieldName(fieldNameStr, true);
         WriteTuple(value, longValue, doubleValue);
     }
     
@@ -201,7 +202,7 @@ public unsafe struct IndexEntryWriter : IDisposable
         if (FreeSpace < requiredSize)
             UnlikelyGrowAuxiliaryBuffer(requiredSize);
         
-        WriteDynamicFieldName(fieldNameStr);
+        WriteDynamicFieldName(fieldNameStr, false);
 
         Span<byte> buffer = Buffer;
         Unsafe.WriteUnaligned(ref buffer[_dataIndex], IndexEntryFieldType.Simple);
@@ -211,14 +212,15 @@ public unsafe struct IndexEntryWriter : IDisposable
         _dataIndex += value.Length;
     }
 
-    private void WriteDynamicFieldName(ByteString fieldNameStr)
+    private void WriteDynamicFieldName(ByteString fieldNameStr, bool hasType)
     {
         Span<byte> tmpBuffer = stackalloc byte[5];
         
         int fieldLenLen = VariableSizeEncoding.Write(tmpBuffer, fieldNameStr.Length);
 
         _dynamicFieldsLocations ??= new();
-        _dynamicFieldsLocations.Add(_dataIndex);
+        int maskedPos = _dataIndex << 1 | (hasType ? 1 : 0);
+        _dynamicFieldsLocations.Add(maskedPos);
         
         var buffer = Buffer;
         tmpBuffer[..fieldLenLen].CopyTo(buffer[_dataIndex..]);
@@ -452,7 +454,7 @@ public unsafe struct IndexEntryWriter : IDisposable
         if (FreeSpace < requiredSize)
             UnlikelyGrowAuxiliaryBuffer(requiredSize);
         
-        WriteDynamicFieldName(fieldNameStr);
+        WriteDynamicFieldName(fieldNameStr, true);
         
         WriteList(values, type);
     }

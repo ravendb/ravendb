@@ -45,14 +45,14 @@ public ref struct IndexEntryReader
     public readonly ref struct FieldReader
     {
         private readonly IndexEntryReader _parent;
-        private readonly IndexEntryFieldType _type;
+        public readonly IndexEntryFieldType Type;
         private readonly bool _isTyped;
         private readonly int _offset;
 
         public FieldReader(IndexEntryReader parent, IndexEntryFieldType type, bool isTyped, int offset)
         {
             _parent = parent;
-            _type = type;
+            Type = type;
             _isTyped = isTyped;
             _offset = offset;
         }
@@ -65,8 +65,8 @@ public ref struct IndexEntryReader
         public bool TryReadMany(out IndexEntryFieldIterator iterator)
         {
             if (_isTyped == false ||
-                _type.HasFlag(IndexEntryFieldType.List) == false ||
-                _type.HasFlag(IndexEntryFieldType.SpatialPointList))
+                Type.HasFlag(IndexEntryFieldType.List) == false ||
+                Type.HasFlag(IndexEntryFieldType.SpatialPointList))
             {
                 iterator = default;
                 return false;
@@ -93,10 +93,10 @@ public ref struct IndexEntryReader
 
         public bool Read(out IndexEntryFieldType type, out long longValue, out double doubleValue, out Span<byte> sequenceValue)
         {
-            if (_type == IndexEntryFieldType.Invalid || _isTyped == false)
+            if (Type == IndexEntryFieldType.Invalid || _isTyped == false)
                 goto Fail;
 
-            type = _type;
+            type = Type;
             if (type == IndexEntryFieldType.Null)
                 goto NullOrEmpty;
 
@@ -330,7 +330,7 @@ public ref struct IndexEntryReader
             }
 
             intOffset += +sizeof(IndexEntryFieldType);
-            type = _type;
+            type = Type;
             if (type == IndexEntryFieldType.Null)
             {
                 if (elementIdx == 0)
@@ -452,7 +452,7 @@ public ref struct IndexEntryReader
             if (_isTyped == false || _offset == Invalid)
                 goto Failed;
 
-            if (_type.HasFlag(IndexEntryFieldType.SpatialPointList))
+            if (Type.HasFlag(IndexEntryFieldType.SpatialPointList))
             {
                 iterator = new SpatialPointFieldIterator(_parent._buffer, _offset);
                 return true;
@@ -474,6 +474,7 @@ public ref struct IndexEntryReader
         
         public Span<byte> CurrentFieldName;
         public int CurrentValueOffset;
+        public bool HasType;
         public IndexEntryFieldType CurrentFieldType => Unsafe.ReadUnaligned<IndexEntryFieldType>(ref _parent._buffer[CurrentValueOffset]);
 
         public DynamicFieldEnumerator(IndexEntryReader parent)
@@ -486,6 +487,7 @@ public ref struct IndexEntryReader
             _position += offset;
             CurrentFieldName = default;
             CurrentValueOffset = default;
+            HasType = false;
         }
 
         public bool MoveNext()
@@ -499,16 +501,18 @@ public ref struct IndexEntryReader
             _remaining--;
             
             var buffer = _parent._buffer;
-            int dynamicEntryOffset = VariableSizeEncoding.Read<int>(buffer, out var offset, _position);
+            int masked = VariableSizeEncoding.Read<int>(buffer, out var offset, _position);
+            int dynamicEntryOffset = masked >>1;
             _position += offset;
             var len = VariableSizeEncoding.Read<int>(buffer, out offset, dynamicEntryOffset);
             CurrentFieldName = buffer[(dynamicEntryOffset + offset)..(dynamicEntryOffset + offset + len)];
             CurrentValueOffset = dynamicEntryOffset + offset + len;
+            HasType = (masked & 1) != 0; 
             return true;
         }
     }
 
-    private bool ReadDynamicValueOffset(ReadOnlySpan<byte> name, out int valueOffset)
+    private bool ReadDynamicValueOffset(ReadOnlySpan<byte> name, out int valueOffset, out bool isTyped)
     {
         var it = new DynamicFieldEnumerator(this);
         while (it.MoveNext())
@@ -516,31 +520,24 @@ public ref struct IndexEntryReader
             if (it.CurrentFieldName.SequenceEqual(name))
             {
                 valueOffset = it.CurrentValueOffset;
+                isTyped = it.HasType;
                 return true;
             }
         }
         valueOffset = default;
+        isTyped = default;
         return false;
-    }
-
-
-    public IndexEntryFieldType GetFieldType(ReadOnlySpan<byte> name, out int intOffset)
-    {
-        if (ReadDynamicValueOffset(name, out intOffset))
-        { 
-            var type = Unsafe.ReadUnaligned<IndexEntryFieldType>(ref _buffer[intOffset]);
-            intOffset += Unsafe.SizeOf<IndexEntryFieldType>();
-            return type;
-        }
-        return IndexEntryFieldType.Invalid;
     }
 
     public FieldReader GetReaderFor(ReadOnlySpan<byte> name)
     {
-        if (ReadDynamicValueOffset(name, out var intOffset))
+        if (ReadDynamicValueOffset(name, out var intOffset, out bool isTyped))
         {
             var type = (IndexEntryFieldType)VariableSizeEncoding.Read<ushort>(_buffer, out _, intOffset);
-            return new FieldReader(this, type, true, intOffset );
+            if (isTyped == false)
+                intOffset += sizeof(IndexEntryFieldType);
+            
+            return new FieldReader(this, type, isTyped, intOffset);
         }
 
         return new FieldReader(this, IndexEntryFieldType.Invalid, false, Invalid);
