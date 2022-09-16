@@ -3,10 +3,10 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
-using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Xunit;
 using Xunit.Abstractions;
+using static Raven.Server.Documents.Indexes.IndexStorage;
 
 namespace SlowTests.Issues
 {
@@ -51,6 +51,19 @@ namespace SlowTests.Issues
                 await store.Maintenance.SendAsync(new StartIndexingOperation());
 
                 Indexes.WaitForIndexing(store);
+
+                // wait for the entries count value to be stored - we update stats after we're done with indexing
+
+                var indexStorage = (await GetDatabase(store.Database)).IndexStore.GetIndexes().First(x => x.Name == index.IndexName)._indexStorage;
+
+                await WaitForNotNullAsync(() =>
+                {
+                    using (var tx = indexStorage.Environment().ReadTransaction())
+                    {
+                        var statsTree = tx.ReadTree(IndexSchema.StatsTree);
+                        return Task.FromResult(statsTree.Read(IndexSchema.EntriesCount));
+                    }
+                });
 
                 // let's force to clean the reader
                 indexInstance.IndexPersistence.Clean(IndexCleanup.All);
