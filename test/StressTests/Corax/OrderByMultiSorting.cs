@@ -14,7 +14,7 @@ using Xunit;
 using Xunit.Abstractions;
 using static Corax.Queries.SortingMatch;
 
-namespace FastTests.Corax
+namespace StressTests.Corax
 {
 
     public class OrderByMultiSortingTests : StorageTest

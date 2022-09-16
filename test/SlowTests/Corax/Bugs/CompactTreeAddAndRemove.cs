@@ -14,7 +14,7 @@ using Xunit;
 using Xunit.Abstractions;
 using Encoding = System.Text.Encoding;
 
-namespace FastTests.Corax.Bugs;
+namespace SlowTests.Corax.Bugs;
 
 public class CompactTreeAddAndRemove : StorageTest
 {
@@ -26,7 +26,6 @@ public class CompactTreeAddAndRemove : StorageTest
     }
 
     [RavenTheory(RavenTestCategory.Voron)]
-    [InlineData("repro-4.log.gz")]
     [InlineData("repro-2.log.gz")]
     public unsafe void AddAndRemoveValues(string filename)
     {
@@ -69,7 +68,7 @@ public class CompactTreeAddAndRemove : StorageTest
 
     private static IEnumerable<List<string>> ReadTermsFromResource(string file)
     {
-        var reader = new StreamReader(new GZipStream(typeof(SetAddRemoval).Assembly.GetManifestResourceStream("FastTests.Corax.Bugs." + file), CompressionMode.Decompress));
+        var reader = new StreamReader(new GZipStream(typeof(CompactTreeAddAndRemove).Assembly.GetManifestResourceStream("SlowTests.Corax.Bugs." + file), CompressionMode.Decompress));
         var adds = new List<string>();
         string line = null;
         while ((line = reader.ReadLine()) != null)
