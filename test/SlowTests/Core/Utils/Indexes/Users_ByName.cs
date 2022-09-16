@@ -26,4 +26,20 @@ namespace SlowTests.Core.Utils.Indexes
             Stores.Add(x => x.Name, FieldStorage.Yes);
         }
     }
+
+    public class Users_ByName_WithoutBoosting : AbstractIndexCreationTask<User>
+    {
+        public Users_ByName_WithoutBoosting()
+        {
+            Map = users => from u in users select new { Name = u.Name, LastName = u.LastName };
+
+            Indexes.Add(x => x.Name, FieldIndexing.Search);
+
+            IndexSuggestions.Add(x => x.Name);
+
+            Analyzers.Add(x => x.Name, typeof(Lucene.Net.Analysis.SimpleAnalyzer).FullName);
+
+            Stores.Add(x => x.Name, FieldStorage.Yes);
+        }
+    }
 }

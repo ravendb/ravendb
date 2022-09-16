@@ -178,7 +178,7 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [RavenExplicitData(searchEngine: RavenSearchEngineMode.Lucene)]
+        [RavenExplicitData(searchEngine: RavenSearchEngineMode.All)]
         public void CanMakeDynamicDocumentQueriesWithComplexProperties(RavenTestParameters config)
         {
             using (var store = GetDocumentStore(options: new Options
