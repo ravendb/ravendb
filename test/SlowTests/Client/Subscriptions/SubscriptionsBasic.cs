@@ -388,7 +388,8 @@ namespace SlowTests.Client.Subscriptions
             DoNotReuseServer();
             using (var store = GetDocumentStore())
             {
-                Server.ServerStore.Observer.Suspended = true;
+                Cluster.SuspendObserver(Server);
+
                 var lastId = string.Empty;
                 var docsAmount = 50;
                 using (var biPeople = store.BulkInsert())

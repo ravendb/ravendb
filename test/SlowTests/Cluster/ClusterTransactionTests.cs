@@ -366,7 +366,7 @@ namespace SlowTests.Cluster
             var members = new List<string> {"A", "B", "C"};
             members.Remove(removedTag);
 
-            leader.ServerStore.Observer.Suspended = true;
+            Cluster.SuspendObserver(leader);
 
             using (var store = GetDocumentStore(new Options {Server = leader, ModifyDatabaseRecord = r => r.Topology = new DatabaseTopology {Members = members}}))
             {

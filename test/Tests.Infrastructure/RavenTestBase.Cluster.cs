@@ -200,5 +200,13 @@ public partial class RavenTestBase
             }
             return string.Join(Environment.NewLine, states.OrderBy(x => x.transition.When).Select(x => $"State for {x.tag}-term{x.Item2.CurrentTerm}:{Environment.NewLine}{x.Item2.From}=>{x.Item2.To} at {x.Item2.When:o} {Environment.NewLine}because {x.Item2.Reason}"));
         }
+
+        public void SuspendObserver(RavenServer server)
+        {
+            // observer is set in the background task, hence we are waiting for it to not be null
+            WaitForValue(() => server.ServerStore.Observer != null, true);
+
+            server.ServerStore.Observer.Suspended = true;
+        }
     }
 }
