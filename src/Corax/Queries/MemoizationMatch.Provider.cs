@@ -9,7 +9,7 @@ using static Voron.Global.Constants;
 namespace Corax.Queries
 {
 
-    public unsafe struct MemoizationMatchProvider<TInner> : IMemoizationMatchSource
+    public unsafe class MemoizationMatchProvider<TInner> : IMemoizationMatchSource
              where TInner : IQueryMatch
     {
         private int _replayCounter;

@@ -6,12 +6,17 @@ using System.Threading;
 using Corax;
 using Corax.Pipeline;
 using Corax.Queries;
+using Lucene.Net.Index;
+using Lucene.Net.Search;
 using Raven.Client.Documents.Queries.Explanation;
+using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Highlightings;
+using Raven.Server.Documents.Queries.MoreLikeThis;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Timings;
+using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
@@ -21,6 +26,7 @@ using Sparrow.Logging;
 using Sparrow.Server;
 using Voron.Impl;
 using CoraxConstants = Corax.Constants;
+using IndexSearcher = Corax.IndexSearcher;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax
 {
@@ -72,8 +78,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             bool isBinary;
             using (coraxScope?.Start())
             {
-                if ((queryMatch = CoraxQueryBuilder.BuildQuery(_indexSearcher, null, null, query, _index, query.QueryParameters, QueryBuilderFactories, out isBinary,
-                        _fieldMappings, fieldsToFetch, highlightingTerms: highlightingTerms, take: take)) is null)
+                var queryEnv = new QueryEnvironment(_indexSearcher, serverContext: null, context: null, query, _index, query.QueryParameters, QueryBuilderFactories,
+                    _fieldMappings, fieldsToFetch, highlightingTerms, take);
+                if ((queryMatch = CoraxQueryBuilder.BuildQuery(queryEnv, out isBinary)) is null)
                     yield break;
             }
 
@@ -465,7 +472,149 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         public override IEnumerable<QueryResult> MoreLikeThis(IndexQueryServerSide query, IQueryResultRetriever retriever, DocumentsOperationContext context,
             CancellationToken token)
         {
-            throw new NotImplementedException();
+            IDisposable releaseServerContext = null;
+            IDisposable closeServerTransaction = null;
+            TransactionOperationContext serverContext = null;
+            CoraxMoreLikeThisQuery moreLikeThisQuery;
+            var isBinary = false;
+            QueryEnvironment queryEnvironment;
+
+            try
+            {
+                if (query.Metadata.HasCmpXchg)
+                {
+                    releaseServerContext = context.DocumentDatabase.ServerStore.ContextPool.AllocateOperationContext(out serverContext);
+                    closeServerTransaction = serverContext.OpenReadTransaction();
+                }
+
+                using (closeServerTransaction)
+                {
+                    queryEnvironment = new QueryEnvironment(_indexSearcher, serverContext, context, query, _index, query.QueryParameters, QueryBuilderFactories,
+                        _fieldMappings, null, null /* allow highlighting? */, -1, null);
+                    moreLikeThisQuery = CoraxQueryBuilder.BuildMoreLikeThisQuery(queryEnvironment, query.Metadata.Query.Where, out isBinary);
+                }
+            }
+            finally
+            {
+                releaseServerContext?.Dispose();
+            }
+
+            var options = moreLikeThisQuery.Options != null ? JsonDeserializationServer.MoreLikeThisOptions(moreLikeThisQuery.Options) : MoreLikeThisOptions.Default;
+
+            HashSet<string> stopWords = null;
+            if (string.IsNullOrWhiteSpace(options.StopWordsDocumentId) == false)
+            {
+                var stopWordsDoc = context.DocumentDatabase.DocumentsStorage.Get(context, options.StopWordsDocumentId);
+                if (stopWordsDoc == null)
+                    throw new InvalidOperationException($"Stop words document {options.StopWordsDocumentId} could not be found");
+
+                if (stopWordsDoc.Data.TryGet(nameof(MoreLikeThisStopWords.StopWords), out BlittableJsonReaderArray value) && value != null)
+                {
+                    stopWords = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    for (var i = 0; i < value.Length; i++)
+                        stopWords.Add(value.GetStringByIndex(i));
+                }
+            }
+
+            queryEnvironment = new QueryEnvironment(_indexSearcher, null, context, query, _index, query.QueryParameters, QueryBuilderFactories,
+                _fieldMappings, null, null /* allow highlighting? */, -1, null);
+            var mlt = new RavenCoraxMoreLikeThis(queryEnvironment, options);
+            long? baseDocId = null;
+
+            if (moreLikeThisQuery.BaseDocument == null)
+            {
+
+                Span<long> docsIds = stackalloc long[16];
+
+
+                // get the current Lucene docid for the given RavenDB doc ID
+                if (moreLikeThisQuery.BaseDocumentQuery.Fill(docsIds) == 0)
+                    throw new InvalidOperationException("Given filtering expression did not yield any documents that could be used as a base of comparison");
+                
+                //What if we've got multiple items?
+                baseDocId = docsIds[0];
+            }
+
+            if (stopWords != null)
+                mlt.SetStopWords(stopWords);
+
+            string[] fieldNames;
+            if (options.Fields != null && options.Fields.Length > 0)
+                fieldNames = options.Fields;
+            else
+            {
+                fieldNames = new string[_fieldMappings.Count];
+                var index = 0;
+                foreach (var binding in _fieldMappings)
+                {
+                    if (binding.FieldNameAsString is Client.Constants.Documents.Indexing.Fields.DocumentIdFieldName or Client.Constants.Documents.Indexing.Fields.SourceDocumentIdFieldName or Client.Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName)
+                        continue;
+                    fieldNames[index++] = binding.FieldNameAsString;
+
+                }
+
+                if (index < fieldNames.Length)
+                    Array.Resize(ref fieldNames, index);
+            }
+
+            mlt.SetFieldNames(fieldNames);
+
+            var pageSize = CoraxGetPageSize(_indexSearcher, query.PageSize, query, isBinary);
+
+            IQueryMatch mltQuery;
+            if (baseDocId.HasValue)
+            {
+                mltQuery = mlt.Like(baseDocId.Value);
+            }
+            else
+            {
+                using (var blittableJson = ParseJsonStringIntoBlittable(moreLikeThisQuery.BaseDocument, context))
+                    mltQuery = mlt.Like(blittableJson);
+            }
+
+            if (moreLikeThisQuery.FilterQuery != null && moreLikeThisQuery.FilterQuery is AllEntriesMatch == false)
+            {
+                mltQuery = _indexSearcher.And(mltQuery, moreLikeThisQuery.FilterQuery);
+            }
+            
+
+
+            var ravenIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            long[] ids = QueryPool.Rent(pageSize);
+            var read = 0;
+
+            while ((read = mltQuery.Fill(ids.AsSpan())) != 0)
+            {
+                for (int i = 0; i < read; i++)
+                {
+                    var hit = ids[i];
+                    token.ThrowIfCancellationRequested();
+
+                    if (hit == baseDocId)
+                        continue;
+
+                    var reader = _indexSearcher.GetReaderAndIdentifyFor(hit, out string id);
+
+                    if (ravenIds.Add(id) == false)
+                        continue;
+
+                    var retrieverInput = new RetrieverInput(_fieldMappings, reader, id);
+                    var result = retriever.Get(ref retrieverInput, token);
+                    if (result.Document != null)
+                    {
+                        yield return new QueryResult {Result = result.Document};
+                    }
+                    else if (result.List != null)
+                    {
+                        foreach (Document item in result.List)
+                        {
+                            yield return new QueryResult {Result = item};
+                        }
+                    }
+                }
+            }
+
+            QueryPool.Return(ids);
         }
 
         public override IEnumerable<BlittableJsonReaderObject> IndexEntries(IndexQueryServerSide query, Reference<int> totalResults,
@@ -486,8 +635,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
             IQueryMatch queryMatch;
             bool isBinary;
-            if ((queryMatch = CoraxQueryBuilder.BuildQuery(_indexSearcher, null, null, query, _index, null, null, out isBinary,
-                    _fieldMappings, take: take)) is null)
+            var queryEnv = new QueryEnvironment(_indexSearcher, null, null, query, _index, null, null, _fieldMappings, null, null, -1, null);
+            if ((queryMatch = CoraxQueryBuilder.BuildQuery(queryEnv, out isBinary)) is null)
                 yield break;
 
             var ids = QueryPool.Rent(CoraxGetPageSize(_indexSearcher, take, query, isBinary));

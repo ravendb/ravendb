@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
+using System.Text;
 using Lucene.Net.Analysis;
 using Lucene.Net.Search;
 using Raven.Server.Documents.Indexes.Persistence.Corax;
@@ -147,5 +148,16 @@ public abstract class IndexOperationBase : IDisposable
             return null;
 
         return new QueryFilter(index, query, documentsContext, skippedResults, scannedDocuments, retriever, queryTimings);
+    }
+    
+    internal static unsafe BlittableJsonReaderObject ParseJsonStringIntoBlittable(string json, JsonOperationContext context)
+    {
+        var bytes = Encoding.UTF8.GetBytes(json);
+        fixed (byte* ptr = bytes)
+        {
+            var blittableJson = context.ParseBuffer(ptr, bytes.Length, "MoreLikeThis/ExtractTermsFromJson", BlittableJsonDocumentBuilder.UsageMode.None);
+            blittableJson.BlittableValidation(); //precaution, needed because this is user input..
+            return blittableJson;
+        }
     }
 }

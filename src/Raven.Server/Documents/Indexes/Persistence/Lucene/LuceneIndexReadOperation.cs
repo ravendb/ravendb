@@ -769,7 +769,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             IDisposable releaseServerContext = null;
             IDisposable closeServerTransaction = null;
             TransactionOperationContext serverContext = null;
-            MoreLikeThisQuery moreLikeThisQuery;
+            LuceneMoreLikeThisQuery moreLikeThisQuery;
 
             try
             {
@@ -805,7 +805,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
 
             var ir = _searcher.IndexReader;
-            var mlt = new RavenMoreLikeThis(ir, options, _state);
+            var mlt = new RavenLuceneMoreLikeThis(ir, options, _state);
 
             int? baseDocId = null;
 
