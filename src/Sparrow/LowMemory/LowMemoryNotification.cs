@@ -190,7 +190,7 @@ namespace Sparrow.LowMemory
         private bool _enableHighTemporaryDirtyMemoryUse;
         private CancellationTokenRegistration _cancellationTokenRegistration;
 
-        private LowMemoryNotification()
+        internal LowMemoryNotification()
         {
             _logger = LoggingSource.Instance.GetLogger<LowMemoryNotification>("Server");
         }
