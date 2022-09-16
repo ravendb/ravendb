@@ -30,15 +30,12 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </EmbeddedResource>
     <None Remove="Corax\Bugs\Terms.log.gz" />
-    <EmbeddedResource Include="Corax\Bugs\Terms.log.gz" />
     <None Remove="Corax\Bugs\repro-2.log.gz" />
-    <EmbeddedResource Include="Corax\Bugs\repro-2.log.gz" />
     <None Remove="Corax\Bugs\Terms-2.txt.gz" />
     <EmbeddedResource Include="Corax\Bugs\Terms-2.txt.gz" />
     <None Remove="Corax\Bugs\3-2015-10.txt.gz" />
     <EmbeddedResource Include="Corax\Bugs\3-2015-10.txt.gz" />
     <None Remove="Corax\Bugs\repro-4.log.gz" />
-    <EmbeddedResource Include="Corax\Bugs\repro-4.log.gz" />
   </ItemGroup>
   <ItemGroup>
     <Compile Remove="Sparrow\BitVectors.cs" />

@@ -1,5 +1,4 @@
 using System;
-using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -9,7 +8,6 @@ using Corax.Pipeline;
 using Corax.Queries;
 using Corax.Utils;
 using FastTests.Voron;
-using Raven.Client.Documents.Linq;
 using Sparrow;
 using Sparrow.Server;
 using Sparrow.Threading;
@@ -23,104 +21,17 @@ namespace FastTests.Corax
 {
     public class IndexSearcherTest : StorageTest
     {
-        private class IndexEntry
-        {
-            public long IndexEntryId;
-            public string Id;
-            public string[] Content;
-        }
-
-        private class IndexSingleEntry
-        {
-            public string Id;
-            public string Content;
-        }
-
-        private readonly struct StringArrayIterator : IReadOnlySpanIndexer
-        {
-            private readonly string[] _values;
-
-            private static string[] Empty = new string[0];
-
-            public StringArrayIterator(string[] values)
-            {
-                _values = values ?? Empty;
-            }
-
-            public StringArrayIterator(IEnumerable<string> values)
-            {
-                _values = values?.ToArray() ?? Empty;
-            }
-
-            public int Length => _values.Length;
-
-            public bool IsNull(int i)
-            {
-                if (i < 0 || i >= Length)
-                    throw new ArgumentOutOfRangeException();
-
-                return _values[i] == null;
-            }
-
-            public ReadOnlySpan<byte> this[int i] => _values[i] != null ? Encoding.UTF8.GetBytes(_values[i]) : null;
-        }
-
-        private static ByteStringContext<ByteStringMemoryCache>.InternalScope CreateIndexEntry(
-            ref IndexEntryWriter entryWriter, IndexEntry value, out ByteString output)
-        {
-            Span<byte> PrepareString(string value)
-            {
-                if (value == null)
-                    return Span<byte>.Empty;
-                return Encoding.UTF8.GetBytes(value);
-            }
-
-            entryWriter.Write(IdIndex, PrepareString(value.Id));
-            entryWriter.Write(ContentIndex, new StringArrayIterator(value.Content));
-
-            return entryWriter.Finish(out output);
-        }
-
-        public const int IdIndex = 0,
-            ContentIndex = 1;
-
-        private static IndexFieldsMapping CreateKnownFields(ByteStringContext ctx, Analyzer analyzer = null)
-        {
-            Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice idSlice);
-            Slice.From(ctx, "Content", ByteStringType.Immutable, out Slice contentSlice);
-
-            return new IndexFieldsMapping(ctx)
-                .AddBinding(IdIndex, idSlice, analyzer)
-                .AddBinding(ContentIndex, contentSlice, analyzer);
-        }
-
-
         public IndexSearcherTest(ITestOutputHelper output) : base(output)
         {
-        }
-
-
-        private void IndexEntries(ByteStringContext bsc, IEnumerable<IndexEntry> list, IndexFieldsMapping mapping)
-        {
-            using var indexWriter = new IndexWriter(Env, mapping);
-            var entryWriter = new IndexEntryWriter(bsc, mapping);
-
-            foreach (var entry in list)
-            {
-                using var __ = CreateIndexEntry(ref entryWriter, entry, out var data);
-                entry.IndexEntryId = indexWriter.Index(entry.Id, data.ToSpan());
-            }
-
-            indexWriter.Commit();
         }
 
         [Fact]
         public void EmptyTerm()
         {
-            var entry = new IndexEntry { Id = "entry/1", Content = new string[] { "road", "lake" }, };
+            var entry = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "lake"},};
 
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-            IndexEntries(bsc, new[] { entry }, CreateKnownFields(bsc));
+            IndexEntries(bsc, new[] {entry}, CreateKnownFields(bsc));
 
             {
                 Span<long> ids = stackalloc long[16];
@@ -139,10 +50,10 @@ namespace FastTests.Corax
         [Fact]
         public void SingleTerm()
         {
-            var entry = new IndexEntry { Id = "entry/1", Content = new string[] { "road", "lake" }, };
+            var entry = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "lake"},};
 
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-            IndexEntries(bsc, new[] { entry }, CreateKnownFields(bsc));
+            IndexEntries(bsc, new[] {entry}, CreateKnownFields(bsc));
 
             {
                 Span<long> ids = stackalloc long[16];
@@ -161,7 +72,7 @@ namespace FastTests.Corax
             var entries = new IndexEntry[16];
             for (int i = 0; i < entries.Length; i++)
             {
-                entries[i] = new IndexEntry { Id = $"entry/{i}", Content = new string[] { "road" }, };
+                entries[i] = new IndexEntry {Id = $"entry/{i}", Content = new string[] {"road"},};
             }
 
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
@@ -188,59 +99,13 @@ namespace FastTests.Corax
         }
 
         [Fact]
-        public void SetTerm()
-        {
-            var entries = new IndexEntry[100000];
-            var content = new string[] { "road" };
-
-            for (int i = 0; i < entries.Length; i++)
-            {
-                entries[i] = new IndexEntry { Id = $"entry/{i}", Content = content, };
-            }
-
-            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-            IndexEntries(bsc, entries, CreateKnownFields(bsc));
-
-            {
-                using var searcher = new IndexSearcher(Env);
-                var match = searcher.TermQuery("Content", "road");
-
-                Assert.Equal(100000, match.Count);
-
-                Span<long> ids = stackalloc long[1000];
-                ids.Fill(-1);
-
-                int read;
-                int total = 0;
-                do
-                {
-                    read = match.Fill(ids);
-                    if (read != 0)
-                    {
-                        Assert.Equal(1000, read);
-                        Assert.False(ids.Contains(-1));
-                        Assert.True(total <= match.Count);
-
-                        ids.Fill(-1);
-                    }
-
-                    total += read;
-                } while (read != 0);
-
-                Assert.Equal(match.Count, total);
-                Assert.Equal(0, match.Fill(ids));
-            }
-        }
-
-
-        [Fact]
         public void EmptyAnd()
         {
-            var entry1 = new IndexEntry { Id = "entry/1", Content = new string[] { "road", "lake" }, };
-            var entry2 = new IndexEntry { Id = "entry/2", Content = new string[] { "road", "mountain" }, };
+            var entry1 = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "lake"},};
+            var entry2 = new IndexEntry {Id = "entry/2", Content = new string[] {"road", "mountain"},};
 
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-            IndexEntries(bsc, new[] { entry1, entry2 }, CreateKnownFields(bsc));
+            IndexEntries(bsc, new[] {entry1, entry2}, CreateKnownFields(bsc));
 
             {
                 using var searcher = new IndexSearcher(Env);
@@ -256,15 +121,15 @@ namespace FastTests.Corax
         [Fact]
         public void SingleAndNoDuplication()
         {
-            var entry1 = new IndexEntry { Id = "entry/1", Content = new string[] { "road", "lake" }, };
-            var entry2 = new IndexEntry { Id = "entry/2", Content = new string[] { "road", "mountain" }, };
+            var entry1 = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "lake"},};
+            var entry2 = new IndexEntry {Id = "entry/2", Content = new string[] {"road", "mountain"},};
 
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-            IndexEntries(bsc, new[] { entry1, entry2 }, CreateKnownFields(bsc));
+            IndexEntries(bsc, new[] {entry1, entry2}, CreateKnownFields(bsc));
 
             {
                 using var searcher = new IndexSearcher(Env);
-                var match1 = searcher.InQuery("Content", new List<string>() { "road", "lake" });
+                var match1 = searcher.InQuery("Content", new List<string>() {"road", "lake"});
                 var match2 = searcher.ExistsQuery("Content");
                 var andMatch = searcher.And(in match1, in match2);
 
@@ -277,11 +142,11 @@ namespace FastTests.Corax
         [Fact]
         public void SingleAnd()
         {
-            var entry1 = new IndexEntry { Id = "entry/1", Content = new string[] { "road", "lake" }, };
-            var entry2 = new IndexEntry { Id = "entry/1", Content = new string[] { "road", "mountain" }, };
+            var entry1 = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "lake"},};
+            var entry2 = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "mountain"},};
 
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-            IndexEntries(bsc, new[] { entry1, entry2 }, CreateKnownFields(bsc));
+            IndexEntries(bsc, new[] {entry1, entry2}, CreateKnownFields(bsc));
 
             {
                 using var searcher = new IndexSearcher(Env);
@@ -298,11 +163,11 @@ namespace FastTests.Corax
         [Fact]
         public void AllAnd()
         {
-            var entry1 = new IndexEntry { Id = "entry/1", Content = new string[] { "road", "lake", "mountain" }, };
-            var entry2 = new IndexEntry { Id = "entry/1", Content = new string[] { "road", "mountain" }, };
+            var entry1 = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "lake", "mountain"},};
+            var entry2 = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "mountain"},};
 
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-            IndexEntries(bsc, new[] { entry1, entry2 }, CreateKnownFields(bsc));
+            IndexEntries(bsc, new[] {entry1, entry2}, CreateKnownFields(bsc));
 
             {
                 using var searcher = new IndexSearcher(Env);
@@ -319,7 +184,7 @@ namespace FastTests.Corax
         [Fact]
         public void AllAndWithEmpty()
         {
-            var entries = Enumerable.Range(1, 10_000).Select(i => new IndexEntry { Id = $"entry/{i}", Content = new string[] { "road", "lake", "mountain" } }).ToArray();
+            var entries = Enumerable.Range(1, 10_000).Select(i => new IndexEntry {Id = $"entry/{i}", Content = new string[] {"road", "lake", "mountain"}}).ToArray();
 
 
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
@@ -339,11 +204,11 @@ namespace FastTests.Corax
         [Fact]
         public void AllAndMemoized()
         {
-            var entry1 = new IndexEntry { Id = "entry/1", Content = new string[] { "road", "lake", "mountain" }, };
-            var entry2 = new IndexEntry { Id = "entry/1", Content = new string[] { "road", "mountain" }, };
+            var entry1 = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "lake", "mountain"},};
+            var entry2 = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "mountain"},};
 
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-            IndexEntries(bsc, new[] { entry1, entry2 }, CreateKnownFields(bsc));
+            IndexEntries(bsc, new[] {entry1, entry2}, CreateKnownFields(bsc));
 
             {
                 using var searcher = new IndexSearcher(Env);
@@ -366,11 +231,11 @@ namespace FastTests.Corax
         [Fact]
         public void EmptyOr()
         {
-            var entry1 = new IndexEntry { Id = "entry/1", Content = new string[] { "road", "lake" }, };
-            var entry2 = new IndexEntry { Id = "entry/2", Content = new string[] { "road", "mountain" }, };
+            var entry1 = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "lake"},};
+            var entry2 = new IndexEntry {Id = "entry/2", Content = new string[] {"road", "mountain"},};
 
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-            IndexEntries(bsc, new[] { entry1, entry2 }, CreateKnownFields(bsc));
+            IndexEntries(bsc, new[] {entry1, entry2}, CreateKnownFields(bsc));
 
             {
                 using var searcher = new IndexSearcher(Env);
@@ -387,11 +252,11 @@ namespace FastTests.Corax
         [Fact]
         public void SingleOr()
         {
-            var entry1 = new IndexEntry { Id = "entry/1", Content = new string[] { "road", "lake" }, };
-            var entry2 = new IndexEntry { Id = "entry/2", Content = new string[] { "road", "mountain" }, };
+            var entry1 = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "lake"},};
+            var entry2 = new IndexEntry {Id = "entry/2", Content = new string[] {"road", "mountain"},};
 
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-            IndexEntries(bsc, new[] { entry1, entry2 }, CreateKnownFields(bsc));
+            IndexEntries(bsc, new[] {entry1, entry2}, CreateKnownFields(bsc));
 
             {
                 Span<long> ids = stackalloc long[16];
@@ -416,11 +281,11 @@ namespace FastTests.Corax
         [Fact]
         public void AllOr()
         {
-            var entry1 = new IndexEntry { Id = "entry/1", Content = new string[] { "road", "lake" }, };
-            var entry2 = new IndexEntry { Id = "entry/2", Content = new string[] { "road", "mountain" }, };
+            var entry1 = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "lake"},};
+            var entry2 = new IndexEntry {Id = "entry/2", Content = new string[] {"road", "mountain"},};
 
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-            IndexEntries(bsc, new[] { entry1, entry2 }, CreateKnownFields(bsc));
+            IndexEntries(bsc, new[] {entry1, entry2}, CreateKnownFields(bsc));
 
             {
                 using var searcher = new IndexSearcher(Env);
@@ -438,12 +303,12 @@ namespace FastTests.Corax
         [Fact]
         public void AllOrInBatches()
         {
-            var entry1 = new IndexEntry { Id = "entry/1", Content = new string[] { "road", "lake" }, };
-            var entry2 = new IndexEntry { Id = "entry/2", Content = new string[] { "road", "mountain" }, };
-            var entry3 = new IndexEntry { Id = "entry/3", Content = new string[] { "trail", "mountain" }, };
+            var entry1 = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "lake"},};
+            var entry2 = new IndexEntry {Id = "entry/2", Content = new string[] {"road", "mountain"},};
+            var entry3 = new IndexEntry {Id = "entry/3", Content = new string[] {"trail", "mountain"},};
 
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-            IndexEntries(bsc, new[] { entry1, entry2, entry3 }, CreateKnownFields(bsc));
+            IndexEntries(bsc, new[] {entry1, entry2, entry3}, CreateKnownFields(bsc));
 
             {
                 using var searcher = new IndexSearcher(Env);
@@ -461,12 +326,12 @@ namespace FastTests.Corax
         [Fact]
         public void SimpleAndOr()
         {
-            var entry1 = new IndexEntry { Id = "entry/1", Content = new string[] { "road", "lake", "mountain" }, };
-            var entry2 = new IndexEntry { Id = "entry/2", Content = new string[] { "road", "mountain" }, };
-            var entry3 = new IndexEntry { Id = "entry/3", Content = new string[] { "sky", "space" }, };
+            var entry1 = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "lake", "mountain"},};
+            var entry2 = new IndexEntry {Id = "entry/2", Content = new string[] {"road", "mountain"},};
+            var entry3 = new IndexEntry {Id = "entry/3", Content = new string[] {"sky", "space"},};
 
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-            IndexEntries(bsc, new[] { entry1, entry2, entry3 }, CreateKnownFields(bsc));
+            IndexEntries(bsc, new[] {entry1, entry2, entry3}, CreateKnownFields(bsc));
 
             {
                 using var searcher = new IndexSearcher(Env);
@@ -498,12 +363,10 @@ namespace FastTests.Corax
 
 
         [Theory]
-        [InlineData(new object[] { 100000, 128 })]
-        [InlineData(new object[] { 100000, 18 })]
-        [InlineData(new object[] { 8000, 18 })]
-        [InlineData(new object[] { 1000, 8 })]
-        [InlineData(new object[] { 1020, 7 })]
-        [InlineData(new object[] { 201, 128 })]
+        [InlineData(new object[] {8000, 18})]
+        [InlineData(new object[] {1000, 8})]
+        [InlineData(new object[] {1020, 7})]
+        [InlineData(new object[] {201, 128})]
         public void SimpleAndOrForBiggerSet(int setSize, int stackSize)
         {
             setSize = setSize - (setSize % 3);
@@ -517,9 +380,9 @@ namespace FastTests.Corax
                     Id = $"entry/{i}",
                     Content = (i % 3) switch
                     {
-                        0 => new string[] { "road", "lake", "mountain" },
-                        1 => new string[] { "road", "mountain" },
-                        2 => new string[] { "sky", "space", "lake" },
+                        0 => new string[] {"road", "lake", "mountain"},
+                        1 => new string[] {"road", "mountain"},
+                        2 => new string[] {"sky", "space", "lake"},
                         _ => throw new InvalidDataException("This should not happen.")
                     }
                 };
@@ -554,9 +417,8 @@ namespace FastTests.Corax
                     read = orMatch.Fill(ids);
                     count += read;
                     actual.AddRange(ids[..read].ToArray());
-                } 
-                while (read != 0);
-                
+                } while (read != 0);
+
                 // Because there is no guarantee that multiple Fill operations would return sequential non redundant document ids,
                 // we need to sort and remove duplicates before actually testing the final condition. 
                 var sortedActual = actual.ToArray();
@@ -573,16 +435,16 @@ namespace FastTests.Corax
         [Fact]
         public void SimpleInStatement()
         {
-            var entry1 = new IndexEntry { Id = "entry/1", Content = new string[] { "road", "lake", "mountain" }, };
-            var entry2 = new IndexEntry { Id = "entry/2", Content = new string[] { "road", "mountain" }, };
-            var entry3 = new IndexEntry { Id = "entry/3", Content = new string[] { "sky", "space" }, };
+            var entry1 = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "lake", "mountain"},};
+            var entry2 = new IndexEntry {Id = "entry/2", Content = new string[] {"road", "mountain"},};
+            var entry3 = new IndexEntry {Id = "entry/3", Content = new string[] {"sky", "space"},};
 
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-            IndexEntries(bsc, new[] { entry1, entry2, entry3 }, CreateKnownFields(bsc));
+            IndexEntries(bsc, new[] {entry1, entry2, entry3}, CreateKnownFields(bsc));
 
             using var searcher = new IndexSearcher(Env);
             {
-                var match = searcher.InQuery("Content", new() { "road", "space" });
+                var match = searcher.InQuery("Content", new() {"road", "space"});
 
                 Span<long> ids = stackalloc long[2];
                 Assert.Equal(2, match.Fill(ids));
@@ -591,7 +453,7 @@ namespace FastTests.Corax
             }
 
             {
-                var match = searcher.InQuery("Content", new() { "road", "space" });
+                var match = searcher.InQuery("Content", new() {"road", "space"});
 
                 Span<long> ids = stackalloc long[16];
                 Assert.Equal(3, match.Fill(ids));
@@ -599,7 +461,7 @@ namespace FastTests.Corax
             }
 
             {
-                var match = searcher.InQuery("Content", new() { "sky", "space" });
+                var match = searcher.InQuery("Content", new() {"sky", "space"});
 
                 Span<long> ids = stackalloc long[16];
                 Assert.Equal(1, match.Fill(ids));
@@ -607,7 +469,7 @@ namespace FastTests.Corax
             }
 
             {
-                var match = searcher.InQuery("Content", new() { "road", "mountain", "space" });
+                var match = searcher.InQuery("Content", new() {"road", "mountain", "space"});
 
                 Span<long> ids = stackalloc long[16];
                 Assert.Equal(3, match.Fill(ids));
@@ -616,12 +478,9 @@ namespace FastTests.Corax
         }
 
         [Theory]
-        [InlineData(new object[] { 300, 128 })]
-        [InlineData(new object[] { 10000, 128 })]
-        [InlineData(new object[] { 100000, 2046 })]
-        [InlineData(new object[] { 1000, 8 })]
-        [InlineData(new object[] { 11700, 18 })]
-        [InlineData(new object[] { 11859, 18 })]
+        [InlineData(new object[] {1000, 8})]
+        [InlineData(new object[] {300, 128})]
+        [InlineData(new object[] {10000, 128})]
         public void AndInStatement(int setSize, int stackSize)
         {
             setSize = setSize - (setSize % 3);
@@ -635,9 +494,9 @@ namespace FastTests.Corax
                     Id = $"entry/{i}",
                     Content = (i % 3) switch
                     {
-                        0 => new string[] { "road", "lake", "mountain" },
-                        1 => new string[] { "road", "mountain" },
-                        2 => new string[] { "sky", "space", "lake" },
+                        0 => new string[] {"road", "lake", "mountain"},
+                        1 => new string[] {"road", "mountain"},
+                        2 => new string[] {"sky", "space", "lake"},
                         _ => throw new InvalidDataException("This should not happen.")
                     }
                 };
@@ -656,7 +515,7 @@ namespace FastTests.Corax
 
             using var searcher = new IndexSearcher(Env);
             {
-                var match1 = searcher.InQuery("Content", new() { "lake", "mountain" });
+                var match1 = searcher.InQuery("Content", new() {"lake", "mountain"});
                 var match2 = searcher.TermQuery("Content", "sky");
                 var andMatch = searcher.And(in match1, in match2);
 
@@ -682,7 +541,7 @@ namespace FastTests.Corax
 
             {
                 var match1 = searcher.TermQuery("Content", "sky");
-                var match2 = searcher.InQuery("Content", new() { "lake", "mountain" });
+                var match2 = searcher.InQuery("Content", new() {"lake", "mountain"});
                 var andMatch = searcher.And(in match1, in match2);
 
                 var actual = new List<long>();
@@ -695,6 +554,7 @@ namespace FastTests.Corax
                     actual.AddRange(ids[..read].ToArray());
                     count += read;
                 } while (read != 0);
+
                 var actualSorted = actual.ToArray();
                 var actualSize = Sorting.SortAndRemoveDuplicates(actualSorted.AsSpan());
 
@@ -710,16 +570,103 @@ namespace FastTests.Corax
         [Fact]
         public void AllIn()
         {
-            var entry0 = new IndexEntry { Id = "entry/0", Content = new string[] {  "quo", "consequatur?", "officia", "in", "pariatur.", "illo", "minim", "nihil", "consequuntur", "eum", "consequuntur", "error", "qui", "et", "eos", "minim", "numquam", "commodo", "architecto", "ut", "Cicero", "deserunt", "Finibus", "sunt", "nesciunt.", "molestiae", "Quis", "THIS_IS_UNIQUE_VALUE,", "eum", "in"}, };
-            var entry1 = new IndexEntry { Id = "entry/1", Content = new string[] {  "incididunt", "fugiat", "quia", "consequatur?", "magnam", "officia", "elit,", "illum", "ipsa", "of", "culpa", "ea", "voluptas", "Duis", "voluptatem", "Lorem", "modi", "qui", "Sed", "veritatis", "written", "ea", "mollit", "sint", "porro", "ratione", "THIS_IS_UNIQUE_VALUE,", "consectetur", "laudantium,", "aliquam"}, };
-            var entry2 = new IndexEntry { Id = "entry/2", Content = new string[] {  "laboris", "natus", "Neque", "consequatur,", "qui", "ut", "natus", "illo", "Quis", "voluptas", "eaque", "quasi", "", "aut", "esse", "sed", "qui", "aut", "eos", "eius", "quia", "esse", "aliquip", "", "vel", "quia", "aliqua.", "quia", "consequatur,", "Sed"}, };
-            var entry3 = new IndexEntry { Id = "entry/3", Content = new string[] {  "enim", "aliquid", "voluptas", "Finibus", "eaque", "esse", "Duis", "aut", "voluptatem.", "reprehenderit", "ad", "illum", "consequatur?", "architecto", "velit", "esse", "veniam,", "amet,", "voluptatem", "accusantium", "THIS_IS_UNIQUE_VALUE.", "dolore", "eum", "laborum.", "ipsam", "of", "explicabo.", "voluptatem", "et", "quis"}, };
-            var entry4 = new IndexEntry { Id = "entry/4", Content = new string[] {  "incididunt", "id", "ratione", "inventore", "pariatur.", "molestiae", "dolor", "sit", "Nemo", "de", "nulla", "et", "proident,", "quae", "ipsam", "iste", "in", "dolore", "culpa", "enim", "dolor", "consectetur", "veritatis", "of", "45", "fugiat", "magnam", "Bonorum", "dolor", "beatae"}, };
-            var entry5 = new IndexEntry { Id = "entry/5", Content = new string[] {  "laboriosam,", "totam", "voluptate", "et", "sit", "culpa", "reprehenderit", "eius", "accusantium", "", "omnis", "beatae", "amet,", "nulla", "tempor", "ullamco", "dolor", "ipsam", "vel", "THIS_IS_UNIQUE_VALUE", "quia", "", "consequatur,", "labore", "aliqua.", "dicta", "nostrum", "ut", "dolorem", "Duis"}, };
-            var entry6 = new IndexEntry { Id = "entry/6", Content = new string[] {  "enim", "sed", "ad", "deserunt", "eu", "omnis", "voluptate", "in", "qui", "rem", "sunt", "tempor", "voluptatem", "vel", "enim", "velit", "velit", "aliquip", "by", "in", "eum", "dolore", "incidunt", "commodi", "anim", "amet,", "quo", "est,", "ratione", "sit"}, };
-            var entry7 = new IndexEntry { Id = "entry/7", Content = new string[] {  "sed", "qui", "esse", "THIS_IS_UNIQUE_VALUE", "dolore", "totam", "Nemo", "veniam,", "reprehenderit", "consequuntur", "consequuntur", "aperiam,", "fugiat", "sed", "corporis", "45", "culpa", "accusantium", "quae", "dolor", "voluptate", "dolor", "et", "explicabo.", "voluptate", "Nemo", "tempora", "accusantium", "dolore", "in"}, };
-            var entry8 = new IndexEntry { Id = "entry/8", Content = new string[] {  "nihil", "velit", "quia", "amet,", "fugit,", "eiusmod", "magna", "aliqua.", "ullamco", "accusantium", "nulla", "ex", "sit", "quo", "sit", "sit", "enim", "qui", "sunt", "aspernatur", "laboris", "autem", "voluptas", "amet,", "ipsa", "commodo", "minima", "consectetur,", "fugiat", "voluptas"}, };
-            var entry9 = new IndexEntry { Id = "entry/9", Content = new string[] {  "dolorem", "ipsa", "in", "omnis", "ullamco", "ab", "esse", "aut", "rem", "eu", "iure", "ad", "consequuntur", "est", "adipisci", "velit", "inventore", "nesciunt.", "ad", "vitae", "laborum.", "esse", "voluptate", "et", "fugiat", "fugiat", "voluptas", "quae", "dolor", "qui"}, };
+            var entry0 = new IndexEntry
+            {
+                Id = "entry/0",
+                Content = new string[]
+                {
+                    "quo", "consequatur?", "officia", "in", "pariatur.", "illo", "minim", "nihil", "consequuntur", "eum", "consequuntur", "error", "qui", "et",
+                    "eos", "minim", "numquam", "commodo", "architecto", "ut", "Cicero", "deserunt", "Finibus", "sunt", "nesciunt.", "molestiae", "Quis",
+                    "THIS_IS_UNIQUE_VALUE,", "eum", "in"
+                },
+            };
+            var entry1 = new IndexEntry
+            {
+                Id = "entry/1",
+                Content = new string[]
+                {
+                    "incididunt", "fugiat", "quia", "consequatur?", "magnam", "officia", "elit,", "illum", "ipsa", "of", "culpa", "ea", "voluptas", "Duis",
+                    "voluptatem", "Lorem", "modi", "qui", "Sed", "veritatis", "written", "ea", "mollit", "sint", "porro", "ratione", "THIS_IS_UNIQUE_VALUE,",
+                    "consectetur", "laudantium,", "aliquam"
+                },
+            };
+            var entry2 = new IndexEntry
+            {
+                Id = "entry/2",
+                Content = new string[]
+                {
+                    "laboris", "natus", "Neque", "consequatur,", "qui", "ut", "natus", "illo", "Quis", "voluptas", "eaque", "quasi", "", "aut", "esse", "sed",
+                    "qui", "aut", "eos", "eius", "quia", "esse", "aliquip", "", "vel", "quia", "aliqua.", "quia", "consequatur,", "Sed"
+                },
+            };
+            var entry3 = new IndexEntry
+            {
+                Id = "entry/3",
+                Content = new string[]
+                {
+                    "enim", "aliquid", "voluptas", "Finibus", "eaque", "esse", "Duis", "aut", "voluptatem.", "reprehenderit", "ad", "illum", "consequatur?",
+                    "architecto", "velit", "esse", "veniam,", "amet,", "voluptatem", "accusantium", "THIS_IS_UNIQUE_VALUE.", "dolore", "eum", "laborum.", "ipsam",
+                    "of", "explicabo.", "voluptatem", "et", "quis"
+                },
+            };
+            var entry4 = new IndexEntry
+            {
+                Id = "entry/4",
+                Content = new string[]
+                {
+                    "incididunt", "id", "ratione", "inventore", "pariatur.", "molestiae", "dolor", "sit", "Nemo", "de", "nulla", "et", "proident,", "quae",
+                    "ipsam", "iste", "in", "dolore", "culpa", "enim", "dolor", "consectetur", "veritatis", "of", "45", "fugiat", "magnam", "Bonorum", "dolor",
+                    "beatae"
+                },
+            };
+            var entry5 = new IndexEntry
+            {
+                Id = "entry/5",
+                Content = new string[]
+                {
+                    "laboriosam,", "totam", "voluptate", "et", "sit", "culpa", "reprehenderit", "eius", "accusantium", "", "omnis", "beatae", "amet,", "nulla",
+                    "tempor", "ullamco", "dolor", "ipsam", "vel", "THIS_IS_UNIQUE_VALUE", "quia", "", "consequatur,", "labore", "aliqua.", "dicta", "nostrum",
+                    "ut", "dolorem", "Duis"
+                },
+            };
+            var entry6 = new IndexEntry
+            {
+                Id = "entry/6",
+                Content = new string[]
+                {
+                    "enim", "sed", "ad", "deserunt", "eu", "omnis", "voluptate", "in", "qui", "rem", "sunt", "tempor", "voluptatem", "vel", "enim", "velit",
+                    "velit", "aliquip", "by", "in", "eum", "dolore", "incidunt", "commodi", "anim", "amet,", "quo", "est,", "ratione", "sit"
+                },
+            };
+            var entry7 = new IndexEntry
+            {
+                Id = "entry/7",
+                Content = new string[]
+                {
+                    "sed", "qui", "esse", "THIS_IS_UNIQUE_VALUE", "dolore", "totam", "Nemo", "veniam,", "reprehenderit", "consequuntur", "consequuntur",
+                    "aperiam,", "fugiat", "sed", "corporis", "45", "culpa", "accusantium", "quae", "dolor", "voluptate", "dolor", "et", "explicabo.", "voluptate",
+                    "Nemo", "tempora", "accusantium", "dolore", "in"
+                },
+            };
+            var entry8 = new IndexEntry
+            {
+                Id = "entry/8",
+                Content = new string[]
+                {
+                    "nihil", "velit", "quia", "amet,", "fugit,", "eiusmod", "magna", "aliqua.", "ullamco", "accusantium", "nulla", "ex", "sit", "quo", "sit",
+                    "sit", "enim", "qui", "sunt", "aspernatur", "laboris", "autem", "voluptas", "amet,", "ipsa", "commodo", "minima", "consectetur,", "fugiat",
+                    "voluptas"
+                },
+            };
+            var entry9 = new IndexEntry
+            {
+                Id = "entry/9",
+                Content = new string[]
+                {
+                    "dolorem", "ipsa", "in", "omnis", "ullamco", "ab", "esse", "aut", "rem", "eu", "iure", "ad", "consequuntur", "est", "adipisci", "velit",
+                    "inventore", "nesciunt.", "ad", "vitae", "laborum.", "esse", "voluptate", "et", "fugiat", "fugiat", "voluptas", "quae", "dolor", "qui"
+                },
+            };
             var entries = new[] {entry0, entry1, entry2, entry3, entry4, entry5, entry6, entry7, entry8, entry9};
 
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
@@ -732,35 +679,98 @@ namespace FastTests.Corax
                 Assert.Equal(2, match.Fill(ids));
                 Assert.Equal(0, match.Fill(ids));
             }
-            
+
             {
-                var match = searcher.AllInQuery("Content", new HashSet<string>(){"dolorem", "ipsa", "in", "omnis", "ullamco", "ab", "esse", "aut", "rem", "eu", "iure", "ad", "consequuntur", "est", "adipisci", "velit", "inventore", "nesciunt.", "ad", "vitae", "laborum.", "esse", "voluptate", "et", "fugiat", "fugiat", "voluptas", "quae", "dolor", "qui"}, ContentIndex);
+                var match = searcher.AllInQuery("Content", new HashSet<string>()
+                {
+                    "dolorem",
+                    "ipsa",
+                    "in",
+                    "omnis",
+                    "ullamco",
+                    "ab",
+                    "esse",
+                    "aut",
+                    "rem",
+                    "eu",
+                    "iure",
+                    "ad",
+                    "consequuntur",
+                    "est",
+                    "adipisci",
+                    "velit",
+                    "inventore",
+                    "nesciunt.",
+                    "ad",
+                    "vitae",
+                    "laborum.",
+                    "esse",
+                    "voluptate",
+                    "et",
+                    "fugiat",
+                    "fugiat",
+                    "voluptas",
+                    "quae",
+                    "dolor",
+                    "qui"
+                }, ContentIndex);
 
                 Span<long> ids = stackalloc long[16];
                 Assert.Equal(1, match.Fill(ids));
                 Assert.Equal(0, match.Fill(ids));
             }
-            
+
             {
-                var match = searcher.AllInQuery("Content", new HashSet<string>() {"dolorem", "ipsa", "in", "omnis", "ullamco", "ab", "esse", "aut", "rem", "eu", "iure", "ad", "consequuntur", "est", "adipisci", "velit", "inventore", "nesciunt.", "ad", "vitae", "laborum.", "esse", "voluptate", "et", "fugiat", "fugiat", "voluptas", "quae", "dolor", 
-                    "THIS_IS_SUPER_UNIQUE_VALUE"}, ContentIndex);
+                var match = searcher.AllInQuery("Content", new HashSet<string>()
+                {
+                    "dolorem",
+                    "ipsa",
+                    "in",
+                    "omnis",
+                    "ullamco",
+                    "ab",
+                    "esse",
+                    "aut",
+                    "rem",
+                    "eu",
+                    "iure",
+                    "ad",
+                    "consequuntur",
+                    "est",
+                    "adipisci",
+                    "velit",
+                    "inventore",
+                    "nesciunt.",
+                    "ad",
+                    "vitae",
+                    "laborum.",
+                    "esse",
+                    "voluptate",
+                    "et",
+                    "fugiat",
+                    "fugiat",
+                    "voluptas",
+                    "quae",
+                    "dolor",
+                    "THIS_IS_SUPER_UNIQUE_VALUE"
+                }, ContentIndex);
 
                 Span<long> ids = stackalloc long[16];
                 Assert.Equal(0, match.Fill(ids));
             }
         }
-        
-        
+
+
         [Fact]
         public void SimpleStartWithStatement()
         {
-            var entry1 = new IndexEntry { Id = "entry/1", Content = new string[] { "a road", "a lake", "the mountain" }, };
-            var entry2 = new IndexEntry { Id = "entry/2", Content = new string[] { "a road", "the mountain" }, };
-            var entry3 = new IndexEntry { Id = "entry/3", Content = new string[] { "the sky", "the space", "an animal" }, };
+            var entry1 = new IndexEntry {Id = "entry/1", Content = new string[] {"a road", "a lake", "the mountain"},};
+            var entry2 = new IndexEntry {Id = "entry/2", Content = new string[] {"a road", "the mountain"},};
+            var entry3 = new IndexEntry {Id = "entry/3", Content = new string[] {"the sky", "the space", "an animal"},};
 
 
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-            IndexEntries(bsc, new[] { entry1, entry2, entry3 }, CreateKnownFields(bsc));
+            IndexEntries(bsc, new[] {entry1, entry2, entry3}, CreateKnownFields(bsc));
 
             using var searcher = new IndexSearcher(Env);
             {
@@ -797,45 +807,16 @@ namespace FastTests.Corax
             }
         }
 
-        private static ByteStringContext<ByteStringMemoryCache>.InternalScope CreateIndexEntry(
-            ref IndexEntryWriter entryWriter, IndexSingleEntry value, out ByteString output)
-        {
-            Span<byte> PrepareString(string value)
-            {
-                if (value == null)
-                    return Span<byte>.Empty;
-                return Encoding.UTF8.GetBytes(value);
-            }
-
-            entryWriter.Write(IdIndex, PrepareString(value.Id));
-            entryWriter.Write(ContentIndex, PrepareString(value.Content));
-            return entryWriter.Finish(out output);
-        }
-
-        private void IndexEntries(ByteStringContext bsc, IEnumerable<IndexSingleEntry> list, IndexFieldsMapping mapping)
-        {
-            using var indexWriter = new IndexWriter(Env, mapping);
-            var entryWriter = new IndexEntryWriter(bsc, mapping);
-
-            foreach (var entry in list)
-            {
-                using var __ = CreateIndexEntry(ref entryWriter, entry, out var data);
-                indexWriter.Index(entry.Id, data.ToSpan());
-            }
-
-            indexWriter.Commit();
-        }
-
         [Fact]
         public void MixedSortedMatchStatement()
         {
-            var entry1 = new IndexSingleEntry { Id = "entry/1", Content = "3" };
-            var entry2 = new IndexEntry { Id = "entry/2", Content = new string[] { "4", "2" }, };
-            var entry3 = new IndexSingleEntry { Id = "entry/3", Content = "1" };
+            var entry1 = new IndexSingleEntry {Id = "entry/1", Content = "3"};
+            var entry2 = new IndexEntry {Id = "entry/2", Content = new string[] {"4", "2"},};
+            var entry3 = new IndexSingleEntry {Id = "entry/3", Content = "1"};
 
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-            IndexEntries(bsc, new[] { entry1, entry3 }, CreateKnownFields(bsc));
-            IndexEntries(bsc, new[] { entry2 }, CreateKnownFields(bsc));
+            IndexEntries(bsc, new[] {entry1, entry3}, CreateKnownFields(bsc));
+            IndexEntries(bsc, new[] {entry2}, CreateKnownFields(bsc));
 
             using var searcher = new IndexSearcher(Env);
             {
@@ -852,13 +833,13 @@ namespace FastTests.Corax
         [Fact]
         public void WillGetTotalNumberOfResultsInPagedQuery()
         {
-            var entry1 = new IndexSingleEntry { Id = "entry/1", Content = "3" };
-            var entry2 = new IndexEntry { Id = "entry/2", Content = new string[] { "4", "2" }, };
-            var entry3 = new IndexSingleEntry { Id = "entry/3", Content = "1" };
+            var entry1 = new IndexSingleEntry {Id = "entry/1", Content = "3"};
+            var entry2 = new IndexEntry {Id = "entry/2", Content = new string[] {"4", "2"},};
+            var entry3 = new IndexSingleEntry {Id = "entry/3", Content = "1"};
 
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-            IndexEntries(bsc, new[] { entry1, entry3 }, CreateKnownFields(bsc));
-            IndexEntries(bsc, new[] { entry2 }, CreateKnownFields(bsc));
+            IndexEntries(bsc, new[] {entry1, entry3}, CreateKnownFields(bsc));
+            IndexEntries(bsc, new[] {entry2}, CreateKnownFields(bsc));
 
             using var searcher = new IndexSearcher(Env);
             {
@@ -880,14 +861,14 @@ namespace FastTests.Corax
             int i;
             for (i = 0; i < 1024; ++i)
             {
-                list.Add(new IndexSingleEntry() { Id = $"entry/{i + 1}", Content = i.ToString() });
+                list.Add(new IndexSingleEntry() {Id = $"entry/{i + 1}", Content = i.ToString()});
             }
 
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
             IndexEntries(bsc, list, CreateKnownFields(bsc));
-            IndexEntries(bsc, new[] { new IndexEntry() { Id = $"entry/{i + 1}" } }, CreateKnownFields(bsc));
+            IndexEntries(bsc, new[] {new IndexEntry() {Id = $"entry/{i + 1}"}}, CreateKnownFields(bsc));
 
-            list.Add(new IndexSingleEntry() { Id = $"entry/{i + 1}" });
+            list.Add(new IndexSingleEntry() {Id = $"entry/{i + 1}"});
 
             using var searcher = new IndexSearcher(Env);
             {
@@ -912,12 +893,12 @@ namespace FastTests.Corax
         [Fact]
         public void SimpleSortedMatchStatement()
         {
-            var entry1 = new IndexSingleEntry { Id = "entry/1", Content = "3" };
-            var entry2 = new IndexSingleEntry { Id = "entry/2", Content = "2" };
-            var entry3 = new IndexSingleEntry { Id = "entry/3", Content = "1" };
+            var entry1 = new IndexSingleEntry {Id = "entry/1", Content = "3"};
+            var entry2 = new IndexSingleEntry {Id = "entry/2", Content = "2"};
+            var entry3 = new IndexSingleEntry {Id = "entry/3", Content = "1"};
 
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-            IndexEntries(bsc, new[] { entry1, entry2, entry3 }, CreateKnownFields(bsc));
+            IndexEntries(bsc, new[] {entry1, entry2, entry3}, CreateKnownFields(bsc));
 
             using var searcher = new IndexSearcher(Env);
 
@@ -942,53 +923,12 @@ namespace FastTests.Corax
             }
         }
 
-
-        private void IndexEntriesDouble(IEnumerable<IndexSingleEntryDouble> list)
-        {
-            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-            var knownFields = CreateKnownFields(bsc);
-
-            {
-                using var indexWriter = new IndexWriter(Env, knownFields);
-                var entryWriter = new IndexEntryWriter(bsc, knownFields);
-
-                foreach (var entry in list)
-                {
-                    var data = CreateIndexEntryDouble(ref entryWriter, entry, out var buffer);
-                    indexWriter.Index(entry.Id, buffer.ToSpan());
-                }
-
-                indexWriter.Commit();
-            }
-        }
-
-        private static ByteStringContext<ByteStringMemoryCache>.InternalScope CreateIndexEntryDouble(
-            ref IndexEntryWriter entryWriter, IndexSingleEntryDouble value, out ByteString output)
-        {
-            Span<byte> PrepareString(string value)
-            {
-                if (value == null)
-                    return Span<byte>.Empty;
-                return Encoding.UTF8.GetBytes(value);
-            }
-
-            entryWriter.Write(IdIndex, PrepareString(value.Id));
-            entryWriter.Write(ContentIndex, PrepareString(value.Content.ToString()), Convert.ToInt64(value.Content), value.Content);
-            return entryWriter.Finish(out output);
-        }
-
-        private class IndexSingleEntryDouble
-        {
-            public string Id;
-            public double Content;
-        }
-
         [Fact]
         public void SimpleOrdinalCompareStatementWithLongValue()
         {
             var list = new List<IndexSingleEntryDouble>();
             for (int i = 1; i < 1001; ++i)
-                list.Add(new IndexSingleEntryDouble() { Id = $"entry/{i}", Content = (double)i });
+                list.Add(new IndexSingleEntryDouble() {Id = $"entry/{i}", Content = (double)i});
             List<string> qids = new();
             IndexEntriesDouble(list);
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
@@ -1001,8 +941,8 @@ namespace FastTests.Corax
 
                 int read = 0;
                 while ((read = match2.Fill(ids)) != 0)
-                    while (--read >= 0)
-                        qids.Add(searcher.GetIdentityFor(ids[read]));
+                while (--read >= 0)
+                    qids.Add(searcher.GetIdentityFor(ids[read]));
 
                 foreach (IndexSingleEntryDouble indexSingleEntryDouble in list)
                 {
@@ -1057,12 +997,12 @@ namespace FastTests.Corax
         [Fact]
         public void SimpleOrdinalCompareStatement()
         {
-            var entry1 = new IndexSingleEntry { Id = "entry/1", Content = "3" };
-            var entry2 = new IndexSingleEntry { Id = "entry/2", Content = "2" };
-            var entry3 = new IndexSingleEntry { Id = "entry/3", Content = "1" };
+            var entry1 = new IndexSingleEntry {Id = "entry/1", Content = "3"};
+            var entry2 = new IndexSingleEntry {Id = "entry/2", Content = "2"};
+            var entry3 = new IndexSingleEntry {Id = "entry/3", Content = "1"};
 
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-            IndexEntries(bsc, new[] { entry1, entry2, entry3 }, CreateKnownFields(bsc));
+            IndexEntries(bsc, new[] {entry1, entry2, entry3}, CreateKnownFields(bsc));
 
             using var searcher = new IndexSearcher(Env);
 
@@ -1109,12 +1049,12 @@ namespace FastTests.Corax
         [Fact]
         public void SimpleEqualityCompareStatement()
         {
-            var entry1 = new IndexSingleEntry { Id = "entry/1", Content = "1" };
-            var entry2 = new IndexSingleEntry { Id = "entry/2", Content = "2" };
-            var entry3 = new IndexSingleEntry { Id = "entry/3", Content = "1" };
+            var entry1 = new IndexSingleEntry {Id = "entry/1", Content = "1"};
+            var entry2 = new IndexSingleEntry {Id = "entry/2", Content = "2"};
+            var entry3 = new IndexSingleEntry {Id = "entry/3", Content = "1"};
 
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-            IndexEntries(bsc, new[] { entry1, entry2, entry3 }, CreateKnownFields(bsc));
+            IndexEntries(bsc, new[] {entry1, entry2, entry3}, CreateKnownFields(bsc));
 
             using var searcher = new IndexSearcher(Env);
 
@@ -1160,12 +1100,12 @@ namespace FastTests.Corax
         [Fact]
         public void SimpleWildcardStatement()
         {
-            var entry1 = new IndexSingleEntry { Id = "entry/1", Content = "Testing" };
-            var entry2 = new IndexSingleEntry { Id = "entry/2", Content = "Running" };
-            var entry3 = new IndexSingleEntry { Id = "entry/3", Content = "Runner" };
+            var entry1 = new IndexSingleEntry {Id = "entry/1", Content = "Testing"};
+            var entry2 = new IndexSingleEntry {Id = "entry/2", Content = "Running"};
+            var entry3 = new IndexSingleEntry {Id = "entry/3", Content = "Runner"};
 
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-            IndexEntries(bsc, new[] { entry1, entry2, entry3 }, CreateKnownFields(bsc));
+            IndexEntries(bsc, new[] {entry1, entry2, entry3}, CreateKnownFields(bsc));
 
             using var searcher = new IndexSearcher(Env);
 
@@ -1201,7 +1141,7 @@ namespace FastTests.Corax
 
                 Span<long> ids = stackalloc long[16];
                 Assert.Equal(2, match.Fill(ids));
-                var results = new string[] { searcher.GetIdentityFor(ids[0]), searcher.GetIdentityFor(ids[1]) };
+                var results = new string[] {searcher.GetIdentityFor(ids[0]), searcher.GetIdentityFor(ids[1])};
                 Array.Sort(results);
                 Assert.Equal("entry/1", results[0]);
                 Assert.Equal("entry/2", results[1]);
@@ -1248,13 +1188,13 @@ namespace FastTests.Corax
         [Fact]
         public void SimpleBetweenCompareStatement()
         {
-            var entry1 = new IndexSingleEntry { Id = "entry/1", Content = "3" };
-            var entry2 = new IndexSingleEntry { Id = "entry/2", Content = "2" };
-            var entry3 = new IndexSingleEntry { Id = "entry/3", Content = "1" };
-            var entry4 = new IndexSingleEntry { Id = "entry/4", Content = "4" };
+            var entry1 = new IndexSingleEntry {Id = "entry/1", Content = "3"};
+            var entry2 = new IndexSingleEntry {Id = "entry/2", Content = "2"};
+            var entry3 = new IndexSingleEntry {Id = "entry/3", Content = "1"};
+            var entry4 = new IndexSingleEntry {Id = "entry/4", Content = "4"};
 
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-            IndexEntries(bsc, new[] { entry1, entry2, entry3, entry4 }, CreateKnownFields(bsc));
+            IndexEntries(bsc, new[] {entry1, entry2, entry3, entry4}, CreateKnownFields(bsc));
 
             using var searcher = new IndexSearcher(Env);
 
@@ -1303,13 +1243,14 @@ namespace FastTests.Corax
         [Fact]
         public void BetweenWithCustomComparers()
         {
-            var entries = Enumerable.Range(0, 100).Select(i => new IndexSingleEntryDouble() { Id = $"entry{i}", Content = Convert.ToDouble(i) }).ToList();
+            var entries = Enumerable.Range(0, 100).Select(i => new IndexSingleEntryDouble() {Id = $"entry{i}", Content = Convert.ToDouble(i)}).ToList();
             IndexEntriesDouble(entries);
             int? read;
             using var searcher = new IndexSearcher(Env);
             {
                 Span<long> ids = stackalloc long[128];
-                var match = searcher.UnaryBetween(searcher.AllEntries(), ContentIndex, 20L, 30L, UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThanOrEqual);
+                var match = searcher.UnaryBetween(searcher.AllEntries(), ContentIndex, 20L, 30L, UnaryMatchOperation.GreaterThanOrEqual,
+                    UnaryMatchOperation.LessThanOrEqual);
                 Assert.Equal(entries.Count(i => i.Content is >= 20 and <= 30), read = match.Fill(ids));
                 for (int i = 0; i < read; ++i)
                     Check(ids[i], 20, 30, UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThanOrEqual);
@@ -1361,13 +1302,13 @@ namespace FastTests.Corax
         [Fact]
         public void SimpleNotBetweenCompareStatement()
         {
-            var entry1 = new IndexSingleEntry { Id = "entry/1", Content = "3" };
-            var entry2 = new IndexSingleEntry { Id = "entry/2", Content = "2" };
-            var entry3 = new IndexSingleEntry { Id = "entry/3", Content = "1" };
-            var entry4 = new IndexSingleEntry { Id = "entry/4", Content = "4" };
+            var entry1 = new IndexSingleEntry {Id = "entry/1", Content = "3"};
+            var entry2 = new IndexSingleEntry {Id = "entry/2", Content = "2"};
+            var entry3 = new IndexSingleEntry {Id = "entry/3", Content = "1"};
+            var entry4 = new IndexSingleEntry {Id = "entry/4", Content = "4"};
 
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-            IndexEntries(bsc, new[] { entry1, entry2, entry3, entry4 }, CreateKnownFields(bsc));
+            IndexEntries(bsc, new[] {entry1, entry2, entry3, entry4}, CreateKnownFields(bsc));
 
             using var searcher = new IndexSearcher(Env);
 
@@ -1415,11 +1356,7 @@ namespace FastTests.Corax
         }
 
         [Theory]
-        [InlineData(new object[] { 100000, 128 })]
-        [InlineData(new object[] { 100000, 2046 })]
-        [InlineData(new object[] { 1000, 8 })]
-        [InlineData(new object[] { 11700, 18 })]
-        [InlineData(new object[] { 11859, 18 })]
+        [InlineData(new object[] {1000, 8})]
         public void AndInStatementWithLowercaseAnalyzer(int setSize, int stackSize)
         {
             setSize = setSize - (setSize % 3);
@@ -1432,9 +1369,9 @@ namespace FastTests.Corax
                     Id = $"entry/{i}",
                     Content = (i % 3) switch
                     {
-                        0 => new string[] { "road", "Lake", "mounTain" },
-                        1 => new string[] { "roAd", "mountain" },
-                        2 => new string[] { "sky", "space", "laKe" },
+                        0 => new string[] {"road", "Lake", "mounTain"},
+                        1 => new string[] {"roAd", "mountain"},
+                        2 => new string[] {"sky", "space", "laKe"},
                         _ => throw new InvalidDataException("This should not happen.")
                     }
                 };
@@ -1454,38 +1391,15 @@ namespace FastTests.Corax
 
             using var searcher = new IndexSearcher(Env);
             {
-                var match1 = searcher.InQuery("Content", new() { "lake", "mountain" });
+                var match1 = searcher.InQuery("Content", new() {"lake", "mountain"});
                 var match2 = searcher.TermQuery("Content", "sky");
                 var andMatch = searcher.And(in match1, in match2);
-                
+
                 var actual = new List<long>();
                 Span<long> ids = stackalloc long[stackSize];
                 int read;
                 do
                 {
-                    
-                    read = andMatch.Fill(ids);
-                    actual.AddRange(ids[..read].ToArray());
-                } while (read != 0);
-
-                var actualSorted = actual.ToArray();
-                var actualSize = Sorting.SortAndRemoveDuplicates(actualSorted.AsSpan());
-
-                Assert.Equal((setSize / 3), actualSize);                
-            }
-
-            {
-                var match1 = searcher.TermQuery("Content", "sky");
-                var match2 = searcher.InQuery("Content", new() { "lake", "mountain" });
-                var andMatch = searcher.And(in match1, in match2);
-
-                  
-                var actual = new List<long>();
-                Span<long> ids = stackalloc long[stackSize];
-                int read;
-                do
-                {
-                    
                     read = andMatch.Fill(ids);
                     actual.AddRange(ids[..read].ToArray());
                 } while (read != 0);
@@ -1494,16 +1408,32 @@ namespace FastTests.Corax
                 var actualSize = Sorting.SortAndRemoveDuplicates(actualSorted.AsSpan());
 
                 Assert.Equal((setSize / 3), actualSize);
+            }
 
+            {
+                var match1 = searcher.TermQuery("Content", "sky");
+                var match2 = searcher.InQuery("Content", new() {"lake", "mountain"});
+                var andMatch = searcher.And(in match1, in match2);
+
+
+                var actual = new List<long>();
+                Span<long> ids = stackalloc long[stackSize];
+                int read;
+                do
+                {
+                    read = andMatch.Fill(ids);
+                    actual.AddRange(ids[..read].ToArray());
+                } while (read != 0);
+
+                var actualSorted = actual.ToArray();
+                var actualSize = Sorting.SortAndRemoveDuplicates(actualSorted.AsSpan());
+
+                Assert.Equal((setSize / 3), actualSize);
             }
         }
 
         [Theory]
-        [InlineData(new object[] { 100000, 128 })]
-        [InlineData(new object[] { 100000, 2046 })]
-        [InlineData(new object[] { 1000, 8 })]
-        [InlineData(new object[] { 11700, 18 })]
-        [InlineData(new object[] { 11859, 18 })]
+        [InlineData(new object[] {1000, 8})]
         public void AndInStatementAndWhitespaceTokenizer(int setSize, int stackSize)
         {
             setSize = setSize - (setSize % 3);
@@ -1516,9 +1446,9 @@ namespace FastTests.Corax
                     Id = $"entry/{i}",
                     Content = (i % 3) switch
                     {
-                        0 => new string[] { "road Lake mounTain  " },
-                        1 => new string[] { "roAd mountain" },
-                        2 => new string[] { "sky space laKe" },
+                        0 => new string[] {"road Lake mounTain  "},
+                        1 => new string[] {"roAd mountain"},
+                        2 => new string[] {"sky space laKe"},
                         _ => throw new InvalidDataException("This should not happen.")
                     }
                 };
@@ -1539,7 +1469,7 @@ namespace FastTests.Corax
 
             using var searcher = new IndexSearcher(Env, mapping);
             {
-                var match1 = searcher.InQuery("Content", new() { "lake", "mountain" });
+                var match1 = searcher.InQuery("Content", new() {"lake", "mountain"});
                 var match2 = searcher.TermQuery("Content", "sky");
                 var andMatch = searcher.And(in match1, in match2);
 
@@ -1548,7 +1478,6 @@ namespace FastTests.Corax
                 int read;
                 do
                 {
-                    
                     read = andMatch.Fill(ids);
                     actual.AddRange(ids[..read].ToArray());
                 } while (read != 0);
@@ -1561,7 +1490,7 @@ namespace FastTests.Corax
 
             {
                 var match1 = searcher.TermQuery("Content", "sky");
-                var match2 = searcher.InQuery("Content", new() { "lake", "mountain" });
+                var match2 = searcher.InQuery("Content", new() {"lake", "mountain"});
                 var andMatch = searcher.And(in match1, in match2);
 
                 var actual = new List<long>();
@@ -1569,7 +1498,6 @@ namespace FastTests.Corax
                 int read;
                 do
                 {
-                    
                     read = andMatch.Fill(ids);
                     actual.AddRange(ids[..read].ToArray());
                 } while (read != 0);
@@ -1594,7 +1522,7 @@ namespace FastTests.Corax
                 .AddBinding(IdIndex, idSlice, analyzer)
                 .AddBinding(ContentIndex, contentSlice, analyzer);
 
-            IndexEntries(ctx, new []{entry}, mapping);
+            IndexEntries(ctx, new[] {entry}, mapping);
             using (var searcher = new IndexSearcher(Env, mapping))
             {
                 var match = searcher.StartWithQuery("Content", "test");
@@ -1604,79 +1532,11 @@ namespace FastTests.Corax
                 Assert.Equal(1, match.Fill(ids));
             }
         }
-        
-        [Fact]
-        public void BigContainsTest()
-        {
-            var ids = ArrayPool<long>.Shared.Rent(2048);
-            var random = new Random(1000);
-            
-            var strings = new string[]
-            {
-                "ing", "hehe", "sad", "mac", "iej", "asz", "yk", "rav", "endb", "co", "rax", "mix", "ture", "net", "fram", "work", "th", "is", " ", "gre", "at", "te",
-                "st"
-            };
-
-            string GetRandomText()
-            {
-                var l = strings.Length;
-                int l_new_word = random.Next(l);
-                if (l_new_word is 0)
-                    l_new_word = 1;
-                var sb = new StringBuilder();
-                for (int i = 0; i < l_new_word; i++)
-                {
-                    sb.Append(strings[random.Next(0, l)]);
-                }
-
-                return sb.ToString();
-            }
-
-            try
-            {
-                using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
-                var list = Enumerable.Range(0, 128_000).Select(x => new IndexSingleEntry() { Id = $"entry/{x}", Content = GetRandomText() }).ToList();
-
-                Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice idSlice);
-                Slice.From(ctx, "Content", ByteStringType.Immutable, out Slice contentSlice);
-                var mapping = new IndexFieldsMapping(ctx)
-                    .AddBinding(IdIndex, idSlice)
-                    .AddBinding(ContentIndex, contentSlice);
-
-                IndexEntries(ctx, list, mapping);
-
-                using var searcher = new IndexSearcher(Env, mapping);
-                {
-                    var match = searcher.ContainsQuery("Content", "ing");
-                    int read;
-                    int whole = 0;
-                    while ((read = match.Fill(ids)) != 0)
-                    {
-                        whole += read;
-                        foreach (var id in ids)
-                        {
-                            searcher.GetReaderFor(id).Read(ContentIndex, out var value);
-                            Assert.True(Encoding.UTF8.GetString(value).Contains("ing"));
-                        }
-                    }
-
-                    Assert.Equal(list.Count(x => x.Content.Contains("ing")), whole);
-                }
-            }
-            catch
-            {
-                throw;
-            }
-            finally
-            {
-                ArrayPool<long>.Shared.Return(ids);
-            }
-        }
 
         [RavenFact(RavenTestCategory.Corax)]
         public void NotInTest()
         {
-            var listToIndex = Enumerable.Range(000000, 1000).Select(i => new IndexSingleEntry { Id = $"entry/{i}", Content = i.ToString("000000") }).ToList();
+            var listToIndex = Enumerable.Range(000000, 1000).Select(i => new IndexSingleEntry {Id = $"entry/{i}", Content = i.ToString("000000")}).ToList();
             var listForNotIn = listToIndex.Where(p => p.Content.EndsWith("1")).ToList();
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
             IndexEntries(bsc, listToIndex, CreateKnownFields(bsc));
@@ -1695,10 +1555,10 @@ namespace FastTests.Corax
         [RavenFact(RavenTestCategory.Corax)]
         public void SimpleAndNot()
         {
-            var entry1 = new IndexSingleEntry { Id = "entry/1", Content = "Testing" };
-            var entry2 = new IndexSingleEntry { Id = "entry/2", Content = "Running" };
-            var entry3 = new IndexSingleEntry { Id = "entry/3", Content = "Runner" };
-            var list = new[] { entry1, entry2, entry3 };
+            var entry1 = new IndexSingleEntry {Id = "entry/1", Content = "Testing"};
+            var entry2 = new IndexSingleEntry {Id = "entry/2", Content = "Running"};
+            var entry3 = new IndexSingleEntry {Id = "entry/3", Content = "Runner"};
+            var list = new[] {entry1, entry2, entry3};
 
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
             IndexEntries(bsc, list, CreateKnownFields(bsc));
@@ -1743,239 +1603,6 @@ namespace FastTests.Corax
         }
 
         [RavenFact(RavenTestCategory.Corax)]
-        public void BigMemoizationQueries()
-        {
-            int total = 100000;
-
-            int startWith = 0;
-            var entries = new List<IndexSingleEntry>();
-            for (int i = 0; i < total; i++)
-            {
-                var content = i.ToString("000000");
-                entries.Add(new IndexSingleEntry { Id = $"entry/{content}", Content = content });
-                if (content.StartsWith("00"))
-                    startWith++;
-            }
-
-
-            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-            IndexEntries(bsc, entries, CreateKnownFields(bsc));
-
-            using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
-            Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice idSlice);
-            Slice.From(ctx, "Content", ByteStringType.Immutable, out Slice contentSlice);
-
-            using var searcher = new IndexSearcher(Env);
-        }
-
-        [RavenFact(RavenTestCategory.Corax)]
-        public void BigAndNotMemoized()
-        {
-            int total = 100000;
-
-            int startWith = 0;
-            var entries = new List<IndexSingleEntry>();
-            for (int i = 0; i < total; i++)
-            {
-                var content = i.ToString("000000");
-                entries.Add(new IndexSingleEntry { Id = $"entry/{content}", Content = content });
-                if (content.StartsWith("00"))
-                    startWith++;
-            }
-
-
-            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-            IndexEntries(bsc, entries, CreateKnownFields(bsc));
-
-            using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
-            Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice idSlice);
-            Slice.From(ctx, "Content", ByteStringType.Immutable, out Slice contentSlice);
-
-            using var searcher = new IndexSearcher(Env);
-
-            var allEntries = searcher.AllEntries();
-            var allEntriesMemoized = searcher.Memoize(allEntries);
-
-            {
-                var andNotMatch = searcher.AndNot(allEntriesMemoized.Replay(), allEntriesMemoized.Replay());
-
-                Span<long> ids = stackalloc long[4096];
-
-                int counter = 0;
-                int read;
-                do
-                {
-                    read = andNotMatch.Fill(ids);
-                    counter += read;
-                } while (read != 0);
-
-                Assert.Equal(0, counter);
-            }
-
-            {
-                var andNotMatch = searcher.AndNot(allEntriesMemoized.Replay(), searcher.StartWithQuery("Content", "J"));
-
-                Span<long> ids = stackalloc long[4096];
-                int counter = 0;
-                int read;
-                do
-                {
-                    read = andNotMatch.Fill(ids);
-                    counter += read;
-                } while (read != 0);
-
-                Assert.Equal(entries.Count, counter);
-            }
-
-            {
-                var andNotMatch = searcher.AndNot(allEntriesMemoized.Replay(), searcher.StartWithQuery("Content", "00"));
-
-                Span<long> ids = stackalloc long[4096];
-
-                var entriesLookup = new HashSet<string>();
-                int read;
-                do
-                {
-                    read = andNotMatch.Fill(ids);
-
-                    for (int i = 0; i < read; i++)
-                    {
-                        var id = searcher.GetIdentityFor(ids[i]);
-                        Assert.False(id.StartsWith("entry/00"));
-                        entriesLookup.Add(id);
-                    }
-                } while (read != 0);
-
-                Assert.Equal(total - startWith, entriesLookup.Count);
-            }
-
-            {
-                var andNotMatch = searcher.AndNot(allEntriesMemoized.Replay(), searcher.StartWithQuery("Content", "00"));
-                var andMatch = searcher.And(allEntriesMemoized.Replay(), andNotMatch);
-
-                Span<long> ids = stackalloc long[4096];
-
-                var entriesLookup = new HashSet<string>();
-                int read;
-                do
-                {
-                    read = andMatch.Fill(ids);
-
-                    for (int i = 0; i < read; i++)
-                    {
-                        var id = searcher.GetIdentityFor(ids[i]);
-                        Assert.False(id.StartsWith("entry/00"));
-                        entriesLookup.Add(id);
-                    }
-                } while (read != 0);
-
-                Assert.Equal(total - startWith, entriesLookup.Count);
-            }
-        }
-
-        [RavenFact(RavenTestCategory.Corax)]
-        public void BigAndNot()
-        {
-            int total = 100_000;
-
-            int startWith = 0;
-            var entries = new List<IndexSingleEntry>();
-            for (int i = 0; i < total; i++)
-            {
-                var content = i.ToString("000000");
-                entries.Add(new IndexSingleEntry { Id = $"entry/{content}", Content = content });
-                if (content.StartsWith("00"))
-                    startWith++;
-            }
-
-
-            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-            IndexEntries(bsc, entries, CreateKnownFields(bsc));
-
-            using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
-            Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice idSlice);
-            Slice.From(ctx, "Content", ByteStringType.Immutable, out Slice contentSlice);
-
-            using var searcher = new IndexSearcher(Env);
-
-            {
-                var andNotMatch = searcher.AndNot(searcher.AllEntries(), searcher.AllEntries());
-
-                Span<long> ids = stackalloc long[4096];
-
-                int counter = 0;
-                int read;
-                do
-                {
-                    read = andNotMatch.Fill(ids);
-                    counter += read;
-                } while (read != 0);
-
-                Assert.Equal(0, counter);
-            }
-
-            {
-                var andNotMatch = searcher.AndNot(searcher.AllEntries(), searcher.StartWithQuery("Content", "J"));
-
-                Span<long> ids = stackalloc long[4096];
-                int counter = 0;
-                int read;
-                do
-                {
-                    read = andNotMatch.Fill(ids);
-                    counter += read;
-                } while (read != 0);
-
-                Assert.Equal(entries.Count, counter);
-            }
-
-            {
-                var andNotMatch = searcher.AndNot(searcher.AllEntries(), searcher.StartWithQuery("Content", "00"));
-
-                Span<long> ids = stackalloc long[4096];
-
-                var entriesLookup = new HashSet<string>();
-                int read;
-                do
-                {
-                    read = andNotMatch.Fill(ids);
-
-                    for (int i = 0; i < read; i++)
-                    {
-                        var id = searcher.GetIdentityFor(ids[i]);
-                        Assert.False(id.StartsWith("entry/00"));
-                        entriesLookup.Add(id);
-                    }
-                } while (read != 0);
-
-                Assert.Equal(total - startWith, entriesLookup.Count);
-            }
-
-            {
-                var andNotMatch = searcher.AndNot(searcher.AllEntries(), searcher.StartWithQuery("Content", "00"));
-                var andMatch = searcher.And(searcher.AllEntries(), andNotMatch);
-
-                Span<long> ids = stackalloc long[4096];
-
-                var entriesLookup = new HashSet<string>();
-                int read;
-                do
-                {
-                    read = andMatch.Fill(ids);
-
-                    for (int i = 0; i < read; i++)
-                    {
-                        var id = searcher.GetIdentityFor(ids[i]);
-                        Assert.False(id.StartsWith("entry/00"));
-                        entriesLookup.Add(id);
-                    }
-                } while (read != 0);
-
-                Assert.Equal(total - startWith, entriesLookup.Count);
-            }
-        }
-
-        [RavenFact(RavenTestCategory.Corax)]
         public void NotEqualWithList()
         {
             var entries = new List<IndexEntry>();
@@ -1987,13 +1614,13 @@ namespace FastTests.Corax
                     Id = $"entry/{i}",
                     Content = (i % 7) switch
                     {
-                        0 => new string[] { "1" },
-                        1 => new string[] { "7" },
-                        2 => new string[] { "1", "2" },
-                        3 => new string[] { "1", "2", "3" },
-                        4 => new string[] { "1", "2", "3", "5" },
-                        5 => new string[] { "2", "5" },
-                        6 => new string[] { "2", "5", "7" },
+                        0 => new string[] {"1"},
+                        1 => new string[] {"7"},
+                        2 => new string[] {"1", "2"},
+                        3 => new string[] {"1", "2", "3"},
+                        4 => new string[] {"1", "2", "3", "5"},
+                        5 => new string[] {"2", "5"},
+                        6 => new string[] {"2", "5", "7"},
                         _ => throw new ArgumentOutOfRangeException()
                     }
                 };
@@ -2081,9 +1708,6 @@ namespace FastTests.Corax
         [InlineData(10_000, 256)]
         [InlineData(10_000, 512)]
         [InlineData(10_000, 1028)]
-        [InlineData(100_000, 1028)]
-        [InlineData(100_000, 2048)]
-        [InlineData(100_000, 4096)]
         public void MultiTermMatchWithBinaryOperations(int setSize, int stackSize)
         {
             var words = new[]
@@ -2092,7 +1716,7 @@ namespace FastTests.Corax
                 "macios", "tests", "are", "cool", "arent", "they", "this", "should", "work", "every", "time"
             };
             var random = new Random(1000);
-            var entries = Enumerable.Range(0, setSize).Select(i => new IndexEntry() { Id = $"entry/{i}", Content = GetContent() }).ToList();
+            var entries = Enumerable.Range(0, setSize).Select(i => new IndexEntry() {Id = $"entry/{i}", Content = GetContent()}).ToList();
 
             using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
             Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice idSlice);
@@ -2104,7 +1728,7 @@ namespace FastTests.Corax
             using var searcher = new IndexSearcher(Env);
             {
                 //MultiTermMatch And TermMatch
-                var match0 = searcher.InQuery("Content", new List<string>() { "maciej", "poland" });
+                var match0 = searcher.InQuery("Content", new List<string>() {"maciej", "poland"});
                 var match1 = searcher.TermQuery("Content", "this");
                 var and = searcher.And(match0, match1);
                 var result = Act(and);
@@ -2156,13 +1780,13 @@ namespace FastTests.Corax
                     Id = $"entry/{i}",
                     Content = (i % 7) switch
                     {
-                        0 => new string[] { "1" },
-                        1 => new string[] { null, "7" },
-                        2 => new string[] { "2", "1" },
-                        3 => new string[] { null, "1", "2", "3" },
-                        4 => new string[] { "1", "2", "3", "5", null },
-                        5 => new string[] { "2", "5" },
-                        6 => new string[] { "2", "5", "7" },
+                        0 => new string[] {"1"},
+                        1 => new string[] {null, "7"},
+                        2 => new string[] {"2", "1"},
+                        3 => new string[] {null, "1", "2", "3"},
+                        4 => new string[] {"1", "2", "3", "5", null},
+                        5 => new string[] {"2", "5"},
+                        6 => new string[] {"2", "5", "7"},
                         _ => throw new ArgumentOutOfRangeException()
                     }
                 };
@@ -2178,7 +1802,7 @@ namespace FastTests.Corax
 
             using var searcher = new IndexSearcher(Env);
             {
-                var notOne = searcher.UnaryQuery(searcher.AllEntries(), ContentIndex, one, UnaryMatchOperation.NotEquals);               
+                var notOne = searcher.UnaryQuery(searcher.AllEntries(), ContentIndex, one, UnaryMatchOperation.NotEquals);
                 Span<long> ids = stackalloc long[32];
                 var expected = entries.Count(x => x.Content.Contains("1") == false);
                 var result = notOne.Fill(ids);
@@ -2204,6 +1828,162 @@ namespace FastTests.Corax
 
                 Assert.Equal(expected, result);
             }
+        }
+        
+        
+        private class IndexEntry
+        {
+            public long IndexEntryId;
+            public string Id;
+            public string[] Content;
+        }
+
+        private class IndexSingleEntry
+        {
+            public string Id;
+            public string Content;
+        }
+
+        private readonly struct StringArrayIterator : IReadOnlySpanIndexer
+        {
+            private readonly string[] _values;
+
+            private static string[] Empty = new string[0];
+
+            public StringArrayIterator(string[] values)
+            {
+                _values = values ?? Empty;
+            }
+
+            public StringArrayIterator(IEnumerable<string> values)
+            {
+                _values = values?.ToArray() ?? Empty;
+            }
+
+            public int Length => _values.Length;
+
+            public bool IsNull(int i)
+            {
+                if (i < 0 || i >= Length)
+                    throw new ArgumentOutOfRangeException();
+
+                return _values[i] == null;
+            }
+
+            public ReadOnlySpan<byte> this[int i] => _values[i] != null ? Encoding.UTF8.GetBytes(_values[i]) : null;
+        }
+
+        private static ByteStringContext<ByteStringMemoryCache>.InternalScope CreateIndexEntry(
+            ref IndexEntryWriter entryWriter, IndexEntry value, out ByteString output)
+        {
+            Span<byte> PrepareString(string value)
+            {
+                if (value == null)
+                    return Span<byte>.Empty;
+                return Encoding.UTF8.GetBytes(value);
+            }
+
+            entryWriter.Write(IdIndex, PrepareString(value.Id));
+            entryWriter.Write(ContentIndex, new StringArrayIterator(value.Content));
+
+            return entryWriter.Finish(out output);
+        }
+
+        public const int IdIndex = 0,
+            ContentIndex = 1;
+
+        private static IndexFieldsMapping CreateKnownFields(ByteStringContext ctx, Analyzer analyzer = null)
+        {
+            Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice idSlice);
+            Slice.From(ctx, "Content", ByteStringType.Immutable, out Slice contentSlice);
+
+            return new IndexFieldsMapping(ctx)
+                .AddBinding(IdIndex, idSlice, analyzer)
+                .AddBinding(ContentIndex, contentSlice, analyzer);
+        }
+
+        private void IndexEntries(ByteStringContext bsc, IEnumerable<IndexEntry> list, IndexFieldsMapping mapping)
+        {
+            using var indexWriter = new IndexWriter(Env, mapping);
+            var entryWriter = new IndexEntryWriter(bsc, mapping);
+
+            foreach (var entry in list)
+            {
+                using var __ = CreateIndexEntry(ref entryWriter, entry, out var data);
+                entry.IndexEntryId = indexWriter.Index(entry.Id, data.ToSpan());
+            }
+
+            indexWriter.Commit();
+        }
+
+        private void IndexEntries(ByteStringContext bsc, IEnumerable<IndexSingleEntry> list, IndexFieldsMapping mapping)
+        {
+            using var indexWriter = new IndexWriter(Env, mapping);
+            var entryWriter = new IndexEntryWriter(bsc, mapping);
+
+            foreach (var entry in list)
+            {
+                using var __ = CreateIndexEntry(ref entryWriter, entry, out var data);
+                indexWriter.Index(entry.Id, data.ToSpan());
+            }
+
+            indexWriter.Commit();
+        }
+
+        private void IndexEntriesDouble(IEnumerable<IndexSingleEntryDouble> list)
+        {
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            var knownFields = CreateKnownFields(bsc);
+
+            {
+                using var indexWriter = new IndexWriter(Env, knownFields);
+                var entryWriter = new IndexEntryWriter(bsc, knownFields);
+
+                foreach (var entry in list)
+                {
+                    var data = CreateIndexEntryDouble(ref entryWriter, entry, out var buffer);
+                    indexWriter.Index(entry.Id, buffer.ToSpan());
+                }
+
+                indexWriter.Commit();
+            }
+        }
+
+        private static ByteStringContext<ByteStringMemoryCache>.InternalScope CreateIndexEntryDouble(
+            ref IndexEntryWriter entryWriter, IndexSingleEntryDouble value, out ByteString output)
+        {
+            Span<byte> PrepareString(string value)
+            {
+                if (value == null)
+                    return Span<byte>.Empty;
+                return Encoding.UTF8.GetBytes(value);
+            }
+
+            entryWriter.Write(IdIndex, PrepareString(value.Id));
+            entryWriter.Write(ContentIndex, PrepareString(value.Content.ToString()), Convert.ToInt64(value.Content), value.Content);
+            return entryWriter.Finish(out output);
+        }
+
+        
+        private static ByteStringContext<ByteStringMemoryCache>.InternalScope CreateIndexEntry(
+            ref IndexEntryWriter entryWriter, IndexSingleEntry value, out ByteString output)
+        {
+            Span<byte> PrepareString(string value)
+            {
+                if (value == null)
+                    return Span<byte>.Empty;
+                return Encoding.UTF8.GetBytes(value);
+            }
+
+            entryWriter.Write(IdIndex, PrepareString(value.Id));
+            entryWriter.Write(ContentIndex, PrepareString(value.Content));
+            return entryWriter.Finish(out output);
+        }
+        
+        private class IndexSingleEntryDouble
+        {
+            public string Id;
+            public double Content;
         }
     }
 }
