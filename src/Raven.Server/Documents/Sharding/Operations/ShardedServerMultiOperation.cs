@@ -2,11 +2,11 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
 using Raven.Client.ServerWide.Operations;
-using Raven.Server.Documents.Operations;
 using Sparrow.Json;
 using Operation = Raven.Client.Documents.Operations.Operation;
 

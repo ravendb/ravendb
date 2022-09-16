@@ -86,7 +86,7 @@ namespace Raven.Server.Config.Categories
 
             [Description("Authentication password used by secondary user for SNMP v3 authentication.")]
             [DefaultValue(null)]
-            [ConfigurationEntry("Monitoring.Snmp.AuthenticationPassword.Secondary", ConfigurationEntryScope.ServerWideOnly)]
+            [ConfigurationEntry("Monitoring.Snmp.AuthenticationPassword.Secondary", ConfigurationEntryScope.ServerWideOnly, isSecured: true)]
             public string AuthenticationPasswordSecondary { get; set; }
 
             [Description("Privacy protocol used for SNMP v3 privacy. Default: None")]

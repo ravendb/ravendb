@@ -1665,9 +1665,14 @@ namespace Raven.Server.Documents
 
         internal void HandleNonDurableFileSystemError(object sender, NonDurabilitySupportEventArgs e)
         {
+            string title = $"Non Durable File System - {Name ?? "Unknown Database"}";
+
+            if (_logger.IsOperationsEnabled)
+                _logger.Operations($"{title}. {e.Message}", e.Exception);
+
             _serverStore?.NotificationCenter.Add(AlertRaised.Create(
                 Name,
-                $"Non Durable File System - {Name ?? "Unknown Database"}",
+                title,
                 e.Message,
                 AlertType.NonDurableFileSystem,
                 NotificationSeverity.Warning,
@@ -1715,12 +1720,17 @@ namespace Raven.Server.Documents
                     throw new ArgumentOutOfRangeException(nameof(type), type.ToString());
             }
 
+            string message = $"{e.Message}{Environment.NewLine}{Environment.NewLine}Environment: {environment}";
+
+            if (_logger.IsOperationsEnabled)
+                _logger.Operations($"{title}. {message}", e.Exception);
+
             nc?.Add(AlertRaised.Create(Name,
                 title,
-                $"{e.Message}{Environment.NewLine}{Environment.NewLine}Environment: {environment}",
+                message,
                 AlertType.RecoveryError,
                 NotificationSeverity.Error,
-                key: resourceName));
+                key: $"{resourceName}/{SystemTime.UtcNow.Ticks % 5}")); // if this was called multiple times let's try to not overwrite previous alerts
         }
 
         internal void HandleOnDatabaseIntegrityErrorOfAlreadySyncedData(object sender, DataIntegrityErrorEventArgs e)
@@ -1763,18 +1773,26 @@ namespace Raven.Server.Documents
                     throw new ArgumentOutOfRangeException(nameof(type), type.ToString());
             }
 
+            string message = $"{e.Message}{Environment.NewLine}{Environment.NewLine}Environment: {environment}";
+
+            if (_logger.IsOperationsEnabled)
+                _logger.Operations($"{title}. {message}", e.Exception);
+
             nc?.Add(AlertRaised.Create(Name,
                 title,
-                $"{e.Message}{Environment.NewLine}{Environment.NewLine}Environment: {environment}",
+                message,
                 AlertType.IntegrityErrorOfAlreadySyncedData,
                 NotificationSeverity.Warning,
-                key: resourceName));
+                key: $"{resourceName}/{SystemTime.UtcNow.Ticks % 5}")); // if this was called multiple times let's try to not overwrite previous alerts
         }
 
         internal void HandleRecoverableFailure(object sender, RecoverableFailureEventArgs e)
         {
             var title = $"Recoverable Voron error in '{Name}' database";
             var message = $"Failure {e.FailureMessage} in the following environment: {e.EnvironmentPath}";
+
+            if (_logger.IsOperationsEnabled)
+                _logger.Operations($"{title}. {message}", e.Exception);
 
             try
             {
@@ -1791,9 +1809,6 @@ namespace Raven.Server.Documents
             {
                 // exception in raising an alert can't prevent us from unloading a database
             }
-
-            if (_logger.IsOperationsEnabled)
-                _logger.Operations($"{title}. {message}", e.Exception);
         }
 
         public long GetEnvironmentsHash()

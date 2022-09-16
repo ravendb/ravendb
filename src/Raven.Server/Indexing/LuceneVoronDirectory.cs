@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using Lucene.Net.Store;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Util;
 using Voron;
 using Voron.Impl;
@@ -14,17 +15,18 @@ namespace Raven.Server.Indexing
         private readonly TempFileCache _tempFileCache;
         private readonly string _name;
         private readonly IndexOutputFilesSummary _indexOutputFilesSummary;
-
+        private readonly LuceneIndexInputType _indexInputType;
+        
         public string Name => _name;
 
         public long FilesAllocations => _indexOutputFilesSummary.TotalWritten;
 
         public string TempFullPath => _environment.Options.TempPath.FullPath;
 
-        public LuceneVoronDirectory(Transaction tx, StorageEnvironment environment, TempFileCache tempFileCache) : this(tx, environment, tempFileCache, "Files")
+        public LuceneVoronDirectory(Transaction tx, StorageEnvironment environment, TempFileCache tempFileCache, LuceneIndexInputType indexInputType) : this(tx, environment, tempFileCache, "Files", indexInputType)
         { }
 
-        public LuceneVoronDirectory(Transaction tx, StorageEnvironment environment, TempFileCache tempFileCache, string name)
+        public LuceneVoronDirectory(Transaction tx, StorageEnvironment environment, TempFileCache tempFileCache, string name, LuceneIndexInputType indexInputType)
         {
             if (tx.IsWriteTransaction == false)
                 throw new InvalidOperationException($"Creation of the {nameof(LuceneVoronDirectory)} must be done under a write transaction.");
@@ -32,7 +34,8 @@ namespace Raven.Server.Indexing
             _environment = environment;
             _tempFileCache = tempFileCache;
             _name = name;
-
+            _indexInputType = indexInputType;
+            
             SetLockFactory(NoLockFactory.Instance);
 
             tx.CreateTree(_name);
@@ -181,7 +184,13 @@ namespace Raven.Server.Indexing
             if (state == null)
                 throw new ArgumentNullException(nameof(s));
 
-            return new VoronIndexInput(this, name, state.Transaction, _name);
+            return _indexInputType switch
+            {
+                LuceneIndexInputType.Buffered => new VoronBufferedInput(this, name, state.Transaction, _name),
+                LuceneIndexInputType.Standard => new VoronIndexInput(this, name, state.Transaction, _name),
+                _ => throw new ArgumentException(
+                    $"Cannot create {nameof(IndexInput)} implemented as {_indexInputType} inside {nameof(LuceneVoronDirectory)} because it is not added to a list.")
+            };
         }
 
         public override IndexOutput CreateOutput(string name, IState s)
@@ -192,7 +201,7 @@ namespace Raven.Server.Indexing
             var state = s as VoronState;
             if (state == null)
                 throw new ArgumentNullException(nameof(s));
-
+            
             return new VoronIndexOutput(_tempFileCache, name, state.Transaction, _name, _indexOutputFilesSummary);
         }
 

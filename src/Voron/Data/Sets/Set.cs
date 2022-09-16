@@ -232,10 +232,11 @@ namespace Voron.Data.Sets
                     }
                     _state.NumberOfEntries--;
                 }
-                
-                // because we are in bulk mode, we only want to try to do a merge if the 
-                // page is 75% empty, rather than try to be eager about this
-                if (leafPage.SpaceUsed < (Constants.Storage.PageSize / 4) * 3) 
+
+                // because we are in bulk mode, rather than try to be eager about this
+                // we only want to try to do a merge if the  page is 75% empty or the
+                // space used is less than 25% of the total size 
+                if (leafPage.SpaceUsed < Constants.Storage.PageSize / 4) 
                     MaybeMergeLeafPage(in leafPage);
             }
         }
@@ -257,6 +258,12 @@ namespace Voron.Data.Sets
 
                 var leafPage = new SetLeafPage(state.Page);
 
+                // Two different conditions may force us to move into single value insertions.
+                // Either the value is outside range on the upside, OR it is within range
+                // but because we are not going to be adding elements below the Baseline we 
+                // need to create another leaf page to deal with that one. This is the case
+                // when values are separated by more than int.MaxValue. 
+
                 long last = NextParentLimit();
                 if (leafPage.IsValidValue(last) == false)
                 {
@@ -268,6 +275,15 @@ namespace Voron.Data.Sets
                         Add(values[index++]);
                         continue;
                     }
+                }
+
+                if (values[index] < leafPage.Header->Baseline)
+                {
+                    // Since FindPageFor will return the minimal leaf page that holds this range,
+                    // we need to create a new leaf page to hold this value as the current baseline
+                    // is incompatible. 
+                    Add(values[index++]);
+                    continue;
                 }
 
                 for (; index < values.Length && values[index] < last; index++)

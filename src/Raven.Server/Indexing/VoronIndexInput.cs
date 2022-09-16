@@ -27,7 +27,7 @@ namespace Raven.Server.Indexing
             _name = name;
             _tree = tree;
 
-            OpenInternal(transaction);
+            _stream = OpenVoronStream(transaction, _directory, _name, _tree);
         }
 
         public override string ToString()
@@ -35,38 +35,39 @@ namespace Raven.Server.Indexing
             return _name;
         }
 
-        private void OpenInternal(Transaction transaction)
+        internal static VoronStream OpenVoronStream(Transaction transaction, LuceneVoronDirectory directory, string name, string tree)
         {
             if (transaction.IsWriteTransaction == false)
             {
                 if (transaction.LowLevelTransaction.ImmutableExternalState is IndexTransactionCache cache)
                 {
-                    if (cache.DirectoriesByName.TryGetValue(_directory.Name, out var files))
+                    if (cache.DirectoriesByName.TryGetValue(directory.Name, out var files))
                     {
-                        if (files.ChunksByName.TryGetValue(_name, out var details))
+                        if (files.ChunksByName.TryGetValue(name, out var details))
                         {
                             // we don't dispose here explicitly, the fileName needs to be
                             // alive as long as the transaction is
-                            Slice.From(transaction.Allocator, _name, out Slice fileName);
-                            _stream = new VoronStream(fileName, details, transaction.LowLevelTransaction);
-                            return;
+                            Slice.From(transaction.Allocator, name, out Slice fileName);
+                            return new VoronStream(fileName, details, transaction.LowLevelTransaction);
                         }
                     }
                 }
             }
 
-            var fileTree = transaction.ReadTree(_tree);
+            var fileTree = transaction.ReadTree(tree);
             if (fileTree == null)
-                throw new FileNotFoundException($"Could not find '{_tree}' tree for index input", _name);
+                throw new FileNotFoundException($"Could not find '{tree}' tree for index input", name);
 
-            using (Slice.From(transaction.Allocator, _name, out Slice fileName))
+            using (Slice.From(transaction.Allocator, name, out Slice fileName))
             {
-                _stream = fileTree.ReadStream(fileName);
-                if (_stream == null)
-                    throw new FileNotFoundException("Could not find index input", _name);
+                var stream = fileTree.ReadStream(fileName);
+                if (stream == null)
+                    throw new FileNotFoundException("Could not find index input", name);
+
+                return stream;
             }
         }
-
+        
         public override object Clone(IState s)
         {
             var state = s as VoronState;
@@ -82,7 +83,7 @@ namespace Raven.Server.Indexing
             GC.SuppressFinalize(clone);
             clone._isOriginal = false;
 
-            clone.OpenInternal(state.Transaction);
+            clone._stream = OpenVoronStream(state.Transaction, clone._directory, clone._name, clone._tree);
             clone._stream.Position = _stream.Position;
 
             return clone;
@@ -183,6 +184,7 @@ namespace Raven.Server.Indexing
                 ThrowDisposed();
                 return; // never hit
             }
+
             if (state.Transaction.LowLevelTransaction.IsDisposed)
                 ThrowTransactionDisposed();
             if (_cts.IsCancellationRequested)

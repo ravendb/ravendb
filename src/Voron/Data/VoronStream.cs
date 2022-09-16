@@ -12,7 +12,8 @@ namespace Voron.Data
         public Slice Name { get; }
 
         private readonly Tree.ChunkDetails[] _chunksDetails;
-        private readonly int[] _positions;
+        private readonly long[] _chunksOffsets;
+        private long _position;
         private int _index;
         private LowLevelTransaction _llt;
         
@@ -31,13 +32,17 @@ namespace Voron.Data
             Name = name;
 
             _chunksDetails = chunksDetails;
-            _positions = new int[_chunksDetails.Length];
+            _chunksOffsets = new long[_chunksDetails.Length];
+
             _index = 0;
             _llt = llt;
             _lastPage = default(Page);
+            _position = 0;
 
-            foreach (var cd in _chunksDetails)
+            for (int index = 0; index < _chunksDetails.Length; index++)
             {
+                ref Tree.ChunkDetails cd = ref _chunksDetails[index];
+                _chunksOffsets[index] = Length;
                 Length += cd.ChunkSize;
             }
         }
@@ -67,32 +72,41 @@ namespace Voron.Data
         {
             get
             {
-                long pos = 0;
-                // ReSharper disable once ForCanBeConvertedToForeach
-                for (int i = 0; i < _positions.Length; i++)
-                {
-                    pos += _positions[i];
-                }
-                return pos;
+                return _position;
             }
             set
             {
-                long pos = 0;
-                _index = _positions.Length - 1;
-                for (int i = 0; i < _positions.Length; i++)
+                if (value >= Length)
                 {
-                    if (pos + _chunksDetails[i].ChunkSize > value)
-                    {
-                        _positions[i] = (int)((value - pos) % _chunksDetails[i].ChunkSize);
-                        _index = i;
-                        break;
-                    }
-                    _positions[i] = _chunksDetails[i].ChunkSize;
-                    pos += _chunksDetails[i].ChunkSize;
+                    //Out of stream
+                    _index = _chunksDetails.Length - 1;
+                    _position = Length;
+                    return;
                 }
-                for (int i = _index + 1; i < _positions.Length; i++)
+
+                var search = Array.BinarySearch(_chunksOffsets, value);
+                
+                if (search >= 0)
                 {
-                    _positions[i] = 0;
+                    //The index of the specified value in the specified array, if value is found; otherwise, a negative number
+                 
+                    //Ideally hit the 0th element of chunk.
+                    _position = value;
+                    _index = search;
+                }
+                else
+                {
+                    //If value is not found and value is less than one or more elements in array, the negative number returned is the bitwise complement of the index of the first element that is larger than value.
+                    //If value is not found and value is greater than all elements in array, the negative number returned is the bitwise complement of (the index of the last element plus 1). If this method is called with a non-sorted array, the return value can be incorrect and a negative number could be returned, even if value is present in array.
+                    search = ~search;
+                    
+                    //LessOrEqualZero should not be here. 0 means it should be handled above (it is a 0th element of first chunk
+                    //If it is negative then offset from Seek() is invalid (because it should move ptr to right, not to left)
+                    if (search <= 0)
+                        ThrowWhenValueIsEqualOrLessZero(value);
+
+                    _position = value;
+                    _index = search - 1;
                 }
             }
         }
@@ -101,10 +115,9 @@ namespace Voron.Data
 
         public override int ReadByte()
         {
-            int pos = _positions[_index];
             var chunk = _chunksDetails[_index];
 
-            if (pos == chunk.ChunkSize)
+            if (_position - _chunksOffsets[_index] == chunk.ChunkSize)
             {
                 if (_index == _chunksDetails.Length - 1)
                     return -1;
@@ -120,31 +133,33 @@ namespace Voron.Data
             {
                 _lastPage = _llt.GetPage(chunk.PageNumber);
             }
-
-            return _lastPage.DataPointer[_positions[_index]++];
+            
+            var pos = _position - _chunksOffsets[_index];
+            _position++; //move ptr
+            return _lastPage.DataPointer[pos];
         }
 
         public override int Read(byte[] buffer, int offset, int count)
         {
-            var pos = _positions[_index];
             var len = _chunksDetails[_index].ChunkSize;
 
-            if (pos == len)
+            if (_position == _chunksOffsets[_index] + len)
             {
                 if (_index == _chunksDetails.Length - 1)
                     return 0;
 
                 _index++;
-
-                pos = _positions[_index];
+                
                 len = _chunksDetails[_index].ChunkSize;
 
                 if (len == 0)
                     return 0;
             }
-
-            if (count > len - pos)
-                count = len - pos;
+            
+            //0th element of array + len(chunk size ) == 0th element of next chunk
+            var countSizeLeft = _chunksOffsets[_index] + len - _position;
+            if (count > countSizeLeft)
+                count = (int)countSizeLeft;
 
             ref Tree.ChunkDetails chunk = ref _chunksDetails[_index];
             if (!_lastPage.IsValid || _lastPage.PageNumber != chunk.PageNumber)
@@ -152,13 +167,14 @@ namespace Voron.Data
                 _lastPage = _llt.GetPage(chunk.PageNumber);
             }
 
+            var pos = _position - _chunksOffsets[_index];
             fixed (byte* dst = buffer)
             {
                 Memory.Copy(dst + offset, _lastPage.DataPointer + pos, count);
             }
 
-            _positions[_index] += count;
-
+            //move ptr
+            _position += count;
             return count;
         }
 
@@ -195,6 +211,11 @@ namespace Voron.Data
         public override void Write(byte[] buffer, int offset, int count)
         {
             throw new NotSupportedException("The method or operation is not supported by VoronStream.");
+        }
+
+        private static void ThrowWhenValueIsEqualOrLessZero(long position)
+        {
+            throw new ArgumentException($"Position {position} is not possible inside {nameof(VoronStream)}.");
         }
     }
 }

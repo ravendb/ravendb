@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using Raven.Client.Exceptions;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -768,24 +769,59 @@ namespace Raven.Server.Documents.Indexes.Static
             return new DynamicArray(Enumerable.Intersect(this, second.Cast<object>()));
         }
 
-        public struct DynamicArrayIterator : IEnumerator<object>
+        public unsafe struct DynamicArrayIterator : IEnumerator<object>
         {
-            private readonly IEnumerator<object> _inner;
+            private readonly delegate*<ref DynamicArrayIterator, bool> _iteratorMoveNextFunc;
+            private IEnumerator<object> _inner;
 
             public DynamicArrayIterator(IEnumerable<object> items)
             {
                 _inner = items.GetEnumerator();
+                switch (_inner)
+                {
+                    case BlittableJsonReaderArray.BlittableJsonArrayEnumerator _:
+                        _iteratorMoveNextFunc = &InterfaceMoveNext<BlittableJsonReaderArray.BlittableJsonArrayEnumerator>;
+                        break;
+                    default:
+                        _iteratorMoveNextFunc = &InterfaceMoveNext;
+                        break;
+                }
+
                 Current = null;
             }
 
-            public bool MoveNext()
+            private static bool InterfaceMoveNext(ref DynamicArrayIterator iterator)
             {
-                if (_inner.MoveNext() == false)
+                if (iterator._inner.MoveNext() == false)
                     return false;
 
-
-                Current = TypeConverter.ToDynamicType(_inner.Current);
+                iterator.Current = TypeConverter.ToDynamicType(iterator._inner.Current);
                 return true;
+            }
+
+            private static bool InterfaceMoveNext<T>(ref DynamicArrayIterator iterator) 
+                where T : struct, IEnumerator<object>
+            {
+                if (iterator._inner is T inner)
+                {
+                    bool result = false;
+                    if (inner.MoveNext())
+                    {
+                        iterator.Current = TypeConverter.ToDynamicType(inner.Current);
+                        result = true;
+                    }
+
+                    iterator._inner = inner;
+                    return result;
+                }
+
+                return false;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public bool MoveNext()
+            {
+                return _iteratorMoveNextFunc(ref this);
             }
 
             public void Reset()

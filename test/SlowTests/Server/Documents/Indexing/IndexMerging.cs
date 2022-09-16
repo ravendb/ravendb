@@ -177,9 +177,9 @@ namespace SlowTests.Server.Documents.Indexing
 
                 Assert.Equal(3, suggestion.CanMerge.Count);
                 Assert.Equal(FieldIndexing.Search, index.Fields["Name"].Indexing);
-                Assert.Equal(@"docs.Users.Select(doc=>new{Age=doc.Age
-,Email=doc.Email
-,Name=doc.Name
+                Assert.Equal(@"docs.Users.Select(doc => new
+{
+Age = doc.Age, Email = doc.Email, Name = doc.Name
 })", index.Maps.First());
 
             }
@@ -298,10 +298,10 @@ namespace SlowTests.Server.Documents.Indexing
                 var index = suggestion.MergedIndex;
 
                 Assert.Equal(3, suggestion.CanMerge.Count);
-                Assert.Equal(@"fromdocindocs.Users
-selectnew{Age=doc.Age
-,Email=doc.Email
-,Name=doc.Name
+                Assert.Equal(@"from doc in docs.Users
+select new
+{
+Age = doc.Age, Email = doc.Email, Name = doc.Name
 }", index.Maps.First());
 
             }
@@ -340,6 +340,128 @@ selectnew{Age=doc.Age
                 Assert.Equal(1, results.Suggestions[0].CanDelete.Count);
             }
 
+        }
+
+        [Fact]
+        public void CannotMergeWhenIndexContainsWhereClause()
+        {
+            var index1 = new IndexDefinition
+            {
+                Name = "Orders/ByShipment/Location",
+                Maps = { @"from order in docs.Orders
+where order.ShipTo.Location != null
+select new
+{
+    order.Employee,
+    order.Company,
+    ShipmentLocation = CreateSpatialField(order.ShipTo.Location.Latitude, order.ShipTo.Location.Longitude)
+}" },
+                Type = IndexType.Map
+            };
+            var index2 = new IndexDefinition
+            {
+                Name = "Orders/Totals",
+                Maps = { @"from order in docs.Orders
+select new
+{
+    order.Employee,
+    order.Company,
+    Total = order.Lines.Sum(l => (l.Quantity * l.PricePerUnit) * (1 - l.Discount))
+}" },
+                Type = IndexType.Map
+            };
+
+            var results = GetMergeReportOfTwoIndexes(index1, index2);
+           
+            Assert.Equal(0, results.Suggestions.Count);
+            Assert.Equal("Cannot merge indexes that have a where clause", results.Unmergables[index1.Name]);
+        }
+
+        [Fact]
+        public void CanMergeSimpleIndexAndReplaceInnerNamesCorrectly()
+        {
+            var index1 = new IndexDefinition
+            {
+                Name = "Product/Search",
+                Maps = { @"from p in docs.Products
+select new
+{
+    p.Name,
+    p.Category,
+    p.Supplier,
+    p.PricePerUnit
+}" },
+                Type = IndexType.Map
+            };
+            var index2 = new IndexDefinition
+            {
+                Name = "Products/ByUnitOnStock",
+                Maps = { @"from product in docs.Products
+select new {
+    UnitOnStock = LoadCompareExchangeValue(Id(product))
+}" },
+                Type = IndexType.Map
+            };
+            
+            var results = GetMergeReportOfTwoIndexes(index1, index2);
+            
+            Assert.Equal(1, results.Suggestions.Count);
+            Assert.Equal(@"from doc in docs.Products
+select new
+{
+Category = doc.Category, Name = doc.Name, PricePerUnit = doc.PricePerUnit, Supplier = doc.Supplier, UnitOnStock = LoadCompareExchangeValue(Id(doc))}"
+                , results.Suggestions.First().MergedIndex.Maps.First());
+        }
+        
+        [Fact]
+        public void CanMergeCorrectlyWithDifferentDocumentIdentifiers()
+        {
+            var index1 = new IndexDefinition
+            {
+                Name = "Orders/ByShipment/Location",
+                Maps = { @"from order in docs.Orders
+select new
+{
+    order.Employee,
+    order.Company,
+    ShipmentLocation = CreateSpatialField(order.ShipTo.Location.Latitude, order.ShipTo.Location.Longitude)
+}" },
+                Type = IndexType.Map
+            };
+            var index2 = new IndexDefinition
+            {
+                Name = "Orders/Totals",
+                Maps = { @"from test in docs.Orders
+select new
+{
+    test.Employee,
+    test.Company,
+    Total = test.Lines.Sum(l => (l.Quantity * l.PricePerUnit) * (1 - l.Discount))
+}" },
+                Type = IndexType.Map
+            };
+
+            var results = GetMergeReportOfTwoIndexes(index2, index1);
+           
+            Assert.Equal(1, results.Suggestions.Count);
+            Assert.Equal(@"from doc in docs.Orders
+select new
+{
+Company = doc.Company, Employee = doc.Employee, ShipmentLocation = CreateSpatialField(doc.ShipTo.Latitude, doc.ShipTo.Longitude), Total = doc.Lines.Sum(l => (l.Quantity * l.PricePerUnit) * (1 - l.Discount))}", results.Suggestions.First().MergedIndex.Maps.First());
+        }
+
+        private IndexMergeResults GetMergeReportOfTwoIndexes(IndexDefinition index1, IndexDefinition index2)
+        {
+            using var store = GetDocumentStore();
+            store.Maintenance.Send(new PutIndexesOperation(index1, index2));
+            var dictionary = new Dictionary<string, IndexDefinition>
+            {
+                {index1.Name, index1},
+                {index2.Name, index2}
+            };
+
+            var merger = new IndexMerger(dictionary);
+            return merger.ProposeIndexMergeSuggestions();
         }
     }
 }

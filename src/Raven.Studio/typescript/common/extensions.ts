@@ -487,7 +487,8 @@ class extensions {
                     if (clickedOnClose) {
                         if (!closestClosePanel.is(":disabled")) {
                             const $dropdownParent = $target.closest(".dropdown-menu").parent();
-                            $dropdownParent.removeClass('open');
+                            $dropdownParent.removeClass('open')
+                                .trigger('hidden.bs.dropdown');
                         } else {
                             e.stopPropagation();
                         }

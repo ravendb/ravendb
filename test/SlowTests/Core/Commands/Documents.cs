@@ -18,6 +18,7 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Extensions;
 using Tests.Infrastructure;
+using xRetry;
 using Xunit;
 
 using Company = SlowTests.Core.Utils.Entities.Company;
@@ -32,7 +33,7 @@ namespace SlowTests.Core.Commands
         {
         }
 
-        [Fact]
+        [RetryFact(delayBetweenRetriesMs: 1000)]
         public void CanCancelPutDocument()
         {
             var document = new { Name = "John" };

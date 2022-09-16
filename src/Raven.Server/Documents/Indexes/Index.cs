@@ -2480,7 +2480,17 @@ namespace Raven.Server.Documents.Indexes
                 if (Type == IndexType.Faulty)
                     return 1;
 
-                return _indexStorage.ReadErrorsCount();
+                try
+                {
+                    return _indexStorage.ReadErrorsCount();
+                }
+                catch (Exception e)
+                {
+                    if (_logger.IsOperationsEnabled)
+                        _logger.Operations("Failed to get index error count", e);
+
+                    return 1;
+                }
             }
         }
 
@@ -5110,7 +5120,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private TestingStuff _forTestingPurposes;
+        internal TestingStuff _forTestingPurposes;
 
         internal TestingStuff ForTestingPurposesOnly()
         {
@@ -5125,6 +5135,8 @@ namespace Raven.Server.Documents.Indexes
             internal Action ActionToCallInFinallyOfExecuteIndexing;
 
             internal bool ShouldRenewTransaction;
+
+            internal Action BeforeClosingDocumentsReadTransactionForHandleReferences;
 
             internal IDisposable CallDuringFinallyOfExecuteIndexing(Action action)
             {

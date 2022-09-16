@@ -627,9 +627,14 @@ namespace Raven.Server.ServerWide
 
             options.OnNonDurableFileSystemError += (obj, e) =>
             {
+                var title = "Non Durable File System - System Storage";
+
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations($"{title}. {e.Message}", e.Exception);
+
                 var alert = AlertRaised.Create(
                     null,
-                    "Non Durable File System - System Storage",
+                    title,
                     e.Message,
                     AlertType.NonDurableFileSystem,
                     NotificationSeverity.Warning,
@@ -647,13 +652,18 @@ namespace Raven.Server.ServerWide
 
             options.OnRecoveryError += (obj, e) =>
             {
+                string title = "Recovery Error - System Storage";
+
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations($"{title}. {e.Message}", e.Exception);
+
                 var alert = AlertRaised.Create(
                     null,
-                    "Recovery Error - System Storage",
+                    title,
                     e.Message,
                     AlertType.RecoveryError,
                     NotificationSeverity.Error,
-                    "Recovery Error System");
+                    key: $"Recovery Error System/{SystemTime.UtcNow.Ticks % 5}"); // if this was called multiple times let's try to not overwrite previous alerts
 
                 if (NotificationCenter.IsInitialized)
                 {
@@ -667,13 +677,18 @@ namespace Raven.Server.ServerWide
 
             options.OnIntegrityErrorOfAlreadySyncedData += (obj, e) =>
             {
+                string title = "Integrity error of already synced data - System Storage";
+
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations($"{title}. {e.Message}", e.Exception);
+
                 var alert = AlertRaised.Create(
                     null,
-                    "Integrity error of already synced data - System Storage",
+                    title,
                     e.Message,
                     AlertType.IntegrityErrorOfAlreadySyncedData,
                     NotificationSeverity.Warning,
-                    "Integrity Error of Synced Data - System");
+                    key: $"Integrity Error of Synced Data - System/{SystemTime.UtcNow.Ticks % 5}"); // if this was called multiple times let's try to not overwrite previous alerts
 
                 if (NotificationCenter.IsInitialized)
                 {

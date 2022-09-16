@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Sparrow;
 using Sparrow.Binary;
+using Sparrow.Compression;
 using Sparrow.Server.Compression;
 
 namespace Corax;

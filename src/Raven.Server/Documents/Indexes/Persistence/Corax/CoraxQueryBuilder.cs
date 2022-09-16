@@ -11,6 +11,7 @@ using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Json;
 using Spatial4n.Shapes;
 using RavenConstants = Raven.Client.Constants;
@@ -467,6 +468,8 @@ public static class CoraxQueryBuilder
                 case MethodType.Spatial_Disjoint:
                 case MethodType.Spatial_Intersects:
                     return HandleSpatial(indexSearcher, query, me, metadata, parameters, methodType, factories.GetSpatialFieldFactory, index, indexMapping, queryMapping);
+                case MethodType.Regex:
+                    return HandleRegex(indexSearcher, query, me, metadata, parameters, factories, scoreFunction);
                 default:
                     QueryMethod.ThrowMethodNotSupported(methodType, metadata.QueryText, parameters);
                     return null; // never hit
@@ -827,7 +830,29 @@ public static class CoraxQueryBuilder
 
         return indexSearcher.SpatialQuery(fieldName, fieldId, distanceErrorPct, shape, spatialField.GetContext(), operation);
     }
+    
+    private static IQueryMatch HandleRegex<TScoreFunction>(IndexSearcher search, Query query, MethodExpression expression, QueryMetadata metadata,
+        BlittableJsonReaderObject parameters, QueryBuilderFactories factories, TScoreFunction scoreFunction = default)
+    where TScoreFunction : IQueryScoreFunction
+    {
+        if (expression.Arguments.Count != 2)
+            throw new ArgumentException(
+                $"Regex method was invoked with {expression.Arguments.Count} arguments ({expression})" +
+                " while it should be invoked with 2 arguments e.g. Regex(foo.Name,\"^[a-z]+?\")");
 
+        var fieldName = QueryBuilderHelper.ExtractIndexFieldName(query, parameters, expression.Arguments[0], metadata);
+        var (value, valueType) = QueryBuilderHelper.GetValue(query, metadata, parameters, (ValueExpression)expression.Arguments[1]);
+        if (valueType != ValueTokenType.String && !(valueType == ValueTokenType.Parameter && IsStringFamily(value)))
+            QueryBuilderHelper.ThrowMethodExpectsArgumentOfTheFollowingType("regex", ValueTokenType.String, valueType, metadata.QueryText, parameters);
+        var valueAsString = QueryBuilderHelper.CoraxGetValueAsString(value);
+        return search.RegexQuery<TScoreFunction>(fieldName, scoreFunction, factories.GetRegexFactory(valueAsString));
+        
+        bool IsStringFamily(object value)
+        {
+            return value is string || value is StringSegment || value is LazyStringValue;
+        }
+    }
+    
     public static ReadOnlySpan<OrderMetadata> GetSortMetadata(IndexQueryServerSide query, Index index, Func<string, SpatialField> getSpatialField,
         IndexFieldsMapping indexMapping, FieldsToFetch queryMapping)
     {

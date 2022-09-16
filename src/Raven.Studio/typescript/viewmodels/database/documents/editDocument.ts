@@ -101,7 +101,6 @@ class editDocument extends shardViewModelBase {
     propertiesPanelVisible = ko.observable(true);
 
     globalValidationGroup = ko.validatedObservable({
-        userDocumentId: this.userSpecifiedId,
         userDocumentText: this.documentText
     });
     
@@ -312,15 +311,6 @@ class editDocument extends shardViewModelBase {
     }
 
     private initValidation() {
-        const rg1 = /^[^\\]*$/; // forbidden character - backslash
-        this.userSpecifiedId.extend({
-            validation: [
-                {
-                    validator: (val: string) => rg1.test(val),
-                    message: "Can't use backslash in document name"
-                }]
-        });
-
         this.documentText.extend({
             required: {
                 onlyIf: () => !this.isHugeDocument() && this.ignoreHugeDocument()

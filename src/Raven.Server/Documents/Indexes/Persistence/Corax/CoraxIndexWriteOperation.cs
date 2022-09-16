@@ -27,13 +27,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         private readonly IndexWriter _indexWriter;
         private readonly CoraxDocumentConverterBase _converter;
         private readonly IndexFieldsMapping _knownFields;
-        private readonly IDisposable _bufferScope;
-        private readonly ByteString _buffer;
         private long _entriesCount = 0;
 
         public CoraxIndexWriteOperation(Index index, Transaction writeTransaction, CoraxDocumentConverterBase converter, Logger logger) : base(index, logger)
         {
-            _bufferScope = writeTransaction.Allocator.Allocate(DocumentBufferSize, out _buffer);
             _converter = converter;
             _knownFields = _converter.GetKnownFieldsForWriter();
             try
@@ -84,7 +81,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     return;
                 }
                 
-                _indexWriter.Update(keyFieldName, key.AsSpan(), lowerId, data.ToSpan());
+                _indexWriter.Update(keyFieldName, key.AsSpan(), lowerId, data.ToSpan(), ref _entriesCount);
             }
         }
 
@@ -173,7 +170,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         
         public override void Dispose()
         {
-            _bufferScope?.Dispose();
             _indexWriter?.Dispose();
             if (_converter.StringsListForEnumerableScope?.Capacity > MaximumPersistedCapacityOfCoraxWriter)
             {

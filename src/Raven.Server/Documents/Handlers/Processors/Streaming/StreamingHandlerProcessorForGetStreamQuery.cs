@@ -129,6 +129,11 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
                 ThrowUnsupportedException("Using json output format with custom fields is not supported.");
             }
 
+            if (string.IsNullOrEmpty(format) == false && string.Equals(format, "jsonl", StringComparison.OrdinalIgnoreCase))
+            {
+                return new StreamJsonlDocumentQueryResultWriter(responseBodyStream, context);
+            }
+
             return new StreamJsonDocumentQueryResultWriter(responseBodyStream, context);
         }
 
