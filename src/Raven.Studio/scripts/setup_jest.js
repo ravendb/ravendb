@@ -16,6 +16,8 @@ jest.mock("../typescript/components/hooks/useEventsCollector");
 jest.mock("../typescript/common/eventsCollector");
 jest.mock("../typescript/common/bindingHelpers/aceEditorBindingHandler");
 
+jest.mock("../typescript/common/storage/storageKeyProvider");
+
 jest.mock('plugins/router', () => ({
     activate: jest.fn()
 }));
