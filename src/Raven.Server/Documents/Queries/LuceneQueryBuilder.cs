@@ -12,6 +12,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Indexes.Persistence;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Indexes.Static.Spatial;
@@ -26,7 +27,7 @@ using Spatial4n.Shapes;
 using FuzzyQuery = Lucene.Net.Search.FuzzyQuery;
 using Index = Raven.Server.Documents.Indexes.Index;
 using KeywordAnalyzer = Lucene.Net.Analysis.KeywordAnalyzer;
-using MoreLikeThisQuery = Raven.Server.Documents.Queries.MoreLikeThis.MoreLikeThisQuery;
+using MoreLikeThisQuery = Raven.Server.Documents.Queries.MoreLikeThis.LuceneMoreLikeThisQuery;
 using Query = Raven.Server.Documents.Queries.AST.Query;
 using Term = Lucene.Net.Index.Term;
 using TermQuery = Lucene.Net.Search.TermQuery;
@@ -81,7 +82,7 @@ namespace Raven.Server.Documents.Queries
             baseDocument = null;
             options = null;
 
-            var moreLikeThisExpression = FindMoreLikeThisExpression(expression);
+            var moreLikeThisExpression = QueryBuilderHelper.FindMoreLikeThisExpression(expression);
             if (moreLikeThisExpression == null)
                 throw new InvalidOperationException("Query does not contain MoreLikeThis method expression");
 
@@ -89,7 +90,7 @@ namespace Raven.Server.Documents.Queries
             {
                 var value = QueryBuilderHelper.GetValue(query, metadata, parameters, moreLikeThisExpression.Arguments[1], allowObjectsInParameters: true);
                 if (value.Type == ValueTokenType.String)
-                    options = LuceneIndexReadOperation.ParseJsonStringIntoBlittable(GetValueAsString(value.Value), context);
+                    options = IndexOperationBase.ParseJsonStringIntoBlittable(QueryBuilderHelper.GetValueAsString(value.Value), context);
                 else
                     options = value.Value as BlittableJsonReaderObject;
             }
@@ -98,7 +99,7 @@ namespace Raven.Server.Documents.Queries
             if (firstArgument is BinaryExpression binaryExpression)
                 return ToLuceneQuery(serverContext, context, query, binaryExpression, metadata, index, parameters, analyzer, factories);
 
-            var firstArgumentValue = GetValueAsString(QueryBuilderHelper.GetValue(query, metadata, parameters, firstArgument).Value);
+            var firstArgumentValue = QueryBuilderHelper.GetValueAsString(QueryBuilderHelper.GetValue(query, metadata, parameters, firstArgument).Value);
             if (bool.TryParse(firstArgumentValue, out var firstArgumentBool))
             {
                 if (firstArgumentBool)
@@ -110,49 +111,7 @@ namespace Raven.Server.Documents.Queries
             baseDocument = firstArgumentValue;
             return null;
         }
-
-        private static MethodExpression FindMoreLikeThisExpression(QueryExpression expression)
-        {
-            if (expression == null)
-                return null;
-
-            if (expression is BinaryExpression where)
-            {
-                switch (where.Operator)
-                {
-                    case OperatorType.And:
-                    case OperatorType.Or:
-                        var leftExpression = FindMoreLikeThisExpression(where.Left);
-                        if (leftExpression != null)
-                            return leftExpression;
-
-                        var rightExpression = FindMoreLikeThisExpression(where.Right);
-                        if (rightExpression != null)
-                            return rightExpression;
-
-                        return null;
-                    default:
-                        return null;
-                }
-            }
-
-            if (expression is MethodExpression me)
-            {
-                var methodName = me.Name.Value;
-                var methodType = QueryMethod.GetMethodType(methodName);
-
-                switch (methodType)
-                {
-                    case MethodType.MoreLikeThis:
-                        return me;
-                    default:
-                        return null;
-                }
-            }
-
-            return null;
-        }
-
+        
         private static Lucene.Net.Search.Query ToLuceneQuery(TransactionOperationContext serverContext, DocumentsOperationContext documentsContext, Query query,
             QueryExpression expression, QueryMetadata metadata, Index index,
             BlittableJsonReaderObject parameters, Analyzer analyzer, QueryBuilderFactories factories, bool exact = false, int? proximity = null, bool secondary = false,
@@ -205,7 +164,7 @@ namespace Raven.Server.Documents.Queries
                                     return TranslateDateRangeQuery(index, where, fieldName, ticks);
                                 }
 
-                                var valueAsString = GetValueAsString(value);
+                                var valueAsString = QueryBuilderHelper.GetValueAsString(value);
 
                                 switch (where.Operator)
                                 {
@@ -536,8 +495,8 @@ namespace Raven.Server.Documents.Queries
                     }
                     else
                     {
-                        var valueFirstAsString = GetValueAsString(valueFirst);
-                        var valueSecondAsString = GetValueAsString(valueSecond);
+                        var valueFirstAsString = QueryBuilderHelper.GetValueAsString(valueFirst);
+                        var valueSecondAsString = QueryBuilderHelper.GetValueAsString(valueSecond);
                         betweenQuery = LuceneQueryHelper.Between(index, luceneFieldName, termType, valueFirstAsString, be.MinInclusive, valueSecondAsString,
                             be.MaxInclusive, exact);
                     }
@@ -659,24 +618,7 @@ namespace Raven.Server.Documents.Queries
 
             throw new ArgumentException($"Unknown method {method.Name}");
         }
-
-        private static string GetValueAsString(object value)
-        {
-            if (!(value is string valueAsString))
-            {
-                if (value is StringSegment s)
-                {
-                    valueAsString = s.Value;
-                }
-                else
-                {
-                    valueAsString = value?.ToString();
-                }
-            }
-
-            return valueAsString;
-        }
-
+        
         private static IEnumerable<(string Value, ValueTokenType Type)> GetValuesForIn(
             Query query,
             InExpression expression,
@@ -791,7 +733,7 @@ namespace Raven.Server.Documents.Queries
 
             var parser = new Lucene.Net.QueryParsers.QueryParser(Version.LUCENE_29, fieldName, analyzer) {AllowLeadingWildcard = true};
 
-            return parser.Parse(GetValueAsString(value));
+            return parser.Parse(QueryBuilderHelper.GetValueAsString(value));
         }
 
         private static Lucene.Net.Search.Query HandleStartsWith(Query query, MethodExpression expression, QueryMetadata metadata, Index index,
@@ -803,7 +745,7 @@ namespace Raven.Server.Documents.Queries
             if (valueType != ValueTokenType.String)
                 QueryBuilderHelper.ThrowMethodExpectsArgumentOfTheFollowingType("startsWith", ValueTokenType.String, valueType, metadata.QueryText, parameters);
 
-            var valueAsString = GetValueAsString(value);
+            var valueAsString = QueryBuilderHelper.GetValueAsString(value);
             if (string.IsNullOrEmpty(valueAsString))
                 valueAsString = LuceneQueryHelper.Asterisk;
             else
@@ -826,7 +768,7 @@ namespace Raven.Server.Documents.Queries
             if (valueType != ValueTokenType.String)
                 QueryBuilderHelper.ThrowMethodExpectsArgumentOfTheFollowingType("endsWith", ValueTokenType.String, valueType, metadata.QueryText, parameters);
 
-            var valueAsString = GetValueAsString(value);
+            var valueAsString = QueryBuilderHelper.GetValueAsString(value);
             valueAsString = string.IsNullOrEmpty(valueAsString)
                 ? LuceneQueryHelper.Asterisk
                 : valueAsString.Insert(0, LuceneQueryHelper.Asterisk);
@@ -921,7 +863,7 @@ namespace Raven.Server.Documents.Queries
             var (value, valueType) = QueryBuilderHelper.GetValue(query, metadata, parameters, (ValueExpression)expression.Arguments[1]);
             if (valueType != ValueTokenType.String && !(valueType == ValueTokenType.Parameter && IsStringFamily(value)))
                 QueryBuilderHelper.ThrowMethodExpectsArgumentOfTheFollowingType("regex", ValueTokenType.String, valueType, metadata.QueryText, parameters);
-            var valueAsString = GetValueAsString(value);
+            var valueAsString = QueryBuilderHelper.GetValueAsString(value);
             return new RegexQuery(new Term(fieldName, valueAsString), factories.GetRegexFactory(valueAsString));
         }
 
@@ -963,7 +905,7 @@ namespace Raven.Server.Documents.Queries
             if (metadata.IsDynamic && isDocumentId == false)
                 fieldName = new QueryFieldName(AutoIndexField.GetSearchAutoIndexFieldName(fieldName.Value), fieldName.IsQuoted);
 
-            var valueAsString = GetValueAsString(value);
+            var valueAsString = QueryBuilderHelper.GetValueAsString(value);
             if (proximity.HasValue)
             {
                 var type = GetTermType(valueAsString);
@@ -1225,7 +1167,7 @@ namespace Raven.Server.Documents.Queries
 
             units = spatialUnits ?? spatialField.Units;
 
-            var wkt = GetValueAsString(wktValue.Value);
+            var wkt = QueryBuilderHelper.GetValueAsString(wktValue.Value);
 
             try
             {
@@ -1266,7 +1208,7 @@ namespace Raven.Server.Documents.Queries
             var spatialUnitsValue = QueryBuilderHelper.GetValue(query, metadata, parameters, value);
             QueryBuilderHelper.AssertValueIsString(fieldName, spatialUnitsValue.Type);
 
-            var spatialUnitsValueAsString = GetValueAsString(spatialUnitsValue.Value);
+            var spatialUnitsValueAsString = QueryBuilderHelper.GetValueAsString(spatialUnitsValue.Value);
             if (Enum.TryParse(typeof(SpatialUnits), spatialUnitsValueAsString, true, out var su) == false)
                 throw new InvalidOperationException(
                     $"{nameof(SpatialUnits)} value must be either '{SpatialUnits.Kilometers}' or '{SpatialUnits.Miles}' but was '{spatialUnitsValueAsString}'.");

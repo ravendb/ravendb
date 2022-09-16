@@ -127,9 +127,8 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
     /// - optimize: when no termvector support available - used maxNumTermsParsed to limit amount of tokenization
     /// </pre>
     /// </summary>
-    public class MoreLikeThis
+    public abstract class MoreLikeThisBase
     {
-
         /// <summary> Default maximum number of tokens to parse in each example doc field that is not stored with TermVector support.</summary>
         /// <seealso cref="MaxNumTokensParsed">
         /// </seealso>
@@ -181,7 +180,7 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
         public static readonly ISet<string> DEFAULT_STOP_WORDS = null;
 
         /// <summary> Current set of stop words.</summary>
-        private ISet<string> _stopWords = DEFAULT_STOP_WORDS;
+        protected ISet<string> _stopWords = DEFAULT_STOP_WORDS;
 
         /// <summary> Return a Query with no more than this many terms.
         /// 
@@ -194,50 +193,41 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
         /// </seealso>
         public const int DEFAULT_MAX_QUERY_TERMS = 25;
 
-        /// <summary> Analyzer that will be used to parse the doc.</summary>
-        private Analyzer _analyzer = DEFAULT_ANALYZER;
+
 
         /// <summary> Ignore words less frequent that this.</summary>
-        private int _minTermFreq = 0;
+        protected int _minTermFreq = 0;
 
         /// <summary> Ignore words which do not occur in at least this many docs.</summary>
-        private int _minDocFreq = 0;
+        protected int _minDocFreq = 0;
 
         /// <summary>
         /// Ignore words which occur in more than this many docs.
         /// </summary>
-        private int _maxDocfreq = DEFAULT_MAX_DOC_FREQ;
+        protected int _maxDocfreq = DEFAULT_MAX_DOC_FREQ;
 
         /// <summary> Should we apply a boost to the Query based on the scores?</summary>
-        private bool _boost = DEFAULT_BOOST;
+        protected bool _boost = DEFAULT_BOOST;
 
         /// <summary> Field name we'll analyze.</summary>
-        private string[] _fieldNames = null;
+        protected string[] _fieldNames = null;
 
         /// <summary> The maximum number of tokens to parse in each example doc field that is not stored with TermVector support</summary>
-        private int _maxNumTokensParsed = DEFAULT_MAX_NUM_TOKENS_PARSED;
+        protected int _maxNumTokensParsed = DEFAULT_MAX_NUM_TOKENS_PARSED;
 
 
 
         /// <summary> Ignore words if less than this len.</summary>
-        private int _minWordLen = DEFAULT_MIN_WORD_LENGTH;
+        protected int _minWordLen = DEFAULT_MIN_WORD_LENGTH;
 
         /// <summary> Ignore words if greater than this len.</summary>
-        private int _maxWordLen = DEFAULT_MAX_WORD_LENGTH;
+        protected int _maxWordLen = DEFAULT_MAX_WORD_LENGTH;
 
         /// <summary> Don't return a query longer than this.</summary>
-        private int _maxQueryTerms = DEFAULT_MAX_QUERY_TERMS;
-
-        /// <summary> For idf() calculations.</summary>
-        private Similarity _similarity;
-
-        private readonly IState _state;
-
-        /// <summary> IndexReader to use</summary>
-        private readonly IndexReader _ir;
+        protected int _maxQueryTerms = DEFAULT_MAX_QUERY_TERMS;
 
         /// <summary> Boost factor to use when boosting the terms </summary>
-        private float _boostFactor = 1;
+        protected float _boostFactor = 1;
 
         /// <summary>
         /// Gets or sets the boost factor used when boosting terms
@@ -246,40 +236,6 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
         {
             get => _boostFactor;
             set => _boostFactor = value;
-        }
-
-        /// <summary> Constructor requiring an IndexReader.</summary>
-        public MoreLikeThis(IndexReader ir, IState state)
-            : this(ir, new DefaultSimilarity(), state)
-        {
-        }
-
-        public MoreLikeThis(IndexReader ir, Similarity sim, IState state)
-        {
-            _ir = ir;
-            _similarity = sim;
-            _state = state;
-        }
-
-        public Similarity Similarity
-        {
-            get => _similarity;
-            set => _similarity = value;
-        }
-
-        /// <summary> Gets or sets the analyzer used to parse source doc with. The default analyzer
-        /// is the <see cref="DEFAULT_ANALYZER"/>.
-        /// <para />
-        /// An analyzer is not required for generating a query with the
-        /// <see cref="Like(int)"/> method, all other 'like' methods require an analyzer.
-        /// </summary>
-        /// <value> the analyzer that will be used to parse source doc with. </value>
-        /// <seealso cref="DEFAULT_ANALYZER">
-        /// </seealso>
-        public Analyzer Analyzer
-        {
-            get => _analyzer;
-            set => _analyzer = value;
         }
 
         /// <summary>
@@ -312,20 +268,7 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
             get => _maxDocfreq;
             set => _maxDocfreq = value;
         }
-
-        /// <summary>
-        /// Set the maximum percentage in which words may still appear. Words that appear
-        /// in more than this many percent of all docs will be ignored.
-        /// </summary>
-        /// <param name="maxPercentage">
-        /// the maximum percentage of documents (0-100) that a term may appear 
-        /// in to be still considered relevant
-        /// </param>
-        public void SetMaxDocFreqPct(int maxPercentage)
-        {
-            _maxDocfreq = maxPercentage * _ir.NumDocs() / 100;
-        }
-
+        
         /// <summary> Gets or sets a boolean indicating whether to boost terms in query based 
         /// on "score" or not. The default is <see cref="DEFAULT_BOOST"/>.
         /// </summary>
@@ -427,165 +370,6 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
             set => _maxNumTokensParsed = value;
         }
 
-        /// <summary>Return a query that will return docs like the passed lucene document ID.</summary>
-        /// <param name="docNum">the documentID of the lucene doc to generate the 'More Like This" query for.</param>
-        /// <returns> a query that will return docs like the passed lucene document ID.</returns>
-        public Query Like(int docNum)
-        {
-            if (_fieldNames == null)
-            {
-                // gather list of valid fields from lucene
-                var fields = _ir.GetFieldNames(IndexReader.FieldOption.INDEXED);
-                _fieldNames = fields.ToArray();
-            }
-
-            return CreateQuery(RetrieveTerms(docNum));
-        }
-
-        /// <summary> Return a query that will return docs like the passed file.
-        /// 
-        /// </summary>
-        /// <returns> a query that will return docs like the passed file.
-        /// </returns>
-        public Query Like(FileInfo f)
-        {
-            if (_fieldNames == null)
-            {
-                // gather list of valid fields from lucene
-                var fields = _ir.GetFieldNames(IndexReader.FieldOption.INDEXED);
-                _fieldNames = fields.ToArray();
-            }
-
-            using (var file = File.OpenRead(f.FullName))
-            using (var reader = new StreamReader(file, Encoding.UTF8))
-                return Like(reader);
-        }
-
-        /// <summary> Return a query that will return docs like the passed stream.
-        /// 
-        /// </summary>
-        /// <returns> a query that will return docs like the passed stream.
-        /// </returns>
-        public Query Like(Stream isRenamed)
-        {
-            return Like(new StreamReader(isRenamed, Encoding.UTF8));
-        }
-
-        /// <summary> Return a query that will return docs like the passed Reader.
-        /// 
-        /// </summary>
-        /// <returns> a query that will return docs like the passed Reader.
-        /// </returns>
-        public Query Like(TextReader r)
-        {
-            return CreateQuery(RetrieveTerms(r));
-        }
-
-        internal Query Like(BlittableJsonReaderObject json)
-        {
-            return CreateQuery(RetrieveTerms(json));
-        }
-
-        /// <summary> Create the More like query from a PriorityQueue</summary>
-        private Query CreateQuery(PriorityQueue<object[]> q)
-        {
-            var query = new BooleanQuery();
-            object cur;
-            var qterms = 0;
-            float bestScore = 0;
-
-            while ((cur = q.Pop()) != null)
-            {
-                var ar = (object[])cur;
-                var tq = new TermQuery(new Term((string)ar[1], (string)ar[0]));
-
-                if (_boost)
-                {
-                    if (qterms == 0)
-                    {
-                        bestScore = (float)ar[2];
-                    }
-                    var myScore = (float)ar[2];
-
-                    tq.Boost = _boostFactor * myScore / bestScore;
-                }
-
-                try
-                {
-                    query.Add(tq, Occur.SHOULD);
-                }
-                catch (BooleanQuery.TooManyClauses)
-                {
-                    break;
-                }
-
-                qterms++;
-                if (_maxQueryTerms > 0 && qterms >= _maxQueryTerms)
-                {
-                    break;
-                }
-            }
-
-            return query;
-        }
-
-        /// <summary> Create a PriorityQueue from a word->tf map.
-        /// 
-        /// </summary>
-        /// <param name="words">a map of words keyed on the word(String) with Int objects as the values.
-        /// </param>
-        protected PriorityQueue<object[]> CreateQueue(IDictionary<string, Int> words)
-        {
-            // have collected all words in doc and their freqs
-            var numDocs = _ir.NumDocs();
-            var res = new FreqQ(words.Count); // will order words by score
-
-            var it = words.Keys.GetEnumerator();
-            while (it.MoveNext())
-            {
-                // for every word
-                var word = it.Current;
-
-                var tf = words[word].X; // term freq in the source doc
-                if (_minTermFreq > 0 && tf < _minTermFreq)
-                {
-                    continue; // filter out words that don't occur enough times in the source
-                }
-
-                // go through all the fields and find the largest document frequency
-                var topField = _fieldNames[0];
-                var docFreq = 0;
-                for (var i = 0; i < _fieldNames.Length; i++)
-                {
-                    var freq = _ir.DocFreq(new Term(_fieldNames[i], word), _state);
-                    topField = freq > docFreq ? _fieldNames[i] : topField;
-                    docFreq = freq > docFreq ? freq : docFreq;
-                }
-
-                if (_minDocFreq > 0 && docFreq < _minDocFreq)
-                {
-                    continue; // filter out words that don't occur in enough docs
-                }
-
-                if (docFreq > _maxDocfreq)
-                {
-                    continue; // filter out words that occur in too many docs
-                }
-
-                if (docFreq == 0)
-                {
-                    continue; // index update problem?
-                }
-
-                var idf = _similarity.Idf(docFreq, numDocs);
-                var score = tf * idf;
-
-                // only really need 1st 3 entries, other ones are for troubleshooting
-                res.InsertWithOverflow(new object[] { word, topField, score, idf, docFreq, tf });
-            }
-            return res;
-        }
-
         /// <summary> Describe the parameters that control how the "more like this" query is formed.</summary>
         public string DescribeParams()
         {
@@ -607,113 +391,6 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
             sb.Append("\t" + "minDocFreq     : " + _minDocFreq + "\n");
             return sb.ToString();
         }
-
-        /// <summary> Find words for a more-like-this query former.
-        /// 
-        /// </summary>
-        /// <param name="docNum">the id of the lucene document from which to find terms
-        /// </param>
-        protected virtual PriorityQueue<object[]> RetrieveTerms(int docNum)
-        {
-            IDictionary<string, Int> termFreqMap = new HashMap<string, Int>();
-            for (var i = 0; i < _fieldNames.Length; i++)
-            {
-                var fieldName = _fieldNames[i];
-                var vector = _ir.GetTermFreqVector(docNum, fieldName, _state);
-
-                // field does not store term vector info
-                if (vector == null)
-                {
-                    var d = _ir.Document(docNum, _state);
-                    var text = d.GetValues(fieldName, _state);
-                    if (text != null)
-                    {
-                        for (var j = 0; j < text.Length; j++)
-                        {
-                            AddTermFrequencies(new StringReader(text[j]), termFreqMap, fieldName);
-                        }
-                    }
-                }
-                else
-                {
-                    AddTermFrequencies(termFreqMap, vector);
-                }
-            }
-
-            return CreateQueue(termFreqMap);
-        }
-
-        /// <summary> Adds terms and frequencies found in vector into the Map termFreqMap</summary>
-        /// <param name="termFreqMap">a Map of terms and their frequencies
-        /// </param>
-        /// <param name="vector">List of terms and their frequencies for a doc/field
-        /// </param>
-        protected void AddTermFrequencies(IDictionary<string, Int> termFreqMap, ITermFreqVector vector)
-        {
-            var terms = vector.GetTerms();
-            var freqs = vector.GetTermFrequencies();
-            for (var j = 0; j < terms.Length; j++)
-            {
-                var term = terms[j];
-
-                if (IsNoiseWord(term))
-                {
-                    continue;
-                }
-                // increment frequency
-                var cnt = termFreqMap[term];
-                if (cnt == null)
-                {
-                    cnt = new Int();
-                    termFreqMap[term] = cnt;
-                    cnt.X = freqs[j];
-                }
-                else
-                {
-                    cnt.X += freqs[j];
-                }
-            }
-        }
-        /// <summary> Adds term frequencies found by tokenizing text from reader into the Map words</summary>
-        /// <param name="r">a source of text to be tokenized
-        /// </param>
-        /// <param name="termFreqMap">a Map of terms and their frequencies
-        /// </param>
-        /// <param name="fieldName">Used by analyzer for any special per-field analysis
-        /// </param>
-        protected void AddTermFrequencies(TextReader r, IDictionary<string, Int> termFreqMap, string fieldName)
-        {
-            var ts = _analyzer.TokenStream(fieldName, r);
-            var tokenCount = 0;
-            // for every token
-            var termAtt = ts.AddAttribute<ITermAttribute>();
-
-            while (ts.IncrementToken())
-            {
-                var word = termAtt.Term;
-                tokenCount++;
-                if (tokenCount > _maxNumTokensParsed)
-                {
-                    break;
-                }
-                if (IsNoiseWord(word))
-                {
-                    continue;
-                }
-
-                // increment frequency
-                var cnt = termFreqMap[word];
-                if (cnt == null)
-                {
-                    termFreqMap[word] = new Int();
-                }
-                else
-                {
-                    cnt.X++;
-                }
-            }
-        }
-
 
         /// <summary>determines if the passed term is likely to be of interest in "more like" comparisons 
         /// 
@@ -740,42 +417,23 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
             return false;
         }
 
-
-        /// <summary> Find words for a more-like-this query former.
-        /// The result is a priority queue of arrays with one entry for <b>every word</b> in the document.
-        /// Each array has 6 elements.
-        /// The elements are:
-        /// <ol>
-        /// <li> The word (String)</li>
-        /// <li> The top field that this word comes from (String)</li>
-        /// <li> The score for this word (Float)</li>
-        /// <li> The IDF value (Float)</li>
-        /// <li> The frequency of this word in the index (Integer)</li>
-        /// <li> The frequency of this word in the source document (Integer)</li>
-        /// </ol>
-        /// This is a somewhat "advanced" routine, and in general only the 1st entry in the array is of interest.
-        /// This method is exposed so that you can identify the "interesting words" in a document.
-        /// For an easier method to call see <see cref="RetrieveInterestingTerms(System.IO.TextReader)"/>.
+        /// <summary> Create a PriorityQueue from a word->tf map.
         /// 
         /// </summary>
-        /// <param name="r">the reader that has the content of the document
+        /// <param name="words">a map of words keyed on the word(String) with Int objects as the values.
         /// </param>
-        /// <returns> the most intresting words in the document ordered by score, with the highest scoring, or best entry, first
-        /// 
-        /// </returns>
-        /// <seealso cref="RetrieveInterestingTerms(System.IO.TextReader)">
-        /// </seealso>
-        public PriorityQueue<object[]> RetrieveTerms(TextReader r)
-        {
-            IDictionary<string, Int> words = new HashMap<string, Int>();
-            for (var i = 0; i < _fieldNames.Length; i++)
-            {
-                var fieldName = _fieldNames[i];
-                AddTermFrequencies(r, words, fieldName);
-            }
-            return CreateQueue(words);
-        }
+        protected abstract PriorityQueue<object[]> CreateQueue(IDictionary<string, Int> words);
 
+        protected static bool HasFlagWithBitPacking(BlittableJsonToken token)
+        {
+            return token.HasFlag(BlittableJsonToken.StartObject) &&
+                   !token.HasFlag(BlittableJsonToken.String) &&
+                   !token.HasFlag(BlittableJsonToken.Boolean) &&
+                   !token.HasFlag(BlittableJsonToken.EmbeddedBlittable) &&
+                   !token.HasFlag(BlittableJsonToken.Reserved2) &&
+                   !token.HasFlag(BlittableJsonToken.Reserved4) &&
+                   !token.HasFlag(BlittableJsonToken.Reserved6);
+        }
 
         internal PriorityQueue<object[]> RetrieveTerms(BlittableJsonReaderObject json)
         {
@@ -785,7 +443,7 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
             return CreateQueue(words);
         }
 
-        private void RetrieveTerms(BlittableJsonReaderObject json, IDictionary<string, Int> words)
+        protected void RetrieveTerms(BlittableJsonReaderObject json, IDictionary<string, Int> words)
         {
             var prop = new BlittableJsonReaderObject.PropertyDetails();
 
@@ -797,7 +455,12 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
             }
         }
 
-        private void ProcessTerms(BlittableJsonToken token, LazyStringValue name, object value, IDictionary<string, Int> words)
+        public abstract void SetMaxDocFreqPct(int maxPercentage);
+
+        protected abstract void AddTermFrequencies(TextReader r, IDictionary<string, Int> termFreqMap, string fieldName);
+
+
+        protected void ProcessTerms(BlittableJsonToken token, LazyStringValue name, object value, IDictionary<string, Int> words)
         {
             switch (token & BlittableJsonReaderBase.TypesMask)
             {
@@ -839,65 +502,8 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
             }
         }
 
-        private static bool HasFlagWithBitPacking(BlittableJsonToken token)
-        {
-            return token.HasFlag(BlittableJsonToken.StartObject) &&
-                   !token.HasFlag(BlittableJsonToken.String) &&
-                   !token.HasFlag(BlittableJsonToken.Boolean) &&
-                   !token.HasFlag(BlittableJsonToken.EmbeddedBlittable) &&
-                   !token.HasFlag(BlittableJsonToken.Reserved2) &&
-                   !token.HasFlag(BlittableJsonToken.Reserved4) &&
-                   !token.HasFlag(BlittableJsonToken.Reserved6);
-        }
-
-        public string[] RetrieveInterestingTerms(int docNum)
-        {
-            var al = new List<object>(_maxQueryTerms);
-            var pq = RetrieveTerms(docNum);
-            object cur;
-            var lim = _maxQueryTerms; // have to be careful, retrieveTerms returns all words but that's probably not useful to our caller...
-            // we just want to return the top words
-            while ((cur = pq.Pop()) != null && lim-- > 0)
-            {
-                var ar = (object[])cur;
-                al.Add(ar[0]); // the 1st entry is the interesting word
-            }
-            //System.String[] res = new System.String[al.Count];
-            //return al.toArray(res);
-            return al.Select(x => x.ToString()).ToArray();
-        }
-
-        /// <summary> Convenience routine to make it easy to return the most interesting words in a document.
-        /// More advanced users will call <see cref="RetrieveTerms(System.IO.TextReader)"/> directly.
-        /// </summary>
-        /// <param name="r">the source document
-        /// </param>
-        /// <returns> the most interesting words in the document
-        /// 
-        /// </returns>
-        /// <seealso cref="RetrieveTerms(System.IO.TextReader)">
-        /// </seealso>
-        /// <seealso cref="MaxQueryTerms">
-        /// </seealso>
-        public string[] RetrieveInterestingTerms(TextReader r)
-        {
-            var al = new List<object>(_maxQueryTerms);
-            var pq = RetrieveTerms(r);
-            object cur;
-            var lim = _maxQueryTerms; // have to be careful, retrieveTerms returns all words but that's probably not useful to our caller...
-            // we just want to return the top words
-            while ((cur = pq.Pop()) != null && lim-- > 0)
-            {
-                var ar = (object[])cur;
-                al.Add(ar[0]); // the 1st entry is the interesting word
-            }
-            //System.String[] res = new System.String[al.Count];
-            // return (System.String[]) SupportClass.ICollectionSupport.ToArray(al, res);
-            return al.Select(x => x.ToString()).ToArray();
-        }
-
         /// <summary> PriorityQueue that orders words by score.</summary>
-        private class FreqQ : PriorityQueue<object[]>
+        protected class FreqQ : PriorityQueue<object[]>
         {
             internal FreqQ(int s)
             {

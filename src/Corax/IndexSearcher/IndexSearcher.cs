@@ -38,6 +38,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
     internal Transaction Transaction => _transaction;
 
+    public IndexFieldsMapping FieldMapping => _fieldMapping;
 
     private readonly bool _ownsTransaction;
 
@@ -142,6 +143,8 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         }
     }
 
+
+
     internal ByteStringContext<ByteStringMemoryCache>.InternalScope ApplyAnalyzer(ReadOnlySpan<byte> originalTerm, int fieldId, out Slice value)
     {
         if (_fieldMapping.TryGetByFieldId(fieldId, out var binding) == false
@@ -198,6 +201,8 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     {
         return new AllEntriesMatch(this, _transaction);
     }
+    
+    public TermMatch EmptySet() => TermMatch.CreateEmpty(Allocator);
 
     public long GetEntriesAmountInField(string name)
     {

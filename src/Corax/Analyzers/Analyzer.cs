@@ -495,6 +495,13 @@ namespace Corax
                 throw new ArgumentException("Buffer is too small");
             
             var emptyHandler = Array.Empty<byte>();
+            if (source.Length == 0)
+            {
+                output = Span<byte>.Empty;
+                tokens = Span<Token>.Empty;
+                return;
+            }
+
             _funcUtf8(this, source, ref output, ref tokens, ref emptyHandler);
             
             if (emptyHandler.Length > 0)
