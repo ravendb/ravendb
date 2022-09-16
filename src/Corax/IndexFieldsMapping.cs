@@ -34,23 +34,22 @@ public class IndexFieldsMapping : IEnumerable<IndexFieldBinding>
     private const short LongSuffix = 19501; //"-L"
     private const short DoubleSuffix = 17453; //"-D"
 
-    public ByteStringContext<ByteStringMemoryCache>.InternalScope GetFieldNameForLongs(Slice fieldName, out Slice fieldNameForLongs)
+    public static void GetFieldNameForLongs(ByteStringContext context, Slice fieldName, out Slice fieldNameForLongs)
     {
-        return GetFieldNameWithPostfix(fieldName, LongSuffix, out fieldNameForLongs);
+        GetFieldNameWithPostfix(context, fieldName, LongSuffix, out fieldNameForLongs);
     }
     
-    public ByteStringContext<ByteStringMemoryCache>.InternalScope GetFieldNameForDoubles(Slice fieldName, out Slice fieldNameForDoubles)
+    public static void GetFieldNameForDoubles(ByteStringContext context, Slice fieldName, out Slice fieldNameForDoubles)
     {
-        return GetFieldNameWithPostfix(fieldName, DoubleSuffix, out fieldNameForDoubles);
+        GetFieldNameWithPostfix(context, fieldName, DoubleSuffix, out fieldNameForDoubles);
     }
 
-    private unsafe ByteStringContext<ByteStringMemoryCache>.InternalScope GetFieldNameWithPostfix(Slice fieldName, short postfix, out Slice fieldWithPostfix)
+    private static unsafe void GetFieldNameWithPostfix(ByteStringContext context, Slice fieldName, short postfix, out Slice fieldWithPostfix)
     {
-        var scope = _context.Allocate(fieldName.Size + sizeof(short), out ByteString output);
+        context.Allocate(fieldName.Size + sizeof(short), out ByteString output);
         fieldName.Content.CopyTo(output.Ptr);
         *(short*)(output.Ptr + fieldName.Size) = postfix;
         fieldWithPostfix = new Slice(SliceOptions.Key, output);
-        return scope;
     }
 
     public IndexFieldsMapping AddBinding(int fieldId, string fieldName)
@@ -63,8 +62,8 @@ public class IndexFieldsMapping : IEnumerable<IndexFieldBinding>
     {
         if (!_fieldsById.TryGetValue(fieldId, out var storedAnalyzer))
         {
-            GetFieldNameForDoubles(fieldName, out var fieldNameDouble);
-            GetFieldNameForLongs(fieldName, out var fieldNameLong);
+            GetFieldNameForDoubles(_context, fieldName, out var fieldNameDouble);
+            GetFieldNameForLongs(_context, fieldName, out var fieldNameLong);
             var binding = new IndexFieldBinding(fieldId, fieldName,  fieldNameLong,fieldNameDouble, 
                 analyzer, hasSuggestion, fieldIndexingMode, hasSpatial);
             _fields[fieldName] = binding;

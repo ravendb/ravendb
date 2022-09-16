@@ -77,7 +77,7 @@ public class DynamicFieldsTests : StorageTest
             .ToList();
         
         using IDisposable __ = StorageEnvironment.GetStaticContext(out ByteStringContext ctx);
-        Slice.From(ctx, "A", ByteStringType.Immutable, out Slice aSlice);
+        Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice aSlice);
         Slice.From(ctx, "D", ByteStringType.Immutable, out Slice dSlice);
 
         // The idea is that GetField will return an struct we can use later on a loop (we just get it once).
@@ -109,9 +109,6 @@ public class DynamicFieldsTests : StorageTest
 
                 var reader = searcher.GetReaderFor(ids[0]);
 
-                var fieldType = reader.GetFieldType(Encoding.UTF8.GetBytes("Coordinates_Home"), out int intOffset);
-                Assert.Equal(IndexEntryFieldType.SpatialPoint, fieldType);
-                
                 reader.GetReaderFor(Encoding.UTF8.GetBytes("Coordinates_Home")).Read(out (double, double) coords);
                 Assert.Equal(coords.Item1, latitude);
                 Assert.Equal(coords.Item2, longitude);

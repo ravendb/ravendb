@@ -34,7 +34,7 @@ namespace Voron
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static explicit operator Span<byte>(Slice x) => new Span<byte>(x.Content.Ptr, x.Content.Length);
 
-        public ReadOnlySpan<byte> AsReadOnlySpan() => new ReadOnlySpan<byte>(Content.Ptr, Content.Length);
+        public readonly ReadOnlySpan<byte> AsReadOnlySpan() => new ReadOnlySpan<byte>(Content.Ptr, Content.Length);
 
         public bool HasValue => Content.HasValue;
 
