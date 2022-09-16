@@ -27,7 +27,8 @@ namespace SlowTests.Client.Subscriptions
             DoNotReuseServer();
             using (var documentStore = GetDocumentStore())
             {
-                Server.ServerStore.Observer.Suspended = true;
+                Cluster.SuspendObserver(Server);
+
                 var originalDoc = new Doc
                 {
                     Id = "doc/1",
@@ -79,7 +80,8 @@ namespace SlowTests.Client.Subscriptions
             DoNotReuseServer();
             using (var documentStore = GetDocumentStore())
             {
-                Server.ServerStore.Observer.Suspended = true;
+                Cluster.SuspendObserver(Server);
+
                 var originalDoc = new Doc
                 {
                     Id = "doc/1",

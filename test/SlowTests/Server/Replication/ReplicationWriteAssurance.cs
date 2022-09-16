@@ -17,7 +17,7 @@ namespace SlowTests.Server.Replication
         public async Task ServerSideWriteAssurance()
         {
             var (_, leader) = await CreateRaftCluster(3);
-            leader.ServerStore.Observer.Suspended = true;
+            Cluster.SuspendObserver(leader);
             using (var store = GetDocumentStore(new Options
             {
                 Server = leader,
