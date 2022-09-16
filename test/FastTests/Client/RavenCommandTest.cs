@@ -61,6 +61,8 @@ namespace FastTests.Client
                 "DeleteServerWideSorterCommand", "PutServerWideSortersCommand",
                 "SetDatabasesLockCommand",
                 "GetDatabaseSettingsCommand", "PutDatabaseConfigurationSettingsCommand", "ConfigurePostgreSqlCommand",
+                "GetTrafficWatchConfigurationCommand", "SetTrafficWatchConfigurationCommand",
+                "GetNextServerOperationIdCommand", "KillServerOperationCommand",
                 "GetEssentialStatisticsCommand"
             }.OrderBy(t => t);
 

@@ -15,6 +15,7 @@ import models = require("models/database/settings/databaseSettingsModels");
 import popoverUtils = require("common/popoverUtils");
 import genUtils = require("common/generalUtils");
 import messagePublisher = require("common/messagePublisher");
+import { settingsEntry } from "models/database/settings/databaseSettingsModels";
 import shardViewModelBase from "viewmodels/shardViewModelBase";
 
 type viewModeType = "summaryMode" | "editMode";
@@ -265,7 +266,7 @@ class databaseSettings extends shardViewModelBase {
                     }),
                     new textColumn<models.settingsEntry>(summaryGrid, x => x.effectiveValueInUseText(), "Effective Value in Use", "30%", {
                         sortable: "string",
-                        useRawValue: (x) => !x.hasAccess(),
+                        useRawValue: (x) => !x.hasAccess() || x.isSecured(),
                         extraClass: (x) => {
                             if (x.hasAccess()) {
                                 return x.effectiveValueInUseText() ? "value-has-content" : "";
@@ -286,7 +287,7 @@ class databaseSettings extends shardViewModelBase {
                     }),
                     new textColumn<models.settingsEntry>(summaryGrid, x => x.effectiveValue(), "Effective Value", "40%", {
                         sortable: "string",
-                        useRawValue: (x) => !x.hasAccess(),
+                        useRawValue: (x) => !x.hasAccess() || x.isSecured(),
                         extraClass: (x) => {
                             if (x.hasAccess()) {
                                 return x.effectiveValueInUseText() ? "value-has-content" : "";
@@ -332,10 +333,16 @@ class databaseSettings extends shardViewModelBase {
              e: JQueryEventObject,
              onValue: (context: any, valueToCopy?: string) => void) => {
                 if (column.header !== "Origin") {
-                    let value = column.getCellValue(details);
+                    const value = column.getCellValue(details);
                     if (value) {
-                        if (column.header.includes("Effective Value") && !details.hasAccess()) {
-                            value = "Unauthorized to access value!";
+                        if (column.header.includes("Effective Value")) {
+                            if (!details.hasAccess()) {
+                                onValue("Unauthorized to access value!", "");
+                                return;
+                            } else if (details.isSecured()) {
+                                onValue(settingsEntry.passwordBullets, "");
+                                return;
+                        }
                         }
                         onValue(genUtils.escapeHtml(value), value);
                     }

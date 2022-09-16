@@ -3,6 +3,7 @@ using System.IO.Compression;
 using System.Threading.Tasks;
 using FastTests;
 using Tests.Infrastructure;
+using xRetry;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,7 +15,7 @@ namespace SlowTests.Client
         {
         }
 
-        [Theory]
+        [RetryTheory]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task Simple_Bulk_Insert_With_Ssl(RavenTestBase.Options options)
         {

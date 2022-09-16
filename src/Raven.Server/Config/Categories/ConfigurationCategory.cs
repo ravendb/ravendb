@@ -208,8 +208,43 @@ namespace Raven.Server.Config.Categories
                             else if (property.Info.PropertyType == typeof(HashSet<string>))
                             {
                                 var hashSet = new HashSet<string>(SplitValue(value), StringComparer.OrdinalIgnoreCase);
-
+                                
                                 property.Info.SetValue(this, hashSet);
+                            }
+                            else if (property.Info.PropertyType == typeof(HashSet<int>))
+                            {
+                                var values = SplitValue(value).Select(int.Parse).ToArray();
+                                HashSet<int> hashSet = new(values);
+                                property.Info.SetValue(this, hashSet);
+                            }
+                            else if (property.Info.PropertyType.IsGenericType &&
+                                     property.Info.PropertyType.GenericTypeArguments[0].BaseType == typeof(Enum))
+                            {
+                                try
+                                {
+                                    var enumType = property.Info.PropertyType.GenericTypeArguments[0];
+
+                                    var hashSet = Activator.CreateInstance(
+                                        typeof(HashSet<>).MakeGenericType(enumType));
+
+                                    foreach (string item in SplitValue(value))
+                                    {
+                                        var parsedItem = Enum.Parse(enumType, item, ignoreCase: true);
+                                        Expression.Lambda<Action>(
+                                            Expression.Call(
+                                                Expression.Constant(hashSet, property.Info.PropertyType),
+                                                "Add",
+                                                Type.EmptyTypes,
+                                                Expression.Constant(parsedItem, enumType))
+                                        ).Compile()();
+                                    }
+
+                                    property.Info.SetValue(this, hashSet);
+                                }
+                                catch (ArgumentException)
+                                {
+                                    throw new ConfigurationEnumValueException(value, property.Info.PropertyType);
+                                }
                             }
                             else if (property.Info.PropertyType == typeof(UriSetting[]))
                             {
@@ -344,6 +379,8 @@ namespace Raven.Server.Config.Categories
 
             Initialized = true;
         }
+
+
 
         protected virtual void ValidateProperty(PropertyInfo property)
         {

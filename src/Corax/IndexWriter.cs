@@ -14,6 +14,7 @@ using Corax.Pipeline;
 using Corax.Utils;
 using Sparrow;
 using Sparrow.Binary;
+using Sparrow.Compression;
 using Sparrow.Json;
 using Sparrow.Server;
 using Sparrow.Server.Compression;
@@ -40,7 +41,7 @@ namespace Corax
         Set = 2
     }
 
-    public class IndexWriter : IDisposable // single threaded, controlled by caller
+    public partial class IndexWriter : IDisposable // single threaded, controlled by caller
     {
         private long _numberOfModifications;
         private readonly IndexFieldsMapping _fieldsMapping;
@@ -245,10 +246,11 @@ namespace Corax
             return Index(idSlice, data);
         }
 
-        public long Update(string field, Span<byte> key, LazyStringValue id, Span<byte> data)
+        public long Update(string field, Span<byte> key, LazyStringValue id, Span<byte> data, ref long numberOfEntries)
         {
             if (TryGetEntryTermId(field, key, out var entryId) == false)
             {
+                numberOfEntries++;
                 return Index(id, data);
             }
             // if there is more than a single entry for this key, delete & index from scratch
@@ -256,6 +258,7 @@ namespace Corax
             if((entryId & (long)TermIdMask.EnsureIsSingleMask) != 0)
             {
                 RecordDeletion(entryId);
+                numberOfEntries++;
                 return Index(id, data);
             }
 
@@ -268,10 +271,11 @@ namespace Corax
             Span<byte> buf = stackalloc byte[10];
             var idLen = ZigZagEncoding.Encode(buf, id.Size);
 
-            // can fit in old size, have to remove anyway
+            // can't fit in old size, have to remove anyway
             if (rawSize < idLen + id.Size + data.Length)
             {
                 RecordDeletion(entryId);
+                numberOfEntries++;
                 return Index(id, data);
             }
             var context = Transaction.Allocator;
@@ -1093,6 +1097,8 @@ namespace Corax
             Sorter<Slice, SliceStructComparer> sorter = default;
             sorter.Sort(sortedTermsBuffer, 0, termsCount);
 
+            using var dumper = new IndexTermDumper(fieldsTree, fieldId);
+
             fieldTree.InitializeStateForTryGetNextValue();
             for (var index = 0; index < termsCount; index++)
             {
@@ -1106,8 +1112,13 @@ namespace Corax
                 if (fieldTree.TryGetNextValue(termsSpan, out var existing, out var encodedKey) == false)
                 {
                     if (entries.TotalRemovals != 0)
+                    {
                         throw new InvalidOperationException($"Attempt to remove entries from new term: '{term}' for field {fieldId}! This is a bug.");
+                    }
+
                     AddNewTerm(entries, tmpBuf, out termId);
+
+                    dumper.WriteAddition(term, termId);
                     fieldTree.Add(termsSpan, termId, encodedKey);
                     continue;
                 }
@@ -1115,13 +1126,16 @@ namespace Corax
                 switch (AddEntriesToTerm(tmpBuf, existing, ref entries, out termId))
                 {
                     case AddEntriesToTermResult.UpdateTermId:
+                        dumper.WriteAddition(term, termId);
                         fieldTree.Add(termsSpan, termId, encodedKey);
                         break;
                     case AddEntriesToTermResult.RemoveTermId:
                         if (fieldTree.TryRemove(termsSpan, out var ttt) == false)
                         {
+                            dumper.WriteRemoval(term, termId);
                             throw new InvalidOperationException($"Attempt to remove term: '{term}' for field {fieldId}, but it does not exists! This is a bug.");
                         }
+                        dumper.WriteRemoval(term, ttt);
                         break;
                 }
             }
@@ -1355,29 +1369,32 @@ namespace Corax
             }
         }
         
-        private bool TryDeltaEncodingToBuffer(ReadOnlySpan<long> additions, Span<byte> tmpBuf, out Span<byte> encoded)
+        private unsafe bool TryDeltaEncodingToBuffer(ReadOnlySpan<long> additions, Span<byte> tmpBuf, out Span<byte> encoded)
         {
             // try to insert to container value
             //TODO: using simplest delta encoding, need to do better here
-            int pos = ZigZagEncoding.Encode(tmpBuf, additions.Length);
-            pos += ZigZagEncoding.Encode(tmpBuf, additions[0], pos);
-            for (int i = 1; i < additions.Length; i++)
+            fixed (byte* tmpBufferPtr = tmpBuf)
             {
-                if (pos + ZigZagEncoding.MaxEncodedSize >= tmpBuf.Length)
+                int pos = ZigZagEncoding.Encode(tmpBufferPtr, additions.Length);
+                pos += ZigZagEncoding.Encode(tmpBufferPtr, additions[0], pos);
+                for (int i = 1; i < additions.Length; i++)
                 {
-                    encoded = default;
-                    return false;
+                    if (pos + ZigZagEncoding.MaxEncodedSize >= tmpBuf.Length)
+                    {
+                        encoded = default;
+                        return false;
+                    }
+
+                    long entry = additions[i] - additions[i - 1];
+                    if (entry == 0)
+                        continue; // we don't need to store duplicates
+
+                    pos += ZigZagEncoding.Encode(tmpBufferPtr, entry, pos);
                 }
 
-                long entry = additions[i] - additions[i - 1];
-                if (entry == 0)
-                    continue; // we don't need to store duplicates
-
-                pos += ZigZagEncoding.Encode(tmpBuf, entry, pos);
+                encoded = tmpBuf[..pos];
+                return true;
             }
-
-            encoded = tmpBuf[..pos];
-            return true;
         }
 
         private void AddNewTerm(in EntriesModifications entries, Span<byte> tmpBuf, out long termId, bool sortingNeeded = true)

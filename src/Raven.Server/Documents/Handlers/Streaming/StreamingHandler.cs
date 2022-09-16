@@ -1,12 +1,7 @@
-﻿using System;
-using System.Net.Http;
+﻿using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Server.Documents.Handlers.Processors.Streaming;
-using Raven.Server.Documents.Handlers.Processors.TimeSeries;
-using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Streaming
 {

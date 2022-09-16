@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Sparrow.Compression;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Compression;
@@ -24,6 +25,27 @@ namespace FastTests.Sparrow
             Span<byte> vBuffer = new byte[16];
             fixed (byte* bPtr = buffer, vbPtr = vBuffer)
             {
+                for (int i = 0; i < 2 * ushort.MaxValue; i++)
+                {
+                    var value = i;
+
+                    buffer.Fill(0);
+                    vBuffer.Fill(0);
+
+                    int pos = 0;
+                    int length = VariableSizeEncoding.Write<int>(buffer, value);
+
+                    var vbPtrCopy = vbPtr;
+                    JsonParserState.WriteVariableSizeInt(ref vbPtrCopy, value);
+                    Assert.Equal((int)(vbPtrCopy - vbPtr), length);
+                    Assert.Equal(0, vBuffer.SequenceCompareTo(buffer));
+
+                    pos = 0;
+                    Assert.Equal(value, BlittableJsonReaderBase.ReadVariableSizeInt(bPtr, ref pos));
+                    Assert.Equal(value, VariableSizeEncoding.Read<int>(buffer, out int _, 0));
+                }
+
+
                 var rnd = new Random(1337);
                 for (int i = 0; i < 100; i++)
                 {

@@ -15,9 +15,13 @@ namespace Sparrow.Server.Compression
     internal unsafe struct Interval3Gram
     {
         [FieldOffset(0)]
+        public uint BufferAndLength;
+
+        [FieldOffset(0)]
         public fixed byte KeyBuffer[3];
         [FieldOffset(3)]
         public byte _prefixAndKeyLength;
+
         [FieldOffset(4)]
         public Code Code;
 
@@ -429,49 +433,70 @@ namespace Sparrow.Server.Compression
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             static int CompareDictionaryEntry(ReadOnlySpan<byte> s1, ReadOnlySpan<byte> s2)
             {
-                for (int i = 0; i < 3; i++)
-                {
-                    if (i >= s1.Length)
-                    {
-                        if (s2[i] == 0)
-                            return 0;
-                        return -1;
-                    }
+                int length = s1.Length;
+                if (0 >= length)
+                    return s2[0] == 0 ? 0 : -1;
+                if (s1[0] != s2[0])
+                    return s1[0] < s2[0] ? -1 : 1;
 
-                    if (s1[i] < s2[i])
-                        return -1;
-                    if (s1[i] > s2[i])
-                        return 1;
-                }
+                if (1 >= length)
+                    return s2[1] == 0 ? 0 : -1;
+                if (s1[1] != s2[1])
+                    return s1[1] < s2[1] ? -1 : 1;
 
-                if (s1.Length > 3)
-                    return 1;
-                return 0;
+                if (2 >= length)
+                    return s2[2] == 0 ? 0 : -1;
+                if (s1[2] != s2[2])
+                    return s1[2] < s2[2] ? -1 : 1;
+
+                return length > 3 ? 1 : 0;
             }
 
             int l = 0;
             int r = numberOfEntries;
-            while (r - l > 1)
-            {
-                int m = (l + r) >> 1;
 
-                int cmp;
-                fixed (byte* p = table[m].KeyBuffer)
+            if (symbol.Length >= 4)
+            {
+                // PERF: this is an optimized version of the CompareDictionaryEntry routine. Given that we
+                // can actually perform the operation in parallel. The usual case will be to call the parallel
+                // version instead of the serial, until we hit the end of the key. 
+                uint symbolValue = BinaryPrimitives.ReverseEndianness(MemoryMarshal.Read<uint>(symbol)) >> 8;
+                while (r - l > 1)
                 {
-                    cmp = CompareDictionaryEntry(symbol, new ReadOnlySpan<byte>(p,3));
+                    int m = (l + r) >> 1;
+
+                    uint codeValue = BinaryPrimitives.ReverseEndianness(table[m].BufferAndLength) >> 8;
+                    if (symbolValue < codeValue)
+                        r = m;
+                    else
+                        l = m;
                 }
-                if (cmp < 0)
+            }
+            else
+            {
+                while (r - l > 1)
                 {
-                    r = m;
-                }
-                else if (cmp == 0)
-                {
-                    l = m;
-                    break;
-                }
-                else
-                {
-                    l = m;
+                    int m = (l + r) >> 1;
+
+                    int cmp;
+                    fixed (byte* p = table[m].KeyBuffer)
+                    {
+                        cmp = CompareDictionaryEntry(symbol, new ReadOnlySpan<byte>(p, 3));
+                    }
+
+                    if (cmp < 0)
+                    {
+                        r = m;
+                    }
+                    else if (cmp == 0)
+                    {
+                        l = m;
+                        break;
+                    }
+                    else
+                    {
+                        l = m;
+                    }
                 }
             }
 

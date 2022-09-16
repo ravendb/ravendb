@@ -85,6 +85,14 @@ namespace Voron
 
         public bool EnablePrefetching = true;
 
+        internal DisposableAction DisableOnRecoveryErrorHandler()
+        {
+            var handler = OnRecoveryError;
+            OnRecoveryError = null;
+
+            return new DisposableAction(() => OnRecoveryError = handler);
+        }
+
         public void InvokeRecoveryError(object sender, string message, Exception e)
         {
             var handler = OnRecoveryError;
@@ -95,6 +103,14 @@ namespace Voron
             }
 
             handler(this, new RecoveryErrorEventArgs(message, e));
+        }
+
+        internal DisposableAction DisableOnIntegrityErrorOfAlreadySyncedDataHandler()
+        {
+            var handler = OnIntegrityErrorOfAlreadySyncedData;
+            OnIntegrityErrorOfAlreadySyncedData = null;
+
+            return new DisposableAction(() => OnIntegrityErrorOfAlreadySyncedData = handler);
         }
 
         public void InvokeIntegrityErrorOfAlreadySyncedData(object sender, string message, Exception e)
@@ -1414,6 +1430,21 @@ namespace Voron
                     }
                 }
             }
+        }
+
+        internal TestingStuff ForTestingPurposes;
+
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (ForTestingPurposes != null)
+                return ForTestingPurposes;
+
+            return ForTestingPurposes = new TestingStuff();
+        }
+
+        internal class TestingStuff
+        {
+            public int? WriteToJournalCompressionAcceleration = null;
         }
     }
 }

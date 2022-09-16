@@ -13,6 +13,7 @@ using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
+using OperationCanceledException = System.OperationCanceledException;
 
 namespace Raven.Debug.LogTrafficWatch
 {
@@ -22,10 +23,14 @@ namespace Raven.Debug.LogTrafficWatch
         private readonly string _schema;
         private readonly string _host;
         private readonly int _port;
+        private readonly CancellationTokenSource _cancellationTokenSource;
         private readonly int _threads;
         
         public HttpClient HttpClient;
         private readonly Channel<TrafficWatchHttpChange> _trafficChannel = Channel.CreateBounded<TrafficWatchHttpChange>(1024);
+        private readonly Task[] _consumers;
+        private readonly Stopwatch _sp = new();
+
 
         public TrafficWatchReplay(string path, string certPath, string certPass, string host, int port, int threads = 8)
         {
@@ -41,6 +46,8 @@ namespace Raven.Debug.LogTrafficWatch
             _threads = threads;
             _host = host;
             _port = port;
+            _cancellationTokenSource = new CancellationTokenSource();
+            _consumers = new Task[_threads];
 
             InitializeHttpClient(certPath, certPass);
         }
@@ -48,34 +55,34 @@ namespace Raven.Debug.LogTrafficWatch
         public async Task Start()
         {
             Console.WriteLine($"[{DateTime.UtcNow:O}] Start traffic watch replay");
-            var sp = Stopwatch.StartNew();
-            
+            _sp.Start();
+
             var producers = new Task[_trafficFiles.Length];
             for (var index = 0; index < _trafficFiles.Length; index++)
             {
                 var trafficFile = _trafficFiles[index];
-                producers[index] = new TrafficParser(trafficFile, _trafficChannel).Execute();
-                
+                producers[index] = new TrafficParser(trafficFile, _trafficChannel, _cancellationTokenSource.Token).Execute();
             }
 
-            var consumers = new Task[_threads];
             for (var i = 0; i < _threads; i++)
             {
-                consumers[i] = new TrafficReplay(_trafficChannel, HttpClient, _schema, _host, _port).Execute();
+                _consumers[i] = new TrafficReplay(_trafficChannel, HttpClient, _cancellationTokenSource.Token, _schema, _host, _port).Execute();
             }
 
             var whenAllProducersTask = Task.WhenAll(producers);
             while (whenAllProducersTask.Wait(1_000) == false)
             {
-                Console.WriteLine($"[{DateTime.UtcNow:O}] Processed {TrafficReplay.RequestsCount:#,#;;0}");
+                if (_cancellationTokenSource.Token.IsCancellationRequested)
+                    break;
+
+                Console.WriteLine($"[{DateTime.UtcNow:O}] Processed {TrafficReplay.RequestsCount:#,#;;0} requests");
             }
 
             _trafficChannel.Writer.Complete();
+            await Task.WhenAll(_consumers);
 
-            await Task.WhenAll(consumers);
-
-            Console.WriteLine($"[{DateTime.UtcNow:O}] Processed {TrafficReplay.RequestsCount:#,#;;0} RequestsCount");
-            Console.WriteLine($"[{DateTime.UtcNow:O}] Done after {sp.Elapsed}");
+            Console.WriteLine($"[{DateTime.UtcNow:O}] Totally processed {TrafficReplay.RequestsCount:#,#;;0} requests");
+            Console.WriteLine($"[{DateTime.UtcNow:O}] Done after {_sp.Elapsed}");
         }
 
         public class TrafficParser
@@ -91,19 +98,28 @@ namespace Raven.Debug.LogTrafficWatch
 
             private readonly string _file;
             private readonly Channel<TrafficWatchHttpChange> _trafficChannel;
+            private readonly CancellationToken _cancellationToken;
 
-            internal TrafficParser(string file, Channel<TrafficWatchHttpChange> trafficChannel)
+            internal TrafficParser(string file, Channel<TrafficWatchHttpChange> trafficChannel, CancellationToken cancellationToken)
             {
                 _file = file;
                 _trafficChannel = trafficChannel;
+                _cancellationToken = cancellationToken;
             }
 
             public async Task Execute()
             {
-                await foreach (var item in GetItemsList<TrafficWatchHttpChange>(_file))
+                try
                 {
-                    await _trafficChannel.Writer.WriteAsync(item);
-                    Interlocked.Increment(ref LoadedRequestCount);
+                    await foreach (var item in GetItemsList<TrafficWatchHttpChange>(_file, _cancellationToken))
+                    {
+                        await _trafficChannel.Writer.WriteAsync(item, _cancellationToken);
+                        Interlocked.Increment(ref LoadedRequestCount);
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    // ignore
                 }
             }
 
@@ -127,10 +143,12 @@ namespace Raven.Debug.LogTrafficWatch
             private readonly int _port;
             private readonly Channel<TrafficWatchHttpChange> _trafficChannel;
             private readonly HttpClient _httpClient;
+            private readonly CancellationToken _cancellationToken;
 
             public static int RequestsCount;
 
-            internal TrafficReplay(Channel<TrafficWatchHttpChange> trafficChannel, HttpClient httpClient, string schema = "http", string host = "127.0.0.1",
+            internal TrafficReplay(Channel<TrafficWatchHttpChange> trafficChannel, HttpClient httpClient, CancellationToken cancellationToken, string schema = "http",
+                string host = "127.0.0.1",
                 int port = 8080)
             {
                 _schema = schema;
@@ -138,6 +156,7 @@ namespace Raven.Debug.LogTrafficWatch
                 _port = port;
                 _trafficChannel = trafficChannel;
                 _httpClient = httpClient;
+                _cancellationToken = cancellationToken;
             }
 
             public async Task Execute()
@@ -149,17 +168,23 @@ namespace Raven.Debug.LogTrafficWatch
                     TrafficWatchHttpChange item;
                     try
                     {
-                        item = await _trafficChannel.Reader.ReadAsync();
-                        Interlocked.Increment(ref RequestsCount);
+                        item = await _trafficChannel.Reader.ReadAsync(_cancellationToken);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        return;
                     }
                     catch (ChannelClosedException)
                     {
                         // queue is empty
                         return;
                     }
-
+                    
+                    if (item.RequestUri == null) 
+                        continue;
+                    
                     var uri = UriReplace(item.RequestUri);
-                   
+
                     try
                     {
                         if (item.Type != TrafficWatchChangeType.Queries)
@@ -171,7 +196,7 @@ namespace Raven.Debug.LogTrafficWatch
                             {
                                 // use the uri as is
                                 using var getRequest = new HttpRequestMessage(HttpMethod.Get, uri);
-                                using var response = await _httpClient.SendAsync(getRequest);
+                                using var response = await _httpClient.SendAsync(getRequest, _cancellationToken);
                                 await ConsumeResponse(response, responseBuffer);
                                 break;
                             }
@@ -198,26 +223,29 @@ namespace Raven.Debug.LogTrafficWatch
                                 }
 
                                 using var postRequest = new HttpRequestMessage(HttpMethod.Post, uri) { Content = new StringContent(body) };
-                                using var response = await _httpClient.SendAsync(postRequest);
+                                using var response = await _httpClient.SendAsync(postRequest, _cancellationToken);
                                 await ConsumeResponse(response, responseBuffer);
                                 break;
                             }
                         }
 
-
+                        Interlocked.Increment(ref RequestsCount);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        return;
                     }
                     catch (Exception ex)
                     {
                         Console.WriteLine(ex);
-                        // ignore
                     }
                 }
             }
 
-            private static async Task ConsumeResponse(HttpResponseMessage response, byte[] responseBuffer)
+            private async Task ConsumeResponse(HttpResponseMessage response, byte[] responseBuffer)
             {
-                await using var stream = await response.Content.ReadAsStreamAsync();
-                while (await stream.ReadAsync(responseBuffer) > 0)
+                await using var stream = await response.Content.ReadAsStreamAsync(_cancellationToken);
+                while (await stream.ReadAsync(responseBuffer, _cancellationToken) > 0)
                 {
                 }
             }
@@ -293,13 +321,13 @@ namespace Raven.Debug.LogTrafficWatch
         public void Stop()
         {
             Console.WriteLine("Stop collection traffic watch. Exiting...");
-            Dispose();
-            Environment.Exit(0);
+            _cancellationTokenSource.Cancel();
         }
 
         public void Dispose()
         {
             HttpClient?.Dispose();
+            _cancellationTokenSource.Dispose();
         }
     }
 }

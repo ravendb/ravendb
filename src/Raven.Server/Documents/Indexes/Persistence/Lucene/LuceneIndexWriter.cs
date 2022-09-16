@@ -151,13 +151,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             _indexWriter = new TimeTrackingIndexWriter(_directory, _analyzer, _indexDeletionPolicy, _maxFieldLength, state);
             _indexWriter.UseCompoundFile = false;
-            _indexWriter.SetMergePolicy(new LogByteSizeMergePolicy(_indexWriter)
+            var mergePolicy = new LogByteSizeMergePolicy(_indexWriter)
             {
                 MaxMergeMB = _index.Configuration.MaximumSizePerSegment.GetValue(SizeUnit.Megabytes),
                 MergeFactor = _index.Configuration.MergeFactor,
                 LargeSegmentSizeMB = _index.Configuration.LargeSegmentSizeToMerge.GetValue(SizeUnit.Megabytes),
                 NumberOfLargeSegmentsToMergeInSingleBatch = _index.Configuration.NumberOfLargeSegmentsToMergeInSingleBatch
-            });
+            };
+            
+            mergePolicy.SetUseCompoundFile(_index.Configuration.LuceneUseCompoundFileInMerging);
+            _indexWriter.SetMergePolicy(mergePolicy);
 
             if (_indexReaderWarmer != null)
             {

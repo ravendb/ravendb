@@ -114,6 +114,10 @@ module.exports = (env, args) => {
         module: {
             rules: [
                 {
+                    resourceQuery: /raw/,
+                    type: 'asset/source',
+                },
+                {
                     test: /\.font\.js$/,
                     use: [
                         MiniCssExtractPlugin.loader,
@@ -294,6 +298,7 @@ module.exports = (env, args) => {
                 configuration: path.resolve(__dirname, 'typings/server/configuration'),
                 
                 Content: path.resolve(__dirname, 'wwwroot/Content/'),
+                wwwroot: path.resolve(__dirname, 'wwwroot/'),
                 d3: path.resolve(__dirname, 'wwwroot/Content/custom_d3'),
                 qrcodejs: path.resolve(__dirname, 'wwwroot/Content/custom_qrcode'),
                 ["google.analytics"]: path.resolve(__dirname, 'wwwroot/Content/custom_ga'),

@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
@@ -904,10 +905,16 @@ namespace Raven.Client.Documents.Subscriptions
                 case AllTopologyNodesDownException _:
                 case SubscriberErrorException _:
                 case NotSupportedInShardingException _:
-                case RavenException _:
-                    processingCts?.Cancel();
+                    _processingCts.Cancel();
                     return (false, null);
+                case RavenException re:
+                    if (re.InnerException is HttpRequestException or TimeoutException)
+                    {
+                        goto default;
+                    }
 
+                    _processingCts.Cancel();
+                    return (false, null);
                 default:
                     onUnexpectedSubscriptionError?.Invoke(ex);
                     assertLastConnectionFailure?.Invoke();

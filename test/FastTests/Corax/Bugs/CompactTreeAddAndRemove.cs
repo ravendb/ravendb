@@ -5,6 +5,7 @@ using FastTests.Voron;
 using Parquet.Thrift;
 using SharpCompress.Compressors;
 using SharpCompress.Compressors.Deflate;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Data.CompactTrees;
 using Voron.Data.RawData;
@@ -24,13 +25,17 @@ public class CompactTreeAddAndRemove : StorageTest
         _testOutputHelper = testOutputHelper;
     }
 
-    [Fact]
-    public unsafe void AddAndRemoveValues()
+    [RavenTheory(RavenTestCategory.Voron)]
+    [InlineData("repro-4.log.gz")]
+    [InlineData("repro-2.log.gz")]
+    public unsafe void AddAndRemoveValues(string filename)
     {
         using (var wtx = Env.WriteTransaction())
         {
+            int i = 0;
+
             CompactTree dates = wtx.CompactTreeFor("Dates");
-            foreach ( var terms in ReadTermsFromResource("repro-2.log.gz"))
+            foreach (var terms in ReadTermsFromResource(filename))
             {
                 for (var index = 0; index < terms.Count; index++)
                 {
@@ -47,9 +52,11 @@ public class CompactTreeAddAndRemove : StorageTest
                             Assert.Equal(long.Parse(parts[2]), old);
                             break;
                     }
+
+                    i++;
                 }
             }
-            
+
             dates.Verify();
             dates.VerifyOrderOfElements();
             foreach (long page in dates.AllPages())
@@ -59,7 +66,7 @@ public class CompactTreeAddAndRemove : StorageTest
             }
         }
     }
-    
+
     private static IEnumerable<List<string>> ReadTermsFromResource(string file)
     {
         var reader = new StreamReader(new GZipStream(typeof(SetAddRemoval).Assembly.GetManifestResourceStream("FastTests.Corax.Bugs." + file), CompressionMode.Decompress));

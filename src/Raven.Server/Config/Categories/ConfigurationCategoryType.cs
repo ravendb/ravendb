@@ -34,6 +34,8 @@ namespace Raven.Server.Config.Categories
         Tombstones,
         [Description("Transaction Merger")]
         TransactionMerger,
-        Updates
+        Updates,
+        [Description("Traffic Watch")]
+        TrafficWatch
     }
 }

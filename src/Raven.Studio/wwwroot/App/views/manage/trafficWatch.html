@@ -32,6 +32,11 @@
                 <label for="onlyErrors">Show errors only</label>
             </div>
         </div>
+        <div class="flex-grow"></div>
+        <div>
+            <i class="icon-info"></i>
+            <small>To set the Traffic Watch logging go to <a data-bind="attr: { href: adminLogsUrl }">Admin Logs View</a></small>
+        </div>
     </div>
     <div class="flex-horizontal">
         <div class="flex-separator"></div>
@@ -98,39 +103,65 @@
                 </div>
             </div>
             <div class="row margin-top">
-                <div class="properties-container stats-container flex-horizontal padding padding-sm" data-label="Duration (HTTP)"
-                     data-toggle="tooltip" title="Requests duration info <br> (excluding web sockets)" data-placement="top">
-                    <div class="property">
-                        <h5><i class="icon-arrow-filled-down"></i><span>Minimum duration</span></h5>
-                        <strong data-bind="text: stats.min" class="stats-property"></strong>
+                <div class="properties-container stats-container flex-horizontal padding padding-sm" data-label="Request Duration (HTTP)"
+                     data-toggle="tooltip" title="Requests duration percentiles <br> (excluding web sockets - calculated based on last 2048 items)" data-placement="top">
+                    <div class="property right-border">
+                        <h5><i class="icon-average"></i><span>Average</span></h5>
+                        <strong data-bind="text: stats.requestDuration().avg" class="stats-property"></strong>
                     </div>
                     <div class="property">
-                        <h5><i class="icon-average"></i><span>Average duration</span></h5>
-                        <strong data-bind="text: stats.avg" class="stats-property"></strong>
+                        <h5><i class="icon-arrow-filled-down"></i><span>Minimum</span></h5>
+                        <strong data-bind="text: stats.requestDuration().min" class="stats-property"></strong>
                     </div>
-                    <div class="property">
-                        <h5><i class="icon-arrow-filled-up"></i><span>Maximum duration</span></h5>
-                        <strong data-bind="text: stats.max" class="stats-property"></strong>
-                    </div>
-                </div>
-            </div>
-            <div class="row margin-top">
-                <div class="properties-container stats-container padding padding-sm" data-label="Percentiles (HTTP)"
-                     data-toggle="tooltip" title="Percentiles info <br> (excluding web sockets)" data-placement="top">
                     <div class="property">
                         <h5>90%</h5>
-                        <strong data-bind="text: stats.percentile_90"></strong>
+                        <strong data-bind="text: stats.requestDuration().percentile_90"></strong>
                     </div>
                     <div class="property">
                         <h5>99%</h5>
-                        <strong data-bind="text: stats.percentile_99"></strong>
+                        <strong data-bind="text: stats.requestDuration().percentile_99"></strong>
                     </div>
                     <div class="property">
                         <h5>99.9%</h5>
-                        <strong data-bind="text: stats.percentile_99_9"></strong>
+                        <strong data-bind="text: stats.requestDuration().percentile_99_9"></strong>
+                    </div>
+                    <div class="property">
+                        <h5><i class="icon-arrow-filled-up"></i><span>Maximum</span></h5>
+                        <strong data-bind="text: stats.requestDuration().max" class="stats-property"></strong>
                     </div>
                 </div>
             </div>
+
+            <div class="row margin-top">
+                <div class="properties-container stats-container flex-horizontal padding padding-sm" data-label="Response size (HTTP)"
+                     data-toggle="tooltip" title="Response size percentiles <br> (excluding web sockets - calculated based on last 2048 items)" data-placement="top">
+                    <div class="property right-border">
+                        <h5><i class="icon-average"></i><span>Average</span></h5>
+                        <strong data-bind="text: stats.responseSize().avg" class="stats-property"></strong>
+                    </div>
+                    <div class="property">
+                        <h5><i class="icon-arrow-filled-down"></i><span>Minimum</span></h5>
+                        <strong data-bind="text: stats.responseSize().min" class="stats-property"></strong>
+                    </div>
+                    <div class="property">
+                        <h5>90%</h5>
+                        <strong data-bind="text: stats.responseSize().percentile_90"></strong>
+                    </div>
+                    <div class="property">
+                        <h5>99%</h5>
+                        <strong data-bind="text: stats.responseSize().percentile_99"></strong>
+                    </div>
+                    <div class="property">
+                        <h5>99.9%</h5>
+                        <strong data-bind="text: stats.responseSize().percentile_99_9"></strong>
+                    </div>
+                    <div class="property">
+                        <h5><i class="icon-arrow-filled-up"></i><span>Maximum</span></h5>
+                        <strong data-bind="text: stats.responseSize().max"></strong>
+                    </div>
+                </div>
+            </div>
+            
             <div class="row" data-bind="visible: isDataFiltered">
                 <div class="properties-container pull-right">
                     <small class="text-warning bg-warning padding padding-xs">

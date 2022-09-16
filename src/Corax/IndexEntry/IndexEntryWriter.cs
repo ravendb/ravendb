@@ -4,11 +4,10 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Corax.Utils;
-using Corax.Utils.Spatial;
 using Sparrow;
 using Sparrow.Binary;
+using Sparrow.Compression;
 using Sparrow.Server;
-using Sparrow.Server.Compression;
 using Voron.Impl;
 
 namespace Corax;
@@ -30,13 +29,13 @@ public unsafe partial struct IndexEntryWriter : IDisposable
     private int FreeSpace => _rawBuffer.Length - KnownFieldMetadataSize - _dataIndex - _dynamicFieldIndex;
 
     // The usable part of the buffer, the metadata space will be removed from the usable space.
-    private Span<byte> Buffer => new Span<byte>(_rawBuffer.Ptr, _rawBuffer.Length - KnownFieldMetadataSize);
+    private Span<byte> Buffer => new (_rawBuffer.Ptr, _rawBuffer.Length - KnownFieldMetadataSize);
 
     // Temporary location for the pointers, these will eventually be encoded based on how big they are.
     // <256 bytes we could use a single byte
     // <65546 bytes we could use a single ushort
     // for the rest we will use a uint.
-    private Span<int> KnownFieldsLocations => new Span<int>(_rawBuffer.Ptr + _rawBuffer.Length - KnownFieldMetadataSize, _knownFields.Count);
+    private Span<int> KnownFieldsLocations => new (_rawBuffer.Ptr + _rawBuffer.Length - KnownFieldMetadataSize, _knownFields.Count);
 
     private int KnownFieldMetadataSize => _knownFields.Count * sizeof(uint);
 
@@ -47,7 +46,7 @@ public unsafe partial struct IndexEntryWriter : IDisposable
     private int _dataIndex;
 
     // Dynamic fields will use a full integer to store the pointer location at the metadata table. They are supposed to be rare 
-    // so we wont even try to make the process more complex just to deal with them efficienly.
+    // so we wont even try to make the process more complex just to deal with them efficiently.
     private int _dynamicFieldIndex;
 
     public IndexEntryWriter(LowLevelTransaction llt, IndexFieldsMapping knownFields) 
@@ -92,7 +91,7 @@ public unsafe partial struct IndexEntryWriter : IDisposable
         Debug.Assert(KnownFieldsLocations[field] == Invalid, "The field has been written before.");
 
         if (FreeSpace < value.Length + sizeof(long))
-            UnlikelyGrowAuxiliaryBuffer();
+            UnlikelyGrowAuxiliaryBuffer(value.Length + sizeof(long));
 
         // Write known field.
         ref int fieldLocation = ref KnownFieldsLocations[field];                
@@ -124,7 +123,7 @@ public unsafe partial struct IndexEntryWriter : IDisposable
         Debug.Assert(KnownFieldsLocations[field] == Invalid, "The field has been written before.");
 
         if (FreeSpace < binaryValue.Length + sizeof(long))
-            UnlikelyGrowAuxiliaryBuffer();
+            UnlikelyGrowAuxiliaryBuffer(binaryValue.Length + sizeof(long));
 
         int dataLocation = _dataIndex;
 
@@ -273,7 +272,7 @@ public unsafe partial struct IndexEntryWriter : IDisposable
         Debug.Assert(KnownFieldsLocations[field] == Invalid, "The field has been written before.");
 
         if (FreeSpace < sizeof(IndexEntryFieldType) + value.Length + 4 * sizeof(long))
-            UnlikelyGrowAuxiliaryBuffer();
+            UnlikelyGrowAuxiliaryBuffer(sizeof(IndexEntryFieldType) + value.Length + 4 * sizeof(long));
 
         int dataLocation = _dataIndex;
         var buffer = Buffer;        
@@ -542,8 +541,9 @@ public unsafe partial struct IndexEntryWriter : IDisposable
     {
         // Since we are at the end of the process, as long as we hve 2 longs of space we can
         // finish the preprocessing to write the data into the new allocated buffer. 
-        if (FreeSpace < 2 * sizeof(long))
-            UnlikelyGrowAuxiliaryBuffer();
+        int requiredSpace = (_knownFields.Count + 2) * sizeof(long);
+        if (FreeSpace < requiredSpace)
+            UnlikelyGrowAuxiliaryBuffer(requiredSpace);
         
         var knownFieldsLocations = KnownFieldsLocations;
 
@@ -658,11 +658,16 @@ public unsafe partial struct IndexEntryWriter : IDisposable
         return count * offset;
     }
 
-    private void UnlikelyGrowAuxiliaryBuffer(long requiredSize = 0)
+    private void UnlikelyGrowAuxiliaryBuffer(long extraRequiredSpace = 0)
     {
+        // The new buffer has to have at least an extra over the current free-space.
+        // Therefore, the size must be (conservatively) as big as the current buffer
+        // plus the extra we are going to be needing. 
+        extraRequiredSpace += _rawBuffer.Length;
+
         // Since we are duplicating we need to ensure that the extension will fit.
         var newSize = _rawBuffer.Length * 2;
-        while (newSize - _rawBuffer.Length < requiredSize)
+        while (newSize <= extraRequiredSpace)
             newSize *= 2;
 
         var newBufferScope = _context.Allocate(newSize, out var newBuffer);

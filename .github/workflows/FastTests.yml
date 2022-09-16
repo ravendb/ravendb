@@ -10,7 +10,7 @@ on:
         - v6.0
 
 env:
-  DOTNET_VERSION: 6.0.400
+  DOTNET_VERSION: 6.0.401
   
 
 jobs:

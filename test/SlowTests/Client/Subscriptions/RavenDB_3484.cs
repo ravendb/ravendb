@@ -63,7 +63,8 @@ namespace SlowTests.Client.Subscriptions
             DoNotReuseServer();
             using (var store = GetDocumentStore())
             {
-                Server.ServerStore.Observer.Suspended = true;
+                Cluster.SuspendObserver(Server);
+
                 var id = store.Subscriptions.Create<User>();
 
                 const int numberOfClients = 2;

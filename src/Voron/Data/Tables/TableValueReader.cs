@@ -7,6 +7,7 @@
 using System;
 using System.Diagnostics;
 using System.Text;
+using Sparrow.Compression;
 using Sparrow.Json;
 
 namespace Voron.Data.Tables
@@ -37,7 +38,7 @@ namespace Voron.Data.Tables
             else
                 _elementSize = 1;
 
-            Count = BlittableJsonReaderBase.ReadVariableSizeInt(ptr, 0, out byte offset);
+            Count = VariableSizeEncoding.Read<int>(ptr,  out var offset);
             _dataPtr = Pointer + offset;
             _dataSize = Size - offset;
         }

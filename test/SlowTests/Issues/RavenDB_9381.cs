@@ -1,4 +1,5 @@
 ﻿using FastTests.Voron;
+using Raven.Client.Documents.Indexes;
 using Raven.Server.Indexing;
 using Xunit;
 using Xunit.Abstractions;
@@ -17,7 +18,7 @@ namespace SlowTests.Issues
             using (var tx = Env.WriteTransaction())
             using (var cache = new TempFileCache(Env.Options))
             {
-                var dir = new LuceneVoronDirectory(tx, Env, cache);
+                var dir = new LuceneVoronDirectory(tx, Env, cache, LuceneIndexInputType.Standard);
 
                 var state = new VoronState(tx);
 

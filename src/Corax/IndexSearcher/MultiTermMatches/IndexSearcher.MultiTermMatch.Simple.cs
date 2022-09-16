@@ -1,5 +1,7 @@
 ﻿using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
 using Corax.Queries;
+using Sparrow.Server;
 using Voron;
 
 namespace Corax;
@@ -118,5 +120,17 @@ public partial class IndexSearcher
         where TScoreFunction : IQueryScoreFunction
     {
         return MultiTermMatchBuilder<TScoreFunction, ExistsTermProvider>(field, null, scoreFunction, false, Constants.IndexSearcher.NonAnalyzer);
+    }
+
+    public MultiTermMatch RegexQuery<TScoreFunction>(string field, TScoreFunction scoreFunction, Regex regex)
+        where TScoreFunction : IQueryScoreFunction
+    {
+        var fields = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
+        var terms = fields?.CompactTreeFor(field);
+        if (terms == null)
+            return MultiTermMatch.CreateEmpty(_transaction.Allocator);
+
+        return MultiTermMatch.Create(new MultiTermMatch<RegexTermProvider>(_transaction.Allocator,
+            new RegexTermProvider(this, terms, field, regex)));
     }
 }

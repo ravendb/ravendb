@@ -6,9 +6,9 @@ import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 
 type configurationOrigin = "Default" | "Server" | "Database";
 
-export abstract class settingsEntry {
+export abstract class settingsEntry<T extends Raven.Server.Config.ConfigurationEntryServerValue = Raven.Server.Config.ConfigurationEntryServerValue>{
 
-    data: Raven.Server.Config.ConfigurationEntryDatabaseValue;
+    data: T;
 
     keyName = ko.observable<string>();
     
@@ -26,6 +26,8 @@ export abstract class settingsEntry {
     hasPendingContent = ko.observable<boolean>(false);
     
     hasAccess = ko.observable<boolean>(true);
+    isSecured = ko.observable<boolean>(false);
+    
     static passwordBullets = "&bull;&bull;&bull;&bull;&bull;";
     
     // These 2 are needed for Summary view
@@ -35,12 +37,14 @@ export abstract class settingsEntry {
     entryClassForSummaryMode: KnockoutComputed<string>;
     descriptionHtml: KnockoutComputed<string>;
 
-    protected constructor(data: Raven.Server.Config.ConfigurationEntryDatabaseValue) {
+    protected constructor(data: T) {
         this.data = data;
 
         this.hasServerValue = ko.pureComputed(() => !_.isEmpty(this.data.ServerValues));
 
         this.keyName(this.data.Metadata.Keys[0]);
+
+        this.isSecured(this.data.Metadata.IsSecured);
         
         if (this.data.Metadata.Keys.length > 1 && this.hasServerValue()) {
             // a single metadata key is expected from configuration, but case must be handled, see RavenDB-17777
@@ -63,19 +67,19 @@ export abstract class settingsEntry {
         });
     }
 
-    static getEntry(rawEntry: Raven.Server.Config.ConfigurationEntryDatabaseValue) {
+    static getEntry(rawEntry: Raven.Server.Config.ConfigurationEntryValue) {
         if (rawEntry.Metadata.Scope === "ServerWideOnly") {
-            return new serverWideOnlyEntry(rawEntry);
+            return new serverWideOnlyEntry(rawEntry as Raven.Server.Config.ConfigurationEntryServerValue);
         }
         
-        return databaseEntry.getEntry(rawEntry);
+        return databaseEntry.getEntry(rawEntry as Raven.Server.Config.ConfigurationEntryDatabaseValue);
     }
 
     abstract getTemplateType(): settingsTemplateType;
 }
 
 export class serverWideOnlyEntry extends settingsEntry {
-    constructor(data: Raven.Server.Config.ConfigurationEntryDatabaseValue) {
+    constructor(data: Raven.Server.Config.ConfigurationEntryServerValue) {
         super(data);
         this.isServerWideOnlyEntry(true);
 
@@ -101,7 +105,7 @@ export class serverWideOnlyEntry extends settingsEntry {
     }
 }
 
-export abstract class databaseEntry<T> extends settingsEntry {
+export abstract class databaseEntry<T> extends settingsEntry<Raven.Server.Config.ConfigurationEntryDatabaseValue> {
     customizedDatabaseValue = ko.observable<T>();
     override = ko.observable<boolean>(false);
   
@@ -176,7 +180,7 @@ export abstract class databaseEntry<T> extends settingsEntry {
         }
 
         this.effectiveValue = ko.pureComputed(() => {
-            if (!this.hasAccess()) {
+            if (!this.hasAccess() || this.isSecured()) {
                 return settingsEntry.passwordBullets;
             }
             

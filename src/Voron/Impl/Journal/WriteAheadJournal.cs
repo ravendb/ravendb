@@ -80,6 +80,7 @@ namespace Voron.Impl.Journal
 
             _compressionPager = CreateCompressionPager(_env.Options.InitialFileSize ?? _env.Options.InitialLogFileSize);
             _journalApplicator = new JournalApplicator(this);
+            _lastCompressionAccelerationInfo = new CompressionAccelerationStats(env.Options);
 
             _disposeRunner = new DisposeOnce<SingleAttempt>(() =>
             {
@@ -245,7 +246,7 @@ namespace Voron.Impl.Journal
 
                             lastProcessedJournal = journalNumber;
 
-                            if (journalReader.RequireHeaderUpdate) //this should prevent further loading of transactions
+                            if (journalReader.RequireHeaderUpdate) //this should prevent further load of transactions
                             {
                                 requireHeaderUpdate = true;
                                 break;
@@ -378,12 +379,6 @@ namespace Voron.Impl.Journal
 
             _journalIndex = lastProcessedJournal;
 
-            addToInitLog?.Invoke($"Cleanup Newer Invalid Journal Files (Last Flushed Journal={lastProcessedJournal})");
-            if (_env.Options.CopyOnWriteMode == false)
-            {
-                CleanupNewerInvalidJournalFiles(lastProcessedJournal);
-            }
-
             if (_files.Count > 0)
             {
                 var lastFile = _files.Last();
@@ -392,6 +387,55 @@ namespace Voron.Impl.Journal
                     CurrentFile = lastFile;
             }
             addToInitLog?.Invoke($"Info: Current File = '{CurrentFile?.Number}', Position (4KB)='{CurrentFile?.WritePosIn4KbPosition}'. Require Header Update = {requireHeaderUpdate}");
+
+            if (requireHeaderUpdate)
+            {
+                // we didn't process all journals due to encountered errors
+                // we must update the header and set current journal to the last processed one
+
+                _headerAccessor.Modify(
+                    header =>
+                    {
+                        header->Journal.CurrentJournal = lastProcessedJournal;
+                        header->IncrementalBackup.LastCreatedJournal = lastProcessedJournal;
+                    });
+
+                if (CurrentFile != null)
+                {
+                    // we're gonna have further writes to a partially recovered journal
+                    // there might be more transactions already there (even with valid hash) that we didn't apply
+                    // in order to avoid false positive recovery errors next time (if the journal will still exist)
+                    // let's erase not processed transactions that are gonna be overwritten anyway
+
+                    long fourKb = 4L * Constants.Size.Kilobyte;
+
+                    var ptr = Marshal.AllocHGlobal(new IntPtr(2 * fourKb));
+
+                    try
+                    {
+                        var emptyFourKbPtr = (byte*)(ptr.ToInt64() + (fourKb - (ptr.ToInt64() % fourKb))); // ensure 4KB pointer alignment
+
+                        Memory.Set(emptyFourKbPtr, 0, fourKb);
+
+                        for (long pos = CurrentFile.WritePosIn4KbPosition; pos < CurrentFile.JournalWriter.NumberOfAllocated4Kb; pos++)
+                        {
+                            CurrentFile.JournalWriter.Write(pos, emptyFourKbPtr, 1);
+                        }
+                    }
+                    finally
+                    {
+                        Marshal.FreeHGlobal(ptr);
+                    }
+                }
+            }
+
+            if (_env.Options.CopyOnWriteMode == false)
+            {
+                addToInitLog?.Invoke($"Cleanup Newer Invalid Journal Files (Last Flushed Journal={lastProcessedJournal})");
+
+                CleanupNewerInvalidJournalFiles(lastProcessedJournal);
+            }
+
             return requireHeaderUpdate;
         }
 
@@ -413,7 +457,7 @@ namespace Voron.Impl.Journal
         private void RecoverCurrentJournalSize(AbstractPager pager, out bool isMoreThanMaxFileSize)
         {
             var journalSize = Bits.PowerOf2(pager.TotalAllocationSize);
-            if (journalSize >= _env.Options.MaxLogFileSize) // can't set for more than the max log file size{
+            if (journalSize >= _env.Options.MaxLogFileSize) // can't set for more than the max log file size
             {
                 isMoreThanMaxFileSize = true;
                 return;
@@ -1939,16 +1983,28 @@ namespace Voron.Impl.Journal
 
         private class CompressionAccelerationStats
         {
+            private readonly StorageEnvironmentOptions _options;
             public TimeSpan CompressionDuration;
             public TimeSpan WriteDuration;
 
             private int _lastAcceleration = 1;
             private int _flux; // allow us to ignore fluctuations by requiring several consecutive operations to change 
 
+            public CompressionAccelerationStats(StorageEnvironmentOptions options)
+            {
+                _options = options;
+            }
+
             public int LastAcceleration => _lastAcceleration;
 
             public void CalculateOptimalAcceleration()
             {
+                if (_options.ForTestingPurposes?.WriteToJournalCompressionAcceleration.HasValue == true)
+                {
+                    _lastAcceleration = _options.ForTestingPurposes.WriteToJournalCompressionAcceleration.Value;
+                    return;
+                }
+
                 // if comression is _much_ higher than write time, increase acceleration
                 if (CompressionDuration > WriteDuration.Add(WriteDuration))
                 {
@@ -1997,7 +2053,7 @@ namespace Voron.Impl.Journal
         }
 
         private DateTime _lastCompressionBufferReduceCheck = DateTime.UtcNow;
-        private CompressionAccelerationStats _lastCompressionAccelerationInfo = new CompressionAccelerationStats();
+        private readonly CompressionAccelerationStats _lastCompressionAccelerationInfo;
         private readonly bool _is32Bit;
 
         private void ReduceSizeOfCompressionBufferIfNeeded(bool forceReduce = false)

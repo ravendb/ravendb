@@ -222,7 +222,7 @@ namespace SlowTests.Issues
         public async Task QueriesShouldFailoverIfIndexIsCompactingCluster()
         {
             var (nodes, leader) = await CreateRaftCluster(2, watcherCluster: true); // Prevent updating the db topology after getting it.
-            leader.ServerStore.Observer.Suspended = true;
+            Cluster.SuspendObserver(leader);
             Assert.Equal(nodes.Count, 2);
             var storeOptions = new Options
             {

@@ -5,6 +5,7 @@ using System.Reflection.Metadata;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Xml;
+using Sparrow.Compression;
 using Sparrow.Server.Compression;
 using Voron.Global;
 using Voron.Impl;

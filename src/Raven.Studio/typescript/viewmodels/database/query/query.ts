@@ -1029,10 +1029,11 @@ class query extends shardViewModelBase {
                         }
 
                         const totalFromQuery = queryResults.totalResultCount || 0;
+                        const filterByQuery = !!queryResults.additionalResultInfo.ScannedResults;
                         
                         itemsSoFar += queryResults.items.length;
                         
-                        if (totalFromQuery != -1) {
+                        if (totalFromQuery !== -1) {
                             if (itemsSoFar > totalFromQuery) {
                                 itemsSoFar = totalFromQuery;
                             }
@@ -1055,7 +1056,7 @@ class query extends shardViewModelBase {
                             this.totalResultsForUi(this.hasMoreUnboundedResults() ? itemsSoFar - 1 : itemsSoFar);
                         }
                         
-                        if (queryResults.additionalResultInfo.SkippedResults) {
+                        if (queryResults.additionalResultInfo.SkippedResults || filterByQuery) {
                             // apply skipped results (if any)
                             totalSkippedResults += queryResults.additionalResultInfo.SkippedResults;
                             
@@ -1067,7 +1068,7 @@ class query extends shardViewModelBase {
                             }
                         }
                         
-                        if (totalSkippedResults) {
+                        if (totalSkippedResults || filterByQuery) {
                             queryResults.totalResultCount = skip + queryResults.items.length;
                             if (queryResults.items.length === take + 1) {
                                 queryResults.totalResultCount += 30;

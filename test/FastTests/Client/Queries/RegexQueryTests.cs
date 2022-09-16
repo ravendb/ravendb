@@ -15,7 +15,7 @@ namespace FastTests.Client.Queries
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void QueriesWithRegexShouldWork(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -38,7 +38,7 @@ namespace FastTests.Client.Queries
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task QueriesWithRegexFromDocumentQuery(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -85,7 +85,7 @@ namespace FastTests.Client.Queries
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void QueriesWithRegexFromLinqProvider(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -111,7 +111,7 @@ namespace FastTests.Client.Queries
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void QueriesWithRegexFromLinqProvider_QueryExpressionSyntax(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -137,7 +137,7 @@ namespace FastTests.Client.Queries
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void QueriesWithRegexAndEscapedCharsShouldWork(Options options)
         {
             using (var store = GetDocumentStore(options))

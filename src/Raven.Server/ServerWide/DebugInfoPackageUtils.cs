@@ -71,6 +71,8 @@ namespace Raven.Server.ServerWide
             await using (var entryStream = entry.Open())
             await using (var sw = new StreamWriter(entryStream))
             {
+                await sw.WriteAsync($"Exception throw time: UTC {DateTime.UtcNow:yyyy-MM-dd H:mm:ss}");
+                await sw.WriteLineAsync();
                 await sw.WriteAsync(e.ToString());
                 await sw.FlushAsync();
             }

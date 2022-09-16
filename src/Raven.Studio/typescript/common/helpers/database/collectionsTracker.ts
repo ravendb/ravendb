@@ -175,7 +175,13 @@ class collectionsTracker {
     }
 
     private onCollectionChanged(item: collection, incomingData: Raven.Server.NotificationCenter.Notifications.DatabaseStatsChanged.ModifiedCollection) {
+        if (item.lastDocumentChangeVector() === incomingData.LastDocumentChangeVector && item.documentCount() === incomingData.Count) {
+            // no change 
+            return;
+        }
+        
         item.documentCount(incomingData.Count);
+        item.lastDocumentChangeVector(incomingData.LastDocumentChangeVector);
 
         this.events.changed.forEach(handler => handler(item, incomingData.LastDocumentChangeVector));
 

@@ -353,7 +353,7 @@ namespace SlowTests.Cluster
             var members = new List<string> { "A", "B", "C" };
             members.Remove(removedTag);
 
-            leader.ServerStore.Observer.Suspended = true;
+            Cluster.SuspendObserver(leader);
             options.Server = leader;
             if (options.DatabaseMode == RavenDatabaseMode.Single)
             {

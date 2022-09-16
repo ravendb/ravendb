@@ -127,6 +127,11 @@ namespace SlowTests.Issues
                         documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
                         return documentDatabase.IndexStore.GetIndex(indexName).State;
                     }, IndexState.Normal);
+                    await WaitForValueAsync(async () =>
+                    {
+                        documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
+                        return documentDatabase.IndexStore.GetIndex(indexName).Status;
+                    }, IndexRunningStatus.Running);
                     Assert.Equal(IndexState.Normal, documentDatabase.IndexStore.GetIndex(indexName).State);
                     Assert.Equal(IndexRunningStatus.Running, documentDatabase.IndexStore.GetIndex(indexName).Status);
                 }
@@ -172,6 +177,11 @@ namespace SlowTests.Issues
                         documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
                         return documentDatabase.IndexStore.GetIndex(indexName).State;
                     }, IndexState.Normal);
+                    await WaitForValueAsync(async () =>
+                    {
+                        documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
+                        return documentDatabase.IndexStore.GetIndex(indexName).Status;
+                    }, IndexRunningStatus.Running);
                     Assert.Equal(IndexState.Normal, documentDatabase.IndexStore.GetIndex(indexName).State);
 
                     await WaitForValueAsync(async () =>
@@ -386,6 +396,11 @@ namespace SlowTests.Issues
                         documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
                         return documentDatabase.IndexStore.GetIndex(indexName).State;
                     }, IndexState.Normal, 3000);
+                    await WaitForValueAsync(async () =>
+                    {
+                        documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
+                        return documentDatabase.IndexStore.GetIndex(indexName).Status;
+                    }, IndexRunningStatus.Running);
                     Assert.Equal(IndexState.Normal, documentDatabase.IndexStore.GetIndex(indexName).State);
                     Assert.Equal(IndexRunningStatus.Running, documentDatabase.IndexStore.GetIndex(indexName).Status);
                 }
@@ -403,6 +418,11 @@ namespace SlowTests.Issues
                         documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
                         return documentDatabase.IndexStore.GetIndex(indexName).State;
                     }, IndexState.Disabled, 3000);
+                    await WaitForValueAsync(async () =>
+                    {
+                        documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
+                        return documentDatabase.IndexStore.GetIndex(indexName).Status;
+                    }, IndexRunningStatus.Disabled);
                     Assert.Equal(IndexState.Disabled, documentDatabase.IndexStore.GetIndex(indexName).State);
                     Assert.Equal(IndexRunningStatus.Disabled, documentDatabase.IndexStore.GetIndex(indexName).Status);
                 }
@@ -420,6 +440,11 @@ namespace SlowTests.Issues
                         documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
                         return documentDatabase.IndexStore.GetIndex(indexName).State;
                     }, IndexState.Normal, 3000);
+                    await WaitForValueAsync(async () =>
+                    {
+                        documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
+                        return documentDatabase.IndexStore.GetIndex(indexName).Status;
+                    }, IndexRunningStatus.Running);
                     Assert.Equal(IndexState.Normal, documentDatabase.IndexStore.GetIndex(indexName).State);
                     Assert.Equal(IndexRunningStatus.Running, documentDatabase.IndexStore.GetIndex(indexName).Status);
                 }
@@ -453,6 +478,11 @@ namespace SlowTests.Issues
                         documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
                         return documentDatabase.IndexStore.GetIndex(indexName).State;
                     }, IndexState.Normal, 3000);
+                    await WaitForValueAsync(async () =>
+                    {
+                        documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
+                        return documentDatabase.IndexStore.GetIndex(indexName).Status;
+                    }, IndexRunningStatus.Running);
                     Assert.Equal(IndexState.Normal, documentDatabase.IndexStore.GetIndex(indexName).State);
                     Assert.Equal(IndexRunningStatus.Running, documentDatabase.IndexStore.GetIndex(indexName).Status);
                 }
@@ -481,6 +511,11 @@ namespace SlowTests.Issues
                         documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
                         return documentDatabase.IndexStore.GetIndex(indexName).State;
                     }, IndexState.Normal);
+                    await WaitForValueAsync(async () =>
+                    {
+                        documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
+                        return documentDatabase.IndexStore.GetIndex(indexName).Status;
+                    }, IndexRunningStatus.Running);
                     Assert.Equal(IndexState.Normal, documentDatabase.IndexStore.GetIndex(indexName).State);
                     Assert.Equal(IndexRunningStatus.Running, documentDatabase.IndexStore.GetIndex(indexName).Status);
                 }
