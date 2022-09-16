@@ -19,8 +19,7 @@ namespace SlowTests.Core.Querying
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUseBasicMoreLikeThis(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -60,13 +59,12 @@ namespace SlowTests.Core.Querying
 
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUseMoreLikeThisWithIncludes(Options options)
         {
             using (var store = GetDocumentStore(options))
             {
-                var index = new Users_ByName();
+                var index = new Users_ByName_WithoutBoosting();
                 index.Execute(store);
 
                 using (var session = store.OpenSession())
@@ -79,7 +77,7 @@ namespace SlowTests.Core.Querying
 
                     Indexes.WaitForIndexing(store);
 
-                    var list = session.Query<User, Users_ByName>()
+                    var list = session.Query<User, Users_ByName_WithoutBoosting>()
                         .Include(x => x.AddressId)
                         .MoreLikeThis(f => f.UsingDocument(x => x.Id == "users/1").WithOptions(new MoreLikeThisOptions
                         {
