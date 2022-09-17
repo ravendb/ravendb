@@ -115,10 +115,7 @@ public unsafe struct IndexEntryWriter : IDisposable
     public void WriteNullDynamic(string name)
     {
         using var _ = _context.From(name, ByteStringType.Immutable, out var fieldNameStr);
-        Span<byte> tmpBuffer = stackalloc byte[10];
-        int fieldLenLen = VariableSizeEncoding.Write(tmpBuffer, fieldNameStr.Length);
-
-        var requiredSize = fieldLenLen + fieldNameStr.Length;
+        var requiredSize = VariableSizeEncoding.MaximumSizeOf<int>() + fieldNameStr.Length;
         
         if (FreeSpace < requiredSize)
             UnlikelyGrowAuxiliaryBuffer(requiredSize);
@@ -136,10 +133,7 @@ public unsafe struct IndexEntryWriter : IDisposable
         ComputeSpaceRequirements(entries, out int requiredSize, out int maxGeohashLength);
         
         using var _ = _context.From(name, ByteStringType.Immutable, out var fieldNameStr);
-        Span<byte> tmpBuffer = stackalloc byte[10];
-        int fieldLenLen = VariableSizeEncoding.Write(tmpBuffer, fieldNameStr.Length);
-
-        requiredSize += fieldLenLen + fieldNameStr.Length;
+        requiredSize += VariableSizeEncoding.MaximumSizeOf<int>() + fieldNameStr.Length;
         
         if (FreeSpace < requiredSize)
             UnlikelyGrowAuxiliaryBuffer(requiredSize);
@@ -155,9 +149,7 @@ public unsafe struct IndexEntryWriter : IDisposable
         int maxGeohashLength = entry.Geohash.Length;
 
         using var _ = _context.From(name, ByteStringType.Immutable, out var fieldNameStr);
-        Span<byte> tmpBuffer = stackalloc byte[10];
-        int fieldLenLen = VariableSizeEncoding.Write(tmpBuffer, fieldNameStr.Length);
-        long requiredSize = fieldLenLen +
+        long requiredSize = VariableSizeEncoding.MaximumSizeOf<int>() +
                             fieldNameStr.Length +
                             sizeof(IndexEntryFieldType) + 
                             maxGeohashLength + 4 * sizeof(long);
@@ -173,9 +165,7 @@ public unsafe struct IndexEntryWriter : IDisposable
     public void WriteDynamic(string name, ReadOnlySpan<byte> value, long longValue, double doubleValue)
     {
         using var _ = _context.From(name, ByteStringType.Immutable, out var fieldNameStr);
-        Span<byte> tmpBuffer = stackalloc byte[10];
-        int fieldLenLen = VariableSizeEncoding.Write(tmpBuffer, fieldNameStr.Length);
-        long requiredSize = fieldLenLen +
+        long requiredSize = VariableSizeEncoding.MaximumSizeOf<int>() +
                             fieldNameStr.Length +
                             sizeof(IndexEntryFieldType) + 
                             value.Length + 4 * sizeof(long);
@@ -214,17 +204,12 @@ public unsafe struct IndexEntryWriter : IDisposable
 
     private void WriteDynamicFieldName(ByteString fieldNameStr, bool hasType)
     {
-        Span<byte> tmpBuffer = stackalloc byte[5];
-        
-        int fieldLenLen = VariableSizeEncoding.Write(tmpBuffer, fieldNameStr.Length);
-
         _dynamicFieldsLocations ??= new();
         int maskedPos = _dataIndex << 1 | (hasType ? 1 : 0);
         _dynamicFieldsLocations.Add(maskedPos);
         
         var buffer = Buffer;
-        tmpBuffer[..fieldLenLen].CopyTo(buffer[_dataIndex..]);
-        _dataIndex += fieldLenLen;
+        _dataIndex += VariableSizeEncoding.Write(buffer, fieldNameStr.Length, _dataIndex);
         fieldNameStr.CopyTo(buffer[_dataIndex..]);
         _dataIndex += fieldNameStr.Length;
     }

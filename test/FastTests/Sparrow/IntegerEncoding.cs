@@ -87,7 +87,7 @@ namespace FastTests.Sparrow
         [Fact]
         public void ReadWriteMany()
         {
-            Span<byte> buffer = new byte[VariableSizeEncoding.GetMaximumEncodingLength(16)];
+            Span<byte> buffer = new byte[VariableSizeEncoding.MaximumSizeOf<long>() * 16];
             var rnd = new Random(1337);
 
             Span<int> values = stackalloc int[16];
