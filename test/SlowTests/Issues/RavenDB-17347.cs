@@ -128,11 +128,18 @@ namespace SlowTests.Issues
 
         private async Task WaitAndAssertMembers(DocumentStore store, List<string> expectedMembers)
         {
+            List<string> members = new List<string>();
             Assert.True(await WaitUntilDatabaseHasState(store, timeout: TimeSpan.FromSeconds(15), predicate: record =>
             {
-                var members = record?.Topology?.Members;
-                return members != null && ContainsAll(members, expectedMembers);
-            }), "Members are not as expected");
+                var actualMembers = record?.Topology?.Members;
+                members.Clear();
+                foreach (var v in actualMembers)
+                {
+                    members.Add(v);
+                }
+                
+                return actualMembers != null && ContainsAll(actualMembers, expectedMembers);
+            }), $"Members are not as expected. Expected: {String.Join(" ", expectedMembers)}, Actual: {String.Join(" ", members)}");
         }
 
         private static void DisconnectNode(List<RavenServer> nodes, string nodeTag)
