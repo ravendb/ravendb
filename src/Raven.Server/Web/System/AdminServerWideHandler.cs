@@ -58,7 +58,7 @@ namespace Raven.Server.Web.System
 
                 ServerStore.LicenseManager.AssertCanAddPeriodicBackup(observedConfiguration);
 
-                var existingTasks = GetTaskConfigurationsAsync(OngoingTaskType.Backup, JsonDeserializationCluster.ServerWideBackupConfiguration, false).Result.Results;
+                var existingTasks = GetTaskConfigurations(OngoingTaskType.Backup, JsonDeserializationCluster.ServerWideBackupConfiguration);
 
                 if (existingTasks
                     .Where(existingTask => existingTask.Name.Equals(observedConfiguration.Name, StringComparison.OrdinalIgnoreCase))
@@ -145,7 +145,7 @@ namespace Raven.Server.Web.System
         public Task GetServerWideBackupConfigurations()
         {
             // backward compatibility
-            return GetTaskConfigurationsAsync(OngoingTaskType.Backup, JsonDeserializationCluster.ServerWideBackupConfiguration, true);
+            return WriteTaskConfigurationsAsync(OngoingTaskType.Backup, JsonDeserializationCluster.ServerWideBackupConfiguration);
         }
 
         [RavenAction("/admin/configuration/server-wide/tasks", "GET", AuthorizationStatus.ClusterAdmin)]
@@ -170,7 +170,7 @@ namespace Raven.Server.Web.System
                     throw new ArgumentOutOfRangeException($"Task type '{type} isn't suppported");
             }
 
-            await GetTaskConfigurationsAsync(type, converter, true);
+            await WriteTaskConfigurationsAsync(type, converter);
         }
 
         [RavenAction("/admin/configuration/server-wide/state", "POST", AuthorizationStatus.ClusterAdmin)]
@@ -237,14 +237,12 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private async Task<ServerWideTasksResult<T>> GetTaskConfigurationsAsync<T>(OngoingTaskType type, Func<BlittableJsonReaderObject, T> converter, bool writeResponseBodyStream)
+        private ServerWideTasksResult<T> GetTaskConfigurationsInternal<T>(TransactionOperationContext context, OngoingTaskType type, Func<BlittableJsonReaderObject, T> converter) 
             where T : IDynamicJsonValueConvertible
         {
             var taskName = GetStringQueryString("name", required: false);
 
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 var blittables = ServerStore.Cluster.GetServerWideConfigurations(context, type, taskName);
                 var result = new ServerWideTasksResult<T>();
@@ -255,10 +253,25 @@ namespace Raven.Server.Web.System
                     result.Results.Add(configuration);
                 }
 
-                if(writeResponseBodyStream)
-                    context.Write(writer, result.ToJson());
-
                 return result;
+            }
+        }
+
+        private List<T> GetTaskConfigurations<T>(OngoingTaskType type, Func<BlittableJsonReaderObject, T> converter)
+            where T : IDynamicJsonValueConvertible
+        {
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                return GetTaskConfigurationsInternal(context, type, converter).Results;
+        }
+
+        private async Task WriteTaskConfigurationsAsync<T>(OngoingTaskType type, Func<BlittableJsonReaderObject, T> converter) 
+            where T : IDynamicJsonValueConvertible
+        {
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                var result = GetTaskConfigurationsInternal(context, type, converter);
+                context.Write(writer, result.ToJson());
             }
         }
     }
