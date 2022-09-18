@@ -123,13 +123,13 @@ namespace Raven.Server.Config.Categories
         [Description("EXPERT: A deep database cleanup will be done when this number of minutes has passed since the last time work was done on the database.")]
         [DefaultValue(5)]
         [TimeUnit(TimeUnit.Minutes)]
-        [ConfigurationEntry("Databases.DeepCleanupThresholdInMin", ConfigurationEntryScope.ServerWideOnly)]
+        [ConfigurationEntry("Databases.DeepCleanupThresholdInMin", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public TimeSetting DeepCleanupThreshold { get; set; }
 
         [Description("EXPERT: A regular database cleanup will be done when this number of minutes has passed since the last database idle time.")]
         [DefaultValue(10)]
         [TimeUnit(TimeUnit.Minutes)]
-        [ConfigurationEntry("Databases.RegularCleanupThresholdInMin", ConfigurationEntryScope.ServerWideOnly)]
+        [ConfigurationEntry("Databases.RegularCleanupThresholdInMin", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public TimeSetting RegularCleanupThreshold { get; set; }
     }
 }
