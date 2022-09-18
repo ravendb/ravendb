@@ -1376,27 +1376,30 @@ namespace Raven.Server.ServerWide.Maintenance
                 return (false, null);
             }
 
-            var mentorsLastCompareExchangeIndex = mentorCurrDbStats.LastCompareExchangeIndex;
-            var promotableLastCompareExchangeIndex = promotableDbStats.LastCompareExchangeIndex;
-
-            if (mentorsLastCompareExchangeIndex > promotableLastCompareExchangeIndex)
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
             {
-                var msg = $"The database '{dbName}' on {promotable} not ready to be promoted, because the mentor hasn't sent all commands yet." + Environment.NewLine +
-                          $"Last Raft Index: {promotableLastCompareExchangeIndex}" + Environment.NewLine +
-                          $"Mentor's Raft Index: {mentorsLastCompareExchangeIndex}";
+                var leaderLastCompareExchangeIndex = _server.Cluster.GetLastCompareExchangeIndexForDatabase(context, dbName);
+                var promotableLastCompareExchangeIndex = promotableDbStats.LastCompareExchangeIndex;
 
-                LogMessage($"Node {promotable} hasn't been promoted because it's raft index isn't updated yet", database: dbName);
-
-                if (topology.DemotionReasons.TryGetValue(promotable, out var demotionReason) == false ||
-                    msg.Equals(demotionReason) == false)
+                if (leaderLastCompareExchangeIndex > promotableLastCompareExchangeIndex)
                 {
-                    topology.DemotionReasons[promotable] = msg;
-                    topology.PromotablesStatus[promotable] = DatabasePromotionStatus.RaftIndexNotUpToDate;
-                    return (false, msg);
-                }
-                return (false, null);
-            }
+                    var msg = $"The database '{dbName}' on {promotable} not ready to be promoted, because the leader hasn't sent all of the compare exchanges yet." + Environment.NewLine +
+                              $"Last Compare Exchange Raft Index: {promotableLastCompareExchangeIndex}" + Environment.NewLine +
+                              $"Leader's Compare Exchange Raft Index: {leaderLastCompareExchangeIndex}";
 
+                    LogMessage($"Node {promotable} hasn't been promoted because it's raft index isn't updated yet", database: dbName);
+
+                    if (topology.DemotionReasons.TryGetValue(promotable, out var demotionReason) == false ||
+                        msg.Equals(demotionReason) == false)
+                    {
+                        topology.DemotionReasons[promotable] = msg;
+                        topology.PromotablesStatus[promotable] = DatabasePromotionStatus.RaftIndexNotUpToDate;
+                        return (false, msg);
+                    }
+                    return (false, null);
+                }
+            }
 
             var indexesCaughtUp = CheckIndexProgress(
                 promotablePrevDbStats.LastEtag,

@@ -110,7 +110,7 @@ namespace Raven.Server.Rachis
 
             if (ForTestingPurposes!=null && ForTestingPurposes.NodeTagsToDisconnect.Contains(tag))
             {
-                throw new InvalidOperationException("");
+                throw new InvalidOperationException($"Exception was thrown for disconnecting  node {tag} - For testing purposes.");
             }
 
             return StateMachine.ConnectToPeer(url, tag, certificate, _serverStore.ServerShutdown);
