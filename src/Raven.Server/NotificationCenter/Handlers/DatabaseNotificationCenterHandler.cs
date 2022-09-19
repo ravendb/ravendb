@@ -27,5 +27,12 @@ namespace Raven.Server.NotificationCenter.Handlers
             using (var processor = new DatabaseNotificationCenterHandlerProcessorForPostpone(this))
                 await processor.ExecuteAsync();
         }
+
+        [RavenAction("/databases/*/notification-center/stats", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task Stats()
+        {
+            using (var processor = new DatabaseNotificationCenterHandlerProcessorForStats(this))
+                await processor.ExecuteAsync();
+        }
     }
 }
