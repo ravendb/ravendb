@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Corax;
 using Corax.Queries;
+using Corax.Utils;
 using Raven.Server.Documents.Queries;
 using Sparrow.Extensions;
 
@@ -147,12 +148,12 @@ public class CoraxBooleanQuery : IQueryMatch
     private const string QueryMatchUsageException =
         $"You tried to use {nameof(CoraxBooleanQuery)} as normal querying function. This class is only for type - relaxation inside {nameof(CoraxQueryBuilder)} to build big UnaryMatch stack";
 
-    private MemoizationMatchProvider<AllEntriesMatch> _allEntries;
+    private MemoizationMatchProviderRef<AllEntriesMatch> _allEntries;
 
     private readonly IndexSearcher _indexSearcher;
     public bool HasInnerBinary { get; private set; }
 
-    public CoraxBooleanQuery(IndexSearcher indexSearcher, MemoizationMatchProvider<AllEntriesMatch> allEntries, CoraxBooleanItem left, CoraxBooleanItem right,
+    public CoraxBooleanQuery(IndexSearcher indexSearcher, MemoizationMatchProviderRef<AllEntriesMatch> allEntries, CoraxBooleanItem left, CoraxBooleanItem right,
         IQueryScoreFunction scoreFunction)
     {
         _indexSearcher = indexSearcher;

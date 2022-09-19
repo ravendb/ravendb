@@ -3,7 +3,7 @@ using Raven.Server.Documents.Indexes.Persistence.Corax;
 
 namespace Raven.Server.Documents.Queries.MoreLikeThis.Corax;
 
-internal class RavenRavenMoreLikeThis : RavenMoreLikeThis
+internal sealed class RavenRavenMoreLikeThis : RavenMoreLikeThis
 {
     public RavenRavenMoreLikeThis(QueryParameters env, MoreLikeThisOptions options) : base(env)
     {

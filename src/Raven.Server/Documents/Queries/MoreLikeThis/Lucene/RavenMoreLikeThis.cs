@@ -9,7 +9,7 @@ using LuceneProj = Lucene;
 
 namespace Raven.Server.Documents.Queries.MoreLikeThis.Lucene;
 
-internal class RavenMoreLikeThis : LuceneMoreLikeThis
+internal sealed class RavenMoreLikeThis : LuceneMoreLikeThis
 {
     private readonly IndexReader _ir;
     private readonly IState _state;
