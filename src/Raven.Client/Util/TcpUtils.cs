@@ -204,8 +204,11 @@ namespace Raven.Client.Util
             if (info.Certificate == null)
                 return networkStream;
 
-            var expectedCert = new X509Certificate2(Convert.FromBase64String(info.Certificate), (string)null, X509KeyStorageFlags.MachineKeySet);
-            var sslStream = new SslStream(networkStream, false, (sender, actualCert, chain, errors) => expectedCert.Equals(actualCert));
+            var sslStream = new SslStream(networkStream, false, (sender, actualCert, chain, errors) =>
+            {
+                string actualStringCert = Convert.ToBase64String(actualCert.Export(X509ContentType.Cert));
+                return info.Certificate.Equals(actualStringCert);
+            });
             
             var targetHost = new Uri(info.Url).Host;
             var clientCertificates = new X509CertificateCollection(new X509Certificate[] { storeCertificate });

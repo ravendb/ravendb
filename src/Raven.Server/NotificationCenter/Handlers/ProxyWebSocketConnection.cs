@@ -50,7 +50,7 @@ namespace Raven.Server.NotificationCenter.Handlers
             {
                 var tcpConnection = ReplicationUtils.GetTcpInfo(_nodeUrl, null, $"{nameof(ProxyWebSocketConnection)} to {_nodeUrl}", certificate, _cts.Token);
 
-                var expectedCert = new X509Certificate2(Convert.FromBase64String(tcpConnection.Certificate), (string)null, CertificateUtils.FlagsForOpen);
+                var expectedCert = CertificateUtils.CreateCertificate(Convert.FromBase64String(tcpConnection.Certificate));
 
                 _remoteWebSocket.Options.ClientCertificates.Add(certificate);
 

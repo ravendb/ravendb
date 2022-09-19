@@ -2006,7 +2006,7 @@ namespace Raven.Server.Smuggler.Documents
                 const int batchSize = 128;
 
                 byte[] buffer = Convert.FromBase64String(access.CertificateBase64);
-                using var cert = new X509Certificate2(buffer);
+                using var cert = CertificateUtils.CreateCertificate(buffer);
 
                 _commands.Add(new RegisterReplicationHubAccessCommand(_database.Name, hub, access, cert, RaftIdGenerator.DontCareId));
 

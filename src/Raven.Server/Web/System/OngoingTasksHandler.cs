@@ -168,7 +168,7 @@ namespace Raven.Server.Web.System
             {
                 // fetch public key of certificate
                 var certBytes = Convert.FromBase64String(sinkReplication.CertificateWithPrivateKey);
-                var certificate = new X509Certificate2(certBytes,
+                var certificate = CertificateUtils.CreateCertificate(certBytes,
                     sinkReplication.CertificatePassword,
                     CertificateUtils.FlagsForExport);
 
