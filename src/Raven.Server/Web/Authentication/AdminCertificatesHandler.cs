@@ -215,9 +215,9 @@ namespace Raven.Server.Web.Authentication
             var collection = new X509Certificate2Collection();
 
             if (string.IsNullOrEmpty(password))
-                collection.Import(certBytes, (string)null, CertificateLoaderUtil.FlagsForOpen);
+                CertificateLoaderUtil.Import(collection, certBytes);
             else
-                collection.Import(certBytes, password, CertificateLoaderUtil.FlagsForPersist);
+                CertificateLoaderUtil.Import(collection, certBytes, password, CertificateLoaderUtil.FlagsForPersist);
 
             var first = true;
             var collectionPrimaryKey = string.Empty;
@@ -680,7 +680,7 @@ namespace Raven.Server.Web.Authentication
             var collection = new X509Certificate2Collection();
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                collection.Import(Server.Certificate.Certificate.Export(X509ContentType.Cert), (string)null, CertificateLoaderUtil.FlagsForOpen);
+                CertificateLoaderUtil.Import(collection, Server.Certificate.Certificate.Export(X509ContentType.Cert));
 
                 if (ServerStore.CurrentRachisState != RachisState.Passive)
                 {
@@ -699,7 +699,7 @@ namespace Raven.Server.Web.Authentication
                                 var x509Certificate2 = CertificateLoaderUtil.CreateCertificate(Convert.FromBase64String(cert.Certificate));
 
                                 if (collection.Contains(x509Certificate2) == false)
-                                    collection.Import(x509Certificate2.Export(X509ContentType.Cert), null, CertificateLoaderUtil.FlagsForOpen);
+                                    CertificateLoaderUtil.Import(collection, x509Certificate2.Export(X509ContentType.Cert));
                             }
                         }
                         finally
@@ -952,7 +952,7 @@ namespace Raven.Server.Web.Authentication
                             try
                             {
                                 var cert = new X509Certificate2Collection();
-                                cert.Import(certBytes, certificate.Password, CertificateLoaderUtil.FlagsForExport);
+                                CertificateLoaderUtil.Import(cert, certBytes, certificate.Password, CertificateLoaderUtil.FlagsForExport);
                                 // Exporting with the private key, but without the password
                                 certBytes = cert.Export(X509ContentType.Pkcs12);
                                 certificate.Certificate = Convert.ToBase64String(certBytes);

@@ -696,9 +696,9 @@ namespace Raven.Server.ServerWide
             var collection = new X509Certificate2Collection();
 
             if (string.IsNullOrEmpty(password))
-                collection.Import(rawBytes, (string)null, CertificateLoaderUtil.FlagsForOpen);
+                CertificateLoaderUtil.Import(collection, rawBytes);
             else
-                collection.Import(rawBytes, password, CertificateLoaderUtil.FlagsForOpen);
+                CertificateLoaderUtil.Import(collection,rawBytes, password);
 
             var storeName = PlatformDetails.RunningOnMacOsx ? StoreName.My : StoreName.CertificateAuthority;
             using (var userIntermediateStore = new X509Store(storeName, StoreLocation.CurrentUser,

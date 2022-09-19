@@ -142,7 +142,7 @@ public partial class RavenTestBase
                 X509Certificate2 serverCertificate;
                 try
                 {
-                    serverCertificate = new X509Certificate2(certBytes, (string)null, CertificateLoaderUtil.FlagsForOpen);
+                    serverCertificate = new X509Certificate2(certBytes, (string)null);
                 }
                 catch (Exception e)
                 {

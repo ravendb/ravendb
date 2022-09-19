@@ -46,7 +46,7 @@ namespace SlowTests.Authentication
 
         public X509Certificate2 CreateAndPutExpiredClientCertificate(string serverCertPath, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance = SecurityClearance.ValidUser)
         {
-            var serverCertificate = new X509Certificate2(serverCertPath, (string)null, CertificateLoaderUtil.FlagsForOpen);
+            var serverCertificate = new X509Certificate2(serverCertPath, (string)null);
             var serverCertificateHolder = new SecretProtection(
                 new SecurityConfiguration()).LoadCertificateFromPath(
                 serverCertPath,
