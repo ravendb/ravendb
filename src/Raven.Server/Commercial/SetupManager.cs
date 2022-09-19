@@ -1318,7 +1318,7 @@ namespace Raven.Server.Commercial
                 if (isSecured)
                 {
                     currentNodeSettingsJson.TryGet(RavenConfiguration.GetKey(x => x.Security.CertificatePassword), out string certPassword);
-                    serverCert = new X509Certificate2(certBytes, certPassword, CertificateUtils.FlagsForPersist);   
+                    serverCert = CertificateUtils.CreateCertificate(certBytes, certPassword, CertificateUtils.FlagsForPersist);   
                 }
             }
             catch (Exception e)
@@ -1330,7 +1330,7 @@ namespace Raven.Server.Commercial
             {
                 if (isSecured)
                 {
-                    clientCert = new X509Certificate2(clientCertBytes, (string)null, CertificateUtils.FlagsForPersist);
+                    clientCert = CertificateUtils.CreateCertificate(clientCertBytes, flags: CertificateUtils.FlagsForPersist);
                 }
             }
             catch (Exception e)

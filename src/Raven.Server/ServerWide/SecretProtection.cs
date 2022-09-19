@@ -516,7 +516,7 @@ namespace Raven.Server.ServerWide
             try
             {
                 // may need to send this over the cluster, so use exportable here
-                loadedCertificate = new X509Certificate2(rawData, (string)null, CertificateUtils.FlagsForExport);
+                loadedCertificate = CertificateUtils.CreateCertificate(rawData, (string)null, CertificateUtils.FlagsForExport);
                 ValidateExpiration(executable, loadedCertificate, licenseType);
                 ValidatePrivateKey(executable, null, rawData, out privateKey);
                 ValidateKeyUsages(executable, loadedCertificate, certificateValidationKeyUsages);
@@ -768,7 +768,7 @@ namespace Raven.Server.ServerWide
                 var rawData = File.ReadAllBytes(path);
 
                 // we need to load it as exportable because we might need to send it over the cluster
-                var loadedCertificate = new X509Certificate2(rawData, password, CertificateUtils.FlagsForExport);
+                var loadedCertificate = CertificateUtils.CreateCertificate(rawData, password, CertificateUtils.FlagsForExport);
 
                 ValidateExpiration(path, loadedCertificate, licenseType);
 

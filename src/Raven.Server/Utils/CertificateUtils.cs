@@ -6,6 +6,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Org.BouncyCastle.Asn1;
 using Org.BouncyCastle.Asn1.X509;
@@ -37,12 +38,39 @@ namespace Raven.Server.Utils
 
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger("Server", typeof(CertificateUtils).FullName);
 
-        internal static X509KeyStorageFlags FlagsForOpen = X509KeyStorageFlags.EphemeralKeySet;
+        private static int KeySetFlag = (int)X509KeyStorageFlags.UserKeySet;
+        
+        internal static X509KeyStorageFlags FlagsForOpen => (X509KeyStorageFlags)KeySetFlag;
 
-        internal static X509KeyStorageFlags FlagsForExport = X509KeyStorageFlags.Exportable | X509KeyStorageFlags.EphemeralKeySet;
+        internal static X509KeyStorageFlags FlagsForExport => FlagsForOpen | X509KeyStorageFlags.Exportable;
 
-        internal static X509KeyStorageFlags FlagsForPersist = X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.MachineKeySet;
+        internal static X509KeyStorageFlags FlagsForPersist => FlagsForOpen | X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet;
 
+        internal static X509Certificate2 CreateCertificate(byte[] rawData, string password = null, X509KeyStorageFlags? flags = null)
+        {
+            return CreateCertificate(f => new X509Certificate2(rawData, password, f), flags);
+        }
+        internal static X509Certificate2 CreateCertificate(string fileName, string password = null, X509KeyStorageFlags? flags = null)
+        {
+            return CreateCertificate(f => new X509Certificate2(fileName, password, f), flags);
+        }
+
+        private static X509Certificate2 CreateCertificate(Func<X509KeyStorageFlags, X509Certificate2> creator, X509KeyStorageFlags? flag)
+        {
+            var f = flag ?? FlagsForOpen;
+            try
+            {
+                return creator(f);
+            }
+            catch
+            {
+                if ((f & X509KeyStorageFlags.MachineKeySet) == X509KeyStorageFlags.MachineKeySet)
+                    throw;
+                Volatile.Write(ref KeySetFlag, (int)X509KeyStorageFlags.MachineKeySet);
+                return creator(f & ~X509KeyStorageFlags.UserKeySet | X509KeyStorageFlags.MachineKeySet);
+            }
+        }
+        
         internal static bool CertHasKnownIssuer(X509Certificate2 userCertificate, X509Certificate2 knownCertificate, SecurityConfiguration securityConfiguration, out string issuerPinningHash)
         {
             issuerPinningHash = null;
@@ -126,7 +154,7 @@ namespace Raven.Server.Utils
             // Note this is for tests only!
             CreateCertificateAuthorityCertificate(commonNameValue + " CA", out var ca, out var caSubjectName, log);
             CreateSelfSignedCertificateBasedOnPrivateKey(commonNameValue, caSubjectName, ca, false, false, DateTime.UtcNow.Date.AddMonths(3), out var certBytes, log: log);
-            var selfSignedCertificateBasedOnPrivateKey = new X509Certificate2(certBytes, (string)null, FlagsForOpen);
+            var selfSignedCertificateBasedOnPrivateKey = CreateCertificate(certBytes);
             selfSignedCertificateBasedOnPrivateKey.Verify();
 
             // We had a problem where we didn't cleanup the user store in Linux (~/.dotnet/corefx/cryptography/x509stores/ca)
@@ -143,11 +171,11 @@ namespace Raven.Server.Utils
             var existingKeyPair = GetRsaKey();
 
             CreateSelfSignedCertificateBasedOnPrivateKey(commonNameValue, caSubjectName, ca, false, false, DateTime.UtcNow.Date.AddMonths(3), out var certBytes1, existingKeyPair, log);
-            var selfSignedCertificateBasedOnPrivateKey1 = new X509Certificate2(certBytes1, (string)null, FlagsForOpen);
+            var selfSignedCertificateBasedOnPrivateKey1 = CreateCertificate(certBytes1);
             selfSignedCertificateBasedOnPrivateKey1.Verify();
 
             CreateSelfSignedCertificateBasedOnPrivateKey(commonNameValue, caSubjectName, ca, false, false, DateTime.UtcNow.Date.AddMonths(3), out var certBytes2, existingKeyPair, log);
-            var selfSignedCertificateBasedOnPrivateKey2 = new X509Certificate2(certBytes2, (string)null, FlagsForOpen);
+            var selfSignedCertificateBasedOnPrivateKey2 = CreateCertificate(certBytes2);
             selfSignedCertificateBasedOnPrivateKey2.Verify();
 
             RemoveOldTestCertificatesFromOsStore(commonNameValue);
@@ -216,7 +244,7 @@ namespace Raven.Server.Utils
             store.Save(memoryStream, Array.Empty<char>(), GetSeededSecureRandom());
             certBytes = memoryStream.ToArray();
 
-            var cert = new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+            var cert = CreateCertificate(certBytes, flags: FlagsForPersist);
             return cert;
         }
 
@@ -243,7 +271,7 @@ namespace Raven.Server.Utils
                 DateTime.UtcNow.Date.AddYears(-1),
                 out var certBytes);
 
-            return new X509Certificate2(certBytes, (string)null, FlagsForOpen);
+            return CreateCertificate(certBytes);
         }
 
         public static void CreateSelfSignedCertificateBasedOnPrivateKey(string commonNameValue,
@@ -567,7 +595,7 @@ namespace Raven.Server.Utils
             Debug.Assert(certBytes != null);
             setupInfo.Certificate = Convert.ToBase64String(certBytes);
 
-            return new X509Certificate2(certBytes, (string)null, FlagsForExport);
+            return CreateCertificate(certBytes, flags: FlagsForExport);
         }
     }
     public static class PublicKeyPinningHashHelpers

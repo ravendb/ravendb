@@ -149,9 +149,7 @@ namespace Raven.Server.Commercial
             try
             {
                 var localCertBytes = Convert.FromBase64String(Certificate);
-                return string.IsNullOrEmpty(Password)
-                    ? new X509Certificate2(localCertBytes, (string)null, CertificateUtils.FlagsForOpen)
-                    : new X509Certificate2(localCertBytes, Password, CertificateUtils.FlagsForOpen);
+                return CertificateUtils.CreateCertificate(localCertBytes, Password);
             }
             catch (Exception e)
             {

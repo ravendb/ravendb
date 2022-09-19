@@ -648,7 +648,7 @@ namespace Raven.Server.Utils.Cli
             X509Certificate2 cert;
             try
             {
-                cert = args.Count == 3 ? new X509Certificate2(path, args[2], CertificateUtils.FlagsForOpen) : new X509Certificate2(path, (string)null, CertificateUtils.FlagsForOpen);
+                cert = CertificateUtils.CreateCertificate(path, args.Count == 3 ? args[2] : null);
             }
             catch (Exception e)
             {
@@ -739,7 +739,7 @@ namespace Raven.Server.Utils.Cli
             try
             {
                 certBytes = File.ReadAllBytes(path);
-                cert = password != null ? new X509Certificate2(certBytes, password, CertificateUtils.FlagsForOpen) : new X509Certificate2(certBytes, (string)null, CertificateUtils.FlagsForOpen);
+                cert = CertificateUtils.CreateCertificate(certBytes, password);
             }
             catch (Exception e)
             {
@@ -919,7 +919,7 @@ namespace Raven.Server.Utils.Cli
             X509Certificate2 loadedCert;
             try
             {
-                loadedCert = new X509Certificate2(certBytes, (string)null, CertificateUtils.FlagsForExport);
+                loadedCert = CertificateUtils.CreateCertificate(certBytes, flags:CertificateUtils.FlagsForExport);
             }
             catch (Exception e)
             {

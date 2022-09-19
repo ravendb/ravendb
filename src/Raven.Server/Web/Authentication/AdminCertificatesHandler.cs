@@ -178,7 +178,7 @@ namespace Raven.Server.Web.Authentication
                 try
                 {
                     var password = string.IsNullOrEmpty(certificate.Password) ? null : certificate.Password;
-                    using var certificate2 = new X509Certificate2(certBytes, password, CertificateUtils.FlagsForOpen);
+                    using var certificate2 = CertificateUtils.CreateCertificate(certBytes, password);
                 }
                 catch (Exception e)
                 {
@@ -531,7 +531,7 @@ namespace Raven.Server.Web.Authentication
                 {
                     // NotBefore will be null if the certificate was generated prior to adding the NotBefore property to class CertificateMetadata
                     // So we are manually extracting this info - See issue RavenDB-18519
-                    var tempCertificate = new X509Certificate2(Convert.FromBase64String(def.Certificate));
+                    var tempCertificate = CertificateUtils.CreateCertificate(Convert.FromBase64String(def.Certificate));
                     using (tempCertificate) 
                     {
                           def.NotBefore = tempCertificate.NotBefore;
@@ -695,10 +695,10 @@ namespace Raven.Server.Web.Authentication
 
                             foreach (var cert in clusterNodes)
                             {
-                                var x509Certificate2 = new X509Certificate2(Convert.FromBase64String(cert.Certificate), (string)null, CertificateUtils.FlagsForOpen);
+                                var x509Certificate2 = CertificateUtils.CreateCertificate(Convert.FromBase64String(cert.Certificate));
 
                                 if (collection.Contains(x509Certificate2) == false)
-                                    collection.Import(x509Certificate2.Export(X509ContentType.Cert), (string)null, CertificateUtils.FlagsForOpen);
+                                    collection.Import(x509Certificate2.Export(X509ContentType.Cert), null, CertificateUtils.FlagsForOpen);
                             }
                         }
                         finally
@@ -965,7 +965,7 @@ namespace Raven.Server.Web.Authentication
                         // Ensure we'll be able to load the certificate
                         try
                         {
-                            var _ = new X509Certificate2(certBytes, (string)null, CertificateUtils.FlagsForExport);
+                            var _ = CertificateUtils.CreateCertificate(certBytes, flags: CertificateUtils.FlagsForExport);
                         }
                         catch (Exception e)
                         {
