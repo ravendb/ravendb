@@ -893,7 +893,7 @@ namespace Raven.Server.Utils.Cli
             try
             {
                 certBytes = File.ReadAllBytes(path);
-                cert.Import(certBytes, password, CertificateLoaderUtil.FlagsForExport);
+                CertificateLoaderUtil.Import(cert, certBytes, password, CertificateLoaderUtil.FlagsForExport);
             }
             catch (Exception e)
             {

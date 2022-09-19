@@ -160,7 +160,7 @@ namespace FastTests
             {
                 try
                 {
-                    return new TrackingX509Certificate2(ServerCertificatePath, (string)null, CertificateLoaderUtil.FlagsForOpen);
+                    return new TrackingX509Certificate2(ServerCertificatePath, (string)null);
                 }
                 catch (CryptographicException e)
                 {
@@ -211,7 +211,7 @@ namespace FastTests
             {
                 try
                 {
-                    return new TrackingX509Certificate2(ServerCertificatePath, (string)null, CertificateLoaderUtil.FlagsForOpen);
+                    return new TrackingX509Certificate2(ServerCertificatePath, (string)null);
                 }
                 catch (CryptographicException e)
                 {
