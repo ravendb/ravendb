@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 
 #if !RVN
 using Jint;
+using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
@@ -648,7 +649,7 @@ namespace Raven.Server.Utils.Cli
             X509Certificate2 cert;
             try
             {
-                cert = CertificateUtils.CreateCertificate(path, args.Count == 3 ? args[2] : null);
+                cert = CertificateLoaderUtil.CreateCertificate(path, args.Count == 3 ? args[2] : null);
             }
             catch (Exception e)
             {
@@ -739,7 +740,7 @@ namespace Raven.Server.Utils.Cli
             try
             {
                 certBytes = File.ReadAllBytes(path);
-                cert = CertificateUtils.CreateCertificate(certBytes, password);
+                cert = CertificateLoaderUtil.CreateCertificate(certBytes, password);
             }
             catch (Exception e)
             {
@@ -892,7 +893,7 @@ namespace Raven.Server.Utils.Cli
             try
             {
                 certBytes = File.ReadAllBytes(path);
-                cert.Import(certBytes, password, CertificateUtils.FlagsForExport);
+                cert.Import(certBytes, password, CertificateLoaderUtil.FlagsForExport);
             }
             catch (Exception e)
             {
@@ -919,7 +920,7 @@ namespace Raven.Server.Utils.Cli
             X509Certificate2 loadedCert;
             try
             {
-                loadedCert = CertificateUtils.CreateCertificate(certBytes, flags:CertificateUtils.FlagsForExport);
+                loadedCert = CertificateLoaderUtil.CreateCertificate(certBytes, flags:CertificateLoaderUtil.FlagsForExport);
             }
             catch (Exception e)
             {

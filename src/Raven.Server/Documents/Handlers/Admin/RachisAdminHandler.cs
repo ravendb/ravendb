@@ -10,7 +10,7 @@ using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations.Certificates;
-using Raven.Client.Util;
+using Raven.Client;
 using Raven.Server.Commercial;
 using Raven.Server.Extensions;
 using Raven.Server.Json;
@@ -389,7 +389,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                         if (nodeInfo.Certificate == null)
                             throw new InvalidOperationException($"Cannot add node {nodeTag} with url {nodeUrl} to cluster because it has no certificate while trying to use HTTPS");
 
-                        certificate = CertificateUtils.CreateCertificate(Convert.FromBase64String(nodeInfo.Certificate));
+                        certificate = CertificateLoaderUtil.CreateCertificate(Convert.FromBase64String(nodeInfo.Certificate));
 
                         var now = DateTime.UtcNow;
                         if (certificate.NotBefore.ToUniversalTime() > now)

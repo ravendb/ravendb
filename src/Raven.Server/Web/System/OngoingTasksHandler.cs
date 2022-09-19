@@ -7,6 +7,7 @@ using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
@@ -168,9 +169,9 @@ namespace Raven.Server.Web.System
             {
                 // fetch public key of certificate
                 var certBytes = Convert.FromBase64String(sinkReplication.CertificateWithPrivateKey);
-                var certificate = CertificateUtils.CreateCertificate(certBytes,
+                var certificate = CertificateLoaderUtil.CreateCertificate(certBytes,
                     sinkReplication.CertificatePassword,
-                    CertificateUtils.FlagsForExport);
+                    CertificateLoaderUtil.FlagsForExport);
 
                 sinkInfo.CertificatePublicKey = Convert.ToBase64String(certificate.Export(X509ContentType.Cert));
             }

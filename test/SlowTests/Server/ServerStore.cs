@@ -4,6 +4,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using FastTests;
 using Org.BouncyCastle.Crypto.Tls;
+using Raven.Client;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
@@ -25,7 +26,7 @@ namespace SlowTests.Server
         {
             using (GetDocumentStore())
             {
-                var certificate = new X509Certificate2(Certificates.GenerateAndSaveSelfSignedCertificate().ServerCertificatePath, (string)null, CertificateUtils.FlagsForOpen);
+                var certificate = new X509Certificate2(Certificates.GenerateAndSaveSelfSignedCertificate().ServerCertificatePath, (string)null, CertificateLoaderUtil.FlagsForOpen);
 
                 TransactionOperationContext context;
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
@@ -60,7 +61,7 @@ namespace SlowTests.Server
         {
             using (GetDocumentStore())
             {
-                var certificate = new X509Certificate2(Certificates.GenerateAndSaveSelfSignedCertificate().ServerCertificatePath, (string)null, CertificateUtils.FlagsForOpen);
+                var certificate = new X509Certificate2(Certificates.GenerateAndSaveSelfSignedCertificate().ServerCertificatePath, (string)null, CertificateLoaderUtil.FlagsForOpen);
 
                 TransactionOperationContext context;
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))

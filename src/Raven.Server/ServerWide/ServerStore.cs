@@ -15,6 +15,7 @@ using System.Threading.Tasks;
 using Lucene.Net.Search;
 using NCrontab.Advanced;
 using NCrontab.Advanced.Extensions;
+using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Backups;
@@ -1334,7 +1335,7 @@ namespace Raven.Server.ServerWide
                     if (cert.TryGet(nameof(CertificateReplacement.Certificate), out string base64Cert) == false)
                         throw new InvalidOperationException($"Invalid 'server/cert' value, expected to get '{nameof(CertificateReplacement.Certificate)}' property");
 
-                    var certificate = CertificateUtils.CreateCertificate(Convert.FromBase64String(base64Cert));
+                    var certificate = CertificateLoaderUtil.CreateCertificate(Convert.FromBase64String(base64Cert));
 
                     var now = Server.Time.GetUtcNow();
                     if (certificate.NotBefore.ToUniversalTime() > now)
@@ -1433,7 +1434,7 @@ namespace Raven.Server.ServerWide
                     // Save the received certificate
 
                     var bytesToSave = Convert.FromBase64String(certBase64);
-                    var newClusterCertificate = CertificateUtils.CreateCertificate(bytesToSave, flags: CertificateUtils.FlagsForExport);
+                    var newClusterCertificate = CertificateLoaderUtil.CreateCertificate(bytesToSave, flags: CertificateLoaderUtil.FlagsForExport);
 
                     if (string.IsNullOrEmpty(Configuration.Security.CertificatePath) == false)
                     {

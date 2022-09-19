@@ -1655,7 +1655,7 @@ namespace Raven.Server.Documents.Replication
                         return _server.Server.Certificate.Certificate;
 
                     var certBytes = Convert.FromBase64String(sink.CertificateWithPrivateKey);
-                    return CertificateUtils.CreateCertificate(certBytes, sink.CertificatePassword, CertificateUtils.FlagsForExport);
+                    return CertificateLoaderUtil.CreateCertificate(certBytes, sink.CertificatePassword, CertificateLoaderUtil.FlagsForExport);
 
                 default:
                     throw new ArgumentException($"Unknown node type {node.GetType().FullName}");

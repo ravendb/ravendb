@@ -6,6 +6,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Operations;
@@ -44,7 +45,7 @@ namespace SlowTests.Smuggler
             var dummy = Certificates.GenerateAndSaveSelfSignedCertificate(createNew: true);
             string privateKey;
             using (var pullReplicationCertificate =
-                new X509Certificate2(dummy.ServerCertificatePath, (string)null, CertificateUtils.FlagsForExport))
+                new X509Certificate2(dummy.ServerCertificatePath, (string)null, CertificateLoaderUtil.FlagsForExport))
             {
                 privateKey = Convert.ToBase64String(pullReplicationCertificate.Export(X509ContentType.Pfx));
             }
@@ -250,7 +251,7 @@ namespace SlowTests.Smuggler
             var dummy = Certificates.GenerateAndSaveSelfSignedCertificate(createNew: true);
             string privateKey;
             using (var pullReplicationCertificate =
-                new X509Certificate2(dummy.ServerCertificatePath, (string)null, CertificateUtils.FlagsForExport))
+                new X509Certificate2(dummy.ServerCertificatePath, (string)null, CertificateLoaderUtil.FlagsForExport))
             {
                 privateKey = Convert.ToBase64String(pullReplicationCertificate.Export(X509ContentType.Pfx));
             }
@@ -1006,7 +1007,7 @@ namespace SlowTests.Smuggler
             var dummy = Certificates.GenerateAndSaveSelfSignedCertificate(createNew: true);
             string privateKey;
             using (var pullReplicationCertificate =
-                new X509Certificate2(dummy.ServerCertificatePath, (string)null, CertificateUtils.FlagsForExport))
+                new X509Certificate2(dummy.ServerCertificatePath, (string)null, CertificateLoaderUtil.FlagsForExport))
             {
                 privateKey = Convert.ToBase64String(pullReplicationCertificate.Export(X509ContentType.Pfx));
             }

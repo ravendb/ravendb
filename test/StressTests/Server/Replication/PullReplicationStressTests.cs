@@ -8,7 +8,7 @@ using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
-using Raven.Server.Utils;
+using Raven.Client;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -41,7 +41,7 @@ namespace StressTests.Server.Replication
             var sinkServer = GetNewServer(new ServerCreationOptions { CustomSettings = sinkSettings, RegisterForDisposal = true });
 
             var dummy = Certificates.GenerateAndSaveSelfSignedCertificate(createNew: false);
-            var pullReplicationCertificate = new X509Certificate2(dummy.ServerCertificatePath, (string)null, CertificateUtils.FlagsForExport);
+            var pullReplicationCertificate = new X509Certificate2(dummy.ServerCertificatePath, (string)null, CertificateLoaderUtil.FlagsForExport);
             Assert.True(pullReplicationCertificate.HasPrivateKey);
 
             using (var hubStore = GetDocumentStore(new Options
