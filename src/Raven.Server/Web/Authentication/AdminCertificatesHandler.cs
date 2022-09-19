@@ -216,7 +216,7 @@ namespace Raven.Server.Web.Authentication
             if (string.IsNullOrEmpty(password))
                 collection.Import(certBytes, (string)null, CertificateUtils.FlagsForOpen);
             else
-                collection.Import(certBytes, password, CertificateUtils.FlagsForOpen);
+                collection.Import(certBytes, password, CertificateUtils.FlagsForPersist);
 
             var first = true;
             var collectionPrimaryKey = string.Empty;

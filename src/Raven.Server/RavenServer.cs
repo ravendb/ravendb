@@ -1204,7 +1204,7 @@ namespace Raven.Server
                 X509Certificate2 newCertificate;
                 try
                 {
-                    newCertificate = CertificateUtils.CreateCertificate(certBytes, flags: CertificateUtils.FlagsForExport);
+                    newCertificate = CertificateUtils.CreateCertificate(certBytes, flags: CertificateUtils.FlagsForPersist);
                 }
                 catch (Exception e)
                 {
