@@ -422,10 +422,14 @@ namespace FastTests.Corax
                 // Because there is no guarantee that multiple Fill operations would return sequential non redundant document ids,
                 // we need to sort and remove duplicates before actually testing the final condition. 
                 var sortedActual = actual.ToArray();
-                Sorting.SortAndRemoveDuplicates(sortedActual.AsSpan());
-                for (int i = 0; i < count; i++)
+                var uniqueIdsCount = Sorting.SortAndRemoveDuplicates(sortedActual.AsSpan());
+                var uniqueIds = sortedActual.AsSpan().Slice(0, uniqueIdsCount);
+                
+                Assert.Equal(matchesId.Count, uniqueIdsCount);
+                
+                for (int i = 0; i < uniqueIdsCount; i++)
                 {
-                    Assert.Equal(matchesId[i], sortedActual[i]);
+                    Assert.Equal(matchesId[i], uniqueIds[i]);
                 }
 
                 Assert.Equal((setSize / 3) * 2, count);
