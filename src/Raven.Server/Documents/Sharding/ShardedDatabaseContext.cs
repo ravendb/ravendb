@@ -7,6 +7,7 @@ using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Sharding.Executors;
+using Raven.Server.Documents.Sharding.NotificationCenter;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -60,6 +61,8 @@ namespace Raven.Server.Documents.Sharding
             AllNodesExecutor = new AllNodesExecutor(ServerStore, this);
 
             NotificationCenter = new ShardedDatabaseNotificationCenter(this);
+            NotificationCenter.Initialize();
+
             Streaming = new ShardedStreaming();
             Cluster = new ShardedCluster(this);
             Changes = new ShardedDocumentsChanges(this);

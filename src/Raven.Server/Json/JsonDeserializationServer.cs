@@ -47,6 +47,7 @@ using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.Documents.Revisions;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.Documents.Studio;
+using Raven.Server.NotificationCenter.BackgroundWork;
 using Raven.Server.NotificationCenter.Notifications.Server;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.BackgroundTasks;
@@ -274,6 +275,8 @@ namespace Raven.Server.Json
         internal static readonly Func<BlittableJsonReaderObject, GetEtlTaskPerformanceStatsCommand.EtlTaskPerformanceStatsResponse> EtlTaskPerformanceStatsResponse = GenerateJsonDeserializationRoutine<GetEtlTaskPerformanceStatsCommand.EtlTaskPerformanceStatsResponse>();
 
         internal static readonly Func<BlittableJsonReaderObject, GetPeriodicBackupTimersCommand.PeriodicBackupTimersResponse> GetPeriodicBackupTimersCommandResponse = GenerateJsonDeserializationRoutine<GetPeriodicBackupTimersCommand.PeriodicBackupTimersResponse>();
+
+        internal static readonly Func<BlittableJsonReaderObject, NotificationCenterDatabaseStats> NotificationCenterDatabaseStats = GenerateJsonDeserializationRoutine<NotificationCenterDatabaseStats>();
 
         public class Parameters
         {
