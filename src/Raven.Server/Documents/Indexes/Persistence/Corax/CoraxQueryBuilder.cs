@@ -450,7 +450,7 @@ internal static class CoraxQueryBuilder
         return null;
     }
 
-    private static bool TryMergeTwoNodes<TScoreFunction>(IndexSearcher indexSearcher, MemoizationMatchProvider<AllEntriesMatch> allEntries, ref IQueryMatch lhs,
+    private static bool TryMergeTwoNodes<TScoreFunction>(IndexSearcher indexSearcher, MemoizationMatchProviderRef<AllEntriesMatch> allEntries, ref IQueryMatch lhs,
         ref IQueryMatch rhs, out CoraxBooleanQuery merged, TScoreFunction scoreFunction, bool reruiredMaterialization = false)
         where TScoreFunction : IQueryScoreFunction
     {

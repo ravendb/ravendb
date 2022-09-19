@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Corax;
 using Corax.Queries;
+using Corax.Utils;
 using Raven.Server.Documents.Queries;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -24,7 +25,7 @@ internal class QueryParameters
     public readonly Dictionary<string, CoraxHighlightingTermIndex> HighlightingTerms;
     public readonly int Take;
     public readonly List<string> BuildSteps;
-    public readonly MemoizationMatchProvider<AllEntriesMatch> AllEntries;
+    public readonly MemoizationMatchProviderRef<AllEntriesMatch> AllEntries;
     public readonly QueryMetadata Metadata;
     
     internal QueryParameters(IndexSearcher searcher, TransactionOperationContext serverContext, DocumentsOperationContext documentsContext, IndexQueryServerSide query, Index index, BlittableJsonReaderObject parameters, QueryBuilderFactories factories, IndexFieldsMapping indexFieldsMapping, FieldsToFetch fieldsToFetch, Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms, int take, List<string> buildSteps = null)
@@ -41,7 +42,7 @@ internal class QueryParameters
         HighlightingTerms = highlightingTerms;
         Take = take;
         BuildSteps = buildSteps;
-        AllEntries = IndexSearcher.Memoize(IndexSearcher.AllEntries());
+        AllEntries = new MemoizationMatchProviderRef<AllEntriesMatch>(IndexSearcher.Memoize(IndexSearcher.AllEntries()));
         Metadata = query.Metadata;
     }
 }

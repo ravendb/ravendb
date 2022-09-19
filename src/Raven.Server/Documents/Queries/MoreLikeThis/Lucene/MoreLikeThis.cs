@@ -129,8 +129,6 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
     /// </summary>
     public class LuceneMoreLikeThis : MoreLikeThisBase
     {
-
-
         /// <summary> For idf() calculations.</summary>
         private Similarity _similarity;
 
