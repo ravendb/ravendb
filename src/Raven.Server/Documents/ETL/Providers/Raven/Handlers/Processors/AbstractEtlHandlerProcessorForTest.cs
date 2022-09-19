@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven.Handlers.Processors
             {
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
                 {
-                    var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(testResult);
+                    var djv = testResult.ToJson(context);
                     writer.WriteObject(context.ReadObject(djv, "et/sql/test"));
                 }
             }
