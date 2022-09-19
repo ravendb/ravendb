@@ -4,7 +4,7 @@ using System.Net.WebSockets;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Util;
+using Raven.Client;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -50,7 +50,7 @@ namespace Raven.Server.NotificationCenter.Handlers
             {
                 var tcpConnection = ReplicationUtils.GetTcpInfo(_nodeUrl, null, $"{nameof(ProxyWebSocketConnection)} to {_nodeUrl}", certificate, _cts.Token);
 
-                var expectedCert = CertificateUtils.CreateCertificate(Convert.FromBase64String(tcpConnection.Certificate));
+                var expectedCert = CertificateLoaderUtil.CreateCertificate(Convert.FromBase64String(tcpConnection.Certificate));
 
                 _remoteWebSocket.Options.ClientCertificates.Add(certificate);
 

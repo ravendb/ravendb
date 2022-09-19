@@ -9,7 +9,7 @@ using FastTests.Server.Replication;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.Replication;
-using Raven.Server.Utils;
+using Raven.Client;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Sparrow.Server.Json.Sync;
@@ -43,7 +43,7 @@ namespace SlowTests.Issues
             var hubServer = GetNewServer(new ServerCreationOptions { CustomSettings = hubSettings, RegisterForDisposal = true });
             var sinkServer = GetNewServer(new ServerCreationOptions { CustomSettings = sinkSettings, RegisterForDisposal = true });
 
-            var ownCertificate = new X509Certificate2(sinkCertificates.ClientCertificate1Path, (string)null, CertificateUtils.FlagsForExport);
+            var ownCertificate = new X509Certificate2(sinkCertificates.ClientCertificate1Path, (string)null, CertificateLoaderUtil.FlagsForExport);
             Assert.True(ownCertificate.HasPrivateKey);
 
             using (var hubStore = GetDocumentStore(new Options

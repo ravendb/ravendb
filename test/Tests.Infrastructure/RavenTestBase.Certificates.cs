@@ -7,6 +7,7 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
+using Raven.Client;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Properties;
 using Raven.Client.ServerWide.Operations.Certificates;
@@ -141,7 +142,7 @@ public partial class RavenTestBase
                 X509Certificate2 serverCertificate;
                 try
                 {
-                    serverCertificate = new X509Certificate2(certBytes, (string)null, CertificateUtils.FlagsForOpen);
+                    serverCertificate = new X509Certificate2(certBytes, (string)null, CertificateLoaderUtil.FlagsForOpen);
                 }
                 catch (Exception e)
                 {

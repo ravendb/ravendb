@@ -12,6 +12,7 @@ using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands.MultiGet;
 using Raven.Client.Documents.Operations.ConnectionStrings;
@@ -45,7 +46,7 @@ namespace SlowTests.Authentication
 
         public X509Certificate2 CreateAndPutExpiredClientCertificate(string serverCertPath, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance = SecurityClearance.ValidUser)
         {
-            var serverCertificate = new X509Certificate2(serverCertPath, (string)null, CertificateUtils.FlagsForOpen);
+            var serverCertificate = new X509Certificate2(serverCertPath, (string)null, CertificateLoaderUtil.FlagsForOpen);
             var serverCertificateHolder = new SecretProtection(
                 new SecurityConfiguration()).LoadCertificateFromPath(
                 serverCertPath,

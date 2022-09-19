@@ -10,6 +10,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client;
 using Raven.Client.Documents.Smuggler;
 using Raven.Server.Config;
 using Raven.Server.ServerWide;
@@ -336,7 +337,7 @@ exit 0";
             X509Certificate2 serverCertificate;
             try
             {
-                serverCertificate = new X509Certificate2(certificates.ServerCertificatePath, (string)null, CertificateUtils.FlagsForExport);
+                serverCertificate = new X509Certificate2(certificates.ServerCertificatePath, (string)null, CertificateLoaderUtil.FlagsForExport);
             }
             catch (CryptographicException e)
             {

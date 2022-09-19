@@ -438,7 +438,7 @@ namespace Raven.Server.Web.System
 
                 try
                 {
-                    certificate = CertificateUtils.CreateCertificate(Convert.FromBase64String(certDef.Certificate), certDef.Password);
+                    certificate = CertificateLoaderUtil.CreateCertificate(Convert.FromBase64String(certDef.Certificate), certDef.Password);
 
                     cn = certificate.GetNameInfo(X509NameType.SimpleName, false);
                 }
@@ -577,7 +577,7 @@ namespace Raven.Server.Web.System
 
                 var zip = ((SetupProgressAndResult)operationResult).SettingsZipFile;
 
-                var nodeCert = CertificateUtils.CreateCertificate(Convert.FromBase64String(setupInfo.Certificate), setupInfo.Password);
+                var nodeCert = CertificateLoaderUtil.CreateCertificate(Convert.FromBase64String(setupInfo.Certificate), setupInfo.Password);
 
                 var cn = nodeCert.GetNameInfo(X509NameType.SimpleName, false);
                 var fileName = $"{cn}.Cluster.Settings {DateTime.UtcNow:yyyy-MM-dd HH-mm}.zip ";

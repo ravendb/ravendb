@@ -9,6 +9,7 @@ using System.Runtime.CompilerServices;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Indexes;
@@ -47,7 +48,7 @@ using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Server.Utils;
 using Voron;
-using Voron.Global;
+using Constants = Voron.Global.Constants;
 using Size = Sparrow.Size;
 
 namespace Raven.Server.Smuggler.Documents
@@ -2006,7 +2007,7 @@ namespace Raven.Server.Smuggler.Documents
                 const int batchSize = 128;
 
                 byte[] buffer = Convert.FromBase64String(access.CertificateBase64);
-                using var cert = CertificateUtils.CreateCertificate(buffer);
+                using var cert = CertificateLoaderUtil.CreateCertificate(buffer);
 
                 _commands.Add(new RegisterReplicationHubAccessCommand(_database.Name, hub, access, cert, RaftIdGenerator.DontCareId));
 

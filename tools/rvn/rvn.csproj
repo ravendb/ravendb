@@ -16,6 +16,9 @@
   <ItemGroup>
     <Compile Include="..\..\src\Raven.Client\Extensions\MemberInfoExtensions.cs" Link="Client\Extensions\MemberInfoExtensions.cs" />
     <Compile Include="..\..\src\Raven.Client\Extensions\StringExtensions.cs" Link="Client\Extensions\StringExtensions.cs" />
+    <Compile Include="..\..\src\Raven.Client\Util\CertificateLoaderUtil.cs">
+      <Link>Client\Util\CertificateLoaderUtil.cs</Link>
+    </Compile>
     <Compile Include="..\..\src\Raven.Server\Commercial\CompleteClusterConfigurationResult.cs" Link="Server\Commercial\CompleteClusterConfigurationResult.cs" />
     <Compile Include="..\..\src\Raven.Server\Commercial\GetSetupZipFileParameters.cs" Link="Server\Commercial\GetSetupZipFileParameters.cs" />
     <Compile Include="..\..\src\Raven.Server\Commercial\SetupMode.cs" Link="Server\Commercial\SetupMode.cs" />
