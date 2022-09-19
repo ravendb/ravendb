@@ -149,7 +149,7 @@
             </div>
             <div class="scroll flex-grow margin-top margin-top-sm">
                 <div class="panel panel-info certificate-item" data-bind="visible: wellKnownAdminCertsVisible">
-                    <div class="padding flex-horizontal">
+                    <div class="padding-sm flex-horizontal">
                         <div class="certificate-name">
                             <div class="flex-horizontal">
                                 <div>
@@ -194,7 +194,7 @@
                                          data-bind="visible: _.includes(Thumbprints, $root.serverCertificateThumbprint())">server certificate
                                     </div>
                                     <div title="This is the client certificate currently used by the browser" class="label label-success"
-                                         data-bind="visible: _.includes(Thumbprints, $root.clientCertificateThumbprint())">client certificate
+                                         data-bind="visible: _.includes(Thumbprints, $root.clientCertificateThumbprint())">current browser certificate
                                     </div>
                                 </a>
                                 <div class="thumbprint" title="Certificate thumbprint" data-bind="text: Thumbprints.join(', ')">
@@ -203,7 +203,9 @@
                             <div class="flex-grow"></div>
                             <div class="flex-horizontal">
                                 <div class="actions">
-                                    <button class="btn btn-default" data-bind="click: _.partial($root.enterRegenerateCertificateMode, $data), visible: $root.canEdit($data)() && isExpired" title="Re-generate certificate">
+                                    <button class="btn btn-default" 
+                                            data-bind="click: _.partial($root.enterRegenerateCertificateMode, $data), visible: $root.canEdit($data)() && (isAboutToExpire || isExpired)" 
+                                            title="Re-generate certificate">
                                         <i class="icon-magic-wand"></i>
                                     </button>
                                     <button class="btn btn-default" data-bind="click: _.partial($root.enterEditCertificateMode, $data), visible: $root.canEdit($data)() && !isExpired" title="Edit certificate">
@@ -270,7 +272,7 @@
                         <div class="flex-horizontal margin-bottom">
                             <div class="flex-grow">
                                 <h3 data-bind="visible: mode() === 'generate'">Generate client certificate</h3>
-                                <h3 data-bind="visible: mode() === 'regenerate'">Regenerate expired client certificate</h3>
+                                <h3 data-bind="visible: mode() === 'regenerate'">Regenerate client certificate</h3>
                                 <h3 data-bind="visible: mode() === 'upload'">Upload client certificate</h3>
                                 <h3 data-bind="visible: mode() === 'editExisting'">Edit permissions</h3>
                                 <h3 data-bind="visible: mode() === 'replace'">Replace server certificates (cluster-wide)</h3>
@@ -454,8 +456,8 @@
                             <hr class="margin-top-lg" />
                             <div class="toggle margin-left-sm" data-bind="visible: mode() === 'regenerate'">
                                 <input id="deleteExpired" type="checkbox" class="styled" data-bind="checked: deleteExpired" />
-                                <label for="deleteExpired" data-placement="bottom" data-toggle="tooltip" data-animation="true" title="The expired certificate will be deleted upon clicking 'Generate'">
-                                    <span>Delete expired certificate</span>&nbsp;<small>(<code data-bind="text: thumbprint()"></code>)</small>
+                                <label for="deleteExpired" data-placement="bottom" data-toggle="tooltip" data-animation="true" title="Old certificate will be deleted upon clicking 'Generate'">
+                                    <span>Delete old certificate</span>&nbsp;<small>(<code data-bind="text: thumbprint()"></code>)</small>
                                 </label>
                             </div>
                             <div class="flex-horizontal margin-top">
