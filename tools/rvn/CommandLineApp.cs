@@ -176,6 +176,7 @@ namespace rvn
                                 Console.Error.WriteLine(tuple.Exception.Message);
                             }
                         }),
+                        RegisterTcpDnsRecords = generateHelmValuesVal is not null,
                         CancellationToken = token
                     });
                 });
