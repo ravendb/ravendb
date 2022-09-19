@@ -47,7 +47,7 @@ public readonly struct CoraxBooleanItem : IQueryMatch
         if (operation is UnaryMatchOperation.Equals or UnaryMatchOperation.NotEquals)
         {
             TermAsString = QueryBuilderHelper.CoraxGetValueAsString(term);
-            Count = searcher.TermAmount(name, TermAsString);
+            Count = searcher.TermAmount(name, TermAsString, fieldId);
         }
         else
         {
