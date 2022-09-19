@@ -11,6 +11,7 @@ using Lucene.Net.Util;
 using Raven.Client.Exceptions.Corax;
 using Raven.Server.Documents.Indexes.Persistence.Corax;
 using Sparrow.Json;
+using CoraxProj = global::Corax;
 
 /*
  * This code is adaptation of `MoreLikeThis` functionality from Lucene for Corax. Original code is shared on licence:
@@ -32,23 +33,23 @@ using Sparrow.Json;
   You can find original source-code here: https://github.com/ravendb/ravendb/blob/v5.3/src/Raven.Server/Documents/Queries/MoreLikeThis/MoreLikeThis.cs
 */
 
-namespace Raven.Server.Documents.Queries.MoreLikeThis;
+namespace Raven.Server.Documents.Queries.MoreLikeThis.Corax;
 
-internal class CoraxMoreLikeThis : MoreLikeThisBase
+internal class RavenMoreLikeThis : MoreLikeThisBase
 {
-    private readonly QueryEnvironment _queryEnvironment;
+    private readonly QueryParameters _queryParameters;
     private readonly Analyzer _analyzer;
 
 
-    public CoraxMoreLikeThis(QueryEnvironment queryEnvironment, Analyzer analyzer = null)
+    public RavenMoreLikeThis(QueryParameters queryParameters, Analyzer analyzer = null)
     {
         _analyzer = analyzer ?? Analyzer.DefaultAnalyzer;
-        _queryEnvironment = queryEnvironment;
+        _queryParameters = queryParameters;
     }
 
     protected override PriorityQueue<object[]> CreateQueue(IDictionary<string, Int> words)
     {
-        var indexSearcher = _queryEnvironment.IndexSearcher;
+        var indexSearcher = _queryParameters.IndexSearcher;
         var amountOfDocs = indexSearcher.NumberOfEntries;
         var res = new FreqQ(words.Count);
 
@@ -146,7 +147,7 @@ internal class CoraxMoreLikeThis : MoreLikeThisBase
     /// <summary> Adds term frequencies found by tokenizing text from reader into the Map words</summary>
     protected void AddTermFrequencies(ref IndexEntryReader entryReader, IDictionary<string, Int> termFreqMap, string fieldName)
     {
-        if (_queryEnvironment.IndexFieldsMapping.TryGetByFieldName(fieldName, out var binding) == false || binding.FieldIndexingMode is FieldIndexingMode.No)
+        if (_queryParameters.IndexFieldsMapping.TryGetByFieldName(fieldName, out var binding) == false || binding.FieldIndexingMode is FieldIndexingMode.No)
         {
             //We don't have such data in index so nothing to do
             return;
@@ -161,7 +162,7 @@ internal class CoraxMoreLikeThis : MoreLikeThisBase
         {
             case IndexEntryFieldType.Empty:
             case IndexEntryFieldType.Null:
-                var termValue = fieldType == IndexEntryFieldType.Null ? Corax.Constants.NullValueSlice : Corax.Constants.EmptyStringSlice;
+                var termValue = fieldType == IndexEntryFieldType.Null ? CoraxProj.Constants.NullValueSlice : CoraxProj.Constants.EmptyStringSlice;
                 InsertTerm(termValue.AsReadOnlySpan());
                 break;
 
@@ -174,7 +175,7 @@ internal class CoraxMoreLikeThis : MoreLikeThisBase
                 {
                     if (iterator.IsNull)
                     {
-                        InsertTerm(Corax.Constants.NullValueSlice);
+                        InsertTerm(CoraxProj.Constants.NullValueSlice);
                     }
                     else if (iterator.IsEmpty)
                     {
@@ -227,7 +228,7 @@ internal class CoraxMoreLikeThis : MoreLikeThisBase
 
                     if ((fieldType & IndexEntryFieldType.HasNulls) != 0 && (iterator.IsEmpty || iterator.IsNull))
                     {
-                        var fieldValue = iterator.IsNull ? Corax.Constants.NullValueSlice : Corax.Constants.EmptyStringSlice;
+                        var fieldValue = iterator.IsNull ? CoraxProj.Constants.NullValueSlice : CoraxProj.Constants.EmptyStringSlice;
                         InsertTerm(fieldValue.AsReadOnlySpan());
                     }
                     else
@@ -310,7 +311,7 @@ internal class CoraxMoreLikeThis : MoreLikeThisBase
 
     IQueryMatch CreateQuery(PriorityQueue<object[]> q)
     {
-        var indexSearcher = _queryEnvironment.IndexSearcher;
+        var indexSearcher = _queryParameters.IndexSearcher;
         object cur;
         var qterms = 0;
         IQueryMatch query = null;
@@ -349,13 +350,13 @@ internal class CoraxMoreLikeThis : MoreLikeThisBase
     /// </param>
     public override void SetMaxDocFreqPct(int maxPercentage)
     {
-        var result = checked((maxPercentage / 100.0) * _queryEnvironment.IndexSearcher.NumberOfEntries);
+        var result = checked((maxPercentage / 100.0) * _queryParameters.IndexSearcher.NumberOfEntries);
         _maxDocfreq = result >= int.MaxValue ? int.MaxValue : (int)Math.Ceiling(result);
     }
 
     protected PriorityQueue<object[]> RetrieveTerms(long documentId)
     {
-        var indexSearcher = _queryEnvironment.IndexSearcher;
+        var indexSearcher = _queryParameters.IndexSearcher;
         IDictionary<string, Int> termFreqMap = new HashMap<string, Int>();
         var indexEntry = indexSearcher.GetReaderFor(documentId);
 

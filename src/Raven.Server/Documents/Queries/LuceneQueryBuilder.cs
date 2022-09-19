@@ -27,7 +27,7 @@ using Spatial4n.Shapes;
 using FuzzyQuery = Lucene.Net.Search.FuzzyQuery;
 using Index = Raven.Server.Documents.Indexes.Index;
 using KeywordAnalyzer = Lucene.Net.Analysis.KeywordAnalyzer;
-using MoreLikeThisQuery = Raven.Server.Documents.Queries.MoreLikeThis.LuceneMoreLikeThisQuery;
+using MoreLikeThisQuery = Raven.Server.Documents.Queries.MoreLikeThis.Lucene;
 using Query = Raven.Server.Documents.Queries.AST.Query;
 using Term = Lucene.Net.Index.Term;
 using TermQuery = Lucene.Net.Search.TermQuery;
@@ -61,7 +61,7 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
-        public static MoreLikeThisQuery BuildMoreLikeThisQuery(TransactionOperationContext serverContext, DocumentsOperationContext context, QueryMetadata metadata,
+        public static MoreLikeThisQuery.MoreLikeThisQuery BuildMoreLikeThisQuery(TransactionOperationContext serverContext, DocumentsOperationContext context, QueryMetadata metadata,
             Index index, QueryExpression whereExpression, BlittableJsonReaderObject parameters, LuceneRavenPerFieldAnalyzerWrapper analyzer,
             QueryBuilderFactories factories)
         {
@@ -71,7 +71,7 @@ namespace Raven.Server.Documents.Queries
                 var moreLikeThisQuery = ToMoreLikeThisQuery(serverContext, context, metadata.Query, whereExpression, metadata, index, parameters, analyzer, factories,
                     out var baseDocument, out var options);
 
-                return new MoreLikeThisQuery {BaseDocument = baseDocument, BaseDocumentQuery = moreLikeThisQuery, FilterQuery = filterQuery, Options = options};
+                return new MoreLikeThisQuery.MoreLikeThisQuery {BaseDocument = baseDocument, BaseDocumentQuery = moreLikeThisQuery, FilterQuery = filterQuery, Options = options};
             }
         }
 

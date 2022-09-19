@@ -14,6 +14,7 @@ using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Highlightings;
 using Raven.Server.Documents.Queries.MoreLikeThis;
+using Raven.Server.Documents.Queries.MoreLikeThis.Corax;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.Json;
@@ -78,7 +79,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             bool isBinary;
             using (coraxScope?.Start())
             {
-                var queryEnv = new QueryEnvironment(_indexSearcher, serverContext: null, context: null, query, _index, query.QueryParameters, QueryBuilderFactories,
+                var queryEnv = new QueryParameters(_indexSearcher, serverContext: null, documentsContext: null, query, _index, query.QueryParameters, QueryBuilderFactories,
                     _fieldMappings, fieldsToFetch, highlightingTerms, take);
                 if ((queryMatch = CoraxQueryBuilder.BuildQuery(queryEnv, out isBinary)) is null)
                     yield break;
@@ -475,9 +476,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             IDisposable releaseServerContext = null;
             IDisposable closeServerTransaction = null;
             TransactionOperationContext serverContext = null;
-            CoraxMoreLikeThisQuery moreLikeThisQuery;
+            MoreLikeThisQuery moreLikeThisQuery;
             var isBinary = false;
-            QueryEnvironment queryEnvironment;
+            QueryParameters queryParameters;
 
             try
             {
@@ -489,9 +490,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
                 using (closeServerTransaction)
                 {
-                    queryEnvironment = new QueryEnvironment(_indexSearcher, serverContext, context, query, _index, query.QueryParameters, QueryBuilderFactories,
-                        _fieldMappings, null, null /* allow highlighting? */, -1, null);
-                    moreLikeThisQuery = CoraxQueryBuilder.BuildMoreLikeThisQuery(queryEnvironment, query.Metadata.Query.Where, out isBinary);
+                    queryParameters = new QueryParameters(_indexSearcher, serverContext, context, query, _index, query.QueryParameters, QueryBuilderFactories,
+                        _fieldMappings, null, null /* allow highlighting? */, CoraxQueryBuilder.TakeAll, null);
+                    moreLikeThisQuery = CoraxQueryBuilder.BuildMoreLikeThisQuery(queryParameters, query.Metadata.Query.Where, out isBinary);
                 }
             }
             finally
@@ -516,9 +517,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 }
             }
 
-            queryEnvironment = new QueryEnvironment(_indexSearcher, null, context, query, _index, query.QueryParameters, QueryBuilderFactories,
-                _fieldMappings, null, null /* allow highlighting? */, -1, null);
-            var mlt = new RavenCoraxMoreLikeThis(queryEnvironment, options);
+            queryParameters = new QueryParameters(_indexSearcher, null, context, query, _index, query.QueryParameters, QueryBuilderFactories,
+                _fieldMappings, null, null /* allow highlighting? */, CoraxQueryBuilder.TakeAll, null);
+            var mlt = new RavenRavenMoreLikeThis(queryParameters, options);
             long? baseDocId = null;
 
             if (moreLikeThisQuery.BaseDocument == null)
@@ -635,7 +636,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
             IQueryMatch queryMatch;
             bool isBinary;
-            var queryEnv = new QueryEnvironment(_indexSearcher, null, null, query, _index, null, null, _fieldMappings, null, null, -1, null);
+            var queryEnv = new QueryParameters(_indexSearcher, null, null, query, _index, null, null, _fieldMappings, null, null, -1, null);
             if ((queryMatch = CoraxQueryBuilder.BuildQuery(queryEnv, out isBinary)) is null)
                 yield break;
 

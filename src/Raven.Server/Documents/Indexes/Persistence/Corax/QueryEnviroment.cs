@@ -7,27 +7,27 @@ using Sparrow.Json;
 using RavenConstants = Raven.Client.Constants;
 using IndexSearcher = Corax.IndexSearcher;
 using CoraxConstants = Corax.Constants;
-using MoreLikeThisQuery = Raven.Server.Documents.Queries.MoreLikeThis.CoraxMoreLikeThisQuery;
+using MoreLikeThisQuery = Raven.Server.Documents.Queries.MoreLikeThis.Corax;
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
-internal readonly struct QueryEnvironment
+internal class QueryParameters
 {
-    internal readonly IndexSearcher IndexSearcher;
-    internal readonly TransactionOperationContext ServerContext;
-    internal readonly DocumentsOperationContext Context;
-    internal readonly IndexQueryServerSide Query;
-    internal readonly Index Index;
-    internal readonly BlittableJsonReaderObject Parameters;
-    internal readonly QueryBuilderFactories Factories;
-    internal readonly IndexFieldsMapping IndexFieldsMapping;
-    internal readonly FieldsToFetch FieldsToFetch;
-    internal readonly Dictionary<string, CoraxHighlightingTermIndex> HighlightingTerms;
-    internal readonly int Take;
-    internal readonly List<string> BuildSteps;
-    internal readonly MemoizationMatchProvider<AllEntriesMatch> AllEntries;
-    internal readonly QueryMetadata Metadata;
+    public readonly IndexSearcher IndexSearcher;
+    public readonly TransactionOperationContext ServerContext;
+    public readonly DocumentsOperationContext DocumentsContext;
+    public readonly IndexQueryServerSide Query;
+    public readonly Index Index;
+    public readonly BlittableJsonReaderObject Parameters;
+    public readonly QueryBuilderFactories Factories;
+    public readonly IndexFieldsMapping IndexFieldsMapping;
+    public readonly FieldsToFetch FieldsToFetch;
+    public readonly Dictionary<string, CoraxHighlightingTermIndex> HighlightingTerms;
+    public readonly int Take;
+    public readonly List<string> BuildSteps;
+    public readonly MemoizationMatchProvider<AllEntriesMatch> AllEntries;
+    public readonly QueryMetadata Metadata;
     
-    internal QueryEnvironment(IndexSearcher searcher, TransactionOperationContext serverContext, DocumentsOperationContext context, IndexQueryServerSide query, Index index, BlittableJsonReaderObject parameters, QueryBuilderFactories factories, IndexFieldsMapping indexFieldsMapping, FieldsToFetch fieldsToFetch, Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms, int take, List<string> buildSteps = null)
+    internal QueryParameters(IndexSearcher searcher, TransactionOperationContext serverContext, DocumentsOperationContext documentsContext, IndexQueryServerSide query, Index index, BlittableJsonReaderObject parameters, QueryBuilderFactories factories, IndexFieldsMapping indexFieldsMapping, FieldsToFetch fieldsToFetch, Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms, int take, List<string> buildSteps = null)
     {
         IndexSearcher = searcher;
         ServerContext = serverContext;
@@ -37,7 +37,7 @@ internal readonly struct QueryEnvironment
         Factories = factories;
         IndexFieldsMapping = indexFieldsMapping;
         FieldsToFetch = fieldsToFetch;
-        Context = context;
+        DocumentsContext = documentsContext;
         HighlightingTerms = highlightingTerms;
         Take = take;
         BuildSteps = buildSteps;
