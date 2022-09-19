@@ -12,6 +12,7 @@ namespace Corax
     public unsafe class Analyzer : IDisposable
     {
         public static Analyzer DefaultAnalyzer = Create(default(KeywordTokenizer), default(ExactTransformer));
+        public static Analyzer DefaultLowercaseAnalyzer = Create(default(KeywordTokenizer), default(LowerCaseTransformer));
         public static readonly ArrayPool<byte> BufferPool = ArrayPool<byte>.Create();
         public static readonly ArrayPool<Token> TokensPool = ArrayPool<Token>.Create();
         public readonly int DefaultOutputSize;

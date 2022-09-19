@@ -128,7 +128,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     internal ByteStringContext<ByteStringMemoryCache>.InternalScope ApplyAnalyzer(string originalTerm, int fieldId, out Slice value)
     {
         if (_fieldMapping.TryGetByFieldId(fieldId, out var binding) == false
-            || binding.FieldIndexingMode is FieldIndexingMode.Exact or FieldIndexingMode.Search
+            || binding.FieldIndexingMode is FieldIndexingMode.Exact
             || binding.Analyzer is null)
         {
             var disposable = Slice.From(Allocator, originalTerm, ByteStringType.Immutable, out var originalTermSliced);
@@ -145,7 +145,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     internal ByteStringContext<ByteStringMemoryCache>.InternalScope ApplyAnalyzer(ReadOnlySpan<byte> originalTerm, int fieldId, out Slice value)
     {
         if (_fieldMapping.TryGetByFieldId(fieldId, out var binding) == false
-            || binding.FieldIndexingMode is FieldIndexingMode.Exact or FieldIndexingMode.Search
+            || binding.FieldIndexingMode is FieldIndexingMode.Exact
             || binding.Analyzer is null)
         {
             var disposable = Slice.From(Allocator, originalTerm, ByteStringType.Immutable, out var originalTermSliced);
@@ -160,7 +160,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     internal ByteStringContext<ByteStringMemoryCache>.InternalScope ApplyAnalyzer(Slice originalTerm, int fieldId, out Slice value)
     {
         if (_fieldMapping.TryGetByFieldId(fieldId, out var binding) == false
-            || binding.FieldIndexingMode is FieldIndexingMode.Exact or FieldIndexingMode.Search
+            || binding.FieldIndexingMode is FieldIndexingMode.Exact
             || binding.Analyzer is null)
         {
             value = originalTerm;
@@ -173,7 +173,9 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private ByteStringContext<ByteStringMemoryCache>.InternalScope AnalyzeTerm(IndexFieldBinding binding, ReadOnlySpan<byte> originalTerm, int fieldId, out Slice value)
     {
-        var analyzer = binding.Analyzer!;
+        var analyzer = binding.FieldIndexingMode is FieldIndexingMode.Search 
+            ? Analyzer.DefaultLowercaseAnalyzer // lowercase only when search is used in non-full-text-search match 
+            : binding.Analyzer!;
         analyzer.GetOutputBuffersSize(originalTerm.Length, out int outputSize, out int tokenSize);
 
         Debug.Assert(outputSize < 1024 * 1024, "Term size is too big for analyzer.");
