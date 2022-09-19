@@ -10,5 +10,6 @@ public class UpdateDnsRecordParameters
     public SetupProgressAndResult Progress;
     public string Challenge;
     public SetupInfo SetupInfo;
+    public bool RegisterTcpDnsRecords;
     public CancellationToken Token;
 }
