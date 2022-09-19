@@ -23,6 +23,7 @@ using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Explanation;
 using Raven.Server.Documents.Queries.MoreLikeThis;
+using Raven.Server.Documents.Queries.MoreLikeThis.Lucene;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Sorting.AlphaNumeric;
 using Raven.Server.Documents.Queries.Sorting.Custom;
@@ -769,7 +770,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             IDisposable releaseServerContext = null;
             IDisposable closeServerTransaction = null;
             TransactionOperationContext serverContext = null;
-            LuceneMoreLikeThisQuery moreLikeThisQuery;
+            MoreLikeThisQuery moreLikeThisQuery;
 
             try
             {
@@ -805,7 +806,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
 
             var ir = _searcher.IndexReader;
-            var mlt = new RavenLuceneMoreLikeThis(ir, options, _state);
+            var mlt = new RavenMoreLikeThis(ir, options, _state);
 
             int? baseDocId = null;
 

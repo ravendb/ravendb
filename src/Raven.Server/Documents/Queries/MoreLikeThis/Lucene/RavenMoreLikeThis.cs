@@ -1,21 +1,20 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
-
 using Lucene.Net.Index;
 using Lucene.Net.Store;
 using Lucene.Net.Util;
 using Raven.Client.Documents.Queries.MoreLikeThis;
-using Raven.Server.Documents.Indexes.Persistence.Corax;
+using LuceneProj = Lucene;
 
-namespace Raven.Server.Documents.Queries.MoreLikeThis;
+namespace Raven.Server.Documents.Queries.MoreLikeThis.Lucene;
 
-internal class RavenLuceneMoreLikeThis : LuceneMoreLikeThis
+internal class RavenMoreLikeThis : LuceneMoreLikeThis
 {
     private readonly IndexReader _ir;
     private readonly IState _state;
 
-    public RavenLuceneMoreLikeThis(IndexReader ir, MoreLikeThisOptions options, IState state)
+    public RavenMoreLikeThis(IndexReader ir, MoreLikeThisOptions options, IState state)
         : base(ir, state)
     {
         _ir = ir;
@@ -47,7 +46,7 @@ internal class RavenLuceneMoreLikeThis : LuceneMoreLikeThis
     {
         var fieldNames = GetFieldNames() ?? Array.Empty<string>();
 
-        IDictionary<string, Int> termFreqMap = new Lucene.Net.Support.HashMap<string, Int>();
+        IDictionary<string, Int> termFreqMap = new LuceneProj.Net.Support.HashMap<string, Int>();
 
         foreach (var fieldName in fieldNames)
         {
@@ -73,32 +72,5 @@ internal class RavenLuceneMoreLikeThis : LuceneMoreLikeThis
         }
 
         return CreateQueue(termFreqMap);
-    }
-}
-
-internal class RavenCoraxMoreLikeThis : CoraxMoreLikeThis
-{
-    public RavenCoraxMoreLikeThis(QueryEnvironment env, MoreLikeThisOptions options) : base(env)
-    {
-        if (options.Boost != null)
-            Boost = options.Boost.Value;
-        if (options.BoostFactor != null)
-            BoostFactor = options.BoostFactor.Value;
-        if (options.MaximumNumberOfTokensParsed != null)
-            MaxNumTokensParsed = options.MaximumNumberOfTokensParsed.Value;
-        if (options.MaximumQueryTerms != null)
-            MaxQueryTerms = options.MaximumQueryTerms.Value;
-        if (options.MinimumWordLength != null)
-            MinWordLen = options.MinimumWordLength.Value;
-        if (options.MaximumWordLength != null)
-            MaxWordLen = options.MaximumWordLength.Value;
-        if (options.MinimumTermFrequency != null)
-            MinTermFreq = options.MinimumTermFrequency.Value;
-        if (options.MinimumDocumentFrequency != null)
-            MinDocFreq = options.MinimumDocumentFrequency.Value;
-        if (options.MaximumDocumentFrequency != null)
-            MaxDocFreq = options.MaximumDocumentFrequency.Value;
-        if (options.MaximumDocumentFrequencyPercentage != null)
-            base.SetMaxDocFreqPct(options.MaximumDocumentFrequencyPercentage.Value);
     }
 }
