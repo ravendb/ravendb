@@ -546,22 +546,14 @@ namespace Voron.Data.Sets
 
             while (state.IsLeaf == false)
             {
-                SearchPageAndPushNext(value);
+                var branch = new SetBranchPage(state.Page);
+                (long nextPage, state.LastSearchPosition, state.LastMatch) = branch.SearchPage(value);
+
+                PushPage(nextPage);
+
                 state = ref _stk[_pos];
             }
         }
-
-        private void SearchPageAndPushNext(long value)
-        {
-            ref var state = ref _stk[_pos];
-
-            var branch = new SetBranchPage(state.Page);
-            long nextPage;
-            (nextPage, state.LastSearchPosition, state.LastMatch) = branch.SearchPage(value);
-
-            PushPage(nextPage);
-        }
-
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void PopPage()
