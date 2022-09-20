@@ -251,6 +251,12 @@ namespace Raven.Client.Http
             return Certificate?.Thumbprint ?? string.Empty;
         }
 
+        internal static void ClearHttpClientsPool()
+        {
+            GlobalHttpClientWithCompression.Clear();
+            GlobalHttpClientWithoutCompression.Clear();
+        }
+
         private static bool ShouldRemoveHttpClient(SocketException exception)
         {
             switch (exception.SocketErrorCode)
