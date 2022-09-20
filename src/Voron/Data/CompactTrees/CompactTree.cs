@@ -1302,6 +1302,7 @@ namespace Voron.Data.CompactTrees
             return FindPageFor(ref cstate, ref state, encodedKey);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private EncodedKey FindPageFor(ref IteratorCursorState cstate, ref CursorState state, EncodedKey encodedKey)
         {
             while (state.Header->PageFlags.HasFlag(CompactPageFlags.Branch))

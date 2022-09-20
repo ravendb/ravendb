@@ -11,6 +11,8 @@ namespace Sparrow.Server.Compression
         where TAlgorithm : struct, IEncoderAlgorithm
     {
         private TAlgorithm _encoder;
+        private bool _isTrained;
+
         private int _maxSequenceLength;
         private int _maxSequenceLengthMultiplier;
         private int _minSequenceLength;
@@ -24,6 +26,11 @@ namespace Sparrow.Server.Compression
 
             _minSequenceLength = _encoder.MinBitSequenceLength;
             _minSequenceLengthMultiplier = ((int)(8 / (float)_minSequenceLength) + 1) * 3;
+
+            if (_minSequenceLength is < 1 or > 128 || _maxSequenceLength < 1)
+                _isTrained = false;
+            else
+                _isTrained = true;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -36,6 +43,11 @@ namespace Sparrow.Server.Compression
 
             _minSequenceLength = _encoder.MinBitSequenceLength;
             _minSequenceLengthMultiplier = ((int)(8 / (float)_minSequenceLength) + 1) * 3;
+
+            if (_minSequenceLength is < 1 or > 128 || _maxSequenceLength < 1)
+                _isTrained = false;
+            else
+                _isTrained = true;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -84,21 +96,28 @@ namespace Sparrow.Server.Compression
             return _encoder.Decode(bits, data, outputBuffer);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int GetMaxEncodingBytes(int keySize)
         {
-            if (_maxSequenceLength < 1)
-                throw new InvalidOperationException("Cannot calculate without a trained dictionary");
+            if (!_isTrained)
+                ThrowInvalidOperationWithoutTrainedDictionary();
 
             int value = _maxSequenceLengthMultiplier * keySize;
             return value % sizeof(long) == 0 ? value : value + sizeof(long);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int GetMaxDecodingBytes(int keySize)
         {
-            if (_minSequenceLength < 1 || _minSequenceLength > 128)
-                throw new InvalidOperationException("Cannot calculate without a trained dictionary");
+            if (!_isTrained)
+                ThrowInvalidOperationWithoutTrainedDictionary();
 
             return _minSequenceLengthMultiplier * keySize;
+        }
+
+        private static void ThrowInvalidOperationWithoutTrainedDictionary()
+        {
+            throw new InvalidOperationException("Cannot calculate without a trained dictionary");
         }
 
         public void Dispose()
