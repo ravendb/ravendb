@@ -5,7 +5,7 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis.Corax;
 
 internal sealed class RavenRavenMoreLikeThis : RavenMoreLikeThis
 {
-    public RavenRavenMoreLikeThis(QueryParameters env, MoreLikeThisOptions options) : base(env)
+    public RavenRavenMoreLikeThis(CoraxQueryBuilder.Parameters builderParameters, MoreLikeThisOptions options) : base(builderParameters)
     {
         if (options.Boost != null)
             Boost = options.Boost.Value;

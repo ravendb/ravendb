@@ -79,9 +79,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             bool isBinary;
             using (coraxScope?.Start())
             {
-                var queryEnv = new QueryParameters(_indexSearcher, serverContext: null, documentsContext: null, query, _index, query.QueryParameters, QueryBuilderFactories,
+                var builderParameters = new CoraxQueryBuilder.Parameters(_indexSearcher, serverContext: null, documentsContext: null, query, _index, query.QueryParameters, QueryBuilderFactories,
                     _fieldMappings, fieldsToFetch, highlightingTerms, take);
-                if ((queryMatch = CoraxQueryBuilder.BuildQuery(queryEnv, out isBinary)) is null)
+                if ((queryMatch = CoraxQueryBuilder.BuildQuery(builderParameters, out isBinary)) is null)
                     yield break;
             }
 
@@ -478,7 +478,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             TransactionOperationContext serverContext = null;
             MoreLikeThisQuery moreLikeThisQuery;
             var isBinary = false;
-            QueryParameters queryParameters;
+            CoraxQueryBuilder.Parameters builderParameters;
 
             try
             {
@@ -490,9 +490,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
                 using (closeServerTransaction)
                 {
-                    queryParameters = new QueryParameters(_indexSearcher, serverContext, context, query, _index, query.QueryParameters, QueryBuilderFactories,
+                    builderParameters = new (_indexSearcher, serverContext, context, query, _index, query.QueryParameters, QueryBuilderFactories,
                         _fieldMappings, null, null /* allow highlighting? */, CoraxQueryBuilder.TakeAll, null);
-                    moreLikeThisQuery = CoraxQueryBuilder.BuildMoreLikeThisQuery(queryParameters, query.Metadata.Query.Where, out isBinary);
+                    moreLikeThisQuery = CoraxQueryBuilder.BuildMoreLikeThisQuery(builderParameters, query.Metadata.Query.Where, out isBinary);
                 }
             }
             finally
@@ -517,9 +517,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 }
             }
 
-            queryParameters = new QueryParameters(_indexSearcher, null, context, query, _index, query.QueryParameters, QueryBuilderFactories,
+            builderParameters = new (_indexSearcher, null, context, query, _index, query.QueryParameters, QueryBuilderFactories,
                 _fieldMappings, null, null /* allow highlighting? */, CoraxQueryBuilder.TakeAll, null);
-            var mlt = new RavenRavenMoreLikeThis(queryParameters, options);
+            var mlt = new RavenRavenMoreLikeThis(builderParameters, options);
             long? baseDocId = null;
 
             if (moreLikeThisQuery.BaseDocument == null)
@@ -636,8 +636,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
             IQueryMatch queryMatch;
             bool isBinary;
-            var queryEnv = new QueryParameters(_indexSearcher, null, null, query, _index, null, null, _fieldMappings, null, null, -1, null);
-            if ((queryMatch = CoraxQueryBuilder.BuildQuery(queryEnv, out isBinary)) is null)
+            var builderParameters = new CoraxQueryBuilder.Parameters(_indexSearcher, null, null, query, _index, null, null, _fieldMappings, null, null, -1, null);
+            if ((queryMatch = CoraxQueryBuilder.BuildQuery(builderParameters, out isBinary)) is null)
                 yield break;
 
             var ids = QueryPool.Rent(CoraxGetPageSize(_indexSearcher, take, query, isBinary));
@@ -659,7 +659,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 {
                     token.ThrowIfCancellationRequested();
                     var reader = _indexSearcher.GetReaderAndIdentifyFor(ids[i], out var id);
-                    yield return documentsContext.ReadObject(GetRawDocument(reader), id);
+                    yield return documentsContext.ReadObject(GetRawDocument(ref reader), id);
                 }
 
                 if ((read = queryMatch.Fill(ids)) == 0)
@@ -671,7 +671,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             Analyzer.BufferPool.Return(encodedBuffer);
             Analyzer.TokensPool.Return(tokensBuffer);
             ArrayPool<int>.Shared.Return(maxTermLengthProceedPerAnalyzer);
-            DynamicJsonValue GetRawDocument(in IndexEntryReader reader)
+            DynamicJsonValue GetRawDocument(ref IndexEntryReader reader)
             {
                 var doc = new DynamicJsonValue();
                 foreach (var binding in _fieldMappings)
@@ -719,8 +719,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         if ((type & IndexEntryFieldType.SpatialPoint) != 0)
                         {
                             var enumerableEntries = new List<object>();
-                            for (int i = 1; i <= value.Length; ++i)
-                                enumerableEntries.Add(Encodings.Utf8.GetString(value.Slice(0, i)));
+                            for (int geohashId = 1; geohashId <= value.Length; ++i)
+                                enumerableEntries.Add(Encodings.Utf8.GetString(value.Slice(0, geohashId)));
                             doc[binding.FieldNameAsString] = enumerableEntries.ToArray();
                             continue;
                         }

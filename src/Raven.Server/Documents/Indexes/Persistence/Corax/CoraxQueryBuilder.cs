@@ -28,6 +28,41 @@ internal static class CoraxQueryBuilder
 {
     internal const int TakeAll = -1;
     private const bool HasNoInnerBinary = false;
+    internal class Parameters
+    {
+        public readonly IndexSearcher IndexSearcher;
+        public readonly TransactionOperationContext ServerContext;
+        public readonly DocumentsOperationContext DocumentsContext;
+        public readonly IndexQueryServerSide Query;
+        public readonly Index Index;
+        public readonly BlittableJsonReaderObject QueryParameters;
+        public readonly QueryBuilderFactories Factories;
+        public readonly IndexFieldsMapping IndexFieldsMapping;
+        public readonly FieldsToFetch FieldsToFetch;
+        public readonly Dictionary<string, CoraxHighlightingTermIndex> HighlightingTerms;
+        public readonly int Take;
+        public readonly List<string> BuildSteps;
+        public readonly MemoizationMatchProviderRef<AllEntriesMatch> AllEntries;
+        public readonly QueryMetadata Metadata;
+    
+        internal Parameters(IndexSearcher searcher, TransactionOperationContext serverContext, DocumentsOperationContext documentsContext, IndexQueryServerSide query, Index index, BlittableJsonReaderObject queryParameters, QueryBuilderFactories factories, IndexFieldsMapping indexFieldsMapping, FieldsToFetch fieldsToFetch, Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms, int take, List<string> buildSteps = null)
+        {
+            IndexSearcher = searcher;
+            ServerContext = serverContext;
+            Query = query;
+            Index = index;
+            QueryParameters = queryParameters;
+            Factories = factories;
+            IndexFieldsMapping = indexFieldsMapping;
+            FieldsToFetch = fieldsToFetch;
+            DocumentsContext = documentsContext;
+            HighlightingTerms = highlightingTerms;
+            Take = take;
+            BuildSteps = buildSteps;
+            AllEntries = new MemoizationMatchProviderRef<AllEntriesMatch>(IndexSearcher.Memoize(IndexSearcher.AllEntries()));
+            Metadata = query.Metadata;
+        }
+    }
 
     internal static IQueryMatch MateralizeWhenNeeded(IQueryMatch source, ref bool isBinary)
     {
@@ -43,19 +78,19 @@ internal static class CoraxQueryBuilder
         return source;
     }
 
-    internal static IQueryMatch BuildQuery(QueryParameters queryParameters, out bool isBinary)
+    internal static IQueryMatch BuildQuery(Parameters builderParameters, out bool isBinary)
     {
         using (CultureHelper.EnsureInvariantCulture())
         {
             IQueryMatch coraxQuery;
-            var metadata = queryParameters.Query.Metadata;
-            var indexSearcher = queryParameters.IndexSearcher;
+            var metadata = builderParameters.Query.Metadata;
+            var indexSearcher = builderParameters.IndexSearcher;
             var allEntries = indexSearcher.Memoize(indexSearcher.AllEntries());
-            isBinary = false;
+            isBinary = HasNoInnerBinary;
 
             if (metadata.Query.Where is not null)
             {
-                coraxQuery = ToCoraxQuery<NullScoreFunction>(queryParameters, metadata.Query.Where, default, out isBinary);
+                coraxQuery = ToCoraxQuery<NullScoreFunction>(builderParameters, metadata.Query.Where, default, out isBinary);
                 coraxQuery = MateralizeWhenNeeded(coraxQuery, ref isBinary);
 
             }
@@ -68,8 +103,8 @@ internal static class CoraxQueryBuilder
 
             if (metadata.Query.OrderBy is not null)
             {
-                var sortMetadata = GetSortMetadata(queryParameters);
-                coraxQuery = OrderBy(queryParameters, coraxQuery, sortMetadata);
+                var sortMetadata = GetSortMetadata(builderParameters);
+                coraxQuery = OrderBy(builderParameters, coraxQuery, sortMetadata);
             }
             // The parser already throws parse exception if there is a syntax error.
             // We now return null in the case of a term query that has been fully analyzed, so we need to return a valid query.
@@ -77,28 +112,28 @@ internal static class CoraxQueryBuilder
         }
     }
     
-    private static IQueryMatch ToCoraxQuery<TScoreFunction>(QueryParameters queryParameters, QueryExpression expression, TScoreFunction scoreFunction, out bool hasBinary, bool exact = false, int? proximity = null)
+    private static IQueryMatch ToCoraxQuery<TScoreFunction>(Parameters builderParameters, QueryExpression expression, TScoreFunction scoreFunction, out bool hasBinary, bool exact = false, int? proximity = null)
         where TScoreFunction : IQueryScoreFunction
     {
-        var indexSearcher = queryParameters.IndexSearcher;
-        var metadata = queryParameters.Metadata;
-        var parameters = queryParameters.Parameters;
-        var serverContext = queryParameters.ServerContext;
-        var documentsContext = queryParameters.DocumentsContext;
-        var index = queryParameters.Index;
-        var fieldsToFetch = queryParameters.FieldsToFetch;
-        var indexFieldsMapping = queryParameters.IndexFieldsMapping;
+        var indexSearcher = builderParameters.IndexSearcher;
+        var metadata = builderParameters.Metadata;
+        var queryParameters = builderParameters.QueryParameters;
+        var serverContext = builderParameters.ServerContext;
+        var documentsContext = builderParameters.DocumentsContext;
+        var index = builderParameters.Index;
+        var fieldsToFetch = builderParameters.FieldsToFetch;
+        var indexFieldsMapping = builderParameters.IndexFieldsMapping;
         
         hasBinary = false;
         if (RuntimeHelpers.TryEnsureSufficientExecutionStack() == false)
-            QueryBuilderHelper.ThrowQueryTooComplexException(metadata, parameters);
+            QueryBuilderHelper.ThrowQueryTooComplexException(metadata, queryParameters);
 
         if (expression is null)
-            return queryParameters.AllEntries.Replay();
+            return builderParameters.AllEntries.Replay();
 
         if (expression is BinaryExpression where)
         {
-            queryParameters.BuildSteps?.Add($"Where: {expression.Type} - {expression} (operator: {where.Operator})");
+            builderParameters.BuildSteps?.Add($"Where: {expression.Type} - {expression} (operator: {where.Operator})");
             switch (where.Operator)
             {
                 case OperatorType.And:
@@ -131,43 +166,43 @@ internal static class CoraxQueryBuilder
                             }
 
                             if (bq != null)
-                                return TranslateBetweenQuery(queryParameters, bq, scoreFunction, exact);
+                                return TranslateBetweenQuery(builderParameters, bq, scoreFunction, exact);
                         }
 
                         switch (@where.Left, @where.Right)
                         {
                             case (NegatedExpression ne1, NegatedExpression ne2):
-                                left = ToCoraxQuery(queryParameters, ne1.Expression, scoreFunction, out var leftInnerBinary, exact);
-                                right = ToCoraxQuery(queryParameters, ne2.Expression, scoreFunction, out var rightInnerBinary, exact);
+                                left = ToCoraxQuery(builderParameters, ne1.Expression, scoreFunction, out var leftInnerBinary, exact);
+                                right = ToCoraxQuery(builderParameters, ne2.Expression, scoreFunction, out var rightInnerBinary, exact);
 
-                                TryMergeTwoNodes(indexSearcher, queryParameters.AllEntries, ref left, ref right, out var merged, scoreFunction, true);
+                                TryMergeTwoNodes(indexSearcher, builderParameters.AllEntries, ref left, ref right, out var merged, scoreFunction, true);
 
                                 hasBinary = leftInnerBinary | rightInnerBinary;
-                                return indexSearcher.AndNot(queryParameters.AllEntries.Replay(), indexSearcher.Or(left, right));
+                                return indexSearcher.AndNot(builderParameters.AllEntries.Replay(), indexSearcher.Or(left, right));
 
                             case (NegatedExpression ne1, _):
-                                left = ToCoraxQuery(queryParameters, @where.Right, scoreFunction, out leftInnerBinary, exact);
-                                right = ToCoraxQuery(queryParameters, ne1.Expression, scoreFunction, out rightInnerBinary, exact);
+                                left = ToCoraxQuery(builderParameters, @where.Right, scoreFunction, out leftInnerBinary, exact);
+                                right = ToCoraxQuery(builderParameters, ne1.Expression, scoreFunction, out rightInnerBinary, exact);
 
-                                TryMergeTwoNodes(indexSearcher, queryParameters.AllEntries, ref left, ref right, out merged, scoreFunction, true);
+                                TryMergeTwoNodes(indexSearcher, builderParameters.AllEntries, ref left, ref right, out merged, scoreFunction, true);
 
                                 hasBinary = leftInnerBinary | rightInnerBinary;
                                 return indexSearcher.AndNot(right, left);
 
                             case (_, NegatedExpression ne1):
-                                left = ToCoraxQuery(queryParameters, @where.Left, scoreFunction, out leftInnerBinary, exact);
-                                right = ToCoraxQuery(queryParameters, ne1.Expression, scoreFunction, out rightInnerBinary, exact);
+                                left = ToCoraxQuery(builderParameters, @where.Left, scoreFunction, out leftInnerBinary, exact);
+                                right = ToCoraxQuery(builderParameters, ne1.Expression, scoreFunction, out rightInnerBinary, exact);
 
                                 hasBinary = leftInnerBinary | rightInnerBinary;
-                                TryMergeTwoNodes(indexSearcher, queryParameters.AllEntries, ref left, ref right, out merged, scoreFunction, true);
+                                TryMergeTwoNodes(indexSearcher, builderParameters.AllEntries, ref left, ref right, out merged, scoreFunction, true);
                                 return indexSearcher.AndNot(left, right);
 
                             default:
-                                left = ToCoraxQuery(queryParameters, @where.Left, scoreFunction, out leftInnerBinary, exact);
-                                right = ToCoraxQuery(queryParameters, @where.Right, scoreFunction, out rightInnerBinary, exact);
+                                left = ToCoraxQuery(builderParameters, @where.Left, scoreFunction, out leftInnerBinary, exact);
+                                right = ToCoraxQuery(builderParameters, @where.Right, scoreFunction, out rightInnerBinary, exact);
 
 
-                                if (TryMergeTwoNodes(indexSearcher, queryParameters.AllEntries, ref left, ref right, out merged, scoreFunction))
+                                if (TryMergeTwoNodes(indexSearcher, builderParameters.AllEntries, ref left, ref right, out merged, scoreFunction))
                                     return merged;
 
                                 hasBinary = leftInnerBinary | rightInnerBinary;
@@ -176,13 +211,13 @@ internal static class CoraxQueryBuilder
                     }
                 case OperatorType.Or:
                     {
-                        var left = ToCoraxQuery(queryParameters, @where.Left, scoreFunction, out var leftInnerBinary, exact);
-                        var right = ToCoraxQuery(queryParameters, @where.Right, scoreFunction, out var rightInnerBinary, exact);
+                        var left = ToCoraxQuery(builderParameters, @where.Left, scoreFunction, out var leftInnerBinary, exact);
+                        var right = ToCoraxQuery(builderParameters, @where.Right, scoreFunction, out var rightInnerBinary, exact);
 
-                        queryParameters.BuildSteps?.Add(
+                        builderParameters.BuildSteps?.Add(
                             $"OR operator: left - {left.GetType().FullName} ({left}) assembly: {left.GetType().Assembly.FullName} assemby location: {left.GetType().Assembly.Location} , right - {right.GetType().FullName} ({right}) assemlby: {right.GetType().Assembly.FullName} assemby location: {right.GetType().Assembly.Location}");
 
-                        TryMergeTwoNodes(indexSearcher, queryParameters.AllEntries, ref left, ref right, out var _, scoreFunction, true);
+                        TryMergeTwoNodes(indexSearcher, builderParameters.AllEntries, ref left, ref right, out var _, scoreFunction, true);
                         hasBinary = leftInnerBinary | rightInnerBinary;
 
                         return indexSearcher.Or(left, right);
@@ -195,24 +230,24 @@ internal static class CoraxQueryBuilder
 
                         if (where.Right is MethodExpression rme)
                         {
-                            right = QueryBuilderHelper.EvaluateMethod(metadata.Query, metadata, serverContext, documentsContext, rme, parameters);
+                            right = QueryBuilderHelper.EvaluateMethod(metadata.Query, metadata, serverContext, documentsContext, rme, queryParameters);
                         }
 
 
-                        var fieldName = QueryBuilderHelper.ExtractIndexFieldName(metadata.Query, parameters, where.Left, metadata);
+                        var fieldName = QueryBuilderHelper.ExtractIndexFieldName(metadata.Query, queryParameters, where.Left, metadata);
 
-                        exact = QueryBuilderHelper.IsExact(queryParameters.Index, exact, fieldName);
+                        exact = QueryBuilderHelper.IsExact(builderParameters.Index, exact, fieldName);
 
-                        var (value, valueType) = QueryBuilderHelper.GetValue(metadata.Query, metadata, parameters, right, true);
+                        var (value, valueType) = QueryBuilderHelper.GetValue(metadata.Query, metadata, queryParameters, right, true);
 
                         var fieldId = QueryBuilderHelper.GetFieldId(fieldName, index, indexFieldsMapping, fieldsToFetch, exact: exact);
 
                         CoraxHighlightingTermIndex highlightingTerm = null;
-                        bool? isHighlighting = queryParameters.HighlightingTerms?.TryGetValue(fieldName, out highlightingTerm);
+                        bool? isHighlighting = builderParameters.HighlightingTerms?.TryGetValue(fieldName, out highlightingTerm);
                         if (isHighlighting.HasValue && isHighlighting.Value == false)
                         {
                             highlightingTerm = new CoraxHighlightingTermIndex { FieldName = fieldName };
-                            queryParameters.HighlightingTerms.TryAdd(fieldName, highlightingTerm);
+                            builderParameters.HighlightingTerms.TryAdd(fieldName, highlightingTerm);
                         }
 
                         var match = valueType switch
@@ -223,7 +258,7 @@ internal static class CoraxQueryBuilder
                                 ValueTokenType.False or
                                 ValueTokenType.Null or
                                 ValueTokenType.String or
-                                ValueTokenType.Parameter => HandleStringUnaryMatch(queryParameters),
+                                ValueTokenType.Parameter => HandleStringUnaryMatch(builderParameters),
                             _ => throw new NotSupportedException($"Unhandled token type: {valueType}")
 
                         };
@@ -236,7 +271,7 @@ internal static class CoraxQueryBuilder
                         return match;
 
 
-                        CoraxBooleanItem HandleStringUnaryMatch(QueryParameters queryEnvironment)
+                        CoraxBooleanItem HandleStringUnaryMatch(Parameters queryEnvironment)
                         {
                             if (exact && queryEnvironment.Metadata.IsDynamic)
                             {
@@ -267,7 +302,7 @@ internal static class CoraxQueryBuilder
 
         if (expression is NegatedExpression ne)
         {
-            queryParameters.BuildSteps?.Add($"Negated: {expression.Type} - {ne}");
+            builderParameters.BuildSteps?.Add($"Negated: {expression.Type} - {ne}");
 
             // 'not foo and bar' should be parsed as:
             // (not foo) and bar, instead of not (foo and bar)
@@ -278,40 +313,40 @@ internal static class CoraxQueryBuilder
             {
                 var newExpr = new BinaryExpression(new NegatedExpression(nbe.Left),
                     nbe.Right, nbe.Operator);
-                return ToCoraxQuery(queryParameters, newExpr, scoreFunction, out hasBinary, exact);
+                return ToCoraxQuery(builderParameters, newExpr, scoreFunction, out hasBinary, exact);
             }
 
-            return ToCoraxQuery(queryParameters, ne.Expression, scoreFunction, out hasBinary, exact);
+            return ToCoraxQuery(builderParameters, ne.Expression, scoreFunction, out hasBinary, exact);
         }
 
         if (expression is BetweenExpression be)
         {
-            queryParameters.BuildSteps?.Add($"Between: {expression.Type} - {be}");
+            builderParameters.BuildSteps?.Add($"Between: {expression.Type} - {be}");
 
-            return TranslateBetweenQuery(queryParameters, be, scoreFunction, exact);
+            return TranslateBetweenQuery(builderParameters, be, scoreFunction, exact);
         }
 
         if (expression is InExpression ie)
         {
-            queryParameters.BuildSteps?.Add($"In: {expression.Type} - {ie}");
+            builderParameters.BuildSteps?.Add($"In: {expression.Type} - {ie}");
 
-            var fieldName = QueryBuilderHelper.ExtractIndexFieldName(metadata.Query, parameters, ie.Source, metadata);
+            var fieldName = QueryBuilderHelper.ExtractIndexFieldName(metadata.Query, queryParameters, ie.Source, metadata);
 
             CoraxHighlightingTermIndex highlightingTerm = null;
-            if (queryParameters.HighlightingTerms != null)
+            if (builderParameters.HighlightingTerms != null)
             {
                 highlightingTerm = new CoraxHighlightingTermIndex { FieldName = fieldName };
-                queryParameters.HighlightingTerms[fieldName] = highlightingTerm;
+                builderParameters.HighlightingTerms[fieldName] = highlightingTerm;
             }
 
-            exact = QueryBuilderHelper.IsExact(queryParameters.Index, exact, fieldName);
-            if (exact && queryParameters.Metadata.IsDynamic)
+            exact = QueryBuilderHelper.IsExact(builderParameters.Index, exact, fieldName);
+            if (exact && builderParameters.Metadata.IsDynamic)
             {
                 fieldName = new QueryFieldName(AutoIndexField.GetExactAutoIndexFieldName(fieldName), fieldName.IsQuoted);
-                if (queryParameters.HighlightingTerms != null)
+                if (builderParameters.HighlightingTerms != null)
                 {
                     highlightingTerm.DynamicFieldName = fieldName;
-                    queryParameters.HighlightingTerms[fieldName] = highlightingTerm;
+                    builderParameters.HighlightingTerms[fieldName] = highlightingTerm;
                 }
             }
 
@@ -320,9 +355,9 @@ internal static class CoraxQueryBuilder
             if (ie.All)
             {
                 var uniqueMatches = new HashSet<string>();
-                foreach (var tuple in QueryBuilderHelper.GetValuesForIn(metadata.Query, ie, metadata, parameters))
+                foreach (var tuple in QueryBuilderHelper.GetValuesForIn(metadata.Query, ie, metadata, queryParameters))
                 {
-                    if (exact && queryParameters.Metadata.IsDynamic)
+                    if (exact && builderParameters.Metadata.IsDynamic)
                         fieldName = new QueryFieldName(AutoIndexField.GetExactAutoIndexFieldName(fieldName.Value), fieldName.IsQuoted);
 
                     uniqueMatches.Add(QueryBuilderHelper.CoraxGetValueAsString(tuple.Value));
@@ -332,7 +367,7 @@ internal static class CoraxQueryBuilder
             }
 
             var matches = new List<string>();
-            foreach (var tuple in QueryBuilderHelper.GetValuesForIn(metadata.Query, ie, metadata, parameters))
+            foreach (var tuple in QueryBuilderHelper.GetValuesForIn(metadata.Query, ie, metadata, queryParameters))
             {
                 matches.Add(QueryBuilderHelper.CoraxGetValueAsString(tuple.Value));
             }
@@ -349,9 +384,9 @@ internal static class CoraxQueryBuilder
 
         if (expression is TrueExpression)
         {
-            queryParameters.BuildSteps?.Add($"True: {expression.Type} - {expression}");
+            builderParameters.BuildSteps?.Add($"True: {expression.Type} - {expression}");
 
-            return queryParameters.AllEntries.Replay();
+            return builderParameters.AllEntries.Replay();
         }
 
         if (expression is MethodExpression me)
@@ -359,61 +394,61 @@ internal static class CoraxQueryBuilder
             var methodName = me.Name.Value;
             var methodType = QueryMethod.GetMethodType(methodName);
 
-            queryParameters.BuildSteps?.Add($"Method: {expression.Type} - {me} - method: {methodType}, {methodName}");
+            builderParameters.BuildSteps?.Add($"Method: {expression.Type} - {me} - method: {methodType}, {methodName}");
 
             switch (methodType)
             {
                 case MethodType.Search:
-                    return HandleSearch(queryParameters, me, proximity, scoreFunction);
+                    return HandleSearch(builderParameters, me, proximity, scoreFunction);
                 case MethodType.Boost:
-                    return HandleBoost(queryParameters, me, exact, out hasBinary);
+                    return HandleBoost(builderParameters, me, exact, out hasBinary);
                 case MethodType.StartsWith:
-                    return HandleStartsWith(queryParameters, me, exact, scoreFunction);
+                    return HandleStartsWith(builderParameters, me, exact, scoreFunction);
                 case MethodType.EndsWith:
-                    return HandleEndsWith(queryParameters, me, scoreFunction, exact);
+                    return HandleEndsWith(builderParameters, me, scoreFunction, exact);
                 case MethodType.Exists:
-                    return HandleExists(queryParameters, me, scoreFunction);
+                    return HandleExists(builderParameters, me, scoreFunction);
                 case MethodType.Exact:
-                    return HandleExact(queryParameters, me, scoreFunction, out hasBinary, proximity);
+                    return HandleExact(builderParameters, me, scoreFunction, out hasBinary, proximity);
                 case MethodType.Spatial_Within:
                 case MethodType.Spatial_Contains:
                 case MethodType.Spatial_Disjoint:
                 case MethodType.Spatial_Intersects:
-                    return HandleSpatial(queryParameters, me, methodType);
+                    return HandleSpatial(builderParameters, me, methodType);
                 case MethodType.Regex:
-                    return HandleRegex(queryParameters, me, scoreFunction);
+                    return HandleRegex(builderParameters, me, scoreFunction);
                 case MethodType.MoreLikeThis:
-                    return queryParameters.AllEntries.Replay();
+                    return builderParameters.AllEntries.Replay();
                 default:
-                    QueryMethod.ThrowMethodNotSupported(methodType, metadata.QueryText, parameters);
+                    QueryMethod.ThrowMethodNotSupported(methodType, metadata.QueryText, queryParameters);
                     return null; // never hit
             }
         }
 
-        throw new InvalidQueryException("Unable to understand query", metadata.QueryText, parameters);
+        throw new InvalidQueryException("Unable to understand query", metadata.QueryText, queryParameters);
     }
 
-    public static MoreLikeThisQuery.MoreLikeThisQuery BuildMoreLikeThisQuery(QueryParameters queryParameters, QueryExpression whereExpression, out bool isBinary)
+    public static MoreLikeThisQuery.MoreLikeThisQuery BuildMoreLikeThisQuery(Parameters builderParameters, QueryExpression whereExpression, out bool isBinary)
     {
         using (CultureHelper.EnsureInvariantCulture())
         {
-            var filterQuery = BuildQuery(queryParameters, out isBinary);
+            var filterQuery = BuildQuery(builderParameters, out isBinary);
             filterQuery = MateralizeWhenNeeded(filterQuery, ref isBinary);
 
-            var moreLikeThisQuery = ToMoreLikeThisQuery(queryParameters, whereExpression, out isBinary, out var baseDocument, out var options);
+            var moreLikeThisQuery = ToMoreLikeThisQuery(builderParameters, whereExpression, out isBinary, out var baseDocument, out var options);
             moreLikeThisQuery = MateralizeWhenNeeded(moreLikeThisQuery, ref isBinary);
 
             return new MoreLikeThisQuery.MoreLikeThisQuery { BaseDocument = baseDocument, BaseDocumentQuery = moreLikeThisQuery, FilterQuery = filterQuery, Options = options };
         }
     }
 
-    private static IQueryMatch ToMoreLikeThisQuery(QueryParameters queryParameters, QueryExpression whereExpression, out bool isBinary, out string baseDocument, out BlittableJsonReaderObject options)
+    private static IQueryMatch ToMoreLikeThisQuery(Parameters builderParameters, QueryExpression whereExpression, out bool isBinary, out string baseDocument, out BlittableJsonReaderObject options)
     {
-        var indexSearcher = queryParameters.IndexSearcher;
-        var metadata = queryParameters.Metadata;
-        var parameters = queryParameters.Parameters;
-        var serverContext = queryParameters.ServerContext;
-        var context = queryParameters.DocumentsContext;
+        var indexSearcher = builderParameters.IndexSearcher;
+        var metadata = builderParameters.Metadata;
+        var queryParameters = builderParameters.QueryParameters;
+        var serverContext = builderParameters.ServerContext;
+        var context = builderParameters.DocumentsContext;
         isBinary = false;
         baseDocument = null;
         options = null;
@@ -424,7 +459,7 @@ internal static class CoraxQueryBuilder
 
         if (moreLikeThisExpression.Arguments.Count == 2)
         {
-            var value = QueryBuilderHelper.GetValue(metadata.Query, metadata, parameters, moreLikeThisExpression.Arguments[1], allowObjectsInParameters: true);
+            var value = QueryBuilderHelper.GetValue(metadata.Query, metadata, queryParameters, moreLikeThisExpression.Arguments[1], allowObjectsInParameters: true);
             if (value.Type == ValueTokenType.String)
                 options = IndexOperationBase.ParseJsonStringIntoBlittable(QueryBuilderHelper.GetValueAsString(value.Value), context);
             else
@@ -433,10 +468,10 @@ internal static class CoraxQueryBuilder
 
         var firstArgument = moreLikeThisExpression.Arguments[0];
         if (firstArgument is BinaryExpression binaryExpression)
-            return ToCoraxQuery(queryParameters, binaryExpression, default(NullScoreFunction), out isBinary);
+            return ToCoraxQuery(builderParameters, binaryExpression, default(NullScoreFunction), out isBinary);
 
         isBinary = false;
-        var firstArgumentValue = QueryBuilderHelper.GetValueAsString(QueryBuilderHelper.GetValue(metadata.Query, metadata, parameters, firstArgument).Value);
+        var firstArgumentValue = QueryBuilderHelper.GetValueAsString(QueryBuilderHelper.GetValue(metadata.Query, metadata, queryParameters, firstArgument).Value);
         if (bool.TryParse(firstArgumentValue, out var firstArgumentBool))
         {
 
@@ -509,24 +544,24 @@ internal static class CoraxQueryBuilder
     }
 
 
-    private static IQueryMatch HandleExact<TScoreFunction>(QueryParameters queryParameters, MethodExpression expression, TScoreFunction scoreFunction, out bool hasBinary, int? proximity = null)
+    private static IQueryMatch HandleExact<TScoreFunction>(Parameters builderParameters, MethodExpression expression, TScoreFunction scoreFunction, out bool hasBinary, int? proximity = null)
         where TScoreFunction : IQueryScoreFunction
     {
-        return ToCoraxQuery(queryParameters, expression.Arguments[0], scoreFunction, out hasBinary, true, proximity);
+        return ToCoraxQuery(builderParameters, expression.Arguments[0], scoreFunction, out hasBinary, true, proximity);
     }
 
-    private static CoraxBooleanItem TranslateBetweenQuery<TScoreFunction>(QueryParameters queryParameters, BetweenExpression be, TScoreFunction scoreFunction, bool exact)
+    private static CoraxBooleanItem TranslateBetweenQuery<TScoreFunction>(Parameters builderParameters, BetweenExpression be, TScoreFunction scoreFunction, bool exact)
         where TScoreFunction : IQueryScoreFunction
     {
-        var metadata = queryParameters.Metadata;
-        var parameters = queryParameters.Parameters;
-        var index = queryParameters.Index;
-        var fieldsToFetch = queryParameters.FieldsToFetch;
-        var indexFieldsMapping = queryParameters.IndexFieldsMapping;
+        var metadata = builderParameters.Metadata;
+        var queryParameters = builderParameters.QueryParameters;
+        var index = builderParameters.Index;
+        var fieldsToFetch = builderParameters.FieldsToFetch;
+        var indexFieldsMapping = builderParameters.IndexFieldsMapping;
         
-        var fieldName = QueryBuilderHelper.ExtractIndexFieldName(metadata.Query, parameters, be.Source, metadata);
-        var (valueFirst, valueFirstType) = QueryBuilderHelper.GetValue(metadata.Query, metadata, parameters, be.Min);
-        var (valueSecond, valueSecondType) = QueryBuilderHelper.GetValue(metadata.Query, metadata, parameters, be.Max);
+        var fieldName = QueryBuilderHelper.ExtractIndexFieldName(metadata.Query, queryParameters, be.Source, metadata);
+        var (valueFirst, valueFirstType) = QueryBuilderHelper.GetValue(metadata.Query, metadata, queryParameters, be.Min);
+        var (valueSecond, valueSecondType) = QueryBuilderHelper.GetValue(metadata.Query, metadata, queryParameters, be.Max);
         var fieldId = QueryBuilderHelper.GetFieldId(fieldName, index, indexFieldsMapping, fieldsToFetch, exact: exact);
         var leftSideOperation = be.MinInclusive ? UnaryMatchOperation.GreaterThanOrEqual : UnaryMatchOperation.GreaterThan;
         var rightSideOperation = be.MaxInclusive ? UnaryMatchOperation.LessThanOrEqual : UnaryMatchOperation.LessThan;
@@ -535,16 +570,16 @@ internal static class CoraxQueryBuilder
 
         if ((valueFirstType, valueSecondType) is (ValueTokenType.Double, ValueTokenType.Double) or (ValueTokenType.Long, ValueTokenType.Long))
         {
-            if (queryParameters.HighlightingTerms != null)
+            if (builderParameters.HighlightingTerms != null)
             {
                 var highlightingTerm = new CoraxHighlightingTermIndex { FieldName = fieldName, Values = (valueFirst, valueSecond) };
-                queryParameters.HighlightingTerms[fieldName] = highlightingTerm;
+                builderParameters.HighlightingTerms[fieldName] = highlightingTerm;
             }
         }
         return (valueFirstType, valueSecondType) switch
         {
             (ValueTokenType.String, ValueTokenType.String) => HandleStringBetween(),
-            _ => new CoraxBooleanItem(queryParameters.IndexSearcher, fieldName, fieldId, valueFirst, valueSecond, UnaryMatchOperation.Between, leftSideOperation, rightSideOperation, scoreFunction)
+            _ => new CoraxBooleanItem(builderParameters.IndexSearcher, fieldName, fieldId, valueFirst, valueSecond, UnaryMatchOperation.Between, leftSideOperation, rightSideOperation, scoreFunction)
         };
 
         CoraxBooleanItem HandleStringBetween()
@@ -553,79 +588,79 @@ internal static class CoraxQueryBuilder
             var valueFirstAsString = QueryBuilderHelper.CoraxGetValueAsString(valueFirst);
             var valueSecondAsString = QueryBuilderHelper.CoraxGetValueAsString(valueSecond);
 
-            if (queryParameters.HighlightingTerms != null)
+            if (builderParameters.HighlightingTerms != null)
             {
                 var highlightingTerm = new CoraxHighlightingTermIndex { FieldName = fieldName, Values = (valueFirst, valueSecond) };
-                queryParameters.HighlightingTerms[fieldName] = highlightingTerm;
+                builderParameters.HighlightingTerms[fieldName] = highlightingTerm;
             }
 
-            return new CoraxBooleanItem(queryParameters.IndexSearcher, fieldName, fieldId, valueFirstAsString, valueSecondAsString, UnaryMatchOperation.Between, leftSideOperation, rightSideOperation, scoreFunction);
+            return new CoraxBooleanItem(builderParameters.IndexSearcher, fieldName, fieldId, valueFirstAsString, valueSecondAsString, UnaryMatchOperation.Between, leftSideOperation, rightSideOperation, scoreFunction);
         }
     }
 
-    private static IQueryMatch HandleExists<TScoreFunction>(QueryParameters queryParameters, MethodExpression expression, TScoreFunction scoreFunction)
+    private static IQueryMatch HandleExists<TScoreFunction>(Parameters builderParameters, MethodExpression expression, TScoreFunction scoreFunction)
         where TScoreFunction : IQueryScoreFunction
     {
-        var metadata = queryParameters.Metadata;
-        var parameters = queryParameters.Parameters;
+        var metadata = builderParameters.Metadata;
+        var queryParameters = builderParameters.QueryParameters;
         
-        var fieldName = QueryBuilderHelper.ExtractIndexFieldName(metadata.Query, parameters, expression.Arguments[0], metadata);
+        var fieldName = QueryBuilderHelper.ExtractIndexFieldName(metadata.Query, queryParameters, expression.Arguments[0], metadata);
 
-        return queryParameters.IndexSearcher.ExistsQuery(fieldName, scoreFunction);
+        return builderParameters.IndexSearcher.ExistsQuery(fieldName, scoreFunction);
     }
 
-    private static IQueryMatch HandleStartsWith<TScoreFunction>(QueryParameters queryParameters, MethodExpression expression, bool exact, TScoreFunction scoreFunction)
+    private static IQueryMatch HandleStartsWith<TScoreFunction>(Parameters builderParameters, MethodExpression expression, bool exact, TScoreFunction scoreFunction)
         where TScoreFunction : IQueryScoreFunction
     {
-        var metadata = queryParameters.Metadata;
-        var parameters = queryParameters.Parameters;
-        var index = queryParameters.Index;
-        var fieldsToFetch = queryParameters.FieldsToFetch;
-        var indexFieldsMapping = queryParameters.IndexFieldsMapping;
+        var metadata = builderParameters.Metadata;
+        var queryParameters = builderParameters.QueryParameters;
+        var index = builderParameters.Index;
+        var fieldsToFetch = builderParameters.FieldsToFetch;
+        var indexFieldsMapping = builderParameters.IndexFieldsMapping;
         
-        var fieldName = QueryBuilderHelper.ExtractIndexFieldName(metadata.Query, parameters, expression.Arguments[0], metadata);
-        var (value, valueType) = QueryBuilderHelper.GetValue(metadata.Query, metadata, parameters, (ValueExpression)expression.Arguments[1]);
+        var fieldName = QueryBuilderHelper.ExtractIndexFieldName(metadata.Query, queryParameters, expression.Arguments[0], metadata);
+        var (value, valueType) = QueryBuilderHelper.GetValue(metadata.Query, metadata, queryParameters, (ValueExpression)expression.Arguments[1]);
         if (valueType != ValueTokenType.String)
-            QueryBuilderHelper.ThrowMethodExpectsArgumentOfTheFollowingType("startsWith", ValueTokenType.String, valueType, metadata.QueryText, parameters);
+            QueryBuilderHelper.ThrowMethodExpectsArgumentOfTheFollowingType("startsWith", ValueTokenType.String, valueType, metadata.QueryText, queryParameters);
 
         var valueAsString = QueryBuilderHelper.CoraxGetValueAsString(value);
         CoraxHighlightingTermIndex highlightingTerm = null;
-        if (queryParameters.HighlightingTerms != null)
+        if (builderParameters.HighlightingTerms != null)
         {
             highlightingTerm = new CoraxHighlightingTermIndex { FieldName = fieldName, Values = valueAsString };
-            queryParameters.HighlightingTerms[fieldName] = highlightingTerm;
+            builderParameters.HighlightingTerms[fieldName] = highlightingTerm;
         }
 
         exact = QueryBuilderHelper.IsExact(index, exact, fieldName);
-        if (exact && queryParameters.Metadata.IsDynamic)
+        if (exact && builderParameters.Metadata.IsDynamic)
         {
             fieldName = new QueryFieldName(AutoIndexField.GetExactAutoIndexFieldName(fieldName.Value), fieldName.IsQuoted);
-            if (queryParameters.HighlightingTerms != null)
+            if (builderParameters.HighlightingTerms != null)
             {
                 highlightingTerm.DynamicFieldName = fieldName;
-                queryParameters.HighlightingTerms[fieldName] = highlightingTerm;
+                builderParameters.HighlightingTerms[fieldName] = highlightingTerm;
             }
         }
 
         var fieldId = QueryBuilderHelper.GetFieldId(fieldName, index, indexFieldsMapping, fieldsToFetch, exact: exact);
-        return queryParameters.IndexSearcher.StartWithQuery(fieldName, valueAsString, scoreFunction: scoreFunction, fieldId: fieldId);
+        return builderParameters.IndexSearcher.StartWithQuery(fieldName, valueAsString, scoreFunction: scoreFunction, fieldId: fieldId);
     }
 
-    private static IQueryMatch HandleEndsWith<TScoreFunction>(QueryParameters queryParameters, MethodExpression expression, TScoreFunction scoreFunction, bool exact)
+    private static IQueryMatch HandleEndsWith<TScoreFunction>(Parameters builderParameters, MethodExpression expression, TScoreFunction scoreFunction, bool exact)
         where TScoreFunction : IQueryScoreFunction
     {
-        var indexSearcher = queryParameters.IndexSearcher;
-        var metadata = queryParameters.Metadata;
-        var parameters = queryParameters.Parameters;
-        var highlightingTerms = queryParameters.HighlightingTerms;
-        var index = queryParameters.Index;
-        var fieldsToFetch = queryParameters.FieldsToFetch;
-        var indexFieldsMapping = queryParameters.IndexFieldsMapping;
+        var indexSearcher = builderParameters.IndexSearcher;
+        var metadata = builderParameters.Metadata;
+        var queryParameters = builderParameters.QueryParameters;
+        var highlightingTerms = builderParameters.HighlightingTerms;
+        var index = builderParameters.Index;
+        var fieldsToFetch = builderParameters.FieldsToFetch;
+        var indexFieldsMapping = builderParameters.IndexFieldsMapping;
 
-        var fieldName = QueryBuilderHelper.ExtractIndexFieldName(metadata.Query, parameters, expression.Arguments[0], metadata);
-        var (value, valueType) = QueryBuilderHelper.GetValue(metadata.Query, metadata, parameters, (ValueExpression)expression.Arguments[1]);
+        var fieldName = QueryBuilderHelper.ExtractIndexFieldName(metadata.Query, queryParameters, expression.Arguments[0], metadata);
+        var (value, valueType) = QueryBuilderHelper.GetValue(metadata.Query, metadata, queryParameters, (ValueExpression)expression.Arguments[1]);
         if (valueType != ValueTokenType.String)
-            QueryBuilderHelper.ThrowMethodExpectsArgumentOfTheFollowingType("endsWith", ValueTokenType.String, valueType, metadata.QueryText, parameters);
+            QueryBuilderHelper.ThrowMethodExpectsArgumentOfTheFollowingType("endsWith", ValueTokenType.String, valueType, metadata.QueryText, queryParameters);
 
         var valueAsString = QueryBuilderHelper.CoraxGetValueAsString(value);
 
@@ -636,7 +671,7 @@ internal static class CoraxQueryBuilder
             highlightingTerms[fieldName] = highlightingTerm;
         }
 
-        exact = QueryBuilderHelper.IsExact(queryParameters.Index, exact, fieldName);
+        exact = QueryBuilderHelper.IsExact(builderParameters.Index, exact, fieldName);
         if (exact && metadata.IsDynamic)
         {
             fieldName = new QueryFieldName(AutoIndexField.GetExactAutoIndexFieldName(fieldName.Value), fieldName.IsQuoted);
@@ -651,21 +686,21 @@ internal static class CoraxQueryBuilder
         return indexSearcher.EndsWithQuery(fieldName, valueAsString, scoreFunction: scoreFunction, fieldId: fieldId);
     }
 
-    private static IQueryMatch HandleBoost(QueryParameters queryParameters, MethodExpression expression, bool exact, out bool hasBinary)
+    private static IQueryMatch HandleBoost(Parameters builderParameters, MethodExpression expression, bool exact, out bool hasBinary)
     {
-        var metadata = queryParameters.Metadata;
-        var parameters = queryParameters.Parameters;
-        var indexSearcher = queryParameters.IndexSearcher;
+        var metadata = builderParameters.Metadata;
+        var queryParameters = builderParameters.QueryParameters;
+        var indexSearcher = builderParameters.IndexSearcher;
 
         if (expression.Arguments.Count != 2)
         {
             throw new InvalidQueryException($"Boost(expression, boostVal) requires two arguments, but was called with {expression.Arguments.Count}",
-                metadata.QueryText, parameters);
+                metadata.QueryText, queryParameters);
         }
 
 
         float boost;
-        var (val, type) = QueryBuilderHelper.GetValue(metadata.Query, metadata, parameters, expression.Arguments[1]);
+        var (val, type) = QueryBuilderHelper.GetValue(metadata.Query, metadata, queryParameters, expression.Arguments[1]);
         switch (val)
         {
             case float f:
@@ -684,17 +719,17 @@ internal static class CoraxQueryBuilder
                 if (float.TryParse(s, out boost) == false)
                 {
                     throw new InvalidQueryException($"The boost value must be a valid float, but was called with {s}",
-                        metadata.QueryText, parameters);
+                        metadata.QueryText, queryParameters);
                 }
 
                 break;
             default:
                 throw new InvalidQueryException($"Unable to find boost value: {val} ({type})",
-                    metadata.QueryText, parameters);
+                    metadata.QueryText, queryParameters);
         }
 
 
-        var rawQuery = ToCoraxQuery(queryParameters, expression.Arguments[0], default(NullScoreFunction), out hasBinary, exact);
+        var rawQuery = ToCoraxQuery(builderParameters, expression.Arguments[0], default(NullScoreFunction), out hasBinary, exact);
 
         if (rawQuery is CoraxBooleanItem cbi)
             rawQuery = cbi.Materialize();
@@ -710,26 +745,26 @@ internal static class CoraxQueryBuilder
         return indexSearcher.Boost(rawQuery, scoreFunction);
     }
 
-    private static IQueryMatch HandleSearch<TScoreFunction>(QueryParameters queryParameters, MethodExpression expression, int? proximity, TScoreFunction scoreFunction)
+    private static IQueryMatch HandleSearch<TScoreFunction>(Parameters builderParameters, MethodExpression expression, int? proximity, TScoreFunction scoreFunction)
         where TScoreFunction : IQueryScoreFunction
     {
-        var metadata = queryParameters.Metadata;
-        var highlightingTerms = queryParameters.HighlightingTerms;
-        var parameters = queryParameters.Parameters;
-        var indexSearcher = queryParameters.IndexSearcher;
-        var index = queryParameters.Index;
-        var fieldsToFetch = queryParameters.FieldsToFetch;
-        var indexFieldsMapping = queryParameters.IndexFieldsMapping;
+        var metadata = builderParameters.Metadata;
+        var highlightingTerms = builderParameters.HighlightingTerms;
+        var queryParameters = builderParameters.QueryParameters;
+        var indexSearcher = builderParameters.IndexSearcher;
+        var index = builderParameters.Index;
+        var fieldsToFetch = builderParameters.FieldsToFetch;
+        var indexFieldsMapping = builderParameters.IndexFieldsMapping;
 
         QueryFieldName fieldName;
         var isDocumentId = false;
         switch (expression.Arguments[0])
         {
             case FieldExpression ft:
-                fieldName = QueryBuilderHelper.ExtractIndexFieldName(metadata.Query, parameters, ft, metadata);
+                fieldName = QueryBuilderHelper.ExtractIndexFieldName(metadata.Query, queryParameters, ft, metadata);
                 break;
             case ValueExpression vt:
-                fieldName = QueryBuilderHelper.ExtractIndexFieldName(metadata.Query, parameters, vt, metadata);
+                fieldName = QueryBuilderHelper.ExtractIndexFieldName(metadata.Query, queryParameters, vt, metadata);
                 break;
             case MethodExpression me when QueryMethod.GetMethodType(me.Name.Value) == MethodType.Id:
                 fieldName = QueryFieldName.DocumentId;
@@ -740,9 +775,9 @@ internal static class CoraxQueryBuilder
         }
 
 
-        var (value, valueType) = QueryBuilderHelper.GetValue(metadata.Query, metadata, parameters, (ValueExpression)expression.Arguments[1]);
+        var (value, valueType) = QueryBuilderHelper.GetValue(metadata.Query, metadata, queryParameters, (ValueExpression)expression.Arguments[1]);
         if (valueType != ValueTokenType.String)
-            QueryBuilderHelper.ThrowMethodExpectsArgumentOfTheFollowingType("search", ValueTokenType.String, valueType, queryParameters.Metadata.QueryText, queryParameters.Parameters);
+            QueryBuilderHelper.ThrowMethodExpectsArgumentOfTheFollowingType("search", ValueTokenType.String, valueType, builderParameters.Metadata.QueryText, builderParameters.QueryParameters);
 
         Debug.Assert(metadata.IsDynamic == false || metadata.WhereFields[fieldName].IsFullTextSearch);
 
@@ -780,7 +815,7 @@ internal static class CoraxQueryBuilder
         {
             var fieldExpression = (FieldExpression)expression.Arguments[2];
             if (fieldExpression.Compound.Count != 1)
-                QueryBuilderHelper.ThrowInvalidOperatorInSearch(metadata, parameters, fieldExpression);
+                QueryBuilderHelper.ThrowInvalidOperatorInSearch(metadata, queryParameters, fieldExpression);
 
             var op = fieldExpression.Compound[0];
             if (string.Equals("AND", op.Value, StringComparison.OrdinalIgnoreCase))
@@ -788,11 +823,11 @@ internal static class CoraxQueryBuilder
             else if (string.Equals("OR", op.Value, StringComparison.OrdinalIgnoreCase))
                 @operator = Constants.Search.Operator.Or;
             else
-                QueryBuilderHelper.ThrowInvalidOperatorInSearch(metadata, parameters, fieldExpression);
+                QueryBuilderHelper.ThrowInvalidOperatorInSearch(metadata, queryParameters, fieldExpression);
         }
 
 
-        if (queryParameters.IndexFieldsMapping.TryGetByFieldId(fieldId, out var binding) && binding.Analyzer is not LuceneAnalyzerAdapter)
+        if (builderParameters.IndexFieldsMapping.TryGetByFieldId(fieldId, out var binding) && binding.Analyzer is not LuceneAnalyzerAdapter)
         {
             return indexSearcher.SearchQuery(fieldName, valueAsString, scoreFunction, @operator, fieldId, false, true);
         }
@@ -800,21 +835,21 @@ internal static class CoraxQueryBuilder
         return indexSearcher.SearchQuery(fieldName, valueAsString, scoreFunction, @operator, fieldId);
     }
 
-    private static IQueryMatch HandleSpatial(QueryParameters queryParameters, MethodExpression expression, MethodType spatialMethod)
+    private static IQueryMatch HandleSpatial(Parameters builderParameters, MethodExpression expression, MethodType spatialMethod)
     {
-        var metadata = queryParameters.Metadata;
-        var parameters = queryParameters.Parameters;
-        var index = queryParameters.Index;
-        var indexFieldsMapping = queryParameters.IndexFieldsMapping;
-        var fieldsToFetch = queryParameters.FieldsToFetch;
+        var metadata = builderParameters.Metadata;
+        var queryParameters = builderParameters.QueryParameters;
+        var index = builderParameters.Index;
+        var indexFieldsMapping = builderParameters.IndexFieldsMapping;
+        var fieldsToFetch = builderParameters.FieldsToFetch;
         
         string fieldName;
         if (metadata.IsDynamic == false)
-            fieldName = QueryBuilderHelper.ExtractIndexFieldName(metadata.Query, parameters, expression.Arguments[0], metadata);
+            fieldName = QueryBuilderHelper.ExtractIndexFieldName(metadata.Query, queryParameters, expression.Arguments[0], metadata);
         else
         {
             var spatialExpression = (MethodExpression)expression.Arguments[0];
-            fieldName = metadata.GetSpatialFieldName(spatialExpression, queryParameters.Parameters);
+            fieldName = metadata.GetSpatialFieldName(spatialExpression, builderParameters.QueryParameters);
         }
 
         var fieldId = QueryBuilderHelper.GetFieldId(fieldName, index, indexFieldsMapping, fieldsToFetch);
@@ -823,13 +858,13 @@ internal static class CoraxQueryBuilder
         var distanceErrorPct = RavenConstants.Documents.Indexing.Spatial.DefaultDistanceErrorPct;
         if (expression.Arguments.Count == 3)
         {
-            var distanceErrorPctValue = QueryBuilderHelper.GetValue(metadata.Query, metadata, parameters, (ValueExpression)expression.Arguments[2]);
+            var distanceErrorPctValue = QueryBuilderHelper.GetValue(metadata.Query, metadata, queryParameters, (ValueExpression)expression.Arguments[2]);
             QueryBuilderHelper.AssertValueIsNumber(fieldName, distanceErrorPctValue.Type);
 
             distanceErrorPct = Convert.ToDouble(distanceErrorPctValue.Value);
         }
 
-        var spatialField = queryParameters.Factories.GetSpatialFieldFactory(fieldName);
+        var spatialField = builderParameters.Factories.GetSpatialFieldFactory(fieldName);
 
         var methodName = shapeExpression.Name;
         var methodType = QueryMethod.GetMethodType(methodName.Value);
@@ -838,13 +873,13 @@ internal static class CoraxQueryBuilder
         switch (methodType)
         {
             case MethodType.Spatial_Circle:
-                shape = QueryBuilderHelper.HandleCircle(metadata.Query, shapeExpression, metadata, parameters, fieldName, spatialField, out _);
+                shape = QueryBuilderHelper.HandleCircle(metadata.Query, shapeExpression, metadata, queryParameters, fieldName, spatialField, out _);
                 break;
             case MethodType.Spatial_Wkt:
-                shape = QueryBuilderHelper.HandleWkt(queryParameters, fieldName, shapeExpression, spatialField, out _);
+                shape = QueryBuilderHelper.HandleWkt(builderParameters, fieldName, shapeExpression, spatialField, out _);
                 break;
             default:
-                QueryMethod.ThrowMethodNotSupported(methodType, metadata.QueryText, queryParameters.Parameters);
+                QueryMethod.ThrowMethodNotSupported(methodType, metadata.QueryText, builderParameters.QueryParameters);
                 break;
         }
 
@@ -856,16 +891,16 @@ internal static class CoraxQueryBuilder
             MethodType.Spatial_Disjoint => global::Corax.Utils.Spatial.SpatialRelation.Disjoint,
             MethodType.Spatial_Intersects => global::Corax.Utils.Spatial.SpatialRelation.Intersects,
             MethodType.Spatial_Contains => global::Corax.Utils.Spatial.SpatialRelation.Contains,
-            _ => (global::Corax.Utils.Spatial.SpatialRelation)QueryMethod.ThrowMethodNotSupported(spatialMethod, metadata.QueryText, queryParameters.Parameters)
+            _ => (global::Corax.Utils.Spatial.SpatialRelation)QueryMethod.ThrowMethodNotSupported(spatialMethod, metadata.QueryText, builderParameters.QueryParameters)
         };
 
 
         //var args = new SpatialArgs(operation, shape) {DistErrPct = distanceErrorPct};
 
-        return queryParameters.IndexSearcher.SpatialQuery(fieldName, fieldId, distanceErrorPct, shape, spatialField.GetContext(), operation);
+        return builderParameters.IndexSearcher.SpatialQuery(fieldName, fieldId, distanceErrorPct, shape, spatialField.GetContext(), operation);
     }
 
-    private static IQueryMatch HandleRegex<TScoreFunction>(QueryParameters queryParameters, MethodExpression expression, TScoreFunction scoreFunction = default)
+    private static IQueryMatch HandleRegex<TScoreFunction>(Parameters builderParameters, MethodExpression expression, TScoreFunction scoreFunction = default)
     where TScoreFunction : IQueryScoreFunction
     {
         if (expression.Arguments.Count != 2)
@@ -873,15 +908,15 @@ internal static class CoraxQueryBuilder
                 $"Regex method was invoked with {expression.Arguments.Count} arguments ({expression})" +
                 " while it should be invoked with 2 arguments e.g. Regex(foo.Name,\"^[a-z]+?\")");
 
-        var metadata = queryParameters.Metadata;
-        var parameters = queryParameters.Parameters;
+        var metadata = builderParameters.Metadata;
+        var queryParameters = builderParameters.QueryParameters;
         
-        var fieldName = QueryBuilderHelper.ExtractIndexFieldName(metadata.Query, parameters, expression.Arguments[0], metadata);
-        var (value, valueType) = QueryBuilderHelper.GetValue(metadata.Query, metadata, parameters, (ValueExpression)expression.Arguments[1]);
+        var fieldName = QueryBuilderHelper.ExtractIndexFieldName(metadata.Query, queryParameters, expression.Arguments[0], metadata);
+        var (value, valueType) = QueryBuilderHelper.GetValue(metadata.Query, metadata, queryParameters, (ValueExpression)expression.Arguments[1]);
         if (valueType != ValueTokenType.String && !(valueType == ValueTokenType.Parameter && IsStringFamily(value)))
-            QueryBuilderHelper.ThrowMethodExpectsArgumentOfTheFollowingType("regex", ValueTokenType.String, valueType, queryParameters.Metadata.QueryText, queryParameters.Parameters);
+            QueryBuilderHelper.ThrowMethodExpectsArgumentOfTheFollowingType("regex", ValueTokenType.String, valueType, builderParameters.Metadata.QueryText, builderParameters.QueryParameters);
         var valueAsString = QueryBuilderHelper.CoraxGetValueAsString(value);
-        return queryParameters.IndexSearcher.RegexQuery<TScoreFunction>(fieldName, scoreFunction, queryParameters.Factories.GetRegexFactory(valueAsString));
+        return builderParameters.IndexSearcher.RegexQuery<TScoreFunction>(fieldName, scoreFunction, builderParameters.Factories.GetRegexFactory(valueAsString));
 
         bool IsStringFamily(object value)
         {
@@ -889,13 +924,13 @@ internal static class CoraxQueryBuilder
         }
     }
 
-    public static OrderMetadata[] GetSortMetadata(QueryParameters queryParameters)
+    public static OrderMetadata[] GetSortMetadata(Parameters builderParameters)
     {
-        var query = queryParameters.Query;
-        var index = queryParameters.Index;
-        var getSpatialField = queryParameters.Factories.GetSpatialFieldFactory;
-        var indexMapping = queryParameters.IndexFieldsMapping;
-        var queryMapping = queryParameters.FieldsToFetch;
+        var query = builderParameters.Query;
+        var index = builderParameters.Index;
+        var getSpatialField = builderParameters.Factories.GetSpatialFieldFactory;
+        var indexMapping = builderParameters.IndexFieldsMapping;
+        var queryMapping = builderParameters.FieldsToFetch;
 
 
         var sort = ReadOnlySpan<OrderMetadata>.Empty;
@@ -1001,11 +1036,11 @@ internal static class CoraxQueryBuilder
         return sortArray[0..sortIndex];
     }
 
-    private static IQueryMatch OrderBy(QueryParameters queryParameters, IQueryMatch match, ReadOnlySpan<OrderMetadata> orderMetadata)
+    private static IQueryMatch OrderBy(Parameters builderParameters, IQueryMatch match, ReadOnlySpan<OrderMetadata> orderMetadata)
     {
         RuntimeHelpers.EnsureSufficientExecutionStack();
-        var indexSearcher = queryParameters.IndexSearcher;
-        var take = queryParameters.Take;
+        var indexSearcher = builderParameters.IndexSearcher;
+        var take = builderParameters.Take;
         switch (orderMetadata.Length)
         {
             //Note: we want to use generics up to 3 comparers. This way we gonna avoid virtual calls in most cases.

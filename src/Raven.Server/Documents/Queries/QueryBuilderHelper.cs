@@ -633,15 +633,15 @@ public static class QueryBuilderHelper
         DescendingSpatial
     }
 
-    internal static IShape HandleWkt(QueryParameters queryParameters, string fieldName, MethodExpression expression, 
+    internal static IShape HandleWkt(CoraxQueryBuilder.Parameters builderParameters, string fieldName, MethodExpression expression, 
         SpatialField spatialField, out SpatialUnits units)
     {
-        var wktValue = QueryBuilderHelper.GetValue(queryParameters.Metadata.Query, queryParameters.Metadata, queryParameters.Parameters, (ValueExpression)expression.Arguments[0]);
+        var wktValue = QueryBuilderHelper.GetValue(builderParameters.Metadata.Query, builderParameters.Metadata, builderParameters.QueryParameters, (ValueExpression)expression.Arguments[0]);
         QueryBuilderHelper.AssertValueIsString(fieldName, wktValue.Type);
 
         SpatialUnits? spatialUnits = null;
         if (expression.Arguments.Count == 2)
-            spatialUnits = GetSpatialUnits(queryParameters.Metadata.Query, expression.Arguments[1] as ValueExpression, queryParameters.Metadata, queryParameters.Parameters, fieldName);
+            spatialUnits = GetSpatialUnits(builderParameters.Metadata.Query, expression.Arguments[1] as ValueExpression, builderParameters.Metadata, builderParameters.QueryParameters, fieldName);
 
         units = spatialUnits ?? spatialField.Units;
 
@@ -653,7 +653,7 @@ public static class QueryBuilderHelper
         }
         catch (Exception e)
         {
-            throw new InvalidQueryException($"Value '{wkt}' is not a valid WKT value.", queryParameters.Metadata.QueryText, queryParameters.Parameters, e);
+            throw new InvalidQueryException($"Value '{wkt}' is not a valid WKT value.", builderParameters.Metadata.QueryText, builderParameters.QueryParameters, e);
         }
     }
     
