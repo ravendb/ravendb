@@ -37,19 +37,19 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis.Corax;
 
 internal class RavenMoreLikeThis : MoreLikeThisBase
 {
-    private readonly QueryParameters _queryParameters;
+    private readonly CoraxQueryBuilder.Parameters _builderParameters;
     private readonly Analyzer _analyzer;
 
 
-    public RavenMoreLikeThis(QueryParameters queryParameters, Analyzer analyzer = null)
+    public RavenMoreLikeThis(CoraxQueryBuilder.Parameters builderParameters, Analyzer analyzer = null)
     {
         _analyzer = analyzer ?? Analyzer.DefaultAnalyzer;
-        _queryParameters = queryParameters;
+        _builderParameters = builderParameters;
     }
 
     protected override PriorityQueue<object[]> CreateQueue(IDictionary<string, Int> words)
     {
-        var indexSearcher = _queryParameters.IndexSearcher;
+        var indexSearcher = _builderParameters.IndexSearcher;
         var amountOfDocs = indexSearcher.NumberOfEntries;
         var res = new FreqQ(words.Count);
 
@@ -147,7 +147,7 @@ internal class RavenMoreLikeThis : MoreLikeThisBase
     /// <summary> Adds term frequencies found by tokenizing text from reader into the Map words</summary>
     protected void AddTermFrequencies(ref IndexEntryReader entryReader, IDictionary<string, Int> termFreqMap, string fieldName)
     {
-        if (_queryParameters.IndexFieldsMapping.TryGetByFieldName(fieldName, out var binding) == false || binding.FieldIndexingMode is FieldIndexingMode.No)
+        if (_builderParameters.IndexFieldsMapping.TryGetByFieldName(fieldName, out var binding) == false || binding.FieldIndexingMode is FieldIndexingMode.No)
         {
             //We don't have such data in index so nothing to do
             return;
@@ -311,7 +311,7 @@ internal class RavenMoreLikeThis : MoreLikeThisBase
 
     IQueryMatch CreateQuery(PriorityQueue<object[]> q)
     {
-        var indexSearcher = _queryParameters.IndexSearcher;
+        var indexSearcher = _builderParameters.IndexSearcher;
         object cur;
         var qterms = 0;
         IQueryMatch query = null;
@@ -350,13 +350,13 @@ internal class RavenMoreLikeThis : MoreLikeThisBase
     /// </param>
     public override void SetMaxDocFreqPct(int maxPercentage)
     {
-        var result = checked((maxPercentage / 100.0) * _queryParameters.IndexSearcher.NumberOfEntries);
+        var result = checked((maxPercentage / 100.0) * _builderParameters.IndexSearcher.NumberOfEntries);
         _maxDocfreq = result >= int.MaxValue ? int.MaxValue : (int)Math.Ceiling(result);
     }
 
     protected PriorityQueue<object[]> RetrieveTerms(long documentId)
     {
-        var indexSearcher = _queryParameters.IndexSearcher;
+        var indexSearcher = _builderParameters.IndexSearcher;
         IDictionary<string, Int> termFreqMap = new HashMap<string, Int>();
         var indexEntry = indexSearcher.GetReaderFor(documentId);
 
