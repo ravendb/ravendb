@@ -125,8 +125,7 @@ public partial class IndexSearcher
     public MultiTermMatch RegexQuery<TScoreFunction>(string field, TScoreFunction scoreFunction, Regex regex)
         where TScoreFunction : IQueryScoreFunction
     {
-        var fields = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
-        var terms = fields?.CompactTreeFor(field);
+        var terms = _fieldsTree?.CompactTreeFor(field);
         if (terms == null)
             return MultiTermMatch.CreateEmpty(_transaction.Allocator);
 
