@@ -44,7 +44,8 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
     private readonly bool _ownsTransaction;
 
-    private Tree _metadataTree;
+    private readonly Tree _metadataTree;
+    private readonly Tree _fieldsTree;
 
     // The reason why we want to have the transaction open for us is so that we avoid having
     // to explicitly provide the index searcher with opening semantics and also every new
@@ -54,6 +55,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         _ownsTransaction = true;
         _transaction = environment.ReadTransaction();
         _fieldMapping = fieldsMapping ?? new IndexFieldsMapping(_transaction.Allocator);
+        _fieldsTree = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
         _metadataTree = _transaction.ReadTree(Constants.IndexMetadata);
     }
 
@@ -62,6 +64,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         _ownsTransaction = false;
         _transaction = tx;
         _fieldMapping = fieldsMapping ?? new IndexFieldsMapping(_transaction.Allocator);
+        _fieldsTree = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
         _metadataTree = _transaction.ReadTree(Constants.IndexMetadata);
     }
 
@@ -199,8 +202,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
     public long GetEntriesAmountInField(string name)
     {
-        var fields = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
-        var terms = fields?.CompactTreeFor(name);
+        var terms = _fieldsTree?.CompactTreeFor(name);
 
         return terms?.NumberOfEntries ?? 0;
     }
@@ -208,8 +210,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     public bool TryGetTermsOfField(string field, out ExistsTermProvider existsTermProvider)
     {
         using var _ = Slice.From(Allocator, field, ByteStringType.Immutable, out var fieldName);
-        var fields = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
-        var terms = fields?.CompactTreeFor(fieldName);
+        var terms = _fieldsTree?.CompactTreeFor(fieldName);
 
         if (terms == null)
         {

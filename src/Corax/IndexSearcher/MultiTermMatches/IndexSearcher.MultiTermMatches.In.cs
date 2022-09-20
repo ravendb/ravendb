@@ -10,8 +10,7 @@ public partial class IndexSearcher
 {
     public MultiTermMatch InQuery(string field, List<string> inTerms, int fieldId = Constants.IndexSearcher.NonAnalyzer)
     {
-        var fields = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
-        var terms = fields?.CompactTreeFor(field);
+        var terms = _fieldsTree?.CompactTreeFor(field);
         if (terms == null)
         {
             // If either the term or the field does not exist the request will be empty. 
@@ -56,8 +55,7 @@ public partial class IndexSearcher
     //In this case, when we get more conditions, we have to quit building the tree and manually check the entries with UnaryMatch.
     public IQueryMatch AllInQuery(string field, HashSet<string> allInTerms, int fieldId = Constants.IndexSearcher.NonAnalyzer)
     {
-        var fields = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
-        var terms = fields?.CompactTreeFor(field);
+        var terms = _fieldsTree?.CompactTreeFor(field);
 
         if (terms == null)
         {
@@ -135,8 +133,7 @@ public partial class IndexSearcher
     public MultiTermMatch InQuery<TScoreFunction>(string field, List<string> inTerms, TScoreFunction scoreFunction, int fieldId = Constants.IndexSearcher.NonAnalyzer)
         where TScoreFunction : IQueryScoreFunction
     {
-        var fields = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
-        var terms = fields?.CompactTreeFor(field);
+        var terms = _fieldsTree?.CompactTreeFor(field);
         if (terms == null)
         {
             // If either the term or the field does not exist the request will be empty. 

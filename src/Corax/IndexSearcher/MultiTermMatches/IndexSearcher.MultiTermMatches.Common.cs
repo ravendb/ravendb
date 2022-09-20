@@ -11,8 +11,7 @@ public partial class IndexSearcher
         where TScoreFunction : IQueryScoreFunction
         where TTermProvider : ITermProvider
     {
-        var fields = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
-        var terms = fields?.CompactTreeFor(fieldName);
+        var terms = _fieldsTree?.CompactTreeFor(fieldName);
         if (terms == null)
             return MultiTermMatch.CreateEmpty(_transaction.Allocator);
 
@@ -23,10 +22,9 @@ public partial class IndexSearcher
         where TScoreFunction : IQueryScoreFunction
         where TTermProvider : ITermProvider
     {
-        var fields = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
         using var _ = Slice.From(Allocator, field, ByteStringType.Immutable, out var fieldName);
 
-        var terms = fields?.CompactTreeFor(field);
+        var terms = _fieldsTree?.CompactTreeFor(field);
         if (terms == null)
             return MultiTermMatch.CreateEmpty(_transaction.Allocator);
         var slicedTerm = EncodeAndApplyAnalyzer(term, fieldId);
