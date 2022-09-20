@@ -334,7 +334,8 @@ namespace Tests.Infrastructure
             {
                 try
                 {
-                    var leader = servers == null ? Servers.FirstOrDefault(s => s.ServerStore.IsLeader()) : servers.FirstOrDefault(s => s.ServerStore.IsLeader());
+                    servers ??= Servers;
+                    var leader = servers.FirstOrDefault(s => s.ServerStore.IsLeader());
                     if (leader != null)
                     {
                         await act(leader);
