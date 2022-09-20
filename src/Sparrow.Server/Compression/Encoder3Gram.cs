@@ -93,52 +93,54 @@ namespace Sparrow.Server.Compression
             return result;
         }
 
-        public void EncodeBatch<TSampleEnumerator, TOutputEnumerator>(in TSampleEnumerator data, Span<int> outputSizes, in TOutputEnumerator outputBuffers)
+        public unsafe void EncodeBatch<TSampleEnumerator, TOutputEnumerator>(in TSampleEnumerator data, Span<int> outputSizes, in TOutputEnumerator outputBuffers)
             where TSampleEnumerator : struct, IReadOnlySpanIndexer
             where TOutputEnumerator : struct, ISpanIndexer
         {
-            var table = EncodingTable;
-            var numberOfEntries = _entries;
-
-            int length = data.Length;
-            for (int i = 0; i < length; i++)
+            fixed (Interval3Gram* table = EncodingTable)
             {
-                var intBuf = MemoryMarshal.Cast<byte, long>(outputBuffers[i]);
+                var numberOfEntries = _entries;
 
-                int idx = 0;
-                intBuf[0] = 0;
-                int intBufLen = 0;
-
-                var keyStr = data[i];
-                int pos = 0;
-                while (pos < keyStr.Length)
+                int length = data.Length;
+                for (int i = 0; i < length; i++)
                 {
-                    int prefixLen = Lookup(keyStr.Slice(pos), table, numberOfEntries, out Code code);
-                    long sBuf = code.Value;
-                    int sLen = code.Length;
-                    if (intBufLen + sLen > 63)
+                    var intBuf = MemoryMarshal.Cast<byte, long>(outputBuffers[i]);
+
+                    int idx = 0;
+                    intBuf[0] = 0;
+                    int intBufLen = 0;
+
+                    var keyStr = data[i];
+                    int pos = 0;
+                    while (pos < keyStr.Length)
                     {
-                        int numBitsLeft = 64 - intBufLen;
-                        intBufLen = sLen - numBitsLeft;
-                        intBuf[idx] <<= numBitsLeft;
-                        intBuf[idx] |= (sBuf >> intBufLen);
-                        intBuf[idx] = BinaryPrimitives.ReverseEndianness(intBuf[idx]);
-                        intBuf[idx + 1] = sBuf;
-                        idx++;
-                    }
-                    else
-                    {
-                        intBuf[idx] <<= sLen;
-                        intBuf[idx] |= sBuf;
-                        intBufLen += sLen;
+                        int prefixLen = Lookup(keyStr.Slice(pos), table, numberOfEntries, out Code code);
+                        long sBuf = code.Value;
+                        int sLen = code.Length;
+                        if (intBufLen + sLen > 63)
+                        {
+                            int numBitsLeft = 64 - intBufLen;
+                            intBufLen = sLen - numBitsLeft;
+                            intBuf[idx] <<= numBitsLeft;
+                            intBuf[idx] |= (sBuf >> intBufLen);
+                            intBuf[idx] = BinaryPrimitives.ReverseEndianness(intBuf[idx]);
+                            intBuf[idx + 1] = sBuf;
+                            idx++;
+                        }
+                        else
+                        {
+                            intBuf[idx] <<= sLen;
+                            intBuf[idx] |= sBuf;
+                            intBufLen += sLen;
+                        }
+
+                        pos += prefixLen;
                     }
 
-                    pos += prefixLen;
+                    intBuf[idx] <<= (64 - intBufLen);
+                    intBuf[idx] = BinaryPrimitives.ReverseEndianness(intBuf[idx]);
+                    outputSizes[i] = ((idx << 6) + intBufLen);
                 }
-
-                intBuf[idx] <<= (64 - intBufLen);
-                intBuf[idx] = BinaryPrimitives.ReverseEndianness(intBuf[idx]);
-                outputSizes[i] = ((idx << 6) + intBufLen);
             }
         }
 
@@ -204,7 +206,7 @@ namespace Sparrow.Server.Compression
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int Encode(ReadOnlySpan<byte> key, Span<byte> outputBuffer)
+        public unsafe int Encode(ReadOnlySpan<byte> key, Span<byte> outputBuffer)
         {
             Debug.Assert(outputBuffer.Length >= sizeof(long)); // Ensure we can safely cast to int 64
 
@@ -214,40 +216,42 @@ namespace Sparrow.Server.Compression
             intBuf[0] = 0;
             int intBufLen = 0;
 
-            var table = EncodingTable;
-            var numberOfEntries = _entries;
-
-            var symbol = key;
-
-            var intBufValue = intBuf[idx];
-            while (symbol.Length != 0)
+            fixed (Interval3Gram* table = EncodingTable)
             {
-                if (symbol[0] == 0 && symbol.Length > 1)
-                    throw new InvalidDataException("The key cannot contain null bytes unless it is the last value.");
+                var numberOfEntries = _entries;
 
-                int prefixLen = Lookup(symbol, table, numberOfEntries, out Code code);
-                long sBuf = code.Value;
-                int sLen = code.Length;
-                if (intBufLen + sLen > 63)
+                var symbol = key;
+
+                var intBufValue = intBuf[idx];
+                while (symbol.Length != 0)
                 {
-                    int numBitsLeft = 64 - intBufLen;
-                    intBufLen = sLen - numBitsLeft;
+                    if (symbol[0] == 0 && symbol.Length > 1)
+                        throw new InvalidDataException("The key cannot contain null bytes unless it is the last value.");
 
-                    intBuf[idx] = BinaryPrimitives.ReverseEndianness((intBufValue << numBitsLeft) | (sBuf >> intBufLen));
-                    idx++;
-                    intBufValue = sBuf;
-                }
-                else
-                {
-                    intBufValue = (intBufValue << sLen) | sBuf;
-                    intBufLen += sLen;
+                    int prefixLen = Lookup(symbol, table, numberOfEntries, out Code code);
+                    long sBuf = code.Value;
+                    int sLen = code.Length;
+                    if (intBufLen + sLen > 63)
+                    {
+                        int numBitsLeft = 64 - intBufLen;
+                        intBufLen = sLen - numBitsLeft;
+
+                        intBuf[idx] = BinaryPrimitives.ReverseEndianness((intBufValue << numBitsLeft) | (sBuf >> intBufLen));
+                        idx++;
+                        intBufValue = sBuf;
+                    }
+                    else
+                    {
+                        intBufValue = (intBufValue << sLen) | sBuf;
+                        intBufLen += sLen;
+                    }
+
+                    symbol = symbol.Slice(prefixLen);
                 }
 
-                symbol = symbol.Slice(prefixLen);
+                intBuf[idx] = BinaryPrimitives.ReverseEndianness(intBufValue << (64 - intBufLen));
+                return ((idx << 6) + intBufLen);
             }
-
-            intBuf[idx] = BinaryPrimitives.ReverseEndianness(intBufValue << (64 - intBufLen));
-            return ((idx << 6) + intBufLen);
         }
 
         public unsafe int DecodeStochasticBug(ReadOnlySpan<byte> data, Span<byte> outputBuffer)
@@ -429,7 +433,7 @@ namespace Sparrow.Server.Compression
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private int Lookup(ReadOnlySpan<byte> symbol, ReadOnlySpan<Interval3Gram> table, int numberOfEntries, out Code code)
+        private static unsafe int Lookup(ReadOnlySpan<byte> symbol, Interval3Gram* table, int numberOfEntries, out Code code)
         {
             // PERF: this is an optimized version of the CompareDictionaryEntry routine. Given that we
             // can actually perform the operation in parallel. The usual case will be to call the parallel
@@ -439,21 +443,21 @@ namespace Sparrow.Server.Compression
             int r = numberOfEntries;
 
             uint symbolValue;
-            switch (symbol.Length)
+            if (symbol.Length >= 4)
             {
-                case 3:
-                    symbolValue = (uint)(symbol[0] << 16 | symbol[1] << 8 | symbol[2]);
-                    break;
-                case 2:
-                    symbolValue = (uint)(symbol[0] << 16 | symbol[1] << 8);
-                    break;
-                case 1:
-                    symbolValue = (uint)symbol[0] << 16;
-                    break;
-                default:
-                    symbolValue = BinaryPrimitives.ReverseEndianness(MemoryMarshal.Read<uint>(symbol)) >> 8;
-                    break;
+                symbolValue = BinaryPrimitives.ReverseEndianness(MemoryMarshal.Read<uint>(symbol)) >> 8;
             }
+            else
+            {
+                symbolValue = symbol.Length switch
+                {
+                    3 => (uint)(symbol[0] << 16 | symbol[1] << 8 | symbol[2]),
+                    2 => (uint)(symbol[0] << 16 | symbol[1] << 8),
+                    1 => (uint)symbol[0] << 16,
+                };
+            }
+
+
 
             while (r - l > 1)
             {
