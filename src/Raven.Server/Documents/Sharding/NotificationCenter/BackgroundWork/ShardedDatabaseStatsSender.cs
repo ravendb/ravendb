@@ -7,6 +7,7 @@ using Raven.Client.Http;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.BackgroundWork;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.NotificationCenter.BackgroundWork;
@@ -23,11 +24,19 @@ public class ShardedDatabaseStatsSender : AbstractDatabaseStatsSender
 
     protected override async ValueTask<NotificationCenterDatabaseStats> GetStatsAsync()
     {
-        return await _context.ShardExecutor.ExecuteParallelForAllAsync(new GetNotificationCenterDatabaseStatsOperation());
+        using (_context.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext contex))
+            return await _context.ShardExecutor.ExecuteParallelForAllAsync(new GetNotificationCenterDatabaseStatsOperation(contex));
     }
 
-    private struct GetNotificationCenterDatabaseStatsOperation : IShardedOperation<NotificationCenterDatabaseStats>
+    private readonly struct GetNotificationCenterDatabaseStatsOperation : IShardedOperation<NotificationCenterDatabaseStats>
     {
+        private readonly TransactionOperationContext _context;
+
+        public GetNotificationCenterDatabaseStatsOperation([NotNull] TransactionOperationContext context)
+        {
+            _context = context ?? throw new ArgumentNullException(nameof(context));
+        }
+
         public HttpRequest HttpRequest => null;
 
         public NotificationCenterDatabaseStats Combine(Memory<NotificationCenterDatabaseStats> results)
@@ -38,7 +47,7 @@ public class ShardedDatabaseStatsSender : AbstractDatabaseStatsSender
             {
                 var stats = results.Span[i];
 
-                result.CombineWith(stats);
+                result.CombineWith(stats, _context);
             }
 
             return result;

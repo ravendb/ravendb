@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
@@ -26,7 +27,7 @@ public class DatabaseStatsSender : AbstractDatabaseStatsSender
 
         var indexes = database.IndexStore.GetIndexes().ToList();
         var needsServerContext = indexes.Any(x => x.Definition.HasCompareExchange);
-        var staleIndexes = 0;
+        var staleIndexes = new List<string>();
         var countOfIndexingErrors = 0L;
 
         using (var context = QueryOperationContext.Allocate(database, needsServerContext))
@@ -36,7 +37,7 @@ public class DatabaseStatsSender : AbstractDatabaseStatsSender
             foreach (var index in indexes)
             {
                 if (index.IsStale(context))
-                    staleIndexes++;
+                    staleIndexes.Add(index.Name);
 
                 var errorCount = index.GetErrorCount();
 
@@ -59,7 +60,8 @@ public class DatabaseStatsSender : AbstractDatabaseStatsSender
                 CountOfConflicts = database.DocumentsStorage.ConflictsStorage.GetNumberOfDocumentsConflicts(context.Documents),
                 CountOfDocuments = database.DocumentsStorage.GetNumberOfDocuments(context.Documents),
                 CountOfIndexes = indexes.Count,
-                CountOfStaleIndexes = staleIndexes,
+                CountOfStaleIndexes = staleIndexes.Count,
+                StaleIndexes = staleIndexes.ToArray(),
                 CountOfIndexingErrors = countOfIndexingErrors,
                 LastEtag = DocumentsStorage.ReadLastEtag(context.Documents.Transaction.InnerTransaction),
                 GlobalChangeVector = DocumentsStorage.GetDatabaseChangeVector(context.Documents),

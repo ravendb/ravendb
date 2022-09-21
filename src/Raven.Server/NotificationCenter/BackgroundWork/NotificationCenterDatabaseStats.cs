@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Raven.Server.Extensions;
 using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.NotificationCenter.BackgroundWork;
 
@@ -16,6 +18,8 @@ public class NotificationCenterDatabaseStats
     public int CountOfIndexes;
 
     public int CountOfStaleIndexes;
+
+    public string[] StaleIndexes;
 
     public long CountOfIndexingErrors;
 
@@ -70,8 +74,48 @@ public class NotificationCenterDatabaseStats
         }
     }
 
-    public void CombineWith(NotificationCenterDatabaseStats stats)
+    public void CombineWith(NotificationCenterDatabaseStats stats,  IChangeVectorOperationContext context)
     {
         CountOfDocuments += stats.CountOfDocuments;
+        CountOfConflicts += stats.CountOfConflicts;
+        
+        CountOfIndexes = stats.CountOfIndexes; // every node has the same amount of indexes
+        CountOfIndexingErrors += stats.CountOfIndexingErrors;
+
+        if (StaleIndexes == null)
+            StaleIndexes = stats.StaleIndexes;
+        else if (stats.StaleIndexes != null)
+        {
+            var staleIndexes = new HashSet<string>(StaleIndexes, StringComparer.OrdinalIgnoreCase);
+            staleIndexes.UnionWith(stats.StaleIndexes);
+
+            StaleIndexes = staleIndexes.ToArray();
+        }
+
+        CountOfStaleIndexes = StaleIndexes?.Length ?? 0;
+
+        LastEtag = -1;
+        GlobalChangeVector = null;
+
+        if (LastIndexingErrorTime == null)
+            LastIndexingErrorTime = stats.LastIndexingErrorTime;
+        else if (stats.LastIndexingErrorTime > LastIndexingErrorTime)
+            LastIndexingErrorTime = stats.LastIndexingErrorTime;
+
+        if (stats.Collections != null)
+        {
+            Collections ??= new Dictionary<string, DatabaseStatsChanged.ModifiedCollection>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var kvp in stats.Collections)
+            {
+                if (Collections.TryGetValue(kvp.Key, out var current) == false)
+                {
+                    Collections[kvp.Key] = kvp.Value;
+                    continue;
+                }
+
+                current.CombineWith(kvp.Value, context);
+            }
+        }
     }
 }
