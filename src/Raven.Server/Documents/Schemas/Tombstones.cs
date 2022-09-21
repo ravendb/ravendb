@@ -16,7 +16,6 @@ namespace Raven.Server.Documents.Schemas
         internal static readonly Slice TombstonesPrefix;
         internal static readonly Slice DeletedEtagsSlice;
         internal static readonly Slice TombstonesBucketAndEtagSlice;
-        internal static readonly Slice CollectionTombstonesBucketAndEtagSlice;
 
         internal enum TombstoneTable
         {
@@ -41,7 +40,6 @@ namespace Raven.Server.Documents.Schemas
                 Slice.From(ctx, "DeletedEtags", ByteStringType.Immutable, out DeletedEtagsSlice);
 
                 Slice.From(ctx, "TombstonesBucketAndEtag", ByteStringType.Immutable, out TombstonesBucketAndEtagSlice);
-                Slice.From(ctx, "CollectionTombstonesBucketAndEtag", ByteStringType.Immutable, out CollectionTombstonesBucketAndEtagSlice);
             }
 
             DefineIndexesForTombstonesSchema(TombstonesSchemaBase);
@@ -85,13 +83,6 @@ namespace Raven.Server.Documents.Schemas
                     GenerateKey = DocumentsStorage.GenerateBucketAndEtagIndexKeyForTombstones,
                     IsGlobal = true,
                     Name = TombstonesBucketAndEtagSlice
-                });
-
-                TombstonesSchemaBase60.DefineIndex(new TableSchema.DynamicKeyIndexDef
-                {
-                    GenerateKey = DocumentsStorage.GenerateBucketAndEtagIndexKeyForTombstones,
-                    IsGlobal = false,
-                    Name = CollectionTombstonesBucketAndEtagSlice
                 });
             }
         }
