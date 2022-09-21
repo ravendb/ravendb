@@ -355,6 +355,11 @@ namespace Raven.Server.Documents.Queries.Results
                     return r;
                 foreach (Document item in r.List)
                 {
+                    // https://issues.hibernatingrhinos.com/issue/RavenDB-19350
+                    // We need to have a different instance of the strings, otherwise, they
+                    // will be disposed (but then try to be used).
+                    item.Id = doc.Id.CloneOnSameContext();
+                    item.LowerId = doc.LowerId.CloneOnSameContext();
                     FinishDocumentSetup(item, scoreDoc);
                 }
                 return r;
