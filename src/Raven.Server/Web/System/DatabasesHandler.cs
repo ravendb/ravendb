@@ -104,14 +104,14 @@ namespace Raven.Server.Web.System
                     var clientCert = GetCurrentCertificate();
 
                     var auditLog = LoggingSource.AuditLog.GetLogger("DbMgmt", "Audit");
-                    auditLog.Info($"Database \'{dbName}\' record has modified by {clientCert?.Subject} ({clientCert?.Thumbprint})");
+                    auditLog.Info($"Database \'{dbName}\' record has been modified by {clientCert?.Subject} ({clientCert?.Thumbprint})");
                 }
 
                 // Validate Database Name
                 var databaseRecord = ServerStore.Cluster.ReadDatabase(context, dbName, out var index);
                 if (databaseRecord == null)
                 {
-                    throw new DatabaseDoesNotExistException("Database Record not found when trying to modify database topology");
+                    throw new DatabaseDoesNotExistException($"Database {dbName} Record not found when trying to modify database topology");
                 }
 
                 // Validate Topology
@@ -120,7 +120,7 @@ namespace Raven.Server.Web.System
                 foreach (var node in databaseAllNodes)
                 {
                     if (clusterTopology.Contains(node) == false)
-                        throw new ArgumentException($"Failed to add node {node}, because we don't have it in the cluster.");
+                        throw new ArgumentException($"Failed to modify database {dbName} topology, because we don't have node {node} (which is in the new topology) in the cluster.");
 
                     if (databaseRecord.Topology.RelevantFor(node))
                     {
@@ -128,14 +128,14 @@ namespace Raven.Server.Web.System
                                                     databaseRecord.DeletionInProgress.TryGetValue(node, out var deletionInProgress) &&
                                                     deletionInProgress != DeletionInProgressStatus.No;
                         if (databaseIsBeenDeleted)
-                            throw new InvalidOperationException($"Can't add node {node} to database '{dbName}' topology because it is currently being deleted from node '{node}'");
+                            throw new InvalidOperationException($"Can't modify database {dbName} topology, because the database {dbName} is currently being deleted from node {node} (which is in the new topology)");
 
                         var url = clusterTopology.GetUrlFromTag(node);
                         if (url == null)
-                            throw new InvalidOperationException($"Can't add node {node} to database '{dbName}' topology because node {node} is not part of the cluster");
+                            throw new InvalidOperationException($"Can't modify database {dbName} topology, because node {node} (which is in the new topology) is not part of the cluster");
 
                         if (databaseRecord.Encrypted && url.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == false)
-                            throw new InvalidOperationException($"Can't add node {node} to database '{dbName}' topology because database {dbName} is encrypted but node {node} doesn't have an SSL certificate.");
+                            throw new InvalidOperationException($"Can't modify database {dbName} topology, because database {dbName} is encrypted but node {node} (which is in the new topology) doesn't have an SSL certificate.");
                     }
                 }
                 databaseTopology.ReplicationFactor = Math.Min(databaseTopology.Count, clusterTopology.AllNodes.Count);

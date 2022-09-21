@@ -39,9 +39,44 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public async Task UpdateDbTopologyOperationTest()
+        public async Task UpdateDbTopologyOperation_RemoveMember()
         {
             var (nodes, leader) = await CreateRaftCluster(3);
+            var storeOptions = new Options { Server = leader, ReplicationFactor = nodes.Count };
+
+            using (var store = GetDocumentStore(storeOptions))
+            {
+                var databaseName = store.Database;
+                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
+                var databaseTopology = new DatabaseTopology();
+                record.Topology.CopyTo(databaseTopology);
+
+                // Modify databaseTopology
+                databaseTopology.ReplicationFactor--;
+                databaseTopology.Members.Remove(databaseTopology.Members.First());
+
+                // Execute command
+                var res = await store.Maintenance.Server.SendAsync(new ModifyDatabaseTopologyOperation(databaseName, databaseTopology));
+
+                // Wait for command (raft index)
+                await Cluster.WaitForRaftIndexToBeAppliedOnClusterNodesAsync(res.RaftCommandIndex, nodes);
+
+                // Check equality of new record topology and databaseTopology
+                record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
+                Assert.Equal(databaseTopology.ReplicationFactor, record.Topology.ReplicationFactor);
+                Assert.Equal(databaseTopology.Members.Count, record.Topology.Members.Count);
+                foreach (var member in databaseTopology.Members)
+                {
+                    Assert.True(record.Topology.Members.Contains(member), "Members in topologies are not equals");
+                }
+            }
+        }
+
+        [Fact]
+        public async Task UpdateDbTopologyOperationTest_TurnMemberIntoRehab()
+        {
+            var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true);
+            Cluster.SuspendObserver(leader);
             var storeOptions = new Options
             {
                 Server = leader,
@@ -54,13 +89,16 @@ namespace SlowTests.Issues
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
                 var databaseTopology = new DatabaseTopology();
                 record.Topology.CopyTo(databaseTopology);
-                databaseTopology.ReplicationFactor--;
-                databaseTopology.Members.Remove(databaseTopology.Members.First());
 
                 // Modify databaseTopology
+                var node = databaseTopology.Members.First();
+                databaseTopology.Members.Remove(node);
+                databaseTopology.Rehabs.Add(node);
+
+                // Execute command
                 var res = await store.Maintenance.Server.SendAsync(new ModifyDatabaseTopologyOperation(databaseName, databaseTopology));
 
-                // Wait for raft index
+                // Wait for command (raft index)
                 await Cluster.WaitForRaftIndexToBeAppliedOnClusterNodesAsync(res.RaftCommandIndex, nodes);
 
                 // Check equality of new record topology and databaseTopology
@@ -68,8 +106,13 @@ namespace SlowTests.Issues
                 Assert.Equal(databaseTopology.ReplicationFactor, record.Topology.ReplicationFactor);
                 Assert.Equal(databaseTopology.Members.Count, record.Topology.Members.Count);
                 foreach (var member in databaseTopology.Members)
+                { 
+                    Assert.True(record.Topology.Members.Contains(member), "Members in topologies are not equals");
+                }
+                Assert.Equal(databaseTopology.Rehabs.Count, record.Topology.Rehabs.Count);
+                foreach (var rehab in databaseTopology.Rehabs)
                 {
-                    Assert.True(record.Topology.Members.Contains(member),"Members in topologies are not equals");
+                    Assert.True(record.Topology.Rehabs.Contains(rehab), "Rehabs in topologies are not equals");
                 }
             }
         }
