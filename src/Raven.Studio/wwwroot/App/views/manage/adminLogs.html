@@ -38,7 +38,7 @@
                             </div>
                             <div class="btn-group flex-grow">
                                 <input type="text" class="form-control input-sm full-width"
-                                       data-bind="textInput: $root.editedHeaderValue, attr: { 'placeholder': $root.headerValuePlaceholder }" >
+                                       data-bind="textInput: $root.editedHeaderValue, attr: { 'placeholder': $root.headerValuePlaceholder }">
                             </div>
                             <div>
                                 <button class="btn btn-sm btn-default" data-bind="click: $root.includeFilter"><i class="icon-plus"></i> <span>Include</span></button>
@@ -158,7 +158,7 @@
                                     </div>
                                 </div>
                                 <div class="modal-body margin-top margin-bottom-lg margin-right-sm">
-                                    <div class="form-group" >
+                                    <div class="form-group">
                                         <label for="startDate" class="control-label">Start Date</label>
                                         <div class="flex-grow margin-left">
                                             <div class="checkbox no-padding-left">
@@ -236,18 +236,18 @@
     </div>
     <div class="log-list flex-grow scroll" data-bind="event: { mousedown: _.partial(updateMouseStatus, true), mouseup: _.partial(updateMouseStatus, false) }">
         <list-view params="controller: listController, emptyTemplate: 'empty-admin-logs-template', itemHeightProvider: itemHeightProvider, itemHtmlProvider: itemHtmlProvider"></list-view>
-        <div class="results-error" data-bind="visible: !isConnectedToWebSocket()">
-            <div class="help-block bg-warning text-warning">
-                <span data-bind="visible: isPauseLogs"><i class="icon-warning"></i><span>Admin log is paused</span></span>
-                <span data-bind="visible: !isPauseLogs()"><i class="btn-spinner"></i><span class="margin-left">Trying to Connect</span></span>
-            </div>
-        </div>
-        <div class="has-error results-error" data-bind="visible: isBufferFull">
-            <div class="help-block">
-                <i class="icon-danger"></i><span>Log buffer is full. Either increase buffer size in 'Options' panel or <a href="#" data-bind="click: clear">clear all entries.</a></span>
-            </div>
+    </div>
+
+    <div class="help-block bg-warning text-warning" data-bind="visible: !isConnectedToWebSocket()">
+        <span data-bind="visible: isPauseLogs"><i class="icon-warning"></i><span>Admin log is paused</span></span>
+        <span data-bind="visible: !isPauseLogs()"><i class="btn-spinner"></i><span class="margin-left">Trying to Connect</span></span>
+    </div>
+    <div class="has-error" data-bind="visible: isBufferFull">
+        <div class="help-block">
+            <i class="icon-danger"></i><span>Log buffer is full. Either increase buffer size in 'Options' panel or <a href="#" data-bind="click: clear">clear all entries.</a></span>
         </div>
     </div>
+
 </div>
 
 <script type="text/html" id="empty-admin-logs-template">

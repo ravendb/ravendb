@@ -16,7 +16,7 @@ public class RavenDB_18013 : ClusterTestBase
     public RavenDB_18013(ITestOutputHelper output) : base(output)
     {
     }
-    private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromMinutes(15) : TimeSpan.FromSeconds(60);
+    private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromMinutes(15) : TimeSpan.FromSeconds(40);
     [Fact]
     public async Task ShouldHandleDatabaseDeleteWhileItsBeingDeleted()
     {
@@ -100,7 +100,15 @@ public class RavenDB_18013 : ClusterTestBase
             removeNodeFromDatabaseCommandMre.Set();
 
             // finish delete
-            await t;
+            try
+            {
+                await t;
+            }
+            catch (Exception e)
+            {
+                Output.WriteLine($"Failed to delete database from test {nameof(ShouldHandleDatabaseDeleteWhileItsBeingDeleted)}:{e}");
+                throw;
+            }
         }
     }
 }
