@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.NotificationCenter.Notifications
@@ -49,15 +52,15 @@ namespace Raven.Server.NotificationCenter.Notifications
         }
 
         public static DatabaseStatsChanged Create(
-            string database, 
-            long countOfConflicts, 
-            long countOfDocs, 
-            int countOfIndexes, 
-            int countOfStaleIndexes, 
+            string database,
+            long countOfConflicts,
+            long countOfDocs,
+            int countOfIndexes,
+            int countOfStaleIndexes,
             string globalChangeVector,
-            long lastEtag, 
-            long countOfIndexingErrors, 
-            DateTime? lastIndexingErrorTime, 
+            long lastEtag,
+            long countOfIndexingErrors,
+            DateTime? lastIndexingErrorTime,
             List<ModifiedCollection> modifiedCollections)
         {
             return new DatabaseStatsChanged(database)
@@ -80,11 +83,16 @@ namespace Raven.Server.NotificationCenter.Notifications
 
         public class ModifiedCollection
         {
-            public readonly string Name;
+            public string Name;
 
-            public readonly long Count;
+            public long Count;
 
-            public readonly string LastDocumentChangeVector;
+            public string LastDocumentChangeVector;
+
+            public ModifiedCollection()
+            {
+                // for deserialization
+            }
 
             public ModifiedCollection(string name, long count, string lastDocumentChangeVector)
             {
@@ -115,8 +123,10 @@ namespace Raven.Server.NotificationCenter.Notifications
 
             public override bool Equals(object obj)
             {
-                if (ReferenceEquals(null, obj)) return false;
-                if (ReferenceEquals(this, obj)) return true;
+                if (ReferenceEquals(null, obj))
+                    return false;
+                if (ReferenceEquals(this, obj))
+                    return true;
 
                 var collection = obj as ModifiedCollection;
                 if (collection == null)
@@ -134,6 +144,26 @@ namespace Raven.Server.NotificationCenter.Notifications
                     hashCode = (hashCode * 397) ^ LastDocumentChangeVector.GetHashCode();
                     return hashCode;
                 }
+            }
+
+            public void CombineWith(ModifiedCollection collection, IChangeVectorOperationContext context)
+            {
+                Debug.Assert(string.Equals(Name, collection.Name, StringComparison.OrdinalIgnoreCase), $"string.Equals({Name}, {collection.Name}, StringComparison.OrdinalIgnoreCase)");
+
+                Count += collection.Count;
+
+                /*
+                if (LastDocumentChangeVector == null)
+                    LastDocumentChangeVector = collection.LastDocumentChangeVector;
+                else if (collection.LastDocumentChangeVector != null)
+                {
+                    var currentChangeVector = new ChangeVector(LastDocumentChangeVector, context);
+                    var changeVector = new ChangeVector(collection.LastDocumentChangeVector, context);
+                    var newChangeVector = currentChangeVector.MergeWith(changeVector, context);
+
+                    LastDocumentChangeVector = newChangeVector;
+                }
+                */
             }
         }
     }
