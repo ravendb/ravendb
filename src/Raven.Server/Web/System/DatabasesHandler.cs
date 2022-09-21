@@ -8,6 +8,8 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.Replication;
+using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
@@ -21,6 +23,7 @@ using Raven.Server.Extensions;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Migration;
 using Raven.Server.Utils;
@@ -79,6 +82,83 @@ namespace Raven.Server.Web.System
                         WriteDatabaseInfo(databaseName, dbDoc.Value, context, w);
                     });
                     writer.WriteEndObject();
+                }
+            }
+        }
+
+        [RavenAction("/topology/modify", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task ModifyTopology()
+        {
+            var dbName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name").Trim();
+            var raftRequestId = GetRaftRequestIdFromQuery();
+
+            await ServerStore.EnsureNotPassiveAsync();
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var json = await context.ReadForDiskAsync(RequestBodyStream(), "Database Topology");
+                var databaseTopology = JsonDeserializationCluster.DatabaseTopology(json);
+
+                if (LoggingSource.AuditLog.IsInfoEnabled)
+                {
+                    var clientCert = GetCurrentCertificate();
+
+                    var auditLog = LoggingSource.AuditLog.GetLogger("DbMgmt", "Audit");
+                    auditLog.Info($"Database \'{dbName}\' record has modified by {clientCert?.Subject} ({clientCert?.Thumbprint})");
+                }
+
+                // Validate Database Name
+                var databaseRecord = ServerStore.Cluster.ReadDatabase(context, dbName, out var index);
+                if (databaseRecord == null)
+                {
+                    throw new DatabaseDoesNotExistException("Database Record not found when trying to modify database topology");
+                }
+
+                // Validate Topology
+                var clusterTopology = ServerStore.GetClusterTopology(context);
+                var databaseAllNodes = databaseTopology.AllNodes;
+                foreach (var node in databaseAllNodes)
+                {
+                    if (clusterTopology.Contains(node) == false)
+                        throw new ArgumentException($"Failed to add node {node}, because we don't have it in the cluster.");
+
+                    if (databaseRecord.Topology.RelevantFor(node))
+                    {
+                        var databaseIsBeenDeleted = databaseRecord.DeletionInProgress != null &&
+                                                    databaseRecord.DeletionInProgress.TryGetValue(node, out var deletionInProgress) &&
+                                                    deletionInProgress != DeletionInProgressStatus.No;
+                        if (databaseIsBeenDeleted)
+                            throw new InvalidOperationException($"Can't add node {node} to database '{dbName}' topology because it is currently being deleted from node '{node}'");
+
+                        var url = clusterTopology.GetUrlFromTag(node);
+                        if (url == null)
+                            throw new InvalidOperationException($"Can't add node {node} to database '{dbName}' topology because node {node} is not part of the cluster");
+
+                        if (databaseRecord.Encrypted && url.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == false)
+                            throw new InvalidOperationException($"Can't add node {node} to database '{dbName}' topology because database {dbName} is encrypted but node {node} doesn't have an SSL certificate.");
+                    }
+                }
+                databaseTopology.ReplicationFactor = Math.Min(databaseTopology.Count, clusterTopology.AllNodes.Count);
+
+                // Update Topology
+                var update = new UpdateTopologyCommand(dbName, SystemTime.UtcNow, raftRequestId)
+                {
+                    Topology = databaseTopology
+                };
+
+                var (newIndex, _) = await ServerStore.SendToLeaderAsync(update);
+
+                await ServerStore.Cluster.WaitForIndexNotification(newIndex);
+
+                // Return Raft Index
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, new DynamicJsonValue
+                    {
+                        [nameof(DatabasePutResult.RaftCommandIndex)] = newIndex
+                    });
                 }
             }
         }
