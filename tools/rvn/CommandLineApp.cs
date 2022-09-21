@@ -655,7 +655,9 @@ namespace rvn
 
         private static CommandOption ConfigureGenerateValues(CommandLineApplication cmd)
         {
-            return cmd.Option("--generate-helm-values", "Path to values.yaml", CommandOptionType.SingleOrNoValue);
+            var opt = cmd.Option("--generate-helm-values", "Path to values.yaml", CommandOptionType.SingleOrNoValue);
+            opt.DefaultValue = "values.yaml";
+            return opt;
         }
 
         private static CommandOption ConfigureServiceNameOption(CommandLineApplication cmd)
