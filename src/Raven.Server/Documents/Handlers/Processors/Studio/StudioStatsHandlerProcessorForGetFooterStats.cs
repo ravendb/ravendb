@@ -20,11 +20,17 @@ namespace Raven.Server.Documents.Handlers.Processors.Studio
             using (var context = QueryOperationContext.Allocate(RequestHandler.Database, needsServerContext: true))
             using (context.OpenReadTransaction())
             {
-                return ValueTask.FromResult(new FooterStatistics()
+                var staleIndexes = indexes
+                    .Where(x => x.IsStale(context))
+                    .Select(x => x.Name)
+                    .ToArray();
+
+                return ValueTask.FromResult(new FooterStatistics
                 {
                     CountOfDocuments = RequestHandler.Database.DocumentsStorage.GetNumberOfDocuments(context.Documents),
                     CountOfIndexes = indexes.Count,
-                    CountOfStaleIndexes = indexes.Count(i => i.IsStale(context)),
+                    StaleIndexes = staleIndexes,
+                    CountOfStaleIndexes = staleIndexes.Length,
                     CountOfIndexingErrors = indexes.Sum(index => index.GetErrorCount())
                 });
             }
