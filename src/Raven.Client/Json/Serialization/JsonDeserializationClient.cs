@@ -75,6 +75,8 @@ namespace Raven.Client.Json.Serialization
 
         public static readonly Func<BlittableJsonReaderObject, DatabasePutResult> DatabasePutResult = GenerateJsonDeserializationRoutine<DatabasePutResult>();
 
+        public static readonly Func<BlittableJsonReaderObject, ModifyDatabaseTopologyResult> ModifyDatabaseTopologyResult = GenerateJsonDeserializationRoutine<ModifyDatabaseTopologyResult>();
+
         public static readonly Func<BlittableJsonReaderObject, GetLogsConfigurationResult> GetLogsConfigurationResult = GenerateJsonDeserializationRoutine<GetLogsConfigurationResult>();
 
         public static readonly Func<BlittableJsonReaderObject, ModifyOngoingTaskResult> ModifyOngoingTaskResult = GenerateJsonDeserializationRoutine<ModifyOngoingTaskResult>();
