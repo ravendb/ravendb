@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Commands
 {
@@ -41,6 +42,17 @@ namespace Raven.Client.Documents.Commands
             public long ConflictsPerDocument { get; set; }
 
             public long ScannedResults { get; set; }
+
+            public DynamicJsonValue ToJson()
+            {
+                return new DynamicJsonValue
+                {
+                    [nameof(Id)] = Id,
+                    [nameof(LastModified)] = LastModified,
+                    [nameof(ConflictsPerDocument)] = ConflictsPerDocument,
+                    [nameof(ScannedResults)] = ScannedResults
+                };
+            }
         }
     }
 }

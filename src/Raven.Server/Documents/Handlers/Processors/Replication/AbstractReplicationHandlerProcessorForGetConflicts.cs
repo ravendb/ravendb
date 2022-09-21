@@ -46,13 +46,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
 
                 foreach (var conflict in previewResult.Results)
                 {
-                    array.Add(new DynamicJsonValue
-                    {
-                        [nameof(GetConflictsPreviewResult.ConflictPreview.Id)] = conflict.Id,
-                        [nameof(GetConflictsPreviewResult.ConflictPreview.LastModified)] = conflict.LastModified,
-                        [nameof(GetConflictsPreviewResult.ConflictPreview.ConflictsPerDocument)] = conflict.ConflictsPerDocument,
-                        [nameof(GetConflictsPreviewResult.ConflictPreview.ScannedResults)] = conflict.ScannedResults
-                    });
+                    array.Add(conflict.ToJson());
                 }
 
                 context.Write(writer, new DynamicJsonValue

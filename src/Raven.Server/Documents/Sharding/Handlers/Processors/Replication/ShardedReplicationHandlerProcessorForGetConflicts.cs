@@ -78,7 +78,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Replication
                         break;
 
                     var shard = res.Shard;
-                    _token.Pages[shard].Start += (int)res.Item.ScannedResults;
+                    _token.Pages[shard].Start = (int)res.Item.ScannedResults;
                 }
 
                 return final;
