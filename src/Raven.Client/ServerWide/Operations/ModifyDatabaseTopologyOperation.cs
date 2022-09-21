@@ -28,15 +28,15 @@ namespace Raven.Client.ServerWide.Operations
 
         public RavenCommand<ModifyDatabaseTopologyResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
-            return new ModifyDatabaseTopology(_databaseName, _databaseTopology);
+            return new ModifyDatabaseTopologyCommand(_databaseName, _databaseTopology);
         }
 
-        internal class ModifyDatabaseTopology : RavenCommand<ModifyDatabaseTopologyResult>, IRaftCommand
+        internal class ModifyDatabaseTopologyCommand : RavenCommand<ModifyDatabaseTopologyResult>, IRaftCommand
         {
             private readonly DatabaseTopology _databaseTopology;
             private readonly string _databaseName;
 
-            public ModifyDatabaseTopology(string databaseName, DatabaseTopology databaseTopology)
+            public ModifyDatabaseTopologyCommand(string databaseName, DatabaseTopology databaseTopology)
             {
                 _databaseTopology = databaseTopology;
                 _databaseName = databaseName ?? throw new ArgumentNullException(nameof(databaseTopology));
