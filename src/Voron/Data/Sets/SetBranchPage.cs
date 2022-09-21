@@ -5,10 +5,12 @@ using System.Reflection.Metadata;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Xml;
+using Sparrow;
 using Sparrow.Compression;
 using Sparrow.Server.Compression;
 using Voron.Global;
 using Voron.Impl;
+using static Voron.Data.CompactTrees.CompactTree;
 
 namespace Voron.Data.Sets
 {
@@ -46,9 +48,12 @@ namespace Voron.Data.Sets
         
         private Span<ushort> Positions => new Span<ushort>(_page.Pointer + PageHeader.SizeOf, Header->NumberOfEntries);
 
+        private ushort* PositionsPtr => (ushort*)(_page.Pointer + PageHeader.SizeOf);
+
         private int FreeSpace => Header->Upper - PageHeader.SizeOf - (Header->NumberOfEntries * sizeof(ushort));
         
         private readonly Span<byte> Span => new Span<byte>(_page.Pointer, Constants.Storage.PageSize);
+
         public int SpaceUsed
         {
             get
@@ -124,7 +129,7 @@ namespace Voron.Data.Sets
                     key = -1;
                     return false;
                 }
-                (key, page) = ZigZagEncoding.Decode2<long>(_parent.Span, out int _, _parent.Positions[_pos++]);
+                (key, page) = ZigZagEncoding.Decode2<long>(_parent.Span, out int _, _parent.PositionsPtr[_pos++]);
                 return true;
             }
         }
@@ -137,14 +142,14 @@ namespace Voron.Data.Sets
             if (match != 0)
                 index--; // went too far
             var actual = Math.Min(Header->NumberOfEntries - 1, index);
-            var (_, value) = ZigZagEncoding.Decode2<long>(Span, out var _, Positions[actual]);
+            var (_, value) = ZigZagEncoding.Decode2<long>(_page.Pointer, out var _, PositionsPtr[actual]);
             return (value, index, match);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public (long Key, long Page) GetByIndex(int index)
         {
-            return ZigZagEncoding.Decode2<long>(Span, out var _, Positions[index]);
+            return ZigZagEncoding.Decode2<long>(Span, out var _, PositionsPtr[index]);
         }
 
         public bool TryGetValue(long key, out long value)
@@ -155,7 +160,7 @@ namespace Voron.Data.Sets
                 value = -1;
                 return false;
             }
-            (_, value) = ZigZagEncoding.Decode2<long>(Span, out var _, Positions[index]);
+            (_, value) = ZigZagEncoding.Decode2<long>(Span, out var _, PositionsPtr[index]);
             return true;
         }
 
@@ -213,37 +218,31 @@ namespace Voron.Data.Sets
         
         private (int Index, int Match) SearchInPage(long key)
         {
-            var positions = Positions;
-            int high = Header->NumberOfEntries - 1, low = 0;
-            int match = -1;
-            int mid = 0;
-            while (low <= high)
+            ushort* @base = PositionsPtr;
+            byte* span = _page.Pointer;
+            int length = Header->NumberOfEntries;
+
+            if (length == 0)
+                return (-1, -1);
+
+            int match;
+            int bot = 0;
+            int top = length;
+            while (top > 1)
             {
-                mid = (high + low) / 2;
-                var offset = Positions[mid];
-                var cur = ZigZagEncoding.Decode<long>(Span, offset);
-                match = key.CompareTo(cur);
+                int mid = top / 2;
+                match = key.CompareTo(ZigZagEncoding.Decode<long>(span, out _, @base[bot + mid]));
 
-                if (match == 0)
-                {
-                    return (mid, 0);
-                }
-
-                if (match > 0)
-                {
-                    low = mid + 1;
-                    match = 1;
-                }
-                else
-                {
-                    high = mid - 1;
-                    match = -1;
-                }
+                if (match >= 0)
+                    bot += mid;
+                top -= mid;
             }
-            var lastMatch = match > 0 ? 1:-1;
-            if (lastMatch == 1)
-                mid++;
-            return (~mid, lastMatch);
+
+            match = key.CompareTo(ZigZagEncoding.Decode<long>(span, out _, @base[bot]));
+            if (match == 0)
+                return (bot, 0);
+
+            return (~(bot + (match > 0).ToInt32()), match > 0 ? 1 : -1);
         }
 
         public List<long> GetAllChildPages()
