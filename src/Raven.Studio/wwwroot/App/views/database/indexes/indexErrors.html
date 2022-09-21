@@ -14,23 +14,25 @@
             </div>
             <div>
                 <button class="btn btn-danger"
-                        data-bind="click: clearIndexErrors, enable: selectedIndexNames().length, text: clearErrorsBtnText(), 
+                        data-bind="click: clearIndexErrors, enable: selectedIndexNames().length, text: clearErrorsBtnText(),
                                    attr: { title: clearErrorsBtnTooltip() }, requiredAccess: 'DatabaseReadWrite'">
                 </button>
             </div>
         </div>
     </div>
     <div class="flex-grow">
-        <div class="has-error results-error" data-bind="visible: isDirty">
-            <div class="help-block">
-                <i class="icon-danger"></i><span>The data has changed. Your results may contain outdated entries.
-                <a href="#" data-bind="click: refresh">Refresh</a></span>
-            </div>
-        </div>
         <div class="scroll-stretch">
             <div class="panel-body">
                 <virtual-grid class="resizable" params="controller: gridController, emptyTemplate: 'empty-index-errors-template'"></virtual-grid>
             </div>
+        </div>
+    </div>
+    <div class="has-error" data-bind="visible: isDirty">
+        <div class="help-block">
+            <i class="icon-danger"></i><span>
+                The data has changed. Your results may contain outdated entries.
+                <a href="#" data-bind="click: refresh">Refresh</a>
+            </span>
         </div>
     </div>
 </div>

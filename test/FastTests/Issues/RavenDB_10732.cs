@@ -16,7 +16,8 @@ namespace FastTests.Issues
         {
             using (var monitor = new LowMemoryMonitor())
             {
-                LowMemoryNotification.Instance.CheckMemoryStatus(monitor);
+                var lowMemoryNotification = new LowMemoryNotification();
+                lowMemoryNotification.CheckMemoryStatus(monitor);
             }
         }
     }

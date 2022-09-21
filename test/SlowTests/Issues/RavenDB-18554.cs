@@ -9,6 +9,7 @@ using FastTests;
 using FastTests.Client;
 using NuGet.ContentModel;
 using Orders;
+using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
@@ -223,7 +224,6 @@ namespace SlowTests.Issues
         {
             var (nodes, leader) = await CreateRaftCluster(2, watcherCluster: true); // Prevent updating the db topology after getting it.
             Cluster.SuspendObserver(leader);
-            Assert.Equal(nodes.Count, 2);
             var storeOptions = new Options
             {
                 Server = leader,
@@ -246,15 +246,18 @@ namespace SlowTests.Issues
 
                 // Wait for indexing in first node and second node
                 var index = new Categoroies_Details();
-                await Cluster.CreateIndexInClusterAsync(store, index);
+                await Cluster.CreateIndexInClusterAsync(store, index, nodes);
 
                 foreach (var n in nodes)
                 {
                     // wait for indexing to finish on the current node
+                    var nodeTag = n.ServerStore.NodeTag;
                     Indexes.WaitForIndexing(store,
                         dbName: store.Database,
                         timeout: TimeSpan.FromMinutes(2),
-                        nodeTag: n.ServerStore.NodeTag);
+                        nodeTag: nodeTag);
+
+                    Assert.Equal(0, await GetStaleIndexesCount(store, nodeTag));
                 }
 
                 // Test
@@ -294,6 +297,14 @@ namespace SlowTests.Issues
                 Assert.Equal(categoryId, l[0].Id);
                 Assert.Equal(Categoroies_Details.GenDetails(c), l[0].Details);
             }
+        }
+
+        private async Task<int> GetStaleIndexesCount(IDocumentStore store, string nodeTag)
+        {
+            var databaseStatistics = await store.Maintenance.SendAsync(new GetStatisticsOperation("wait-for-indexing", nodeTag));
+            var staleIndexesCount = databaseStatistics.Indexes
+                .Count(x => x.IsStale || x.Name.StartsWith(Constants.Documents.Indexing.SideBySideIndexNamePrefix));
+            return staleIndexesCount;
         }
 
         class Categoroies_Details : AbstractMultiMapIndexCreationTask<Categoroies_Details.Entity>

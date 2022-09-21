@@ -3,10 +3,12 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Security;
+using Raven.Client.Http;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
@@ -22,6 +24,14 @@ namespace Raven.Server.Documents.Handlers.Debugging
 {
     public class NodeDebugHandler : RequestHandler
     {
+        [RavenAction("/admin/debug/node/clear-http-clients-pool", "GET", AuthorizationStatus.ClusterAdmin)]
+        public Task ClearHttpClientsPool()
+        {
+            RequestExecutor.ClearHttpClientsPool();
+
+            return NoContent(HttpStatusCode.OK);
+        }
+
         [RavenAction("/admin/debug/node/remote-connections", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
         public async Task ListRemoteConnections()
         {

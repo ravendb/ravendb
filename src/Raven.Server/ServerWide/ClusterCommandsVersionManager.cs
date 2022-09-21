@@ -232,17 +232,17 @@ namespace Raven.Server.ServerWide
         }
     }
 
-    public class UnknownClusterCommand : Exception
+    public class UnknownClusterCommandException : Exception
     {
-        public UnknownClusterCommand()
+        public UnknownClusterCommandException()
         {
         }
 
-        public UnknownClusterCommand(string message) : base(message)
+        public UnknownClusterCommandException(string message) : base(message)
         {
         }
 
-        public UnknownClusterCommand(string message, Exception innerException) : base(message, innerException)
+        public UnknownClusterCommandException(string message, Exception innerException) : base(message, innerException)
         {
         }
     }
