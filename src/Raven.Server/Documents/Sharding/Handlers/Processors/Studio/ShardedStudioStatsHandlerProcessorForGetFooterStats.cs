@@ -40,16 +40,12 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Studio
             {
                 var span = results.Span;
 
-                var combined = new FooterStatistics();
+                var result = new FooterStatistics();
 
                 foreach (var stats in span)
-                {
-                    combined.CountOfDocuments += stats.CountOfDocuments;
-                    combined.CountOfIndexingErrors += stats.CountOfIndexingErrors;
-                    combined.CountOfStaleIndexes += stats.CountOfStaleIndexes;
-                }
+                    result.CombineWith(stats);
 
-                return combined;
+                return result;
             }
 
             public RavenCommand<FooterStatistics> CreateCommandForShard(int shardNumber) => new GetStudioFooterStatisticsOperation.GetStudioFooterStatisticsCommand();
