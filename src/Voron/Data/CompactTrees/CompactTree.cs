@@ -1381,7 +1381,7 @@ namespace Voron.Data.CompactTrees
         {
             var entryPos = page.Pointer + entryOffset;
             var keyLen = VariableSizeEncoding.Read<ushort>(entryPos, out var lenOfKeyLen);
-            return new ReadOnlySpan<byte>(page.Pointer + entryOffset + lenOfKeyLen,  (int)keyLen);
+            return new ReadOnlySpan<byte>(entryPos + lenOfKeyLen, keyLen);
         }
 
         private static long GetValue(ref CursorState state, int pos)
@@ -1477,40 +1477,41 @@ namespace Voron.Data.CompactTrees
 
             var encodedKey = key.Encoded;
 
-            int high = state.Header->NumberOfEntries - 1, low = 0;
-            int match = -1;
-            int mid = 0;
-            while (low <= high)
+            ushort* @base = state.EntriesOffsetsPtr;
+            int length = state.Header->NumberOfEntries;
+
+            if (length == 0)
             {
-                mid = (high + low) / 2;
-                var cur = GetEncodedKey(state.Page, state.EntriesOffsets[mid]);
-
-                match = encodedKey.SequenceCompareTo(cur);
-
-                if (match == 0)
-                {
-                    state.LastMatch = 0;
-                    state.LastSearchPosition = mid;
-                    return;
-                }
-
-                if (match > 0)
-                {
-                    low = mid + 1;
-                    match = 1;
-                }
-                else
-                {
-                    high = mid - 1;
-                    match = -1;
-                }
+                state.LastMatch = -1;
+                state.LastSearchPosition = -1;
+                return;
             }
-            state.LastMatch = match > 0 ? 1 : -1;
-            if (match > 0)
-                mid++;
-            state.LastSearchPosition = ~mid;
-        }
 
+            int match;
+            int bot = 0;
+            int top = length;
+            while (top > 1)
+            {
+                int mid = top / 2;
+                match = encodedKey.SequenceCompareTo(GetEncodedKey(state.Page, @base[bot + mid]));
+
+                if (match >= 0)
+                    bot += mid;
+
+                top -= mid;
+            }
+
+            match = encodedKey.SequenceCompareTo(GetEncodedKey(state.Page, @base[bot]));
+            if (match == 0)
+            {
+                state.LastMatch = 0;
+                state.LastSearchPosition = bot;
+                return;
+            }
+
+            state.LastMatch = match > 0 ? 1 : -1;
+            state.LastSearchPosition = ~(bot + (match > 0).ToInt32());
+        }
         private static int DictionaryOrder(ReadOnlySpan<byte> s1, ReadOnlySpan<byte> s2)
         {
             // Bed - Tree: An All-Purpose Index Structure for String Similarity Search Based on Edit Distance

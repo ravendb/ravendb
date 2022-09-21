@@ -207,5 +207,15 @@ namespace Sparrow.Compression
             len = fst + snd;
             return (one, two);
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static unsafe (T, T) Decode2<T>(byte* buffer, out int len, int pos = 0) where T : unmanaged
+        {
+            T one = UnZag(VariableSizeEncoding.Read<T>(buffer + pos, out int fst));
+            T two = UnZag(VariableSizeEncoding.Read<T>(buffer + pos + fst, out int snd));
+
+            len = fst + snd;
+            return (one, two);
+        }
     }
 }
