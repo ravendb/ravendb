@@ -60,7 +60,7 @@ namespace FastTests.Client
                 "SetDatabasesLockCommand",
                 "GetDatabaseSettingsCommand", "PutDatabaseConfigurationSettingsCommand",
                 "GetTrafficWatchConfigurationCommand", "SetTrafficWatchConfigurationCommand",
-                "GetNextServerOperationIdCommand", "KillServerOperationCommand"
+                "GetNextServerOperationIdCommand", "KillServerOperationCommand", "ModifyDatabaseTopologyCommand"
             }.OrderBy(t => t);
 
             var commandBaseType = typeof(RavenCommand<>);
