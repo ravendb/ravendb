@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 using System.Net.Http;
+using System.Runtime.Intrinsics.X86;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
@@ -10,6 +13,7 @@ using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
+using Raven.Server;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
@@ -52,7 +56,7 @@ namespace SlowTests.Issues
 
                 var cmd = new RachisConsensusTestBase.TestCommandWithRaftId("test", RaftIdGenerator.NewId());
 
-                await Assert.ThrowsAsync<UnknownClusterCommand>(() => leader.ServerStore.SendToLeaderAsync(cmd));
+                await Assert.ThrowsAsync<UnknownClusterCommandException>(() => leader.ServerStore.SendToLeaderAsync(cmd));
 
                 var cmd2 = new CreateDatabaseOperation.CreateDatabaseCommand(new DatabaseRecord("Toli"), 1);
 
@@ -162,7 +166,7 @@ namespace SlowTests.Issues
         [Fact]
         public async Task RemoveEntryFromRaftLogTest()
         {
-            var (_, leader) = await CreateRaftCluster(3, watcherCluster: true);
+            var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true);
             var database = GetDatabaseName();
 
             await CreateDatabaseInClusterInner(new DatabaseRecord(database), 3, leader.WebUrl, null);
@@ -178,7 +182,13 @@ namespace SlowTests.Issues
 
                 var cmd = new RachisConsensusTestBase.TestCommandWithRaftId("test", RaftIdGenerator.NewId());
 
-                _ = leader.ServerStore.Engine.CurrentLeader.PutAsync(cmd, new TimeSpan(2000));
+                _ = leader.ServerStore.Engine.CurrentLeader.PutAsync(cmd, TimeSpan.FromSeconds(2));
+
+                // Get last raft index from leader
+                var leaderLastIndex = leader.ServerStore.Engine.StateMachine.LastNotifiedIndex;
+
+                // Wait for all nodes to be updated to leader last raft index
+                await AssertRaftIndexToBeUpdatedOnNodesAsync(leaderLastIndex, nodes);
 
                 var cmd2 = new CreateDatabaseOperation.CreateDatabaseCommand(new DatabaseRecord("Toli"), 1);
 
@@ -201,18 +211,9 @@ namespace SlowTests.Issues
                     Assert.False(server.ServerStore.DatabasesLandlord.IsDatabaseLoaded("Toli"));
                 }
 
-                long index = 0;
-
+                long index = leaderLastIndex;
                 foreach (var server in Servers)
                 {
-                    index = 0;
-                    documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
-                    using (documentDatabase.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-                    using (var tx = context.OpenReadTransaction())
-                    {
-                        server.ServerStore.Engine.GetLastCommitIndex(context, out index, out long term);
-                    }
-
                     var res = await WaitForValueAsync(() => server.ServerStore.Engine.RemoveEntryFromRaftLog(index + 1), true);
 
                     Assert.True(res);
@@ -243,6 +244,27 @@ namespace SlowTests.Issues
                     Assert.True(val);
                 }
             }
+        }
+
+        public async Task AssertRaftIndexToBeUpdatedOnNodesAsync(long index, List<RavenServer> nodes, int timeout = 15000, int interval = 100)
+        {
+
+            var sw = Stopwatch.StartNew();
+            List<string> nodeTags = new List<string>();
+            var updated = false;
+            while (sw.ElapsedMilliseconds < timeout)
+            {
+                nodeTags = nodes
+                    .Where(node => node.ServerStore.Engine.StateMachine.LastNotifiedIndex < index)
+                    .Select(node => node.ServerStore.NodeTag).ToList();
+                if (nodeTags.Count == 0)
+                {
+                    updated = true;
+                    break;
+                }
+                await Task.Delay(interval);
+            }
+            Assert.True(updated, $"Nodes {string.Join(" ", nodeTags)} are not updated to the index {index}");
         }
 
         internal class TestCommandWithRaftId : CommandBase

@@ -43,14 +43,16 @@ namespace Raven.Client.Http
 
         private static readonly Guid GlobalApplicationIdentifier = Guid.NewGuid();
 
+        private static readonly TimeSpan MinHttpClientLifetime = TimeSpan.FromSeconds(5);
+
         private const int InitialTopologyEtag = -2;
 
         // https://aspnetmonsters.com/2016/08/2016-08-27-httpclientwrong/
 
         internal static readonly TimeSpan GlobalHttpClientTimeout = TimeSpan.FromHours(12);
 
-        private static readonly ConcurrentDictionary<string, Lazy<HttpClient>> GlobalHttpClientWithCompression = new ConcurrentDictionary<string, Lazy<HttpClient>>();
-        private static readonly ConcurrentDictionary<string, Lazy<HttpClient>> GlobalHttpClientWithoutCompression = new ConcurrentDictionary<string, Lazy<HttpClient>>();
+        private static readonly ConcurrentDictionary<string, Lazy<HttpClientCacheItem>> GlobalHttpClientWithCompression = new ConcurrentDictionary<string, Lazy<HttpClientCacheItem>>();
+        private static readonly ConcurrentDictionary<string, Lazy<HttpClientCacheItem>> GlobalHttpClientWithoutCompression = new ConcurrentDictionary<string, Lazy<HttpClientCacheItem>>();
 
         private static readonly GetStatisticsOperation BackwardCompatibilityFailureCheckOperation = new GetStatisticsOperation(debugTag: "failure=check");
         private static readonly DatabaseHealthCheckOperation FailureCheckOperation = new DatabaseHealthCheckOperation();
@@ -232,23 +234,42 @@ namespace Raven.Client.Http
 
             var name = GetHttpClientName();
 
-            return httpClientCache.GetOrAdd(name, new Lazy<HttpClient>(CreateClient)).Value;
+            return httpClientCache.GetOrAdd(name, new Lazy<HttpClientCacheItem>(() => new HttpClientCacheItem
+                {
+                    HttpClient = CreateClient(),
+                    CreatedAt = SystemTime.UtcNow
+                })).Value.HttpClient;
         }
 
-        internal void RemoveHttpClient()
+        internal bool TryRemoveHttpClient(bool force = false)
         {
             var httpClientCache = GetHttpClientCache();
 
             var name = GetHttpClientName();
 
-            httpClientCache.TryRemove(name, out _);
+            if (httpClientCache.TryGetValue(name, out var client) &&
+                ((client.IsValueCreated && 
+                SystemTime.UtcNow - client.Value.CreatedAt > MinHttpClientLifetime) || force))
+            {
+                httpClientCache.TryRemove(name, out _);
+                    
+                _httpClient = null;
 
-            _httpClient = null;
+                return true;
+            }
+
+            return false;
         }
 
         private string GetHttpClientName()
         {
             return Certificate?.Thumbprint ?? string.Empty;
+        }
+
+        internal static void ClearHttpClientsPool()
+        {
+            GlobalHttpClientWithCompression.Clear();
+            GlobalHttpClientWithoutCompression.Clear();
         }
 
         private static bool ShouldRemoveHttpClient(SocketException exception)
@@ -266,7 +287,7 @@ namespace Raven.Client.Http
             }
         }
 
-        private ConcurrentDictionary<string, Lazy<HttpClient>> GetHttpClientCache()
+        private ConcurrentDictionary<string, Lazy<HttpClientCacheItem>> GetHttpClientCache()
         {
             return Conventions.UseCompression ?
                 GlobalHttpClientWithCompression :
@@ -1001,8 +1022,8 @@ namespace Raven.Client.Http
                     {
                         if (requestContext.HttpClientRemoved == false)
                         {
-                            RemoveHttpClient();
-                            requestContext.HttpClientRemoved = true;
+                            if (TryRemoveHttpClient())
+                                requestContext.HttpClientRemoved = true;
                         }
                         else
                         {
@@ -2237,6 +2258,13 @@ namespace Raven.Client.Http
             {
                 Node = node ?? throw new ArgumentNullException(nameof(node));
             }
+        }
+
+        private class HttpClientCacheItem
+        {
+            public HttpClient HttpClient { get; set; }
+
+            public DateTime CreatedAt { get; set; }
         }
     }
 }
