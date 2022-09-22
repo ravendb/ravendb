@@ -570,7 +570,8 @@ namespace SlowTests.Client.MoreLikeThis
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "Complex objects are not supposed to be indexed inside Corax.")]
         public void CanMakeDynamicDocumentQueriesWithComplexProperties(Options options)
         {
             using (var store = GetDocumentStore(options))
