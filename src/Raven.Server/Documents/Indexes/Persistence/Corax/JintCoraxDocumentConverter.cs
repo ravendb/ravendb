@@ -58,7 +58,7 @@ public class JintCoraxDocumentConverter : JintCoraxDocumentConverterBase
         // We prepare for the next entry.
         ref var entryWriter = ref GetEntriesWriter();
 
-        scope.Write(0, id.AsSpan(), ref entryWriter);
+        scope.Write(string.Empty, 0, id.AsSpan(), ref entryWriter);
         int idX = 1;
         foreach (var (property, propertyDescriptor) in documentToProcess.GetOwnProperties())
         {
@@ -173,7 +173,7 @@ public class JintCoraxDocumentConverter : JintCoraxDocumentConverterBase
                     fixed (byte* bPtr = blittableBuffer)
                         storedValue.CopyTo(bPtr);
 
-                    scope.Write(GetKnownFieldsForWriter().Count - 1, blittableBuffer, ref entryWriter);
+                    scope.Write(string.Empty, GetKnownFieldsForWriter().Count - 1, blittableBuffer, ref entryWriter);
                 }
             }
         }

@@ -4,7 +4,9 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 using Corax;
+using Corax.Queries;
 using Corax.Utils;
+using JetBrains.Annotations;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Server;
@@ -15,15 +17,24 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
     {
         //todo maciej: this is only temp implementation. Related: https://issues.hibernatingrhinos.com/issue/RavenDB-17243
         private readonly ByteStringContext _allocator;
-        
+        private bool _isDynamic = false;
         private readonly List<ByteString> _stringValues;
         private readonly List<long> _longValues;
         private readonly List<double> _doubleValues;
         private readonly List<CoraxSpatialPointEntry> _spatialValues;
 
+        [CanBeNull]
+        private string _persistedName;
         private readonly List<BlittableJsonReaderObject> _blittableJsonReaderObjects;
-        private (int Strings, int Longs, int Doubles, int Raws, int Spatials) _count;        
+        private (int Strings, int Longs, int Doubles, int Raws, int Spatials) _count;
 
+        private void PersistName(string path)
+        {
+            _persistedName ??= path;
+            if (path != _persistedName) //I don't know if there is a case that trigger it;
+                throw new InvalidDataException("Enumerable contains multiple dynamic fields.");
+        }
+        
         public EnumerableWriterScope(List<ByteString> stringValues, List<long> longValues, List<double> doubleValues, List<CoraxSpatialPointEntry> spatialValues,
             List<BlittableJsonReaderObject> blittableJsonReaderObjects, ByteStringContext allocator)
         {
@@ -36,7 +47,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
             _allocator = allocator;
         }
 
-        public void WriteNull(int field, ref IndexEntryWriter entryWriter)
+        public void WriteNull(string path, int field, ref IndexEntryWriter entryWriter)
         {
             // We cannot know if we are writing a tuple or a list. But we know that at finish
             // we will be able to figure out based on the stored counts. Therefore,
@@ -44,9 +55,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
             _stringValues.Add(default);
             _longValues.Add(0);
             _doubleValues.Add(float.NaN);
+            PersistName(path);
         }
 
-        public void Write(int field, ReadOnlySpan<byte> value, ref IndexEntryWriter entryWriter)
+        public void Write(string path, int field, ReadOnlySpan<byte> value, ref IndexEntryWriter entryWriter)
         {
             if (_count.Longs != 0 || _count.Doubles != 0)
                 throw new InvalidOperationException("Cannot mix tuples writes with straightforward writes");
@@ -59,9 +71,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
             _stringValues.Add(buffer);
             _longValues.Add(0);
             _doubleValues.Add(float.NaN);
+            PersistName(path);
+
         }
 
-        public void Write(int field, ReadOnlySpan<byte> value, long longValue, double doubleValue, ref IndexEntryWriter entryWriter)
+        public void Write(string path, int field, ReadOnlySpan<byte> value, long longValue, double doubleValue, ref IndexEntryWriter entryWriter)
         {
             if (_count.Strings != _count.Longs || _count.Strings != _count.Doubles)
                 throw new InvalidOperationException("Cannot write a tuple with a different number of values than the previous tuple.");
@@ -76,9 +90,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
             _count.Strings++;
             _count.Longs++;
             _count.Doubles++;
+            PersistName(path);
+
         }
 
-        public void Write(int field, string value, ref IndexEntryWriter entryWriter)
+        public void Write(string path, int field, string value, ref IndexEntryWriter entryWriter)
         {
             _allocator.Allocate(Encoding.UTF8.GetMaxByteCount(value.Length), out var buffer);
 
@@ -86,146 +102,232 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
             buffer.Truncate(length);
             _stringValues.Add(buffer);
             _count.Strings++;
+            PersistName(path);
+
         }
 
-        public void Write(int field, string value, long longValue, double doubleValue, ref IndexEntryWriter entryWriter)
+        public void Write(string path, int field, string value, long longValue, double doubleValue, ref IndexEntryWriter entryWriter)
         {
-            Write(field, value, ref entryWriter);
+            Write(path, field, value, ref entryWriter);
             _longValues.Add(longValue);
             _doubleValues.Add(doubleValue);
             _count.Longs++;
             _count.Doubles++;
+            PersistName(path);
+
         }
 
-        public void Write(int field, BlittableJsonReaderObject reader, ref IndexEntryWriter entryWriter)
+        public void Write(string path, int field, BlittableJsonReaderObject reader, ref IndexEntryWriter entryWriter)
         {
             _blittableJsonReaderObjects.Add(reader);
             _count.Raws++;
+            PersistName(path);
         }
 
-        public void Write(int field, CoraxSpatialPointEntry entry, ref IndexEntryWriter entryWriter)
+        public void Write(string path, int field, CoraxSpatialPointEntry entry, ref IndexEntryWriter entryWriter)
         {
             _count.Spatials++;
             _spatialValues.Add(entry);
+            PersistName(path);
+
         }
 
-        public void Finish(int field, ref IndexEntryWriter entryWriter)
+        public void Finish(string path, int field, ref IndexEntryWriter entryWriter)
         {
-            if (_count.Spatials != 0)
-            {
-                if (_count.Spatials == 1)
-                    entryWriter.WriteSpatial(field, _spatialValues[0]);
-                else
-                    entryWriter.WriteSpatial(field, CollectionsMarshal.AsSpan(_spatialValues));
+            var dataType = GetDataType();
 
-            }
-            else if (_count.Raws > 0 && (_count.Longs | _count.Doubles | _count.Strings) != 0)
+            if (_isDynamic)
             {
-                // This basically should not happen but I want to make sure on whole SlowTests.
+                dataType |= DataType.Dynamic;
+                path = _persistedName;
+            }
+            
+            switch (dataType)
+            {
+                case DataType.SingleSpatial:
+                    entryWriter.WriteSpatial(field, _spatialValues[0]);
+                    break;
+                case DataType.DynamicSingleSpatial:
+                    entryWriter.WriteSpatialDynamic(path, _spatialValues[0]);
+                    break;
+
+                case DataType.Spatials:
+                    entryWriter.WriteSpatial(field, CollectionsMarshal.AsSpan(_spatialValues));
+                    break;
+                case DataType.DynamicSpatials:
+                    entryWriter.WriteSpatialDynamic(path, CollectionsMarshal.AsSpan(_spatialValues));
+                    break;
+
+
+                case DataType.SingleTuple:
+                    entryWriter.Write(field, _stringValues[0].ToSpan(), _longValues[0], _doubleValues[0]);
+                    break;
+
+                case DataType.DynamicSingleTuple:
+                    entryWriter.WriteDynamic(path, _stringValues[0].ToSpan(), _longValues[0], _doubleValues[0]);
+                    break;
+
+                case DataType.Tuples:
+                    entryWriter.Write(field, new ByteStringIterator(_stringValues), CollectionsMarshal.AsSpan(_longValues), CollectionsMarshal.AsSpan(_doubleValues));
+                    break;
+
+                case DataType.DynamicTuples:
+                    entryWriter.WriteDynamic(path, new ByteStringIterator(_stringValues), CollectionsMarshal.AsSpan(_longValues), CollectionsMarshal.AsSpan(_doubleValues));
+                    break;
+
+
+                case DataType.SingleString:
+                    entryWriter.Write(field, _stringValues[0].ToSpan());
+                    break;
+
+                case DataType.DynamicSingleString:
+                    entryWriter.WriteDynamic(path, _stringValues[0].ToSpan());
+                    break;
+
+                case DataType.Strings:
+                    entryWriter.Write(field, new ByteStringIterator(_stringValues));
+                    break;
+
+                case DataType.DynamicStrings:
+                    entryWriter.WriteDynamic(path, new ByteStringIterator(_stringValues));
+                    break;
+
+
+                case DataType.DynamicSingleRaw:
+                case DataType.SingleRaw:
+                    new BlittableWriterScope(_blittableJsonReaderObjects[0]).Write(path, field, ref entryWriter);
+                    break;
+
+                case DataType.Raws:
+                    entryWriter.Write(field, new BlittableIterator(_blittableJsonReaderObjects), IndexEntryFieldType.Raw);
+                    break;
+
+                case DataType.DynamicRaws:
+                    entryWriter.WriteDynamic(path, new BlittableIterator(_blittableJsonReaderObjects), IndexEntryFieldType.Raw);
+                    break;
+
+
+                case DataType.Empty:
+                    //do nothing;
+                    break;
+                default:
+                    ThrowMixedValues();
+                    break;
+            }
+
+            DisposeStringsCollection();
+            ClearContainers();
+            
+
+            void ClearContainers()
+            {
+                _stringValues.Clear();
+                _longValues.Clear();
+                _doubleValues.Clear();
+                _blittableJsonReaderObjects.Clear();
+                _spatialValues.Clear();
+            }
+            
+            void ThrowMixedValues()
+            {
                 throw new InvalidDataException($"{nameof(EnumerableWriterScope)}: Some raws were mixed with normal literal.");
             }
 
-            // Even in the case of stored null values, the number of strings and doubles would match. 
-            else if (_count.Strings == _count.Doubles && _count.Raws == 0)
-            {                
-                entryWriter.Write(field, new ByteStringIterator(_stringValues), CollectionsMarshal.AsSpan(_longValues), CollectionsMarshal.AsSpan(_doubleValues));
-            }
-            else if (_count is { Raws: > 0, Strings: 0 })
+            void DisposeStringsCollection()
             {
-                if (_count.Raws == 1)
+                var stringSpan = CollectionsMarshal.AsSpan(_stringValues);
+                for (int i = 0; i < _stringValues.Count; i++)
                 {
-                    new BlittableWriterScope(_blittableJsonReaderObjects[0]).Write(field, ref entryWriter);
-                }
-                else
-                {
-                    entryWriter.Write(field, new BlittableIterator(_blittableJsonReaderObjects), IndexEntryFieldType.Raw);
+                    ref var item = ref stringSpan[i];
+                    if (item.HasValue)
+                        _allocator.Release(ref item);
                 }
             }
-            else
-            {
-                entryWriter.Write(field, new ByteStringIterator(_stringValues));
-            }
+        }
 
-            var stringSpan = CollectionsMarshal.AsSpan(_stringValues);
-            for (int i = 0; i < _stringValues.Count; i++)
-            {
-                ref var item = ref stringSpan[i];
-                if (item.HasValue)
-                    _allocator.Release(ref item);
-            }
-            
-            _stringValues.Clear();
-            _longValues.Clear();
-            _doubleValues.Clear();
-            _blittableJsonReaderObjects.Clear();
-            _spatialValues.Clear();
+        public void SetAsDynamic()
+        {
+            _isDynamic = true;
         }
         
-        private struct ByteStringIterator : IReadOnlySpanIndexer
+        private DataType GetDataType()
         {
-            private readonly List<ByteString> _values;
-
-            public ByteStringIterator(List<ByteString> values)
+            var type = DataType.Empty;
+            if (_count.Strings > 0)
             {
-                _values = values;
+                type |= _count.Strings == 1 
+                    ? DataType.SingleString 
+                    : DataType.Strings;
             }
 
-            public int Length => _values.Count;
-
-            public bool IsNull(int i)
+            if (_count.Longs > 0)
             {
-                if (i < 0 || i >= Length)
-                    throw new ArgumentOutOfRangeException();
-
-                return !_values[i].HasValue;
+                type |= DataType.Longs;
             }
 
-            public ReadOnlySpan<byte> this[int i] => IsNull(i) ? ReadOnlySpan<byte>.Empty : _values[i].ToReadOnlySpan();
+            if (_count.Doubles > 0)
+            {
+                type |= DataType.Doubles;
+            }
+
+            if (_count.Spatials > 0)
+            {
+                type |= _count.Spatials == 1 
+                    ? DataType.SingleSpatial 
+                    : DataType.Spatials;
+            }
+
+            if (_count.Raws > 0)
+            {
+                type |= _count.Raws == 1 
+                    ? DataType.SingleRaw 
+                    : DataType.Raws;
+            }
+
+            if (type == DataType.Tuples)
+            {
+                var isTuple = _count.Longs == _count.Strings && _count.Longs == _count.Doubles;
+                if (isTuple == false)
+                {
+                    type = _count.Strings == 1 
+                        ? DataType.SingleString 
+                        : DataType.Strings; //case when at least one item is only string. In such case lets write all data as strings.
+                }
+            }
+
+
+            return type;
         }
 
-        private struct BlittableIterator : IReadOnlySpanIndexer, IDisposable
+        [Flags]
+        private enum DataType : byte
         {
-            private readonly List<BlittableJsonReaderObject> _values;
-            private readonly List<IDisposable> _toDispose;
+            Empty = 0,
+            Strings = 1 << 1,
+            Doubles = 1 << 2,
+            Longs = 1 << 3,
+            Spatials = 1 << 4,
+            Raws = 1 << 5,
 
-            public BlittableIterator(List<BlittableJsonReaderObject> values)
-            {
-                _values = values;
-                _toDispose = new();
-            }
+            Single = 1 << 6,
+            Dynamic = 1 << 7,
 
-            public int Length => _values.Count;
+            Tuples = Strings | Doubles | Longs,
 
-            public bool IsNull(int i)
-            {
-                if (i < 0 || i >= Length)
-                    throw new ArgumentOutOfRangeException();
+            SingleTuple = Tuples | Single,
+            SingleString = Strings | Single,
+            SingleRaw = Raws | Single,
+            SingleSpatial = Spatials | Single,
 
-                return false;
-            }
-
-            public ReadOnlySpan<byte> this[int i] => Memory(i);
-
-            private ReadOnlySpan<byte> Memory(int id)
-            {
-                var reader = _values[id];
-                if (reader.HasParent == false)
-                {
-                    return new ReadOnlySpan<byte>(reader.BasePointer, reader.Size);
-                }
-
-                var clonedBlittable = reader.CloneOnTheSameContext();
-                _toDispose.Add(clonedBlittable);
-                return new ReadOnlySpan<byte>(clonedBlittable.BasePointer, clonedBlittable.Size);
-            }
-
-            public void Dispose()
-            {
-                foreach (var item in _toDispose)
-                {
-                    item?.Dispose();
-                }
-            }
+            DynamicSingleTuple = DynamicTuples | Single,
+            DynamicSingleString = DynamicStrings | Single,
+            DynamicSingleRaw = DynamicRaws | Single,
+            DynamicSingleSpatial = DynamicSpatials | Single,
+            
+            DynamicStrings = Strings | Dynamic,
+            DynamicTuples = Tuples | Dynamic,
+            DynamicRaws = Raws | Dynamic,
+            DynamicSpatials = Spatials | Dynamic,
         }
     }
 }
