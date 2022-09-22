@@ -153,13 +153,14 @@ namespace Sparrow.Compression
             throw new ArgumentException("Not enough output space.");
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining )]
-        public static unsafe T Read<T>(byte* input, out int offset) where T : unmanaged
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static unsafe T Read<T>(byte* input, out int offset, out bool success) where T : unmanaged
         {
             if (typeof(T) == typeof(sbyte) || typeof(T) == typeof(byte) || typeof(T) == typeof(bool))
             {
                 offset = 1;
                 byte b = input[0];
+                success = true;
 
                 if (typeof(T) == typeof(bool))
                     return (T)(object)(b == 1);
@@ -216,7 +217,8 @@ namespace Sparrow.Compression
                 }
                 while (b >= 0x80);
 
-                End:
+            End:
+                success = true;
                 if (typeof(T) == typeof(short))
                     return (T)(object)(short)ul;
                 if (typeof(T) == typeof(ushort))
@@ -228,12 +230,33 @@ namespace Sparrow.Compression
                 if (typeof(T) == typeof(long))
                     return (T)(object)(long)ul;
                 return (T)(object)ul;
-                
             }
 
             ThrowNotSupportedException<T>();
 
         Fail:
+            success = false;
+
+            if (typeof(T) == typeof(short))
+                return (T)(object)(short)0;
+            if (typeof(T) == typeof(ushort))
+                return (T)(object)(ushort)0;
+            if (typeof(T) == typeof(int))
+                return (T)(object)(int)0;
+            if (typeof(T) == typeof(uint))
+                return (T)(object)(uint)0;
+            if (typeof(T) == typeof(long))
+                return (T)(object)(long)0;
+            return (T)(object)(ulong)0;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static unsafe T Read<T>(byte* input, out int offset) where T : unmanaged
+        {
+            T result = Read<T>(input, out offset, out var success);
+            if (success)
+                return result;
+
             ThrowInvalidShift();
             return (T)(object)-1;
         }

@@ -1392,9 +1392,18 @@ namespace Voron.Data.CompactTrees
 
         private static void GetValuePointer(ref CursorState state, int pos, out byte* p)
         {
+            int GetValuePointerUnlikely(ref byte* p, out int lenKeyLen)
+            {
+                return VariableSizeEncoding.Read<int>(p, out lenKeyLen);
+            }
+
             ushort entryOffset = state.EntriesOffsets[pos];
             p = state.Page.Pointer + entryOffset;
-            var keyLen = VariableSizeEncoding.Read<int> (p, out var lenKeyLen);
+
+            var keyLen = (int)VariableSizeEncoding.Read<short>(p, out var lenKeyLen, out var success);
+            if (success == false)
+                keyLen = GetValuePointerUnlikely(ref p, out lenKeyLen);
+
             p += keyLen + lenKeyLen;
         }
 
