@@ -47,7 +47,7 @@ public class RawCoraxFlag : StorageTest
                 entry.Write(IndexId, Encodings.Utf8.GetBytes(id));
                 using (var scope = new BlittableWriterScope(item))
                 {
-                    scope.Write(ContentId, ref entry);
+                    scope.Write(string.Empty, ContentId, ref entry);
                 }
 
                 using var _ = entry.Finish(out var output);                

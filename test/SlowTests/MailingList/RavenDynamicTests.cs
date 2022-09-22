@@ -12,6 +12,7 @@ using Newtonsoft.Json.Serialization;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Json.Serialization.NewtonsoftJson;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -53,10 +54,11 @@ namespace SlowTests.MailingList
                 }
             }
 
-            [Fact]
-            public void It_should_be_stored_in_index()
+            [RavenTheory(RavenTestCategory.Indexes)]
+            [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+            public void It_should_be_stored_in_index(Options options)
             {
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(options))
                 {
                     CreateData(store);
 

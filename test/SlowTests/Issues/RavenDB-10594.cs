@@ -36,8 +36,7 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
         public void CanUseDefaultFieldToSetAnalyzer(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -49,7 +48,7 @@ namespace SlowTests.Issues
                 }
                 new MyIndex().Execute(store);
                 Indexes.WaitForIndexing(store);
-
+                WaitForUserToContinueTheTest(store);
                 using (var session = store.OpenSession())
                 {
                     var users = session.Advanced.DocumentQuery<User, MyIndex>()
