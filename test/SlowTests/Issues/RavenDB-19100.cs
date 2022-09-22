@@ -48,8 +48,7 @@ namespace SlowTests.Issues
             {
                 var databaseName = store.Database;
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
-                var databaseTopology = new DatabaseTopology();
-                record.Topology.CopyTo(databaseTopology);
+                var databaseTopology = record.Topology;
 
                 // Modify databaseTopology
                 databaseTopology.ReplicationFactor--;
@@ -87,8 +86,7 @@ namespace SlowTests.Issues
             {
                 var databaseName = store.Database;
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
-                var databaseTopology = new DatabaseTopology();
-                record.Topology.CopyTo(databaseTopology);
+                var databaseTopology = record.Topology;
 
                 // Modify databaseTopology
                 var node = databaseTopology.Members.First();

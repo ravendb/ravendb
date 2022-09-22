@@ -212,57 +212,6 @@ namespace Raven.Client.ServerWide
                    Promotables.Contains(nodeTag);
         }
 
-        internal DatabaseTopology CopyTo(DatabaseTopology databaseTopology)
-        {
-            foreach (var node in this.Members)
-            {
-                databaseTopology.Members.Add(node);
-            }
-            foreach (var node in this.Promotables)
-            {
-                databaseTopology.Promotables.Add(node);
-            }
-            foreach (var node in this.Rehabs)
-            {
-                databaseTopology.Rehabs.Add(node);
-            }
-
-            foreach (var kvp in this.PredefinedMentors)
-            {
-                databaseTopology.PredefinedMentors[kvp.Key] = kvp.Value;
-            }
-
-            foreach (var kvp in this.DemotionReasons)
-            {
-                databaseTopology.DemotionReasons[kvp.Key] = kvp.Value;
-            }
-
-            foreach (var kvp in this.PromotablesStatus)
-            {
-                databaseTopology.PromotablesStatus[kvp.Key] = kvp.Value;
-            }
-
-            if (databaseTopology.Stamp != null)
-            {
-                databaseTopology.Stamp = new LeaderStamp()
-                {
-                    Index = databaseTopology.Stamp.Index, Term = databaseTopology.Stamp.Term, LeadersTicks = databaseTopology.Stamp.LeadersTicks
-                };
-            }
-
-            databaseTopology.DynamicNodesDistribution = this.DynamicNodesDistribution;
-            databaseTopology.ReplicationFactor = this.ReplicationFactor;
-
-            foreach (var var in this.PriorityOrder)
-            {
-                databaseTopology.PriorityOrder.Add(var);
-            }
-
-            databaseTopology.NodesModifiedAt = this.NodesModifiedAt;
-
-            return databaseTopology;
-        }
-
         public List<ReplicationNode> GetDestinations(string myTag, string databaseName, Dictionary<string, DeletionInProgressStatus> deletionInProgress,
             ClusterTopology clusterTopology, RachisState state)
         {
