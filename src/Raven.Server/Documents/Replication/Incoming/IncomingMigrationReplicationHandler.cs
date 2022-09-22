@@ -58,7 +58,6 @@ namespace Raven.Server.Documents.Replication.Incoming
             {
                 _shardedDatabase = ShardedDocumentDatabase.CastToShardedDocumentDatabase(context.DocumentDatabase);
                
-                // TODO: delete current items in the bucket?
                 // TODO: handle the incoming properly
 
                 return base.ExecuteCmd(context);

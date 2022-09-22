@@ -161,7 +161,6 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
 
     public long DeleteBucket(DocumentsOperationContext context, int bucket, ChangeVector upTo)
     {
-        // test artificial tombstone on backup/restore
         long numOfDeletions = 0;
 
         MarkTombstonesAsArtificial(context, bucket);
@@ -209,7 +208,6 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
             
             var writeTable = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, collectionName.GetTableName(CollectionTableType.Tombstones));
 
-            // todo update cv and etag + clone key
             var newEtag = GenerateNextEtag();
             var cv = ChangeVector.Merge(context.LastDatabaseChangeVector, context.GetChangeVector(tombstone.ChangeVector), context);
             var flags = tombstone.Flags | DocumentFlags.Artificial;
@@ -230,6 +228,7 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
                 tvb.Add((int)flags);
                 tvb.Add(cvSlice.Content.Ptr, cvSlice.Size);
                 tvb.Add(tombstone.LastModified.Ticks);
+
                 writeTable.Update(tombstone.StorageId, tvb);
             }
         }
