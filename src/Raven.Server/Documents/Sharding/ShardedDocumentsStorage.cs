@@ -8,8 +8,19 @@ using Sparrow.Server;
 using Sparrow.Utils;
 using Voron;
 using Voron.Data.Tables;
+using static Raven.Server.Documents.AttachmentsStorage;
+using static Raven.Server.Documents.ConflictsStorage;
+using static Raven.Server.Documents.CountersStorage;
+using static Raven.Server.Documents.Revisions.RevisionsStorage;
+using static Raven.Server.Documents.Schemas.Attachments;
+using static Raven.Server.Documents.Schemas.Conflicts;
+using static Raven.Server.Documents.Schemas.Counters;
+using static Raven.Server.Documents.Schemas.DeletedRanges;
 using static Raven.Server.Documents.Schemas.Documents;
 using static Raven.Server.Documents.Schemas.Tombstones;
+using static Raven.Server.Documents.Schemas.Revisions;
+using static Raven.Server.Documents.Schemas.TimeSeries;
+using static Raven.Server.Documents.TimeSeries.TimeSeriesStorage;
 
 namespace Raven.Server.Documents.Sharding;
 
@@ -58,8 +69,6 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
     {
         DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal,
             "Optimize this to calculate the merged change vector during insertion to the bucket");
-        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal,
-            "Extend this for all types not only docs and tombstones");
 
         var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
         var merged = context.GetChangeVector(string.Empty);
@@ -72,6 +81,36 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
         {
             var tombstoneCv = TableValueToChangeVector(context, (int)TombstoneTable.ChangeVector, ref result.Result.Reader);
             merged = merged.MergeWith(tombstoneCv, context);
+        }
+        foreach (var result in GetItemsByBucket(context.Allocator, table, CountersSchema.DynamicKeyIndexes[CountersBucketAndEtagSlice], bucket, 0))
+        {
+            var counterCv = TableValueToChangeVector(context, (int)CountersTable.ChangeVector, ref result.Result.Reader);
+            merged = merged.MergeWith(counterCv, context);
+        }
+        foreach (var result in GetItemsByBucket(context.Allocator, table, ConflictsSchema.DynamicKeyIndexes[ConflictsBucketAndEtagSlice], bucket, 0))
+        {
+            var conflictCv = TableValueToChangeVector(context, (int)ConflictsTable.ChangeVector, ref result.Result.Reader);
+            merged = merged.MergeWith(conflictCv, context);
+        }
+        foreach (var result in GetItemsByBucket(context.Allocator, table, RevisionsSchema.DynamicKeyIndexes[RevisionsBucketAndEtagSlice], bucket, 0))
+        {
+            var revisionCv = TableValueToChangeVector(context, (int)RevisionsTable.ChangeVector, ref result.Result.Reader);
+            merged = merged.MergeWith(revisionCv, context);
+        }
+        foreach (var result in GetItemsByBucket(context.Allocator, table, AttachmentsSchema.DynamicKeyIndexes[AttachmentsBucketAndEtagSlice], bucket, 0))
+        {
+            var attachmentCv = TableValueToChangeVector(context, (int)AttachmentsTable.ChangeVector, ref result.Result.Reader);
+            merged = merged.MergeWith(attachmentCv, context);
+        }
+        foreach (var result in GetItemsByBucket(context.Allocator, table, TimeSeriesSchema.DynamicKeyIndexes[TimeSeriesBucketAndEtagSlice], bucket, 0))
+        {
+            var tsCv = TableValueToChangeVector(context, (int)TimeSeriesTable.ChangeVector, ref result.Result.Reader);
+            merged = merged.MergeWith(tsCv, context);
+        }
+        foreach (var result in GetItemsByBucket(context.Allocator, table, DeleteRangesSchema.DynamicKeyIndexes[DeletedRangesBucketAndEtagSlice], bucket, 0))
+        {
+            var deletedRangeCv = TableValueToChangeVector(context, (int)DeletedRangeTable.ChangeVector, ref result.Result.Reader);
+            merged = merged.MergeWith(deletedRangeCv, context);
         }
 
         return merged;
