@@ -16,7 +16,7 @@ using Sparrow.Server.Compression;
 
 namespace Voron.Data.CompactTrees
 {
-    public unsafe partial class CompactTree
+    public sealed unsafe partial class CompactTree
     {
         private LowLevelTransaction _llt;
         private CompactTreeState _state;
@@ -170,7 +170,7 @@ namespace Voron.Data.CompactTrees
             private set;
         }
 
-        private Tree _parent;
+        private readonly Tree _parent;
 
         public long NumberOfEntries => _state.NumberOfEntries;
 
