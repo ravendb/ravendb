@@ -334,7 +334,6 @@ public partial class RavenTestBase
                 return settings;
             }
 
-
             public async Task CheckData(IDocumentStore store, RavenDatabaseMode dbMode = RavenDatabaseMode.Single, long expectedRevisionsCount = 28, string database = null)
             {
                 long docsCount = default, tombstonesCount = default, revisionsCount = default;
@@ -613,7 +612,8 @@ public partial class RavenTestBase
 
                 using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, location)))
                 {
-                    Assert.True(await session.Advanced.ExistsAsync(id));
+                    var user = await session.Advanced.ExistsAsync(id);
+                    Assert.NotNull(user);
                 }
 
                 await server.Sharding.StartBucketMigration(store.Database, bucket, location, newLocation);
@@ -624,7 +624,7 @@ public partial class RavenTestBase
 
             public async Task WaitForMigrationComplete(IDocumentStore store, string id)
             {
-                using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15)))
+                using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60)))
                 {
                     var bucket = ShardHelper.GetBucket(id);
                     var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database), cts.Token);
