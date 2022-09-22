@@ -474,18 +474,35 @@ namespace Sparrow.Server.Compression
             return table[l].PrefixLength;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private unsafe int Lookup(in BitReader reader, ref Span<byte> symbol, Interval3Gram* table, in BinaryTree<short> tree, out bool endsWithNull)
         {
             BitReader localReader = reader;
             if (tree.FindCommonPrefix(ref localReader, out var idx))
             {
                 var p = table + idx;
-                Span<byte> term = new(p->KeyBuffer, p->PrefixLength);
-                term.CopyTo(symbol);
-                symbol = symbol[p->PrefixLength..];
 
-                endsWithNull = term[^1] == 0;
+                int prefixLength = p->PrefixLength;
+                byte* buffer = p->KeyBuffer;
 
+                if (prefixLength == 1)
+                {
+                    symbol[0] = buffer[0];
+                }
+                else if (prefixLength == 2)
+                {
+                    symbol[0] = buffer[0];
+                    symbol[1] = buffer[1];
+                }
+                else
+                {
+                    Span<byte> term = new(p->KeyBuffer, p->PrefixLength);
+                    term.CopyTo(symbol);
+                }
+
+                endsWithNull = buffer[prefixLength - 1] == 0;
+
+                symbol = symbol[prefixLength..];
                 return reader.Length - localReader.Length;
             }
 
