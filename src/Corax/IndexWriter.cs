@@ -212,6 +212,7 @@ namespace Corax
         private readonly HashSet<long> _deletedEntries = new();
 
         private readonly long _postingListContainerId, _entriesContainerId;
+        private readonly IndexDynamicFieldsMapping _dynamicFieldsMapping;
 
         private const string SuggestionsTreePrefix = "__Suggestion_";
         
@@ -249,6 +250,11 @@ namespace Corax
             _indexMetadata = Transaction.CreateTree(Constants.IndexMetadata);
         }
 
+        public IndexWriter([NotNull] Transaction tx, IndexFieldsMapping fieldsMapping, IndexDynamicFieldsMapping dynamicFieldsMapping) : this(tx, fieldsMapping)
+        {
+            _dynamicFieldsMapping = dynamicFieldsMapping;
+        }
+        
         public IndexWriter([NotNull] Transaction tx, IndexFieldsMapping fieldsMapping) : this(fieldsMapping)
         {
             Transaction = tx;
@@ -499,12 +505,24 @@ namespace Corax
             _dynamicFieldsTerms ??= new();
             using var _ = Slice.From(context, it.CurrentFieldName, out var slice);
 
-            if (_dynamicFieldsTerms.TryGetValue(slice, out var indexedField) == false)
+            if (_dynamicFieldsTerms.TryGetValue(slice, out var indexedField))
+                return indexedField;
+            
+            
+            var clonedFieldName = slice.Clone(context);
+
+            if (_dynamicFieldsMapping != null && _dynamicFieldsMapping.TryGetByFieldName(slice, out var binding))
             {
-                var clonedFieldName = slice.Clone(context);
-                IndexFieldsMapping.GetFieldNameForLongs(context, clonedFieldName, out var fieldNameLong);
-                IndexFieldsMapping.GetFieldNameForDoubles(context, clonedFieldName, out var fieldNameDouble);
-                indexedField = new IndexedField(-1, clonedFieldName, fieldNameLong, fieldNameDouble, null, false); //TODO: need to handle index customizations here
+                
+                indexedField = new IndexedField(-1, binding.FieldName, binding.FieldNameLong, binding.FieldNameDouble, binding.Analyzer, binding.HasSuggestions);
+                _dynamicFieldsTerms[clonedFieldName] = indexedField;
+            }
+            else
+            {
+
+                IndexFieldsMappingBase.GetFieldNameForLongs(context, clonedFieldName, out var fieldNameLong);
+                IndexFieldsMappingBase.GetFieldNameForDoubles(context, clonedFieldName, out var fieldNameDouble);
+                indexedField = new IndexedField(-1, clonedFieldName, fieldNameLong, fieldNameDouble, null, false);
                 _dynamicFieldsTerms[clonedFieldName] = indexedField;
             }
 
@@ -1097,12 +1115,12 @@ namespace Corax
                 _tokensBufferHandler = Analyzer.TokensPool.Rent(newTokenSize);
             }
         }
-
+        
         public void Commit()
         {
+            
             using var _ = Transaction.Allocator.Allocate(Container.MaxSizeInsideContainerPage, out Span<byte> workingBuffer);
             Tree fieldsTree = Transaction.CreateTree(Constants.IndexWriter.FieldsSlice);
-            
             _indexMetadata.Increment(Constants.IndexWriter.NumberOfEntriesSlice, _numberOfModifications);
 
             ProcessDeletes();
@@ -1194,6 +1212,7 @@ namespace Corax
 
                 long termId;
                 ReadOnlySpan<byte> termsSpan = term.AsSpan();
+                if (termsSpan[^1] == '\0') break;
                 if (fieldTree.TryGetNextValue(termsSpan, out var existing, out var encodedKey) == false)
                 {
                     if (entries.TotalRemovals != 0)

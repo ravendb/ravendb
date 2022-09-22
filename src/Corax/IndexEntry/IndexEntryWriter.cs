@@ -214,6 +214,11 @@ public unsafe struct IndexEntryWriter : IDisposable
         _dataIndex += fieldNameStr.Length;
     }
 
+    public void WriteRawDynamic(string fieldName, ReadOnlySpan<byte> binaryValue)
+    {
+        throw new NotImplementedException($"{nameof(WriteRawDynamic)}");
+    }
+
     /// <summary>
     ///  Writes binary into buffer. This field will contain flag RAW and it will not be indexed.
     /// </summary>
@@ -603,6 +608,11 @@ public unsafe struct IndexEntryWriter : IDisposable
         return dataLocation;
     }
 
+    public void WriteDynamic(string fieldName, IReadOnlySpanIndexer values, ReadOnlySpan<long> longValues, ReadOnlySpan<double> doubleValues)
+    {
+        throw new NotImplementedException($"{nameof(WriteDynamic)}");
+    }
+    
     public void Write(int field, IReadOnlySpanIndexer values, ReadOnlySpan<long> longValues, ReadOnlySpan<double> doubleValues)
     {
         Debug.Assert(field < _knownFields.Count, "The field must be known");

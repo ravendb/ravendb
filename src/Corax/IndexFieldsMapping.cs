@@ -2,38 +2,47 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.InteropServices;
 using Sparrow.Server;
 using Voron;
 
 namespace Corax;
 
-public class IndexFieldsMapping : IEnumerable<IndexFieldBinding>
+public abstract class IndexFieldsMappingBase : IEnumerable<IndexFieldBinding>
 {
-    private readonly ByteStringContext _context;
-    private readonly Dictionary<Slice, IndexFieldBinding> _fields;
-    private readonly Dictionary<int, IndexFieldBinding> _fieldsById;
-    private readonly List<IndexFieldBinding> _fieldsList;
-    public int Count => _fieldsById.Count;
-    public Analyzer DefaultAnalyzer;
-    private int _maximumOutputSize;
+    protected const short LongSuffix = 19501; //"-L"
+    protected const short DoubleSuffix = 17453; //"-D"
+    
+    protected readonly ByteStringContext Context;
+    
+    protected readonly Dictionary<Slice, IndexFieldBinding> Fields;
+    protected readonly Dictionary<int, IndexFieldBinding> FieldsById;
+    protected readonly List<IndexFieldBinding> FieldsList;
+    
+    public int Count => FieldsById.Count;
+    
+    protected int _maximumOutputSize;
     public int MaximumOutputSize => _maximumOutputSize;
     
-    private int _maximumTokenSize;
+    protected int _maximumTokenSize;
     public int MaximumTokenSize => _maximumTokenSize;
 
-    public IndexFieldsMapping(ByteStringContext context)
+    public readonly Func<string, Analyzer> DefaultSearchAnalyzer;
+    public readonly Func<string, Analyzer> DefaultExactAnalyzer;
+    public Analyzer DefaultAnalyzer;
+
+    public IndexFieldsMappingBase(ByteStringContext context, Func<string, Analyzer> exactAnalyzer, Func<string, Analyzer> searchAnalyzer)
     {
-        _context = context;
-        _fields = new Dictionary<Slice, IndexFieldBinding>(SliceComparer.Instance);
-        _fieldsById = new Dictionary<int, IndexFieldBinding>();
-        _fieldsList = new List<IndexFieldBinding>();
+        Context = context;
+        Context = context;
+        Fields = new Dictionary<Slice, IndexFieldBinding>(SliceComparer.Instance);
+        FieldsById = new Dictionary<int, IndexFieldBinding>();
+        FieldsList = new List<IndexFieldBinding>();
+        DefaultSearchAnalyzer = searchAnalyzer;
+        DefaultExactAnalyzer = exactAnalyzer;
     }
-
     
-    private const short LongSuffix = 19501; //"-L"
-    private const short DoubleSuffix = 17453; //"-D"
-
     public static void GetFieldNameForLongs(ByteStringContext context, Slice fieldName, out Slice fieldNameForLongs)
     {
         GetFieldNameWithPostfix(context, fieldName, LongSuffix, out fieldNameForLongs);
@@ -51,50 +60,16 @@ public class IndexFieldsMapping : IEnumerable<IndexFieldBinding>
         *(short*)(output.Ptr + fieldName.Size) = postfix;
         fieldWithPostfix = new Slice(SliceOptions.Key, output);
     }
-
-    public IndexFieldsMapping AddBinding(int fieldId, string fieldName)
+    
+    public void CompleteAnalyzerGathering()
     {
-        Slice.From(_context, fieldName, ByteStringType.Immutable, out var str);
-        return AddBinding(fieldId, str);
-    }
-
-    public IndexFieldsMapping AddBinding(int fieldId, Slice fieldName, Analyzer analyzer = null, bool hasSuggestion = false, FieldIndexingMode fieldIndexingMode = FieldIndexingMode.Normal, bool hasSpatial = false)
-    {
-        if (!_fieldsById.TryGetValue(fieldId, out var storedAnalyzer))
-        {
-            GetFieldNameForDoubles(_context, fieldName, out var fieldNameDouble);
-            GetFieldNameForLongs(_context, fieldName, out var fieldNameLong);
-            var binding = new IndexFieldBinding(fieldId, fieldName,  fieldNameLong,fieldNameDouble, 
-                analyzer, hasSuggestion, fieldIndexingMode, hasSpatial);
-            _fields[fieldName] = binding;
-            _fieldsById[fieldId] = binding;
-            _fieldsList.Add(binding);
-        }
-        else
-        {
-            Debug.Assert(analyzer == storedAnalyzer.Analyzer);
-        }
-
-        return this;
-    }
-
-    public void UpdateAnalyzersInBindings(IndexFieldsMapping analyzers)
-    {
-        foreach (var mapping in analyzers.GetEnumerator())
-        {
-            if (TryGetByFieldId(mapping.FieldId, out var binding) == true)
-            {
-                binding.SetAnalyzer(mapping.Analyzer);
-            }
-        }
-
-        foreach (var ifb in CollectionsMarshal.AsSpan(_fieldsList))
+        foreach (var ifb in CollectionsMarshal.AsSpan(FieldsList))
         {
             if (ifb.FieldIndexingMode == FieldIndexingMode.Exact || ifb.HasSpatial == true)
                 continue;
 
             if(ifb.Analyzer == null)
-                ifb.SetAnalyzer(analyzers.DefaultAnalyzer);
+                ifb.SetAnalyzer(DefaultAnalyzer);
         }
         
         //We want also find maximum buffer for analyzers.
@@ -103,7 +78,7 @@ public class IndexFieldsMapping : IEnumerable<IndexFieldBinding>
 
     internal void UpdateMaximumOutputAndTokenSize()
     {
-        foreach (var analyzer in CollectionsMarshal.AsSpan(_fieldsList))
+        foreach (var analyzer in CollectionsMarshal.AsSpan(FieldsList))
         {
             if (analyzer.Analyzer == null)
                 continue;
@@ -116,46 +91,148 @@ public class IndexFieldsMapping : IEnumerable<IndexFieldBinding>
     
     public IndexFieldBinding GetByFieldId(int fieldId)
     {
-        return _fieldsById[fieldId];
+        return FieldsById[fieldId];
     }
 
     public bool TryGetByFieldId(int fieldId, out IndexFieldBinding binding)
     {
-        return _fieldsById.TryGetValue(fieldId, out binding);
+        return FieldsById.TryGetValue(fieldId, out binding);
     }
 
     public IndexFieldBinding GetByFieldName(string fieldName)
     {
         // This method is a convenience method that should not be used in high performance sections of the code.
-        using var _ = Slice.From(_context, fieldName, out var str);
-        return _fields[str];
+        using var _ = Slice.From(Context, fieldName, out var str);
+        return Fields[str];
     }
 
     public bool TryGetByFieldName(string fieldName, out IndexFieldBinding binding)
     {
         // This method is a convenience method that should not be used in high performance sections of the code.
-        using var _ = Slice.From(_context, fieldName, out var str);
-        return _fields.TryGetValue(str, out binding);
+        using var _ = Slice.From(Context, fieldName, out var str);
+        return Fields.TryGetValue(str, out binding);
     }
 
+    protected void AddNewBinding(int fieldId, Slice fieldName, Analyzer analyzer = null, bool hasSuggestion = false, FieldIndexingMode fieldIndexingMode = FieldIndexingMode.Normal, bool hasSpatial = false)
+    {
+        if (FieldsById.TryGetValue(fieldId, out var storedAnalyzer) == false)
+        {
+            GetFieldNameForDoubles(Context, fieldName, out var fieldNameDouble);
+            GetFieldNameForLongs(Context, fieldName, out var fieldNameLong);
+            var binding = new IndexFieldBinding(fieldId, fieldName,  fieldNameLong,fieldNameDouble, 
+                analyzer, hasSuggestion, fieldIndexingMode, hasSpatial);
+            Fields[fieldName] = binding;
+            FieldsById[fieldId] = binding;
+            FieldsList.Add(binding);
+        }
+        else
+        {
+            Debug.Assert(analyzer == storedAnalyzer.Analyzer);
+        }
+    }
+
+    public IndexFieldsMappingBase AddBinding(IndexFieldBinding binding)
+    {
+        var fieldId = binding.FieldId;
+        var fieldName = binding.FieldName;
+        
+        var canAdd = FieldsById.ContainsKey(fieldId) == false && Fields.ContainsKey(fieldName) == false;
+
+        if (canAdd)
+        {
+            Fields[fieldName] = binding;
+            FieldsById[fieldId] = binding;
+            FieldsList.Add(binding);
+        }
+        else
+        {
+            throw new InvalidDataException("Cannot add already existing item into index mapping.");
+        }
+
+        return this;
+    }
+    
     public IndexFieldBinding GetByFieldName(Slice fieldName)
     {
-        return _fields[fieldName];
+        return Fields[fieldName];
     }
 
     public bool TryGetByFieldName(Slice fieldName, out IndexFieldBinding binding)
     {
-        return _fields.TryGetValue(fieldName, out binding);
+        return Fields.TryGetValue(fieldName, out binding);
     }
 
     public IEnumerator<IndexFieldBinding> GetEnumerator()
     {
-        return _fieldsList.GetEnumerator();
+        return FieldsList.GetEnumerator();
     }
 
     IEnumerator IEnumerable.GetEnumerator()
     {
-        return _fieldsList.GetEnumerator();
+        return FieldsList.GetEnumerator();
+    }
+}
+
+public class IndexDynamicFieldsMapping : IndexFieldsMappingBase
+{
+    internal IndexDynamicFieldsMapping(ByteStringContext context, Func<string, Analyzer> searchAnalyzer, Analyzer defaultAnalyzer, Func<string, Analyzer> exactAnalyzer) : base(context, exactAnalyzer, searchAnalyzer)
+    {
+        DefaultAnalyzer = defaultAnalyzer;
+    }
+
+    public IndexDynamicFieldsMapping AddBinding(string fieldName, FieldIndexingMode fieldIndexingMode)
+    {
+        if (TryGetByFieldName(fieldName, out var binding))
+            return this;
+        
+        Slice.From(Context, fieldName, ByteStringType.Immutable, out var str);
+        
+        var analyzer = fieldIndexingMode switch
+        {
+            FieldIndexingMode.Search => DefaultSearchAnalyzer(fieldName),
+            FieldIndexingMode.Exact => DefaultExactAnalyzer(fieldName),
+            FieldIndexingMode.Normal => DefaultAnalyzer,
+            FieldIndexingMode.No => null,
+            _ => throw new ArgumentOutOfRangeException(nameof(fieldIndexingMode), fieldIndexingMode, null)
+        };
+
+        AddNewBinding(Count + 1, str, analyzer, fieldIndexingMode: fieldIndexingMode);
+        return this;
+    }
+}
+
+public class IndexFieldsMapping : IndexFieldsMappingBase
+{
+
+
+    public IndexFieldsMapping(ByteStringContext context) : base(context, null, null)
+    {
+    }
+
+    public IndexFieldsMapping(ByteStringContext context, Func<string, Analyzer> searchAnalyzer, Func<string, Analyzer> exactAnalyzer) : base(context, exactAnalyzer, searchAnalyzer)
+    {
+    } 
+    
+    public IndexFieldsMapping AddBinding(int fieldId, string fieldName)
+    {
+        Slice.From(Context, fieldName, ByteStringType.Immutable, out var str);
+        AddBinding(fieldId, str);
+        return this;
+    }
+
+    public IndexFieldsMapping AddBinding(int fieldId, Slice fieldName, Analyzer analyzer = null, bool hasSuggestion = false,
+        FieldIndexingMode fieldIndexingMode = FieldIndexingMode.Normal, bool hasSpatial = false)
+    {
+        AddNewBinding(fieldId, fieldName, analyzer, hasSuggestion, fieldIndexingMode, hasSpatial);
+        return this;
+    }
+    
+    public IndexDynamicFieldsMapping CreateIndexMappingForDynamic()
+    {
+        if (DefaultExactAnalyzer == null || DefaultAnalyzer == null || DefaultSearchAnalyzer == null)
+            throw new InvalidDataException($"Cannot create IndexMapping for dynamic fields because analyzers are not created...");
+
+        return new IndexDynamicFieldsMapping(Context, DefaultSearchAnalyzer, DefaultAnalyzer, DefaultExactAnalyzer);
     }
 }
 

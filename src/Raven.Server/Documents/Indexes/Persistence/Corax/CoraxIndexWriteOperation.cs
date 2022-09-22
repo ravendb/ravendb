@@ -1,17 +1,19 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using Corax;
+using NetTopologySuite.Utilities;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Documents.Indexes.Persistence.Lucene;
+using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Exceptions;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server;
-using Voron.Impl;
-using Sparrow.Server.Compression;
 using Voron;
-using Voron.Data.Containers;
+using Voron.Impl;
 using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax
@@ -19,23 +21,28 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
     public class CoraxIndexWriteOperation : IndexWriteOperationBase
     {
         public const int MaximumPersistedCapacityOfCoraxWriter = 512;
-
-        // WORKAROUND: RavenDB-18872
-        // https://issues.hibernatingrhinos.com/issue/RavenDB-18872
-        protected const int DocumentBufferSize = 128 * Sparrow.Global.Constants.Size.Megabyte;
-
         private readonly IndexWriter _indexWriter;
         private readonly CoraxDocumentConverterBase _converter;
-        private readonly IndexFieldsMapping _knownFields;
+        private readonly IndexDynamicFieldsMapping _dynamicFields;
         private long _entriesCount = 0;
+        private readonly CurrentIndexingScope _indexingScope;
 
         public CoraxIndexWriteOperation(Index index, Transaction writeTransaction, CoraxDocumentConverterBase converter, Logger logger) : base(index, logger)
         {
             _converter = converter;
-            _knownFields = _converter.GetKnownFieldsForWriter();
+            IndexFieldsMapping knownFields = _converter.GetKnownFieldsForWriter();
+            _indexingScope = CurrentIndexingScope.Current;
+            if (index.Definition.HasDynamicFields)
+            {
+                _dynamicFields = knownFields.CreateIndexMappingForDynamic();
+                UpdateDynamicFieldsBindings();
+            }
+            
             try
             {
-                _indexWriter = new IndexWriter(writeTransaction, _knownFields);
+                _indexWriter = index.Definition.HasDynamicFields 
+                    ? new IndexWriter(writeTransaction, knownFields, _dynamicFields) 
+                    : new IndexWriter(writeTransaction, knownFields);
                 _entriesCount = _indexWriter.GetNumberOfEntries();
             }
             catch (Exception e) when (e.IsOutOfMemory())
@@ -72,6 +79,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 scope = _converter.SetDocumentFields(key, sourceDocumentId, document, indexContext, out lowerId, out data);
             }
             
+            if (_dynamicFields != null && _dynamicFields.Count != _indexingScope.CreatedFieldsCount)
+            {
+                UpdateDynamicFieldsBindings();
+            }
+            
             using(scope)
             using (Stats.AddStats.Start())
             {
@@ -90,13 +102,17 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         {
             EnsureValidStats(stats);
             _entriesCount++;
-
             LazyStringValue lowerId;
             ByteString data;
             ByteStringContext<ByteStringMemoryCache>.InternalScope scope = default;
             using (Stats.ConvertStats.Start())
             {
                 scope = _converter.SetDocumentFields(key, sourceDocumentId, document, indexContext, out lowerId, out data);
+            }
+            
+            if (_dynamicFields != null && _dynamicFields.Count != _indexingScope.CreatedFieldsCount)
+            {
+                UpdateDynamicFieldsBindings();
             }
 
             using (scope)
@@ -111,6 +127,29 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
                 stats.RecordIndexingOutput();
             } 
+        }
+
+        private void UpdateDynamicFieldsBindings()
+        {
+            foreach (var (fieldName, fieldIndexing) in _indexingScope.DynamicFields)
+            {
+                if (_dynamicFields.TryGetByFieldName(fieldName, out var binding))
+                {
+                    Debug.Assert(binding.FieldIndexingMode == FieldIndexingIntoFieldIndexingMode(fieldIndexing));
+                    continue;
+                }
+
+                _dynamicFields.AddBinding(fieldName, FieldIndexingIntoFieldIndexingMode(fieldIndexing));
+            }
+
+            FieldIndexingMode FieldIndexingIntoFieldIndexingMode(FieldIndexing option) => option switch
+            {
+                FieldIndexing.Search => FieldIndexingMode.Search,
+                FieldIndexing.Exact => FieldIndexingMode.Exact,
+                FieldIndexing.Default => FieldIndexingMode.Normal,
+                FieldIndexing.No => FieldIndexingMode.No,
+                _ => throw new ArgumentOutOfRangeException(nameof(option), option, null)
+            };
         }
 
         public override long EntriesCount() => _entriesCount;
