@@ -117,6 +117,7 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
 
     public long DeleteBucket(DocumentsOperationContext context, int bucket, ChangeVector upTo)
     {
+        // test artificial tombstone on backup/restore
         long numOfDeletions = 0;
 
         MarkTombstonesAsArtificial(context, bucket);
@@ -133,7 +134,7 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
             // check change vectors of all document extensions
             if (HasDocumentExtensionWithGreaterChangeVector(context, document.LowerId, upTo)) 
                 break;
-
+            
             Delete(context, document.Id, document.Flags | DocumentFlags.Artificial);
 
             // delete revisions for document
@@ -147,32 +148,45 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
 
     private void MarkTombstonesAsArtificial(DocumentsOperationContext context, int bucket)
     {
-        foreach (var collectionName in _collectionsCache.Values)
-        {
-            var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, collectionName.GetTableName(CollectionTableType.Tombstones));
-            foreach (var result in GetItemsByBucket(context.Allocator, table, TombstonesSchema.DynamicKeyIndexes[CollectionTombstonesBucketAndEtagSlice], bucket, etag: 0))
-            {
-                var tombstone = TableValueToTombstone(context, ref result.Result.Reader);
-                if (tombstone.Flags.Contain(DocumentFlags.Artificial))
-                    continue;
+        var readTable = new Table(TombstonesSchema, context.Transaction.InnerTransaction);
 
-                var flags = tombstone.Flags | DocumentFlags.Artificial;
-                using (Slice.From(context.Allocator, tombstone.ChangeVector, out var cv))
-                using (Slice.External(context.Allocator, tombstone.LowerId, out var keySlice))
-                using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
-                using (table.Allocate(out TableValueBuilder tvb))
-                {
-                    tvb.Add(keySlice.Content.Ptr, keySlice.Size);
-                    tvb.Add(Bits.SwapBytes(tombstone.Etag));
-                    tvb.Add(Bits.SwapBytes(tombstone.DeletedEtag));
-                    tvb.Add(tombstone.TransactionMarker);
-                    tvb.Add((byte)tombstone.Type);
-                    tvb.Add(collectionSlice);
-                    tvb.Add((int)flags);
-                    tvb.Add(cv.Content.Ptr, cv.Size);
-                    tvb.Add(tombstone.LastModified.Ticks);
-                    table.Update(tombstone.StorageId, tvb);
-                }
+        foreach (var result in GetItemsByBucket(context.Allocator, readTable, TombstonesSchema.DynamicKeyIndexes[TombstonesBucketAndEtagSlice], bucket, etag: 0))
+        {
+            var tombstone = TableValueToTombstone(context, ref result.Result.Reader);
+            if (tombstone.Flags.Contain(DocumentFlags.Artificial))
+                continue;
+
+            var collection = TableValueToId(context, (int)TombstoneTable.Collection, ref result.Result.Reader);
+            if (_collectionsCache.TryGetValue(collection, out var collectionName) == false)
+            {
+                collectionName = new CollectionName(collection);
+                _collectionsCache.TryAdd(collection, collectionName);
+            }
+            
+            var writeTable = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, collectionName.GetTableName(CollectionTableType.Tombstones));
+
+            // todo update cv and etag + clone key
+            var newEtag = GenerateNextEtag();
+            var cv = ChangeVector.Merge(context.LastDatabaseChangeVector, context.GetChangeVector(tombstone.ChangeVector), context);
+            var flags = tombstone.Flags | DocumentFlags.Artificial;
+
+            using (Slice.From(context.Allocator, cv, out var cvSlice))
+            using (Slice.External(context.Allocator, tombstone.LowerId, out var keySlice))
+            using (DocumentIdWorker.GetStringPreserveCase(context, collection, out Slice collectionSlice))
+            using (writeTable.Allocate(out TableValueBuilder tvb))
+            {
+                var clonedKey = keySlice.Clone(context.Allocator);
+
+                tvb.Add(clonedKey.Content.Ptr, clonedKey.Size);
+                tvb.Add(Bits.SwapBytes(newEtag));
+                tvb.Add(Bits.SwapBytes(tombstone.DeletedEtag));
+                tvb.Add(tombstone.TransactionMarker);
+                tvb.Add((byte)tombstone.Type);
+                tvb.Add(collectionSlice);
+                tvb.Add((int)flags);
+                tvb.Add(cvSlice.Content.Ptr, cvSlice.Size);
+                tvb.Add(tombstone.LastModified.Ticks);
+                writeTable.Update(tombstone.StorageId, tvb);
             }
         }
     }
