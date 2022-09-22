@@ -16,7 +16,8 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.Enumerators
 
         private bool Filter()
         {
-            return _tombstones.Current.Type != Tombstone.TombstoneType.Document;
+            var tombstone = _tombstones.Current;
+            return tombstone.Type != Tombstone.TombstoneType.Document || tombstone.Flags.Contain(DocumentFlags.Artificial);
         }
 
         public bool MoveNext()
