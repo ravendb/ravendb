@@ -101,6 +101,13 @@ public class DynamicFieldsTests : StorageTest
             var entries = searcher.TermQuery("Items_UK", "GBP");
             Assert.Equal(1, entries.Fill(ids));
         }
+        
+        using (var searcher = new IndexSearcher(Env, knownFields))
+        {
+            Span<long> ids = new long[16];
+            var entries = searcher.TermQuery("NotExists", Constants.EmptyString);
+            Assert.Equal(0, entries.Fill(ids));
+        }
     }
     
     [RavenTheory(RavenTestCategory.Corax)]

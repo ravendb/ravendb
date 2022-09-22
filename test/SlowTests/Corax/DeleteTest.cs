@@ -108,10 +108,10 @@ public class DeleteTest : StorageTest
             for (int i = 0; i < read; i++)
             {
                 var entry = indexSearcher.GetReaderFor(ids[i]);
-                Assert.True(entry.Read(0, out Span<byte> id));
+                Assert.True(entry.GetReaderFor(0).Read(out Span<byte> id));
                 if (idAsBytes.SequenceEqual(id))
                 {
-                    entry.Read(ContentId, out Span<byte> content);
+                    entry.GetReaderFor(ContentId).Read(out Span<byte> content);
                     // Assert.False(nine.SequenceEqual(content));
                 }
             }
