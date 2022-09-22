@@ -332,7 +332,8 @@ public class IndexSearcherTest : StorageTest
                     whole += read;
                     foreach (var id in ids)
                     {
-                        searcher.GetReaderFor(id).Read(ContentIndex, out var value);
+                        var reader = searcher.GetReaderFor(id);
+                        reader.GetReaderFor(ContentIndex).Read(out var value);
                         Assert.True(Encoding.UTF8.GetString(value).Contains("ing"));
                     }
                 }

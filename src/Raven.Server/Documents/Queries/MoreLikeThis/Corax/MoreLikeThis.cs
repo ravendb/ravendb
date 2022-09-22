@@ -169,7 +169,7 @@ internal class RavenMoreLikeThis : MoreLikeThisBase
 
             case IndexEntryFieldType.TupleListWithNulls:
             case IndexEntryFieldType.TupleList:
-                if (entryReader.TryReadMany(binding.FieldId, out var iterator) == false)
+                if (entryReader.GetReaderFor(binding.FieldId).TryReadMany(out var iterator) == false)
                     break;
 
                 while (iterator.ReadNext())
@@ -198,7 +198,7 @@ internal class RavenMoreLikeThis : MoreLikeThisBase
                 break;
 
             case IndexEntryFieldType.SpatialPointList:
-                if (entryReader.TryReadManySpatialPoint(binding.FieldId, out var spatialIterator) == false)
+                if (entryReader.GetReaderFor(binding.FieldId).TryReadManySpatialPoint(out var spatialIterator) == false)
                     break;
 
                 while (spatialIterator.ReadNext())
@@ -210,7 +210,7 @@ internal class RavenMoreLikeThis : MoreLikeThisBase
                 break;
 
             case IndexEntryFieldType.SpatialPoint:
-                if (entryReader.Read(binding.FieldId, out valueInEntry) == false)
+                if (entryReader.GetReaderFor(binding.FieldId).Read(out valueInEntry) == false)
                     break;
 
                 for (int i = 1; i <= valueInEntry.Length; ++i)
@@ -220,7 +220,7 @@ internal class RavenMoreLikeThis : MoreLikeThisBase
 
             case IndexEntryFieldType.ListWithNulls:
             case IndexEntryFieldType.List:
-                if (entryReader.TryReadMany(binding.FieldId, out iterator) == false)
+                if (entryReader.GetReaderFor(binding.FieldId).TryReadMany(out iterator) == false)
                     break;
 
                 while (iterator.ReadNext())
@@ -244,7 +244,7 @@ internal class RavenMoreLikeThis : MoreLikeThisBase
             case IndexEntryFieldType.Invalid:
                 break;
             default:
-                if (entryReader.Read(binding.FieldId, out var value) == false)
+                if (entryReader.GetReaderFor(binding.FieldId).Read(out var value) == false)
                     break;
 
                 InsertTerm(value);
