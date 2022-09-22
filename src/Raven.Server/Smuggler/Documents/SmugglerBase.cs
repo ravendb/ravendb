@@ -545,8 +545,9 @@ namespace Raven.Server.Smuggler.Documents
                     if (tombstone.LowerId == null)
                         ThrowInvalidData();
 
-
-                    if (_options.IncludeArtificial == false && tombstone.Flags.HasFlag(DocumentFlags.Artificial))
+                    if (_options.IncludeArtificial == false && 
+                        tombstone.Flags.Contain(DocumentFlags.Artificial) && 
+                        tombstone.Flags.Contain(DocumentFlags.FromIndex))
                     {
                         continue;
                     }
