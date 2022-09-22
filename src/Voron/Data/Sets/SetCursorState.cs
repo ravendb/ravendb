@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Text;
 
 namespace Voron.Data.Sets
@@ -12,7 +12,14 @@ namespace Voron.Data.Sets
         public SetBranchPageHeader* BranchHeader => (SetBranchPageHeader*)Page.Pointer;
 
         public bool IsLeaf => LeafHeader->SetFlags == ExtendedPageType.SetLeaf;
-        
+
+        public SetCursorState(Page page)
+        {
+            Page = page;
+            LastMatch = 0;
+            LastSearchPosition = 0;
+        }
+
         public override string ToString()
         {
             if (Page.Pointer == null)
