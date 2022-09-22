@@ -86,7 +86,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/topology/modify", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        [RavenAction("/topology/modify", "POST", AuthorizationStatus.Operator)]
         public async Task ModifyTopology()
         {
             var dbName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name").Trim();
