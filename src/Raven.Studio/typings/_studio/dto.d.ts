@@ -39,6 +39,10 @@ interface resultsWithTotalCountDto<T> extends resultsDto<T> {
 interface resultsWithCountAndToken<T> extends resultsWithTotalCountDto<T> {
     ContinuationToken?: string;
 }
+interface resultsWithCountScannedResultsAndToken<T> extends resultsWithTotalCountDto<T> {
+    ContinuationToken?: string;
+    ScannedResults?: number;
+}
 interface resultsWithCountAndAvailableColumns<T> extends resultsWithCountAndToken<T> {
     AvailableColumns: string[];
 }
@@ -435,6 +439,11 @@ interface pagedResultExtended<T> extends pagedResult<T> {
 
 interface pagedResultWithToken<T> extends pagedResult<T> {
     continuationToken?: string;
+}
+
+interface pagedResultWithTokenAndSkippedResults<T> extends pagedResult<T> {
+    continuationToken?: string;
+    scannedResults?: number;
 }
 
 interface pagedResultWithAvailableColumns<T> extends pagedResultWithToken<T> {

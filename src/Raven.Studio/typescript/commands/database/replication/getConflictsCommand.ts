@@ -8,15 +8,16 @@ class getConflictsCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<pagedResultWithToken<replicationConflictListItemDto>> {
+    execute(): JQueryPromise<pagedResultWithTokenAndSkippedResults<replicationConflictListItemDto>> {
         const args = this.getArgsToUse();
         const url = endpoints.databases.replication.replicationConflicts + this.urlEncodeArgs(args);
 
-        const transformer = (result: resultsWithCountAndToken<replicationConflictListItemDto>): pagedResultWithToken<replicationConflictListItemDto> => {
+        const transformer = (result: resultsWithCountScannedResultsAndToken<replicationConflictListItemDto>): pagedResultWithTokenAndSkippedResults<replicationConflictListItemDto> => {
             return {
                 items: result.Results,
                 totalResultCount: result.TotalResults,
-                continuationToken: result.ContinuationToken
+                continuationToken: result.ContinuationToken,
+                scannedResults: result.ScannedResults
             };
         }
 
