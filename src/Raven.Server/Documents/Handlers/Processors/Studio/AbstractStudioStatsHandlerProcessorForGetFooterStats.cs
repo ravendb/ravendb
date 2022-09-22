@@ -31,14 +31,15 @@ namespace Raven.Server.Documents.Handlers.Processors.Studio
 
                 writer.WritePropertyName(nameof(FooterStatistics.CountOfIndexes));
                 writer.WriteInteger(stats.CountOfIndexes);
+                writer.WriteComma();
 
                 writer.WriteArray(nameof(FooterStatistics.StaleIndexes), stats.StaleIndexes);
-
                 writer.WriteComma();
+
                 writer.WritePropertyName(nameof(FooterStatistics.CountOfStaleIndexes));
                 writer.WriteInteger(stats.CountOfStaleIndexes);
-
                 writer.WriteComma();
+
                 writer.WritePropertyName(nameof(FooterStatistics.CountOfIndexingErrors));
                 writer.WriteInteger(stats.CountOfIndexingErrors);
 
