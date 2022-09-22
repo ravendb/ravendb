@@ -26,6 +26,8 @@ namespace Raven.Server.Documents.ETL.Providers.Raven.Enumerators
         private bool Filter(RavenEtlItem item)
         {
             var tombstone = _tombstones.Current;
+            if (tombstone.Flags.Contain(DocumentFlags.Artificial))
+                return true;
 
             if (_allDocs == false)
             {

@@ -24,6 +24,9 @@ namespace Raven.Server.Documents.ETL.Providers.Raven.Enumerators
             if (tombstone.Type != Tombstone.TombstoneType.Attachment)
                 TombstonesToRavenEtlItems.ThrowInvalidTombstoneType(Tombstone.TombstoneType.Attachment, tombstone.Type);
 
+            if (tombstone.Flags.Contain(DocumentFlags.Artificial))
+                return true;
+
             if (FilterAttachment(_context, item))
                 return true;
 

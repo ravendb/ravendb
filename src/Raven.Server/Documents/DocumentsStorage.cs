@@ -1473,13 +1473,13 @@ namespace Raven.Server.Documents
                 DeletedEtag = TableValueToEtag((int)TombstoneTable.DeletedEtag, ref tvr),
                 Type = *(Tombstone.TombstoneType*)tvr.Read((int)TombstoneTable.Type, out int _),
                 TransactionMarker = *(short*)tvr.Read((int)TombstoneTable.TransactionMarker, out int _),
-                ChangeVector = TableValueToChangeVector(context, (int)TombstoneTable.ChangeVector, ref tvr)
+                ChangeVector = TableValueToChangeVector(context, (int)TombstoneTable.ChangeVector, ref tvr),
+                Flags = TableValueToFlags((int)TombstoneTable.Flags, ref tvr)
             };
 
             if (result.Type == Tombstone.TombstoneType.Document)
             {
                 result.Collection = TableValueToId(context, (int)TombstoneTable.Collection, ref tvr);
-                result.Flags = TableValueToFlags((int)TombstoneTable.Flags, ref tvr);
                 result.LastModified = TableValueToDateTime((int)TombstoneTable.LastModified, ref tvr);
                 result.LowerId = UnwrapLowerIdIfNeeded(context, result.LowerId);
             }
@@ -1844,7 +1844,7 @@ namespace Raven.Server.Documents
                     context,
                     lowerId,
                     newEtag,
-                    docChangeVector);
+                    context.GetChangeVector(docChangeVector).Version);
 
                 if (string.IsNullOrEmpty(mergedChangeVector))
                     ChangeVectorUtils.ThrowConflictingEtag(lowerId.ToString(), docChangeVector, newEtag, Environment.Base64Id, DocumentDatabase.ServerStore.NodeTag);
@@ -2272,7 +2272,6 @@ namespace Raven.Server.Documents
                 while (it.MoveNext());
             }
         }
-
 
         public ConflictStatus GetConflictStatus(DocumentsOperationContext context, string remote, string local, ChangeVectorMode mode) => GetConflictStatus(context, remote, local, mode, out _);
 
