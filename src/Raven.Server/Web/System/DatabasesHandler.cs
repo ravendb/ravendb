@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using CsvHelper;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
@@ -94,7 +95,6 @@ namespace Raven.Server.Web.System
 
             await ServerStore.EnsureNotPassiveAsync();
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
             {
                 var json = await context.ReadForDiskAsync(RequestBodyStream(), "Database Topology");
                 var databaseTopology = JsonDeserializationCluster.DatabaseTopology(json);
@@ -108,7 +108,10 @@ namespace Raven.Server.Web.System
                 }
 
                 // Validate Database Name
-                var databaseRecord = ServerStore.Cluster.ReadDatabase(context, dbName, out var index);
+                DatabaseRecord databaseRecord;
+                using (context.OpenReadTransaction())
+                    databaseRecord = ServerStore.Cluster.ReadDatabase(context, dbName, out var index);
+
                 if (databaseRecord == null)
                 {
                     throw new DatabaseDoesNotExistException($"Database {dbName} Record not found when trying to modify database topology");
@@ -122,20 +125,9 @@ namespace Raven.Server.Web.System
                     if (clusterTopology.Contains(node) == false)
                         throw new ArgumentException($"Failed to modify database {dbName} topology, because we don't have node {node} (which is in the new topology) in the cluster.");
 
-                    if (databaseRecord.Topology.RelevantFor(node))
+                    if (databaseRecord.Topology.RelevantFor(node) == false)
                     {
-                        var databaseIsBeenDeleted = databaseRecord.DeletionInProgress != null &&
-                                                    databaseRecord.DeletionInProgress.TryGetValue(node, out var deletionInProgress) &&
-                                                    deletionInProgress != DeletionInProgressStatus.No;
-                        if (databaseIsBeenDeleted)
-                            throw new InvalidOperationException($"Can't modify database {dbName} topology, because the database {dbName} is currently being deleted from node {node} (which is in the new topology)");
-
-                        var url = clusterTopology.GetUrlFromTag(node);
-                        if (url == null)
-                            throw new InvalidOperationException($"Can't modify database {dbName} topology, because node {node} (which is in the new topology) is not part of the cluster");
-
-                        if (databaseRecord.Encrypted && url.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == false)
-                            throw new InvalidOperationException($"Can't modify database {dbName} topology, because database {dbName} is encrypted but node {node} (which is in the new topology) doesn't have an SSL certificate.");
+                        ValidateNodeForAddingToDb(dbName, node, databaseRecord, clusterTopology, baseMessage: $"Can't modify database {dbName} topology");
                     }
                 }
                 databaseTopology.ReplicationFactor = Math.Min(databaseTopology.Count, clusterTopology.AllNodes.Count);
