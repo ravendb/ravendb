@@ -45,15 +45,12 @@ internal class ShardedDocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
         if (counters.Count > 0)
             throw new NotSupportedInShardingException("Include of counters is not supported");
 
-        if (revisions != null)
-            throw new NotSupportedInShardingException("Include of revisions is not supported");
-
         if (timeSeries != null)
             throw new NotSupportedInShardingException("Include of time series is not supported");
 
         string[] compareExchangeValuesAsArray = compareExchangeValues;
         var idsByShard = ShardLocator.GetDocumentIdsByShards(context, RequestHandler.DatabaseContext, ids);
-        var op = new FetchDocumentsFromShardsOperation(context, RequestHandler, idsByShard, includePaths, compareExchangeValuesAsArray, etag, metadataOnly);
+        var op = new FetchDocumentsFromShardsOperation(context, RequestHandler, idsByShard, includePaths, revisions, compareExchangeValuesAsArray, etag, metadataOnly);
         var shardedReadResult = await RequestHandler.DatabaseContext.ShardExecutor.ExecuteParallelForShardsAsync(idsByShard.Keys.ToArray(), op, CancellationToken);
 
         var result = new DocumentsByIdResult<BlittableJsonReaderObject>
@@ -63,13 +60,15 @@ internal class ShardedDocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
             Includes = shardedReadResult.Result?.Includes,
             MissingIncludes = shardedReadResult.Result?.MissingIncludes,
             CompareExchangeIncludes = shardedReadResult.Result?.CompareExchangeValueIncludes,
+            RevisionsChangeVectorIncludes = shardedReadResult.Result?.RevisionsChangeVectorResults,
+            IdByRevisionsByDateTimeIncludes = shardedReadResult.Result?.IdByRevisionsByDateTimeResults,
             StatusCode = (HttpStatusCode)shardedReadResult.StatusCode
         };
 
         if (result.MissingIncludes?.Count > 0)
         {
             var missingIncludeIdsByShard = ShardLocator.GetDocumentIdsByShards(context, RequestHandler.DatabaseContext, result.MissingIncludes);
-            var missingIncludesOp = new FetchDocumentsFromShardsOperation(context, RequestHandler, missingIncludeIdsByShard, includePaths: null, compareExchangeValueIncludes: null, etag: null, metadataOnly: metadataOnly);
+            var missingIncludesOp = new FetchDocumentsFromShardsOperation(context, RequestHandler, missingIncludeIdsByShard, includePaths: null, includeRevisions: null, compareExchangeValueIncludes: null, etag: null, metadataOnly: metadataOnly);
             var missingResult = await RequestHandler.DatabaseContext.ShardExecutor.ExecuteParallelForShardsAsync(missingIncludeIdsByShard.Keys.ToArray(), missingIncludesOp, CancellationToken);
 
             foreach (var (id, missing) in missingResult.Result.Documents)

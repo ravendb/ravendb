@@ -8,6 +8,7 @@ using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Includes.Sharding;
+using Raven.Server.Documents.Queries.Revisions;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -23,6 +24,7 @@ namespace Raven.Server.Documents.Sharding.Operations
         private readonly ShardedDatabaseContext _databaseContext;
         private readonly Dictionary<int, ShardLocator.IdsByShard<string>> _idsByShards;
         private readonly string[] _includePaths;
+        private readonly RevisionIncludeField _includeRevisions;
         private readonly string[] _compareExchangeValueIncludes;
         private readonly bool _metadataOnly;
 
@@ -31,6 +33,7 @@ namespace Raven.Server.Documents.Sharding.Operations
             ShardedDatabaseRequestHandler handler,
             Dictionary<int, ShardLocator.IdsByShard<string>> idsByShards,
             string[] includePaths,
+            RevisionIncludeField includeRevisions,
             string[] compareExchangeValueIncludes,
             string etag,
             bool metadataOnly)
@@ -41,6 +44,7 @@ namespace Raven.Server.Documents.Sharding.Operations
             _idsByShards = idsByShards;
             ExpectedEtag = etag;
             _includePaths = includePaths;
+            _includeRevisions = includeRevisions;
             _compareExchangeValueIncludes = compareExchangeValueIncludes;
             _metadataOnly = metadataOnly;
         }
@@ -55,6 +59,7 @@ namespace Raven.Server.Documents.Sharding.Operations
             var missingIncludes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             ShardedIncludeCompareExchangeValues includeCompareExchangeValues = null;
+            ShardedIncludeRevisions includeRevisions = null;
 
             foreach (var cmd in span)
             {
@@ -65,6 +70,7 @@ namespace Raven.Server.Documents.Sharding.Operations
                 var cmdIncludes = cmd.Includes;
                 var cmdCounterIncludes = cmd.CounterIncludes;
                 var cmdCompareExchangeValueIncludes = cmd.CompareExchangeValueIncludes;
+                var cmdRevisionIncludes = cmd.RevisionIncludes;
 
                 if (cmdIncludes != null)
                 {
@@ -109,6 +115,13 @@ namespace Raven.Server.Documents.Sharding.Operations
 
                     includeCompareExchangeValues.AddResults(cmdCompareExchangeValueIncludes, _context);
                 }
+
+                if (cmdRevisionIncludes != null)
+                {
+                    includeRevisions ??= new ShardedIncludeRevisions();
+
+                    includeRevisions.AddResults(cmdRevisionIncludes, _context);
+                }
             }
 
             foreach (var kvp in includesMap) // remove the items we already have
@@ -123,13 +136,21 @@ namespace Raven.Server.Documents.Sharding.Operations
                 Documents = docs,
                 Includes = includesMap.Values.ToList(),
                 MissingIncludes = missingIncludes,
-                CompareExchangeValueIncludes = includeCompareExchangeValues?.Results
+                CompareExchangeValueIncludes = includeCompareExchangeValues?.Results,
+                RevisionsChangeVectorResults = includeRevisions?.RevisionsChangeVectorResults,
+                IdByRevisionsByDateTimeResults = includeRevisions?.IdByRevisionsByDateTimeResults
             };
         }
 
         public HttpRequest HttpRequest => _handler.HttpContext.Request;
 
-        public RavenCommand<GetDocumentsResult> CreateCommandForShard(int shardNumber) => new GetDocumentsCommand(_idsByShards[shardNumber].Ids.ToArray(), _includePaths, includeAllCounters: false, timeSeriesIncludes: null, _compareExchangeValueIncludes, _metadataOnly);
+        public RavenCommand<GetDocumentsResult> CreateCommandForShard(int shardNumber) => new GetDocumentsCommand(_idsByShards[shardNumber].Ids.ToArray(), _includePaths,
+            counterIncludes: null,
+            revisionsIncludesByChangeVector: _includeRevisions?.RevisionsChangeVectorsPaths, // TODO arek - what's the difference between RevisionsChangeVectorsPaths and RevisionsChangeVectors
+            revisionIncludeByDateTimeBefore: _includeRevisions?.RevisionsBeforeDateTime,
+            timeSeriesIncludes: null,
+            compareExchangeValueIncludes: _compareExchangeValueIncludes, 
+            _metadataOnly);
     }
 
     public class GetShardedDocumentsResult
@@ -139,5 +160,8 @@ namespace Raven.Server.Documents.Sharding.Operations
 
         public HashSet<string> MissingIncludes;
         public Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> CompareExchangeValueIncludes;
+
+        public Dictionary<string, Document> RevisionsChangeVectorResults;
+        public Dictionary<string, Dictionary<DateTime, Document>> IdByRevisionsByDateTimeResults;
     }
 }
