@@ -79,6 +79,7 @@ class conflicts extends shardViewModelBase {
     });
 
     itemsSoFar = ko.observable<number>(0);
+    nextStart = 0;
     continuationToken: string;
 
     constructor(db: database) {
@@ -118,7 +119,7 @@ class conflicts extends shardViewModelBase {
 
         const grid = this.gridController();
         grid.headerVisible(true);
-        grid.init((s, t) => this.fetchConflicts(s, t), () =>
+        grid.init((s, t) => this.fetchConflicts(t), () =>
             [
                 new hyperlinkColumn<replicationConflictListItemDto>(grid, x => x.Id, x => appUrl.forConflicts(this.db, x.Id), "Document", "40%",
                     {
@@ -169,8 +170,8 @@ class conflicts extends shardViewModelBase {
             });
     }
 
-    private fetchConflicts(skip: number, take: number): JQueryPromise<pagedResultWithToken<replicationConflictListItemDto>> {
-        return new getConflictsCommand(this.db, skip, take, this.continuationToken)
+    private fetchConflicts(take: number): JQueryPromise<pagedResultWithToken<replicationConflictListItemDto>> {
+        return new getConflictsCommand(this.db, this.nextStart, take, this.continuationToken)
             .execute()
             .done((results) => {
                 this.continuationToken = results.continuationToken;
@@ -183,6 +184,8 @@ class conflicts extends shardViewModelBase {
                     } else {
                         results.totalResultCount = this.itemsSoFar() + 1;
                     }
+                } else {
+                    this.nextStart += results.scannedResults + 1;
                 }
 
                 this.syncSelection(results.items);
@@ -294,6 +297,7 @@ class conflicts extends shardViewModelBase {
     }
 
     private onResolved() {
+        this.nextStart = 0;
         this.gridController().reset(false);
         
         this.suggestedResolution("");
