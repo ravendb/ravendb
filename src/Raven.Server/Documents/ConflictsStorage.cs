@@ -783,8 +783,10 @@ namespace Raven.Server.Documents
             }
             else if (result.Tombstone != null)
             {
-                local = result.Tombstone.ChangeVector;
                 hasLocalClusterTx = result.Tombstone.Flags.Contain(DocumentFlags.FromClusterTransaction);
+                if (result.Tombstone.Flags.Contain(DocumentFlags.Artificial))
+                    return ConflictStatus.Update;
+                local = result.Tombstone.ChangeVector;
             }
             else
                 return ConflictStatus.Update; //document with 'id' doesn't exist locally, so just do PUT
