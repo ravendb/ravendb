@@ -59,14 +59,19 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
         DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal,
             "Optimize this to calculate the merged change vector during insertion to the bucket");
         DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal,
-            "Extend this for all types not only docs");
+            "Extend this for all types not only docs and tombstones");
 
         var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
         var merged = context.GetChangeVector(string.Empty);
         foreach (var result in GetItemsByBucket(context.Allocator, table, DocsSchema.DynamicKeyIndexes[AllDocsBucketAndEtagSlice], bucket, 0))
         {
-            var document = TableValueToDocument(context, ref result.Result.Reader, DocumentFields.ChangeVector);
-            merged = merged.MergeWith(document.ChangeVector, context);
+            var documentCv = TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref result.Result.Reader);
+            merged = merged.MergeWith(documentCv, context);
+        }
+        foreach (var result in GetItemsByBucket(context.Allocator, table, TombstonesSchema.DynamicKeyIndexes[TombstonesBucketAndEtagSlice], bucket, 0))
+        {
+            var tombstoneCv = TableValueToChangeVector(context, (int)TombstoneTable.ChangeVector, ref result.Result.Reader);
+            merged = merged.MergeWith(tombstoneCv, context);
         }
 
         return merged;
