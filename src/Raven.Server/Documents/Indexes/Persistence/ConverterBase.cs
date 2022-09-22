@@ -142,6 +142,9 @@ namespace Raven.Server.Documents.Indexes.Persistence
             if (value is CoraxSpatialPointEntry)
                 return ValueType.CoraxSpatialPointEntry;
 
+            if (value is CoraxDynamicItem)
+                return ValueType.CoraxDynamicItem;
+            
             return ValueType.ConvertToJson;
         }
 
@@ -259,6 +262,8 @@ namespace Raven.Server.Documents.Indexes.Persistence
             TimeOnly,
             
             CoraxSpatialPointEntry,
+            
+            CoraxDynamicItem,
         }
 
         protected class ConversionScope : IDisposable
