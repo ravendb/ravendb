@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using JetBrains.Annotations;
 using Raven.Server.Documents.Queries.Revisions;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
@@ -8,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Includes
 {
-    public class IncludeRevisionsCommand
+    public class IncludeRevisionsCommand : IIncludeRevisions
     {
         private readonly DocumentDatabase _database;
         private readonly DocumentsOperationContext _context;

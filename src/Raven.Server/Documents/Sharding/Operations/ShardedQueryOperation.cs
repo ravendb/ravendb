@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
-using Raven.Server.Documents.Includes;
+using Raven.Server.Documents.Includes.Sharding;
 using Raven.Server.Documents.Queries.Sharding;
 using Raven.Server.Documents.Replication.Senders;
 using Raven.Server.Documents.Sharding.Commands;
@@ -23,16 +22,14 @@ public class ShardedQueryOperation : IShardedReadOperation<QueryResult, ShardedQ
     private readonly TransactionOperationContext _context;
     private readonly ShardedDatabaseRequestHandler _requestHandler;
     private readonly Dictionary<int, ShardedQueryCommand> _queryCommands;
-    private readonly IncludeCompareExchangeValuesCommand _includeCompareExchangeValues;
     private readonly ShardedDocumentsComparer _sortingComparer;
     private long _combinedResultEtag;
 
-    public ShardedQueryOperation(TransactionOperationContext context, ShardedDatabaseRequestHandler requestHandler, Dictionary<int, ShardedQueryCommand> queryCommands, IncludeCompareExchangeValuesCommand includeCompareExchangeValues, ShardedDocumentsComparer sortingComparer, string expectedEtag)
+    public ShardedQueryOperation(TransactionOperationContext context, ShardedDatabaseRequestHandler requestHandler, Dictionary<int, ShardedQueryCommand> queryCommands, ShardedDocumentsComparer sortingComparer, string expectedEtag)
     {
         _context = context;
         _requestHandler = requestHandler;
         _queryCommands = queryCommands;
-        _includeCompareExchangeValues = includeCompareExchangeValues;
         _sortingComparer = sortingComparer;
         ExpectedEtag = expectedEtag;
     }
@@ -67,6 +64,9 @@ public class ShardedQueryOperation : IShardedReadOperation<QueryResult, ShardedQ
 
         DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Arek, DevelopmentHelper.Severity.Normal, "Check if we could handle this in streaming manner so we won't need to materialize all blittables and do Clone() here");
 
+        ShardedIncludeCompareExchangeValues includeCompareExchangeValues = null;
+        ShardedIncludeRevisions includeRevisions = null;
+
         foreach (var cmdResult in results.Span)
         {
             result.TotalResults += cmdResult.TotalResults;
@@ -99,9 +99,18 @@ public class ShardedQueryOperation : IShardedReadOperation<QueryResult, ShardedQ
                 HandleDocumentIncludes(cmdResult, ref result);
             }
 
-            if (_includeCompareExchangeValues != null && cmdResult.CompareExchangeValueIncludes != null)
+            if (cmdResult.RevisionIncludes is {Length: > 0})
             {
-                HandleCompareExchangeIncludes(cmdResult, ref result);
+                includeRevisions ??= new ShardedIncludeRevisions();
+
+                includeRevisions.AddResults(cmdResult.RevisionIncludes, _context);
+            }
+
+            if (cmdResult.CompareExchangeValueIncludes != null)
+            {
+                includeCompareExchangeValues ??= new ShardedIncludeCompareExchangeValues();
+
+                includeCompareExchangeValues.AddResults(cmdResult.CompareExchangeValueIncludes, _context);
             }
 
             if (_sortingComparer == null)
@@ -112,6 +121,12 @@ public class ShardedQueryOperation : IShardedReadOperation<QueryResult, ShardedQ
                 }
             }
         }
+
+        if (includeCompareExchangeValues != null)
+            result.AddCompareExchangeValueIncludes(includeCompareExchangeValues);
+
+        if (includeRevisions != null)
+            result.AddRevisionIncludes(includeRevisions);
 
         if (_sortingComparer != null)
         {
@@ -140,13 +155,6 @@ public class ShardedQueryOperation : IShardedReadOperation<QueryResult, ShardedQ
         }
 
         return result;
-    }
-
-    private void HandleCompareExchangeIncludes(QueryResult cmdResult, ref ShardedQueryResult result)
-    {
-        _includeCompareExchangeValues.AddResults(cmdResult.CompareExchangeValueIncludes.Clone(_context));
-
-        result.AddCompareExchangeValueIncludes(_includeCompareExchangeValues);
     }
 
     private void HandleDocumentIncludes(QueryResult cmdResult, ref ShardedQueryResult result)

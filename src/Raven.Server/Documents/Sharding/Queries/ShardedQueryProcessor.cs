@@ -1,12 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
-using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Results.Sharding;
@@ -29,9 +27,6 @@ public class ShardedQueryProcessor : AbstractShardedQueryProcessor<ShardedQueryC
     private readonly long? _existingResultEtag;
 
     //private readonly HashSet<int> _filteredShardIndexes;
-    private readonly List<IDisposable> _disposables = new();
-
-    private IncludeCompareExchangeValuesCommand _includeCompareExchangeValues;
 
     // User should also be able to define a query parameter ("Sharding.Context") which is an array
     // that contains the ids whose shards the query should be limited to. Advanced: Optimization if user
@@ -67,12 +62,6 @@ public class ShardedQueryProcessor : AbstractShardedQueryProcessor<ShardedQueryC
 
     public override async Task<ShardedQueryResult> ExecuteShardedOperations()
     {
-        if (_query.Metadata.HasCmpXchgIncludes)
-        {
-            _includeCompareExchangeValues = IncludeCompareExchangeValuesCommand.ExternalScope(_requestHandler.DatabaseContext, _query.Metadata.CompareExchangeValueIncludes);
-            _disposables.Add(_includeCompareExchangeValues);
-        }
-        
         ShardedDocumentsComparer documentsComparer = null;
 
         if (_query.Metadata.OrderBy?.Length > 0 && (_isMapReduceIndex || _isAutoMapReduceQuery) == false)
@@ -83,7 +72,7 @@ public class ShardedQueryProcessor : AbstractShardedQueryProcessor<ShardedQueryC
             documentsComparer = new ShardedDocumentsComparer(_query.Metadata, _isMapReduceIndex || _isAutoMapReduceQuery);
         }
 
-        var operation = new ShardedQueryOperation(_context, _requestHandler, _commands, _includeCompareExchangeValues, documentsComparer, _existingResultEtag?.ToString());
+        var operation = new ShardedQueryOperation(_context, _requestHandler, _commands, documentsComparer, _existingResultEtag?.ToString());
 
         var shardedReadResult = await _requestHandler.ShardExecutor.ExecuteParallelForShardsAsync(_commands.Keys.ToArray(), operation, _token);
 
@@ -205,14 +194,6 @@ public class ShardedQueryProcessor : AbstractShardedQueryProcessor<ShardedQueryC
                 var doc = _context.ReadObject(documentData, "modified-map-reduce-result");
                 results.Add(doc);
             }
-        }
-    }
-
-    public override void Dispose()
-    {
-        foreach (var toDispose in _disposables)
-        {
-            toDispose.Dispose();
         }
     }
 }

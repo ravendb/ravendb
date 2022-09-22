@@ -6,7 +6,6 @@ using Raven.Client.Exceptions.Sharding;
 using Raven.Server.Config;
 using Raven.Server.Documents.Handlers.Processors.Queries;
 using Raven.Server.Documents.Queries;
-using Raven.Server.Documents.Queries.Sharding;
 using Raven.Server.Documents.Sharding.Queries;
 using Raven.Server.NotificationCenter;
 using Raven.Server.ServerWide;
@@ -18,8 +17,6 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Queries;
 
 internal class ShardedQueriesHandlerProcessorForGet : AbstractQueriesHandlerProcessorForGet<ShardedQueriesHandler, TransactionOperationContext, TransactionOperationContext, BlittableJsonReaderObject>
 {
-    private ShardedQueryProcessor _queryProcessor;
-
     public ShardedQueriesHandlerProcessorForGet([NotNull] ShardedQueriesHandler requestHandler, HttpMethod method) : base(requestHandler, requestHandler.DatabaseContext.QueryMetadataCache, method)
     {
     }
@@ -68,19 +65,12 @@ internal class ShardedQueriesHandlerProcessorForGet : AbstractQueriesHandlerProc
 
         using (RequestHandler.DatabaseContext.QueryRunner.MarkQueryAsRunning(indexName, query, token))
         {
-            _queryProcessor = new ShardedQueryProcessor(queryContext, RequestHandler, query, existingResultEtag, metadataOnly, indexEntriesOnly: false,
+            var queryProcessor = new ShardedQueryProcessor(queryContext, RequestHandler, query, existingResultEtag, metadataOnly, indexEntriesOnly: false,
                 token: token.Token);
 
-            _queryProcessor.Initialize();
+            queryProcessor.Initialize();
 
-            return await _queryProcessor.ExecuteShardedOperations();
+            return await queryProcessor.ExecuteShardedOperations();
         }
-    }
-
-    public override void Dispose()
-    {
-        base.Dispose();
-
-        _queryProcessor?.Dispose();
     }
 }

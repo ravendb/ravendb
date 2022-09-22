@@ -59,9 +59,5 @@ namespace Raven.Server.Documents.Sharding.Queries
         {
             return new PostQueryStreamCommand(query, _debug, _ignoreLimit);
         }
-
-        public override void Dispose()
-        {
-        }
     }
 }
