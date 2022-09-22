@@ -354,7 +354,7 @@ namespace SlowTests.Tests.Linq
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Load_IncludeBuilder_IncludeRevisionByChangeVector(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -390,7 +390,7 @@ namespace SlowTests.Tests.Linq
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Load_IncludeBuilder_IncludeRevisionByChangeVectorAsync(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -427,7 +427,7 @@ namespace SlowTests.Tests.Linq
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Load_IncludeBuilder_IncludeRevisionByChangeVectors(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -513,7 +513,7 @@ namespace SlowTests.Tests.Linq
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Load_IncludeBuilder_IncludeRevisionByChangeVectorsAsync(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -597,7 +597,7 @@ namespace SlowTests.Tests.Linq
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Load_IncludeBuilder_IncludeRevisionsByProperty_ChangeVectorAndChangeVectors(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -706,7 +706,7 @@ namespace SlowTests.Tests.Linq
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Load_IncludeBuilder_IncludeRevisionsByProperty_ChangeVectorAndChangeVectorsAsync(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -809,7 +809,7 @@ namespace SlowTests.Tests.Linq
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Load_IncludeBuilder_IncludeRevisionByDateTime_VerifyUtc(Options options)
         {
             string changeVector;
@@ -864,7 +864,7 @@ namespace SlowTests.Tests.Linq
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Load_IncludeBuilder_IncludeRevisionByDateTime_VerifyUtcAsync(Options options)
         {
             string changeVector;
