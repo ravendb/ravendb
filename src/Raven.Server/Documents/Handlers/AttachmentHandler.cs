@@ -14,6 +14,7 @@ using Raven.Client;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Exceptions;
+using Raven.Client.Extensions;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -177,7 +178,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/debug/attachments/metadata", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, DisableOnCpuCreditsExhaustion = true)]
         public async Task GetDocumentsAttachmentMetadataWithCounts()
         {
-            var id = GetStringQueryString("id", false);
+            var id = GetStringQueryString("id", false); //TODO stav: bug
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
@@ -217,7 +218,35 @@ namespace Raven.Server.Documents.Handlers
                         throw new ArgumentException("The 'ChangeVector' field in the body request is mandatory");
                 }
 
-                var attachment = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(context, documentId, name, type, changeVector);
+                //get the document and extract its attachment metadata
+                var documentOrTombstone = Database.DocumentsStorage.GetDocumentOrTombstone(context, documentId.ToLower(), throwOnConflict: false);
+                if (documentOrTombstone.Document == null)
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                    return;
+                }
+                //TODO stav: what if there is also a tombstone
+
+                string hash = null, contentType = null;
+                var docAttachments = AttachmentsStorage.GetAttachmentDetailsFromDocument(documentOrTombstone.Document.Data);
+                foreach (var att in docAttachments)
+                {
+                    if (att.Name == name)
+                    {
+                        hash = att.Hash;
+                        contentType = att.ContentType;
+                    }
+                }
+
+                if (hash == null)
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                    return;
+                }
+
+                var attachment = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(context, documentId, name, AttachmentType.Document, null, hash, contentType,
+                    usePartialKey: false);
+                //var attachment = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(context, documentId, name, type, changeVector);
                 if (attachment == null)
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;

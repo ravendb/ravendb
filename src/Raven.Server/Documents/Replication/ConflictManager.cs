@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.Handlers;
@@ -260,6 +261,7 @@ namespace Raven.Server.Documents.Replication
                     nonPersistentFlags |= NonPersistentDocumentFlags.ResolveTimeSeriesConflict;
 
                 _database.DocumentsStorage.Put(context, id, null, incomingDoc, lastModifiedTicks, mergedChangeVector, nonPersistentFlags: nonPersistentFlags);
+                Console.WriteLine($"{_database.Name} Incoming doc resolved identical. original cv: {incomingChangeVector}. merged cv: {mergedChangeVector} \n{incomingDoc}");
                 return true;
             }
 

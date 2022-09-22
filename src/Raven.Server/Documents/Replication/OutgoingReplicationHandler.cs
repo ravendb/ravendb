@@ -945,6 +945,8 @@ namespace Raven.Server.Documents.Replication
         {
             _lastSentDocumentEtag = replicationBatchReply.LastEtagAccepted;
 
+            if(LastAcceptedChangeVector != replicationBatchReply.DatabaseChangeVector)
+                Console.WriteLine($"{this.FromToString} \n         UpdateDestinationChangeVectorHeartbeat from {LastAcceptedChangeVector} to {replicationBatchReply.DatabaseChangeVector}");
             LastAcceptedChangeVector = replicationBatchReply.DatabaseChangeVector;
             if (ReplicationType != ReplicationLatestEtagRequest.ReplicationType.External)
             {

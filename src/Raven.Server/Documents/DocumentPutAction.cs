@@ -15,6 +15,7 @@ using System.Linq;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.ServerWide;
+using Raven.Server.Documents.Replication;
 using Sparrow.Server;
 using static Raven.Server.Documents.DocumentsStorage;
 using Constants = Raven.Client.Constants;
@@ -238,6 +239,7 @@ namespace Raven.Server.Documents
                         }
                         
                         flags |= DocumentFlags.HasRevisions;
+                        Console.WriteLine($"{_documentDatabase.Name} Putting revision in storage {document} {changeVector}");
                         _documentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, document, flags, nonPersistentFlags, changeVector, modifiedTicks, configuration, collectionName);
                     }
                 }
@@ -266,6 +268,8 @@ namespace Raven.Server.Documents
                     }
                 }
 
+                Console.WriteLine($"{_documentDatabase.Name} Putting document {lowerId} with cv {changeVector} tx: {context.GetTransactionMarker()}");
+
                 if (collectionName.IsHiLo == false)
                 {
                     _documentsStorage.ExpirationStorage.Put(context, lowerId, document);
@@ -284,7 +288,7 @@ namespace Raven.Server.Documents
 
                 ValidateDocumentHash(id, document, documentDebugHash);
                 ValidateDocument(id, document, ref documentDebugHash);
-
+                
                 return new PutOperationResults
                 {
                     Etag = newEtag,
@@ -498,6 +502,7 @@ namespace Raven.Server.Documents
 #endif
                 }
             }
+            Console.WriteLine($"{_documentDatabase.Name} Doc recreated to {document}");
         }
 
 

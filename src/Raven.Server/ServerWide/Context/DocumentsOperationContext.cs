@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Utils;
@@ -21,6 +22,10 @@ namespace Raven.Server.ServerWide.Context
 
                 if (DbIdsToIgnore == null || DbIdsToIgnore.Count == 0 || string.IsNullOrEmpty(value))
                 {
+                    if(_lastDatabaseChangeVector != value)
+                        Console.WriteLine($"{_documentDatabase.Name} {_lastDatabaseChangeVector} -> {value}");
+                  //  Console.WriteLine($"{_documentDatabase.Name} {_lastDatabaseChangeVector} -> {value} \n{System.Environment.StackTrace}");
+
                     _lastDatabaseChangeVector = value;
                     return;
                 }

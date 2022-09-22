@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -298,7 +299,7 @@ namespace Raven.Server.Documents.Replication
             
             // Resolved document should generate a new change vector, since it was changed locally.
             // In a cluster this may cause a ping-pong replication which will be settled down by the fact that a conflict with identical content doesn't increase the local etag
-            var changeVector = _database.DocumentsStorage.CreateNextDatabaseChangeVector(context, resolved.ChangeVector);
+            // var changeVector = _database.DocumentsStorage.CreateNextDatabaseChangeVector(context, resolved.ChangeVector);
 
             if (resolved.Doc == null)
             {
@@ -307,12 +308,14 @@ namespace Raven.Server.Documents.Replication
                 // that can invalidate and override memory occupied by resolved.LowerId
                 using (Slice.From(context.Allocator, resolved.LowerId, out var lowerId))
                 {
+                    var changeVector = _database.DocumentsStorage.CreateNextDatabaseChangeVector(context, resolved.ChangeVector);
                     _database.DocumentsStorage.Delete(context, lowerId, resolved.Id, null, null, changeVector, new CollectionName(resolved.Collection),
                         documentFlags: resolved.Flags | DocumentFlags.Resolved | DocumentFlags.HasRevisions, nonPersistentFlags: NonPersistentDocumentFlags.FromResolver | NonPersistentDocumentFlags.Resolved);
                     return true;
                 }
             }
 
+            //resolved.ChangeVector = _database.DocumentsStorage.CreateNextDatabaseChangeVector(context, resolved.ChangeVector);
             if (ResolveAttachmentsConflicts(context, resolved, resolvedToLatest) == false)
                 return false;
 
@@ -338,7 +341,8 @@ namespace Raven.Server.Documents.Replication
                 // we always want to merge the counters and attachments, even if the user specified a script
                 var nonPersistentFlags = NonPersistentDocumentFlags.ResolveCountersConflict | NonPersistentDocumentFlags.ResolveAttachmentsConflict | NonPersistentDocumentFlags.ResolveTimeSeriesConflict |
                                          NonPersistentDocumentFlags.FromResolver | NonPersistentDocumentFlags.Resolved;
-               
+
+                var changeVector = _database.DocumentsStorage.CreateNextDatabaseChangeVector(context, resolved.ChangeVector);
                 _database.DocumentsStorage.Put(context, resolved.Id, null, clone, null, changeVector, null, resolved.Flags | DocumentFlags.Resolved, nonPersistentFlags: nonPersistentFlags);
             }
 
@@ -484,55 +488,51 @@ namespace Raven.Server.Documents.Replication
             using var scope = Slice.External(context.Allocator, resolved.LowerId, out var lowerIdSlice);
             var attachmentStorage = _database.DocumentsStorage.AttachmentsStorage;
             var storageAttachmentsDetails = attachmentStorage.GetAttachmentDetailsForDocument(context, resolved.LowerId);
-            var resolvedAttachmentsMetadata = AttachmentsStorage.GetAttachmentsFromDocumentMetadata(resolved.Doc).Select(attachment => JsonDeserializationClient.AttachmentName(attachment)).ToList();
-            
+            var resolvedAttachmentsMetadata = AttachmentsStorage.GetAttachmentDetailsFromDocument(resolved.Doc);
+            Console.WriteLine($"{_database.Name} ResolveAttachmentsConflicts. Resolved doc: \n\t {resolved.Doc} \n{_database.Name} Storage: {string.Join(",", storageAttachmentsDetails.Select(x => x.Hash))} ");
             //we only insert the resolved metadata if we resolve to latest. changing attachment metadata through script is not supported
             if (resolvedToLatest)
             {
                 //make sure all attachments metadata from doc exist in storage. if not, put them
                 foreach (var attachment in resolvedAttachmentsMetadata)
                 {
-                    if (storageAttachmentsDetails.Exists(x =>
-                            x.DocumentId.ToLower() == resolved.LowerId && x.Name == attachment.Name && x.Hash == attachment.Hash &&
-                            x.ContentType == attachment.ContentType) == false)
+                    Console.WriteLine($"{_database.Name} This doc's attachment md is missing from storage {attachment.Hash}");
+                    using var scope2 = attachmentStorage.GetAttachmentKeyForDocumentType(context, resolved.LowerId, attachment.Name,
+                        attachment.Hash,
+                        attachment.ContentType, out Slice key);
+                    using var _ = Slice.From(context.Allocator, attachment.Hash, out Slice hashSlice);
+
+                    if (attachmentStorage.AttachmentExists(context, hashSlice) == false)
                     {
-                        using var scope2 = attachmentStorage.GetAttachmentKeyForDocumentType(context, resolved.LowerId, attachment.Name,
-                            attachment.Hash,
-                            attachment.ContentType, out Slice key);
-                        using var _ = Slice.From(context.Allocator, attachment.Hash, out Slice hashSlice);
+                        var error =
+                            $"Trying to resolve attachment conflict for doc {resolved.Id} and attachment '{attachment.Name}' but its attachment stream {attachment.Hash} is missing from storage. Adding to unresolved conflicts.";
+                        
+                        _database.NotificationCenter.Add(AlertRaised.Create(
+                            _database.Name,
+                            "Attachment stream not found",
+                            error,
+                            AlertType.DeletionError,
+                            NotificationSeverity.Error));
+                        Console.WriteLine($"\n\n{_database.Name} Couldn't find attachment stream!!\n\n");
+                        if (_log.IsInfoEnabled)
+                            _log.Info(error);
+                        Debugger.Launch();
+                        return false; //TODO stav: should break here to revert to old behavior?
+                    }
+                    Console.WriteLine($"{_database.Name} This doc's attachment md exists in ReplicatedAttachmentTombstones {key}");
+                    //this attachment was deleted before but its document won the conflict, so now we need to put it in storage again
 
-                        if (attachmentStorage.AttachmentExists(context, hashSlice) == false)
-                        {
-                            var error =
-                                $"Trying to resolve attachment conflict for doc {resolved.Id} and attachment '{attachment.Name}' but its attachment stream {attachment.Hash} is missing from storage. Adding to unresolved conflicts.";
-                            
-                            _database.NotificationCenter.Add(AlertRaised.Create(
-                                _database.Name,
-                                "Attachment stream not found",
-                                error,
-                                AlertType.DeletionError,
-                                NotificationSeverity.Error));
-
-                            if (_log.IsInfoEnabled)
-                                _log.Info(error);
-
-                            return false;
-                        }
-
-                        //this attachment was deleted before but its document won the conflict, so now we need to put it in storage again
-
-                        using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.Name, out Slice _, out Slice attachmentName))
-                        using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.ContentType, out Slice _, out Slice contentType))
-                        {
-                            //put attachment metadata with new change vector
-                            attachmentStorage.PutDirect(context, key, attachmentName, contentType, hashSlice);
-                        }
+                    using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.Name, out Slice _, out Slice attachmentName))
+                    using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.ContentType, out Slice _, out Slice contentType))
+                    {
+                        //put attachment metadata with new change vector
+                        attachmentStorage.PutDirect(context, key, attachmentName, contentType, hashSlice);
                     }
                 }
             }
 
             storageAttachmentsDetails = attachmentStorage.GetAttachmentDetailsForDocument(context, resolved.LowerId); //refresh storage state
-            
+            Console.WriteLine($"{_database.Name} Updated storage status: {string.Join(",", storageAttachmentsDetails.Select(x => x.Hash))}");
             //goes over all name groups for existing attachments in storage for this doc id
             foreach (var group in storageAttachmentsDetails.GroupBy(x => x.Name))
             {
@@ -546,7 +546,7 @@ namespace Raven.Server.Documents.Replication
                 foreach (var attachment in group)
                 {
                     //if this attachment exists in the resolved document's metadata
-                    if (found == false && resolvedAttachmentsMetadata.Any(x => x.Name == attachment.Name && x.Hash == attachment.Hash && x.ContentType == attachment.ContentType))
+                    if (found == false && AttachmentDetailsExist(resolvedAttachmentsMetadata, attachment))
                     {
                         found = true;
                         continue;
@@ -555,6 +555,7 @@ namespace Raven.Server.Documents.Replication
                     if (resolvedToLatest)
                     {
                         // delete duplicates
+                        Console.WriteLine($"{_database.Name} Deleting duplicate {attachment.Hash}");
                         attachmentStorage.DeleteAttachment(context, resolved.LowerId, attachment.Name, expectedChangeVector: null, updateDocument: false,
                             attachment.Hash, attachment.ContentType, usePartialKey: false);
                     }
@@ -575,6 +576,20 @@ namespace Raven.Server.Documents.Replication
             }
 
             return true;
+        }
+
+        private bool AttachmentDetailsExist(List<AttachmentName> attachmentList, AttachmentName attachment)
+        {
+            if (attachmentList == null)
+                return false;
+            
+            foreach (var att in attachmentList)
+            {
+                if (att.Name == attachment.Name && att.Hash == attachment.Hash && att.ContentType == attachment.ContentType)
+                    return true;
+            }
+
+            return false;
         }
     }
 

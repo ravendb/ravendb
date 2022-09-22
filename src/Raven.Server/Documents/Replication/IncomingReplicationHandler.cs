@@ -566,7 +566,7 @@ namespace Raven.Server.Documents.Replication
 
                     using (stats.For(ReplicationOperation.Incoming.Storage))
                     {
-                        var replicationCommand = new MergedDocumentReplicationCommand(dataForReplicationCommand, lastEtag, _incomingPullReplicationParams.Mode);
+                        var replicationCommand = new MergedDocumentReplicationCommand(dataForReplicationCommand, lastEtag, _incomingPullReplicationParams.Mode, FromToString);
                         replicationCommand.BeforeSendingToTxMerger(_incomingPullReplicationParams?.PreventDeletionsMode, documentsContext);
                         task = _database.TxMerger.Enqueue(replicationCommand);
                         //We need a new context here
@@ -1063,15 +1063,17 @@ namespace Raven.Server.Documents.Replication
         {
             private readonly long _lastEtag;
             private readonly PullReplicationMode _mode;
+            private readonly string _debug;
             private readonly DataForReplicationCommand _replicationInfo;
             private readonly bool _isHub;
             private readonly bool _isSink;
 
-            public MergedDocumentReplicationCommand(DataForReplicationCommand replicationInfo, long lastEtag, PullReplicationMode mode)
+            public MergedDocumentReplicationCommand(DataForReplicationCommand replicationInfo, long lastEtag, PullReplicationMode mode, string debug = null)
             {
                 _replicationInfo = replicationInfo;
                 _lastEtag = lastEtag;
                 _mode = mode;
+                _debug = debug;
                 _isHub = mode == PullReplicationMode.SinkToHub;
                 _isSink = mode == PullReplicationMode.HubToSink;
             }
@@ -1093,11 +1095,11 @@ namespace Raven.Server.Documents.Replication
                     }
                 }
             }
-
+            
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
                 var toDispose = new List<IDisposable>();
-
+                string conflictOnAttaTomb = null;
                 try
                 {
                     IsIncomingReplication = true;
@@ -1110,7 +1112,12 @@ namespace Raven.Server.Documents.Replication
                     var handledAttachmentStreams = new HashSet<Slice>(SliceComparer.Instance);
                     context.LastDatabaseChangeVector ??= DocumentsStorage.GetDatabaseChangeVector(context);
                     _replicationInfo.AttachmentStreamsToDeleteAtTheEndOfBatch.Clear();
+                    var guid = Guid.NewGuid().ToString();
+                    Console.WriteLine($"{context.DocumentDatabase.Name} Start Batch {guid}");
+                    var lastVector = string.Empty;
 
+                    Console.WriteLine($"{database.Name} incoming batch: \n {string.Join("\n", _replicationInfo.ReplicatedItems.Select(x => x.Type +" cv:"+x.ChangeVector +" tx: "+x.TransactionMarker))}");
+                    
                     foreach (var item in _replicationInfo.ReplicatedItems)
                     {
                         if (lastTransactionMarker != item.TransactionMarker)
@@ -1136,11 +1143,11 @@ namespace Raven.Server.Documents.Replication
                         TimeSeriesStorage tss;
                         LazyStringValue docId;
                         LazyStringValue name;
-
+                        
                         switch (item)
                         {
                             case AttachmentReplicationItem attachment:
-
+                                
                                 var localAttachment = database.DocumentsStorage.AttachmentsStorage.GetAttachmentByKey(context, attachment.Key);
                                 if (_replicationInfo.ReplicatedAttachmentStreams.TryGetValue(attachment.Base64Hash, out var attachmentStream))
                                 {
@@ -1157,24 +1164,41 @@ namespace Raven.Server.Documents.Replication
                                 toDispose.Add(DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.Name, out _, out Slice attachmentName));
                                 toDispose.Add(DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.ContentType, out _, out Slice contentType));
 
-                                if (localAttachment == null)
-                                {
-                                    database.DocumentsStorage.AttachmentsStorage.PutDirect(context, attachment.Key, attachmentName,
-                                        contentType, attachment.Base64Hash, attachment.ChangeVector);
-                                    break;
-                                }
+                                Console.WriteLine($"{database.Name} <-- attachment arrived: {attachment.Key}");
 
-                                var mergedChangedVector = attachment.ChangeVector;
-                                var status = ChangeVectorUtils.GetConflictStatus(attachment.ChangeVector, localAttachment.ChangeVector);
+                                
+                                //if (localAttachment == null)
+                                //{
+                                //    database.DocumentsStorage.AttachmentsStorage.PutDirect(context, attachment.Key, attachmentName,
+                                //        contentType, attachment.Base64Hash, attachment.ChangeVector);
+                                //    break;
+                                //}
+
+                                //var mergedChangedVector = attachment.ChangeVector;
+                                //var status = ChangeVectorUtils.GetConflictStatus(attachment.ChangeVector, localAttachment.ChangeVector);
+                                var (status, mergedChangeVector) = database.DocumentsStorage.AttachmentsStorage.GetConflictStatusForAttachment(context, attachment.Key, attachment.ChangeVector);
+
                                 switch (status)
                                 {
                                     case ConflictStatus.Update:
                                         database.DocumentsStorage.AttachmentsStorage.PutDirect(context, attachment.Key, attachmentName,
-                                            contentType, attachment.Base64Hash, mergedChangedVector);
+                                            contentType, attachment.Base64Hash, mergedChangeVector);
                                         break;
                                     case ConflictStatus.Conflict:
-                                        mergedChangedVector = ChangeVectorUtils.MergeVectors(attachment.ChangeVector, localAttachment.ChangeVector);
-                                        goto case ConflictStatus.Update;
+                                        //if (localAttachment != null)
+                                        {
+                                            //conflict between local and incoming attachment
+                                            Console.WriteLine($"{database.Name} Conflict between 2 attachments. merging cv's and doing put for incoming");
+                                            goto case ConflictStatus.Update;
+                                        }
+                                        //else
+                                        {
+                                            //conflict between local tombstone and incoming attachment -> update the attachment to merged cv
+                                            //database.DocumentsStorage.AttachmentsStorage.PutDirect(context, attachment.Key, attachmentName, contentType,
+                                            //    attachment.Base64Hash, mergedChangeVector);
+                                        }
+                                        conflictOnAttaTomb = attachment.Key.ToString();
+                                        break;
                                     case ConflictStatus.AlreadyMerged:
                                         break;
                                     default:
@@ -1184,15 +1208,47 @@ namespace Raven.Server.Documents.Replication
                                 break;
 
                             case AttachmentTombstoneReplicationItem attachmentTombstone:
-                                var tombstone = AttachmentsStorage.GetAttachmentTombstoneByKey(context, attachmentTombstone.Key);
-                                if (tombstone != null && ChangeVectorUtils.GetConflictStatus(item.ChangeVector, tombstone.ChangeVector) == ConflictStatus.AlreadyMerged)
-                                    continue;
-
-                                var hashSlice = database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, attachmentTombstone.Key, isPartialKey: false,
-                                    "$fromReplication", expectedChangeVector: null, rcvdChangeVector, attachmentTombstone.LastModifiedTicks, deleteAttachmentStream: false);
                                 
-                                if(hashSlice.HasValue)
-                                    _replicationInfo.AttachmentStreamsToDeleteAtTheEndOfBatch.Add(hashSlice);
+                                var tombstone = AttachmentsStorage.GetAttachmentTombstoneByKey(context, attachmentTombstone.Key);
+                                //if (tombstone != null && ChangeVectorUtils.GetConflictStatus(item.ChangeVector, tombstone.ChangeVector) == ConflictStatus.AlreadyMerged)
+                                //    continue;
+
+                                //var mergedChangedVector2 = attachmentTombstone.ChangeVector;
+                                var (status2, mergedChangeVector2) = database.DocumentsStorage.AttachmentsStorage.GetConflictStatusForAttachment(context, attachmentTombstone.Key, attachmentTombstone.ChangeVector);
+                                Console.WriteLine($"{database.Name} <---- attachment tombstone {attachmentTombstone.Key}. Status: {status2}");
+                                switch (status2)
+                                {
+                                    case ConflictStatus.Update:
+                                        var hashSlice = database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, attachmentTombstone.Key, isPartialKey: false,
+                                                "$fromReplication", expectedChangeVector: null, mergedChangeVector2, attachmentTombstone.LastModifiedTicks, deleteAttachmentStream: false);
+                                        if (hashSlice.HasValue)
+                                            _replicationInfo.AttachmentStreamsToDeleteAtTheEndOfBatch.Add(hashSlice);
+                                        break;
+                                    case ConflictStatus.Conflict:
+                                        //if (tombstone != null)
+                                        {
+                                            //mergedChangeVector2 = ChangeVectorUtils.MergeVectors(attachmentTombstone.ChangeVector, tombstone.ChangeVector);
+                                            goto case ConflictStatus.Update;
+                                        }
+                                        //else
+                                        {
+                                            //conflict between local attachment and the incoming tombstone
+                                            //update the attachment cv to a merge between them and keep it
+                                            //database.DocumentsStorage.AttachmentsStorage.UpdateAttachmentChangeVectorDirect(context, attachmentTombstone.Key, mergedChangeVector2);
+                                        }
+
+                                        conflictOnAttaTomb = attachmentTombstone.Key.ToString();
+                                        break;
+                                    case ConflictStatus.AlreadyMerged:
+                                        break;
+                                    default:
+                                        throw new ArgumentOutOfRangeException();
+                                }
+
+                                //var hashSlice = database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, attachmentTombstone.Key, isPartialKey: false,
+                                //    "$fromReplication", expectedChangeVector: null, rcvdChangeVector, attachmentTombstone.LastModifiedTicks, deleteAttachmentStream: false);
+                                //if (hashSlice.HasValue)
+                                //    _replicationInfo.AttachmentStreamsToDeleteAtTheEndOfBatch.Add(hashSlice);
 
                                 break;
 
@@ -1280,6 +1336,7 @@ namespace Raven.Server.Documents.Replication
                                     {
                                         if (_replicationInfo.SupportedFeatures.Replication.MissingAttachments)
                                         {
+                                            Console.WriteLine($"{database.Name} throwing missing attachment ex for: \n \t {doc.Data}");
                                             throw;
                                         }
 
@@ -1292,7 +1349,7 @@ namespace Raven.Server.Documents.Replication
                                             NotificationSeverity.Warning));
                                     }
                                 }
-
+                                Console.WriteLine($"{database.Name} <-- doc arrived: {doc.Data} cv: {doc.ChangeVector}");
                                 var nonPersistentFlags = NonPersistentDocumentFlags.FromReplication;
                                 if (doc.Flags.Contain(DocumentFlags.Revision))
                                 {
@@ -1382,6 +1439,7 @@ namespace Raven.Server.Documents.Replication
                                             // in two _different clusters_, so we will treat it as a "normal" conflict
 
                                             IsIncomingReplication = false;
+                                            Console.WriteLine($"{database.Name} <--- Document arrived at conflict {document} \n {database.Name} atts in storage: {String.Join(",",_replicationInfo.DocumentDatabase.DocumentsStorage.AttachmentsStorage.GetAttachmentDetailsForDocument(context, "users/1").Select(x => x.Hash).ToList())}");
                                             _replicationInfo.ConflictManager.HandleConflictForDocument(context, doc.Id, doc.Collection, doc.LastModifiedTicks,
                                                 document, rcvdChangeVector, doc.Flags);
                                             continue;
@@ -1413,6 +1471,9 @@ namespace Raven.Server.Documents.Replication
                         }
                     }
 
+
+                    Console.WriteLine($"{context.DocumentDatabase.Name} End Batch {guid}");
+
                     if (docCountersToRecreate != null)
                     {
                         foreach (var id in docCountersToRecreate)
@@ -1421,6 +1482,7 @@ namespace Raven.Server.Documents.Replication
                         }
                     }
 
+                    Console.WriteLine($"{database.Name} Deleting at end of batch");
                     foreach (var hashSlice in _replicationInfo.AttachmentStreamsToDeleteAtTheEndOfBatch)
                     {
                         database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentStream(context, hashSlice, expectedCount: 0);
@@ -1440,6 +1502,11 @@ namespace Raven.Server.Documents.Replication
                         context.LastReplicationEtagFrom = new Dictionary<string, long>();
                     context.LastReplicationEtagFrom[_replicationInfo.SourceDatabaseId] = _lastEtag;
                     return operationsCount;
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine($"{e}");
+                    throw;
                 }
                 finally
                 {
@@ -1566,6 +1633,7 @@ namespace Raven.Server.Documents.Replication
                     {
                         if (_replicationInfo.ReplicatedAttachmentStreams != null && _replicationInfo.ReplicatedAttachmentStreams.TryGetValue(hashSlice, out _))
                         {
+                            Console.WriteLine($"{_replicationInfo.DocumentDatabase.Name} Attachment exists but not in the right order of items");
                             // attachment exists but not in the correct order of items (RavenDB-13341)
                             continue;
                         }

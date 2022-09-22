@@ -425,6 +425,7 @@ namespace Raven.Server.Documents.Replication
                 {
                     if (Interlocked.CompareExchange(ref next, nextReplication, state.CurrentNext) == state.CurrentNext)
                     {
+                        Console.WriteLine($"ReplicationDocumentSender: {_parent.FromToString} state.Delay.Ticks > 0");
                         return false;
                     }
                 }
@@ -443,6 +444,8 @@ namespace Raven.Server.Documents.Replication
             if (state.MaxSizeToSend.HasValue && totalSize >= state.MaxSizeToSend.Value.GetValue(SizeUnit.Bytes) ||
                 state.BatchSize.HasValue && state.NumberOfItemsSent >= state.BatchSize.Value)
             {
+                Console.WriteLine($"ReplicationDocumentSender: {_parent.FromToString} state.MaxSizeToSend.HasValue");
+
                 return false;
             }
 
@@ -451,6 +454,8 @@ namespace Raven.Server.Documents.Replication
                 // ReSharper disable once PossibleLossOfFraction
                 if ((_parent._parent.MinimalHeartbeatInterval / 2) < _stats.Storage.Duration.TotalMilliseconds)
                 {
+                    Console.WriteLine($"ReplicationDocumentSender: {_parent.FromToString} (_stats.Storage.CurrentStats.InputCount");
+
                     return false;
                 }
             }
@@ -585,6 +590,8 @@ namespace Raven.Server.Documents.Replication
             if (ShouldSkip(item, stats, skippedReplicationItemsInfo))
                 return false;
 
+            Console.WriteLine($"ReplicationDocumentSender: {_parent.FromToString} Adding {item.Type} with change vector {item.ChangeVector} tx: {item.TransactionMarker} ({_parent.LastAcceptedChangeVector})");
+
             if (skippedReplicationItemsInfo.SkippedItems > 0)
             {
                 if (_log.IsInfoEnabled)
@@ -659,6 +666,7 @@ namespace Raven.Server.Documents.Replication
             // destination already has it
             if (_parent._database.DocumentsStorage.GetConflictStatus(item.ChangeVector, _parent.LastAcceptedChangeVector) == ConflictStatus.AlreadyMerged)
             {
+                Console.WriteLine($"ReplicationDocumentSender: {_parent.FromToString} Skipping {item.Type} with change vector {item.ChangeVector} tx: {item.TransactionMarker} ({_parent.LastAcceptedChangeVector})");
                 stats.RecordChangeVectorSkip();
                 skippedReplicationItemsInfo.Update(item);
                 return true;

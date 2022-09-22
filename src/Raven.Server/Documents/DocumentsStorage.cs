@@ -498,8 +498,8 @@ namespace Raven.Server.Documents
 
         public string CreateNextDatabaseChangeVector(DocumentsOperationContext context, string changeVector)
         {
-            var databaseChangeVector = context.LastDatabaseChangeVector ?? GetDatabaseChangeVector(context);
-            context.SkipChangeVectorValidation = TryRemoveUnusedIds(ref databaseChangeVector);
+            var databaseChangeVector = GetNewChangeVector(context).ChangeVector;//context.LastDatabaseChangeVector ?? GetDatabaseChangeVector(context);
+           // context.SkipChangeVectorValidation = TryRemoveUnusedIds(ref databaseChangeVector);
             changeVector = ChangeVectorUtils.MergeVectors(databaseChangeVector, changeVector);
             return ChangeVectorUtils.TryUpdateChangeVector(DocumentDatabase, changeVector).ChangeVector;
         }
