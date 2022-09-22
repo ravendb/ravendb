@@ -537,6 +537,25 @@ namespace Voron.Data.Sets
             _pos++;
         }
 
+        private void FindSmallestValue()
+        {
+            _pos = -1;
+            _len = 0;
+            PushPage(_state.RootPage);
+
+            ref var state = ref _stk[_pos];
+            while (state.IsLeaf == false)
+            {
+                var branch = new SetBranchPage(state.Page);
+
+                // Until we hit a leaf, just take the left-most key and move on. 
+                (long _, long nextPage) = branch.GetByIndex(0);
+                PushPage(nextPage);
+
+                state = ref _stk[_pos];
+            }
+        }
+
         private void FindPageFor(long value)
         {
             _pos = -1;
@@ -568,7 +587,7 @@ namespace Voron.Data.Sets
             if (_pos + 1 >= _stk.Length) //  should never actually happen
                 Array.Resize(ref _stk, _stk.Length * 2); // but let's be safe
             Page page = _llt.GetPage(nextPage);
-            _stk[++_pos] = new SetCursorState { Page = page, };
+            _stk[++_pos] = new SetCursorState( page );
             _len++;
         }
 
@@ -588,7 +607,11 @@ namespace Voron.Data.Sets
             {
                 _parent = parent;
                 Current = default;
-                _parent.FindPageFor(long.MinValue);
+
+                // We need to find the long.MinValue therefore the fastest way is to always
+                // take the left-most pointer on any branch node.
+                _parent.FindSmallestValue();
+
                 ref var state = ref _parent._stk[_parent._pos];
                 var leafPage = new SetLeafPage(state.Page);
                 _it = leafPage.GetIterator(_parent._llt);
