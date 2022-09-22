@@ -46,11 +46,12 @@ namespace Corax.Queries
         {
             while (_iterator.MoveNext(out Span<byte> termSlice, out var _))
             {
-                Debug.Assert(termSlice.Length > 1);
-                
                 int termSize = termSlice.Length;
-                if (termSlice[^1] == 0)
-                    termSize--;
+                if (termSlice.Length > 1)
+                {
+                    if (termSlice[^1] == 0)
+                        termSize--;
+                }
 
                 term = termSlice.Slice(0, termSize);
                 return true;
