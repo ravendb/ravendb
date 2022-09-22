@@ -1,11 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Session.Loaders;
 using Raven.Client.Exceptions.Sharding;
 using Raven.Client.Http;
 using Raven.Server.Documents.Queries;
@@ -19,8 +19,7 @@ using Voron;
 
 namespace Raven.Server.Documents.Sharding.Queries;
 
-public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombinedResult> : IDisposable 
-    where TCommand : RavenCommand<TResult>
+public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombinedResult> where TCommand : RavenCommand<TResult>
 {
     const string LimitToken = "__raven_limit";
 
@@ -62,7 +61,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
 
         Dictionary<int, BlittableJsonReaderObject> queryTemplates = null;
 
-        if (_query.Metadata.IsCollectionQuery)
+        if (_query.Metadata.IsCollectionQuery && _query.Metadata.DeclaredFunctions is null or { Count: 0})
         {
             // * For collection queries that specify ids, we can turn that into a set of loads that 
             //   will hit the known servers
@@ -210,13 +209,28 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
         var documentQuery = new DocumentQuery<dynamic>(null, null, _query.Metadata.CollectionName, false);
         documentQuery.WhereIn(Constants.Documents.Indexing.Fields.DocumentIdFieldName, new List<object>());
 
+        IncludeBuilder includeBuilder = null;
+
         if (_query.Metadata.Includes is { Length: > 0 })
         {
-            foreach (var include in _query.Metadata.Includes)
+            includeBuilder = new IncludeBuilder
             {
-                documentQuery.Include(include);
-            }
+                DocumentsToInclude = new HashSet<string>(_query.Metadata.Includes)
+            };
         }
+
+        if (_query.Metadata.RevisionIncludes != null)
+        {
+            // TODO arek - write test for that
+
+            includeBuilder ??= new IncludeBuilder();
+
+            includeBuilder.RevisionsToIncludeByChangeVector = _query.Metadata.RevisionIncludes.RevisionsChangeVectors;
+            includeBuilder.RevisionsToIncludeByDateTime = _query.Metadata.RevisionIncludes.RevisionsBeforeDateTime;
+        }
+
+        if (includeBuilder != null)
+            documentQuery.Include(includeBuilder);
 
         Dictionary<int, BlittableJsonReaderObject> queryTemplates = new();
 
@@ -248,6 +262,4 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
 
         return queryTemplates;
     }
-
-    public abstract void Dispose();
 }

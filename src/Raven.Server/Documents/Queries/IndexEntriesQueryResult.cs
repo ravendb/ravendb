@@ -56,9 +56,9 @@ namespace Raven.Server.Documents.Queries
             throw new NotSupportedException();
         }
 
-        public override void AddCompareExchangeValueIncludes(IncludeCompareExchangeValuesCommand command)
+        public override void AddCompareExchangeValueIncludes(IIncludeCompareExchangeValues values)
         {
-            if (command.Results == null)
+            if (values.Results == null)
                 return;
 
             throw new NotSupportedException();
@@ -79,9 +79,9 @@ namespace Raven.Server.Documents.Queries
             throw new NotSupportedException();
         }
 
-        public override void AddRevisionIncludes(IncludeRevisionsCommand command)
+        public override void AddRevisionIncludes(IIncludeRevisions revisions)
         {
-            if (command.RevisionsChangeVectorResults is null)
+            if (revisions.RevisionsChangeVectorResults is null)
                 return;
             
             throw new NotSupportedException();

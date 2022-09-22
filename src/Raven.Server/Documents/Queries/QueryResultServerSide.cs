@@ -99,11 +99,11 @@ namespace Raven.Server.Documents.Queries
 
         public abstract Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> GetTimeSeriesIncludes();
 
-        public abstract void AddCompareExchangeValueIncludes(IncludeCompareExchangeValuesCommand command);
+        public abstract void AddCompareExchangeValueIncludes(IIncludeCompareExchangeValues values);
 
         public abstract Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> GetCompareExchangeValueIncludes();
 
-        public abstract void AddRevisionIncludes(IncludeRevisionsCommand command);
+        public abstract void AddRevisionIncludes(IIncludeRevisions revisions);
        
         public abstract Dictionary<string, Document> GetRevisionIncludesByChangeVector();
 

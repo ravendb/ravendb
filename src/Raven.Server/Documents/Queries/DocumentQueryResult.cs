@@ -50,18 +50,17 @@ namespace Raven.Server.Documents.Queries
 
         public override Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> GetTimeSeriesIncludes() => _timeSeriesIncludes;
 
-        public override void AddCompareExchangeValueIncludes(IncludeCompareExchangeValuesCommand command)
+        public override void AddCompareExchangeValueIncludes(IIncludeCompareExchangeValues values)
         {
-            _compareExchangeValueIncludes = command.Results;
+            _compareExchangeValueIncludes = values.Results;
         }
 
         public override Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> GetCompareExchangeValueIncludes() => _compareExchangeValueIncludes;
         
-        public override void AddRevisionIncludes(IncludeRevisionsCommand command)
+        public override void AddRevisionIncludes(IIncludeRevisions revisions)
         {
-            _revisionsChangeVectorResults = command.RevisionsChangeVectorResults;
-            _revisionsDateTimeBeforeResults = command.IdByRevisionsByDateTimeResults;
-            
+            _revisionsChangeVectorResults = revisions.RevisionsChangeVectorResults;
+            _revisionsDateTimeBeforeResults = revisions.IdByRevisionsByDateTimeResults;
         }
 
         public override Dictionary<string, Document>  GetRevisionIncludesByChangeVector() => _revisionsChangeVectorResults;

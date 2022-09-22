@@ -12,7 +12,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Includes
 {
-    public class IncludeCompareExchangeValuesCommand : IDisposable
+    public class IncludeCompareExchangeValuesCommand : IIncludeCompareExchangeValues, IDisposable
     {
         private readonly ServerStore _serverStore;
         private readonly string _databaseName;
@@ -25,19 +25,14 @@ namespace Raven.Server.Documents.Includes
         private IDisposable _releaseContext;
         private ClusterOperationContext _serverContext;
         private readonly bool _throwWhenServerContextIsAllocated;
-        public Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> Results;
+        public Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> Results { get; set; }
 
         private IncludeCompareExchangeValuesCommand([NotNull] DocumentDatabase database, ClusterOperationContext serverContext, bool throwWhenServerContextIsAllocated, string[] compareExchangeValues)
             : this(database.Name, database.ServerStore, database.IdentityPartsSeparator, serverContext, throwWhenServerContextIsAllocated, compareExchangeValues)
         {
         }
 
-        private IncludeCompareExchangeValuesCommand([NotNull] ShardedDatabaseContext database, ClusterOperationContext serverContext, bool throwWhenServerContextIsAllocated, string[] compareExchangeValues)
-            : this(database.DatabaseName, database.ServerStore, database.IdentityPartsSeparator, serverContext, throwWhenServerContextIsAllocated, compareExchangeValues)
-        {
-        }
-
-        private IncludeCompareExchangeValuesCommand(string databaseName, ServerStore serverStore, char identityPartsSeparator, ClusterOperationContext serverContext, bool throwWhenServerContextIsAllocated, string[] compareExchangeValues)
+        protected IncludeCompareExchangeValuesCommand(string databaseName, ServerStore serverStore, char identityPartsSeparator, ClusterOperationContext serverContext, bool throwWhenServerContextIsAllocated, string[] compareExchangeValues)
         {
             _databaseName = databaseName;
             _identityPartsSeparator = identityPartsSeparator;
@@ -53,38 +48,9 @@ namespace Raven.Server.Documents.Includes
             return new IncludeCompareExchangeValuesCommand(context.Documents.DocumentDatabase, context.Server, throwWhenServerContextIsAllocated: true, compareExchangeValues);
         }
 
-        public static IncludeCompareExchangeValuesCommand ExternalScope(ShardedDatabaseContext databaseContext, string[] compareExchangeValues)
-        {
-            return new IncludeCompareExchangeValuesCommand(databaseContext, serverContext: null, throwWhenServerContextIsAllocated: true, compareExchangeValues);
-        }
-
         public static IncludeCompareExchangeValuesCommand InternalScope(DocumentDatabase database, string[] compareExchangeValues)
         {
             return new IncludeCompareExchangeValuesCommand(database, serverContext: null, throwWhenServerContextIsAllocated: false, compareExchangeValues);
-        }
-
-        internal void AddResults(BlittableJsonReaderObject results, JsonOperationContext context = null)
-        {
-            if (results == null)
-                return;
-
-            Results ??= new Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>>(StringComparer.OrdinalIgnoreCase);
-
-            var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
-            for (var i = 0; i < results.Count; i++)
-            {
-                results.GetPropertyByIndex(i, ref propertyDetails);
-
-                var value = CompareExchangeValue<BlittableJsonReaderObject>.CreateFrom(propertyDetails.Value as BlittableJsonReaderObject);
-
-                if (Results.TryGetValue(value.Key, out var existing) && existing.Index > value.Index)
-                    continue; // always pick newest
-
-                if (context != null && value.Value != null)
-                    value.Value = value.Value.Clone(context);
-
-                Results[value.Key] = value;
-            }
         }
 
         internal void AddRange(HashSet<string> keys)

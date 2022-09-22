@@ -7,6 +7,7 @@ using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Server.Documents.Includes;
+using Raven.Server.Documents.Includes.Sharding;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -53,9 +54,7 @@ namespace Raven.Server.Documents.Sharding.Operations
             var includesMap = new Dictionary<string, BlittableJsonReaderObject>(StringComparer.OrdinalIgnoreCase);
             var missingIncludes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            using var includeCompareExchangeValues = _compareExchangeValueIncludes != null 
-                ? IncludeCompareExchangeValuesCommand.ExternalScope(_databaseContext, _compareExchangeValueIncludes) 
-                : null;
+            ShardedIncludeCompareExchangeValues includeCompareExchangeValues = null;
 
             foreach (var cmd in span)
             {
@@ -105,7 +104,11 @@ namespace Raven.Server.Documents.Sharding.Operations
                 }
 
                 if (cmdCompareExchangeValueIncludes != null)
+                {
+                    includeCompareExchangeValues ??= new ShardedIncludeCompareExchangeValues();
+
                     includeCompareExchangeValues.AddResults(cmdCompareExchangeValueIncludes, _context);
+                }
             }
 
             foreach (var kvp in includesMap) // remove the items we already have
