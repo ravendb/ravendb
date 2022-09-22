@@ -67,7 +67,8 @@ internal class RavenMoreLikeThis : MoreLikeThisBase
 
             foreach (var fieldName in _fieldNames)
             {
-                var freq = indexSearcher.TermAmount(fieldName, word);
+                var fieldId = QueryBuilderHelper.GetFieldId(fieldName, _builderParameters.Index, _builderParameters.IndexFieldsMapping, _builderParameters.FieldsToFetch);
+                var freq = indexSearcher.TermAmount(fieldName, word, fieldId);
                 topField = freq > docFreq ? fieldName : topField;
                 docFreq = freq > docFreq ? freq : docFreq;
             }
