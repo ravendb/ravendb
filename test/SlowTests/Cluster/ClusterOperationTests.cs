@@ -311,7 +311,7 @@ namespace SlowTests.Cluster
                         await session.SaveChangesAsync(cts.Token);
                     }
 
-                    Assert.True(await WaitForChangeVectorInClusterAsync(databaseServers, db, 30_000));
+                    Assert.True(await WaitForChangeVectorInClusterAsync(databaseServers, db, 30_000), "WaitForChangeVectorInClusterAsync");
 
                     value = await WaitForValueAsync(() => list.Count, 2);
                     Assert.Equal(2, value);
