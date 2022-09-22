@@ -507,16 +507,16 @@ public static class QueryBuilderHelper
         throw new InvalidQueryException("Expected field, got: " + field, query.QueryText, parameters);
     }
 
-    internal static int GetFieldIdForOrderBy(string fieldName, Index index, IndexFieldsMapping indexMapping = null, FieldsToFetch queryMapping = null,
+    internal static int GetFieldIdForOrderBy(string fieldName, Index index, bool hasDynamics, Lazy<List<string>> dynamicFields, IndexFieldsMapping indexMapping = null, FieldsToFetch queryMapping = null,
         bool isForQuery = true)
     {
         if (fieldName is "score()")
             return ScoreId;
 
-        return GetFieldId(fieldName, index, indexMapping, queryMapping, isForQuery);
+        return GetFieldId(fieldName, index, indexMapping, queryMapping, hasDynamics, dynamicFields, isForQuery);
     }
 
-    internal static int GetFieldId(string fieldName, Index index, IndexFieldsMapping indexMapping, FieldsToFetch queryMapping, bool isForQuery = true,
+    internal static int GetFieldId(string fieldName, Index index, IndexFieldsMapping indexMapping, FieldsToFetch queryMapping, bool hasDynamics, Lazy<List<string>> dynamicFields, bool isForQuery = true,
         bool exact = false)
     {
         if (exact)
@@ -538,6 +538,9 @@ public static class QueryBuilderHelper
         if (queryMapping?.IndexFields.TryGetValue(fieldName, out indexField) is null or false &&
             indexMapping?.TryGetByFieldName(fieldName, out binding) is null or false)
         {
+            if (hasDynamics && dynamicFields.Value.Contains(fieldName))
+                return Corax.Constants.IndexWriter.DynamicField;
+            
             ThrowNotFoundInIndex();
         }
 

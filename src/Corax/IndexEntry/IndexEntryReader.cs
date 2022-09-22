@@ -529,6 +529,14 @@ public ref struct IndexEntryReader
         return false;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public FieldReader GetReaderFor(ReadOnlySpan<byte> fieldName, int fieldId)
+    {
+        return fieldId == Constants.IndexWriter.DynamicField 
+            ? GetReaderFor(fieldName) 
+            : GetReaderFor(fieldId);
+    }
+    
     public FieldReader GetReaderFor(ReadOnlySpan<byte> name)
     {
         if (ReadDynamicValueOffset(name, out var intOffset, out bool isTyped))

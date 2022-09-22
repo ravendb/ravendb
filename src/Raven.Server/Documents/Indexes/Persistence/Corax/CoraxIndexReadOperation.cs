@@ -808,11 +808,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
         public override IEnumerable<string> DynamicEntriesFields(HashSet<string> staticFields)
         {
-            foreach (var field in _index.Definition.IndexFields.Values)
+            var fieldsInIndex = _indexSearcher.GetFields();
+            foreach (var field in fieldsInIndex)
             {
-                if (staticFields.Contains(field.Name))
+                if (staticFields.Contains(field))
                     continue;
-                yield return field.Name;
+                yield return field;
             }
         }
 

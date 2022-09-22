@@ -44,7 +44,9 @@ internal static class CoraxQueryBuilder
         public readonly List<string> BuildSteps;
         public readonly MemoizationMatchProviderRef<AllEntriesMatch> AllEntries;
         public readonly QueryMetadata Metadata;
-    
+        public readonly bool HasDynamics;
+        public readonly Lazy<List<string>> DynamicFields;
+        
         internal Parameters(IndexSearcher searcher, TransactionOperationContext serverContext, DocumentsOperationContext documentsContext, IndexQueryServerSide query, Index index, BlittableJsonReaderObject queryParameters, QueryBuilderFactories factories, IndexFieldsMapping indexFieldsMapping, FieldsToFetch fieldsToFetch, Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms, int take, List<string> buildSteps = null)
         {
             IndexSearcher = searcher;
@@ -61,6 +63,10 @@ internal static class CoraxQueryBuilder
             BuildSteps = buildSteps;
             AllEntries = new MemoizationMatchProviderRef<AllEntriesMatch>(IndexSearcher.Memoize(IndexSearcher.AllEntries()));
             Metadata = query.Metadata;
+            HasDynamics = index.Definition.HasDynamicFields;
+            DynamicFields = HasDynamics 
+                ? new Lazy<List<string>>(() => IndexSearcher.GetFields())
+                : null;
         }
     }
 
@@ -240,7 +246,7 @@ internal static class CoraxQueryBuilder
 
                         var (value, valueType) = QueryBuilderHelper.GetValue(metadata.Query, metadata, queryParameters, right, true);
 
-                        var fieldId = QueryBuilderHelper.GetFieldId(fieldName, index, indexFieldsMapping, fieldsToFetch, exact: exact);
+                        var fieldId = QueryBuilderHelper.GetFieldId(fieldName, index, indexFieldsMapping, fieldsToFetch, builderParameters.HasDynamics, builderParameters.DynamicFields, exact: exact);
 
                         CoraxHighlightingTermIndex highlightingTerm = null;
                         bool? isHighlighting = builderParameters.HighlightingTerms?.TryGetValue(fieldName, out highlightingTerm);
@@ -276,7 +282,7 @@ internal static class CoraxQueryBuilder
                             if (exact && queryEnvironment.Metadata.IsDynamic)
                             {
                                 fieldName = new QueryFieldName(AutoIndexField.GetExactAutoIndexFieldName(fieldName), fieldName.IsQuoted);
-                                fieldId = QueryBuilderHelper.GetFieldId(fieldName, index, indexFieldsMapping, fieldsToFetch, exact: exact);
+                                fieldId = QueryBuilderHelper.GetFieldId(fieldName, index, indexFieldsMapping, fieldsToFetch, builderParameters.HasDynamics, builderParameters.DynamicFields, exact: exact);
                             }
 
                             if (value == null)
@@ -350,7 +356,7 @@ internal static class CoraxQueryBuilder
                 }
             }
 
-            var fieldId = QueryBuilderHelper.GetFieldId(fieldName, index, indexFieldsMapping, fieldsToFetch, exact: exact);
+            var fieldId = QueryBuilderHelper.GetFieldId(fieldName, index, indexFieldsMapping, fieldsToFetch, builderParameters.HasDynamics, builderParameters.DynamicFields, exact: exact);
 
             if (ie.All)
             {
@@ -562,7 +568,7 @@ internal static class CoraxQueryBuilder
         var fieldName = QueryBuilderHelper.ExtractIndexFieldName(metadata.Query, queryParameters, be.Source, metadata);
         var (valueFirst, valueFirstType) = QueryBuilderHelper.GetValue(metadata.Query, metadata, queryParameters, be.Min);
         var (valueSecond, valueSecondType) = QueryBuilderHelper.GetValue(metadata.Query, metadata, queryParameters, be.Max);
-        var fieldId = QueryBuilderHelper.GetFieldId(fieldName, index, indexFieldsMapping, fieldsToFetch, exact: exact);
+        var fieldId = QueryBuilderHelper.GetFieldId(fieldName, index, indexFieldsMapping, fieldsToFetch, builderParameters.HasDynamics, builderParameters.DynamicFields, exact: exact);
         var leftSideOperation = be.MinInclusive ? UnaryMatchOperation.GreaterThanOrEqual : UnaryMatchOperation.GreaterThan;
         var rightSideOperation = be.MaxInclusive ? UnaryMatchOperation.LessThanOrEqual : UnaryMatchOperation.LessThan;
 
@@ -642,7 +648,7 @@ internal static class CoraxQueryBuilder
             }
         }
 
-        var fieldId = QueryBuilderHelper.GetFieldId(fieldName, index, indexFieldsMapping, fieldsToFetch, exact: exact);
+        var fieldId = QueryBuilderHelper.GetFieldId(fieldName, index, indexFieldsMapping, fieldsToFetch, builderParameters.HasDynamics, builderParameters.DynamicFields, exact: exact);
         return builderParameters.IndexSearcher.StartWithQuery(fieldName, valueAsString, scoreFunction: scoreFunction, fieldId: fieldId);
     }
 
@@ -682,7 +688,7 @@ internal static class CoraxQueryBuilder
             }
         }
 
-        var fieldId = QueryBuilderHelper.GetFieldId(fieldName, index, indexFieldsMapping, fieldsToFetch, exact: exact);
+        var fieldId = QueryBuilderHelper.GetFieldId(fieldName, index, indexFieldsMapping, fieldsToFetch, builderParameters.HasDynamics, builderParameters.DynamicFields, exact: exact);
         return indexSearcher.EndsWithQuery(fieldName, valueAsString, scoreFunction: scoreFunction, fieldId: fieldId);
     }
 
@@ -803,7 +809,7 @@ internal static class CoraxQueryBuilder
             fieldName = new QueryFieldName(AutoIndexField.GetSearchAutoIndexFieldName(fieldName.Value), fieldName.IsQuoted);
         }
 
-        var fieldId = QueryBuilderHelper.GetFieldId(fieldName, index, indexFieldsMapping, fieldsToFetch);
+        var fieldId = QueryBuilderHelper.GetFieldId(fieldName, index, indexFieldsMapping, fieldsToFetch, builderParameters.HasDynamics, builderParameters.DynamicFields);
 
         if (proximity.HasValue)
         {
@@ -852,7 +858,7 @@ internal static class CoraxQueryBuilder
             fieldName = metadata.GetSpatialFieldName(spatialExpression, builderParameters.QueryParameters);
         }
 
-        var fieldId = QueryBuilderHelper.GetFieldId(fieldName, index, indexFieldsMapping, fieldsToFetch);
+        var fieldId = QueryBuilderHelper.GetFieldId(fieldName, index, indexFieldsMapping, fieldsToFetch, builderParameters.HasDynamics, builderParameters.DynamicFields);
         var shapeExpression = (MethodExpression)expression.Arguments[1];
 
         var distanceErrorPct = RavenConstants.Documents.Indexing.Spatial.DefaultDistanceErrorPct;
@@ -969,7 +975,7 @@ internal static class CoraxQueryBuilder
             if (field.OrderingType == OrderByFieldType.Distance)
             {
                 var spatialField = getSpatialField(field.Name);
-                var distanceFieldId = QueryBuilderHelper.GetFieldIdForOrderBy(field.Name, index, indexMapping, queryMapping, false);
+                var distanceFieldId = QueryBuilderHelper.GetFieldIdForOrderBy(field.Name, index, builderParameters.HasDynamics, builderParameters.DynamicFields, indexMapping, queryMapping, false);
 
                 int lastArgument;
                 IPoint point;
@@ -1013,7 +1019,7 @@ internal static class CoraxQueryBuilder
             }
 
             var fieldName = field.Name.Value;
-            var fieldId = QueryBuilderHelper.GetFieldIdForOrderBy(fieldName, index, indexMapping, queryMapping, false);
+            var fieldId = QueryBuilderHelper.GetFieldIdForOrderBy(fieldName, index, builderParameters.HasDynamics, builderParameters.DynamicFields, indexMapping, queryMapping, false);
             OrderMetadata? temporaryOrder = null;
             switch (field.OrderingType)
             {

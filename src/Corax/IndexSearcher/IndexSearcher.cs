@@ -1,5 +1,7 @@
 using System;
 using System.Buffers;
+using System.Collections;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -128,26 +130,22 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
     internal ByteStringContext<ByteStringMemoryCache>.InternalScope ApplyAnalyzer(string originalTerm, int fieldId, out Slice value)
     {
-        if (_fieldMapping.TryGetByFieldId(fieldId, out var binding) == false
-            || binding.FieldIndexingMode is FieldIndexingMode.Exact
-            || binding.Analyzer is null)
-        {
-            var disposable = Slice.From(Allocator, originalTerm, ByteStringType.Immutable, out var originalTermSliced);
-            value = originalTermSliced;
-            return disposable;
-        }
-
         using (Slice.From(Allocator, originalTerm, ByteStringType.Immutable, out var originalTermSliced))
         {
-            return AnalyzeTerm(binding, originalTermSliced, fieldId, out value);
+            return ApplyAnalyzer(originalTermSliced, fieldId, out value);
         }
     }
-
-
-
+    
     internal ByteStringContext<ByteStringMemoryCache>.InternalScope ApplyAnalyzer(ReadOnlySpan<byte> originalTerm, int fieldId, out Slice value)
     {
-        if (_fieldMapping.TryGetByFieldId(fieldId, out var binding) == false
+        Analyzer analyzer = null;
+        IndexFieldBinding binding = null;
+        
+        if (fieldId == Constants.IndexWriter.DynamicField)
+        {
+            analyzer = _fieldMapping.DefaultAnalyzer;
+        }
+        else if (_fieldMapping.TryGetByFieldId(fieldId, out binding) == false
             || binding.FieldIndexingMode is FieldIndexingMode.Exact
             || binding.Analyzer is null)
         {
@@ -156,29 +154,22 @@ public sealed unsafe partial class IndexSearcher : IDisposable
             return disposable;
         }
 
-        return AnalyzeTerm(binding, originalTerm, fieldId, out value);
+        analyzer ??= binding.FieldIndexingMode is FieldIndexingMode.Search 
+            ? Analyzer.DefaultLowercaseAnalyzer // lowercase only when search is used in non-full-text-search match 
+            : binding.Analyzer!;
+        
+        return AnalyzeTerm(analyzer, originalTerm, fieldId, out value);
     }
 
     [SkipLocalsInit]
     internal ByteStringContext<ByteStringMemoryCache>.InternalScope ApplyAnalyzer(Slice originalTerm, int fieldId, out Slice value)
     {
-        if (_fieldMapping.TryGetByFieldId(fieldId, out var binding) == false
-            || binding.FieldIndexingMode is FieldIndexingMode.Exact
-            || binding.Analyzer is null)
-        {
-            value = originalTerm;
-            return default;
-        }
-
-        return AnalyzeTerm(binding, originalTerm.AsSpan(), fieldId, out value);
+        return ApplyAnalyzer(originalTerm.AsSpan(), fieldId, out value);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private ByteStringContext<ByteStringMemoryCache>.InternalScope AnalyzeTerm(IndexFieldBinding binding, ReadOnlySpan<byte> originalTerm, int fieldId, out Slice value)
+    private ByteStringContext<ByteStringMemoryCache>.InternalScope AnalyzeTerm(Analyzer analyzer, ReadOnlySpan<byte> originalTerm, int fieldId, out Slice value)
     {
-        var analyzer = binding.FieldIndexingMode is FieldIndexingMode.Search 
-            ? Analyzer.DefaultLowercaseAnalyzer // lowercase only when search is used in non-full-text-search match 
-            : binding.Analyzer!;
         analyzer.GetOutputBuffersSize(originalTerm.Length, out int outputSize, out int tokenSize);
 
         Debug.Assert(outputSize < 1024 * 1024, "Term size is too big for analyzer.");
@@ -229,7 +220,29 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         existsTermProvider = new ExistsTermProvider(this, _transaction.Allocator, terms, fieldName);
         return true;
     }
-
+    
+    public List<string> GetFields()
+    {
+        var termContainer = new List<string>();
+        var fields = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
+        using (var it = fields.Iterate(false))
+        {
+            if (it.Seek(Slices.BeforeAllKeys))
+            {
+                do
+                {
+                    if (it.CurrentKey.EndsWith(Constants.IndexWriter.DoubleTreeSuffix) || it.CurrentKey.EndsWith(Constants.IndexWriter.LongTreeSuffix))
+                        continue;
+                    
+                    termContainer.Add(it.CurrentKey.ToString());
+                } while (it.MoveNext());
+            }
+        }
+       
+        return termContainer;
+    }
+    
+    
     public (Slice FieldName, Slice NumericTree) GetSliceForRangeQueries<T>(string name, T value)
     {
         Slice.From(Allocator, name, ByteStringType.Immutable, out var fieldName);
