@@ -4,6 +4,7 @@ using FastTests;
 using Orders;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,13 +16,15 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void CreateFieldsShouldNotDisplayAsIgnored()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-19388")]
+        public void CreateFieldsShouldNotDisplayAsIgnored(Options options)
         {
             var createFieldIndex = new CreateFieldIndex();
             var simpleIndex = new SimpleIndex();
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 createFieldIndex.Execute(store);
                 simpleIndex.Execute(store);
@@ -38,16 +41,8 @@ namespace SlowTests.Issues
                             Employee = $"employee/{i}",
                             Lines = new List<OrderLine>()
                             {
-                                new OrderLine()
-                                {
-                                    Product = $"products/{i}",
-                                    ProductName = new string((char)0, 1) + "/" + i
-                                },
-                                new OrderLine()
-                                {
-                                    Product = $"products/{i}",
-                                    ProductName = new string((char)0, 1) + "/" + i
-                                },
+                                new OrderLine() {Product = $"products/{i}", ProductName = new string((char)0, 1) + "/" + i},
+                                new OrderLine() {Product = $"products/{i}", ProductName = new string((char)0, 1) + "/" + i},
                             }
                         });
                     }
@@ -82,13 +77,48 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void SpatialCreateFieldsShouldNotDisplayAsIgnored()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-19388")]
+        public void CoraxCanIndexSimpleMap(Options options)
+        {
+            var simpleIndex = new SimpleIndex();
+            using var store = GetDocumentStore(options);
+            simpleIndex.Execute(store);
+
+            const int count = 300;
+
+            using (var bulk = store.BulkInsert())
+            {
+                for (int i = 0; i < count; i++)
+                {
+                    bulk.Store(new Order()
+                    {
+                        Company = $"companies/{i}",
+                        Employee = $"employee/{i}",
+                        Lines = new List<OrderLine>()
+                        {
+                            new OrderLine() {Product = $"products/{i}", ProductName = new string((char)0, 1) + "/" + i},
+                            new OrderLine() {Product = $"products/{i}", ProductName = new string((char)0, 1) + "/" + i},
+                        }
+                    });
+                }
+            }
+
+            WaitForUserToContinueTheTest(store);
+            Indexes.WaitForIndexing(store);
+        }
+
+
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-19388")]
+        public void SpatialCreateFieldsShouldNotDisplayAsIgnored(Options options)
         {
             var createSpatialFieldIndex = new CreateSpatialFieldIndex();
             var simpleIndex = new SimpleIndex();
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 createSpatialFieldIndex.Execute(store);
                 simpleIndex.Execute(store);
@@ -105,21 +135,14 @@ namespace SlowTests.Issues
                             Employee = $"employee/{i}",
                             Lines = new List<OrderLine>()
                             {
-                                new OrderLine()
-                                {
-                                    Product = $"products/{i}",
-                                    ProductName = new string((char)0, 1) + "/" + i
-                                },
-                                new OrderLine()
-                                {
-                                    Product = $"products/{i}",
-                                    ProductName = new string((char)0, 1) + "/" + i
-                                },
+                                new OrderLine() {Product = $"products/{i}", ProductName = new string((char)0, 1) + "/" + i},
+                                new OrderLine() {Product = $"products/{i}", ProductName = new string((char)0, 1) + "/" + i},
                             }
                         });
                     }
                 }
 
+                WaitForUserToContinueTheTest(store);
                 Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
@@ -161,19 +184,12 @@ namespace SlowTests.Issues
             {
                 Map = orders => from order in orders
                     from item in order.Lines
-                    select new
-                    {
-                        ProductName = item.ProductName,
-                        Total = item.Discount
-                    };
+                    select new {ProductName = item.ProductName, Total = item.Discount};
 
                 Reduce = results => from result in results
-                    group result by result.ProductName into g
-                    select new
-                    {
-                        ProductName = g.Key,
-                        Total = 12
-                    };
+                    group result by result.ProductName
+                    into g
+                    select new {ProductName = g.Key, Total = 12};
             }
         }
 
@@ -181,21 +197,14 @@ namespace SlowTests.Issues
         {
             public CreateSpatialFieldIndex()
             {
-                    Map = orders => from order in orders
-                                    from item in order.Lines
-                                    select new
-                                    {
-                                        ProductName = item.ProductName,
-                                        Total = item.Discount
-                                    };
+                Map = orders => from order in orders
+                    from item in order.Lines
+                    select new {ProductName = item.ProductName, Total = item.Discount};
 
-                    Reduce = results => from result in results
-                                        group result by result.ProductName into g
-                                        select new
-                                        {
-                                            ProductName = g.Key,
-                                            Total = CreateSpatialField(54.2, 23.2)
-                                        };
+                Reduce = results => from result in results
+                    group result by result.ProductName
+                    into g
+                    select new {ProductName = g.Key, Total = CreateSpatialField(54.2, 23.2)};
             }
         }
 
@@ -205,19 +214,12 @@ namespace SlowTests.Issues
             {
                 Map = orders => from order in orders
                     from item in order.Lines
-                    select new
-                    {
-                        ProductName = item.ProductName,
-                        Total = item.Discount
-                    };
+                    select new {ProductName = item.ProductName, Total = item.Discount};
 
                 Reduce = results => from result in results
-                    group result by result.ProductName into g
-                    select new
-                    {
-                        ProductName = g.Key,
-                        Total = CreateField("Total", 23.2)
-                    };
+                    group result by result.ProductName
+                    into g
+                    select new {ProductName = g.Key, Total = CreateField("Total", 23.2)};
             }
         }
     }
