@@ -9,23 +9,17 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Changes;
-using Raven.Client.Documents.Commands;
-using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations.Identities;
 using Raven.Client.Exceptions;
-using Raven.Client.Http;
+using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
-using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server;
 using Raven.Server.Config;
-using Tests.Infrastructure;
-using Raven.Tests.Core.Utils.Entities;
-using Sparrow.Json;
-using Xunit;
-using Raven.Client.Documents.Operations.Identities;
-using Raven.Client.Extensions;
 using Raven.Server.Utils;
-using Sparrow.Server;
+using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Cluster
@@ -254,20 +248,21 @@ namespace SlowTests.Cluster
         [Fact]
         public async Task ChangesApiFailOver()
         {
-            using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(3)))
+            DebuggerAttachedTimeout.DisableLongTimespan = true;
+
+            using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
             {
                 var db = "ChangesApiFailOver_Test";
                 var topology = new DatabaseTopology { DynamicNodesDistribution = true };
-                var (_, leader) = await CreateRaftCluster(3,
+                var (clusterNodes, leader) = await CreateRaftCluster(3,
                     customSettings: new Dictionary<string, string>()
                     {
                         [RavenConfiguration.GetKey(x => x.Cluster.AddReplicaTimeout)] = "1",
                         [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "0",
-                        [RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "1",
-                        [RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] = "50"
+                        [RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "1"
                     });
 
-                await CreateDatabaseInCluster(new DatabaseRecord { DatabaseName = db, Topology = topology }, 2, leader.WebUrl);
+                var (_, servers) = await CreateDatabaseInCluster(new DatabaseRecord { DatabaseName = db, Topology = topology }, 2, leader.WebUrl);
 
                 using (var store = new DocumentStore { Database = db, Urls = new[] { leader.WebUrl } }.Initialize())
                 {
@@ -284,7 +279,7 @@ namespace SlowTests.Cluster
                         await session.SaveChangesAsync(cts.Token);
                     }
 
-                    WaitForDocument(store, "users/1");
+                    Assert.True(await WaitForDocumentInClusterAsync<User>(servers, db, "users/1", null, TimeSpan.FromSeconds(30)));
 
                     var value = await WaitForValueAsync(() => list.Count, 1);
                     Assert.Equal(1, value);
@@ -292,18 +287,31 @@ namespace SlowTests.Cluster
                     var currentUrl = store.GetRequestExecutor().Url;
                     RavenServer toDispose = null;
                     RavenServer workingServer = null;
-
                     DisposeCurrentServer(currentUrl, ref toDispose, ref workingServer);
 
                     await taskObservable.EnsureConnectedNow().WithCancellation(cts.Token);
 
-                    await WaitForTopologyStabilizationAsync(db, workingServer, 1, 2).WithCancellation(cts.Token);
+                    List<RavenServer> databaseServers = null;
+                    Assert.True(await WaitForValueAsync(async () =>
+                        {
+                            var databaseRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(db));
+                            topology = databaseRecord.Topology;
+                            databaseServers = clusterNodes.Where(s => topology.Members.Contains(s.ServerStore.NodeTag)).ToList();
+      
+                            if (topology.Rehabs.Count == 1 && databaseServers.Count == 2)
+                                return true;
+
+                            return false;
+                        }, true, interval: 333));
+
 
                     using (var session = store.OpenAsyncSession())
                     {
                         await session.StoreAsync(new User(), "users/1", cts.Token);
                         await session.SaveChangesAsync(cts.Token);
                     }
+
+                    Assert.True(await WaitForChangeVectorInClusterAsync(databaseServers, db, 30_000));
 
                     value = await WaitForValueAsync(() => list.Count, 2);
                     Assert.Equal(2, value);
@@ -313,14 +321,12 @@ namespace SlowTests.Cluster
 
                     await taskObservable.EnsureConnectedNow().WithCancellation(cts.Token);
 
-                    await WaitForTopologyStabilizationAsync(db, workingServer, 2, 1).WithCancellation(cts.Token);
-
                     using (var session = store.OpenSession())
                     {
                         session.Store(new User(), "users/1");
                         session.SaveChanges();
                     }
-
+       
                     value = await WaitForValueAsync(() => list.Count, 3);
                     Assert.Equal(3, value);
                 }
@@ -388,45 +394,6 @@ namespace SlowTests.Cluster
                     workingServer = server;
             }
             DisposeServerAndWaitForFinishOfDisposal(toDispose);
-        }
-
-        private async Task WaitForTopologyStabilizationAsync(string s, RavenServer workingServer, int rehabCount, int memberCount)
-        {
-            using (var tempStore = new DocumentStore
-            {
-                Database = s,
-                Urls = new[] { workingServer.WebUrl },
-                Conventions = new DocumentConventions
-                { DisableTopologyUpdates = true }
-            }.Initialize())
-            {
-                Topology topo;
-                using (var context = JsonOperationContext.ShortTermSingleUse())
-                {
-                    var value = await WaitForValueAsync(() =>
-                    {
-                        var topologyGetCommand = new GetDatabaseTopologyCommand();
-                        tempStore.GetRequestExecutor().Execute(topologyGetCommand, context);
-                        topo = topologyGetCommand.Result;
-                        int rehab = 0;
-                        int members = 0;
-                        topo.Nodes.ForEach(n =>
-                        {
-                            switch (n.ServerRole)
-                            {
-                                case ServerNode.Role.Rehab:
-                                    rehab++;
-                                    break;
-                                case ServerNode.Role.Member:
-                                    members++;
-                                    break;
-                            }
-                        });
-                        return new Tuple<int, int>(rehab, members);
-
-                    }, new Tuple<int, int>(rehabCount, memberCount));
-                }
-            }
         }
 
         public static async Task ReverseOrderSuccessfully(IDocumentStore store, string db)
