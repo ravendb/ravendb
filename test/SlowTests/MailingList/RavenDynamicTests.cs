@@ -55,7 +55,8 @@ namespace SlowTests.MailingList
             }
 
             [RavenTheory(RavenTestCategory.Indexes)]
-            [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+            [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+            [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-19393")]
             public void It_should_be_stored_in_index(Options options)
             {
                 using (var store = GetDocumentStore(options))

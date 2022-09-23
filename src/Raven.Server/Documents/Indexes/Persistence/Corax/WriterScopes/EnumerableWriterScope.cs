@@ -143,6 +143,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
             if (_isDynamic)
             {
                 dataType |= DataType.Dynamic;
+                
+                
+                //Look comment in DataType definition. In this case we can do this because is always going to EnumerableScope from dynamic by design.
+                if (_count.Strings == 1 || _count.Raws == 1)
+                {
+                    dataType |= DataType.Single;
+                    if (_hasNulls)
+                        dataType |= DataType.Null;
+                }
+
                 path = _persistedName;
             }
             
@@ -267,14 +277,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
             var type = DataType.Empty;
             if (_count.Strings > 0)
             {
-                type |= _count.Strings == 1 
-                    ? DataType.SingleString 
-                    : DataType.Strings;
-
-                if (type is DataType.SingleString && _hasNulls)
-                {
-                    type |= DataType.Null;
-                }
+                type |= DataType.Strings;
             }
 
             if (_count.Longs > 0)
@@ -306,9 +309,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
                 var isTuple = _count.Longs == _count.Strings && _count.Longs == _count.Doubles;
                 if (isTuple == false)
                 {
-                    type = _count.Strings == 1 
-                        ? DataType.SingleString 
-                        : DataType.Strings; //case when at least one item is only string. In such case lets write all data as strings.
+                    type = DataType.Strings; //case when at least one item is only string. In such case lets write all data as strings.
                 }
             }
 
@@ -333,7 +334,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
             Tuples = Strings | Doubles | Longs,
 
             SingleTuple = Tuples | Single,
-            SingleString = Strings | Single,
+            SingleString = Strings | Single, // do not use it, our projections code is invalid with it. We don't have _IsArray marker in Corax so we've to save it as a list.
             SingleRaw = Raws | Single,
             SingleSpatial = Spatials | Single,
 
@@ -343,7 +344,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
             DynamicSingleSpatial = DynamicSpatials | Single,
             
             DynamicStrings = Strings | Dynamic,
-            DynamicTuples = Tuples | Dynamic,
+            DynamicTuples = Tuples | Dynamic, // do not use it, our projections code is invalid with it. We don't have _IsArray marker in Corax so we've to save it as a list.
             DynamicRaws = Raws | Dynamic,
             DynamicSpatials = Spatials | Dynamic,
             
