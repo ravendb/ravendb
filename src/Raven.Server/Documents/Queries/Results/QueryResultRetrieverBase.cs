@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -29,6 +30,7 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Json.Sync;
+using Voron;
 using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents.Queries.Results
@@ -542,9 +544,9 @@ namespace Raven.Server.Documents.Queries.Results
 
             if (FieldsToFetch.IndexFields.ContainsKey(fieldToFetch.Name.Value) == false)
                 return false;
-
+            
             var id = FieldsToFetch.IndexFields[fieldToFetch.Name.Value].Id;
-            if (TryGetValueFromCoraxIndex(_context, id, ref retrieverInput, out var value) == false)
+            if (TryGetValueFromCoraxIndex(_context, name, id, ref retrieverInput, out var value) == false)
                 return false;
 
             toFill[name] = value;
@@ -596,60 +598,129 @@ namespace Raven.Server.Documents.Queries.Results
             public bool IsNumeric;
         }
 
-        private static unsafe bool TryGetValueFromCoraxIndex(JsonOperationContext context, int fieldId, ref RetrieverInput retrieverInput, out object value)
+        private static unsafe bool TryGetValueFromCoraxIndex(JsonOperationContext context, string fieldName, int fieldId, ref RetrieverInput retrieverInput, out object value)
         {
-            var type = retrieverInput.CoraxEntry.GetFieldType(fieldId, out var intOffset);
-            
-            switch (type)
+            var fieldReader = fieldId == Corax.Constants.IndexWriter.DynamicField 
+                ? retrieverInput.CoraxEntry.GetReaderFor(Encodings.Utf8.GetBytes(fieldName)) : retrieverInput.CoraxEntry.GetReaderFor(fieldId);
+            var fieldType = fieldReader.Type;
+            value = null;
+            switch (fieldType)
             {
-                case IndexEntryFieldType.Tuple:
-                    retrieverInput.CoraxEntry.GetReaderFor(fieldId).Read(out var data);
-                    value = Encodings.Utf8.GetString(data);
-                    break;
-                case IndexEntryFieldType.List:
-                    var iterator = retrieverInput.CoraxEntry.GetReaderFor(fieldId).ReadMany();
-                    var array = new DynamicJsonArray();
-                    while (iterator.ReadNext())
+                
+            case IndexEntryFieldType.Empty:
+            case IndexEntryFieldType.Null:
+                value = fieldType == IndexEntryFieldType.Null ? null : string.Empty;;
+                break;
+
+            case IndexEntryFieldType.TupleListWithNulls:
+            case IndexEntryFieldType.TupleList:
+                if (fieldReader.TryReadMany(out var iterator) == false)
+                    goto case IndexEntryFieldType.Invalid;
+                var tupleList = new DynamicJsonArray();
+                while (iterator.ReadNext())
+                {
+                    if (iterator.IsNull)
+                    {
+                        tupleList.Add(null);
+                    }
+                    else if (iterator.IsEmpty)
+                    {
+                        throw new InvalidDataException("Tuple list cannot contain an empty string (otherwise, where did the numeric came from!)");
+                    }
+                    else
+                    {
+                        tupleList.Add(Encodings.Utf8.GetString(iterator.Sequence));
+                    }
+                }
+
+                value = tupleList;
+                break;
+
+            case IndexEntryFieldType.Tuple:
+                if (fieldReader.TryReadTuple(out long lVal, out double dVal, out Span<byte> valueInEntry) == false)
+                    goto case IndexEntryFieldType.Invalid;
+
+                value = Encodings.Utf8.GetString(valueInEntry);
+                
+                break;
+
+            case IndexEntryFieldType.SpatialPointList:
+                if (fieldReader.TryReadManySpatialPoint(out var spatialIterator) == false)
+                    goto case IndexEntryFieldType.Invalid;
+
+                var geoList = new DynamicJsonArray();
+                
+                while (spatialIterator.ReadNext())
+                {
+                    geoList.Add(Encodings.Utf8.GetString(spatialIterator.Geohash));
+                }
+
+                value = geoList;
+                
+                break;
+
+            case IndexEntryFieldType.SpatialPoint:
+                if (fieldReader.Read(out valueInEntry) == false)
+                    goto case IndexEntryFieldType.Invalid;
+
+                value = Encodings.Utf8.GetString(valueInEntry);
+
+                break;
+
+            case IndexEntryFieldType.ListWithNulls:
+            case IndexEntryFieldType.List:
+                if (fieldReader.TryReadMany(out iterator) == false)
+                    goto case IndexEntryFieldType.Invalid;
+                
+                var array = new DynamicJsonArray();
+                while (iterator.ReadNext())
+                {
+                    Debug.Assert((fieldType & IndexEntryFieldType.Tuple) == 0, "(fieldType & IndexEntryFieldType.Tuple) == 0");
+
+                    if ((fieldType & IndexEntryFieldType.HasNulls) != 0 && (iterator.IsEmpty || iterator.IsNull))
+                    {
+                        array.Add(iterator.IsNull ? null : string.Empty);
+                    }
+                    else
+                    {
                         array.Add(Encodings.Utf8.GetString(iterator.Sequence));
-                    value = array;
-                    break;
-                case IndexEntryFieldType.RawList:
-                    iterator = retrieverInput.CoraxEntry.GetReaderFor(fieldId).ReadMany();
-                    array = new DynamicJsonArray();
-                    while (iterator.ReadNext())
-                    {
-                        fixed (byte* ptr = &iterator.Sequence.GetPinnableReference())
-                            value = new BlittableJsonReaderObject(ptr, iterator.Sequence.Length, context);
                     }
-                    value = array;
-                    break;
-                case IndexEntryFieldType.Raw:
-                    retrieverInput.CoraxEntry.GetReaderFor(fieldId).Read(out Span<byte> blittableBinary);
-                    fixed (byte* ptr = &blittableBinary.GetPinnableReference())
-                        value = new BlittableJsonReaderObject(ptr, blittableBinary.Length, context);
-                    break;
-                case IndexEntryFieldType.Simple:
-                    retrieverInput.CoraxEntry.GetReaderFor(fieldId).Read(out data);
-                    if (data.Length is 10 or 12)
-                    {
-                        if (data.SequenceCompareTo(CoraxDocumentConverterBase.NullValue) == 0)
-                        {
-                            value = null;
-                            break;
-                        }
-                        if (data.SequenceCompareTo(CoraxDocumentConverterBase.EmptyString) == 0)
-                        {
-                            value = string.Empty;
-                            break;
-                        }
-                    }
-                    
-                    value = Encodings.Utf8.GetString(data);
-                    break;
-                default:
-                    value = null;
-                    return false;
+                }
+
+                value = array;
+                break;
+            case IndexEntryFieldType.RawList:
+                if (fieldReader.TryReadMany(out iterator) == false)
+                    goto case IndexEntryFieldType.Invalid;
+                
+                array = new DynamicJsonArray();
+                while (iterator.ReadNext())
+                {
+                    fixed (byte* ptr = &iterator.Sequence.GetPinnableReference())
+                        value = new BlittableJsonReaderObject(ptr, iterator.Sequence.Length, context);
+                }
+                value = array;
+                break;
+            case IndexEntryFieldType.Raw:
+                if (fieldReader.Read(out Span<byte> blittableBinary) == false)
+                    goto case IndexEntryFieldType.Invalid;
+                
+                fixed (byte* ptr = &blittableBinary.GetPinnableReference())
+                    value = new BlittableJsonReaderObject(ptr, blittableBinary.Length, context);
+                break;
+            
+            case IndexEntryFieldType.Invalid:
+                value = null;
+                return false;
+                break;
+            default:
+                if (fieldReader.Read(out valueInEntry) == false)
+                    goto case IndexEntryFieldType.Invalid;
+
+                value = Encodings.Utf8.GetString(valueInEntry);
+                break; 
             }
+            
             
             return true;
         }
@@ -834,7 +905,7 @@ namespace Raven.Server.Documents.Queries.Results
                             break;
                         case SearchEngineType.Corax:
                             if (indexFields.TryGetValue(fieldToFetch.QueryField.SourceAlias, out var fieldDefinition) == false ||
-                                TryGetValueFromCoraxIndex(_context, fieldDefinition.Id, ref retrieverInput, out fieldValue) == false)
+                                TryGetValueFromCoraxIndex(_context, fieldDefinition.Name ?? fieldDefinition.OriginalName, fieldDefinition.Id, ref retrieverInput, out fieldValue) == false)
                             {
                                 throw new InvalidDataException($"Field {fieldToFetch.QueryField.SourceAlias} not found in index");
                             }
