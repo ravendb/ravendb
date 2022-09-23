@@ -247,7 +247,7 @@ namespace Corax
             _postingListContainerId = Transaction.OpenContainer(Constants.IndexWriter.PostingListsSlice);
             _entriesContainerId = Transaction.OpenContainer(Constants.IndexWriter.EntriesContainerSlice);
             _jsonOperationContext = JsonOperationContext.ShortTermSingleUse();
-            _indexMetadata = Transaction.CreateTree(Constants.IndexMetadata);
+            _indexMetadata = Transaction.CreateTree(Constants.IndexMetadataSlice);
         }
 
         public IndexWriter([NotNull] Transaction tx, IndexFieldsMapping fieldsMapping, IndexDynamicFieldsMapping dynamicFieldsMapping) : this(tx, fieldsMapping)
@@ -262,7 +262,7 @@ namespace Corax
             _ownsTransaction = false;
             _postingListContainerId = Transaction.OpenContainer(Constants.IndexWriter.PostingListsSlice);
             _entriesContainerId = Transaction.OpenContainer(Constants.IndexWriter.EntriesContainerSlice);
-            _indexMetadata = Transaction.CreateTree(Constants.IndexMetadata);
+            _indexMetadata = Transaction.CreateTree(Constants.IndexMetadataSlice);
         }
 
         public long Index(string id, Span<byte> data)
