@@ -83,19 +83,25 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     public static IndexEntryReader GetReaderFor(Transaction transaction, ref Page page, long id, out int rawSize)
     {
         var item = Container.MaybeGetFromSamePage(transaction.LowLevelTransaction, ref page, id);
+        int size = ZigZagEncoding.Decode<int>(item.Address, out var len);
+
         rawSize = item.Length;
-        var data = item.ToSpan();
-        int size = ZigZagEncoding.Decode<int>(data, out var len);
-        return new IndexEntryReader(data.Slice(size + len));
+        int headerSize = size + len;
+        return new IndexEntryReader(new Span<byte>(item.Address + headerSize, item.Length - headerSize));
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public IndexEntryReader GetReaderAndIdentifyFor(long id, out string key)
     {
-        var data = Container.MaybeGetFromSamePage(_transaction.LowLevelTransaction, ref _lastPage, id).ToSpan();
-        int size = ZigZagEncoding.Decode<int>(data, out var len);
-        key = Encoding.UTF8.GetString(data.Slice(len, size));
-        return new(data.Slice(size + len));
+        var item = Container.MaybeGetFromSamePage(_transaction.LowLevelTransaction, ref _lastPage, id);
+
+        int size = ZigZagEncoding.Decode<int>(item.Address, out var len);
+
+        var idSpan = new ReadOnlySpan<byte>(item.Address + len, size);
+        key = Encoding.UTF8.GetString(idSpan);
+        
+        int headerSize = size + len;
+        return new(new Span<byte>(item.Address + headerSize, item.Length - headerSize));
     }
 
     public string GetIdentityFor(long id)

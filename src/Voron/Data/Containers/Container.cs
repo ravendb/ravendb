@@ -646,6 +646,8 @@ namespace Voron.Data.Containers
                 Length = size;
             }
 
+            public byte* Address => Page.Pointer + Offset;
+
             public Span<byte> ToSpan() => new Span<byte>(Page.Pointer + Offset, Length);
             public UnmanagedSpan ToUnmanagedSpan() => new UnmanagedSpan(Page.Pointer + Offset, Length);
         }
