@@ -25,6 +25,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
 
         [CanBeNull]
         private string _persistedName;
+
+        private bool _hasNulls;
         private readonly List<BlittableJsonReaderObject> _blittableJsonReaderObjects;
         private (int Strings, int Longs, int Doubles, int Raws, int Spatials) _count;
 
@@ -55,6 +57,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
             _stringValues.Add(default);
             _longValues.Add(0);
             _doubleValues.Add(float.NaN);
+            _count.Strings++;
+            _hasNulls = true;
             PersistName(path);
         }
 
@@ -179,7 +183,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
                 case DataType.SingleString:
                     entryWriter.Write(field, _stringValues[0].ToSpan());
                     break;
-
+                
+                case DataType.SingleStringNull:
+                    entryWriter.WriteNull(field);
+                    break;
+                
+                case DataType.DynamicSingleStringNull:
+                    entryWriter.WriteNullDynamic(path);
+                    break;
+                
                 case DataType.DynamicSingleString:
                     entryWriter.WriteDynamic(path, _stringValues[0].ToSpan());
                     break;
@@ -258,6 +270,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
                 type |= _count.Strings == 1 
                     ? DataType.SingleString 
                     : DataType.Strings;
+
+                if (type is DataType.SingleString && _hasNulls)
+                {
+                    type |= DataType.Null;
+                }
             }
 
             if (_count.Longs > 0)
@@ -300,7 +317,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
         }
 
         [Flags]
-        private enum DataType : byte
+        private enum DataType : short
         {
             Empty = 0,
             Strings = 1 << 1,
@@ -311,7 +328,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
 
             Single = 1 << 6,
             Dynamic = 1 << 7,
-
+            Null = 1 << 8,
+            
             Tuples = Strings | Doubles | Longs,
 
             SingleTuple = Tuples | Single,
@@ -328,6 +346,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
             DynamicTuples = Tuples | Dynamic,
             DynamicRaws = Raws | Dynamic,
             DynamicSpatials = Spatials | Dynamic,
+            
+            SingleStringNull = SingleString | Null,
+            DynamicSingleStringNull = DynamicSingleString | Null,
+            
+
+            
         }
     }
 }
