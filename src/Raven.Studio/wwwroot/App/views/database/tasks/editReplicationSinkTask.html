@@ -267,7 +267,7 @@
                             <div class="margin-bottom margin-bottom-lg margin-top margin-top-lg">
                                 <hr>
                                 <div class="margin-bottom margin-bottom-lg">
-                                    <h3>Filter Replicated Documents by Id Prefixes</h3>
+                                    <h3>Filter Replicated Documents by ID Paths</h3>
                                 </div>
                                 <div class="form-group" data-bind="validationElement: inputPrefixHubToSink().path">
                                     <label for="hubToSink" class="control-label">From Hub to Sink
@@ -276,11 +276,11 @@
                                     <div class="flex-grow" id="hubToSink" data-bind="validationElement: hubToSinkPrefixes">
                                         <div class="flex-horizontal">
                                             <div class="flex-grow">
-                                                <input type="text" class="form-control" placeholder="Enter documents prefix" data-bind="textInput: inputPrefixHubToSink().path" />
+                                                <input type="text" class="form-control" placeholder="Enter documents ID path. Use <path>/* for all child paths." data-bind="textInput: inputPrefixHubToSink().path" />
                                             </div>
                                             <button class="btn btn-info"
                                                     data-bind="click: addHubToSinkInputPrefixWithBlink, enable: inputPrefixHubToSink && inputPrefixHubToSink().path() && inputPrefixHubToSink().path.isValid()">
-                                                <i class="icon-plus"></i><span>Add Prefix</span>
+                                                <i class="icon-plus"></i><span>Add Path</span>
                                             </button>
                                         </div>
                                         <div data-bind="visible: hubToSinkPrefixes().length" class="margin-top">
@@ -292,13 +292,16 @@
                                             </ul>
                                         </div>
                                         <span class="help-block" data-bind="validationMessage: hubToSinkPrefixes"></span>
+                                        <div class="padding padding-xs text-warning bg-warning" data-bind="visible: hasSingleDocumentPattern(hubToSinkPrefixes())">
+                                            <small><i class="icon-warning"></i><span data-bind="text: getSingleDocumentPatternWarning()"></span></small>
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="form-group margin-top margin-top-lg">
                                     <label class="control-label">&nbsp;</label>
                                     <div class="toggle">
                                         <input id="useStuff" type="checkbox" data-bind="checked: samePrefixesForBothDirections" />
-                                        <label for="useStuff">Use above prefixes (<i>Hub to Sink</i>) for both directions</label>
+                                        <label for="useStuff">Use above paths (<i>Hub to Sink</i>) for both directions</label>
                                     </div>
                                 </div>
                                 <div class="form-group margin-bottom" data-bind="validationElement: inputPrefixSinkToHub().path">
@@ -308,11 +311,11 @@
                                     <div class="flex-grow" id="sinkToHub" data-bind="collapse: !samePrefixesForBothDirections(), validationElement: sinkToHubPrefixes">
                                         <div class="flex-horizontal">
                                             <div class="flex-grow">
-                                                <input type="text" class="form-control" placeholder="Enter documents prefix" data-bind="textInput: inputPrefixSinkToHub().path" />
+                                                <input type="text" class="form-control" placeholder="Enter documents ID path. Use <path>/* for all child paths." data-bind="textInput: inputPrefixSinkToHub().path" />
                                             </div>
                                             <button class="btn btn-info"
                                                     data-bind="click: addSinkToHubInputPrefixWithBlink, enable: inputPrefixSinkToHub && inputPrefixSinkToHub().path() && inputPrefixSinkToHub().path.isValid()">
-                                                <i class="icon-plus"></i><span>Add Prefix</span>
+                                                <i class="icon-plus"></i><span>Add Path</span>
                                             </button>
                                         </div>
                                         <div data-bind="visible: sinkToHubPrefixes().length" class="margin-top">
@@ -324,6 +327,9 @@
                                             </ul>
                                         </div>
                                         <span class="help-block" data-bind="validationMessage: sinkToHubPrefixes"></span>
+                                        <div class="padding padding-xs text-warning bg-warning" data-bind="visible: hasSingleDocumentPattern(sinkToHubPrefixes())">
+                                            <small><i class="icon-warning"></i><span data-bind="text: getSingleDocumentPatternWarning()"></span></small>
+                                        </div>
                                     </div>
                                     <div data-bind="visible: samePrefixesForBothDirections">
                                         <div class="form-control-static">Same as <i>Hub to Sink</i></div>

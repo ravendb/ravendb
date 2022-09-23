@@ -54,7 +54,7 @@ class replicationAccessBaseModel {
             validation: [
                 {
                     validator: () => !this.filteringPathsRequired() || this.hubToSinkPrefixes().length,
-                    message: "Please add at least one filtering prefix path."
+                    message: "Please add at least one filtering path"
                 }
             ]
         })
@@ -63,10 +63,18 @@ class replicationAccessBaseModel {
             validation: [
                 {
                     validator: () => !this.filteringPathsRequired() || this.samePrefixesForBothDirections() || this.sinkToHubPrefixes().length,
-                    message: "Please add at least one filtering prefix path, or use the Hub to Sink prefixes."
+                    message: "Please add at least one filtering path, or use the Hub to Sink paths"
                 }
             ]
         })
+    }
+    
+    private hasSingleDocumentPattern(paths: prefixPathModel[]): KnockoutComputed<boolean> {
+        return ko.pureComputed(() => paths.length && !!paths.find(x => !x.path().endsWith("*")));
+    }
+    
+    getSingleDocumentPatternWarning() {
+        return "Path patterns that do Not end with * (asterisk) will match only a single document";
     }
 
     addHubToSinkInputPrefixWithBlink() {
