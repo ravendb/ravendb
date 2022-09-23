@@ -1,4 +1,4 @@
-﻿using Corax.Queries;
+using Corax.Queries;
 using Sparrow.Server;
 using Voron;
 using Voron.Data.CompactTrees;
@@ -27,8 +27,8 @@ public partial class IndexSearcher
         var terms = _fieldsTree?.CompactTreeFor(field);
         if (terms == null)
             return MultiTermMatch.CreateEmpty(_transaction.Allocator);
+        
         var slicedTerm = EncodeAndApplyAnalyzer(term, fieldId);
-
         return MultiTermMatchBuilderBase<TScoreFunction, TTermProvider>(fieldName, terms, slicedTerm, scoreFunction, isNegated, fieldId);
     }
 

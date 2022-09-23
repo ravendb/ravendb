@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -520,9 +520,10 @@ namespace Voron.Impl
             _lowLevelTransaction = null;
         }
 
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public CompactTree CompactTreeFor(string treeName)
         {
-            Slice.From(Allocator, treeName, ByteStringType.Immutable, out var treeNameSlice);
+            using var _ = Slice.From(Allocator, treeName, ByteStringType.Immutable, out var treeNameSlice);
             return CompactTreeFor(treeNameSlice);
         }
 

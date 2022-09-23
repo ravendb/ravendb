@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Sparrow.Server;
 using Voron;
 
@@ -8,15 +8,17 @@ namespace Corax
     {
         public const string NullValue = "NULL_VALUE";
         public const string EmptyString = "EMPTY_STRING";
-        public static readonly Slice NullValueSlice, EmptyStringSlice;
         public const string IndexMetadata = "@index_metadata";
-        
+
+        public static readonly Slice NullValueSlice, EmptyStringSlice, IndexMetadataSlice;
+
         static Constants()
         {
             using (StorageEnvironment.GetStaticContext(out var ctx))
             {
                 Slice.From(ctx, NullValue, ByteStringType.Immutable, out NullValueSlice);
                 Slice.From(ctx, EmptyString, ByteStringType.Immutable, out EmptyStringSlice);
+                Slice.From(ctx, IndexMetadata, ByteStringType.Immutable, out IndexMetadataSlice);
             }
         }
         

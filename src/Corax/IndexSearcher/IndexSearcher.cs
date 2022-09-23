@@ -56,7 +56,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         _transaction = environment.ReadTransaction();
         _fieldMapping = fieldsMapping ?? new IndexFieldsMapping(_transaction.Allocator);
         _fieldsTree = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
-        _metadataTree = _transaction.ReadTree(Constants.IndexMetadata);
+        _metadataTree = _transaction.ReadTree(Constants.IndexMetadataSlice);
     }
 
     public IndexSearcher(Transaction tx, IndexFieldsMapping fieldsMapping = null)
@@ -65,7 +65,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         _transaction = tx;
         _fieldMapping = fieldsMapping ?? new IndexFieldsMapping(_transaction.Allocator);
         _fieldsTree = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
-        _metadataTree = _transaction.ReadTree(Constants.IndexMetadata);
+        _metadataTree = _transaction.ReadTree(Constants.IndexMetadataSlice);
     }
 
     public UnmanagedSpan GetIndexEntryPointer(long id)
