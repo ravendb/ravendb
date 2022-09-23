@@ -225,6 +225,12 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     {
         var termContainer = new List<string>();
         var fields = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
+
+        //Return an empty set when the index doesn't contain any fields. Case when index has 0 entries.
+        if (fields is null)
+            return termContainer;
+        
+        
         using (var it = fields.Iterate(false))
         {
             if (it.Seek(Slices.BeforeAllKeys))
