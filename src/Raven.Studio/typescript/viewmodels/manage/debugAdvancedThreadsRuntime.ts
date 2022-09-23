@@ -5,27 +5,34 @@ import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import generalUtils = require("common/generalUtils");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import actionColumn = require("widgets/virtualGrid/columns/actionColumn");
-import getDebugThreadsRunawayCommand = require("commands/database/debug/getDebugThreadsRunawayCommand");
 import threadStackTrace = require("viewmodels/manage/threadStackTrace");
+import threadsInfoWebSocketClient = require("common/threadsInfoWebSocketClient");
+import eventsCollector = require("common/eventsCollector");
 
 class debugAdvancedThreadsRuntime extends viewModelBase {
 
     allData = ko.observable<Raven.Server.Dashboard.ThreadInfo[]>();
     filteredData = ko.observable<Raven.Server.Dashboard.ThreadInfo[]>();
 
+    private liveClient = ko.observable<threadsInfoWebSocketClient>();
     private gridController = ko.observable<virtualGridController<Raven.Server.Dashboard.ThreadInfo>>();
     private columnPreview = new columnPreviewPlugin<Raven.Server.Dashboard.ThreadInfo>();
 
+    isConnectedToWebSocket: KnockoutComputed<boolean>;
+    
     threadsCount: KnockoutComputed<number>;
     dedicatedThreadsCount: KnockoutComputed<number>;
+    machineCpuUsage = ko.observable<number>(0);
+    serverCpuUsage = ko.observable<number>(0);
+
+    isPause = ko.observable<boolean>(false);
+    
     filter = ko.observable<string>();
     
-    spinners = {
-        refresh: ko.observable<boolean>(false),
-    };
-
     constructor() {
         super();
+        
+        this.isConnectedToWebSocket = ko.pureComputed(() => this.liveClient() && this.liveClient().isConnected());
         
         this.threadsCount = ko.pureComputed(() => {
             const data = this.filteredData();
@@ -74,12 +81,6 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
                item.Id.toString().includes(filterLowered);
     }
     
-    activate(args: any) {
-        super.activate(args);
-
-        return this.loadThreadsRunaway();
-    }
-
     compositionComplete(): void {
         super.compositionComplete();
 
@@ -94,6 +95,7 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
 
         const grid = this.gridController();
         grid.headerVisible(true);
+        grid.setDefaultSortBy(2, "desc");
         grid.init(fetcher, () => {
                 return [
                     new actionColumn<Raven.Server.Dashboard.ThreadInfo>(grid, (x) => this.showStackTrace(x), "Stack",
@@ -144,26 +146,52 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
                     onValue(generalUtils.escapeHtml(value), value);
                 }
             });
+
+        this.connectWebSocket();
     }
 
-    private loadThreadsRunaway() {
-        return new getDebugThreadsRunawayCommand()
-            .execute()
-            .done(response => {
-                this.allData(response);
-                this.filterEntries();
-            });
+    connectWebSocket() {
+        eventsCollector.default.reportEvent("threads-info", "connect");
+
+        const ws = new threadsInfoWebSocketClient(data => this.onData(data));
+        this.liveClient(ws);
+    }
+    
+    private onData(data: Raven.Server.Dashboard.ThreadsInfo) {
+        this.allData(data.List);
+        this.machineCpuUsage(data.CpuUsage);
+        this.serverCpuUsage(data.ProcessCpuUsage);
+        
+        this.filterEntries();
+        
+        this.gridController().reset(false);
     }
 
-    refresh() {
-        this.spinners.refresh(true);
-        return this.loadThreadsRunaway()
-            .done(() => this.gridController().reset(true))
-            .always(() => this.spinners.refresh(false));
+    deactivate() {
+        super.deactivate();
+
+        if (this.liveClient()) {
+            this.liveClient().dispose();
+        }
     }
 
     private showStackTrace(thread: Raven.Server.Dashboard.ThreadInfo) {
         app.showBootstrapDialog(new threadStackTrace(thread.Id, thread.Name));
+    }
+
+    pause() {
+        eventsCollector.default.reportEvent("threads-info", "pause");
+
+        if (this.liveClient()) {
+            this.isPause(true);
+            this.liveClient().dispose();
+            this.liveClient(null);
+        }
+    }
+
+    resume() {
+        this.connectWebSocket();
+        this.isPause(false);
     }
 }
 
