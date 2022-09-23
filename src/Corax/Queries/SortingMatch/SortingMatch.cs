@@ -21,6 +21,7 @@ namespace Corax.Queries
         private readonly TComparer _comparer;
         private readonly int _take;
         private readonly bool _isScoreComparer;
+        private readonly delegate*<ref SortingMatch<TInner, TComparer>, Span<long>, int> _fillFunc;
         public long TotalResults;
 
         public SortingMatch(IndexSearcher searcher, in TInner inner, in TComparer comparer, int take = -1)
@@ -31,6 +32,23 @@ namespace Corax.Queries
             _comparer = comparer;
             _isScoreComparer = typeof(TComparer) == typeof(BoostingComparer);
             TotalResults = 0;
+
+            if (typeof(TComparer) == typeof(BoostingComparer))
+            {
+                _fillFunc = &FillScore;
+            }
+            else
+            {
+                _fillFunc = _comparer.FieldType switch
+                {
+                    MatchCompareFieldType.Sequence => &Fill<SequenceItem>,
+                    MatchCompareFieldType.Integer => &Fill<NumericalItem<long>>,
+                    MatchCompareFieldType.Floating => &Fill<NumericalItem<double>>,
+                    MatchCompareFieldType.Spatial => &Fill<NumericalItem<double>>,
+                    MatchCompareFieldType.Score => &FillScore,
+                    _ => throw new ArgumentOutOfRangeException(_comparer.FieldType.ToString())
+                };
+            }
         }
 
         public long Count => throw new NotSupportedException();
@@ -47,20 +65,7 @@ namespace Corax.Queries
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Fill(Span<long> matches)
         {
-            if (typeof(TComparer) == typeof(BoostingComparer))
-                return FillScore(matches);
-            else
-            {
-                return _comparer.FieldType switch
-                {
-                    MatchCompareFieldType.Sequence => Fill<SequenceItem>(matches),
-                    MatchCompareFieldType.Integer => Fill<NumericalItem<long>>(matches),
-                    MatchCompareFieldType.Floating => Fill<NumericalItem<double>>(matches),
-                    MatchCompareFieldType.Spatial => Fill<NumericalItem<double>>(matches),
-                    MatchCompareFieldType.Score => FillScore(matches),
-                    _ => throw new ArgumentOutOfRangeException(_comparer.FieldType.ToString())
-                };
-            }
+            return _fillFunc(ref this, matches);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -122,25 +127,25 @@ namespace Corax.Queries
 
         [SkipLocalsInit]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private int FillScore(Span<long> matches)
+        private static int FillScore(ref SortingMatch<TInner, TComparer> match, Span<long> matches)
         {
             // Important: If you are going to request a massive take like 20K you need to pass at least a 20K size buffer to work with.
             //            The rationale for such behavior is that sorting has to find among the candidates the order between elements,
             //            and it can't do so without checking every single element found. If you fail to do so, your results may not be
             //            correct. 
-            Debug.Assert(_take <= matches.Length);
+            Debug.Assert(match._take <= matches.Length);
 
-            int totalMatches = _inner.Fill(matches);
+            int totalMatches = match._inner.Fill(matches);
             if (totalMatches <= 1)
             {
                 // In those cases, no need to sort or anything. 
                 return totalMatches;
             }
 
-            int take = _take <= 0 ? matches.Length : Math.Min(matches.Length, _take);
+            int take = match._take <= 0 ? matches.Length : Math.Min(matches.Length, match._take);
 
             int arraySize = 4 * matches.Length;
-            using var _ = _searcher.Allocator.Allocate(arraySize * sizeof(float) + arraySize * sizeof(long), out var wholeBuffer);
+            using var _ = match._searcher.Allocator.Allocate(arraySize * sizeof(float) + arraySize * sizeof(long), out var wholeBuffer);
 
             // We need to work with spans from now on, to avoid the creation of new arrays by slicing. 
             var matchesSpan = new Span<long>(wholeBuffer.Ptr, arraySize);
@@ -152,7 +157,7 @@ namespace Corax.Queries
 
             var aScoresSpan = scoresSpan[0..totalMatches];
             aScoresSpan.Fill(1);
-            _inner.Score(matchesSpan[0..totalMatches], aScoresSpan);
+            match._inner.Score(matchesSpan[0..totalMatches], aScoresSpan);
 
             var sorter = new Sorter<float, long, NumericDescendingComparer>();
 
@@ -165,7 +170,7 @@ namespace Corax.Queries
             while (true)
             {
                 // We get a new batch
-                int bTotalMatches = _inner.Fill(matchesSpan[totalMatches..]);
+                int bTotalMatches = match._inner.Fill(matchesSpan[totalMatches..]);
                 temporaryTotalMatches = totalMatches + bTotalMatches;
 
                 // When we don't have any new batch, we are done.
@@ -177,7 +182,7 @@ namespace Corax.Queries
                 // We will score the new batch
                 var bMatchesScores = scoresSpan[totalMatches..temporaryTotalMatches];
                 bMatchesScores.Fill(1);
-                _inner.Score(matchesSpan[totalMatches..temporaryTotalMatches], bMatchesScores);
+                match._inner.Score(matchesSpan[totalMatches..temporaryTotalMatches], bMatchesScores);
 
                 if (temporaryTotalMatches > 3 * matches.Length && !isSorted)
                 {
@@ -212,29 +217,29 @@ namespace Corax.Queries
 
             // Copy must happen before we return the backing arrays.
             matchesSpan[..totalMatches].CopyTo(matches);
-            TotalResults = totalMatches;
+            match.TotalResults = totalMatches;
 
             return totalMatches;
         }
 
         [SkipLocalsInit]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private int Fill<TOut>(Span<long> matches) 
+        private static int Fill<TOut>(ref SortingMatch<TInner, TComparer> match, Span<long> matches) 
             where TOut : struct
         {
             // Important: If you are going to request a massive take like 20K you need to pass at least a 20K size buffer to work with.
             //            The rationale for such behavior is that sorting has to find among the candidates the order between elements,
             //            and it can't do so without checking every single element found. If you fail to do so, your results may not be
             //            correct. 
-            Debug.Assert(_take <= matches.Length);
+            Debug.Assert(match._take <= matches.Length);
 
-            int totalMatches = _inner.Fill(matches);
+            int totalMatches = match._inner.Fill(matches);
             if (totalMatches == 0)
                 return 0;
             
             int matchesArraySize = sizeof(long) * matches.Length;
             int itemArraySize = 2 * Unsafe.SizeOf<MatchComparer<TComparer, TOut>.Item>() * matches.Length;
-            using var _ = _searcher.Allocator.Allocate(itemArraySize + matchesArraySize, out var bufferHolder);
+            using var _ = match._searcher.Allocator.Allocate(itemArraySize + matchesArraySize, out var bufferHolder);
 
             var itemKeys = MemoryMarshal.Cast<byte, MatchComparer<TComparer, TOut>.Item>(bufferHolder.ToSpan().Slice(0, itemArraySize));
             Debug.Assert(itemKeys.Length == 2 * matches.Length);
@@ -245,16 +250,16 @@ namespace Corax.Queries
             var bKeys = itemKeys.Slice(matches.Length, matches.Length);
             Debug.Assert(bKeys.Length == matches.Length);
 
-            int take = _take <= 0 ? matches.Length : Math.Min(matches.Length, _take);
+            int take = match._take <= 0 ? matches.Length : Math.Min(matches.Length, match._take);
 
-            TotalResults += totalMatches;
+            match.TotalResults += totalMatches;
 
-            var searcher = _searcher;
-            var fieldId = _comparer.FieldId;
-            var comparer = new MatchComparer<TComparer, TOut>(_comparer);
+            var searcher = match._searcher;
+            var fieldId = match._comparer.FieldId;
+            var comparer = new MatchComparer<TComparer, TOut>(match._comparer);
             for (int i = 0; i < totalMatches; i++)
             {
-                var read = Get(searcher, fieldId, matches[i], out matchesKeys[i].Value, _comparer);
+                var read = Get(searcher, fieldId, matches[i], out matchesKeys[i].Value, match._comparer);
                 matchesKeys[i].Key = read ? matches[i] : -matches[i];
             }
 
@@ -267,8 +272,8 @@ namespace Corax.Queries
             while (true)
             {
                 // We get a new batch
-                int bTotalMatches = _inner.Fill(bValues);
-                TotalResults += bTotalMatches;
+                int bTotalMatches = match._inner.Fill(bValues);
+                match.TotalResults += bTotalMatches;
 
                 // When we don't have any new batch, we are done.
                 if (bTotalMatches == 0)
@@ -279,7 +284,7 @@ namespace Corax.Queries
                 // We get the keys to sort.
                 for (int i = 0; i < bTotalMatches; i++)
                 {
-                    var read = Get(searcher, fieldId, bValues[i], out bKeys[i].Value, _comparer);
+                    var read = Get(searcher, fieldId, bValues[i], out bKeys[i].Value, match._comparer);
                     bKeys[i].Key = read ? bValues[i] : -bValues[i];
                 }
 
