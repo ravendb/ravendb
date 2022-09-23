@@ -11,13 +11,14 @@ using Voron.Impl;
 
 namespace Voron.Data.Sets
 {
-    public unsafe class Set
+    public unsafe class Set : IDisposable
     {
         public Slice Name;
         private readonly LowLevelTransaction _llt;
         private SetState _state;
-        private SetCursorState[] _stk = new SetCursorState[8];
+        private UnmanagedSpan<SetCursorState> _stk;
         private int _pos = -1, _len;
+        private readonly ByteStringContext<ByteStringMemoryCache>.InternalScope _scope;
 
         public SetState State => _state;
         internal LowLevelTransaction Llt => _llt;
@@ -30,6 +31,11 @@ namespace Voron.Data.Sets
             Name = name;
             _llt = llt;
             _state = state;
+
+            // PERF: We dont have the ability to dispose Set (because of how it is used) therefore,
+            // we will just discard the memory as reclaiming it may be even more costly.  
+            _scope = llt.Allocator.Allocate(8 * sizeof(SetCursorState), out ByteString buffer);
+            _stk = new UnmanagedSpan<SetCursorState>(buffer.Ptr, buffer.Size);
         }
 
         public static void Create(LowLevelTransaction tx, ref SetState state)
@@ -529,12 +535,25 @@ namespace Voron.Data.Sets
         private void InsertToStack(SetCursorState newPageState)
         {
             // insert entry and shift other elements
-            if (_len + 1 >= _stk.Length)// should never happen
-                Array.Resize(ref _stk, _stk.Length * 2); // but let's handle it
-            Array.Copy(_stk, _pos + 1, _stk, _pos + 2, _len - (_pos + 1));
+            if (_len + 1 >= _stk.Length) // should never happen
+                ResizeCursorState();
+
+            var src = _stk.ToReadOnlySpan().Slice(_pos + 1, _len - (_pos + 1));
+            var dest = _stk.ToSpan().Slice(_pos + 2);
+            src.CopyTo(dest);
+
             _len++;
             _stk[_pos + 1] = newPageState;
             _pos++;
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private void ResizeCursorState()
+        {
+            _llt.Allocator.Allocate(_stk.Length * 2 * sizeof(SetCursorState), out ByteString buffer);
+            var newStk = new UnmanagedSpan<SetCursorState>(buffer.Ptr, buffer.Size);
+            _stk.ToReadOnlySpan().CopyTo(newStk.ToSpan());
+            _stk = newStk;
         }
 
         private void FindSmallestValue()
@@ -585,7 +604,8 @@ namespace Voron.Data.Sets
         private void PushPage(long nextPage)
         {
             if (_pos + 1 >= _stk.Length) //  should never actually happen
-                Array.Resize(ref _stk, _stk.Length * 2); // but let's be safe
+                ResizeCursorState();
+
             Page page = _llt.GetPage(nextPage);
             _stk[++_pos] = new SetCursorState( page );
             _len++;
@@ -786,6 +806,11 @@ namespace Voron.Data.Sets
                     Add(childPage);
                 }
             }
+        }
+
+        public void Dispose()
+        {
+            _scope.Dispose();
         }
     }
 }
