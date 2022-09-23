@@ -4,8 +4,6 @@ using System.Runtime.InteropServices;
 using System.Text;
 using Corax.Queries;
 using Sparrow.Compression;
-using Sparrow.Server;
-using Sparrow.Server.Compression;
 using Voron;
 using Voron.Data.CompactTrees;
 using Voron.Data.Containers;
@@ -13,8 +11,28 @@ using Voron.Data.Sets;
 
 namespace Corax;
 
-public unsafe partial class IndexSearcher
+public partial class IndexSearcher
 {
+    public TermMatch TermQuery(Slice field, string term, int fieldId = Constants.IndexSearcher.NonAnalyzer)
+    {
+        var terms = _fieldsTree?.CompactTreeFor(field);
+        if (terms == null)
+        {
+            // If either the term or the field does not exist the request will be empty. 
+            return TermMatch.CreateEmpty(Allocator);
+        }
+
+        Slice termSlice;
+        if (term == Constants.NullValue)
+            termSlice = Constants.NullValueSlice;
+        else if (term == Constants.EmptyString)
+            termSlice = Constants.EmptyStringSlice;
+        else
+            termSlice = EncodeAndApplyAnalyzer(term, fieldId);
+
+        return TermQuery(terms, termSlice, fieldId);
+    }
+
     public TermMatch TermQuery(string field, string term, int fieldId = Constants.IndexSearcher.NonAnalyzer)
     {
         var terms = _fieldsTree?.CompactTreeFor(field);
@@ -51,6 +69,18 @@ public unsafe partial class IndexSearcher
         }
 
         return TermQuery(terms, term);
+    }
+
+    internal TermMatch TermQuery(Slice field, Slice term, int fieldId = Constants.IndexSearcher.NonAnalyzer)
+    {
+        var terms = _fieldsTree?.CompactTreeFor(field);
+        if (terms == null)
+        {
+            // If either the term or the field does not exist the request will be empty. 
+            return TermMatch.CreateEmpty(Allocator);
+        }
+
+        return TermQuery(terms, term, fieldId);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
