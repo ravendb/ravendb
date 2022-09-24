@@ -154,7 +154,7 @@ namespace SlowTests.Cluster
                 await AddCompareExchangesWithExpire(count, compareExchanges, store, expiry);
                 await AssertCompareExchanges(compareExchanges, store, expiry);
 
-                using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(leader.WebUrl, null))
+                using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(leader.WebUrl, null, DocumentConventions.DefaultForServer))
                 using (requestExecutor.ContextPool.AllocateOperationContext(out var ctx))
                 {
                     await requestExecutor.ExecuteAsync(new AddClusterNodeCommand(follower.WebUrl, watcher: true), ctx);
@@ -216,7 +216,7 @@ namespace SlowTests.Cluster
                     var follower = GetNewServer();
                     ServersForDisposal.Add(follower);
 
-                    using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(leader.WebUrl, null))
+                    using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(leader.WebUrl, null, DocumentConventions.DefaultForServer))
                     using (requestExecutor.ContextPool.AllocateOperationContext(out var ctx))
                     {
                         await requestExecutor.ExecuteAsync(new AddClusterNodeCommand(follower.WebUrl, watcher: true), ctx);
@@ -446,7 +446,7 @@ namespace SlowTests.Cluster
                 var server2Url = server2.ServerStore.GetNodeHttpServerUrl();
                 Servers.Add(server2);
 
-                using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(leader.WebUrl, null))
+                using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(leader.WebUrl, null, DocumentConventions.DefaultForServer))
                 using (requestExecutor.ContextPool.AllocateOperationContext(out var ctx))
                 {
                     await requestExecutor.ExecuteAsync(new AddClusterNodeCommand(server2Url, watcher: true), ctx);
