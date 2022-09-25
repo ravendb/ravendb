@@ -28,6 +28,8 @@ namespace Raven.Server.Documents.Queries.Timings
             public static string Setup;
             public static string Optimizer;
             public static string Filter;
+            public static string Terms;
+            public static string AggregateBy;
         }
 
         public QueryTimingsScope(bool start = true) : base(null, start)
