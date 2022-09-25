@@ -419,7 +419,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     try
                     {
                         index = Index.Open(indexPath, database, generateNewDatabaseId: true);
-        }
+                    }
                     catch (Exception e)
                     {
                         result.AddError($"Could not open index from path '{indexPath}'. Error: {e.Message}");
@@ -755,14 +755,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             if (RestoreFromConfiguration.DisableOngoingTasks == false)
                 return;
 
-            if (databaseRecord.ExternalReplications != null)
-            {
-                foreach (var task in databaseRecord.ExternalReplications)
-                {
-                    task.Disabled = true;
-                }
-            }
-
             if (databaseRecord.RavenEtls != null)
             {
                 foreach (var task in databaseRecord.RavenEtls)
@@ -774,6 +766,14 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             if (databaseRecord.SqlEtls != null)
             {
                 foreach (var task in databaseRecord.SqlEtls)
+                {
+                    task.Disabled = true;
+                }
+            }
+
+            if (databaseRecord.OlapEtls != null)
+            {
+                foreach (var task in databaseRecord.OlapEtls)
                 {
                     task.Disabled = true;
                 }
