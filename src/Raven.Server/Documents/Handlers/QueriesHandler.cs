@@ -103,6 +103,7 @@ namespace Raven.Server.Documents.Handlers
             long numberOfResults;
             await using (var writer = new AsyncBlittableJsonTextWriter(queryContext.Documents, ResponseBodyStream()))
             {
+                result.Timings = indexQuery.Timings?.ToTimings();
                 numberOfResults = await writer.WriteFacetedQueryResultAsync(queryContext.Documents, result, token.Token);
             }
 

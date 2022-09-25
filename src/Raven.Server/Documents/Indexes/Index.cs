@@ -260,7 +260,7 @@ namespace Raven.Server.Documents.Indexes
         private readonly double _txAllocationsRatio;
 
         private readonly string _itemType;
-        
+
         internal bool SourceDocumentIncludedInOutput;
         private bool _alreadyNotifiedAboutIncludingDocumentInOutput;
 
@@ -557,7 +557,7 @@ namespace Raven.Server.Documents.Indexes
         }
 
         public IndexType Type { get; }
-        
+
         public SearchEngineType SearchEngineType;
 
         public IndexSourceType SourceType { get; }
@@ -664,7 +664,7 @@ namespace Raven.Server.Documents.Indexes
             var indexPath = configuration.StoragePath.Combine(name);
 
             var indexTempPath = configuration.TempPath?.Combine(name);
-            
+
             var options = configuration.RunInMemory
                 ? StorageEnvironmentOptions.CreateMemoryOnly(indexPath.FullPath, indexTempPath?.FullPath ?? Path.Combine(indexPath.FullPath, "Temp"),
                     documentDatabase.IoChanges, documentDatabase.CatastrophicFailureNotification)
@@ -709,9 +709,9 @@ namespace Raven.Server.Documents.Indexes
                 options.SchemaUpgrader = SchemaUpgrader.Upgrader(SchemaUpgrader.StorageType.Index, null, null, null);
             }
 
-            if (options is not StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions) 
+            if (options is not StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)
                 return;
-            
+
             string disableMarkerPath = options.BasePath.Combine("disable.marker").FullPath;
             if (File.Exists(disableMarkerPath))
             {
@@ -840,7 +840,7 @@ namespace Raven.Server.Documents.Indexes
                 default:
                     throw new InvalidDataException($"Cannot read search engine type for {Name}. Please reset the index.");
             }
-            
+
             IndexPersistence.Initialize(environment);
 
             IndexFieldsPersistence = new IndexFieldsPersistence(this);
@@ -3484,6 +3484,8 @@ namespace Raven.Server.Documents.Indexes
                 AsyncWaitForIndexing wait = null;
                 (long? DocEtag, long? ReferenceEtag, long? CompareExchangeReferenceEtag)? cutoffEtag = null;
 
+                var stalenessScope = query.Timings?.For(nameof(QueryTimingsScope.Names.Staleness), start: false);
+
                 while (true)
                 {
                     token.ThrowIfCancellationRequested();
@@ -3504,24 +3506,28 @@ namespace Raven.Server.Documents.Indexes
                                 queryContext.OpenReadTransaction();
                             // we have to open read tx for mapResults _after_ we open index tx
 
-                            if (query.WaitForNonStaleResults && cutoffEtag == null)
-                                cutoffEtag = GetCutoffEtag(queryContext);
-
-                            var isStale = IsStale(queryContext, indexContext, cutoffEtag?.DocEtag, cutoffEtag?.ReferenceEtag, cutoffEtag?.CompareExchangeReferenceEtag);
-
-                            if (WillResultBeAcceptable(isStale, query, wait) == false)
+                            bool isStale;
+                            using (stalenessScope?.Start())
                             {
-                                queryContext.CloseTransaction();
-                                Debug.Assert(query.WaitForNonStaleResultsTimeout != null);
+                                if (query.WaitForNonStaleResults && cutoffEtag == null)
+                                    cutoffEtag = GetCutoffEtag(queryContext);
 
-                                if (wait == null)
-                                    wait = new AsyncWaitForIndexing(queryDuration,
-                                        query.WaitForNonStaleResultsTimeout.Value, this);
+                                isStale = IsStale(queryContext, indexContext, cutoffEtag?.DocEtag, cutoffEtag?.ReferenceEtag, cutoffEtag?.CompareExchangeReferenceEtag);
 
-                                marker.ReleaseLock();
+                                if (WillResultBeAcceptable(isStale, query, wait) == false)
+                                {
+                                    queryContext.CloseTransaction();
+                                    Debug.Assert(query.WaitForNonStaleResultsTimeout != null);
 
-                                await wait.WaitForIndexingAsync(frozenAwaiter).ConfigureAwait(false);
-                                continue;
+                                    if (wait == null)
+                                        wait = new AsyncWaitForIndexing(queryDuration,
+                                            query.WaitForNonStaleResultsTimeout.Value, this);
+
+                                    marker.ReleaseLock();
+
+                                    await wait.WaitForIndexingAsync(frozenAwaiter).ConfigureAwait(false);
+                                    continue;
+                                }
                             }
 
                             FillFacetedQueryResult(result, isStale,
@@ -3533,20 +3539,30 @@ namespace Raven.Server.Documents.Indexes
 
                             using (var reader = IndexPersistence.OpenFacetedIndexReader(indexTx.InnerTransaction))
                             {
-                                result.Results = reader.FacetedQuery(facetQuery, queryContext.Documents, GetOrAddSpatialField, token.Token);
-
-                                if (facetQuery.Query.Metadata.HasIncludeOrLoad)
+                                using (var queryScope = query.Timings?.For(nameof(QueryTimingsScope.Names.Query)))
                                 {
-                                    var cmd = new IncludeDocumentsCommand(DocumentDatabase.DocumentsStorage, queryContext.Documents, query.Metadata.Includes, isProjection: true);
-                                    cmd.Gather(result.Results);
+                                    result.Results = reader.FacetedQuery(facetQuery, queryScope, queryContext.Documents, GetOrAddSpatialField, token.Token);
 
-                                    cmd.Fill(result.Includes);
+                                    if (facetQuery.Query.Metadata.HasIncludeOrLoad)
+                                    {
+                                        using (var includesScope = queryScope?.For(nameof(QueryTimingsScope.Names.Includes)))
+                                        {
+                                            var cmd = new IncludeDocumentsCommand(DocumentDatabase.DocumentsStorage, queryContext.Documents, query.Metadata.Includes,
+                                                isProjection: true);
+
+                                            using (includesScope?.For(nameof(QueryTimingsScope.Names.Gather)))
+                                                cmd.Gather(result.Results);
+
+                                            using (includesScope?.For(nameof(QueryTimingsScope.Names.Fill)))
+                                                cmd.Fill(result.Includes);
+                                        }
+                                    }
+
+                                    result.TotalResults = result.Results.Count;
+                                    result.LongTotalResults = result.Results.Count;
+
+                                    return result;
                                 }
-
-                                result.TotalResults = result.Results.Count;
-                                result.LongTotalResults = result.Results.Count;
-
-                                return result;
                             }
                         }
                     }
@@ -3647,7 +3663,7 @@ namespace Raven.Server.Documents.Indexes
                                 var suggestField = (SuggestionField)selectField;
                                 using (var reader = IndexPersistence.OpenSuggestionIndexReader(indexTx.InnerTransaction,
                                            suggestField.Name))
-                                        result.Results.Add(reader.Suggestions(query, suggestField, queryContext.Documents, token.Token));
+                                    result.Results.Add(reader.Suggestions(query, suggestField, queryContext.Documents, token.Token));
                             }
 
                             result.TotalResults = result.Results.Count;
@@ -4152,12 +4168,12 @@ namespace Raven.Server.Documents.Indexes
             IncludeDocumentsCommand includeDocumentsCommand, IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, IncludeRevisionsCommand includeRevisionsCommand);
 
         public abstract void SaveLastState();
-        
+
         protected void HandleSourceDocumentIncludedInMapOutput()
         {
             if (_alreadyNotifiedAboutIncludingDocumentInOutput || SourceDocumentIncludedInOutput == false || PerformanceHintsConfig.AlertWhenSourceDocumentIncludedInOutput == false)
                 return;
-            
+
             DocumentDatabase.NotificationCenter.Add(PerformanceHint.Create(
                 DocumentDatabase.Name,
                 $"Index '{Name}' is including the origin document in output.",
@@ -4165,10 +4181,10 @@ namespace Raven.Server.Documents.Indexes
                 PerformanceHintType.Indexing,
                 NotificationSeverity.Warning,
                 nameof(Index)));
-            
+
             _alreadyNotifiedAboutIncludingDocumentInOutput = true;
         }
-        
+
         protected void HandleIndexOutputsPerDocument(LazyStringValue documentId, int numberOfOutputs, IndexingStatsScope stats)
         {
             stats.RecordNumberOfProducedOutputs(numberOfOutputs);
@@ -4639,7 +4655,7 @@ namespace Raven.Server.Documents.Indexes
         {
             if (IndexPersistence is CoraxIndexPersistence)
                 throw new NotImplementedInCoraxException($"{nameof(Compact)} is not implemented yet.");
-            
+
             if (_isCompactionInProgress)
                 throw new InvalidOperationException($"Index '{Name}' cannot be compacted because compaction is already in progress.");
 
