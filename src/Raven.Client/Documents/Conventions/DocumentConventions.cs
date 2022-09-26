@@ -150,6 +150,19 @@ namespace Raven.Client.Documents.Conventions
 
         static DocumentConventions()
         {
+#if NETCOREAPP3_1_OR_GREATER
+            var httpPooledConnectionLifetimeAsString = Environment.GetEnvironmentVariable("RAVEN_HTTP_POOLEDCONNECTIONLIFETIMEINSEC");
+            if (httpPooledConnectionLifetimeAsString != null)
+            {
+                if (int.TryParse(httpPooledConnectionLifetimeAsString, out var httpPooledConnectionLifetime) == false)
+                    throw new InvalidOperationException($"Could not parse 'RAVEN_HTTP_POOLEDCONNECTIONLIFETIMEINSEC' env variable with value '{httpPooledConnectionLifetimeAsString}'.");
+
+                DefaultForServer.HttpPooledConnectionLifetime = httpPooledConnectionLifetime < 0
+                    ? null
+                    : TimeSpan.FromSeconds(httpPooledConnectionLifetime);
+            }
+#endif
+
             Default.Freeze();
             DefaultForServer.Freeze();
         }
