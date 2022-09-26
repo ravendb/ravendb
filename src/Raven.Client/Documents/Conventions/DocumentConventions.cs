@@ -44,7 +44,10 @@ namespace Raven.Client.Documents.Conventions
         internal static readonly DocumentConventions DefaultForServer = new DocumentConventions
         {
             SendApplicationIdentifier = false,
-            MaxContextSizeToKeep = new Size(PlatformDetails.Is32Bits == false ? 8 : 2, SizeUnit.Megabytes)
+            MaxContextSizeToKeep = new Size(PlatformDetails.Is32Bits == false ? 8 : 2, SizeUnit.Megabytes),
+#if NETCOREAPP3_1_OR_GREATER
+            HttpPooledConnectionLifetime = TimeSpan.FromMinutes(3)
+#endif
         };
 
         private static readonly bool DefaultDisableTcpCompression = false;
@@ -151,6 +154,19 @@ namespace Raven.Client.Documents.Conventions
 
         static DocumentConventions()
         {
+#if NETCOREAPP3_1_OR_GREATER
+            var httpPooledConnectionLifetimeAsString = Environment.GetEnvironmentVariable("RAVEN_HTTP_POOLEDCONNECTIONLIFETIMEINSEC");
+            if (httpPooledConnectionLifetimeAsString != null)
+            {
+                if (int.TryParse(httpPooledConnectionLifetimeAsString, out var httpPooledConnectionLifetime) == false)
+                    throw new InvalidOperationException($"Could not parse 'RAVEN_HTTP_POOLEDCONNECTIONLIFETIMEINSEC' env variable with value '{httpPooledConnectionLifetimeAsString}'.");
+
+                DefaultForServer.HttpPooledConnectionLifetime = httpPooledConnectionLifetime < 0
+                    ? null
+                    : TimeSpan.FromSeconds(httpPooledConnectionLifetime);
+            }
+#endif
+
 #if NETCOREAPP3_1_OR_GREATER
             if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             {
@@ -280,6 +296,10 @@ namespace Raven.Client.Documents.Conventions
         private bool _disableTopologyCache;
         private string _topologyCacheLocation;
         private Version _httpVersion;
+#if NETCOREAPP3_1_OR_GREATER
+        private TimeSpan? _httpPooledConnectionLifetime;
+        private TimeSpan? _httpPooledConnectionIdleTimeout;
+#endif
         private bool _sendApplicationIdentifier;
         private Size _maxContextSizeToKeep;
         private ISerializationConventions _serialization;
@@ -329,6 +349,28 @@ namespace Raven.Client.Documents.Conventions
                 _httpVersion = value;
             }
         }
+
+#if NETCOREAPP3_1_OR_GREATER
+        public TimeSpan? HttpPooledConnectionLifetime
+        {
+            get => _httpPooledConnectionLifetime;
+            set
+            {
+                AssertNotFrozen();
+                _httpPooledConnectionLifetime = value;
+            }
+        }
+
+        public TimeSpan? HttpPooledConnectionIdleTimeout
+        {
+            get => _httpPooledConnectionIdleTimeout;
+            set
+            {
+                AssertNotFrozen();
+                _httpPooledConnectionIdleTimeout = value;
+            }
+        }
+#endif
 
         public Func<MemberInfo, string> PropertyNameConverter
         {

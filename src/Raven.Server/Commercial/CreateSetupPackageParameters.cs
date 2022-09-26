@@ -14,6 +14,8 @@ public class CreateSetupPackageParameters
     public string Mode;
     public string CertificatePath;
     public string CertPassword;
+    public string HelmValuesOutputPath;
     public SetupProgressAndResult Progress;
+    public bool RegisterTcpDnsRecords;
     public CancellationToken CancellationToken;
 }

@@ -3,6 +3,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.Util;
@@ -30,7 +31,7 @@ namespace Raven.Server.Utils
 
         public static async Task<TcpConnectionInfo> GetTcpInfoAsync(string url, string databaseName, string databaseId, long etag, string tag, X509Certificate2 certificate, CancellationToken token)
         {
-            using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(url, certificate))
+            using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(url, certificate, DocumentConventions.DefaultForServer))
             using (requestExecutor.ContextPool.AllocateOperationContext(out var context))
             {
                 var getTcpInfoCommand = databaseId == null ? new GetTcpInfoCommand(tag, databaseName) : new GetTcpInfoCommand(tag, databaseName, databaseId, etag);

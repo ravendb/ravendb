@@ -13,6 +13,8 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.ElasticSearch;
+using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Operations.Replication;
@@ -1284,19 +1286,67 @@ namespace SlowTests.Smuggler
             using (var store = GetDocumentStore())
             {
                 // etl
-                store.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
+                await store.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
                 {
                     Name = store.Database,
                     TopologyDiscoveryUrls = new[] { "http://127.0.0.1:8080" },
                     Database = "Northwind",
                 }));
 
+                await store.Maintenance.SendAsync(new PutConnectionStringOperation<SqlConnectionString>(new SqlConnectionString
+                {
+                    Name = "sql-cs",
+                    ConnectionString = "http://127.0.0.1:8081",
+                    FactoryName = "System.Data.SqlClient"
+                }));
+
+                await store.Maintenance.SendAsync(new PutConnectionStringOperation<OlapConnectionString>(new OlapConnectionString
+                {
+                    Name = "olap-cs"
+                }));
+
+                await store.Maintenance.SendAsync(new PutConnectionStringOperation<ElasticSearchConnectionString>(new ElasticSearchConnectionString
+                {
+                    Name = "elasticsearch-cs"
+                }));
+
                 var etlConfiguration = new RavenEtlConfiguration
                 {
                     ConnectionStringName = store.Database,
-                    Transforms = { new Transformation() { Name = "loadAll", Collections = { "Users" }, Script = "loadToUsers(this)" } }
+                    Transforms = { new Transformation { Name = "loadAll", Collections = { "Users" }, Script = "loadToUsers(this)" } }
                 };
                 await store.Maintenance.SendAsync(new AddEtlOperation<RavenConnectionString>(etlConfiguration));
+
+                var sqlEtlConfiguration = new SqlEtlConfiguration
+                {
+                    ConnectionStringName = "sql-cs",
+                    Name = "sql-test",
+                    AllowEtlOnNonEncryptedChannel = true,
+                    Transforms = new List<Transformation> { new() { Script = "", Collections = new List<string> { "Orders" }, Name = "testScript" } },
+                    SqlTables =
+                    {
+                        new SqlEtlTable {TableName = "Orders", DocumentIdColumn = "Id"},
+                        new SqlEtlTable {TableName = "OrderLines", DocumentIdColumn = "OrderId"},
+                        new SqlEtlTable {TableName = "NotUsedInScript", DocumentIdColumn = "OrderId"},
+                    }
+                };
+                await store.Maintenance.SendAsync(new AddEtlOperation<SqlConnectionString>(sqlEtlConfiguration));
+
+                var olapEtlConfiguration = new OlapEtlConfiguration
+                {
+                    Name = "olap-test",
+                    ConnectionStringName = "olap-cs",
+                    Transforms = { new Transformation { Name = "loadAll", Collections = { "Users" }, Script = "loadToUsers(this)" } }
+                };
+                await store.Maintenance.SendAsync(new AddEtlOperation<OlapConnectionString>(olapEtlConfiguration));
+
+                var elasticSearchEtlConfiguration = new ElasticSearchEtlConfiguration
+                {
+                    Name = "elasticsearch-test",
+                    ConnectionStringName = "elasticsearch-cs",
+                    Transforms = { new Transformation { Name = "loadAll", Collections = { "Orders" }, Script = "loadToOrders(this)" } }
+                };
+                await store.Maintenance.SendAsync(new AddEtlOperation<ElasticSearchConnectionString>(elasticSearchEtlConfiguration));
 
                 // external replication
                 var connectionString = new RavenConnectionString
@@ -1318,7 +1368,7 @@ namespace SlowTests.Smuggler
 
                 // backup
                 var config = Backup.CreateBackupConfiguration(backupPath);
-                Backup.UpdateConfigAndRunBackup(Server, config, store);
+                await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
                 // restore the database with a different name
                 var restoredDatabaseName = GetDatabaseName();
@@ -1340,13 +1390,26 @@ namespace SlowTests.Smuggler
                         var databaseRecord = await restoredStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(restoredStore.Database));
 
                         var tasksCount = 0;
-                        foreach (var task in databaseRecord.ExternalReplications)
+
+                        foreach (var task in databaseRecord.RavenEtls)
                         {
                             Assert.Equal(disableOngoingTasks, task.Disabled);
                             tasksCount++;
                         }
 
-                        foreach (var task in databaseRecord.RavenEtls)
+                        foreach (var task in databaseRecord.SqlEtls)
+                        {
+                            Assert.Equal(disableOngoingTasks, task.Disabled);
+                            tasksCount++;
+                        }
+
+                        foreach (var task in databaseRecord.OlapEtls)
+                        {
+                            Assert.Equal(disableOngoingTasks, task.Disabled);
+                            tasksCount++;
+                        }
+
+                        foreach (var task in databaseRecord.ElasticSearchEtls)
                         {
                             Assert.Equal(disableOngoingTasks, task.Disabled);
                             tasksCount++;
@@ -1376,7 +1439,7 @@ namespace SlowTests.Smuggler
                             tasksCount++;
                         }
 
-                        Assert.Equal(6, tasksCount);
+                        Assert.Equal(8, tasksCount);
                     }
                 }
             }

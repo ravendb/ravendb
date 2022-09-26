@@ -110,8 +110,6 @@ namespace Raven.Server.Monitoring.Snmp
             [Description("Server encryption buffers memory being in pool in MB")]
             public const string EncryptionBuffersMemoryInPool = "1.6.10";
 
-            public const string MemInfoPrefix = "1.6.12.{0}";
-
             [SnmpEnumIndex(typeof(GCKind))]
             [Description("GC information for {0}. Specifies if this is a compacting GC or not.")]
             public const string GcCompacted = "1.6.11.{0}.1";
@@ -175,6 +173,10 @@ namespace Raven.Server.Monitoring.Snmp
             [SnmpEnumIndex(typeof(GCKind))]
             [Description("GC information for {0}. Gets the total committed MB of the managed heap.")]
             public const string GcTotalCommitted = "1.6.11.{0}.15";
+
+            public const string MemInfoPrefix = "1.6.12.{0}";
+
+            public const string AvailableMemoryForProcessing = "1.6.13";
 
             [Description("Number of concurrent requests")]
             public const string ConcurrentRequests = "1.7.1";
