@@ -280,6 +280,7 @@ namespace Raven.Client.Http
                 case SocketError.HostNotFound:
                 case SocketError.HostUnreachable:
                 case SocketError.ConnectionRefused:
+                case SocketError.TryAgain:
                     return true;
 
                 default:
