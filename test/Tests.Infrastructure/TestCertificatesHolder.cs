@@ -160,7 +160,7 @@ namespace FastTests
             {
                 try
                 {
-                    return new TrackingX509Certificate2(ServerCertificatePath, (string)null);
+                    return new TrackingX509Certificate2(ServerCertificatePath, (string)null, X509KeyStorageFlags.MachineKeySet);
                 }
                 catch (CryptographicException e)
                 {
@@ -211,7 +211,7 @@ namespace FastTests
             {
                 try
                 {
-                    return new TrackingX509Certificate2(ServerCertificatePath, (string)null);
+                    return new TrackingX509Certificate2(ServerCertificatePath, (string)null, X509KeyStorageFlags.MachineKeySet);
                 }
                 catch (CryptographicException e)
                 {
@@ -230,7 +230,7 @@ namespace FastTests
             {
                 try
                 {
-                    return new TrackingX509Certificate2(path(), (string)null, CertificateLoaderUtil.FlagsForExport);
+                    return new TrackingX509Certificate2(path(), (string)null, X509KeyStorageFlags.MachineKeySet | CertificateLoaderUtil.FlagsForExport);
                 }
                 catch (CryptographicException e)
                 {

@@ -1,12 +1,15 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Security.Cryptography.X509Certificates;
-using System.Threading;
+using Sparrow.Logging;
 
 namespace Raven.Client;
 
 internal static class CertificateLoaderUtil
 {
+    private static readonly Logger Log = LoggingSource.Instance.GetLogger("Server", nameof(CertificateLoaderUtil));
+    
+    private static bool FirstTime = true;
     public static X509KeyStorageFlags FlagsForExport => X509KeyStorageFlags.Exportable;
 
     public static X509KeyStorageFlags FlagsForPersist => X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet;
@@ -24,16 +27,21 @@ internal static class CertificateLoaderUtil
     {
         DebugAssertDoesntContainKeySet(flag);
         var f = AddUserKeySet(flag);
+        Exception exception = null;
         try
         {
             importer(f);
         }
-        catch
+        catch (Exception e)
         {
-            importer(SwitchUserKeySetWithMachineKeySet(f));
+            exception = e;
+            f = SwitchUserKeySetWithMachineKeySet(f);
+            importer(f);
         }
+
+        LogIfNeeded(f, exception);
     }
-    
+
     public static X509Certificate2 CreateCertificate(byte[] rawData, string password = null, X509KeyStorageFlags? flags = null)
     {
         return CreateCertificate(f => new X509Certificate2(rawData, password, f), flags);
@@ -47,14 +55,21 @@ internal static class CertificateLoaderUtil
     {
         DebugAssertDoesntContainKeySet(flag);
         var f = AddUserKeySet(flag);
+        Exception exception = null;
+        X509Certificate2 ret;
         try
         {
-            return creator(f);
+            ret = creator(f);
         }
-        catch
+        catch(Exception e)
         {
-            return creator(SwitchUserKeySetWithMachineKeySet(f));
+            exception = e;
+            f = SwitchUserKeySetWithMachineKeySet(f);
+            ret = creator(f);
         }
+        
+        LogIfNeeded(f, exception);
+        return ret;
     }
 
     private static X509KeyStorageFlags SwitchUserKeySetWithMachineKeySet(X509KeyStorageFlags f)
@@ -73,8 +88,36 @@ internal static class CertificateLoaderUtil
         const X509KeyStorageFlags keyStorageFlags = 
             X509KeyStorageFlags.UserKeySet | 
             X509KeyStorageFlags.MachineKeySet | 
-            (X509KeyStorageFlags)0x20 /*X509KeyStorageFlags.EphemeralKeySet*/;
+            (X509KeyStorageFlags)0x20 ; // X509KeyStorageFlags.EphemeralKeySet not defined in .Netstandard
         
         Debug.Assert(flags.HasValue == false || (flags.Value & keyStorageFlags) == 0);
     }
+    
+    private static void LogIfNeeded(X509KeyStorageFlags f, Exception exception)
+    {
+        if (Log.IsOperationsEnabled)
+        {
+            if (FirstTime)
+            {
+                FirstTime = false;
+                Log.Operations(CreateMsg());
+            }
+            else
+            {
+                if (Log.IsInfoEnabled)
+                {
+                    Log.Info(CreateMsg());
+                }
+            }
+        }
+
+        string CreateMsg()
+        {
+            var msg = $"Flags used {f}";
+            if (exception != null)
+                msg += $"Firs attempt exception : {exception}";
+            return msg;
+        }
+    }
+
 }
