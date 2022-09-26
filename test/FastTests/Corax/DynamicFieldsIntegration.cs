@@ -39,7 +39,7 @@ public class DynamicFieldsIntegration : RavenTestBase
         using var store = await GetStoreWithIndexAndData<IndexString, string>(options, i => i == 50 ? null : $"Container no {i}");
         {
             using var session = store.OpenAsyncSession();
-            var result = await session.Query<TestClassResult<string>, IndexString>().Where(i => i.Dynamic == null).SingleOrDefaultAsync();
+            var result = await session.Query<TestClassResult<string?>, IndexString>().Where(i => i.Dynamic == null).SingleOrDefaultAsync();
             AssertResult(result);
         }
     }
@@ -52,7 +52,7 @@ public class DynamicFieldsIntegration : RavenTestBase
             await GetStoreWithIndexAndData<IndexStringList, string[]>(options, i => i == 50 ? null : Enumerable.Range(0, 10).Select(p => $"Container no {p}").ToArray());
         {
             using var session = store.OpenAsyncSession();
-            var result = await session.Query<TestClassResult<string>, IndexStringList>().Where(i => i.Dynamic == null).SingleOrDefaultAsync();
+            var result = await session.Query<TestClassResult<string?>, IndexStringList>().Where(i => i.Dynamic == null).SingleOrDefaultAsync();
             AssertResult(result);
         }
     }
@@ -65,7 +65,7 @@ public class DynamicFieldsIntegration : RavenTestBase
 
         {
             using var session = store.OpenAsyncSession();
-            var result = await session.Query<TestClassResult<float?>, IndexFloat>().Where(i => i.Dynamic == 50 + float.Epsilon).SingleOrDefaultAsync();
+            var result = await session.Query<TestClassResult<float?>, IndexFloat>().Where(i => i.Dynamic!.Value == 50).SingleOrDefaultAsync();
             AssertResult(result);
         }
     }
@@ -145,15 +145,15 @@ public class DynamicFieldsIntegration : RavenTestBase
 
     private class TestClass<T>
     {
-        public string Id { get; set; }
+        public string? Id { get; set; }
         public T? Value { get; set; }
     }
 
     private class TestClassResult<T>
     {
-        public string Id { get; set; }
-        public T Value { get; set; }
-        public T Dynamic { get; set; }
+        public string? Id { get; set; }
+        public T? Value { get; set; }
+        public T? Dynamic { get; set; }
     }
 
 
