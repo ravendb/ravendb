@@ -15,6 +15,7 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
+using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Operations.Replication;
@@ -151,7 +152,7 @@ namespace SlowTests.Smuggler
                         Name = "Etl",
                         TaskId = 4,
                         TestMode = true,
-                        Transforms = new List<Transformation>{new() {Script = "",Collections = new List<string>{"Orders"},Name ="testScript"}}
+                        Transforms = new List<Transformation> { new() { Script = "", Collections = new List<string> { "Orders" }, Name = "testScript" } }
                     }));
 
                     store1.Maintenance.Send(new AddEtlOperation<SqlConnectionString>(new SqlEtlConfiguration()
@@ -167,7 +168,7 @@ namespace SlowTests.Smuggler
                         Name = "sql",
                         ParameterizeDeletes = false,
                         MentorNode = "A",
-                        Transforms = new List<Transformation>{new() {Script = "loadToOrders(this)", Collections = new List<string>{"Orders"},Name ="testScript"}}
+                        Transforms = new List<Transformation> { new() { Script = "loadToOrders(this)", Collections = new List<string> { "Orders" }, Name = "testScript" } }
                     }));
                     await store1.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
 
@@ -355,7 +356,7 @@ namespace SlowTests.Smuggler
                         Name = "Etl",
                         TaskId = 4,
                         TestMode = true,
-                        Transforms = new List<Transformation>{new() {Script = "",Collections = new List<string>{"Orders"},Name ="testScript"}}
+                        Transforms = new List<Transformation> { new() { Script = "", Collections = new List<string> { "Orders" }, Name = "testScript" } }
                     }));
 
                     store1.Maintenance.Send(new AddEtlOperation<SqlConnectionString>(new SqlEtlConfiguration()
@@ -371,7 +372,7 @@ namespace SlowTests.Smuggler
                         Name = "sql",
                         ParameterizeDeletes = false,
                         MentorNode = "A",
-                        Transforms = new List<Transformation>{new() {Script = "loadToOrders(this)", Collections = new List<string>{"Orders"},Name ="testScript"}}
+                        Transforms = new List<Transformation> { new() { Script = "loadToOrders(this)", Collections = new List<string> { "Orders" }, Name = "testScript" } }
                     }));
                     var migrate = new Migrator(new DatabasesMigrationConfiguration
                     {
@@ -751,28 +752,28 @@ namespace SlowTests.Smuggler
                         ConnectionStringName = "con1",
                         Name = "etl1",
                         AllowEtlOnNonEncryptedChannel = true,
-                        Transforms = new List<Transformation>{new() {Script = "",Collections = new List<string>{"Orders"},Name ="testScript"}}
+                        Transforms = new List<Transformation> { new() { Script = "", Collections = new List<string> { "Orders" }, Name = "testScript" } }
                     };
                     var etlConfiguration2 = new RavenEtlConfiguration
                     {
                         ConnectionStringName = "con2",
                         Name = "etl2",
                         AllowEtlOnNonEncryptedChannel = true,
-                        Transforms = new List<Transformation>{new() {Script = "",Collections = new List<string>{"Orders"},Name ="testScript"}}
+                        Transforms = new List<Transformation> { new() { Script = "", Collections = new List<string> { "Orders" }, Name = "testScript" } }
                     };
                     var etlConfiguration3 = new RavenEtlConfiguration
                     {
                         ConnectionStringName = "con3",
                         Name = "etl1",
                         AllowEtlOnNonEncryptedChannel = false,
-                        Transforms = new List<Transformation>{new() {Script = "",Collections = new List<string>{"Orders"},Name ="testScript"}}
+                        Transforms = new List<Transformation> { new() { Script = "", Collections = new List<string> { "Orders" }, Name = "testScript" } }
                     };
                     var etlConfiguration4 = new RavenEtlConfiguration
                     {
                         ConnectionStringName = "con4",
                         Name = "etl4",
                         AllowEtlOnNonEncryptedChannel = true,
-                        Transforms = new List<Transformation>{new() {Script = "",Collections = new List<string>{"Orders"},Name ="testScript"}}
+                        Transforms = new List<Transformation> { new() { Script = "", Collections = new List<string> { "Orders" }, Name = "testScript" } }
                     };
                     WaitForUserToContinueTheTest(store1);
                     await store1.Maintenance.SendAsync(new AddEtlOperation<RavenConnectionString>(etlConfiguration));
@@ -818,7 +819,7 @@ namespace SlowTests.Smuggler
                         ConnectionStringName = "scon1",
                         Name = "setl1",
                         AllowEtlOnNonEncryptedChannel = true,
-                        Transforms = new List<Transformation>{new() {Script = "loadToOrders(this)", Collections = new List<string>{"Orders"},Name ="testScript"}},
+                        Transforms = new List<Transformation> { new() { Script = "loadToOrders(this)", Collections = new List<string> { "Orders" }, Name = "testScript" } },
                         SqlTables =
                         {
                             new SqlEtlTable {TableName = "Orders", DocumentIdColumn = "Id"},
@@ -831,7 +832,7 @@ namespace SlowTests.Smuggler
                         ConnectionStringName = "scon2",
                         Name = "setl2",
                         AllowEtlOnNonEncryptedChannel = true,
-                        Transforms = new List<Transformation>{new() {Script = "loadToOrders(this)", Collections = new List<string>{"Orders"},Name ="testScript"}},
+                        Transforms = new List<Transformation> { new() { Script = "loadToOrders(this)", Collections = new List<string> { "Orders" }, Name = "testScript" } },
                         SqlTables =
                         {
                             new SqlEtlTable {TableName = "Orders", DocumentIdColumn = "Id"},
@@ -844,7 +845,7 @@ namespace SlowTests.Smuggler
                         ConnectionStringName = "scon3",
                         Name = "setl1",
                         AllowEtlOnNonEncryptedChannel = true,
-                        Transforms = new List<Transformation>{new() {Script = "loadToOrders(this)", Collections = new List<string>{"Orders"},Name ="testScript"}},
+                        Transforms = new List<Transformation> { new() { Script = "loadToOrders(this)", Collections = new List<string> { "Orders" }, Name = "testScript" } },
                         SqlTables =
                         {
                             new SqlEtlTable {TableName = "Orders", DocumentIdColumn = "Id"},
@@ -857,7 +858,7 @@ namespace SlowTests.Smuggler
                         ConnectionStringName = "scon4",
                         Name = "setl4",
                         AllowEtlOnNonEncryptedChannel = true,
-                        Transforms = new List<Transformation>{new() {Script = "loadToOrders(this)", Collections = new List<string>{"Orders"},Name ="testScript"}},
+                        Transforms = new List<Transformation> { new() { Script = "loadToOrders(this)", Collections = new List<string> { "Orders" }, Name = "testScript" } },
                         SqlTables =
                         {
                             new SqlEtlTable {TableName = "Orders", DocumentIdColumn = "Id"},
@@ -874,7 +875,7 @@ namespace SlowTests.Smuggler
                     var config2 = Backup.CreateBackupConfiguration(backupPath: "FolderPath", fullBackupFrequency: "0 1 * * *", incrementalBackupFrequency: "0 6 * * *", mentorNode: "A", name: "Backup2");
                     var config3 = Backup.CreateBackupConfiguration(backupPath: "FolderPath", backupType: BackupType.Snapshot, fullBackupFrequency: "0 8 * * *", incrementalBackupFrequency: "0 6 * * *", mentorNode: "A", name: "Backup");
                     var config4 = Backup.CreateBackupConfiguration(backupPath: "FolderPath", fullBackupFrequency: "0 1 * * *", incrementalBackupFrequency: "0 6 * * *", mentorNode: "A", name: "Backup4");
-                  
+
                     await store1.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
                     await store1.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config2));
                     await store2.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config3));
@@ -1012,27 +1013,27 @@ namespace SlowTests.Smuggler
                 privateKey = Convert.ToBase64String(pullReplicationCertificate.Export(X509ContentType.Pfx));
             }
 
-                using (var store = GetDocumentStore(new Options
-                {
-                    ModifyDatabaseName = s => $"{s}_1",
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => $"{s}_1",
 
-                    ModifyDatabaseRecord = record =>
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
                     {
-                        record.ConflictSolverConfig = new ConflictSolver
-                        {
-                            ResolveToLatest = false,
-                            ResolveByCollection = new Dictionary<string, ScriptResolver>
-                                {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>
+                            {
                                     {
                                         "ConflictSolver", new ScriptResolver()
                                         {
                                             Script = "Script"
                                         }
                                     }
-                                }
-                        };
-                        record.Sorters = new Dictionary<string, SorterDefinition>
-                        {
+                            }
+                    };
+                    record.Sorters = new Dictionary<string, SorterDefinition>
+                    {
                             {
                                 "MySorter", new SorterDefinition
                                 {
@@ -1040,161 +1041,161 @@ namespace SlowTests.Smuggler
                                     Code = GetCode("RavenDB_8355.MySorter.cs")
                                 }
                             }
-                        };
-                    }
-                }))
-                {
-                    store.Maintenance.Send(new UpdateExternalReplicationOperation(new ExternalReplication("tempDatabase", "ExternalReplication")
-                    {
-                        TaskId = 1,
-                        Name = "External",
-                        DelayReplicationFor = new TimeSpan(4),
-                        Url = "http://127.0.0.1/",
-                        Disabled = false
-                    }));
-                    store.Maintenance.Send(new UpdatePullReplicationAsSinkOperation(new PullReplicationAsSink()
-                    {
-                        Database = "sinkDatabase",
-                        CertificatePassword = (string)null,
-                        CertificateWithPrivateKey = privateKey,
-                        TaskId = 2,
-                        Name = "Sink",
-                        HubName = "hub",
-                        ConnectionStringName = "ConnectionName"
-                    }));
-                    store.Maintenance.Send(new PutPullReplicationAsHubOperation(new PullReplicationDefinition()
-                    {
-                        TaskId = 3,
-                        Name = "hub",
-                        MentorNode = "A",
-                        DelayReplicationFor = new TimeSpan(3),
-                    }));
-
-                    var result1 = store.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
-                    {
-                        Name = "ConnectionName",
-                        TopologyDiscoveryUrls = new[] { "http://127.0.0.1:8080" },
-                        Database = "Northwind",
-                    }));
-                    Assert.NotNull(result1.RaftCommandIndex);
-
-                    var sqlConnectionString = new SqlConnectionString
-                    {
-                        Name = "connection",
-                        ConnectionString = @"Data Source=localhost\sqlexpress;Integrated Security=SSPI;Connection Timeout=3" + $";Initial Catalog=SqlReplication-{store.Database};",
-                        FactoryName = "System.Data.SqlClient"
                     };
+                }
+            }))
+            {
+                store.Maintenance.Send(new UpdateExternalReplicationOperation(new ExternalReplication("tempDatabase", "ExternalReplication")
+                {
+                    TaskId = 1,
+                    Name = "External",
+                    DelayReplicationFor = new TimeSpan(4),
+                    Url = "http://127.0.0.1/",
+                    Disabled = false
+                }));
+                store.Maintenance.Send(new UpdatePullReplicationAsSinkOperation(new PullReplicationAsSink()
+                {
+                    Database = "sinkDatabase",
+                    CertificatePassword = (string)null,
+                    CertificateWithPrivateKey = privateKey,
+                    TaskId = 2,
+                    Name = "Sink",
+                    HubName = "hub",
+                    ConnectionStringName = "ConnectionName"
+                }));
+                store.Maintenance.Send(new PutPullReplicationAsHubOperation(new PullReplicationDefinition()
+                {
+                    TaskId = 3,
+                    Name = "hub",
+                    MentorNode = "A",
+                    DelayReplicationFor = new TimeSpan(3),
+                }));
 
-                    var result2 = store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
-                    Assert.NotNull(result2.RaftCommandIndex);
-                    store.Maintenance.Send(new AddEtlOperation<RavenConnectionString>(new RavenEtlConfiguration()
-                    {
-                        AllowEtlOnNonEncryptedChannel = true,
-                        ConnectionStringName = "ConnectionName",
-                        MentorNode = "A",
-                        Name = "Etl",
-                        TaskId = 4,
+                var result1 = store.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
+                {
+                    Name = "ConnectionName",
+                    TopologyDiscoveryUrls = new[] { "http://127.0.0.1:8080" },
+                    Database = "Northwind",
+                }));
+                Assert.NotNull(result1.RaftCommandIndex);
+
+                var sqlConnectionString = new SqlConnectionString
+                {
+                    Name = "connection",
+                    ConnectionString = @"Data Source=localhost\sqlexpress;Integrated Security=SSPI;Connection Timeout=3" + $";Initial Catalog=SqlReplication-{store.Database};",
+                    FactoryName = "System.Data.SqlClient"
+                };
+
+                var result2 = store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
+                Assert.NotNull(result2.RaftCommandIndex);
+                store.Maintenance.Send(new AddEtlOperation<RavenConnectionString>(new RavenEtlConfiguration()
+                {
+                    AllowEtlOnNonEncryptedChannel = true,
+                    ConnectionStringName = "ConnectionName",
+                    MentorNode = "A",
+                    Name = "Etl",
+                    TaskId = 4,
                     TestMode = true,
-                    Transforms = new List<Transformation>{new() {Script = "",Collections = new List<string>{"Orders"},Name ="testScript"}}
-                    }));
+                    Transforms = new List<Transformation> { new() { Script = "", Collections = new List<string> { "Orders" }, Name = "testScript" } }
+                }));
 
-                    store.Maintenance.Send(new AddEtlOperation<SqlConnectionString>(new SqlEtlConfiguration()
-                    {
-                        AllowEtlOnNonEncryptedChannel = true,
-                        ForceQueryRecompile = false,
-                        ConnectionStringName = "connection",
-                        SqlTables =
+                store.Maintenance.Send(new AddEtlOperation<SqlConnectionString>(new SqlEtlConfiguration()
+                {
+                    AllowEtlOnNonEncryptedChannel = true,
+                    ForceQueryRecompile = false,
+                    ConnectionStringName = "connection",
+                    SqlTables =
                             {
                                 new SqlEtlTable {TableName = "Orders", DocumentIdColumn = "Id", InsertOnlyMode = false},
                                 new SqlEtlTable {TableName = "OrderLines", DocumentIdColumn = "OrderId", InsertOnlyMode = false},
                             },
-                        Name = "sql",
-                        ParameterizeDeletes = false,
+                    Name = "sql",
+                    ParameterizeDeletes = false,
                     MentorNode = "A",
-                    Transforms = new List<Transformation>{new() {Script = "loadToOrders(this)",Collections = new List<string>{"Orders"},Name ="testScript"}}
-                    }));
+                    Transforms = new List<Transformation> { new() { Script = "loadToOrders(this)", Collections = new List<string> { "Orders" }, Name = "testScript" } }
+                }));
 
-                    using (var session = store.OpenAsyncSession())
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
                     {
-                        await session.StoreAsync(new User
-                        {
-                            Name = "oren"
-                        }, "users/1");
-                        await session.SaveChangesAsync();
-                    }
+                        Name = "oren"
+                    }, "users/1");
+                    await session.SaveChangesAsync();
+                }
                 var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "0 */5 * * *", name: "Real");
                 var config2 = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "0 */1 * * *", incrementalBackupFrequency: "0 */6 * * *", mentorNode: "A", name: "Backup");
 
-                    await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config2));
+                await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config2));
                 Backup.UpdateConfigAndRunBackup(Server, config, store);
 
-                    var databaseName = $"restored_database-{Guid.NewGuid()}";
+                var databaseName = $"restored_database-{Guid.NewGuid()}";
                 using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
+                {
+                    BackupLocation = Directory.GetDirectories(backupPath).First(),
+                    DatabaseName = databaseName,
+                }))
+                {
+                    var periodicBackupRunner = (await Databases.GetDocumentDatabaseInstanceFor(store)).PeriodicBackupRunner;
+                    var backups = periodicBackupRunner.PeriodicBackups;
+
+                    Assert.Equal(2, backups.Count);
+                    Assert.Equal(true, backups.Any(x => x.Configuration.Name.Equals("Backup")));
+                    foreach (var backup in backups)
                     {
-                        BackupLocation = Directory.GetDirectories(backupPath).First(),
-                        DatabaseName = databaseName,
-                    }))
-                    {
-                        var periodicBackupRunner = (await Databases.GetDocumentDatabaseInstanceFor(store)).PeriodicBackupRunner;
-                        var backups = periodicBackupRunner.PeriodicBackups;
-
-                        Assert.Equal(2, backups.Count);
-                        Assert.Equal(true, backups.Any(x => x.Configuration.Name.Equals("Backup")));
-                        foreach (var backup in backups)
-                        {
-                            if (!backup.Configuration.Name.Equals("Backup"))
-                                continue;
-                            Assert.Equal(true, backup.Configuration.IncrementalBackupFrequency.Equals("0 */6 * * *"));
-                            Assert.Equal(true, backup.Configuration.FullBackupFrequency.Equals("0 */1 * * *"));
-                            Assert.Equal(BackupType.Backup, backup.Configuration.BackupType);
-                            Assert.Equal(false, backup.Configuration.Disabled);
-                        }
-
-                        var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
-
-                        Assert.NotNull(record.ConflictSolverConfig);
-                        Assert.Equal(false, record.ConflictSolverConfig.ResolveToLatest);
-                        Assert.Equal(1, record.ConflictSolverConfig.ResolveByCollection.Count);
-                        Assert.Equal(true, record.ConflictSolverConfig.ResolveByCollection.TryGetValue("ConflictSolver", out ScriptResolver sr));
-                        Assert.Equal("Script", sr.Script);
-
-                        Assert.Equal(1, record.Sorters.Count);
-                        Assert.Equal(true, record.Sorters.TryGetValue("MySorter", out SorterDefinition sd));
-                        Assert.Equal("MySorter", sd.Name);
-                        Assert.NotEmpty(sd.Code);
-
-                        Assert.Equal(1, record.ExternalReplications.Count);
-                        Assert.Equal("tempDatabase", record.ExternalReplications[0].Database);
-                        Assert.Equal(false, record.ExternalReplications[0].Disabled);
-
-                        Assert.Equal(1, record.SinkPullReplications.Count);
-                        Assert.Equal("sinkDatabase", record.SinkPullReplications[0].Database);
-                        Assert.Equal("hub", record.SinkPullReplications[0].HubName);
-                        Assert.Equal((string)null, record.SinkPullReplications[0].CertificatePassword);
-                        Assert.Equal(privateKey, record.SinkPullReplications[0].CertificateWithPrivateKey);
-                        Assert.Equal(false, record.SinkPullReplications[0].Disabled);
-
-                        Assert.Equal(1, record.HubPullReplications.Count);
-                        Assert.Equal(new TimeSpan(3), record.HubPullReplications.First().DelayReplicationFor);
-                        Assert.Equal("hub", record.HubPullReplications.First().Name);
-                        Assert.Equal(false, record.HubPullReplications.First().Disabled);
-
-                        Assert.Equal(1, record.RavenEtls.Count);
-                        Assert.Equal("Etl", record.RavenEtls.First().Name);
-                        Assert.Equal("ConnectionName", record.RavenEtls.First().ConnectionStringName);
-                        Assert.Equal(true, record.RavenEtls.First().AllowEtlOnNonEncryptedChannel);
-                        Assert.Equal(false, record.RavenEtls.First().Disabled);
-
-                        Assert.Equal(1, record.SqlEtls.Count);
-                        Assert.Equal("sql", record.SqlEtls.First().Name);
-                        Assert.Equal(false, record.SqlEtls.First().ParameterizeDeletes);
-                        Assert.Equal(false, record.SqlEtls.First().ForceQueryRecompile);
-                        Assert.Equal("connection", record.SqlEtls.First().ConnectionStringName);
-                        Assert.Equal(true, record.SqlEtls.First().AllowEtlOnNonEncryptedChannel);
-                        Assert.Equal(false, record.SqlEtls.First().Disabled);
+                        if (!backup.Configuration.Name.Equals("Backup"))
+                            continue;
+                        Assert.Equal(true, backup.Configuration.IncrementalBackupFrequency.Equals("0 */6 * * *"));
+                        Assert.Equal(true, backup.Configuration.FullBackupFrequency.Equals("0 */1 * * *"));
+                        Assert.Equal(BackupType.Backup, backup.Configuration.BackupType);
+                        Assert.Equal(false, backup.Configuration.Disabled);
                     }
+
+                    var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
+
+                    Assert.NotNull(record.ConflictSolverConfig);
+                    Assert.Equal(false, record.ConflictSolverConfig.ResolveToLatest);
+                    Assert.Equal(1, record.ConflictSolverConfig.ResolveByCollection.Count);
+                    Assert.Equal(true, record.ConflictSolverConfig.ResolveByCollection.TryGetValue("ConflictSolver", out ScriptResolver sr));
+                    Assert.Equal("Script", sr.Script);
+
+                    Assert.Equal(1, record.Sorters.Count);
+                    Assert.Equal(true, record.Sorters.TryGetValue("MySorter", out SorterDefinition sd));
+                    Assert.Equal("MySorter", sd.Name);
+                    Assert.NotEmpty(sd.Code);
+
+                    Assert.Equal(1, record.ExternalReplications.Count);
+                    Assert.Equal("tempDatabase", record.ExternalReplications[0].Database);
+                    Assert.Equal(false, record.ExternalReplications[0].Disabled);
+
+                    Assert.Equal(1, record.SinkPullReplications.Count);
+                    Assert.Equal("sinkDatabase", record.SinkPullReplications[0].Database);
+                    Assert.Equal("hub", record.SinkPullReplications[0].HubName);
+                    Assert.Equal((string)null, record.SinkPullReplications[0].CertificatePassword);
+                    Assert.Equal(privateKey, record.SinkPullReplications[0].CertificateWithPrivateKey);
+                    Assert.Equal(false, record.SinkPullReplications[0].Disabled);
+
+                    Assert.Equal(1, record.HubPullReplications.Count);
+                    Assert.Equal(new TimeSpan(3), record.HubPullReplications.First().DelayReplicationFor);
+                    Assert.Equal("hub", record.HubPullReplications.First().Name);
+                    Assert.Equal(false, record.HubPullReplications.First().Disabled);
+
+                    Assert.Equal(1, record.RavenEtls.Count);
+                    Assert.Equal("Etl", record.RavenEtls.First().Name);
+                    Assert.Equal("ConnectionName", record.RavenEtls.First().ConnectionStringName);
+                    Assert.Equal(true, record.RavenEtls.First().AllowEtlOnNonEncryptedChannel);
+                    Assert.Equal(false, record.RavenEtls.First().Disabled);
+
+                    Assert.Equal(1, record.SqlEtls.Count);
+                    Assert.Equal("sql", record.SqlEtls.First().Name);
+                    Assert.Equal(false, record.SqlEtls.First().ParameterizeDeletes);
+                    Assert.Equal(false, record.SqlEtls.First().ForceQueryRecompile);
+                    Assert.Equal("connection", record.SqlEtls.First().ConnectionStringName);
+                    Assert.Equal(true, record.SqlEtls.First().AllowEtlOnNonEncryptedChannel);
+                    Assert.Equal(false, record.SqlEtls.First().Disabled);
                 }
             }
+        }
 
         [Fact, Trait("Category", "Smuggler")]
         public async Task CanRestoreSubscriptionsFromBackup()
@@ -1310,6 +1311,16 @@ namespace SlowTests.Smuggler
                     Name = "elasticsearch-cs"
                 }));
 
+                await store.Maintenance.SendAsync(new PutConnectionStringOperation<QueueConnectionString>(new QueueConnectionString
+                {
+                    Name = "queue-kafka-cs",
+                    BrokerType = QueueBrokerType.Kafka,
+                    KafkaConnectionSettings = new KafkaConnectionSettings
+                    {
+                        BootstrapServers = "localhost:29092"
+                    }
+                }));
+
                 var etlConfiguration = new RavenEtlConfiguration
                 {
                     ConnectionStringName = store.Database,
@@ -1322,7 +1333,7 @@ namespace SlowTests.Smuggler
                     ConnectionStringName = "sql-cs",
                     Name = "sql-test",
                     AllowEtlOnNonEncryptedChannel = true,
-                    Transforms = new List<Transformation> { new() { Script = "", Collections = new List<string> { "Orders" }, Name = "testScript" } },
+                    Transforms = new List<Transformation> { new() { Script = "loadToOrders(this)", Collections = new List<string> { "Orders" }, Name = "testScript" } },
                     SqlTables =
                     {
                         new SqlEtlTable {TableName = "Orders", DocumentIdColumn = "Id"},
@@ -1347,6 +1358,14 @@ namespace SlowTests.Smuggler
                     Transforms = { new Transformation { Name = "loadAll", Collections = { "Orders" }, Script = "loadToOrders(this)" } }
                 };
                 await store.Maintenance.SendAsync(new AddEtlOperation<ElasticSearchConnectionString>(elasticSearchEtlConfiguration));
+
+                var queueKafkaEtlConfiguration = new QueueEtlConfiguration
+                {
+                    Name = "queue-kafka-test",
+                    ConnectionStringName = "queue-kafka-cs",
+                    Transforms = { new Transformation { Name = "loadAll", Collections = { "Orders" }, Script = "loadToOrders(this)" } }
+                };
+                await store.Maintenance.SendAsync(new AddEtlOperation<QueueConnectionString>(queueKafkaEtlConfiguration));
 
                 // external replication
                 var connectionString = new RavenConnectionString
@@ -1415,6 +1434,12 @@ namespace SlowTests.Smuggler
                             tasksCount++;
                         }
 
+                        foreach (var task in databaseRecord.QueueEtls)
+                        {
+                            Assert.Equal(disableOngoingTasks, task.Disabled);
+                            tasksCount++;
+                        }
+
                         foreach (var task in databaseRecord.PeriodicBackups)
                         {
                             Assert.Equal(disableOngoingTasks, task.Disabled);
@@ -1439,7 +1464,7 @@ namespace SlowTests.Smuggler
                             tasksCount++;
                         }
 
-                        Assert.Equal(8, tasksCount);
+                        Assert.Equal(9, tasksCount);
                     }
                 }
             }
