@@ -51,7 +51,7 @@ public class RDBC_631 : RavenTestBase
             using var bulkInsert = store.BulkInsert();
             foreach (var i in Enumerable.Range(0, 100))
             {
-                var date = new TimeOnly(i);
+                var date = new TimeOnly(i * TimeSpan.TicksPerMinute);
                 bulkInsert.Store(new Mock<TimeOnly>() {Date = date});
                 datesOnly.Add(date);
             }
