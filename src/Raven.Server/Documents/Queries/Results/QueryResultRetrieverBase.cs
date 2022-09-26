@@ -712,7 +712,6 @@ namespace Raven.Server.Documents.Queries.Results
             case IndexEntryFieldType.Invalid:
                 value = null;
                 return false;
-                break;
             default:
                 if (fieldReader.Read(out valueInEntry) == false)
                     goto case IndexEntryFieldType.Invalid;
