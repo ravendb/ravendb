@@ -493,24 +493,35 @@ namespace Sparrow.Json
                             ThrowFormatException(result, result.GetType().FullName, "char");
                         obj = (T)(object)@char;
                     }
-                    #if FEATURE_DATEONLY_TIMEONLY_SUPPORT
+#if FEATURE_DATEONLY_TIMEONLY_SUPPORT
                     else if (type == typeof(DateOnly))
                     {
                         if (ChangeTypeToString(result, out string dateOnlyString) == false)
                             ThrowFormatException(result, result.GetType().FullName, "string");
-                        if (DateOnly.TryParse(dateOnlyString, out DateOnly dateOnly) == false)
-                            ThrowFormatException(result, result.GetType().FullName, "DateOnly");
+
+                        DateOnly dateOnly;
+                        fixed (char* dateOnlyStringPtr = dateOnlyString.AsSpan())
+                        {
+                            if (LazyStringParser.TryParseDateOnly(dateOnlyStringPtr, dateOnlyString.Length, out dateOnly) == false)
+                                ThrowFormatException(result, result.GetType().FullName, "DateOnly");
+                        }
                         obj = (T)(object)dateOnly;
                     }
                     else if (type == typeof(TimeOnly))
                     {
                         if (ChangeTypeToString(result, out string timeOnlyString) == false)
                             ThrowFormatException(result, result.GetType().FullName, "string");
-                        if (TimeOnly.TryParse(timeOnlyString, out TimeOnly timeOnly) == false)
-                            ThrowFormatException(result, result.GetType().FullName, "TimeOnly");
+                        
+                        TimeOnly timeOnly;
+
+                        fixed (char* timeOnlyStringPtr = timeOnlyString.AsSpan())
+                        {
+                            if (LazyStringParser.TryParseTimeOnly(timeOnlyStringPtr, timeOnlyString.Length, out timeOnly) == false)
+                                ThrowFormatException(result, result.GetType().FullName, "TimeOnly");
+                        }
                         obj = (T)(object)timeOnly;
                     }
-                    #endif
+#endif
                     else
                     {
                         switch (result)
