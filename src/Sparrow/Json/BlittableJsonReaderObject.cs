@@ -493,6 +493,24 @@ namespace Sparrow.Json
                             ThrowFormatException(result, result.GetType().FullName, "char");
                         obj = (T)(object)@char;
                     }
+                    #if FEATURE_DATEONLY_TIMEONLY_SUPPORT
+                    else if (type == typeof(DateOnly))
+                    {
+                        if (ChangeTypeToString(result, out string dateOnlyString) == false)
+                            ThrowFormatException(result, result.GetType().FullName, "string");
+                        if (DateOnly.TryParse(dateOnlyString, out DateOnly dateOnly) == false)
+                            ThrowFormatException(result, result.GetType().FullName, "DateOnly");
+                        obj = (T)(object)dateOnly;
+                    }
+                    else if (type == typeof(TimeOnly))
+                    {
+                        if (ChangeTypeToString(result, out string timeOnlyString) == false)
+                            ThrowFormatException(result, result.GetType().FullName, "string");
+                        if (TimeOnly.TryParse(timeOnlyString, out TimeOnly timeOnly) == false)
+                            ThrowFormatException(result, result.GetType().FullName, "TimeOnly");
+                        obj = (T)(object)timeOnly;
+                    }
+                    #endif
                     else
                     {
                         switch (result)
