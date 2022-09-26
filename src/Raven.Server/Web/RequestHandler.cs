@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Microsoft.AspNetCore.WebUtilities;
 using Raven.Client;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Extensions;
@@ -163,7 +164,7 @@ namespace Raven.Server.Web
         {
             await ServerStore.Cluster.WaitForIndexNotification(index); // first let see if we commit this in the leader
 
-            using (var requester = ClusterRequestExecutor.CreateForSingleNode(clusterTopology.GetUrlFromTag(node), ServerStore.Server.Certificate.Certificate))
+            using (var requester = ClusterRequestExecutor.CreateForSingleNode(clusterTopology.GetUrlFromTag(node), ServerStore.Server.Certificate.Certificate, DocumentConventions.DefaultForServer))
             {
                 await requester.ExecuteAsync(new WaitForRaftIndexCommand(index), context);
             }
@@ -189,7 +190,7 @@ namespace Raven.Server.Web
                     foreach (var member in members)
                     {
                         var url = clusterTopology.GetUrlFromTag(member);
-                        var executor = ClusterRequestExecutor.CreateForSingleNode(url, ServerStore.Server.Certificate.Certificate);
+                        var executor = ClusterRequestExecutor.CreateForSingleNode(url, ServerStore.Server.Certificate.Certificate, DocumentConventions.DefaultForServer);
                         executors.Add(executor);
                         waitingTasks.Add(ExecuteTask(executor, member, cts.Token));
                     }

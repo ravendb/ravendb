@@ -6,6 +6,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
@@ -50,7 +51,7 @@ namespace InterversionTests
 
             var chosenOne = processes[0];
 
-            using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(chosenOne.Url, certificate))
+            using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(chosenOne.Url, certificate, DocumentConventions.DefaultForServer))
             using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
                 foreach (var processNode in processes)
@@ -97,7 +98,7 @@ namespace InterversionTests
             };
 
             using (leaderServer.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(leaderServer.WebUrl, certificate))
+            using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(leaderServer.WebUrl, certificate, DocumentConventions.DefaultForServer))
             {
                 var local = new List<RavenServer>();
 

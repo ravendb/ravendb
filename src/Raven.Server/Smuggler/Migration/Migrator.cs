@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions.Security;
@@ -44,7 +45,7 @@ namespace Raven.Server.Smuggler.Migration
             _skipServerCertificateValidation = configuration.SkipServerCertificateValidation;
 
             //because of backward compatibility useCompression == false here
-            var httpClientHandler = RequestExecutor.CreateHttpMessageHandler(_serverStore.Server.Certificate.Certificate, setSslProtocols: false, useCompression: false);
+            var httpClientHandler = RequestExecutor.CreateHttpMessageHandler(_serverStore.Server.Certificate.Certificate, setSslProtocols: false, useCompression: false, hasExplicitlySetCompressionUsage: false, DocumentConventions.DefaultForServer.HttpPooledConnectionLifetime, DocumentConventions.DefaultForServer.HttpPooledConnectionIdleTimeout);
             httpClientHandler.UseDefaultCredentials = false;
 
             if (configuration.SkipServerCertificateValidation)

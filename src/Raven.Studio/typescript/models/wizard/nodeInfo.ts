@@ -123,28 +123,13 @@ class nodeInfo {
     }
 
     private initValidation() {
-        const currentHttpPort = window.location.port || "8080";
 
         this.port.extend({
-            number: true,
-            notEqual: {
-                params: currentHttpPort,
-                message: "Port is in use by the Setup Wizard"
-            }
+            number: true
         });
         
         this.tcpPort.extend({
-            number: true,
-            notEqual: {
-                params: currentHttpPort,
-                message: "Port is in use by the Setup Wizard"
-            },
-            validation: [
-                {
-                    validator: (val: string) => !val || val !== this.port(),
-                    message: "Please use different ports for HTTP and TCP bindings"
-                }
-            ]
+            number: true
         });
         
         this.externalHttpsPort.extend({

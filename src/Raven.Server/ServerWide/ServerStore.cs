@@ -3060,7 +3060,7 @@ namespace Raven.Server.ServerWide
 
         private ClusterRequestExecutor CreateNewClusterRequestExecutor(string leaderUrl)
         {
-            var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(leaderUrl, Server.Certificate.Certificate);
+            var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(leaderUrl, Server.Certificate.Certificate, DocumentConventions.DefaultForServer);
             requestExecutor.DefaultTimeout = Engine.OperationTimeout;
 
             return requestExecutor;
