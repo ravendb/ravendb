@@ -13,6 +13,7 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Expiration;
@@ -1304,6 +1305,11 @@ namespace SlowTests.Smuggler
                     Name = "olap-cs"
                 }));
 
+                await store.Maintenance.SendAsync(new PutConnectionStringOperation<ElasticSearchConnectionString>(new ElasticSearchConnectionString
+                {
+                    Name = "elasticsearch-cs"
+                }));
+
                 var etlConfiguration = new RavenEtlConfiguration
                 {
                     ConnectionStringName = store.Database,
@@ -1333,6 +1339,14 @@ namespace SlowTests.Smuggler
                     Transforms = { new Transformation { Name = "loadAll", Collections = { "Users" }, Script = "loadToUsers(this)" } }
                 };
                 await store.Maintenance.SendAsync(new AddEtlOperation<OlapConnectionString>(olapEtlConfiguration));
+
+                var elasticSearchEtlConfiguration = new ElasticSearchEtlConfiguration
+                {
+                    Name = "elasticsearch-test",
+                    ConnectionStringName = "elasticsearch-cs",
+                    Transforms = { new Transformation { Name = "loadAll", Collections = { "Orders" }, Script = "loadToOrders(this)" } }
+                };
+                await store.Maintenance.SendAsync(new AddEtlOperation<ElasticSearchConnectionString>(elasticSearchEtlConfiguration));
 
                 // external replication
                 var connectionString = new RavenConnectionString
@@ -1395,6 +1409,12 @@ namespace SlowTests.Smuggler
                             tasksCount++;
                         }
 
+                        foreach (var task in databaseRecord.ElasticSearchEtls)
+                        {
+                            Assert.Equal(disableOngoingTasks, task.Disabled);
+                            tasksCount++;
+                        }
+
                         foreach (var task in databaseRecord.PeriodicBackups)
                         {
                             Assert.Equal(disableOngoingTasks, task.Disabled);
@@ -1419,7 +1439,7 @@ namespace SlowTests.Smuggler
                             tasksCount++;
                         }
 
-                        Assert.Equal(7, tasksCount);
+                        Assert.Equal(8, tasksCount);
                     }
                 }
             }
