@@ -39,7 +39,7 @@ namespace Corax
 
         public static class IndexWriter
         {
-            public const long Version = 54_001;
+            public const long Version = 54_002;
             public static ReadOnlySpan<byte> DoubleTreeSuffix => DoubleTreeSuffixBytes.AsSpan();
             private static readonly byte[] DoubleTreeSuffixBytes = new byte[]  { (byte)'-', (byte)'D' };
 
