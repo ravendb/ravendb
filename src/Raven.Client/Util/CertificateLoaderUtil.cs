@@ -39,7 +39,7 @@ internal static class CertificateLoaderUtil
             importer(f);
         }
 
-        LogIfNeeded(f, exception);
+        LogIfNeeded(nameof(Import), f, exception);
     }
 
     public static X509Certificate2 CreateCertificate(byte[] rawData, string password = null, X509KeyStorageFlags? flags = null)
@@ -68,7 +68,7 @@ internal static class CertificateLoaderUtil
             ret = creator(f);
         }
         
-        LogIfNeeded(f, exception);
+        LogIfNeeded(nameof(CreateCertificate), f, exception);
         return ret;
     }
 
@@ -93,27 +93,23 @@ internal static class CertificateLoaderUtil
         Debug.Assert(flags.HasValue == false || (flags.Value & keyStorageFlags) == 0);
     }
     
-    private static void LogIfNeeded(X509KeyStorageFlags f, Exception exception)
+    private static void LogIfNeeded(string method, X509KeyStorageFlags f, Exception exception)
     {
-        if (Log.IsOperationsEnabled)
+        if (FirstTime)
         {
-            if (FirstTime)
-            {
-                FirstTime = false;
+            FirstTime = false;
+            if (Log.IsOperationsEnabled)
                 Log.Operations(CreateMsg());
-            }
-            else
-            {
-                if (Log.IsInfoEnabled)
-                {
-                    Log.Info(CreateMsg());
-                }
-            }
+        }
+        else
+        {
+            if (Log.IsInfoEnabled)
+                Log.Info(CreateMsg());
         }
 
         string CreateMsg()
         {
-            var msg = $"Flags used {f}";
+            var msg = $"{nameof(CertificateLoaderUtil)}.{method} - Flags used {f}";
             if (exception != null)
                 msg += $"Firs attempt exception : {exception}";
             return msg;
