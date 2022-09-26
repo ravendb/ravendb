@@ -356,6 +356,7 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
             Processed = 0,
             Total = 4
         },
+            false,
             CancellationToken.None);
 
         X509Certificate2 serverCert;
@@ -490,6 +491,7 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
             Processed = 0,
             Total = 4
         },
+            false,
             CancellationToken.None);
 
         X509Certificate2 serverCert;

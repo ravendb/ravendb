@@ -2,15 +2,21 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using McMaster.Extensions.CommandLineUtils;
 using Newtonsoft.Json;
+using Raven.Client.Documents;
+using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Commercial;
 using Raven.Server.Commercial.SetupWizard;
+using Sparrow.Json;
 using Sparrow.Platform;
 using Voron.Global;
+using YamlDotNet.Serialization;
+using YamlDotNet.Serialization.NamingConventions;
 
 namespace rvn
 {
@@ -49,6 +55,7 @@ namespace rvn
             ConfigureLogsCommand();
             ConfigureSetupPackage();
             ConfigureInitSetupParams();
+            ConfigurePutClientCertificateCommand();
 
             _app.OnExecute(() =>
             {
@@ -127,7 +134,8 @@ namespace rvn
                 cmd.Description = "This command creates a RavenDB setup ZIP file";
                 cmd.ExtendedHelpText = "Usage example:" +
                                        Environment.NewLine + 
-                                       "rvn create-setup-package -m=\"lets-encrypt\" -s=\"json-file-path\" -o=\"output-zip-file-name\"" + Environment.NewLine;
+                                       "rvn create-setup-package -m=\"lets-encrypt\" -s=\"json-file-path\" -o=\"output-zip-file-name\" --generate-helm-values[=\"values.yaml\"]" +
+                                       Environment.NewLine;
                 
                 cmd.HelpOption(HelpOptionString);
 
@@ -136,6 +144,7 @@ namespace rvn
                 var packageOutPath = ConfigurePackageOutputFile(cmd);
                 var certPath = ConfigureCertPath(cmd);
                 var certPass = ConfigureCertPassword(cmd);
+                var generateHelmValues = ConfigureGenerateValues(cmd);
 
                 cmd.OnExecuteAsync(async token =>
                 {
@@ -144,6 +153,7 @@ namespace rvn
                     var packageOutPathVal = packageOutPath.Value();
                     var certPathVal = certPath.Value();
                     var certPassTuple = certPass.Value() ?? Environment.GetEnvironmentVariable("RVN_CERT_PASS");
+                    var generateHelmValuesVal = generateHelmValues.HasValue() && generateHelmValues.Value() is null ? "values.yaml" : generateHelmValues.Value(); 
 
                     return await CreateSetupPackage(new CreateSetupPackageParameters
                     {
@@ -153,6 +163,7 @@ namespace rvn
                         Mode = modeVal,
                         CertificatePath = certPathVal,
                         CertPassword = certPassTuple,
+                        HelmValuesOutputPath = generateHelmValuesVal,
                         Progress = new SetupProgressAndResult(tuple =>
                         {
                             if (tuple.Message != null)
@@ -165,6 +176,7 @@ namespace rvn
                                 Console.Error.WriteLine(tuple.Exception.Message);
                             }
                         }),
+                        RegisterTcpDnsRecords = generateHelmValuesVal is not null,
                         CancellationToken = token
                     });
                 });
@@ -210,6 +222,30 @@ namespace rvn
 
             parameters.Progress.AddInfo($"ZIP file was successfully added to this location: {parameters.PackageOutputPath}");
 
+            if (parameters.HelmValuesOutputPath is null) return 0;
+
+            string extractedValues;
+            
+            try
+            {
+                ValidateHelmValuesPath(parameters);
+                extractedValues = GenerateHelmValues(parameters);
+            }
+            catch (Exception e)
+            {
+                return ExitWithError($"Failed to create helm values : {parameters.HelmValuesOutputPath} file. Error: {e}", parameters.Command);
+            }
+
+            try
+            {
+                await File.WriteAllTextAsync(parameters.HelmValuesOutputPath, extractedValues,parameters.CancellationToken);
+            }
+            catch (Exception e)
+            {
+                return ExitWithError($"Failed to write YAML file to this path: {parameters.HelmValuesOutputPath}\nError: {e}", parameters.Command);
+            }
+            
+            parameters.Progress.AddInfo($"YAML file was successfully added to this location: {parameters.HelmValuesOutputPath}");
             return 0;
         }
 
@@ -227,6 +263,7 @@ namespace rvn
 
             try
             {
+                
                 using (StreamReader file = File.OpenText(parameters.SetupJsonPath))
                 {
                     JsonSerializer serializer = new();
@@ -272,6 +309,47 @@ namespace rvn
                     using (logStream)
                         logStream.Connect().Wait();
 
+                    return 0;
+                });
+            });
+        }
+
+        private static void ConfigurePutClientCertificateCommand()
+        {
+            _app.Command("put-client-certificate", cmd =>
+            {
+                cmd.ExtendedHelpText = cmd.Description = "Register certificate as the valid client certificate for the RavenDB server.";
+                cmd.HelpOption(HelpOptionString);
+                var ravenServerUrlArg= cmd.Argument("ServerUrl", "RavenDB server url");
+                var serverCertificatePathArg = cmd.Argument("ServerCertificateFilePath", "Server PFX certificate path");
+                var clientCertificatePathArg = cmd.Argument("ClientCertificateFilePath", "Client PFX certificate path");
+                
+                cmd.OnExecute(() =>
+                {
+                    if (string.IsNullOrWhiteSpace(serverCertificatePathArg.Value))
+                    {
+                        return ExitWithError("Server certificate file path is invalid.", cmd);
+                    }
+                    if (string.IsNullOrWhiteSpace(clientCertificatePathArg.Value))
+                    {
+                        return ExitWithError("Client certificate file path is invalid.", cmd);
+                    }
+
+                    
+                    X509Certificate2 clientCertificate = new(clientCertificatePathArg.Value);
+                    X509Certificate2 serverCertificate = new(serverCertificatePathArg.Value);
+                    var name = Path.GetFileNameWithoutExtension(clientCertificatePathArg.Value);
+                    try
+                    {
+                        DocumentStore store = new() {Certificate = serverCertificate, Urls = new[] {ravenServerUrlArg.Value}};
+                        store.Initialize();
+                        var operation = new PutClientCertificateOperation(name, clientCertificate, new Dictionary<string,DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+                        store.Maintenance.Server.Send(operation);
+                    }
+                    catch (Exception e)
+                    {
+                        return ExitWithError($"Failed to put client certificate to the RavenDB server under the address: {ravenServerUrlArg.Value}{Environment.NewLine}{e}", cmd);
+                    }
                     return 0;
                 });
             });
@@ -575,6 +653,13 @@ namespace rvn
             return cmd.Option("-p|--password", $"Certificate password{Environment.NewLine}Password can be set from ENV:{Environment.NewLine}Windows - $env:RVN_CERT_PASS=password\nLinux - export RVN_CERT_PASS=password", CommandOptionType.SingleValue);
         }
 
+        private static CommandOption ConfigureGenerateValues(CommandLineApplication cmd)
+        {
+            var opt = cmd.Option("--generate-helm-values", "Path to values.yaml", CommandOptionType.SingleOrNoValue);
+            opt.DefaultValue = "values.yaml";
+            return opt;
+        }
+
         private static CommandOption ConfigureServiceNameOption(CommandLineApplication cmd)
         {
             return cmd.Option("--service-name", "RavenDB Server Windows Service name", CommandOptionType.SingleValue);
@@ -645,6 +730,41 @@ namespace rvn
             }
         }
 
+
+        private static void ValidateHelmValuesPath(CreateSetupPackageParameters parameters)
+        {
+            if (string.IsNullOrWhiteSpace(parameters.HelmValuesOutputPath))
+            {
+                throw new InvalidOperationException("Please provide a valid file name for the helm values yaml.");
+            }
+            
+            if (Path.HasExtension(parameters.HelmValuesOutputPath) == false)
+            {
+                parameters.HelmValuesOutputPath += ".yaml";
+            }
+            else if (Path.GetExtension(parameters.HelmValuesOutputPath)?.Equals(".yaml", StringComparison.OrdinalIgnoreCase) == false)
+            {
+                throw new InvalidOperationException("--generate-helm-values file name must end with an extension of .yaml");
+            }
+        }
+
+        private static string GenerateHelmValues(CreateSetupPackageParameters parameters)
+        {
+            using var context = JsonOperationContext.ShortTermSingleUse();
+            var jsonBlittable = context.ReadObject(parameters.SetupInfo.License.ToJson(), "license");
+            HelmInfo helmInfo = new()
+            {
+                Domain = $"{parameters.SetupInfo.Domain}.{parameters.SetupInfo.RootDomain}",
+                Email = parameters.SetupInfo.Email,
+                License = jsonBlittable.ToString(),
+                NodeTags = parameters.SetupInfo.NodeSetupInfos.Keys.ToList(),
+                SetupMode = parameters.Mode == "lets-encrypt" ? "LetsEncrypt" : "Secured"
+            };
+            
+            var serializer = new SerializerBuilder().WithNamingConvention(CamelCaseNamingConvention.Instance).Build();
+            var yaml = serializer.Serialize(helmInfo);
+            return yaml;
+        }
         private static int PerformOfflineOperation(Func<string> offlineOperation, CommandArgument systemDirArg, CommandLineApplication cmd)
         {
             try

@@ -15,8 +15,6 @@
     <EnablePreviewFeatures>True</EnablePreviewFeatures>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="..\..\src\Raven.Client\Extensions\MemberInfoExtensions.cs" Link="Client\Extensions\MemberInfoExtensions.cs" />
-    <Compile Include="..\..\src\Raven.Client\Extensions\StringExtensions.cs" Link="Client\Extensions\StringExtensions.cs" />
     <Compile Include="..\..\src\Raven.Server\Commercial\CompleteClusterConfigurationResult.cs" Link="Server\Commercial\CompleteClusterConfigurationResult.cs" />
     <Compile Include="..\..\src\Raven.Server\Commercial\GetSetupZipFileParameters.cs" Link="Server\Commercial\GetSetupZipFileParameters.cs" />
     <Compile Include="..\..\src\Raven.Server\Commercial\SetupMode.cs" Link="Server\Commercial\SetupMode.cs" />
@@ -68,19 +66,6 @@
     <Compile Include="..\..\src\Raven.Server\Commercial\ApiHttpClient.cs" Link="Server\Commercial\ApiHttpClient.cs" />
     <Compile Include="..\..\src\Raven.Server\Smuggler\Documents\Processors\BuildVersion.cs" Link="Server\Smuggler\Documents\Processors\BuildVersion.cs" />
     <Compile Include="..\..\src\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
-    <Compile Include="..\..\src\Raven.Client\Exceptions\UnsuccessfulFileAccessException.cs" Link="Client\Exceptions\UnsuccessfulFileAccessException.cs" />
-    <Compile Include="..\..\src\Raven.Client\Extensions\ExpressionExtensions.cs" Link="Client\Extensions\ExpressionExtensions.cs" />
-    <Compile Include="..\..\src\Raven.Client\Extensions\WhoIsLocking.cs" Link="Client\Extensions\WhoIsLocking.cs" />
-    <Compile Include="..\..\src\Raven.Client\Documents\Operations\Configuration\StudioConfiguration.cs" Link="Client\Documents\Operations\Configuration\StudioConfiguration.cs" />
-    <Compile Include="..\..\src\Raven.Client\Documents\Operations\OperationState.cs" Link="Client\Documents\Operations\OperationState.cs" />
-    <Compile Include="..\..\src\Raven.Client\Documents\Operations\IOperationProgress.cs" Link="Client\Documents\Operations\IOperationProgress.cs" />
-    <Compile Include="..\..\src\Raven.Client\Util\SystemTime.cs" Link="Client\Util\SystemTime.cs" />
-    <Compile Include="..\..\src\Raven.Client\Constants.cs" Link="Client\Constants.cs" />
-   <Compile Include="..\..\src\Raven.Client\Properties\VersionInfo.cs" Link="Client\Properties\VersionInfo.cs" />
-    <Compile Include="..\..\src\Raven.Client\Exceptions\Security\SecurityException.cs" Link="Client\Exceptions\Security\SecurityException.cs" />
-    <Compile Include="..\..\src\Raven.Client\Exceptions\RavenException.cs" Link="Client\Exceptions\RavenException.cs" />
-    <Compile Include="..\..\src\Raven.Client\ServerWide\Operations\Certificates\CertificateDefinition.cs" Link="Client\ServerWide\Operations\Certificates\CertificateDefinition.cs" />
-    <Compile Include="..\..\src\Raven.Client\Extensions\CharExtensions.cs" Link="Client\Extensions\CharExtensions.cs" />
   </ItemGroup>
   <ItemGroup Condition="'$(IsAnyOS)' == 'true' OR '$(IsWindows64)' == 'true'">
     <None Include="..\..\libs\libsodium\libsodium.win.x64.dll" Link="libsodium.win.x64.dll">
@@ -174,8 +159,10 @@
     <PackageReference Include="Portable.BouncyCastle" Version="1.9.0" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="6.0.0" />
     <PackageReference Include="System.ServiceProcess.ServiceController" Version="6.0.0" />
+    <PackageReference Include="YamlDotNet" Version="12.0.0" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Raven.Client\Raven.Client.csproj" />
     <ProjectReference Include="..\..\src\Voron\Voron.csproj" />
   </ItemGroup>
 </Project>

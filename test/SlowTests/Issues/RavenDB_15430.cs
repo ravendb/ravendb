@@ -109,27 +109,20 @@ namespace SlowTests.Issues
                     }
                 }
 
-                await WaitForValueAsync(async () =>
-                {
-                    record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
-                    return record.Topology.Members.Count;
-                }, 3);
-                Assert.Equal(3, record.Topology.Members.Count);
+                record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
                 var firstNode2 = record.Topology.Members[0];
-                Assert.Equal(firstNode2, firstNode);
 
-                record = store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database)).Result;
-                var list = record.Topology.Members;
-                list.Reverse();
-                await store.Maintenance.Server.SendAsync(new ReorderDatabaseMembersOperation(store.Database, list));
-                await WaitForValueAsync(async () =>
+                Assert.True(await WaitForValueAsync(async () =>
                 {
                     record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
-                    return record.Topology.Members.Count;
-                }, 3);
-                Assert.Equal(3, record.Topology.Members.Count);
-                firstNode2 = record.Topology.Members[0];
-                Assert.NotEqual(firstNode2, firstNode);
+                    var list = record.Topology.Members;
+                    list.Reverse();
+                    await store.Maintenance.Server.SendAsync(new ReorderDatabaseMembersOperation(store.Database, list));
+
+                    record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                    var firstNode3 = record.Topology.Members[0];
+                    return firstNode3 != firstNode && firstNode3 != firstNode2;
+                }, true, interval: 333));
 
                 await Task.Delay(1000);
 
