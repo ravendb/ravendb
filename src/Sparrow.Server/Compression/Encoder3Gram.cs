@@ -3,6 +3,7 @@ using System.Buffers.Binary;
 using System.Diagnostics;
 using System.Diagnostics.SymbolStore;
 using System.IO;
+using System.IO.MemoryMappedFiles;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Sparrow.Collections;
@@ -202,6 +203,7 @@ namespace Sparrow.Server.Compression
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Encode(ReadOnlySpan<byte> key, Span<byte> outputBuffer)
         {
             Debug.Assert(outputBuffer.Length >= sizeof(long)); // Ensure we can safely cast to int 64
@@ -216,6 +218,8 @@ namespace Sparrow.Server.Compression
             var numberOfEntries = _entries;
 
             var symbol = key;
+
+            var intBufValue = intBuf[idx];
             while (symbol.Length != 0)
             {
                 if (symbol[0] == 0 && symbol.Length > 1)
@@ -228,24 +232,21 @@ namespace Sparrow.Server.Compression
                 {
                     int numBitsLeft = 64 - intBufLen;
                     intBufLen = sLen - numBitsLeft;
-                    intBuf[idx] <<= numBitsLeft;
-                    intBuf[idx] |= (sBuf >> intBufLen);
-                    intBuf[idx] = BinaryPrimitives.ReverseEndianness(intBuf[idx]);
-                    intBuf[idx + 1] = sBuf;
+
+                    intBuf[idx] = BinaryPrimitives.ReverseEndianness((intBufValue << numBitsLeft) | (sBuf >> intBufLen));
                     idx++;
+                    intBufValue = sBuf;
                 }
                 else
                 {
-                    intBuf[idx] <<= sLen;
-                    intBuf[idx] |= sBuf;
+                    intBufValue = (intBufValue << sLen) | sBuf;
                     intBufLen += sLen;
                 }
 
                 symbol = symbol.Slice(prefixLen);
             }
 
-            intBuf[idx] <<= (64 - intBufLen);
-            intBuf[idx] = BinaryPrimitives.ReverseEndianness(intBuf[idx]);
+            intBuf[idx] = BinaryPrimitives.ReverseEndianness(intBufValue << (64 - intBufLen));
             return ((idx << 6) + intBufLen);
         }
 
@@ -428,76 +429,41 @@ namespace Sparrow.Server.Compression
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private unsafe int Lookup(ReadOnlySpan<byte> symbol, ReadOnlySpan<Interval3Gram> table, int numberOfEntries, out Code code)
+        private int Lookup(ReadOnlySpan<byte> symbol, ReadOnlySpan<Interval3Gram> table, int numberOfEntries, out Code code)
         {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            static int CompareDictionaryEntry(ReadOnlySpan<byte> s1, ReadOnlySpan<byte> s2)
-            {
-                int length = s1.Length;
-                if (0 >= length)
-                    return s2[0] == 0 ? 0 : -1;
-                if (s1[0] != s2[0])
-                    return s1[0] < s2[0] ? -1 : 1;
-
-                if (1 >= length)
-                    return s2[1] == 0 ? 0 : -1;
-                if (s1[1] != s2[1])
-                    return s1[1] < s2[1] ? -1 : 1;
-
-                if (2 >= length)
-                    return s2[2] == 0 ? 0 : -1;
-                if (s1[2] != s2[2])
-                    return s1[2] < s2[2] ? -1 : 1;
-
-                return length > 3 ? 1 : 0;
-            }
+            // PERF: this is an optimized version of the CompareDictionaryEntry routine. Given that we
+            // can actually perform the operation in parallel. The usual case will be to call the parallel
+            // version instead of the serial, until we hit the end of the key. 
 
             int l = 0;
             int r = numberOfEntries;
 
-            if (symbol.Length >= 4)
+            uint symbolValue;
+            switch (symbol.Length)
             {
-                // PERF: this is an optimized version of the CompareDictionaryEntry routine. Given that we
-                // can actually perform the operation in parallel. The usual case will be to call the parallel
-                // version instead of the serial, until we hit the end of the key. 
-                uint symbolValue = BinaryPrimitives.ReverseEndianness(MemoryMarshal.Read<uint>(symbol)) >> 8;
-                while (r - l > 1)
-                {
-                    int m = (l + r) >> 1;
-
-                    uint codeValue = BinaryPrimitives.ReverseEndianness(table[m].BufferAndLength) >> 8;
-                    if (symbolValue < codeValue)
-                        r = m;
-                    else
-                        l = m;
-                }
+                case 3:
+                    symbolValue = (uint)(symbol[0] << 16 | symbol[1] << 8 | symbol[2]);
+                    break;
+                case 2:
+                    symbolValue = (uint)(symbol[0] << 16 | symbol[1] << 8);
+                    break;
+                case 1:
+                    symbolValue = (uint)symbol[0] << 16;
+                    break;
+                default:
+                    symbolValue = BinaryPrimitives.ReverseEndianness(MemoryMarshal.Read<uint>(symbol)) >> 8;
+                    break;
             }
-            else
+
+            while (r - l > 1)
             {
-                while (r - l > 1)
-                {
-                    int m = (l + r) >> 1;
+                int m = (l + r) >> 1;
 
-                    int cmp;
-                    fixed (byte* p = table[m].KeyBuffer)
-                    {
-                        cmp = CompareDictionaryEntry(symbol, new ReadOnlySpan<byte>(p, 3));
-                    }
-
-                    if (cmp < 0)
-                    {
-                        r = m;
-                    }
-                    else if (cmp == 0)
-                    {
-                        l = m;
-                        break;
-                    }
-                    else
-                    {
-                        l = m;
-                    }
-                }
+                uint codeValue = BinaryPrimitives.ReverseEndianness(table[m].BufferAndLength) >> 8;
+                if (symbolValue < codeValue)
+                    r = m;
+                else
+                    l = m;
             }
 
             code = table[l].Code;

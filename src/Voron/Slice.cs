@@ -1,4 +1,4 @@
-﻿using Sparrow;
+using Sparrow;
 using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
@@ -60,6 +60,19 @@ namespace Voron
                     throw new InvalidOperationException("Uninitialized slice!");
 
                 return *(Content.Ptr + (sizeof(byte) * index));
+            }
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            set
+            {
+                Debug.Assert(Content.Ptr != null, "Uninitialized slice!");
+
+                if (!Content.HasValue)
+                    throw new InvalidOperationException("Uninitialized slice!");
+
+                if (!Content.IsMutable)
+                    throw new InvalidOperationException("Slice is immutable.");
+
+                *(Content.Ptr + (sizeof(byte) * index)) = value;
             }
         }
 
