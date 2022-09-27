@@ -7,7 +7,7 @@ using Sparrow.Binary;
 
 namespace Sparrow
 {
-    public struct Sorter<T, TSorter>
+    public readonly struct Sorter<T, TSorter>
         where TSorter : struct, IComparer<T>
     {
         private readonly TSorter _sorter;        
@@ -280,7 +280,7 @@ namespace Sparrow
         }
     }
 
-    public struct Sorter<T, V, TSorter>
+    public readonly struct Sorter<T, V, TSorter>
         where TSorter : struct, IComparer<T>
     {
         private readonly TSorter _sorter;

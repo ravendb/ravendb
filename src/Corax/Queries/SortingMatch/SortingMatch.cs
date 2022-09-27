@@ -148,8 +148,10 @@ namespace Corax.Queries
             using var _ = match._searcher.Allocator.Allocate(arraySize * sizeof(float) + arraySize * sizeof(long), out var wholeBuffer);
 
             // We need to work with spans from now on, to avoid the creation of new arrays by slicing. 
-            var matchesSpan = new Span<long>(wholeBuffer.Ptr, arraySize);
-            var scoresSpan = new Span<float>(wholeBuffer.Ptr + arraySize * sizeof(long), arraySize);
+            long* matchesSpanPtr = (long*)wholeBuffer.Ptr;
+            var matchesSpan = new Span<long>(matchesSpanPtr, arraySize);
+            float* scoresSpanPtr = (float*)(wholeBuffer.Ptr + arraySize * sizeof(long));
+            var scoresSpan = new Span<float>(scoresSpanPtr, arraySize);
 
             // We will copy the first batch to a temporary location which we will use to work.
             // However, given that we already filled the scores, we are not going to copy those.
@@ -163,7 +165,7 @@ namespace Corax.Queries
 
             bool isSorted = false;
 
-            // We are going to slowly and painstakenly moving one batch after another to score
+            // We are going to slowly and painstakingly moving one batch after another to score
             // and select the appropriate boosted matches. For that we use a temporary buffer that
             // it has enough space for us to work with without the risk of overworking. 
             int temporaryTotalMatches;
@@ -187,9 +189,7 @@ namespace Corax.Queries
                 if (temporaryTotalMatches > 3 * matches.Length && !isSorted)
                 {
                     // We need to first sort by match to remove the duplicates.
-                    temporaryTotalMatches = Sorting.SortAndRemoveDuplicates(
-                        matchesSpan[0..temporaryTotalMatches],
-                        scoresSpan[0..temporaryTotalMatches]);
+                    temporaryTotalMatches = Sorting.SortAndRemoveDuplicates(matchesSpanPtr, scoresSpanPtr, temporaryTotalMatches);
 
                     // Then sort again to select the appropriate matches.
                     sorter.Sort(scoresSpan[0..temporaryTotalMatches], matchesSpan[0..temporaryTotalMatches]);
@@ -205,9 +205,7 @@ namespace Corax.Queries
             if (!isSorted)
             {
                 // We need to first sort by match to remove the duplicates.
-                temporaryTotalMatches = Sorting.SortAndRemoveDuplicates(
-                    matchesSpan[0..temporaryTotalMatches],
-                    scoresSpan[0..temporaryTotalMatches]);
+                temporaryTotalMatches = Sorting.SortAndRemoveDuplicates(matchesSpanPtr, scoresSpanPtr, temporaryTotalMatches);
 
                 // Then sort again to select the appropriate matches.
                 sorter.Sort(scoresSpan[0..temporaryTotalMatches], matchesSpan[0..temporaryTotalMatches]);
