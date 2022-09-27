@@ -62,7 +62,7 @@ public class ShardedQueryProcessor : AbstractShardedQueryProcessor<ShardedQueryC
 
     protected override ShardedQueryCommand CreateCommand(BlittableJsonReaderObject query)
     {
-        return new ShardedQueryCommand(_context.ReadObject(query, "query"), _query, _metadataOnly, _indexEntriesOnly, _query.Metadata.IndexName);
+        return new ShardedQueryCommand(_context.ReadObject(query, "query"), _query, _metadataOnly, _indexEntriesOnly, _query.Metadata.IndexName, canReadFromCache: _existingResultEtag != null);
     }
 
     public override async Task<ShardedQueryResult> ExecuteShardedOperations()

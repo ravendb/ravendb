@@ -15,10 +15,11 @@ public class ShardedQueryCommand : AbstractQueryCommand<BlittableJsonReaderObjec
     private readonly BlittableJsonReaderObject _query;
     private readonly string _indexName;
 
-    public ShardedQueryCommand(BlittableJsonReaderObject query, IndexQueryServerSide indexQuery, bool metadataOnly, bool indexEntriesOnly, string indexName) : base(indexQuery, true, metadataOnly, indexEntriesOnly)
+    public ShardedQueryCommand(BlittableJsonReaderObject query, IndexQueryServerSide indexQuery, bool metadataOnly, bool indexEntriesOnly, string indexName, bool canReadFromCache) : base(indexQuery, true, metadataOnly, indexEntriesOnly)
     {
         _query = query;
         _indexName = indexName;
+        CanReadFromCache = canReadFromCache;
     }
 
     protected override ulong GetQueryHash(JsonOperationContext ctx)

@@ -1305,7 +1305,7 @@ namespace Raven.Client.Http
 
         private HttpCache.ReleaseCacheItem GetFromCache<TResult>(JsonOperationContext context, RavenCommand<TResult> command, bool useCache, string url, out string cachedChangeVector, out BlittableJsonReaderObject cachedValue)
         {
-            if (useCache && command.CanCache && command.IsReadRequest && command.ResponseType == RavenCommandResponseType.Object)
+            if (useCache && command.CanCache && command.CanReadFromCache && command.IsReadRequest && command.ResponseType == RavenCommandResponseType.Object)
             {
                 return Cache.Get(context, url, out cachedChangeVector, out cachedValue);
             }
