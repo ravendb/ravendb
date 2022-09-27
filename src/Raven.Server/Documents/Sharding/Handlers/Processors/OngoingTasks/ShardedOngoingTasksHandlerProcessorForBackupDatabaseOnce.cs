@@ -2,6 +2,7 @@
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Exceptions.Sharding;
 using Raven.Server.Documents.Handlers.Processors.OngoingTasks;
 using Raven.Server.Documents.Operations;
 using Raven.Server.NotificationCenter;
@@ -30,6 +31,14 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks
             {
                 token.Dispose();
             });
+        }
+
+        protected override void AssertBackup(BackupConfiguration configuration)
+        {
+            if (configuration.BackupType == BackupType.Snapshot)
+                throw new NotSupportedInShardingException($"Backups of type '{nameof(BackupType.Snapshot)}' are not supported in sharding.");
+
+            base.AssertBackup(configuration);
         }
 
         protected override long GetNextOperationId()

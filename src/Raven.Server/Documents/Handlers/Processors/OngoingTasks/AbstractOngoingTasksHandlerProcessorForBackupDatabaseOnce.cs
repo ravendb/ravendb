@@ -20,7 +20,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
         where TOperationContext : JsonOperationContext
         where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
-        public AbstractOngoingTasksHandlerProcessorForBackupDatabaseOnce([NotNull] TRequestHandler requestHandler) : base(requestHandler)
+        protected AbstractOngoingTasksHandlerProcessorForBackupDatabaseOnce([NotNull] TRequestHandler requestHandler) : base(requestHandler)
         {
         }
 
@@ -32,6 +32,11 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 
         protected abstract AbstractNotificationCenter GetNotificationCenter();
 
+        protected virtual void AssertBackup(BackupConfiguration configuration)
+        {
+            BackupConfigurationHelper.AssertOneTimeBackup(configuration, ServerStore);
+        }
+
         public override async ValueTask ExecuteAsync()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -42,9 +47,8 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                 var operationId = RequestHandler.GetLongQueryString("operationId", required: false) ?? GetNextOperationId();
 
                 BackupUtils.CheckServerHealthBeforeBackup(ServerStore, backupName);
-                ServerStore.LicenseManager.AssertCanAddPeriodicBackup(backupConfiguration);
-                BackupConfigurationHelper.AssertBackupConfigurationInternal(backupConfiguration);
-                BackupConfigurationHelper.AssertDestinationAndRegionAreAllowed(backupConfiguration, ServerStore);
+
+                AssertBackup(backupConfiguration);
 
                 var sw = Stopwatch.StartNew();
                 ServerStore.ConcurrentBackupsCounter.StartBackup(backupName, Logger);

@@ -2064,9 +2064,9 @@ namespace Raven.Server.ServerWide
             return SendToLeaderAsync(command);
         }
 
-        public async Task<(long, object)> ModifyPeriodicBackup(TransactionOperationContext context, string name, BlittableJsonReaderObject configurationJson, string raftRequestId)
+        public async Task<(long, object)> ModifyPeriodicBackup(TransactionOperationContext context, string name, PeriodicBackupConfiguration configuration, string raftRequestId)
         {
-            var modifyPeriodicBackup = new UpdatePeriodicBackupCommand(JsonDeserializationCluster.PeriodicBackupConfiguration(configurationJson), name, raftRequestId);
+            var modifyPeriodicBackup = new UpdatePeriodicBackupCommand(configuration, name, raftRequestId);
             return await SendToLeaderAsync(modifyPeriodicBackup);
         }
 
