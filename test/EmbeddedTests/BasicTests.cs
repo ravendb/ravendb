@@ -37,6 +37,7 @@ namespace EmbeddedTests
                 {
                     Assert.True(store.Conventions.SaveEnumsAsIntegers);
                     Assert.True(store.GetRequestExecutor().Conventions.SaveEnumsAsIntegers);
+                    Assert.True(store.Conventions.DisableTopologyCache);
 
                     using (var session = store.OpenSession())
                     {
@@ -62,6 +63,7 @@ namespace EmbeddedTests
                 {
                     Assert.False(store.Conventions.SaveEnumsAsIntegers);
                     Assert.False(store.GetRequestExecutor().Conventions.SaveEnumsAsIntegers);
+                    Assert.True(store.Conventions.DisableTopologyCache);
 
                     using (var session = store.OpenSession())
                     {

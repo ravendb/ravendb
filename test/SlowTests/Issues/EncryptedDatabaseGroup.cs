@@ -344,7 +344,7 @@ namespace SlowTests.Issues
             }.Initialize())
             {
                 var requestExecutor = store.GetRequestExecutor(databaseName);
-                requestExecutor.RemoveHttpClient(); // reset to forget the previous connection
+                requestExecutor.TryRemoveHttpClient(force: true); // reset to forget the previous connection
 
                 var ex = await Assert.ThrowsAsync<AuthorizationException>(async () => await TrySavingDocument((DocumentStore)store));
                 Assert.Contains($"Could not authorize access to {databaseName} using provided client certificate", ex.Message);

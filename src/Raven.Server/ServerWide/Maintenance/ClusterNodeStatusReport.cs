@@ -63,6 +63,8 @@ namespace Raven.Server.ServerWide.Maintenance
         public Dictionary<string, long> LastSentEtag = new Dictionary<string, long>();
         public Dictionary<int, BucketReport> ReportPerBucket = new Dictionary<int, BucketReport>();
 
+        public long LastCompareExchangeIndex { get; set; }
+
         public class ObservedIndexStatus
         {
             public bool IsSideBySide;
@@ -104,7 +106,8 @@ namespace Raven.Server.ServerWide.Maintenance
                 [nameof(LastSentEtag)] = DynamicJsonValue.Convert(LastSentEtag),
                 [nameof(ReportPerBucket)] = DynamicJsonValue.Convert(ReportPerBucket),
                 [nameof(Error)] = Error,
-                [nameof(UpTime)] = UpTime
+                [nameof(UpTime)] = UpTime,
+                [nameof(LastCompareExchangeIndex)] = LastCompareExchangeIndex
             };
             var indexStats = new DynamicJsonValue();
             foreach (var stat in LastIndexStats)

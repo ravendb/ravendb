@@ -7,6 +7,7 @@ using Lucene.Net.Analysis.Standard;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.MoreLikeThis;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -18,10 +19,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void MoreLikeThisWithArticialDocumentsContainingArraysShouldNotThrowCastException()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void MoreLikeThisWithArticialDocumentsContainingArraysShouldNotThrowCastException(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new DataIndex().Execute(store);
 

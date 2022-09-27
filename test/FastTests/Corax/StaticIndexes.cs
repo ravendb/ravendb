@@ -32,23 +32,7 @@ public class StaticIndexes : RavenTestBase
             Assert.True(exception.Message.Contains($"{nameof(Corax)} is not supporting boosting inside index yet. Please use Lucene engine."));
         }
     }
-
-    [RavenTheory(RavenTestCategory.Indexes)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
-    public void DynamicFieldsInIndexException(Options options)
-    {
-        using (var store = GetDocumentStore(options))
-        {
-            var exception = Assert.Throws<IndexCreationException>(() =>
-            {
-                new Product_ByAttribute().Execute(store);
-                Indexes.WaitForIndexing(store);
-            });
-
-            Assert.True(exception.Message.Contains($"{nameof(Corax)} is not supporting dynamic fields yet. Please use Lucene engine."));
-        }
-    }
-
+    
     private class Product
     {
         public string Id { get; set; }

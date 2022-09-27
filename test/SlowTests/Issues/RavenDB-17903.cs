@@ -20,7 +20,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public async Task Bulk_Insert_1NodeRestart_TestCase1()
+        public async Task  Bulk_Insert_1NodeRestart_TestCase1()
         {
             using var server = GetNewServer(new ServerCreationOptions { RunInMemory = false, });
             using var store = GetDocumentStore(new Options { RunInMemory = false, Server = server });

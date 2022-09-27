@@ -39,6 +39,18 @@ public class RavenDnsRecordHelper
                             : new List<string> {node.Value.ExternalIpAddress}
                     };
 
+                    if (parameters.RegisterTcpDnsRecords)
+                    {
+                        var regNodeTcpInfo = new RegistrationNodeInfo
+                        {
+                            SubDomain = (node.Key + "-tcp." + parameters.SetupInfo.Domain).ToLower(),
+                            Ips = node.Value.ExternalIpAddress == null
+                                ? node.Value.Addresses
+                                : new List<string> {node.Value.ExternalIpAddress}
+                        };
+                        registrationInfo.SubDomains.Add(regNodeTcpInfo);
+                    }
+
                     registrationInfo.SubDomains.Add(regNodeInfo);
                 }
                 

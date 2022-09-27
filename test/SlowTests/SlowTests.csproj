@@ -56,6 +56,8 @@
     <Content Include="..\xunit.runner.json" Link="xunit.runner.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <EmbeddedResource Include="Corax\Bugs\repro-2.log.gz" />
+    <EmbeddedResource Include="Corax\Bugs\repro-4.log.gz" />
     <EmbeddedResource Include="Data\legacy-counters.4.1.5.ravendbdump" />
     <EmbeddedResource Include="Data\npgsql.basic.create.sql" />
     <EmbeddedResource Include="Data\npgsql.basic.insert.sql" />

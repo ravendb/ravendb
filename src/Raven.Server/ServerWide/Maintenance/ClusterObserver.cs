@@ -6,7 +6,6 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Builder;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Backups;
@@ -26,7 +25,6 @@ using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.ServerWide.Commands.Sharding;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.ServerWide.Maintenance.Sharding;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
@@ -184,7 +182,7 @@ namespace Raven.Server.ServerWide.Maintenance
             }
         }
 
-        
+
 
         private async Task AnalyzeLatestStats(
             Dictionary<string, ClusterNodeStatusReport> newStats,
@@ -243,7 +241,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
                                 var cmd = new UpdateTopologyCommand(databaseName, now, RaftIdGenerator.NewId())
                                 {
-                                    Topology = topology, 
+                                    Topology = topology,
                                     RaftCommandIndex = etag,
                                 };
 
@@ -270,7 +268,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
                             mergedState.AddState(state);
 
-                            if (SkipAnalyzingDatabaseGroup(state, currentLeader, now)) 
+                            if (SkipAnalyzingDatabaseGroup(state, currentLeader, now))
                                 continue;
 
                             var updateReason = UpdateDatabaseTopology(state, ref deletions);
@@ -280,7 +278,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
                                 var cmd = new UpdateTopologyCommand(state.Name, now, RaftIdGenerator.NewId())
                                 {
-                                    Topology = state.DatabaseTopology, 
+                                    Topology = state.DatabaseTopology,
                                     RaftCommandIndex = state.LastIndexModification,
                                 };
 
@@ -324,7 +322,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
                                     default:
                                         throw new NotSupportedException($"Not supported state: '{cleanupState}'.");
-                                } 
+                                }
                             }
                         }
                     }
@@ -438,7 +436,7 @@ namespace Raven.Server.ServerWide.Maintenance
             var currentMigration = sharding.BucketMigrations.SingleOrDefault(pair => pair.Value.Status < MigrationStatus.OwnershipTransferred).Value;
             if (currentMigration?.LastSourceChangeVector == null)
                 return;
-            
+
             var destination = ShardHelper.ToShardName(databaseName, currentMigration.DestinationShard);
             foreach (var node in newStats)
             {
@@ -463,15 +461,15 @@ namespace Raven.Server.ServerWide.Maintenance
         }
 
         private string UpdateOrchestratorTopology(
-            string database, 
-            Dictionary<string, ClusterNodeStatusReport> newStats, 
-            Dictionary<string, ClusterNodeStatusReport> prevStats, 
-            OrchestratorTopology topology, 
+            string database,
+            Dictionary<string, ClusterNodeStatusReport> newStats,
+            Dictionary<string, ClusterNodeStatusReport> prevStats,
+            OrchestratorTopology topology,
             ClusterTopology clusterTopology)
         {
             foreach (var member in topology.Members)
             {
-                
+
                 if (newStats.TryGetValue(member, out var current) && prevStats.TryGetValue(member, out var prev))
                 {
                     if (current.Status == ClusterNodeStatusReport.ReportStatus.Ok || prev.Status == ClusterNodeStatusReport.ReportStatus.Ok)
@@ -628,7 +626,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 {
                     var setIndexStateCommand = new SetIndexStateCommand(kvp.Key, IndexState.Idle, databaseState.Name, RaftIdGenerator.NewId());
                     var updateReason = $"Marking auto-index '{kvp.Key}' as idle because last query time value is '{difference}' and threshold is set to '{timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan}'.";
-                    
+
                     cleanupCommands.Add((setIndexStateCommand, updateReason));
                     continue;
                 }
@@ -637,7 +635,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 {
                     var setIndexStateCommand = new SetIndexStateCommand(kvp.Key, IndexState.Normal, databaseState.Name, Guid.NewGuid().ToString());
                     var updateReason = $"Marking idle auto-index '{kvp.Key}' as normal because last query time value is '{difference}' and threshold is set to '{timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan}'.";
-                    
+
                     cleanupCommands.Add((setIndexStateCommand, updateReason));
                 }
             }
@@ -657,8 +655,8 @@ namespace Raven.Server.ServerWide.Maintenance
 
             cleanupState = GetMaxCompareExchangeTombstonesEtagToDelete(context, databaseName, state, out long maxEtag);
 
-            return cleanupState == CompareExchangeTombstonesCleanupState.HasMoreTombstones 
-                ? new CleanCompareExchangeTombstonesCommand(databaseName, maxEtag, amountToDelete, RaftIdGenerator.NewId()) 
+            return cleanupState == CompareExchangeTombstonesCleanupState.HasMoreTombstones
+                ? new CleanCompareExchangeTombstonesCommand(databaseName, maxEtag, amountToDelete, RaftIdGenerator.NewId())
                 : null;
         }
 
@@ -924,7 +922,7 @@ namespace Raven.Server.ServerWide.Maintenance
                     {
                         hasLivingNodes = true;
 
-                        if (databaseTopology.PromotablesStatus.TryGetValue(member, out _) || 
+                        if (databaseTopology.PromotablesStatus.TryGetValue(member, out _) ||
                             databaseTopology.DemotionReasons.TryGetValue(member, out _))
                         {
                             databaseTopology.DemotionReasons.Remove(member);
@@ -1210,8 +1208,8 @@ namespace Raven.Server.ServerWide.Maintenance
                     var prevEtagDistance = myPrevEtag - prevLastSentEtag;
                     var currentEtagDistance = myCurrentEtag - currentLastSentEtag;
 
-                    if (Math.Abs(currentEtagDistance) > _maxChangeVectorDistance && 
-                        Math.Abs(prevEtagDistance)> _maxChangeVectorDistance)
+                    if (Math.Abs(currentEtagDistance) > _maxChangeVectorDistance &&
+                        Math.Abs(prevEtagDistance) > _maxChangeVectorDistance)
                     {
                         // we rely both on the etag and change vector,
                         // because the data may find a path to the node even if the direct connection between them is broken.
@@ -1506,6 +1504,30 @@ namespace Raven.Server.ServerWide.Maintenance
                     return (false, msg);
                 }
                 return (false, null);
+            }
+
+            using (_contextPool.AllocateOperationContext(out ClusterOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var leaderLastCompareExchangeIndex = _server.Cluster.GetLastCompareExchangeIndexForDatabase(context, dbName);
+                var promotableLastCompareExchangeIndex = promotableDbStats.LastCompareExchangeIndex;
+                if (leaderLastCompareExchangeIndex > promotableLastCompareExchangeIndex)
+                {
+                    var msg = $"The database '{dbName}' on {promotable} not ready to be promoted, because not all of the compare exchanges have been sent yet." + Environment.NewLine +
+                              $"Last Compare Exchange Raft Index: {promotableLastCompareExchangeIndex}" + Environment.NewLine +
+                              $"Leader's Compare Exchange Raft Index: {leaderLastCompareExchangeIndex}";
+
+                    LogMessage($"Node {promotable} hasn't been promoted because it's raft index isn't updated yet", database: dbName);
+
+                    if (topology.DemotionReasons.TryGetValue(promotable, out var demotionReason) == false ||
+                        msg.Equals(demotionReason) == false)
+                    {
+                        topology.DemotionReasons[promotable] = msg;
+                        topology.PromotablesStatus[promotable] = DatabasePromotionStatus.RaftIndexNotUpToDate;
+                        return (false, msg);
+                    }
+                    return (false, null);
+                }
             }
 
             var indexesCaughtUp = CheckIndexProgress(

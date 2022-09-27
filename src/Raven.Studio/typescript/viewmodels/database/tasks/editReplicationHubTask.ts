@@ -406,8 +406,9 @@ class editReplicationHubTask extends shardViewModelBase {
             {
                 content:
                     "<ul class='no-margin padding'>" +
-                        "<li><small>These prefixes define what docments are allowed to be <strong>sent from the Hub.</strong></small></li>" +
-                        "<li><small>You can <strong>further restrict this list</strong> when defining a Sink task that receives data from this Hub.</small></li>" +
+                        "<li><small>These ID paths define <strong>what docments are allowed to be sent from the Hub.</strong></small></li>" +
+                        "<li><small>You can further restrict this list when defining a Sink task that receives data from this Hub.</small></li>" +
+                        "<li><small>To send all documents under some path use <code>&lt;path&gt;/*</code> or <code>&lt;path&gt;-*</code></small></li>" +
                     "</ul>"
             });
 
@@ -415,8 +416,9 @@ class editReplicationHubTask extends shardViewModelBase {
             {
                 content:
                     "<ul class='no-margin padding'>" +
-                        "<li><small>These prefixes define what docments are allowed to be <strong>sent to this Hub.</strong></small></li>" +
-                        "<li><small>You can <strong>further restrict this list</strong> when defining a Sink task that sends data to this Hub.</small></li>" +
+                        "<li><small>These ID paths define <strong>what docments are allowed to be sent to this Hub.</strong></small></li>" +
+                        "<li><small>You can further restrict this list when defining a Sink task that sends data to this Hub.</small></li>" +
+                        "<li><small>To send all documents under some path use <code>&lt;path&gt;/*</code> or <code>&lt;path&gt;-*</code></small></li>" +
                     "</ul>"
             });
     }

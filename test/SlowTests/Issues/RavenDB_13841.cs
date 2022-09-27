@@ -4,6 +4,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
 using System.Linq;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,10 +16,12 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void ShouldWork()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-19393")]
+        public void ShouldWork(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Seed(store);
                 Test(store);

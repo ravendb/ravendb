@@ -1,6 +1,6 @@
 <div class="flex-window stretch">
     <div class="flex-window-head">
-        
+
         <div class="clearfix padding padding-sm">
 
             <div class="flex-header flex-horizontal margin-bottom">
@@ -38,15 +38,15 @@
 
     </div>
     <div class="flex-window-scroll">
-        <div class="has-error results-error" data-bind="visible: termChanged()">
-            <div class="help-block">
-                <i class="icon-danger"></i><span>A term has changed. Your results are stale. <a href="#" data-bind="click: refresh">Refresh.</a></span>
-            </div>
-        </div>
         <div class="scroll-stretch">
             <div class="panel-body">
                 <virtual-grid class="resizable documents-grid" params="controller: gridController, emptyTemplate: 'empty-cluster-log-template'"></virtual-grid>
             </div>
+        </div>
+    </div>
+    <div class="has-error" data-bind="visible: termChanged()">
+        <div class="help-block">
+            <i class="icon-danger"></i><span>A term has changed. Your results are stale. <a href="#" data-bind="click: refresh">Refresh.</a></span>
         </div>
     </div>
 </div>

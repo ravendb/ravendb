@@ -34,6 +34,7 @@ interface unifiedCertificateDefinitionWithCache extends unifiedCertificateDefini
     expirationIcon: string;
     isExpired: boolean;
     expirationNumber: number;
+    isAboutToExpire: boolean;
     
     validFromClass: string;
     validFromText: string;
@@ -604,6 +605,7 @@ class certificates extends viewModelBase {
             
             const nowPlusMonth = moment.utc().add(1, 'months');
             cert.isExpired = false;
+            cert.isAboutToExpire = false;
             
             if (expirationDate.isBefore()) {
                 cert.expirationText = 'Expired ' + expirationDateFormatted;
@@ -614,11 +616,13 @@ class certificates extends viewModelBase {
                 cert.expirationText = expirationDateFormatted;
                 cert.expirationIcon = "icon-expiration"; 
                 cert.expirationClass = "";
-            } else {
+            } else { 
                 cert.expirationText = expirationDateFormatted;
                 cert.expirationIcon = "icon-warning";
                 cert.expirationClass = "text-warning";
+                cert.isAboutToExpire = true;
             }
+            
 
             if (cert.NotBefore) {
                 const validFromDate = moment.utc(cert.NotBefore);

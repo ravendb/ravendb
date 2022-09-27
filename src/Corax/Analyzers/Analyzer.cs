@@ -12,6 +12,7 @@ namespace Corax
     public unsafe class Analyzer : IDisposable
     {
         public static Analyzer DefaultAnalyzer = Create(default(KeywordTokenizer), default(ExactTransformer));
+        public static Analyzer DefaultLowercaseAnalyzer = Create(default(KeywordTokenizer), default(LowerCaseTransformer));
         public static readonly ArrayPool<byte> BufferPool = ArrayPool<byte>.Create();
         public static readonly ArrayPool<Token> TokensPool = ArrayPool<Token>.Create();
         public readonly int DefaultOutputSize;
@@ -495,6 +496,13 @@ namespace Corax
                 throw new ArgumentException("Buffer is too small");
             
             var emptyHandler = Array.Empty<byte>();
+            if (source.Length == 0)
+            {
+                output = Span<byte>.Empty;
+                tokens = Span<Token>.Empty;
+                return;
+            }
+
             _funcUtf8(this, source, ref output, ref tokens, ref emptyHandler);
             
             if (emptyHandler.Length > 0)

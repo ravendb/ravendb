@@ -630,7 +630,7 @@ namespace Raven.Server.ServerWide
                     default:
                         var massage = $"The command '{type}' is unknown and cannot be executed on server with version '{ServerVersion.FullVersion}'.{Environment.NewLine}" +
                                       "Updating this node version to match the rest should resolve this issue.";
-                        throw new UnknownClusterCommand(massage);
+                        throw new UnknownClusterCommandException(massage);
                 }
 
                 _parent.LogHistory.UpdateHistoryLog(context, index, _parent.CurrentTerm, cmd, result, null);

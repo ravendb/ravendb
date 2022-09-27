@@ -22,6 +22,7 @@ public partial class IndexSearcher
         bool isNegated = false, bool manuallyCutWildcards = false)
         where TScoreFunction : IQueryScoreFunction
     {
+        bool isDynamic = analyzerId == Constants.IndexWriter.DynamicField;
         ReadOnlySpan<byte> term = Encoding.UTF8.GetBytes(searchTerm).AsSpan();
         if (isNegated)
         {
@@ -33,12 +34,15 @@ public partial class IndexSearcher
             };
         }
 
-        if (_fieldMapping.TryGetByFieldId(analyzerId, out var indexFieldBinding) == false && indexFieldBinding.Analyzer is null)
+        if (_fieldMapping.TryGetByFieldId(analyzerId, out var indexFieldBinding) == false && indexFieldBinding.Analyzer is null && isDynamic == false)
         {
             throw new InvalidOperationException($"{nameof(SearchQuery)} requires analyzer.");
         }
 
-        var searchAnalyzer = indexFieldBinding.Analyzer;
+        var searchAnalyzer = isDynamic 
+            ? _fieldMapping.DefaultSearchAnalyzer(field) 
+            : indexFieldBinding?.Analyzer;
+        
         var wildcardAnalyzer = Analyzer.Create<WhitespaceTokenizer, ExactTransformer>();
 
         searchAnalyzer.GetOutputBuffersSize(term.Length, out var outputSize, out var tokenSize);

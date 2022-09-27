@@ -92,7 +92,7 @@ public unsafe partial class IndexSearcher
         return matches;
     }
 
-    public long TermAmount(string field, string term)
+    public long TermAmount(string field, string term, int fieldId)
     {
         var fields = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
         var terms = fields?.CompactTreeFor(field);
@@ -107,8 +107,8 @@ public unsafe partial class IndexSearcher
         if (term.Length == 0)
             return TermAmount(terms, Constants.EmptyStringSlice);
 
-        using var _ = Slice.From(Allocator, term, out Slice termAsSlice);
-        return TermAmount(terms, termAsSlice);
+        var encodedSlice = EncodeAndApplyAnalyzer(term, fieldId);
+        return TermAmount(terms, encodedSlice);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

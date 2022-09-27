@@ -17,49 +17,67 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
         }
 
 
-        public void WriteNull(int field, ref IndexEntryWriter entryWriter)
+        public void WriteNull(string path, int field, ref IndexEntryWriter entryWriter)
         {
-            entryWriter.WriteNull(field);
+            if (field == Constants.IndexWriter.DynamicField)
+                entryWriter.WriteNullDynamic(path);
+            else
+                entryWriter.WriteNull(field);
         }
         
-        public void Write(int field, ReadOnlySpan<byte> value, ref IndexEntryWriter entryWriter)
+        public void Write(string path, int field, ReadOnlySpan<byte> value, ref IndexEntryWriter entryWriter)
         {
-            entryWriter.Write(field, value);
+            if (field == Constants.IndexWriter.DynamicField)
+                entryWriter.WriteDynamic(path, value);
+            else
+                entryWriter.Write(field, value);
         }
         
-        public void Write(int field, ReadOnlySpan<byte> value, long longValue, double doubleValue, ref IndexEntryWriter entryWriter)
+        public void Write(string path, int field, ReadOnlySpan<byte> value, long longValue, double doubleValue, ref IndexEntryWriter entryWriter)
         {
-            entryWriter.Write(field, value, longValue, doubleValue);
+            if (field == Constants.IndexWriter.DynamicField)
+                entryWriter.WriteDynamic(path, value, longValue, doubleValue);
+            else
+                entryWriter.Write(field, value, longValue, doubleValue);
         }
 
-        public void Write(int field, string value, ref IndexEntryWriter entryWriter)
+        public void Write(string path, int field, string value, ref IndexEntryWriter entryWriter)
         {
             using (_allocator.Allocate(Encoding.UTF8.GetByteCount(value), out var buffer))
             {
                 var length = Encoding.UTF8.GetBytes(value, buffer.ToSpan());
                 buffer.Truncate(length);
-                entryWriter.Write(field, buffer.ToSpan());
+                if (field == Constants.IndexWriter.DynamicField)
+                    entryWriter.WriteDynamic(path, buffer.ToSpan());
+                else
+                    entryWriter.Write(field, buffer.ToSpan());
             }
         }
 
-        public void Write(int field, string value, long longValue, double doubleValue, ref IndexEntryWriter entryWriter)
+        public void Write(string path, int field, string value, long longValue, double doubleValue, ref IndexEntryWriter entryWriter)
         {
             using (_allocator.Allocate(Encoding.UTF8.GetByteCount(value), out var buffer))
             {
                 var length = Encoding.UTF8.GetBytes(value, buffer.ToSpan());
                 buffer.Truncate(length);
-                entryWriter.Write(field, buffer.ToSpan(), longValue, doubleValue);
+                if (field == Constants.IndexWriter.DynamicField)
+                    entryWriter.WriteDynamic(path, buffer.ToSpan(), longValue, doubleValue);
+                else
+                    entryWriter.Write(field, buffer.ToSpan(), longValue, doubleValue);
             }
         }
 
-        public void Write(int field, BlittableJsonReaderObject reader, ref IndexEntryWriter entryWriter)
+        public void Write(string path, int field, BlittableJsonReaderObject reader, ref IndexEntryWriter entryWriter)
         {
-            new BlittableWriterScope(reader).Write(field, ref entryWriter);
+            new BlittableWriterScope(reader).Write(path, field, ref entryWriter);
         }
 
-        public void Write(int field, CoraxSpatialPointEntry entry, ref IndexEntryWriter entryWriter)
+        public void Write(string path, int field, CoraxSpatialPointEntry entry, ref IndexEntryWriter entryWriter)
         {
-            entryWriter.WriteSpatial(field, entry);
+            if (field == Constants.IndexWriter.DynamicField)
+                entryWriter.WriteSpatialDynamic(path, entry);
+            else
+                entryWriter.WriteSpatial(field, entry);
         }
     }
 }

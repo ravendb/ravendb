@@ -109,6 +109,11 @@ namespace Raven.Server.Rachis
             if (_serverStore.Initialized == false)
                 throw new InvalidOperationException("Server store isn't initialized.");
 
+            if (ForTestingPurposes!=null && ForTestingPurposes.NodeTagsToDisconnect.Contains(tag))
+            {
+                throw new InvalidOperationException($"Exception was thrown for disconnecting  node {tag} - For testing purposes.");
+            }
+
             return StateMachine.ConnectToPeer(url, tag, certificate, _serverStore.ServerShutdown);
         }
 
@@ -755,6 +760,8 @@ namespace Raven.Server.Rachis
             internal LeaderLockDebug LeaderLock;
 
             internal ManualResetEventSlim Mre = new ManualResetEventSlim(false);
+
+            internal List<string> NodeTagsToDisconnect { get; set; } = new List<string>();
 
             public void OnLeaderElect()
             {

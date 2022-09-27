@@ -208,8 +208,9 @@ class editReplicationSinkTask extends shardViewModelBase {
             {
                 content:
                     "<ul class='no-margin padding'>" +
-                        "<li><small>These prefixes define what <strong>documents the Sink allows the Hub to send</strong>.</small></li>" +
-                        "<li><small>The documents will be sent from the Hub only if these paths are also allowed on the Hub task definition.</li>" +
+                        "<li><small>These ID paths define <strong>what documents the Sink allows the Hub to send</strong>.</small></li>" +
+                        "<li><small>The documents will be sent from the Hub only if these paths are also allowed on the Hub task definition.</small></li>" +
+                        "<li><small>To send all documents under some path use <code>&lt;path&gt;/*</code> or <code>&lt;path&gt;-*</code></small></li>" +
                     "</ul>"
             });
 
@@ -217,8 +218,9 @@ class editReplicationSinkTask extends shardViewModelBase {
             {
                 content:
                     "<ul class='no-margin padding'>" +
-                        "<li><small>These prefixes define what documents are <strong>allowed to be sent from this Sink to the Hub</strong>.</small></li>" +
-                        "<li><small>The documents will be sent to the Hub only if these paths are also allowed on the Hub task definition.</li>" +
+                        "<li><small>These ID paths define <strong>what documents are allowed to be sent from this Sink to the Hub</strong>.</small></li>" +
+                        "<li><small>The documents will be sent to the Hub only if these paths are also allowed on the Hub task definition.</small></li>" +
+                        "<li><small>To send all documents under some path use <code>&lt;path&gt;/*</code> or <code>&lt;path&gt;-*</code></small></li>" +
                     "</ul>"
             });
 

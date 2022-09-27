@@ -39,13 +39,19 @@ namespace Corax
 
         public static class IndexWriter
         {
-            public const long Version = 54_001;
+            public const long Version = 54_002;
+            public static ReadOnlySpan<byte> DoubleTreeSuffix => DoubleTreeSuffixBytes.AsSpan();
+            private static readonly byte[] DoubleTreeSuffixBytes = new byte[]  { (byte)'-', (byte)'D' };
+
+            public static ReadOnlySpan<byte> LongTreeSuffix => LongTreeSuffixBytes.AsSpan();
+            private static readonly byte[] LongTreeSuffixBytes = new byte[]  { (byte)'-', (byte)'L' };
+
             
             public static readonly Slice PostingListsSlice, EntriesContainerSlice, FieldsSlice, NumberOfEntriesSlice, SuggestionsFieldsSlice, IndexVersionSlice;
             public const int IntKnownFieldMask = unchecked((int)0x80000000);
             public const short ShortKnownFieldMask = unchecked((short)0x8000);
             public const byte ByteKnownFieldMask = unchecked((byte)0x80);
-
+            public const int DynamicField = -2;
             static IndexWriter()
             {
                 using (StorageEnvironment.GetStaticContext(out var ctx))

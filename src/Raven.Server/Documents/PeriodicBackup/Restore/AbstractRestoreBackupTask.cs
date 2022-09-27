@@ -111,7 +111,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                            ServerStore.Configuration.Core.DataDirectory.FullPath :
                            new PathSetting(RestoreConfiguration.DataDirectory, ServerStore.Configuration.Core.DataDirectory.FullPath).FullPath;
 
-            if (DatabaseValidation && ResourceNameValidator.IsValidResourceName(RestoreConfiguration.DatabaseName, dataDirectoryThatWillBeUsed, out string errorMessage) == false) 
+            if (DatabaseValidation && ResourceNameValidator.IsValidResourceName(RestoreConfiguration.DatabaseName, dataDirectoryThatWillBeUsed, out string errorMessage) == false)
                 throw new InvalidOperationException(errorMessage);
 
             await ServerStore.EnsureNotPassiveAsync();
@@ -538,12 +538,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             await using (var gzipStream = new GZipStream(inputStream, CompressionMode.Decompress))
             using (var source = new StreamSource(gzipStream, context, database.Name))
             {
-                var smuggler = SmugglerBase.GetDatabaseSmugglerForRestore(database, RestoreSettings.DatabaseRecord, source, destination, 
+                var smuggler = SmugglerBase.GetDatabaseSmugglerForRestore(database, RestoreSettings.DatabaseRecord, source, destination,
                     database.Time, context, options, restoreResult, onProgress);
 
                 smuggler.OnIndexAction = onIndexAction;
                 smuggler.OnDatabaseRecordAction = onDatabaseRecordAction;
-                
+
                 await smuggler.ExecuteAsync(ensureStepsProcessed: false, isLastFile);
             }
         }

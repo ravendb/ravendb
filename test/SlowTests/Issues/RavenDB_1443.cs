@@ -6,6 +6,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.MoreLikeThis;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -43,10 +44,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanUseMoreLikeThisLazy()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanUseMoreLikeThisLazy(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 ActualTestCase(store);
             }

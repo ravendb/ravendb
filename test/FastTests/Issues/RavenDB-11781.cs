@@ -31,6 +31,7 @@ namespace FastTests.Issues
                     session.SaveChanges();
                 }
 
+               // WaitForUserToContinueTheTest(store);
                 Indexes.WaitForIndexing(store);
 
                 new MapReduce().Execute(store);

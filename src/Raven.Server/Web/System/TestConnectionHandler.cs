@@ -4,6 +4,7 @@ using System.IO;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Http;
@@ -39,7 +40,7 @@ namespace Raven.Server.Web.System
                 // test the connection from the remote node to this one
                 if (bidirectional == true && result.Success)
                 {
-                    using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(url, ServerStore.Server.Certificate.Certificate))
+                    using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(url, ServerStore.Server.Certificate.Certificate, DocumentConventions.DefaultForServer))
                     {
                         result = await ServerStore.TestConnectionFromRemote(requestExecutor, context, url);
                     }

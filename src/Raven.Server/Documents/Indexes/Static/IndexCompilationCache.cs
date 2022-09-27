@@ -144,9 +144,6 @@ namespace Raven.Server.Documents.Indexes.Static
 
             if (configuration.Indexing.StaticIndexingEngineType is SearchEngineType.Corax)
             {
-                if (index.HasDynamicFields)
-                    throw new IndexCreationException($"{nameof(Corax)} is not supporting dynamic fields yet. Please use Lucene engine.");
-                
                 if (index.HasBoostedFields)
                     throw new IndexCreationException($"{nameof(Corax)} is not supporting boosting inside index yet. Please use Lucene engine.");
             }
