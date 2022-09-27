@@ -21,7 +21,7 @@ namespace SlowTests.Tests.Linq
         }
 
         [Theory]
-        [RavenData(false, false, SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(false, false, SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         [RavenData(false, true, SearchEngineMode = RavenSearchEngineMode.Lucene)]
         [RavenData(true, false, SearchEngineMode = RavenSearchEngineMode.Lucene)]
         [RavenData(true, true, SearchEngineMode = RavenSearchEngineMode.Lucene)]
@@ -153,13 +153,13 @@ namespace SlowTests.Tests.Linq
 
 
         [Theory]
-        [InlineData(false, false)]
-        [InlineData(false, true)]
-        [InlineData(true, false)]
-        [InlineData(true, true)]
-        public async Task Query_IncludeAllQueryFunctionality_NestedField(bool includeCounters, bool includeTimeSeries)
+        [RavenData(false, false, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(false, true)]
+        [RavenData(true, false)]
+        [RavenData(true, true)]
+        public async Task Query_IncludeAllQueryFunctionality_NestedField(Options options, bool includeCounters, bool includeTimeSeries)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var cvList = new List<string>();
 
