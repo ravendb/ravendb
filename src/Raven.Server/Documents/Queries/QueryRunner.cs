@@ -191,11 +191,18 @@ namespace Raven.Server.Documents.Queries
             {
                 try
                 {
-                    var sw = Stopwatch.StartNew();
+                    Stopwatch sw = null;
+                    QueryTimingsScope scope;
+                    FacetedQueryResult result;
+                    using (scope = query.Timings?.Start())
+                    {
+                        if (scope == null)
+                            sw = Stopwatch.StartNew();
 
-                    var result = await _static.ExecuteFacetedQuery(query, existingResultEtag, queryContext, token);
+                        result = await _static.ExecuteFacetedQuery(query, existingResultEtag, queryContext, token);
+                    }
 
-                    result.DurationInMs = (long)sw.Elapsed.TotalMilliseconds;
+                    result.DurationInMs = sw != null ? (long)sw.Elapsed.TotalMilliseconds : (long)scope.Duration.TotalMilliseconds;
 
                     return result;
                 }

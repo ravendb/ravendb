@@ -64,18 +64,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
             Func<string, SpatialField> getSpatialField, bool ignoreLimit, CancellationToken token);
 
         public abstract IEnumerable<string> DynamicEntriesFields(HashSet<string> staticFields);
-
-        internal static unsafe BlittableJsonReaderObject ParseJsonStringIntoBlittable(string json, JsonOperationContext context)
-        {
-            var bytes = Encoding.UTF8.GetBytes(json);
-            fixed (byte* ptr = bytes)
-            {
-                var blittableJson = context.ParseBuffer(ptr, bytes.Length, "MoreLikeThis/ExtractTermsFromJson", BlittableJsonDocumentBuilder.UsageMode.None);
-                blittableJson.BlittableValidation(); //precaution, needed because this is user input..
-                return blittableJson;
-            }
-        }
-
+        
         public override void Dispose()
         {
             if (_logger.IsInfoEnabled && _memoryInfo != null && _memoryInfo.ManagedThreadId == NativeMemory.CurrentThreadStats.ManagedThreadId)

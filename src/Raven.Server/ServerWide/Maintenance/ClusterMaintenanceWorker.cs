@@ -13,6 +13,7 @@ using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance.Sharding;
 using Raven.Server.Utils;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Json.Sync;
 using Sparrow.Logging;
@@ -88,7 +89,7 @@ namespace Raven.Server.ServerWide.Maintenance
             {
                 try
                 {
-                    using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                    using (_server.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
                     {
                         Dictionary<string, DatabaseStatusReport> nodeReport;
                         using (ctx.OpenReadTransaction())
@@ -131,7 +132,7 @@ namespace Raven.Server.ServerWide.Maintenance
             }
         }
 
-        private void HeartbeatVersion41200(TransactionOperationContext ctx, Dictionary<string, DatabaseStatusReport> nodeReport)
+        private void HeartbeatVersion41200(JsonOperationContext ctx, Dictionary<string, DatabaseStatusReport> nodeReport)
         {
             using (var writer = new BlittableJsonTextWriter(ctx, _tcp.Stream))
             {
@@ -139,7 +140,7 @@ namespace Raven.Server.ServerWide.Maintenance
             }
         }
 
-        private void HeartbeatVersion42000(TransactionOperationContext ctx, MaintenanceReport report)
+        private void HeartbeatVersion42000(JsonOperationContext ctx, MaintenanceReport report)
         {
             report.ServerReport = new ServerReport
             {
@@ -154,7 +155,7 @@ namespace Raven.Server.ServerWide.Maintenance
             }
         }
 
-        private Dictionary<string, DatabaseStatusReport> CollectDatabaseInformation(TransactionOperationContext ctx, Dictionary<string, DatabaseStatusReport> prevReport)
+        private Dictionary<string, DatabaseStatusReport> CollectDatabaseInformation(ClusterOperationContext ctx, Dictionary<string, DatabaseStatusReport> prevReport)
         {
             var result = new Dictionary<string, DatabaseStatusReport>();
             foreach (var databaseName in _server.Cluster.GetDatabaseNames(ctx))
@@ -226,6 +227,7 @@ namespace Raven.Server.ServerWide.Maintenance
                         var dbInstance = dbTask.Result;
                         var currentHash = dbInstance.GetEnvironmentsHash();
                         report.EnvironmentsHash = currentHash;
+                        report.LastCompareExchangeIndex = _server.Cluster.GetLastCompareExchangeIndexForDatabase(ctx, dbName);
 
                         var documentsStorage = dbInstance.DocumentsStorage;
                         var indexStorage = dbInstance.IndexStore;
@@ -259,7 +261,7 @@ namespace Raven.Server.ServerWide.Maintenance
                                     {
                                         bucketReport.LastChangeVector = shardedInstance.ShardedDocumentsStorage.GetMergedChangeVectorInBucket(context, currentMigration.Bucket);
                                     }
-                                
+
                                     report.ReportPerBucket[currentMigration.Bucket] = bucketReport;
                                 }
                             }

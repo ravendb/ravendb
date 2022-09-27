@@ -76,6 +76,7 @@ internal class DatabaseQueriesHandlerProcessorForGet : AbstractQueriesHandlerPro
         long numberOfResults;
         await using (var writer = new AsyncBlittableJsonTextWriter(queryContext.Documents, RequestHandler.ResponseBodyStream()))
         {
+            result.Timings = query.Timings?.ToTimings();
             numberOfResults = await writer.WriteFacetedQueryResultAsync(queryContext.Documents, result, token.Token);
         }
 

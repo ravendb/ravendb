@@ -130,7 +130,7 @@ public class SpatialMatch : IQueryMatch
         }
         else
         {
-            reader.Read(_fieldId, out (double Lat, double Lon) coorinate);
+            reader.GetReaderFor(_fieldId).Read(out (double Lat, double Lon) coorinate);
             var point = new Point(coorinate.Lon, coorinate.Lat, _spatialContext);
             if (IsTrue(point.Relate(_shape)))
             {
@@ -156,7 +156,7 @@ public class SpatialMatch : IQueryMatch
         for (int i = 0; i < matches; ++i)
         {
             var reader = _indexSearcher.GetReaderFor(buffer[i]);
-            reader.Read(_fieldId, out (double Lat, double Lon) coorinate);
+            reader.GetReaderFor(_fieldId).Read(out (double Lat, double Lon) coorinate);
             var point = new Point(coorinate.Lon, coorinate.Lat, _spatialContext);
             if (IsTrue(point.Relate(_shape)))
             {

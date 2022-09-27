@@ -7,6 +7,7 @@ using Lucene.Net.Analysis;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.MoreLikeThis;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -18,8 +19,9 @@ namespace SlowTests.MailingList
         {
         }
 
-        [Fact]
-        public void ShouldMatchTwoMoviesWithSameCast()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void ShouldMatchTwoMoviesWithSameCast(Options options)
         {
             using (var store = GetDocumentStore())
             {

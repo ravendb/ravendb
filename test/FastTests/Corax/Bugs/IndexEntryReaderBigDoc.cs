@@ -42,16 +42,16 @@ public class IndexEntryReaderBigDoc : NoDisposalNeeded
 
         for (int i = 0; i < 7500; i++)
         {
-            enumerableWriterScope.Write(1, "Nice Answer", ref indexEntryWriter);
+            enumerableWriterScope.Write(string.Empty, 1, "Nice Answer", ref indexEntryWriter);
         }
       
-        enumerableWriterScope.Finish(1, ref indexEntryWriter);
+        enumerableWriterScope.Finish(string.Empty, 1, ref indexEntryWriter);
         
-        scope.Write(0, "users/1", ref indexEntryWriter);
+        scope.Write(string.Empty, 0, "users/1", ref indexEntryWriter);
 
         indexEntryWriter.Finish(out var output);
 
-        new IndexEntryReader(output.ToSpan()).Read(0, out var id);
+        new IndexEntryReader(output.ToSpan()).GetReaderFor(0).Read(out var id);
     }
     
     private static JArray  ReadDocFromResource(string file)

@@ -77,8 +77,8 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         {
             try
             {
-                var map = GetKnownFields(_allocator, _index, _keyFieldName, _storeValue, _storeValueFieldName);
-                map.UpdateAnalyzersInBindings(CoraxIndexingHelpers.CreateCoraxAnalyzers(_allocator, _index, _index.Definition, true));
+                var map = CreateRawFieldsMapping(_allocator, _index, _keyFieldName, _storeValue, _storeValueFieldName);
+                map = CoraxIndexingHelpers.CreateMappingWithAnalyzers(_allocator, _index, _index.Definition, map, true);
                 return map;
             }
             catch (Exception e)
@@ -88,26 +88,26 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         });
     }
 
-    public static IndexFieldsMapping GetKnownFields(ByteStringContext allocator, Index index, string keyFieldName, bool storeValue, string storeValueFieldName)
+    private static IndexFieldsMapping CreateRawFieldsMapping(ByteStringContext allocator, Index index, string keyFieldName, bool storeValue, string storeValueFieldName)
     {
         var knownFields = new IndexFieldsMapping(allocator);
-        //todo maciej: perf
         Slice.From(allocator, keyFieldName, ByteStringType.Immutable, out var value);
-        knownFields = knownFields.AddBinding(0, value, null, hasSuggestion: false, fieldIndexingMode: FieldIndexingMode.Normal);
+        knownFields.AddBinding(0, value, null, hasSuggestion: false, fieldIndexingMode: FieldIndexingMode.Normal);
         foreach (var field in index.Definition.IndexFields.Values)
         {
             Slice.From(allocator, field.Name, ByteStringType.Immutable, out value);
-            knownFields = knownFields.AddBinding(field.Id, value, null, 
+            knownFields.AddBinding(field.Id, value, null, 
                 hasSuggestion: field.HasSuggestions, 
                 fieldIndexingMode: TranslateRavenFieldIndexingIntoCoraxFieldIndexingMode(field.Indexing),
                 field.Spatial is not null);
         }
-
+        
         if (storeValue)
         {
             Slice.From(allocator, storeValueFieldName, ByteStringType.Immutable, out var storedKey);
-            knownFields = knownFields.AddBinding(knownFields.Count, storedKey, null, false, FieldIndexingMode.No);
+            knownFields.AddBinding(knownFields.Count, storedKey, null, false, FieldIndexingMode.No);
         }
+        
 
         return knownFields;
     }
@@ -120,8 +120,8 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         {
             try
             {
-                _knownFieldsForWriter = GetKnownFields(_allocator, _index, _keyFieldName, _storeValue, _storeValueFieldName);
-                _knownFieldsForWriter.UpdateAnalyzersInBindings(CoraxIndexingHelpers.CreateCoraxAnalyzers(_allocator, _index, _index.Definition));
+                _knownFieldsForWriter = CreateRawFieldsMapping(_allocator, _index, _keyFieldName, _storeValue, _storeValueFieldName);
+                _knownFieldsForWriter = CoraxIndexingHelpers.CreateMappingWithAnalyzers(_allocator, _index, _index.Definition, _knownFieldsForWriter);
             }
             catch (Exception e)
             {
@@ -153,6 +153,8 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         IWriterScope scope, bool nestedArray = false)
     {
         var valueType = GetValueType(value);
+        var path = field.Name;
+        var fieldId = field.Id;
         long @long;
         double @double;
 
@@ -165,7 +167,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                         doubleAsString = ldv.Inner;
                     @long = (long)ldv;
                     @double = ldv.ToDouble(CultureInfo.InvariantCulture);
-                    scope.Write(field.Id, doubleAsString.AsSpan(), @long, @double, ref entryWriter);
+                    scope.Write(path, fieldId, doubleAsString.AsSpan(), @long, @double, ref entryWriter);
                     break;
                 }
                 else
@@ -194,7 +196,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                         @long = Convert.ToInt64(value);
                         @double = Convert.ToDouble(value, CultureInfo.InvariantCulture);
                         buffer.Truncate(length);
-                        scope.Write(field.Id, buffer.ToSpan(), @long, @double, ref entryWriter);
+                        scope.Write(path, fieldId, buffer.ToSpan(), @long, @double, ref entryWriter);
                         return;
                     }
                 }
@@ -203,18 +205,18 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 var lazyNumber = value as LazyNumberValue;
                 if (lazyNumber == null)
                 {
-                    scope.Write(field.Id, lazyNumber.Inner.AsSpan(), (long)value, Convert.ToDouble(value), ref entryWriter);
+                    scope.Write(path, fieldId, lazyNumber.Inner.AsSpan(), (long)value, Convert.ToDouble(value), ref entryWriter);
                     return;
                 }
 
                 @long = (long)lazyNumber;
                 @double = lazyNumber.ToDouble(CultureInfo.InvariantCulture);
 
-                scope.Write(field.Id, lazyNumber.Inner.AsSpan(), @long, @double, ref entryWriter);
+                scope.Write(path, fieldId, lazyNumber.Inner.AsSpan(), @long, @double, ref entryWriter);
                 return;
 
             case ValueType.String:
-                scope.Write(field.Id, value.ToString(), ref entryWriter);
+                scope.Write(path, fieldId, value.ToString(), ref entryWriter);
                 return;
 
             case ValueType.LazyCompressedString:
@@ -224,27 +226,27 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                     lazyStringValue = ((LazyCompressedStringValue)value).ToLazyStringValue();
                 else
                     lazyStringValue = (LazyStringValue)value;
-                scope.Write(field.Id, lazyStringValue.AsSpan(), ref entryWriter);
+                scope.Write(path, fieldId, lazyStringValue.AsSpan(), ref entryWriter);
                 return;
 
             case ValueType.Enum:
-                scope.Write(field.Id, value.ToString(), ref entryWriter);
+                scope.Write(path, fieldId, value.ToString(), ref entryWriter);
                 return;
 
             case ValueType.Boolean:
-                scope.Write(field.Id, (bool)value ? TrueLiteral : FalseLiteral, ref entryWriter);
+                scope.Write(path, fieldId, (bool)value ? TrueLiteral : FalseLiteral, ref entryWriter);
                 return;
 
             case ValueType.DateTime:
                 var dateTime = (DateTime)value;
                 var dateAsBytes = dateTime.GetDefaultRavenFormat();
-                scope.Write(field.Id, dateAsBytes, ref entryWriter);
+                scope.Write(path, fieldId, dateAsBytes, ref entryWriter);
                 return;
 
             case ValueType.DateTimeOffset:
                 var dateTimeOffset = (DateTimeOffset)value;
                 var dateTimeOffsetBytes = dateTimeOffset.UtcDateTime.GetDefaultRavenFormat(isUtc: true);
-                scope.Write(field.Id, dateTimeOffsetBytes, ref entryWriter);
+                scope.Write(path, fieldId, dateTimeOffsetBytes, ref entryWriter);
                 return;
 
             case ValueType.TimeSpan:
@@ -254,19 +256,19 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                     if (Utf8Formatter.TryFormat(timeSpan, buffer.ToSpan(), out var bytesWritten, _timeSpanFormat) == false)
                         throw new Exception($"Cannot convert {field.Name} as double into bytes.");
                     buffer.Truncate(bytesWritten);
-                    scope.Write(field.Id, buffer.ToSpan(), ref entryWriter);
+                    scope.Write(path, fieldId, buffer.ToSpan(), ref entryWriter);
                 }
 
                 return;
             
             case ValueType.DateOnly:
                 var dateOnly = ((DateOnly)value).ToString(DefaultFormat.DateOnlyFormatToWrite, CultureInfo.InvariantCulture);
-                scope.Write(field.Id, dateOnly, ref entryWriter);
+                scope.Write(path, fieldId, dateOnly, ref entryWriter);
                 return;
             
             case ValueType.TimeOnly:
                 var timeOnly = ((TimeOnly)value).ToString(DefaultFormat.TimeOnlyFormatToWrite, CultureInfo.InvariantCulture);
-                scope.Write(field.Id, timeOnly, ref entryWriter);
+                scope.Write(path, fieldId, timeOnly, ref entryWriter);
                 return;
             
             case ValueType.Convertible:
@@ -274,7 +276,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 @long = iConvertible.ToInt64(CultureInfo.InvariantCulture);
                 @double = iConvertible.ToDouble(CultureInfo.InvariantCulture);
 
-                scope.Write(field.Id, iConvertible.ToString(CultureInfo.InvariantCulture), @long, @double, ref entryWriter);
+                scope.Write(path, fieldId, iConvertible.ToString(CultureInfo.InvariantCulture), @long, @double, ref entryWriter);
                 return;
 
             case ValueType.Enumerable:
@@ -303,7 +305,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
 
                 if (canFinishEnumerableWriting)
                 {
-                    enumerableWriterScope.Finish(field.Id, ref entryWriter);
+                    enumerableWriterScope.Finish(path, fieldId, ref entryWriter);
                 }
                 
                 return;
@@ -313,7 +315,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                     AssertOrAdjustIndexingOptionForComplexObject(field);
 
                 var dynamicJson = (DynamicBlittableJson)value;
-                scope.Write(field.Id, dynamicJson.BlittableJson, ref entryWriter);
+                scope.Write(path, fieldId, dynamicJson.BlittableJson, ref entryWriter);
                 return;
 
             case ValueType.ConvertToJson:
@@ -328,7 +330,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                     AssertOrAdjustIndexingOptionForComplexObject(field);
 
                 var jsonScope = Scope.CreateJson(json, indexContext);
-                scope.Write(field.Id, jsonScope, ref entryWriter);
+                scope.Write(path, fieldId, jsonScope, ref entryWriter);
                 return;
 
             case ValueType.BlittableJsonObject:
@@ -339,23 +341,29 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 var dynamicNull = (DynamicNullObject)value;
                 if (dynamicNull.IsExplicitNull || _indexImplicitNull)
                 {
-                    scope.WriteNull(field.Id, ref entryWriter);
+                    scope.WriteNull(path, fieldId, ref entryWriter);
                 }
                 return;
 
             case ValueType.Null:
-                scope.WriteNull(field.Id, ref entryWriter);
+                scope.WriteNull(path, fieldId, ref entryWriter);
                 return;
             case ValueType.BoostedValue:
                 //todo maciej
                 //https://issues.hibernatingrhinos.com/issue/RavenDB-18146
                 throw new NotSupportedException("Boosting in index is not supported by Corax. You can do it during querying or change index type into Lucene.");
             case ValueType.EmptyString:
-                scope.Write(field.Id, ReadOnlySpan<byte>.Empty, ref entryWriter);
+                scope.Write(path, fieldId, ReadOnlySpan<byte>.Empty, ref entryWriter);
                 return;
             case ValueType.CoraxSpatialPointEntry:
-                scope.Write(field.Id, (CoraxSpatialPointEntry)value, ref entryWriter);
+                scope.Write(path, fieldId, (CoraxSpatialPointEntry)value, ref entryWriter);
                 return;
+            case ValueType.CoraxDynamicItem:
+                var cdi = value as CoraxDynamicItem;
+                (scope as EnumerableWriterScope)?.SetAsDynamic();
+            //we want to unpack item here.
+                InsertRegularField(cdi!.Field, cdi.Value, indexContext, ref entryWriter, scope, nestedArray);
+                break;
             case ValueType.Stream:
                 throw new NotImplementedException();
             case ValueType.Lucene:
@@ -394,7 +402,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
             AssertOrAdjustIndexingOptionForComplexObject(field);
 
         GetKnownFieldsForWriter().GetByFieldId(field.Id).SetAnalyzer(null);
-        scope.Write(field.Id, val, ref entryWriter);
+        scope.Write(field.Name, field.Id, val, ref entryWriter);
     }
 
     private void DisableIndexingForComplexObject(IndexField field)

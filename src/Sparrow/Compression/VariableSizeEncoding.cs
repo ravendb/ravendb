@@ -339,11 +339,6 @@ namespace Sparrow.Compression
             throw new FormatException("Bad variable size int");
         }
 
-        public static int GetMaximumEncodingLength(int count)
-        {
-            return 9 * count;
-        }
-
         [MethodImpl(MethodImplOptions.AggressiveInlining )]
         public static int WriteMany<T>(Span<byte> dest, Span<T> values, int pos = 0) where T : unmanaged
         {
@@ -362,6 +357,12 @@ namespace Sparrow.Compression
                 pos += Write(dest, values[i], pos);
 
             return pos - startPos;
+        }
+
+        public static unsafe int MaximumSizeOf<T>() where T: unmanaged
+        {
+            int i = (sizeof(T) * 8 / 7) +1;
+            return i;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

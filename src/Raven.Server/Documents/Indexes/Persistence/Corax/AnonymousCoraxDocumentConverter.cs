@@ -71,7 +71,7 @@ public class AnonymousCoraxDocumentConverter : CoraxDocumentConverterBase
         if (storedValue is not null)
         {
             var bjo = indexContext.ReadObject(storedValue, "corax field as json");
-            scope.Write(knownFields.Count - 1, bjo, ref entryWriter);
+            scope.Write(string.Empty, knownFields.Count - 1, bjo, ref entryWriter);
         }
 
         if (entryWriter.IsEmpty() == true)
@@ -81,7 +81,7 @@ public class AnonymousCoraxDocumentConverter : CoraxDocumentConverterBase
         }            
         
         id = key ?? (sourceDocumentId ?? throw new InvalidParameterException("Cannot find any identifier of the document."));
-        scope.Write(0, id.AsSpan(), ref entryWriter);
+        scope.Write(string.Empty, 0, id.AsSpan(), ref entryWriter);
         return entryWriter.Finish(out output);
     }
 }

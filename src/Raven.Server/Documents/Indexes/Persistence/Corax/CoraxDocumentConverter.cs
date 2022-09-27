@@ -76,7 +76,7 @@ public class CoraxDocumentConverter : CoraxDocumentConverterBase
         if (key != null)
         {
             Debug.Assert(document.LowerId == null || (key == document.LowerId));
-            scope.Write(0, id.AsSpan(), ref entryWriter);
+            scope.Write(string.Empty, 0, id.AsSpan(), ref entryWriter);
         }
         
         if (_storeValue)
@@ -88,7 +88,7 @@ public class CoraxDocumentConverter : CoraxDocumentConverterBase
                     fixed (byte* bPtr = blittableBuffer)
                         document.Data.CopyTo(bPtr);
 
-                    scope.Write(GetKnownFieldsForWriter().Count - 1, blittableBuffer, ref entryWriter);
+                    scope.Write(string.Empty, GetKnownFieldsForWriter().Count - 1, blittableBuffer, ref entryWriter);
                 }
             }
         }

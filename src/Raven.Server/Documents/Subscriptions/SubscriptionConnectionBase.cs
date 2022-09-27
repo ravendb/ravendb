@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Commercial;
@@ -664,7 +665,7 @@ namespace Raven.Server.Documents.Subscriptions
                                     var clusterTopology = _serverStore.GetClusterTopology(ctx);
                                     using (var requester = ClusterRequestExecutor.CreateForSingleNode(
                                                clusterTopology.GetUrlFromTag(subscriptionDoesNotBelongException.AppropriateNode),
-                                               _serverStore.Server.Certificate.Certificate))
+                                               _serverStore.Server.Certificate.Certificate, DocumentConventions.DefaultForServer))
                                     {
                                         await requester.ExecuteAsync(new WaitForRaftIndexCommand(subscriptionDoesNotBelongException.Index), ctx);
                                     }

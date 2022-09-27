@@ -17,8 +17,7 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void ShouldNotCreatePropertyAfterAccessingIt(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -70,7 +69,7 @@ namespace SlowTests.Issues
 
         [Theory]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-19393")]
         public void ShouldNotProjectPropertyValueIfOnlyViewedStoredIndexedValue(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -93,7 +92,6 @@ b:u.newField
 ",
                         WaitForNonStaleResults = true                        
                     });
-
                     var firstResult = results.Results[0] as BlittableJsonReaderObject;
 
                     Assert.Equal(-1, (firstResult["a"] as BlittableJsonReaderObject).GetPropertyIndex("newField"));
@@ -107,7 +105,7 @@ b:u.newField
 
         [Theory]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-19393")]
         public void ShouldProjectPropertyValueIfViewedAndUpdatedStoredIndexedValue(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -147,7 +145,7 @@ b:u.newField
 
         [Theory]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-19393")]
         public void ShouldProjectPropertyValueIfViewedAndUpdatedStoredIndexedValueShouldRespectOperationsOrder(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -177,7 +175,7 @@ a:proj(u)
                     });
 
                     var firstResult = results.Results[0] as BlittableJsonReaderObject;
-
+                    
                     Assert.Equal("newValue2", (firstResult["a"] as BlittableJsonReaderObject)["newField"].ToString());
                     Assert.Equal("newValue", firstResult["b"].ToString());
 

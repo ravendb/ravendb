@@ -4,6 +4,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
+using Raven.Server.Commercial;
 using Raven.Server.Commercial.LetsEncrypt;
 using Raven.Server.Utils;
 
@@ -13,7 +14,7 @@ public static class LetsEncryptSetupUtils
 {
         private const string AcmeClientUrl = "https://acme-v02.api.letsencrypt.org/directory";
 
-        public static async Task<byte[]> Setup(SetupInfo setupInfo,  SetupProgressAndResult progress, CancellationToken token)
+        public static async Task<byte[]> Setup(SetupInfo setupInfo,  SetupProgressAndResult progress, bool registerTcpDnsRecords, CancellationToken token)
         {
             progress.Processed++;
             progress?.AddInfo("Setting up RavenDB in Let's Encrypt security mode.");
@@ -64,13 +65,13 @@ public static class LetsEncryptSetupUtils
                 {
                     throw new InvalidOperationException($"Failed to claim the given domain: {registrationInfo.Domain}", e);
                 }
-           
                 await RavenDnsRecordHelper.UpdateDnsRecordsTask(new UpdateDnsRecordParameters
                 {
                     Challenge = challengeResult.Challenge,
                     SetupInfo = setupInfo,
                     Progress = progress,
-                    Token = CancellationToken.None
+                    Token = CancellationToken.None,
+                    RegisterTcpDnsRecords = registerTcpDnsRecords
                 });
                 progress?.AddInfo($"Updating DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{setupInfo.RootDomain.ToLower()}.");
             }

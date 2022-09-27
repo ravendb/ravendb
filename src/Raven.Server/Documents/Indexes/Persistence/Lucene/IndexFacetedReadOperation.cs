@@ -13,6 +13,7 @@ using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Facets;
+using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
 using Raven.Server.ServerWide.Context;
@@ -56,7 +57,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _releaseSearcher = searcherHolder.GetSearcher(readTransaction, _state, out _searcher);
         }
 
-        public List<FacetResult> FacetedQuery(FacetQuery facetQuery, DocumentsOperationContext context, Func<string, SpatialField> getSpatialField, CancellationToken token)
+        public List<FacetResult> FacetedQuery(FacetQuery facetQuery, QueryTimingsScope queryTimings, DocumentsOperationContext context, Func<string, SpatialField> getSpatialField, CancellationToken token)
         {
             var results = FacetedQueryParser.Parse(context, facetQuery);
 
@@ -64,20 +65,25 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             Dictionary<string, Dictionary<string, FacetValues>> facetsByName = null;
 
             var baseQuery = GetLuceneQuery(context, query.Metadata, query.QueryParameters, _analyzer, _queryBuilderFactories);
-            var returnedReaders = GetQueryMatchingDocuments(_searcher, baseQuery, _state);
+
+            List<ReaderFacetInfo> returnedReaders;
+            using (queryTimings?.For(nameof(QueryTimingsScope.Names.Lucene)))
+                returnedReaders = GetQueryMatchingDocuments(_searcher, baseQuery, _state);
 
             foreach (var result in results)
             {
-                if (result.Value.Ranges == null || result.Value.Ranges.Count == 0)
+                using (var facetTiming = queryTimings?.For($"{nameof(QueryTimingsScope.Names.AggregateBy)}/{result.Key}"))
                 {
-                    if (facetsByName == null)
-                        facetsByName = new Dictionary<string, Dictionary<string, FacetValues>>();
+                    if (result.Value.Ranges == null || result.Value.Ranges.Count == 0)
+                    {
+                        facetsByName ??= new Dictionary<string, Dictionary<string, FacetValues>>();
 
-                    HandleFacets(returnedReaders, result, facetsByName, facetQuery.Legacy, token);
-                    continue;
+                        HandleFacets(returnedReaders, result, facetsByName, facetQuery.Legacy, facetTiming, token);
+                        continue;
+                    }
+
+                    HandleRangeFacets(returnedReaders, result, facetQuery.Legacy, facetTiming, token);
                 }
-
-                HandleRangeFacets(returnedReaders, result, facetQuery.Legacy, token);
             }
 
             UpdateFacetResults(results, query, facetsByName);
@@ -97,7 +103,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private void HandleRangeFacets(
             List<ReaderFacetInfo> returnedReaders,
             KeyValuePair<string, FacetedQueryParser.FacetResult> result,
-            bool legacy, CancellationToken token)
+            bool legacy,
+            QueryTimingsScope queryTimings,
+            CancellationToken token)
         {
             var needToApplyAggregation = result.Value.Aggregations.Count > 0;
             var facetValues = new Dictionary<string, FacetValues>();
@@ -124,7 +132,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             foreach (var readerFacetInfo in returnedReaders)
             {
                 var name = FieldUtil.ApplyRangeSuffixIfNecessary(result.Value.AggregateBy, result.Value.RangeType);
-                var termsForField = IndexedTerms.GetTermsAndDocumentsFor(readerFacetInfo.Reader, readerFacetInfo.DocBase, name, _indexName, _state);
+
+                Dictionary<string, int[]> termsForField;
+                using (queryTimings?.For(nameof(QueryTimingsScope.Names.Terms)))
+                    termsForField = IndexedTerms.GetTermsAndDocumentsFor(readerFacetInfo.Reader, readerFacetInfo.DocBase, name, _indexName, _state);
 
                 foreach (var kvp in termsForField)
                 {
@@ -167,22 +178,26 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             List<ReaderFacetInfo> returnedReaders,
             KeyValuePair<string, FacetedQueryParser.FacetResult> result,
             Dictionary<string, Dictionary<string, FacetValues>> facetsByName,
-            bool legacy, CancellationToken token)
+            bool legacy,
+            QueryTimingsScope queryTimings,
+            CancellationToken token)
         {
             var needToApplyAggregation = result.Value.Aggregations.Count > 0;
 
             foreach (var readerFacetInfo in returnedReaders)
             {
-                var termsForField = IndexedTerms.GetTermsAndDocumentsFor(readerFacetInfo.Reader, readerFacetInfo.DocBase, result.Value.AggregateBy, _indexName, _state);
+                Dictionary<string, int[]> termsForField;
+                using (queryTimings?.For(nameof(QueryTimingsScope.Names.Terms)))
+                    termsForField = IndexedTerms.GetTermsAndDocumentsFor(readerFacetInfo.Reader, readerFacetInfo.DocBase, result.Value.AggregateBy, _indexName, _state);
 
                 if (facetsByName.TryGetValue(result.Key, out var facetValues) == false)
                     facetsByName[result.Key] = facetValues = new Dictionary<string, FacetValues>();
 
                 foreach (var kvp in termsForField)
                 {
-                    if(kvp.Value.Length ==0)
+                    if (kvp.Value.Length == 0)
                         continue;
-                    
+
                     token.ThrowIfCancellationRequested();
 
                     var intersectedDocuments = GetIntersectedDocuments(new ArraySegment<int>(kvp.Value), readerFacetInfo.Results, needToApplyAggregation);
@@ -381,7 +396,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             if (a.Count == 0 || b.Count == 0)
                 return IntersectDocs.Empty;
-            
+
             ArraySegment<int> n, m;
             if (a.Count > b.Count)
             {
@@ -400,9 +415,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             int[] nArray = n.Array;
             int[] mArray = m.Array;
 
-            if(n[0] > m[^1] || m[0] > n[^1]) // quick check if intersection is even possible
+            if (n[0] > m[^1] || m[0] > n[^1]) // quick check if intersection is even possible
                 return IntersectDocs.Empty;
-            
+
             double o1 = nSize + mSize;
             double o2 = mSize * Math.Log(nSize, 2);
 
@@ -467,7 +482,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private class IntersectDocs
         {
             public static readonly IntersectDocs Empty = new();
-            
+
             public int Count;
             public int[] Documents;
 

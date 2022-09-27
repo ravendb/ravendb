@@ -246,6 +246,11 @@ namespace Sparrow.Server
             EnsureIsNotBadPointer();
             Memory.Copy(dest + offset, _pointer->Ptr + from, count);
         }
+        
+        public void CopyTo(Span<byte> dest)
+        {
+            ToSpan().CopyTo(dest);
+        }
 
         public void CopyTo(byte* dest)
         {

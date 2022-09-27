@@ -36,7 +36,7 @@ namespace Raven.Client.Http
             throw new NotSupportedException();
         }
 
-        public static ClusterRequestExecutor CreateForSingleNode(string url, X509Certificate2 certificate, DocumentConventions conventions = null)
+        public static ClusterRequestExecutor CreateForSingleNode(string url, X509Certificate2 certificate, DocumentConventions conventions)
         {
             var initialUrls = new[] { url };
             url = ValidateUrls(initialUrls, certificate)[0];

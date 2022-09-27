@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Runtime.CompilerServices;
 using Corax;
 using Corax.Queries;
+using Mono.Unix.Native;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Exceptions;
@@ -131,7 +132,7 @@ public static class QueryBuilderHelper
                 return -1;
         }
     }
-
+    
     public static (object Value, ValueTokenType Type) GetValue(Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters, QueryExpression expression,
         bool allowObjectsInParameters = false)
     {
@@ -177,7 +178,7 @@ public static class QueryBuilderHelper
                 throw new ArgumentOutOfRangeException(nameof(value.Type), value.Type, null);
         }
     }
-    
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static object UnwrapParameter(object parameterValue, ValueTokenType parameterType)
     {
@@ -354,8 +355,7 @@ public static class QueryBuilderHelper
         OperatorType.GreaterThanEqual => UnaryMatchOperation.GreaterThanOrEqual,
         _ => throw new ArgumentOutOfRangeException(nameof(current), current, null)
     };
-
-
+    
     internal static IEnumerable<(string Value, ValueTokenType Type)> GetValuesForIn(
         Query query,
         InExpression expression,
@@ -390,7 +390,7 @@ public static class QueryBuilderHelper
             }
         }
     }
-    
+
     internal unsafe static bool TryGetTime(Index index, object value, out long ticks)
     {
         ticks = -1;
@@ -411,7 +411,6 @@ public static class QueryBuilderHelper
                 {
                     result = LazyStringParser.TryParseTimeForQuery(buffer, valueAsString.Length, out dt, out dto, out @do, out to,
                         index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.ProperlyParseThreeDigitsMillisecondsDates);
-
                 }
 
                 break;
@@ -461,12 +460,11 @@ public static class QueryBuilderHelper
                 return new QueryFieldName("score()", false);
 
             return new QueryFieldName("score()", false);
-            
         }
 
         return ExtractIndexFieldName(query, parameters, field, metadata);
     }
-
+    
     internal static QueryFieldName ExtractIndexFieldName(Query query, BlittableJsonReaderObject parameters, QueryExpression field, QueryMetadata metadata)
     {
         if (field is FieldExpression fe)
@@ -509,20 +507,21 @@ public static class QueryBuilderHelper
         throw new InvalidQueryException("Expected field, got: " + field, query.QueryText, parameters);
     }
 
-    internal static int GetFieldIdForOrderBy(string fieldName, Index index, IndexFieldsMapping indexMapping = null, FieldsToFetch queryMapping = null,
+    internal static int GetFieldIdForOrderBy(string fieldName, Index index, bool hasDynamics, Lazy<List<string>> dynamicFields, IndexFieldsMapping indexMapping = null, FieldsToFetch queryMapping = null,
         bool isForQuery = true)
     {
         if (fieldName is "score()")
             return ScoreId;
 
-        return GetFieldId(fieldName, index, indexMapping, queryMapping, isForQuery);
+        return GetFieldId(fieldName, index, indexMapping, queryMapping, hasDynamics, dynamicFields, isForQuery);
     }
 
-    internal static int GetFieldId(string fieldName, Index index, IndexFieldsMapping indexMapping = null, FieldsToFetch queryMapping = null, bool isForQuery = true, bool exact = false)
+    internal static int GetFieldId(string fieldName, Index index, IndexFieldsMapping indexMapping, FieldsToFetch queryMapping, bool hasDynamics, Lazy<List<string>> dynamicFields, bool isForQuery = true,
+        bool exact = false)
     {
         if (exact)
             return Corax.Constants.IndexSearcher.NonAnalyzer;
-        
+
         RuntimeHelpers.EnsureSufficientExecutionStack();
         if (fieldName.Equals(Client.Constants.Documents.Indexing.Fields.DocumentIdMethodName, StringComparison.OrdinalIgnoreCase) ||
             fieldName is Constants.Documents.Indexing.Fields.DocumentIdFieldName)
@@ -536,9 +535,12 @@ public static class QueryBuilderHelper
 
         IndexField indexField = null;
         IndexFieldBinding binding = null;
-        if (queryMapping?.IndexFields.TryGetValue(fieldName, out indexField) == false &&
-            indexMapping?.TryGetByFieldName(fieldName, out binding) == false)
+        if (queryMapping?.IndexFields.TryGetValue(fieldName, out indexField) is null or false &&
+            indexMapping?.TryGetByFieldName(fieldName, out binding) is null or false)
         {
+            if (hasDynamics && dynamicFields.Value.Contains(fieldName))
+                return Corax.Constants.IndexWriter.DynamicField;
+            
             ThrowNotFoundInIndex();
         }
 
@@ -546,7 +548,7 @@ public static class QueryBuilderHelper
         {
             ThrowFieldIsNotIndexed();
         }
-        
+
         return indexField?.Id ?? binding?.FieldId ??
             throw new InvalidQueryException($"{nameof(IndexFieldBinding)} or {nameof(IndexFieldsMapping)} not found in {nameof(CoraxQueryBuilder)}.");
 
@@ -561,7 +563,7 @@ public static class QueryBuilderHelper
     {
         return metadata.GetIndexFieldName(new QueryFieldName(field.Token.Value, field.Value == ValueTokenType.String), parameters);
     }
-
+    
     internal static bool IsExact(Index index, bool exact, QueryFieldName fieldName)
     {
         if (exact)
@@ -574,9 +576,9 @@ public static class QueryBuilderHelper
 
         return false;
     }
-
+    
     internal static QueryExpression EvaluateMethod(Query query, QueryMetadata metadata, TransactionOperationContext serverContext,
-        DocumentsOperationContext documentsContext, MethodExpression method, ref BlittableJsonReaderObject parameters)
+        DocumentsOperationContext documentsContext, MethodExpression method, BlittableJsonReaderObject parameters)
     {
         var methodType = QueryMethod.GetMethodType(method.Name.Value);
 
@@ -611,7 +613,7 @@ public static class QueryBuilderHelper
         null => Corax.Constants.NullValue,
         _ => value?.ToString()
     };
-    
+
     internal static ComparerType GetComparerType(bool ascending, MatchCompareFieldType original, int fieldId) => (ascending, original, fieldId) switch
     {
         (true, MatchCompareFieldType.Spatial, _) => ComparerType.AscendingSpatial,
@@ -633,65 +635,124 @@ public static class QueryBuilderHelper
         AscendingSpatial,
         DescendingSpatial
     }
+
+    internal static IShape HandleWkt(CoraxQueryBuilder.Parameters builderParameters, string fieldName, MethodExpression expression, 
+        SpatialField spatialField, out SpatialUnits units)
+    {
+        var wktValue = QueryBuilderHelper.GetValue(builderParameters.Metadata.Query, builderParameters.Metadata, builderParameters.QueryParameters, (ValueExpression)expression.Arguments[0]);
+        QueryBuilderHelper.AssertValueIsString(fieldName, wktValue.Type);
+
+        SpatialUnits? spatialUnits = null;
+        if (expression.Arguments.Count == 2)
+            spatialUnits = GetSpatialUnits(builderParameters.Metadata.Query, expression.Arguments[1] as ValueExpression, builderParameters.Metadata, builderParameters.QueryParameters, fieldName);
+
+        units = spatialUnits ?? spatialField.Units;
+
+        var wkt = CoraxGetValueAsString(wktValue.Value);
+
+        try
+        {
+            return spatialField.ReadShape(wkt, spatialUnits);
+        }
+        catch (Exception e)
+        {
+            throw new InvalidQueryException($"Value '{wkt}' is not a valid WKT value.", builderParameters.Metadata.QueryText, builderParameters.QueryParameters, e);
+        }
+    }
     
-    internal static IShape HandleWkt(Query query, MethodExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, string fieldName,
-            SpatialField spatialField, out SpatialUnits units)
+    internal static IShape HandleCircle(Query query, MethodExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, string fieldName,
+        SpatialField spatialField, out SpatialUnits units)
+    {
+        var radius = QueryBuilderHelper.GetValue(query, metadata, parameters, (ValueExpression)expression.Arguments[0]);
+        QueryBuilderHelper.AssertValueIsNumber(fieldName, radius.Type);
+
+        var latitude = QueryBuilderHelper.GetValue(query, metadata, parameters, (ValueExpression)expression.Arguments[1]);
+        QueryBuilderHelper.AssertValueIsNumber(fieldName, latitude.Type);
+
+        var longitude = QueryBuilderHelper.GetValue(query, metadata, parameters, (ValueExpression)expression.Arguments[2]);
+        QueryBuilderHelper.AssertValueIsNumber(fieldName, longitude.Type);
+
+        SpatialUnits? spatialUnits = null;
+        if (expression.Arguments.Count == 4)
+            spatialUnits = GetSpatialUnits(query, expression.Arguments[3] as ValueExpression, metadata, parameters, fieldName);
+
+        units = spatialUnits ?? spatialField.Units;
+
+        return spatialField.ReadCircle(Convert.ToDouble(radius.Value), Convert.ToDouble(latitude.Value), Convert.ToDouble(longitude.Value), spatialUnits);
+    }
+
+    private static SpatialUnits? GetSpatialUnits(Query query, ValueExpression value, QueryMetadata metadata, BlittableJsonReaderObject parameters, string fieldName)
+    {
+        if (value == null)
+            throw new ArgumentNullException(nameof(value));
+
+        var spatialUnitsValue = QueryBuilderHelper.GetValue(query, metadata, parameters, value);
+        QueryBuilderHelper.AssertValueIsString(fieldName, spatialUnitsValue.Type);
+
+        var spatialUnitsValueAsString = CoraxGetValueAsString(spatialUnitsValue.Value);
+        if (Enum.TryParse(typeof(SpatialUnits), spatialUnitsValueAsString, true, out var su) == false)
+            throw new InvalidOperationException(
+                $"{nameof(SpatialUnits)} value must be either '{SpatialUnits.Kilometers}' or '{SpatialUnits.Miles}' but was '{spatialUnitsValueAsString}'.");
+
+        return (SpatialUnits)su;
+    }
+
+    internal static MethodExpression FindMoreLikeThisExpression(QueryExpression expression)
+    {
+        if (expression == null)
+            return null;
+
+        if (expression is BinaryExpression where)
         {
-            var wktValue = QueryBuilderHelper.GetValue(query, metadata, parameters, (ValueExpression)expression.Arguments[0]);
-            QueryBuilderHelper.AssertValueIsString(fieldName, wktValue.Type);
-
-            SpatialUnits? spatialUnits = null;
-            if (expression.Arguments.Count == 2)
-                spatialUnits = GetSpatialUnits(query, expression.Arguments[1] as ValueExpression, metadata, parameters, fieldName);
-
-            units = spatialUnits ?? spatialField.Units;
-
-            var wkt = CoraxGetValueAsString(wktValue.Value);
-
-            try
+            switch (where.Operator)
             {
-                return spatialField.ReadShape(wkt, spatialUnits);
+                case OperatorType.And:
+                case OperatorType.Or:
+                    var leftExpression = FindMoreLikeThisExpression(where.Left);
+                    if (leftExpression != null)
+                        return leftExpression;
+
+                    var rightExpression = FindMoreLikeThisExpression(where.Right);
+                    if (rightExpression != null)
+                        return rightExpression;
+
+                    return null;
+                default:
+                    return null;
             }
-            catch (Exception e)
+        }
+
+        if (expression is MethodExpression me)
+        {
+            var methodName = me.Name.Value;
+            var methodType = QueryMethod.GetMethodType(methodName);
+
+            switch (methodType)
             {
-                throw new InvalidQueryException($"Value '{wkt}' is not a valid WKT value.", query.QueryText, parameters, e);
+                case MethodType.MoreLikeThis:
+                    return me;
+                default:
+                    return null;
             }
         }
 
-        internal static IShape HandleCircle(Query query, MethodExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, string fieldName,
-            SpatialField spatialField, out SpatialUnits units)
+        return null;
+    }
+
+    internal static string GetValueAsString(object value)
+    {
+        if (!(value is string valueAsString))
         {
-            var radius = QueryBuilderHelper.GetValue(query, metadata, parameters, (ValueExpression)expression.Arguments[0]);
-            QueryBuilderHelper.AssertValueIsNumber(fieldName, radius.Type);
-
-            var latitude = QueryBuilderHelper.GetValue(query, metadata, parameters, (ValueExpression)expression.Arguments[1]);
-            QueryBuilderHelper.AssertValueIsNumber(fieldName, latitude.Type);
-
-            var longitude = QueryBuilderHelper.GetValue(query, metadata, parameters, (ValueExpression)expression.Arguments[2]);
-            QueryBuilderHelper.AssertValueIsNumber(fieldName, longitude.Type);
-
-            SpatialUnits? spatialUnits = null;
-            if (expression.Arguments.Count == 4)
-                spatialUnits = GetSpatialUnits(query, expression.Arguments[3] as ValueExpression, metadata, parameters, fieldName);
-
-            units = spatialUnits ?? spatialField.Units;
-
-            return spatialField.ReadCircle(Convert.ToDouble(radius.Value), Convert.ToDouble(latitude.Value), Convert.ToDouble(longitude.Value), spatialUnits);
+            if (value is StringSegment s)
+            {
+                valueAsString = s.Value;
+            }
+            else
+            {
+                valueAsString = value?.ToString();
+            }
         }
 
-        private static SpatialUnits? GetSpatialUnits(Query query, ValueExpression value, QueryMetadata metadata, BlittableJsonReaderObject parameters, string fieldName)
-        {
-            if (value == null)
-                throw new ArgumentNullException(nameof(value));
-
-            var spatialUnitsValue = QueryBuilderHelper.GetValue(query, metadata, parameters, value);
-            QueryBuilderHelper.AssertValueIsString(fieldName, spatialUnitsValue.Type);
-
-            var spatialUnitsValueAsString = CoraxGetValueAsString(spatialUnitsValue.Value);
-            if (Enum.TryParse(typeof(SpatialUnits), spatialUnitsValueAsString, true, out var su) == false)
-                throw new InvalidOperationException(
-                    $"{nameof(SpatialUnits)} value must be either '{SpatialUnits.Kilometers}' or '{SpatialUnits.Miles}' but was '{spatialUnitsValueAsString}'.");
-
-            return (SpatialUnits)su;
-        }
+        return valueAsString;
+    }
 }

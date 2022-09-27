@@ -85,7 +85,7 @@
             </div>
             <div class="clearfix">
                 <div class="pull-left btn-group">
-                    <div data-bind="visible: queryStats() && hasEditableIndex(), if: queryStats() && hasEditableIndex()" class="dropdown btn-group" >
+                    <div data-bind="visible: queryStats() && hasEditableIndex(), if: queryStats() && hasEditableIndex()" class="dropdown btn-group">
                         <button class="btn btn-info btn-sm dropdown-toggle" type="button" id="dropdownMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
                             <span>
                                 <i class="icon-index"></i> <span>Index '</span><span data-bind="text: queriedIndexLabel"></span>'
@@ -136,7 +136,7 @@
                             <strong data-bind="text: queryStats().DurationInMs.toLocaleString() + ' ms'"></strong>
                             <span data-bind="visible: originalRequestTime, if: originalRequestTime">(original request took: <strong data-bind="text: originalRequestTime().toLocaleString() + ' ms'"></strong>)</span>
                             <span data-bind="visible: queriedFieldsOnly">
-                                . Showing <strong>stored index fields</strong> only. 
+                                . Showing <strong>stored index fields</strong> only.
                             </span>
                             <span data-bind="visible: queriedIndexEntries">. Showing <strong>raw index entries</strong>.</span>
                         </span>
@@ -189,24 +189,6 @@
             </div>
         </div>
         <div class="panel flex-window-scroll no-margin">
-            <div class="has-error results-error" data-bind="visible: staleResult()">
-                <div class="help-block">
-                    <i class="icon-danger"></i><span>Your index is stale. It's possible that not all the results are displayed. <a href="#" data-bind="click: refresh">Refresh.</a></span>
-                </div>
-            </div>
-            <div class="has-error results-error" data-bind="visible: dirtyResult() && !staleResult()">
-                <div class="help-block">
-                    <i class="icon-danger"></i><span>Your data has changed. The results may contain duplicates or non-current entries. <a href="#" data-bind="click: refresh">Refresh.</a></span>
-                </div>
-            </div>
-            <div class="has-warning results-error" data-bind="visible: showFanOutWarning()">
-                <div class="help-block">
-                    <i class="icon-warning"></i>
-                    <span>Using <code>offset</code> or <code>limit</code> in RQL for fanout indexes may produce unpredictable paging. 
-                        <a href="#" target="_blank" data-bind="attr: { href: 'https://ravendb.net/l/LT8GZF/' + $root.clientVersion() }">See details.</a>
-                    </span>
-                </div>
-            </div>
             <div class="scroll-stretch">
                 <div class="panel-body" data-bind="visible: showVirtualTable()">
                     <virtual-grid class="resizable" params="controller: gridController, emptyTemplate: 'empty-query-template'"></virtual-grid>
@@ -232,6 +214,25 @@
                 <div class="panel-body absolute-fill" data-bind="if: showMapView(), visible: showMapView()">
                     <div class="absolute-fill flex-vertical" data-bind="compose: $root.currentTab"></div>
                 </div>
+            </div>
+        </div>
+        <div class="has-error" data-bind="visible: staleResult()">
+            <div class="help-block">
+                <i class="icon-danger"></i><span>Your index is stale. It's possible that not all the results are displayed. <a href="#" data-bind="click: refresh">Refresh.</a></span>
+            </div>
+        </div>
+        <div class="has-error" data-bind="visible: dirtyResult() && !staleResult()">
+            <div class="help-block">
+                <i class="icon-danger"></i><span>Your data has changed. The results may contain duplicates or non-current entries. <a href="#" data-bind="click: refresh">Refresh.</a></span>
+            </div>
+        </div>
+        <div class="has-warning" data-bind="visible: showFanOutWarning()">
+            <div class="help-block">
+                <i class="icon-warning"></i>
+                <span>
+                    Using <code>offset</code> or <code>limit</code> in RQL for fanout indexes may produce unpredictable paging.
+                    <a href="#" target="_blank" data-bind="attr: { href: 'https://ravendb.net/l/LT8GZF/' + $root.clientVersion() }">See details.</a>
+                </span>
             </div>
         </div>
         <div class="flex-window-head tabs-menu">

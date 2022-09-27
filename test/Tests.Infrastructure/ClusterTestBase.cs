@@ -339,7 +339,8 @@ namespace Tests.Infrastructure
             {
                 try
                 {
-                    var leader = servers == null ? Servers.FirstOrDefault(s => s.ServerStore.IsLeader()) : servers.FirstOrDefault(s => s.ServerStore.IsLeader());
+                    servers ??= Servers;
+                    var leader = servers.FirstOrDefault(s => s.ServerStore.IsLeader());
                     if (leader != null)
                     {
                         await act(leader);
@@ -981,7 +982,7 @@ namespace Tests.Infrastructure
         private static async Task<string[]> GetClusterNodeUrlsAsync(string leadersUrl, IDocumentStore store)
         {
             string[] urls;
-            using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(leadersUrl, store.Certificate))
+            using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(leadersUrl, store.Certificate, DocumentConventions.DefaultForServer))
             {
                 try
                 {

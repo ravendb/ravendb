@@ -1,5 +1,6 @@
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import dialog = require("plugins/dialog");
+import versionProvider from "common/versionProvider";
 
 class secureInstructions extends dialogViewModelBase {
 
@@ -9,8 +10,12 @@ class secureInstructions extends dialogViewModelBase {
     
     validationGroup: KnockoutValidationGroup;
     
+    documentationLink: string;
+    
     constructor() {
         super();
+        
+        this.documentationLink = "https://ravendb.net/l/GN3CN1/" + versionProvider.version;
         
         this.initValidation();
     }

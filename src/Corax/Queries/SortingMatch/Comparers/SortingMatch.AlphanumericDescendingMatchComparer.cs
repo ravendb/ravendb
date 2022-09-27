@@ -24,10 +24,10 @@ unsafe partial struct SortingMatch
             static int CompareWithLoadSequence(ref AlphanumericDescendingMatchComparer comparer, long x, long y)
             {
                 var readerX = comparer._searcher.GetReaderFor(x);
-                var readX = readerX.Read(comparer._fieldId, out var resultX);
+                var readX = readerX.GetReaderFor(comparer._fieldId).Read( out var resultX);
 
                 var readerY = comparer._searcher.GetReaderFor(y);
-                var readY = readerY.Read(comparer._fieldId, out var resultY);
+                var readY = readerY.GetReaderFor(comparer._fieldId).Read( out var resultY);
 
                 if (readX && readY)
                 {
@@ -42,10 +42,10 @@ unsafe partial struct SortingMatch
             static int CompareWithLoadNumerical<T>(ref AlphanumericDescendingMatchComparer comparer, long x, long y) where T : unmanaged
             {
                 var readerX = comparer._searcher.GetReaderFor(x);
-                var readX = readerX.Read<T>(comparer._fieldId, out var resultX);
+                var readX = readerX.GetReaderFor(comparer._fieldId).Read<T>( out var resultX);
 
                 var readerY = comparer._searcher.GetReaderFor(y);
-                var readY = readerY.Read<T>(comparer._fieldId, out var resultY);
+                var readY = readerY.GetReaderFor(comparer._fieldId).Read<T>( out var resultY);
 
                 if (readX && readY)
                 {

@@ -265,11 +265,14 @@ namespace SlowTests.Cluster
                                 }
 
                                 if (numberOfNodes > 1)
-                                    await ActionWithLeader(l =>
+                                    await ActionWithLeader(async l =>
                                     {
+                                        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                                        var waitForLeaderChangeTask = l.ServerStore.Engine.WaitForLeaderChange(cts.Token);
                                         l.ServerStore.Engine.CurrentLeader?.StepDown();
-                                        return Task.CompletedTask;
+                                        await waitForLeaderChangeTask;
                                     });
+
                                 using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(numberOfNodes)))
                                 {
                                     await session.SaveChangesAsync(cts.Token);

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using FastTests.Corax.Bugs;
 using FastTests.Voron;
 using Parquet.Thrift;
 using SharpCompress.Compressors;
@@ -12,7 +13,7 @@ using Xunit;
 using Xunit.Abstractions;
 using Encoding = System.Text.Encoding;
 
-namespace FastTests.Corax.Bugs;
+namespace StressTests.Corax.Bugs;
 
 public class CompactTreeOptimizedLookup : StorageTest
 {
@@ -50,7 +51,7 @@ public class CompactTreeOptimizedLookup : StorageTest
     
     private static IEnumerable<List<string>> ReadTermsFromResource(string file)
     {
-        var reader = new StreamReader(new GZipStream(typeof(SetAddRemoval).Assembly.GetManifestResourceStream("FastTests.Corax.Bugs." + file), CompressionMode.Decompress));
+        var reader = new StreamReader(new GZipStream(typeof(CompactTreeOptimizedLookup).Assembly.GetManifestResourceStream("StressTests.Corax.Bugs." + file), CompressionMode.Decompress));
         var adds = new List<string>();
         string line = null;
         while ((line = reader.ReadLine()) != null)

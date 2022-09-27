@@ -238,7 +238,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         public override void Transform(RavenEtlItem item, EtlStatsScope stats, EtlProcessState state)
         {
             Current = item;
-            _currentRun ??= new RavenEtlScriptRun(stats);
+            _currentRun ??= new RavenEtlScriptRun(stats, _transformation);
 
             if (item.IsDelete == false)
             {
@@ -321,7 +321,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                         {
                             if (item.IsAttachmentTombstone == false)
                             {
-                                _currentRun.Delete(new DeleteCommandData(item.DocumentId, null, null));
+                                _currentRun.Delete(item.DocumentId);
                             }
                             else
                             {
@@ -808,12 +808,12 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                         && _transformation.TimeSeries.IsAddingTimeSeries == false
                         && _currentRun.IsDocumentLoadedToSameCollection(item.DocumentId))
                         continue;
-                    _currentRun.Delete(new DeleteCommandData(item.DocumentId, null, null));
+                    _currentRun.Delete(item.DocumentId);
                     isLoadedToDefaultCollectionDeleted = true;
                 }
                 else
                 {
-                    _currentRun.Delete(new DeletePrefixedCommandData(GetPrefixedId(item.DocumentId, collection)));
+                    _currentRun.DeleteByPrefix(GetPrefixedId(item.DocumentId, collection));
                 }
             }
         }

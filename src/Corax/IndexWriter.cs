@@ -3,13 +3,10 @@ using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.Diagnostics.Contracts;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Xml;
 using Corax.Pipeline;
 using Corax.Utils;
 using Sparrow;
@@ -17,10 +14,8 @@ using Sparrow.Binary;
 using Sparrow.Compression;
 using Sparrow.Json;
 using Sparrow.Server;
-using Sparrow.Server.Compression;
 using Voron;
 using Voron.Data.BTrees;
-using Voron.Data.CompactTrees;
 using Voron.Data.Containers;
 using Voron.Data.Fixed;
 using Voron.Data.Sets;
@@ -182,17 +177,45 @@ namespace Corax
                 _disposable.Dispose();
             }
         }
-        
-        private readonly Dictionary<Slice, EntriesModifications>[] _buffer;
-        private readonly Dictionary<long, EntriesModifications>[] _bufferLongs;
-        private readonly Dictionary<double, EntriesModifications>[] _bufferDoubles;
+
+        private class IndexedField
+        {
+            public readonly Dictionary<Slice, EntriesModifications> Textual;
+            public readonly Dictionary<long, EntriesModifications> Longs;
+            public readonly Dictionary<double, EntriesModifications> Doubles;
+            public Dictionary<Slice, int> Suggestions;
+            public readonly Analyzer Analyzer;
+            public readonly bool HasSuggestions;
+            public readonly Slice Name;
+            public readonly Slice NameLong;
+            public readonly Slice NameDouble;
+            public readonly int Id;
+
+            public IndexedField(int id, Slice name, Slice nameLong, Slice nameDouble, Analyzer analyzer, bool hasSuggestions)
+            {
+                Name = name;
+                NameLong = nameLong;
+                NameDouble = nameDouble;
+                Id = id;
+                Analyzer = analyzer;
+                HasSuggestions = hasSuggestions;
+                Textual = new Dictionary<Slice, EntriesModifications>(SliceComparer.Instance);
+                Longs = new Dictionary<long, EntriesModifications>();
+                Doubles = new Dictionary<double, EntriesModifications>();
+            }
+
+        }
+
+        private bool _hasSuggestions;
+        private readonly IndexedField[] _knownFieldsTerms;
+        private Dictionary<Slice, IndexedField> _dynamicFieldsTerms;
         private readonly HashSet<long> _deletedEntries = new();
 
         private readonly long _postingListContainerId, _entriesContainerId;
+        private readonly IndexDynamicFieldsMapping _dynamicFieldsMapping;
 
         private const string SuggestionsTreePrefix = "__Suggestion_";
-        private Dictionary<int, Dictionary<Slice, int>> _suggestionsAccumulator;
-
+        
         // The reason why we want to have the transaction open for us is so that we avoid having
         // to explicitly provide the index writer with opening semantics and also every new
         // writer becomes essentially a unit of work which makes reusing assets tracking more explicit.
@@ -206,14 +229,11 @@ namespace Corax
             _utf8ConverterBufferHandler = Analyzer.BufferPool.Rent(fieldsMapping.MaximumOutputSize * 10);
 
             var bufferSize = fieldsMapping!.Count;
-            _buffer = new Dictionary<Slice, EntriesModifications>[bufferSize];
-            _bufferDoubles = new Dictionary<double, EntriesModifications>[bufferSize];
-            _bufferLongs = new Dictionary<long, EntriesModifications>[bufferSize];
+            _knownFieldsTerms = new IndexedField[bufferSize];
             for (int i = 0; i < bufferSize; ++i)
             {
-                _buffer[i] = new Dictionary<Slice, EntriesModifications>(SliceComparer.Instance);
-                _bufferDoubles[i] = new Dictionary<double, EntriesModifications>();
-                _bufferLongs[i] = new Dictionary<long, EntriesModifications>();
+                IndexFieldBinding indexFieldBinding = fieldsMapping.GetByFieldId(i);
+                _knownFieldsTerms[i] = new IndexedField(indexFieldBinding.FieldId, indexFieldBinding.FieldName, indexFieldBinding.FieldNameLong, indexFieldBinding.FieldNameDouble, indexFieldBinding.Analyzer, indexFieldBinding.HasSuggestions);
             }
         }
 
@@ -230,6 +250,11 @@ namespace Corax
             _indexMetadata = Transaction.CreateTree(Constants.IndexMetadata);
         }
 
+        public IndexWriter([NotNull] Transaction tx, IndexFieldsMapping fieldsMapping, IndexDynamicFieldsMapping dynamicFieldsMapping) : this(tx, fieldsMapping)
+        {
+            _dynamicFieldsMapping = dynamicFieldsMapping;
+        }
+        
         public IndexWriter([NotNull] Transaction tx, IndexFieldsMapping fieldsMapping) : this(fieldsMapping)
         {
             Transaction = tx;
@@ -310,10 +335,14 @@ namespace Corax
             var oldType = oldEntryReader.GetFieldType(fieldBinding.FieldId, out var _);
             var newType = newEntryReader.GetFieldType(fieldBinding.FieldId, out var _);
 
+            var indexedField = _knownFieldsTerms[fieldBinding.FieldId];
+            var newFieldReader = newEntryReader.GetReaderFor(fieldBinding.FieldId);
+            var oldFieldReader = oldEntryReader.GetReaderFor(fieldBinding.FieldId);
             if (oldType != newType)
             {
-                RemoveSingleTerm(fieldBinding, entryId, oldEntryReader, oldType);
-                InsertToken(context, ref newEntryReader, entryId, fieldBinding);
+                RemoveSingleTerm(indexedField, oldFieldReader, entryId);
+                var indexer = new TermIndexer(this, context, newFieldReader, indexedField, entryId);
+                indexer.InsertToken();
                 return;
             }
 
@@ -328,8 +357,8 @@ namespace Corax
                 case IndexEntryFieldType.ListWithNulls:
                 case IndexEntryFieldType.List:
                 {
-                    bool oldHasIterator = oldEntryReader.TryReadMany(fieldBinding.FieldId, out var oldIterator);
-                    bool newHasIterator = newEntryReader.TryReadMany(fieldBinding.FieldId, out var newIterator);
+                    bool oldHasIterator = oldFieldReader.TryReadMany(out var oldIterator);
+                    bool newHasIterator = newFieldReader.TryReadMany(out var newIterator);
                     bool areEqual = oldHasIterator == newHasIterator;
                     while (true)
                     {
@@ -360,8 +389,9 @@ namespace Corax
 
                     if (areEqual == false)
                     {
-                        RemoveSingleTerm(fieldBinding, entryId, oldEntryReader, oldType);
-                        InsertToken(context, ref newEntryReader, entryId, fieldBinding);
+                        RemoveSingleTerm(indexedField, oldFieldReader, entryId);
+                        var indexer = new TermIndexer(this, context, newFieldReader, indexedField, entryId);
+                        indexer.InsertToken();
                     }
                     break;
                 }
@@ -369,12 +399,13 @@ namespace Corax
                 case IndexEntryFieldType.SpatialPoint:
                 case IndexEntryFieldType.Simple:
                 {
-                    bool hasOld = oldEntryReader.Read(fieldBinding.FieldId, out var oldVal);
-                    bool hasNew = newEntryReader.Read(fieldBinding.FieldId, out var newVal);
+                    bool hasOld = oldFieldReader.Read(out var oldVal);
+                    bool hasNew = newFieldReader.Read(out var newVal);
                     if (hasOld != hasNew || hasOld && oldVal.SequenceEqual(newVal) == false)
                     {
-                        RemoveSingleTerm(fieldBinding, entryId, oldEntryReader, oldType);
-                        InsertToken(context, ref newEntryReader, entryId, fieldBinding);
+                        RemoveSingleTerm(indexedField, oldFieldReader, entryId);
+                        var indexer = new TermIndexer(this, context, newFieldReader, indexedField, entryId);
+                        indexer.InsertToken();
                     }
                     break;
                 }
@@ -385,8 +416,8 @@ namespace Corax
 
                 case IndexEntryFieldType.SpatialPointList:
                 {
-                    bool oldHasIterator = oldEntryReader.TryReadManySpatialPoint(fieldBinding.FieldId, out var oldIterator);
-                    bool newHasIterator = newEntryReader.TryReadManySpatialPoint(fieldBinding.FieldId, out var newIterator);
+                    bool oldHasIterator = oldFieldReader.TryReadManySpatialPoint(out var oldIterator);
+                    bool newHasIterator = newFieldReader.TryReadManySpatialPoint(out var newIterator);
                     bool areEqual = oldHasIterator == newHasIterator;
                     while (true)
                     {
@@ -417,8 +448,9 @@ namespace Corax
 
                     if (areEqual == false)
                     {
-                        RemoveSingleTerm(fieldBinding, entryId, oldEntryReader, oldType);
-                        InsertToken(context, ref newEntryReader, entryId, fieldBinding);
+                        RemoveSingleTerm(indexedField, oldFieldReader, entryId);
+                        var indexer = new TermIndexer(this, context, newFieldReader, indexedField, entryId);
+                        indexer.InsertToken();
                     }
                     break;
                 }
@@ -450,28 +482,66 @@ namespace Corax
                 if (binding.FieldIndexingMode is FieldIndexingMode.No)
                     continue;
 
-                InsertToken(context, ref entryReader, entryId, binding);
+                var indexer = new TermIndexer(this, context, entryReader.GetReaderFor(binding.FieldId), _knownFieldsTerms[binding.FieldId], entryId);
+                indexer.InsertToken();
+            }
+
+            var it = new IndexEntryReader.DynamicFieldEnumerator(entryReader);
+            while (it.MoveNext())
+            {
+                var fieldReader = entryReader.GetReaderFor(it.CurrentFieldName);
+
+                var indexedField = GetDynamicIndexedField(context, ref it);
+
+                var indexer = new TermIndexer(this, context, fieldReader, indexedField, entryId);
+                indexer.InsertToken();
             }
 
             return entryId;
         }
 
-        public long GetNumberOfEntries() => (_indexMetadata.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0) + _numberOfModifications;
-
-        private void AddSuggestions(IndexFieldBinding binding, Slice slice)
+        private IndexedField GetDynamicIndexedField(ByteStringContext context, ref IndexEntryReader.DynamicFieldEnumerator it)
         {
-            _suggestionsAccumulator ??= new Dictionary<int, Dictionary<Slice, int>>();
+            _dynamicFieldsTerms ??= new();
+            using var _ = Slice.From(context, it.CurrentFieldName, out var slice);
 
-            if (_suggestionsAccumulator.TryGetValue(binding.FieldId, out var suggestionsToAdd) == false)
+            if (_dynamicFieldsTerms.TryGetValue(slice, out var indexedField))
+                return indexedField;
+            
+            
+            var clonedFieldName = slice.Clone(context);
+
+            if (_dynamicFieldsMapping != null && _dynamicFieldsMapping.TryGetByFieldName(slice, out var binding))
             {
-                suggestionsToAdd = new Dictionary<Slice, int>();
-                _suggestionsAccumulator[binding.FieldId] = suggestionsToAdd;
+                
+                indexedField = new IndexedField(-1, binding.FieldName, binding.FieldNameLong, binding.FieldNameDouble, binding.Analyzer, binding.HasSuggestions);
+                _dynamicFieldsTerms[clonedFieldName] = indexedField;
+            }
+            else
+            {
+
+                IndexFieldsMappingBase.GetFieldNameForLongs(context, clonedFieldName, out var fieldNameLong);
+                IndexFieldsMappingBase.GetFieldNameForDoubles(context, clonedFieldName, out var fieldNameDouble);
+                indexedField = new IndexedField(-1, clonedFieldName, fieldNameLong, fieldNameDouble, null, false);
+                _dynamicFieldsTerms[clonedFieldName] = indexedField;
             }
 
+            return indexedField;
+        }
+
+        public long GetNumberOfEntries() => (_indexMetadata.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0) + _numberOfModifications;
+
+        private void AddSuggestions(IndexedField field, Slice slice)
+        {
+            _hasSuggestions = true;
+            field.Suggestions ??= new Dictionary<Slice, int>();
+            
             var keys = SuggestionsKeys.Generate(Transaction.Allocator, Constants.Suggestions.DefaultNGramSize, slice.AsSpan(), out int keysCount);
             int keySizes = keys.Length / keysCount;
 
             var bsc = Transaction.Allocator;
+
+            var suggestionsToAdd = field.Suggestions;
 
             int idx = 0;
             while (idx < keysCount)
@@ -486,21 +556,17 @@ namespace Corax
             }
         }
 
-        private void RemoveSuggestions(IndexFieldBinding binding, ReadOnlySpan<byte> sequence)
+        private void RemoveSuggestions(IndexedField field, ReadOnlySpan<byte> sequence)
         {
-            if (_suggestionsAccumulator == null)
-                _suggestionsAccumulator = new Dictionary<int, Dictionary<Slice, int>>();
+            _hasSuggestions = true;
+            field.Suggestions ??= new Dictionary<Slice, int>();
 
-            if (_suggestionsAccumulator.TryGetValue(binding.FieldId, out var suggestionsToAdd) == false)
-            {
-                suggestionsToAdd = new Dictionary<Slice, int>();
-                _suggestionsAccumulator[binding.FieldId] = suggestionsToAdd;
-            }
 
             var keys = SuggestionsKeys.Generate(Transaction.Allocator, Constants.Suggestions.DefaultNGramSize, sequence, out int keysCount);
             int keySizes = keys.Length / keysCount;
 
             var bsc = Transaction.Allocator;
+            var suggestionsToAdd = field.Suggestions;
 
             int idx = 0;
             while (idx < keysCount)
@@ -515,113 +581,142 @@ namespace Corax
             }
         }
 
-        [SkipLocalsInit]
-        private void InsertToken(ByteStringContext context, ref IndexEntryReader entryReader, long entryId,
-            IndexFieldBinding binding)
+        private readonly ref struct TermIndexer
         {
-            var field = _buffer[binding.FieldId];
-            var fieldLongs = _bufferLongs[binding.FieldId];
-            var fieldDoubles = _bufferDoubles[binding.FieldId];
-            int fieldId = binding.FieldId;
-            var fieldType = entryReader.GetFieldType(fieldId, out var _);
-            switch (fieldType)
+            private readonly IndexEntryReader.FieldReader _fieldReader;
+            private readonly IndexWriter _parent;
+            private readonly long _entryId;
+            private readonly ByteStringContext _context;
+            private readonly IndexedField _indexedField;
+
+
+            public TermIndexer(IndexWriter parent, ByteStringContext context, IndexEntryReader.FieldReader fieldReader, IndexedField indexedField, long entryId)
             {
-                case IndexEntryFieldType.Empty:
-                case IndexEntryFieldType.Null:
-                    var fieldName = fieldType == IndexEntryFieldType.Null ? Constants.NullValueSlice : Constants.EmptyStringSlice;
-                    ExactInsert(fieldName.AsReadOnlySpan());
-                    break;
-                
-                case IndexEntryFieldType.TupleListWithNulls:
-                case IndexEntryFieldType.TupleList:
-                    if (entryReader.TryReadMany(binding.FieldId, out var iterator) == false)
-                        break;
-
-                    while (iterator.ReadNext())
-                    {
-                        if (iterator.IsNull)
-                        {
-                            ExactInsert(Constants.NullValueSlice);
-                            NumericInsert(0L, double.NaN);
-                        }
-                        else if (iterator.IsEmpty)
-                        {
-                            throw new InvalidDataException("Tuple list cannot contain an empty string (otherwise, where did the numeric came from!)");
-                        }
-                        else
-                        {
-                            ExactInsert(iterator.Sequence);
-                            NumericInsert(iterator.Long, iterator.Double);
-                        }
-                    }
-
-                    break;
-
-                case IndexEntryFieldType.Tuple:
-                    if (entryReader.Read(binding.FieldId, out _,  out long lVal, out double dVal,out Span<byte> valueInEntry) == false)
-                        break;
-
-                    ExactInsert(valueInEntry);
-                    NumericInsert(lVal, dVal);
-                    break;
-
-                case IndexEntryFieldType.SpatialPointList:
-                    if (entryReader.TryReadManySpatialPoint(binding.FieldId, out var spatialIterator) == false)
-                        break;
-
-                    while (spatialIterator.ReadNext())
-                    {
-                        for (int i = 1; i <= spatialIterator.Geohash.Length; ++i)
-                            ExactInsert(spatialIterator.Geohash.Slice(0, i));
-                    }
-
-                    break;
-
-                case IndexEntryFieldType.SpatialPoint:
-                    if (entryReader.Read(binding.FieldId, out valueInEntry) == false)
-                        break;
-
-                    for (int i = 1; i <= valueInEntry.Length; ++i)
-                        ExactInsert(valueInEntry.Slice(0, i));
-
-                    break;
-
-                case IndexEntryFieldType.ListWithNulls:
-                case IndexEntryFieldType.List:
-                    if (entryReader.TryReadMany(binding.FieldId, out iterator) == false)
-                        break;
-
-                    while (iterator.ReadNext())
-                    {
-                        Debug.Assert((fieldType & IndexEntryFieldType.Tuple) == 0, "(fieldType & IndexEntryFieldType.Tuple) == 0");
-                        
-                        if ((fieldType & IndexEntryFieldType.HasNulls) != 0 && (iterator.IsEmpty || iterator.IsNull))
-                        {
-                            var fieldValue = iterator.IsNull ? Constants.NullValueSlice : Constants.EmptyStringSlice;
-                            ExactInsert(fieldValue.AsReadOnlySpan());
-                        }
-                        else
-                        {
-                            Insert(iterator.Sequence);
-                        }
-                    }
-
-                    break;
-                case IndexEntryFieldType.Raw:
-                case IndexEntryFieldType.RawList:
-                case IndexEntryFieldType.Invalid:
-                    break;
-                default:
-                    if (entryReader.Read(fieldId, out var value) == false)
-                        break;
-
-                    Insert(value);
-                    break;
+                _fieldReader = fieldReader;
+                _parent = parent;
+                _entryId = entryId;
+                _context = context;
+                _indexedField = indexedField;
             }
+
+            [SkipLocalsInit]
+            public void InsertToken()
+            {
+                switch (_fieldReader.Type)
+                {
+                    case IndexEntryFieldType.Empty:
+                    case IndexEntryFieldType.Null:
+                        var fieldName = _fieldReader.Type == IndexEntryFieldType.Null ? Constants.NullValueSlice : Constants.EmptyStringSlice;
+                        ExactInsert(fieldName.AsReadOnlySpan());
+                        break;
+
+                    case IndexEntryFieldType.TupleListWithNulls:
+                    case IndexEntryFieldType.TupleList:
+                        if (_fieldReader.TryReadMany(out var iterator) == false)
+                            break;
+
+                        while (iterator.ReadNext())
+                        {
+                            if (iterator.IsNull)
+                            {
+                                ExactInsert(Constants.NullValueSlice);
+                                NumericInsert(0L, double.NaN);
+                            }
+                            else if (iterator.IsEmpty)
+                            {
+                                throw new InvalidDataException("Tuple list cannot contain an empty string (otherwise, where did the numeric came from!)");
+                            }
+                            else
+                            {
+                                ExactInsert(iterator.Sequence);
+                                NumericInsert(iterator.Long, iterator.Double);
+                            }
+                        }
+
+                        break;
+
+                    case IndexEntryFieldType.Tuple:
+                        if (_fieldReader.Read(out _, out long lVal, out double dVal, out Span<byte> valueInEntry) == false)
+                            break;
+
+                        ExactInsert(valueInEntry);
+                        NumericInsert(lVal, dVal);
+                        break;
+
+                    case IndexEntryFieldType.SpatialPointList:
+                        if (_fieldReader.TryReadManySpatialPoint(out var spatialIterator) == false)
+                            break;
+
+                        while (spatialIterator.ReadNext())
+                        {
+                            for (int i = 1; i <= spatialIterator.Geohash.Length; ++i)
+                                ExactInsert(spatialIterator.Geohash.Slice(0, i));
+                        }
+
+                        break;
+
+                    case IndexEntryFieldType.SpatialPoint:
+                        if (_fieldReader.Read(out valueInEntry) == false)
+                            break;
+
+                        for (int i = 1; i <= valueInEntry.Length; ++i)
+                            ExactInsert(valueInEntry.Slice(0, i));
+
+                        break;
+
+                    case IndexEntryFieldType.ListWithNulls:
+                    case IndexEntryFieldType.List:
+                        if (_fieldReader.TryReadMany(out iterator) == false)
+                            break;
+
+                        while (iterator.ReadNext())
+                        {
+                            Debug.Assert((_fieldReader.Type & IndexEntryFieldType.Tuple) == 0, "(fieldType & IndexEntryFieldType.Tuple) == 0");
+
+                            if ((_fieldReader.Type & IndexEntryFieldType.HasNulls) != 0 && (iterator.IsEmpty || iterator.IsNull))
+                            {
+                                var fieldValue = iterator.IsNull ? Constants.NullValueSlice : Constants.EmptyStringSlice;
+                                ExactInsert(fieldValue.AsReadOnlySpan());
+                            }
+                            else
+                            {
+                                Insert(iterator.Sequence);
+                            }
+                        }
+
+                        break;
+                    case IndexEntryFieldType.Raw:
+                    case IndexEntryFieldType.RawList:
+                    case IndexEntryFieldType.Invalid:
+                        break;
+                    default:
+                        if (_fieldReader.Read(out var value) == false)
+                            break;
+
+                        Insert(value);
+                        break;
+                }
+            }
+
+            void NumericInsert(long lVal, double dVal)
+            {
+                // We make sure we get a reference because we want the struct to be modified directly from the dictionary.
+                ref var doublesTerms = ref CollectionsMarshal.GetValueRefOrAddDefault(_indexedField.Doubles, dVal, out bool fieldDoublesExist);
+                if (fieldDoublesExist == false)
+                    doublesTerms = new EntriesModifications(_parent.Transaction.Allocator);
+                doublesTerms.Addition(_entryId);
+
+                // We make sure we get a reference because we want the struct to be modified directly from the dictionary.
+                ref var longsTerms = ref CollectionsMarshal.GetValueRefOrAddDefault(_indexedField.Longs, lVal, out bool fieldLongExist);
+                if (fieldLongExist == false)
+                    longsTerms = new EntriesModifications(_parent.Transaction.Allocator);
+                longsTerms.Addition(_entryId);
+            }
+
 
             void Insert(ReadOnlySpan<byte> value)
             {
-                if (binding.IsAnalyzed)
+                if (_indexedField.Analyzer != null)
                     AnalyzeInsert(value);
                 else
                     ExactInsert(value);
@@ -629,60 +724,31 @@ namespace Corax
 
             void AnalyzeInsert(ReadOnlySpan<byte> value)
             {
-                var analyzer = binding.Analyzer;
-                if (value.Length > _encodingBufferHandler.Length)
+                var analyzer = _indexedField.Analyzer;
+                if (value.Length > _parent._encodingBufferHandler.Length)
                 {
                     analyzer.GetOutputBuffersSize(value.Length, out var outputSize, out var tokenSize);
-                    if (outputSize > _encodingBufferHandler.Length || tokenSize >  _tokensBufferHandler.Length)
-                        UnlikelyGrowBuffer(outputSize, tokenSize);
+                    if (outputSize > _parent._encodingBufferHandler.Length || tokenSize > _parent._tokensBufferHandler.Length)
+                        _parent.UnlikelyGrowBuffer(outputSize, tokenSize);
                 }
 
-                Span<byte> wordsBuffer = _encodingBufferHandler;
-                Span<Token> tokens = _tokensBufferHandler;
-                analyzer.Execute(value, ref wordsBuffer, ref tokens, ref _utf8ConverterBufferHandler);
-                
+                Span<byte> wordsBuffer = _parent._encodingBufferHandler;
+                Span<Token> tokens = _parent._tokensBufferHandler;
+                analyzer.Execute(value, ref wordsBuffer, ref tokens, ref _parent._utf8ConverterBufferHandler);
+
                 for (int i = 0; i < tokens.Length; i++)
                 {
                     ref var token = ref tokens[i];
 
-                    if (token.Offset + token.Length > _encodingBufferHandler.Length)
-                        ThrowInvalidTokenFoundOnBuffer(binding, value, wordsBuffer, tokens, token);
+                    if (token.Offset + token.Length > _parent._encodingBufferHandler.Length)
+                        _parent.ThrowInvalidTokenFoundOnBuffer(_indexedField, value, wordsBuffer, tokens, token);
 
-                    var word = new Span<byte>(_encodingBufferHandler, token.Offset, (int)token.Length);
+                    var word = new Span<byte>(_parent._encodingBufferHandler, token.Offset, (int)token.Length);
                     ExactInsert(word);
                 }
 
-                unsafe void ThrowInvalidTokenFoundOnBuffer(IndexFieldBinding binding, ReadOnlySpan<byte> value, Span<byte> wordsBuffer, Span<Token> tokens, Token token)
-                {
-                    throw new InvalidDataException(
-                        $"{Environment.NewLine}Got token with: " +
-                        $"{Environment.NewLine}\tOFFSET {token.Offset}" +
-                        $"{Environment.NewLine}\tLENGTH: {token.Length}." +
-                        $"{Environment.NewLine}Total amount of tokens: {tokens.Length}" +
-                        $"{Environment.NewLine}Buffer contains '{Encodings.Utf8.GetString(wordsBuffer)}' and total length is {wordsBuffer.Length}" +
-                        $"{Environment.NewLine}Buffer from ArrayPool: {Environment.NewLine}\tbyte buffer is {_encodingBufferHandler.Length} {Environment.NewLine}\ttokens buffer is {_tokensBufferHandler.Length}" +
-                        $"{Environment.NewLine}Original span contains '{Encodings.Utf8.GetString(value)}' with total length {value.Length}" +
-                        $"{Environment.NewLine}Field " +
-                        $"{Environment.NewLine}\tid: {binding.FieldId}" +
-                        $"{Environment.NewLine}\tname: {binding.FieldName}");
-                }
             }
 
-            void NumericInsert(long lVal, double dVal)
-            {
-                // We make sure we get a reference because we want the struct to be modified directly from the dictionary.
-                ref var doublesTerms = ref CollectionsMarshal.GetValueRefOrAddDefault(fieldDoubles, dVal, out bool fieldDoublesExist);
-                if (fieldDoublesExist == false)
-                    doublesTerms = new EntriesModifications(Transaction.Allocator);
-                doublesTerms.Addition(entryId);
-
-                // We make sure we get a reference because we want the struct to be modified directly from the dictionary.
-                ref var longsTerms = ref CollectionsMarshal.GetValueRefOrAddDefault(fieldLongs, lVal, out bool fieldLongExist);
-                if (fieldLongExist == false)
-                    longsTerms = new EntriesModifications(Transaction.Allocator);
-                longsTerms.Addition(entryId);
-            }
-            
             void ExactInsert(ReadOnlySpan<byte> value)
             {
                 ByteStringContext<ByteStringMemoryCache>.InternalScope? scope;
@@ -695,27 +761,42 @@ namespace Corax
                 }
                 else
                 {
-                    scope = CreateNormalizedTerm(context, value, out slice);
+                    scope = CreateNormalizedTerm(_context, value, out slice);
                 }
 
                 // We are gonna try to get the reference if it exists, but we wont try to do the addition here, because to store in the
                 // dictionary we need to close the slice as we are disposing it afterwards. 
-                ref var term = ref CollectionsMarshal.GetValueRefOrAddDefault(field, slice, out var exists);
+                ref var term = ref CollectionsMarshal.GetValueRefOrAddDefault(_indexedField.Textual, slice, out var exists);
                 if (exists == false)
                 {
-                    term = new EntriesModifications(context);
+                    term = new EntriesModifications(_context);
                     scope = null; // We don't want the fieldname (slice) to be returned.
                 }
 
-                term.Addition(entryId);
+                term.Addition(_entryId);
 
-                if (binding.HasSuggestions)
-                    AddSuggestions(binding, slice);
+                if (_indexedField.HasSuggestions)
+                    _parent.AddSuggestions(_indexedField, slice);
 
                 scope?.Dispose();
             }
         }
 
+        void ThrowInvalidTokenFoundOnBuffer(IndexedField field, ReadOnlySpan<byte> value, Span<byte> wordsBuffer, Span<Token> tokens,
+            Token token)
+        {
+            throw new InvalidDataException(
+                $"{Environment.NewLine}Got token with: " +
+                $"{Environment.NewLine}\tOFFSET {token.Offset}" +
+                $"{Environment.NewLine}\tLENGTH: {token.Length}." +
+                $"{Environment.NewLine}Total amount of tokens: {tokens.Length}" +
+                $"{Environment.NewLine}Buffer contains '{Encodings.Utf8.GetString(wordsBuffer)}' and total length is {wordsBuffer.Length}" +
+                $"{Environment.NewLine}Buffer from ArrayPool: {Environment.NewLine}\tbyte buffer is {_encodingBufferHandler.Length} {Environment.NewLine}\ttokens buffer is {_tokensBufferHandler.Length}" +
+                $"{Environment.NewLine}Original span contains '{Encodings.Utf8.GetString(value)}' with total length {value.Length}" +
+                $"{Environment.NewLine}Field " +
+                $"{Environment.NewLine}\tid: {field.Id}" +
+                $"{Environment.NewLine}\tname: {field.Name}");
+        }
         private static unsafe ByteStringContext<ByteStringMemoryCache>.InternalScope CreateNormalizedTerm(ByteStringContext context, ReadOnlySpan<byte> value,
             out Slice slice)
         {
@@ -747,35 +828,43 @@ namespace Corax
                 if (binding.IsIndexed == false)
                     continue;
 
-                var fieldType = entryReader.GetFieldType(binding.FieldId, out _);
-                RemoveSingleTerm(binding, entryToDelete, entryReader, fieldType);
+                RemoveSingleTerm(_knownFieldsTerms[binding.FieldId], entryReader.GetReaderFor(binding.FieldId), entryToDelete);
+            }
+
+            var context = Transaction.Allocator;
+            var it = new IndexEntryReader.DynamicFieldEnumerator(entryReader);
+            while (it.MoveNext())
+            {
+                var indexedField = GetDynamicIndexedField(context, ref it);
+                var fieldReader = entryReader.GetReaderFor(it.CurrentFieldName);
+                RemoveSingleTerm(indexedField, fieldReader, entryToDelete);
             }
 
             Container.Delete(llt, _entriesContainerId, entryToDelete); // delete raw index entry
         }
 
-        private void RemoveSingleTerm(IndexFieldBinding indexFieldBinding, long entryToDelete, IndexEntryReader entryReader, IndexEntryFieldType fieldType)
+        private void RemoveSingleTerm(IndexedField indexedField, IndexEntryReader.FieldReader fieldReader, long entryToDelete)
         {
             var context = Transaction.Allocator;
 
-            switch (fieldType)
+            switch (fieldReader.Type)
             {
                 case IndexEntryFieldType.Empty:
                 case IndexEntryFieldType.Null:
-                    var termValue = fieldType == IndexEntryFieldType.Null ? Constants.NullValueSlice : Constants.EmptyStringSlice;
-                    RecordExactTermToDelete(termValue, indexFieldBinding);
+                    var termValue = fieldReader.Type == IndexEntryFieldType.Null ? Constants.NullValueSlice : Constants.EmptyStringSlice;
+                    RecordExactTermToDelete(termValue, indexedField);
                     break;
                 case IndexEntryFieldType.TupleListWithNulls:
                 case IndexEntryFieldType.TupleList:
                 {
-                    if (entryReader.TryReadMany(indexFieldBinding.FieldId, out var iterator) == false)
+                    if (fieldReader.TryReadMany(out var iterator) == false)
                         break;
 
                     while (iterator.ReadNext())
                     {
                         if (iterator.IsNull)
                         {
-                            RecordTupleToDelete(indexFieldBinding, Constants.NullValueSlice, double.NaN, 0);
+                            RecordTupleToDelete(indexedField, Constants.NullValueSlice, double.NaN, 0);
                         }
                         else if (iterator.IsEmpty)
                         {
@@ -783,20 +872,20 @@ namespace Corax
                         }
                         else
                         {
-                            RecordTupleToDelete(indexFieldBinding, iterator.Sequence, iterator.Double, iterator.Long);
+                            RecordTupleToDelete(indexedField, iterator.Sequence, iterator.Double, iterator.Long);
                         }
                     }
 
                     break;
                 }
                 case IndexEntryFieldType.Tuple:
-                    if (entryReader.Read(indexFieldBinding.FieldId, out _, out long l, out double d, out Span<byte> valueInEntry) == false)
+                    if (fieldReader.Read(out _, out long l, out double d, out Span<byte> valueInEntry) == false)
                         break;
-                    RecordTupleToDelete(indexFieldBinding, valueInEntry, d, l);
+                    RecordTupleToDelete(indexedField, valueInEntry, d, l);
                     break;
 
                 case IndexEntryFieldType.SpatialPointList:
-                    if (entryReader.TryReadManySpatialPoint(indexFieldBinding.FieldId, out var spatialIterator) == false)
+                    if (fieldReader.TryReadManySpatialPoint(out var spatialIterator) == false)
                         break;
 
                     while (spatialIterator.ReadNext())
@@ -804,7 +893,7 @@ namespace Corax
                         for (int i = 1; i <= spatialIterator.Geohash.Length; ++i)
                         {
                             var spatialTerm = spatialIterator.Geohash.Slice(0, i);
-                            RecordExactTermToDelete(spatialTerm, indexFieldBinding);
+                            RecordExactTermToDelete(spatialTerm, indexedField);
                         }
                     }
 
@@ -816,22 +905,22 @@ namespace Corax
                 case IndexEntryFieldType.List:
                 case IndexEntryFieldType.ListWithNulls:
                 {
-                    if (entryReader.TryReadMany(indexFieldBinding.FieldId, out var iterator) == false)
+                    if (fieldReader.TryReadMany(out var iterator) == false)
                         break;
 
                     while (iterator.ReadNext())
                     {
                         if (iterator.IsNull)
                         {
-                            RecordExactTermToDelete(Constants.NullValueSlice, indexFieldBinding);
+                            RecordExactTermToDelete(Constants.NullValueSlice, indexedField);
                         }
                         else if (iterator.IsEmpty)
                         {
-                            RecordExactTermToDelete(Constants.EmptyStringSlice, indexFieldBinding);
+                            RecordExactTermToDelete(Constants.EmptyStringSlice, indexedField);
                         }
                         else
                         {
-                            RecordTermToDelete(iterator.Sequence, indexFieldBinding);
+                            RecordTermToDelete(iterator.Sequence, indexedField);
                         }
                     }
 
@@ -839,57 +928,57 @@ namespace Corax
                 }
 
                 case IndexEntryFieldType.SpatialPoint:
-                    if (entryReader.Read(indexFieldBinding.FieldId, out valueInEntry) == false)
+                    if (fieldReader.Read(out valueInEntry) == false)
                         break;
 
                     for (int i = 1; i <= valueInEntry.Length; ++i)
                     {
                         var spatialTerm = valueInEntry.Slice(0, i);
-                        RecordExactTermToDelete(spatialTerm, indexFieldBinding);
+                        RecordExactTermToDelete(spatialTerm, indexedField);
                     }
 
                     break;
                 default:
-                    if (entryReader.Read(indexFieldBinding.FieldId, out var value) == false)
+                    if (fieldReader.Read(out var value) == false)
                         break;
 
                     if (value.IsEmpty)
                         goto case IndexEntryFieldType.Empty;
 
-                    RecordTermToDelete(value, indexFieldBinding);
+                    RecordTermToDelete(value, indexedField);
                     break;
             }
 
-            void RecordTupleToDelete(IndexFieldBinding binding, ReadOnlySpan<byte> termValue, double termDouble, long termLong)
+            void RecordTupleToDelete(IndexedField indexedField, ReadOnlySpan<byte> termValue, double termDouble, long termLong)
             {
                 // Is there any reason to analyze string of number?
-                RecordExactTermToDelete(termValue, binding);
+                RecordExactTermToDelete(termValue, indexedField);
 
                 // We make sure we get a reference because we want the struct to be modified directly from the dictionary.
-                ref var doublesTerms = ref CollectionsMarshal.GetValueRefOrAddDefault(_bufferDoubles[binding.FieldId], termDouble, out bool fieldDoublesExist);
+                ref var doublesTerms = ref CollectionsMarshal.GetValueRefOrAddDefault(indexedField.Doubles, termDouble, out bool fieldDoublesExist);
                 if (fieldDoublesExist == false)
                     doublesTerms = new EntriesModifications(context);
                 doublesTerms.Removal(entryToDelete);
 
                 // We make sure we get a reference because we want the struct to be modified directly from the dictionary.
-                ref var longsTerms = ref CollectionsMarshal.GetValueRefOrAddDefault(_bufferLongs[binding.FieldId], termLong, out bool fieldLongExist);
+                ref var longsTerms = ref CollectionsMarshal.GetValueRefOrAddDefault(indexedField.Longs, termLong, out bool fieldLongExist);
                 if (fieldLongExist == false)
                     longsTerms = new EntriesModifications(context);
                 longsTerms.Removal(entryToDelete);
             }
 
-            void RecordTermToDelete(ReadOnlySpan<byte> termValue, IndexFieldBinding binding)
+            void RecordTermToDelete(ReadOnlySpan<byte> termValue, IndexedField indexedField)
             {
-                if (binding.HasSuggestions)
-                    RemoveSuggestions(binding, termValue);
+                if (indexedField.HasSuggestions)
+                    RemoveSuggestions(indexedField, termValue);
 
-                if (binding.IsAnalyzed == false)
+                var analyzer = indexedField.Analyzer;
+                if (analyzer== null)
                 {
-                    RecordExactTermToDelete(termValue, binding);
+                    RecordExactTermToDelete(termValue, indexedField);
                     return;
                 }
                 
-                var analyzer = binding.Analyzer;
                 if (termValue.Length > _encodingBufferHandler.Length)
                 {
                     analyzer.GetOutputBuffersSize(termValue.Length, out int outputSize, out int tokenSize);
@@ -906,17 +995,17 @@ namespace Corax
                     ref var token = ref tokenSpace[i];
 
                     var term = wordSpace.Slice(token.Offset, (int)token.Length);
-                    RecordExactTermToDelete(term, binding);
+                    RecordExactTermToDelete(term, indexedField);
                 }
             }
             
-            void RecordExactTermToDelete(ReadOnlySpan<byte> termValue, IndexFieldBinding binding)
+            void RecordExactTermToDelete(ReadOnlySpan<byte> termValue, IndexedField field)
             {
                 ByteStringContext<ByteStringMemoryCache>.InternalScope? scope = CreateNormalizedTerm(context, termValue, out Slice termSlice);
 
                 // We are gonna try to get the reference if it exists, but we wont try to do the addition here, because to store in the
                 // dictionary we need to close the slice as we are disposing it afterwards. 
-                ref var term = ref CollectionsMarshal.GetValueRefOrAddDefault(_buffer[binding.FieldId], termSlice, out var exists);
+                ref var term = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Textual, termSlice, out var exists);
                 if (exists == false)
                 {
                     term = new EntriesModifications(context);
@@ -1026,12 +1115,12 @@ namespace Corax
                 _tokensBufferHandler = Analyzer.TokensPool.Rent(newTokenSize);
             }
         }
-
+        
         public void Commit()
         {
+            
             using var _ = Transaction.Allocator.Allocate(Container.MaxSizeInsideContainerPage, out Span<byte> workingBuffer);
             Tree fieldsTree = Transaction.CreateTree(Constants.IndexWriter.FieldsSlice);
-            
             _indexMetadata.Increment(Constants.IndexWriter.NumberOfEntriesSlice, _numberOfModifications);
 
             ProcessDeletes();
@@ -1040,25 +1129,39 @@ namespace Corax
             
             for (int fieldId = 0; fieldId < _fieldsMapping.Count; ++fieldId)
             {
-                if (_buffer[fieldId].Count == 0)
+                var indexedField = _knownFieldsTerms[fieldId];
+                if (indexedField.Textual.Count == 0)
                     continue; 
 
-                InsertTextualField(fieldsTree, fieldId, workingBuffer, ref keys);
-                InsertNumericFieldLongs(fieldsTree, fieldId, workingBuffer);
-                InsertNumericFieldDoubles(fieldsTree, fieldId, workingBuffer);
+                InsertTextualField(fieldsTree, indexedField, workingBuffer, ref keys);
+                InsertNumericFieldLongs(fieldsTree, indexedField, workingBuffer);
+                InsertNumericFieldDoubles(fieldsTree, indexedField, workingBuffer);
+            }
+
+            if (_dynamicFieldsTerms != null)
+            {
+                foreach (var (_, indexedField) in _dynamicFieldsTerms)
+                {
+                    InsertTextualField(fieldsTree, indexedField, workingBuffer, ref keys);
+                    InsertNumericFieldLongs(fieldsTree, indexedField, workingBuffer);
+                    InsertNumericFieldDoubles(fieldsTree, indexedField, workingBuffer);
+
+                }
             }
             
             if(keys.Length>0)
                 ArrayPool<Slice>.Shared.Return(keys);
 
             // Check if we have suggestions to deal with. 
-            if (_suggestionsAccumulator != null)
+            if (_hasSuggestions)
             {
-                foreach (var (fieldId, values) in _suggestionsAccumulator)
+                for (var fieldId = 0; fieldId < _knownFieldsTerms.Length; fieldId++)
                 {
+                    IndexedField indexedField = _knownFieldsTerms[fieldId];
+                    if (indexedField.Suggestions == null) continue;
                     Slice.From(Transaction.Allocator, $"{SuggestionsTreePrefix}{fieldId}", out var treeName);
                     var tree = Transaction.CompactTreeFor(treeName);
-                    foreach (var (key, counter) in values)
+                    foreach (var (key, counter) in indexedField.Suggestions)
                     {
                         if (tree.TryGetValue(key, out var storedCounter) == false)
                             storedCounter = 0;
@@ -1079,11 +1182,11 @@ namespace Corax
         }
 
 
-        private void InsertTextualField(Tree fieldsTree, int fieldId, Span<byte> tmpBuf, ref Slice[] sortedTermsBuffer)
+        private void InsertTextualField(Tree fieldsTree, IndexedField indexedField, Span<byte> tmpBuf, ref Slice[] sortedTermsBuffer)
         {
-            var fieldTree = fieldsTree.CompactTreeFor(_fieldsMapping.GetByFieldId(fieldId).FieldName);
+            var fieldTree = fieldsTree.CompactTreeFor(indexedField.Name);
 
-            var currentFieldTerms = _buffer[fieldId];
+            var currentFieldTerms = indexedField.Textual;
             int termsCount = currentFieldTerms.Count;
             if (sortedTermsBuffer.Length < termsCount)
             {
@@ -1097,7 +1200,7 @@ namespace Corax
             Sorter<Slice, SliceStructComparer> sorter = default;
             sorter.Sort(sortedTermsBuffer, 0, termsCount);
 
-            using var dumper = new IndexTermDumper(fieldsTree, fieldId);
+            using var dumper = new IndexTermDumper(fieldsTree, indexedField.Name);
 
             fieldTree.InitializeStateForTryGetNextValue();
             for (var index = 0; index < termsCount; index++)
@@ -1109,11 +1212,12 @@ namespace Corax
 
                 long termId;
                 ReadOnlySpan<byte> termsSpan = term.AsSpan();
+                if (termsSpan[^1] == '\0') break;
                 if (fieldTree.TryGetNextValue(termsSpan, out var existing, out var encodedKey) == false)
                 {
                     if (entries.TotalRemovals != 0)
                     {
-                        throw new InvalidOperationException($"Attempt to remove entries from new term: '{term}' for field {fieldId}! This is a bug.");
+                        throw new InvalidOperationException($"Attempt to remove entries from new term: '{term}' for field {indexedField.Name}! This is a bug.");
                     }
 
                     AddNewTerm(entries, tmpBuf, out termId);
@@ -1133,7 +1237,7 @@ namespace Corax
                         if (fieldTree.TryRemove(termsSpan, out var ttt) == false)
                         {
                             dumper.WriteRemoval(term, termId);
-                            throw new InvalidOperationException($"Attempt to remove term: '{term}' for field {fieldId}, but it does not exists! This is a bug.");
+                            throw new InvalidOperationException($"Attempt to remove term: '{term}' for field {indexedField.Name}, but it does not exists! This is a bug.");
                         }
                         dumper.WriteRemoval(term, ttt);
                         break;
@@ -1299,11 +1403,11 @@ namespace Corax
             return AddEntriesToTermResult.NothingToDo;
         }
 
-        private unsafe void InsertNumericFieldLongs(Tree fieldsTree, int fieldId, Span<byte> tmpBuf)
+        private unsafe void InsertNumericFieldLongs(Tree fieldsTree, IndexedField indexedField, Span<byte> tmpBuf)
         {
-            FixedSizeTree fieldTree = fieldsTree.FixedTreeFor(_fieldsMapping.GetByFieldId(fieldId).FieldNameLong, sizeof(long));
+            FixedSizeTree fieldTree = fieldsTree.FixedTreeFor(indexedField.NameLong, sizeof(long));
           
-            foreach (var (term, entries) in _bufferLongs[fieldId])
+            foreach (var (term, entries) in indexedField.Longs)
             {
                 // We are not going to be using these entries anymore after this. 
                 // Therefore, we can copy and we dont need to get a reference to the entry in the dictionary.
@@ -1334,11 +1438,11 @@ namespace Corax
             }
         }
         
-        private unsafe void InsertNumericFieldDoubles(Tree fieldsTree, int fieldId, Span<byte> tmpBuf)
+        private unsafe void InsertNumericFieldDoubles(Tree fieldsTree, IndexedField indexedField, Span<byte> tmpBuf)
         {
-            var fieldTree = fieldsTree.FixedTreeForDouble(_fieldsMapping.GetByFieldId(fieldId).FieldNameDouble, sizeof(long));
+            var fieldTree = fieldsTree.FixedTreeForDouble(indexedField.NameDouble, sizeof(long));
 
-            foreach (var (term, entries) in _bufferDoubles[fieldId])
+            foreach (var (term, entries) in indexedField.Doubles)
             {
                 // We are not going to be using these entries anymore after this. 
                 // Therefore, we can copy and we dont need to get a reference to the entry in the dictionary.

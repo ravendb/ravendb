@@ -82,7 +82,7 @@ namespace Corax.Queries
                     }
                     else if (type.HasFlag(IndexEntryFieldType.List) || type.HasFlag(IndexEntryFieldType.TupleList))
                     {
-                        var iterator = reader.ReadMany(match._fieldId);
+                        var iterator = reader.GetReaderFor(match._fieldId).ReadMany();
 
                         var isMatch = false;
                         while (iterator.ReadNext())
@@ -112,7 +112,7 @@ namespace Corax.Queries
                     }
                     else if (type.HasFlag(IndexEntryFieldType.Tuple) || type.HasFlag(IndexEntryFieldType.Simple))
                     {
-                        var read = reader.Read(match._fieldId, out var readType, out var resultX);
+                        var read = reader.GetReaderFor(match._fieldId).Read(out var readType, out var resultX);
                         if (read && readType != IndexEntryFieldType.Null)
                         {
                             using var _ = match._searcher.ApplyAnalyzer(resultX, match._fieldId, out var analyzedTerm);
@@ -207,7 +207,7 @@ namespace Corax.Queries
                     }
                     else if (type.HasFlag(IndexEntryFieldType.List) || type.HasFlag(IndexEntryFieldType.TupleList))
                     {
-                        var iterator = reader.ReadMany(match._fieldId);
+                        var iterator = reader.GetReaderFor(match._fieldId).ReadMany();
                         while (iterator.ReadNext())
                         {
                             if (iterator.IsNull)
@@ -221,7 +221,7 @@ namespace Corax.Queries
                         if (value.Length != 1)
                             continue;
 
-                        if (reader.Read(match._fieldId, out var readType, out var resultX) == false)
+                        if (reader.GetReaderFor(match._fieldId).Read( out var readType, out var resultX) == false)
                             continue;
                         
                         if (readType == IndexEntryFieldType.Null)
@@ -312,7 +312,7 @@ namespace Corax.Queries
                     }
                     else if (type.HasFlag(IndexEntryFieldType.List) || type.HasFlag(IndexEntryFieldType.TupleList))
                     {
-                        var iterator = reader.ReadMany(match._fieldId);
+                        var iterator = reader.GetReaderFor(match._fieldId).ReadMany();
 
                         bool isNotMatch = false;
                         while (iterator.ReadNext())
@@ -338,7 +338,7 @@ namespace Corax.Queries
                     }
                     else if (type.HasFlag(IndexEntryFieldType.Tuple) || type.HasFlag(IndexEntryFieldType.Simple))
                     {
-                        var read = reader.Read(match._fieldId, out var readType, out var resultX);
+                        var read = reader.GetReaderFor(match._fieldId).Read(out var readType, out var resultX);
                         if (readType == IndexEntryFieldType.Null)
                         {
                             if (match._operation != UnaryMatchOperation.NotEquals)
@@ -401,7 +401,7 @@ namespace Corax.Queries
                     {
                         if (type.HasFlag(IndexEntryFieldType.HasNulls) && !type.HasFlag(IndexEntryFieldType.Empty))
                         {
-                            var iterator = reader.ReadMany(match._fieldId);
+                            var iterator = reader.GetReaderFor(match._fieldId).ReadMany();
 
                             var isNotMatch = false;
                             while (iterator.ReadNext())
@@ -475,7 +475,7 @@ namespace Corax.Queries
                     {
                         if (type.HasFlag(IndexEntryFieldType.HasNulls) && !type.HasFlag(IndexEntryFieldType.Empty))
                         {
-                            var iterator = reader.ReadMany(match._fieldId);
+                            var iterator = reader.GetReaderFor(match._fieldId).ReadMany();
 
                             bool isMatch = false;
                             while (iterator.ReadNext())
@@ -547,7 +547,7 @@ namespace Corax.Queries
                         {
                             if (type.HasFlag(IndexEntryFieldType.HasNulls) && !type.HasFlag(IndexEntryFieldType.Empty))
                             {
-                                var iterator = reader.ReadMany(match._fieldId);
+                                var iterator = reader.GetReaderFor(match._fieldId).ReadMany();
                                 var isNotMatch = false;
                                 while (iterator.ReadNext())
                                 {
@@ -622,7 +622,7 @@ namespace Corax.Queries
                         {
                             if (type.HasFlag(IndexEntryFieldType.HasNulls) && !type.HasFlag(IndexEntryFieldType.Empty))
                             {
-                                var iterator = reader.ReadMany(match._fieldId);
+                                var iterator = reader.GetReaderFor(match._fieldId).ReadMany();
 
                                 bool isMatch = false;
                                 while (iterator.ReadNext())
@@ -698,7 +698,7 @@ namespace Corax.Queries
                         }
                         else if (type.HasFlag(IndexEntryFieldType.List) || type.HasFlag(IndexEntryFieldType.TupleList))
                         {
-                            var iterator = reader.ReadMany(match._fieldId);
+                            var iterator = reader.GetReaderFor(match._fieldId).ReadMany();
 
                             bool isMatch = false;
                             while (iterator.ReadNext())
@@ -718,7 +718,7 @@ namespace Corax.Queries
                         }
                         else if (type.HasFlag(IndexEntryFieldType.Tuple) || type.HasFlag(IndexEntryFieldType.Simple))
                         {
-                            var read = reader.Read<long>(match._fieldId, out var readType, out var resultX);
+                            var read = reader.GetReaderFor(match._fieldId).Read<long>(out var readType, out var resultX);
                             if (!read)
                                 continue; // Not a match, item is not elegible.
 
@@ -743,7 +743,7 @@ namespace Corax.Queries
                         }
                         else if (type.HasFlag(IndexEntryFieldType.List) || type.HasFlag(IndexEntryFieldType.TupleList))
                         {
-                            var iterator = reader.ReadMany(match._fieldId);
+                            var iterator = reader.GetReaderFor(match._fieldId).ReadMany();
 
                             bool isMatch = false;
                             while (iterator.ReadNext())
@@ -763,7 +763,7 @@ namespace Corax.Queries
                         }
                         else if (type.HasFlag(IndexEntryFieldType.Tuple) || type.HasFlag(IndexEntryFieldType.Simple))
                         {
-                            var read = reader.Read<double>(match._fieldId, out var readType, out var resultX);
+                            var read = reader.GetReaderFor(match._fieldId).Read<double>(out var readType, out var resultX);
                             if (!read)
                                 continue; // Not a match, item is not elegible.
 
@@ -826,7 +826,7 @@ namespace Corax.Queries
                         long currentType = CoherseValueTypeToLong(match._value);
                         if (type.HasFlag(IndexEntryFieldType.List) || type.HasFlag(IndexEntryFieldType.TupleList))
                         {
-                            var iterator = reader.ReadMany(match._fieldId);
+                            var iterator = reader.GetReaderFor(match._fieldId).ReadMany();
 
                             bool isNotMatch = false;
                             while (iterator.ReadNext())
@@ -849,7 +849,7 @@ namespace Corax.Queries
                         }
                         else if (type.HasFlag(IndexEntryFieldType.Tuple) || type.HasFlag(IndexEntryFieldType.Simple))
                         {
-                            var read = reader.Read<long>(match._fieldId, out var readType, out var resultX);
+                            var read = reader.GetReaderFor(match._fieldId).Read<long>(out var readType, out var resultX);
                             if (!read || readType == IndexEntryFieldType.Null)
                                 continue; // It is null, item is not elegible.
                             // 
@@ -864,7 +864,7 @@ namespace Corax.Queries
                         double currentType = CoherseValueTypeToDouble(match._value);
                         if (type.HasFlag(IndexEntryFieldType.List) || type.HasFlag(IndexEntryFieldType.TupleList))
                         {
-                            var iterator = reader.ReadMany(match._fieldId);
+                            var iterator = reader.GetReaderFor(match._fieldId).ReadMany();
 
                             bool isNotMatch = false;
                             while (iterator.ReadNext())
@@ -887,7 +887,7 @@ namespace Corax.Queries
                         }
                         else if (type.HasFlag(IndexEntryFieldType.Tuple) || type.HasFlag(IndexEntryFieldType.Simple))
                         {
-                            var read = reader.Read<double>(match._fieldId, out var readType, out var resultX);
+                            var read = reader.GetReaderFor(match._fieldId).Read<double>(out var readType, out var resultX);
                             if (!read || readType == IndexEntryFieldType.Null)
                                 continue; // It is null, item is not elegible.
                             // 

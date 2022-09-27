@@ -1,5 +1,6 @@
 using System;
 using System.Buffers;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -14,7 +15,7 @@ namespace Corax;
 
 // The rationale to use ref structs is not allowing to copy those around so easily. They should be cheap to construct
 // and cheaper to use. 
-public unsafe partial struct IndexEntryWriter : IDisposable
+public unsafe struct IndexEntryWriter : IDisposable
 {
     private static int Invalid = unchecked(~0);
 
@@ -26,16 +27,18 @@ public unsafe partial struct IndexEntryWriter : IDisposable
     private ByteStringContext<ByteStringMemoryCache>.InternalScope _bufferScope;
     private ByteString _rawBuffer;
 
-    private int FreeSpace => _rawBuffer.Length - KnownFieldMetadataSize - _dataIndex - _dynamicFieldIndex;
+    private int FreeSpace => _rawBuffer.Length - KnownFieldMetadataSize - _dataIndex;
 
     // The usable part of the buffer, the metadata space will be removed from the usable space.
-    private Span<byte> Buffer => new (_rawBuffer.Ptr, _rawBuffer.Length - KnownFieldMetadataSize);
+    private Span<byte> Buffer => new(_rawBuffer.Ptr, _rawBuffer.Length - KnownFieldMetadataSize);
 
     // Temporary location for the pointers, these will eventually be encoded based on how big they are.
     // <256 bytes we could use a single byte
     // <65546 bytes we could use a single ushort
     // for the rest we will use a uint.
-    private Span<int> KnownFieldsLocations => new (_rawBuffer.Ptr + _rawBuffer.Length - KnownFieldMetadataSize, _knownFields.Count);
+    private Span<int> KnownFieldsLocations => new(_rawBuffer.Ptr + _rawBuffer.Length - KnownFieldMetadataSize, _knownFields.Count);
+
+    private List<int> _dynamicFieldsLocations;
 
     private int KnownFieldMetadataSize => _knownFields.Count * sizeof(uint);
 
@@ -45,24 +48,21 @@ public unsafe partial struct IndexEntryWriter : IDisposable
     // Current pointer.        
     private int _dataIndex;
 
-    // Dynamic fields will use a full integer to store the pointer location at the metadata table. They are supposed to be rare 
-    // so we wont even try to make the process more complex just to deal with them efficiently.
-    private int _dynamicFieldIndex;
-
-    public IndexEntryWriter(LowLevelTransaction llt, IndexFieldsMapping knownFields) 
+    public IndexEntryWriter(LowLevelTransaction llt, IndexFieldsMapping knownFields)
         : this(llt.Allocator, knownFields)
     {
     }
 
-    public IndexEntryWriter(ByteStringContext context, IndexFieldsMapping knownFields) 
+    public IndexEntryWriter(ByteStringContext context, IndexFieldsMapping knownFields)
     {
         _context = context;
         _knownFields = knownFields;
 
         _bufferScope = _context.Allocate(16 * Sparrow.Global.Constants.Size.Kilobyte, out _rawBuffer);
 
-        _dynamicFieldIndex = 0;
         _dataIndex = Unsafe.SizeOf<IndexEntryHeader>();
+
+        _dynamicFieldsLocations = null;
 
         // We prepare the table in order to avoid tracking the writes. 
         KnownFieldsLocations.Fill(Invalid);
@@ -94,7 +94,7 @@ public unsafe partial struct IndexEntryWriter : IDisposable
             UnlikelyGrowAuxiliaryBuffer(value.Length + sizeof(long));
 
         // Write known field.
-        ref int fieldLocation = ref KnownFieldsLocations[field];                
+        ref int fieldLocation = ref KnownFieldsLocations[field];
         fieldLocation = _dataIndex;
 
         var buffer = Buffer;
@@ -105,11 +105,129 @@ public unsafe partial struct IndexEntryWriter : IDisposable
             _dataIndex += sizeof(IndexEntryFieldType);
             return;
         }
-        
+
         int length = VariableSizeEncoding.Write(buffer, value.Length, _dataIndex);
         _dataIndex += length;
         value.CopyTo(buffer.Slice(_dataIndex, value.Length));
         _dataIndex += value.Length;
+    }
+
+    public void WriteNullDynamic(string name)
+    {
+        using var _ = _context.From(name, ByteStringType.Immutable, out var fieldNameStr);
+        var requiredSize = VariableSizeEncoding.MaximumSizeOf<int>() + fieldNameStr.Length;
+
+        if (FreeSpace < requiredSize)
+            UnlikelyGrowAuxiliaryBuffer(requiredSize);
+
+        WriteDynamicFieldName(fieldNameStr, true);
+        Unsafe.WriteUnaligned(ref Buffer[_dataIndex], IndexEntryFieldType.Null);
+        _dataIndex += sizeof(IndexEntryFieldType);
+    }
+
+    public void WriteSpatialDynamic(string name, ReadOnlySpan<CoraxSpatialPointEntry> entries)
+    {
+        if (entries.Length == 0)
+            return;
+
+        ComputeSpaceRequirements(entries, out int requiredSize, out int maxGeohashLength);
+
+        using var _ = _context.From(name, ByteStringType.Immutable, out var fieldNameStr);
+        requiredSize += VariableSizeEncoding.MaximumSizeOf<int>() + fieldNameStr.Length;
+
+        if (FreeSpace < requiredSize)
+            UnlikelyGrowAuxiliaryBuffer(requiredSize);
+        WriteDynamicFieldName(fieldNameStr, true);
+        WriteSpatialValues(entries, maxGeohashLength);
+    }
+
+    public void WriteSpatialDynamic(string name, CoraxSpatialPointEntry entry)
+    {
+        if (entry.Geohash.Length == 0)
+            return;
+
+        // Since Geohashes are ASCII characters, the total required space is exactly the length
+        int maxGeohashLength = entry.Geohash.Length;
+
+        using var _ = _context.From(name, ByteStringType.Immutable, out var fieldNameStr);
+        long requiredSize = VariableSizeEncoding.MaximumSizeOf<int>() +
+                            fieldNameStr.Length +
+                            sizeof(IndexEntryFieldType) +
+                            maxGeohashLength + 4 * sizeof(long);
+
+        if (FreeSpace < requiredSize)
+            UnlikelyGrowAuxiliaryBuffer(requiredSize);
+
+        WriteDynamicFieldName(fieldNameStr, true);
+        WriteSpatialValue(entry, maxGeohashLength);
+    }
+
+    public void WriteDynamic(string name, ReadOnlySpan<byte> value, long longValue, double doubleValue)
+    {
+        using var _ = _context.From(name, ByteStringType.Immutable, out var fieldNameStr);
+        long requiredSize = VariableSizeEncoding.MaximumSizeOf<int>() +
+                            fieldNameStr.Length +
+                            sizeof(IndexEntryFieldType) +
+                            value.Length + 4 * sizeof(long);
+
+        if (FreeSpace < requiredSize)
+            UnlikelyGrowAuxiliaryBuffer(requiredSize);
+
+        WriteDynamicFieldName(fieldNameStr, true);
+        WriteTuple(value, longValue, doubleValue);
+    }
+
+    /// <summary>
+    /// Writes a textual value to the buffer, as a named value
+    /// </summary>
+    public void WriteDynamic(string name, ReadOnlySpan<byte> value)
+    {
+        using var _ = _context.From(name, ByteStringType.Immutable, out var fieldNameStr);
+        long requiredSize = VariableSizeEncoding.MaximumSizeOf<int>() + // max field len size 
+                            fieldNameStr.Length +
+                            sizeof(IndexEntryFieldType) +
+                            VariableSizeEncoding.MaximumSizeOf<int>() + // max val len size
+                            value.Length;
+
+        if (FreeSpace < requiredSize)
+            UnlikelyGrowAuxiliaryBuffer(requiredSize);
+
+        WriteDynamicFieldName(fieldNameStr, false);
+
+        Span<byte> buffer = Buffer;
+        Unsafe.WriteUnaligned(ref buffer[_dataIndex], IndexEntryFieldType.Simple);
+        _dataIndex += sizeof(IndexEntryFieldType);
+        _dataIndex += VariableSizeEncoding.Write(buffer, value.Length, _dataIndex);
+        value.CopyTo(buffer[_dataIndex..]);
+        _dataIndex += value.Length;
+    }
+
+    private void WriteDynamicFieldName(ByteString fieldNameStr, bool hasType)
+    {
+        _dynamicFieldsLocations ??= new();
+        int maskedPos = _dataIndex << 1 | (hasType ? 1 : 0);
+        _dynamicFieldsLocations.Add(maskedPos);
+
+        var buffer = Buffer;
+        _dataIndex += VariableSizeEncoding.Write(buffer, fieldNameStr.Length, _dataIndex);
+        fieldNameStr.CopyTo(buffer[_dataIndex..]);
+        _dataIndex += fieldNameStr.Length;
+    }
+
+    public void WriteRawDynamic(string name, ReadOnlySpan<byte> value)
+    {
+        using var _ = _context.From(name, ByteStringType.Immutable, out var fieldNameStr);
+        long requiredSize = VariableSizeEncoding.MaximumSizeOf<int>() + // max field len size 
+                            fieldNameStr.Length +
+                            sizeof(IndexEntryFieldType) +
+                            VariableSizeEncoding.MaximumSizeOf<int>() + // max val len size
+                            value.Length;
+
+        if (FreeSpace < requiredSize)
+            UnlikelyGrowAuxiliaryBuffer(requiredSize);
+
+        WriteDynamicFieldName(fieldNameStr, false);    
+        WriteRawData(value);
     }
 
     /// <summary>
@@ -130,9 +248,14 @@ public unsafe partial struct IndexEntryWriter : IDisposable
         // Write known field.
         ref int fieldLocation = ref KnownFieldsLocations[field];
         fieldLocation = dataLocation | Constants.IndexWriter.IntKnownFieldMask;
+        WriteRawData(binaryValue);
+    }
 
+    private void WriteRawData(ReadOnlySpan<byte> binaryValue)
+    {
         var buffer = Buffer;
-
+        var dataLocation = _dataIndex;
+        
         // Write the list metadata information. 
         ref var indexEntryField = ref Unsafe.AsRef<IndexEntryFieldType>(Unsafe.AsPointer(ref buffer[dataLocation]));
         indexEntryField = IndexEntryFieldType.Raw;
@@ -154,7 +277,6 @@ public unsafe partial struct IndexEntryWriter : IDisposable
         _dataIndex = dataLocation;
     }
 
-
     public void WriteSpatial(int field, CoraxSpatialPointEntry entry)
     {
         Debug.Assert(field < _knownFields.Count, "The field must be known");
@@ -165,17 +287,22 @@ public unsafe partial struct IndexEntryWriter : IDisposable
 
         // Since Geohashes are ASCII characters, the total required space is exactly the length
         int maxGeohashLength = entry.Geohash.Length;
-        
+
         int requiredSpace = sizeof(IndexEntryFieldType) + maxGeohashLength + 4 * sizeof(long);
         if (FreeSpace < requiredSpace)
             UnlikelyGrowAuxiliaryBuffer(requiredSpace);
 
-        int dataLocation = _dataIndex;
 
         // Write known field pointer.
         ref int fieldLocation = ref KnownFieldsLocations[field];
-        fieldLocation = dataLocation | Constants.IndexWriter.IntKnownFieldMask;
+        fieldLocation = _dataIndex | Constants.IndexWriter.IntKnownFieldMask;
 
+        WriteSpatialValue(entry, maxGeohashLength);
+    }
+
+    private void WriteSpatialValue(CoraxSpatialPointEntry entry, int maxGeohashLength)
+    {
+        int dataLocation = _dataIndex;
         var buffer = Buffer;
 
         // Write the spatial point information. 
@@ -204,35 +331,28 @@ public unsafe partial struct IndexEntryWriter : IDisposable
         if (entries.Length == 0)
             return;
 
-        // Since Geohashes are ASCII characters, the total required space is exactly the length
-        int requiredSpace = 0;
-        int maxGeohashLength = 0;
-        foreach (var entry in entries)
-        {
-            int geohashLength = entry.Geohash.Length;
-            requiredSpace += geohashLength;
-            maxGeohashLength = Math.Max(maxGeohashLength, geohashLength);
-        }
-
-        // We are calculating the space based on the necessary space needed to storage the geohashes values in doubles.
-        requiredSpace += sizeof(IndexEntryFieldType) + 2 * entries.Length * sizeof(double) + 4 * sizeof(long);
+        ComputeSpaceRequirements(entries, out int requiredSpace, out int maxGeohashLength);
 
         if (FreeSpace < requiredSpace)
             UnlikelyGrowAuxiliaryBuffer(requiredSpace);
 
-        int dataLocation = _dataIndex;
-
         // Write known field pointer.
         ref int fieldLocation = ref KnownFieldsLocations[field];
-        fieldLocation = dataLocation | Constants.IndexWriter.IntKnownFieldMask;
+        fieldLocation = _dataIndex | Constants.IndexWriter.IntKnownFieldMask;
 
+        WriteSpatialValues(entries, maxGeohashLength);
+    }
+
+    private void WriteSpatialValues(ReadOnlySpan<CoraxSpatialPointEntry> entries, int maxGeohashLength)
+    {
         var buffer = Buffer;
 
+        int dataLocation = _dataIndex;
         // Write the spatial point list. 
         ref var indexEntryField = ref Unsafe.AsRef<IndexEntryFieldType>(Unsafe.AsPointer(ref buffer[dataLocation]));
         indexEntryField = IndexEntryFieldType.SpatialPointList;
         dataLocation += sizeof(IndexEntryFieldType);
-        
+
         dataLocation += VariableSizeEncoding.Write(buffer, entries.Length, dataLocation); // Size of list.
 
         dataLocation += VariableSizeEncoding.Write(buffer, maxGeohashLength, dataLocation); // geohash lvl
@@ -246,7 +366,7 @@ public unsafe partial struct IndexEntryWriter : IDisposable
         // Then we immediately start with writing down the latitudes.
         var latitudesList = MemoryMarshal.Cast<byte, double>(buffer.Slice(dataLocation, entries.Length * sizeof(double)));
         dataLocation += entries.Length * sizeof(double);
-        
+
         longitudesPtrLocation = dataLocation; // We write the current location.
         var longitudesList = MemoryMarshal.Cast<byte, double>(buffer.Slice(dataLocation, entries.Length * sizeof(double)));
         dataLocation += entries.Length * sizeof(double);
@@ -266,6 +386,22 @@ public unsafe partial struct IndexEntryWriter : IDisposable
         _dataIndex = dataLocation;
     }
 
+    private static void ComputeSpaceRequirements(ReadOnlySpan<CoraxSpatialPointEntry> entries, out int requiredSpace, out int maxGeohashLength)
+    {
+        // Since Geohashes are ASCII characters, the total required space is exactly the length
+        requiredSpace = 0;
+        maxGeohashLength = 0;
+        foreach (var entry in entries)
+        {
+            int geohashLength = entry.Geohash.Length;
+            requiredSpace += geohashLength;
+            maxGeohashLength = Math.Max(maxGeohashLength, geohashLength);
+        }
+
+        // We are calculating the space based on the necessary space needed to storage the geohashes values in doubles.
+        requiredSpace += sizeof(IndexEntryFieldType) + 2 * entries.Length * sizeof(double) + 4 * sizeof(long);
+    }
+
     public void Write(int field, ReadOnlySpan<byte> value, long longValue, double doubleValue)
     {
         Debug.Assert(field < _knownFields.Count, "The field must be known");
@@ -274,14 +410,20 @@ public unsafe partial struct IndexEntryWriter : IDisposable
         if (FreeSpace < sizeof(IndexEntryFieldType) + value.Length + 4 * sizeof(long))
             UnlikelyGrowAuxiliaryBuffer(sizeof(IndexEntryFieldType) + value.Length + 4 * sizeof(long));
 
-        int dataLocation = _dataIndex;
-        var buffer = Buffer;        
 
         // Write known field pointer.
         ref int fieldLocation = ref KnownFieldsLocations[field];
-        fieldLocation = dataLocation | Constants.IndexWriter.IntKnownFieldMask;
+        fieldLocation = _dataIndex | Constants.IndexWriter.IntKnownFieldMask;
 
         // Write the tuple information. 
+        WriteTuple(value, longValue, doubleValue);
+    }
+
+    private void WriteTuple(ReadOnlySpan<byte> value, long longValue, double doubleValue)
+    {
+        int dataLocation = _dataIndex;
+        var buffer = Buffer;
+
         ref var indexEntryField = ref Unsafe.AsRef<IndexEntryFieldType>(Unsafe.AsPointer(ref buffer[dataLocation]));
         indexEntryField = IndexEntryFieldType.Tuple;
         dataLocation += sizeof(IndexEntryFieldType);
@@ -306,29 +448,49 @@ public unsafe partial struct IndexEntryWriter : IDisposable
         _dataIndex = dataLocation;
     }
 
-    public void Write<TEnumerator>(int field, TEnumerator values, IndexEntryFieldType type = IndexEntryFieldType.Null) 
+    public void WriteDynamic<TEnumerator>(string name, TEnumerator values, IndexEntryFieldType type = IndexEntryFieldType.Null)
+        where TEnumerator : IReadOnlySpanIndexer
+    {
+        using var _ = _context.From(name, ByteStringType.Immutable, out var fieldNameStr);
+        long requiredSize = VariableSizeEncoding.MaximumSizeOf<int>() + // max field len size 
+                            fieldNameStr.Length +
+                            sizeof(IndexEntryFieldType) +
+                            ComputeSpaceRequirements(values);
+
+        if (FreeSpace < requiredSize)
+            UnlikelyGrowAuxiliaryBuffer(requiredSize);
+
+        WriteDynamicFieldName(fieldNameStr, true);
+
+        WriteList(values, type);
+    }
+
+
+    public void Write<TEnumerator>(int field, TEnumerator values, IndexEntryFieldType type = IndexEntryFieldType.Null)
         where TEnumerator : IReadOnlySpanIndexer
     {
         Debug.Assert(field < _knownFields.Count, "The field must be known");
-        Debug.Assert(KnownFieldsLocations[field] == Invalid, "The field has been written before.");        
+        Debug.Assert(KnownFieldsLocations[field] == Invalid, "The field has been written before.");
 
         // We are calculating the space required based on the necessary space needed to store
         // the lists, metadata and the content. 
-        int requiredSpace = sizeof(IndexEntryFieldType) + 2 * values.Length * sizeof(long) + 4 * sizeof(long);
-        for (int i = 0; i < values.Length; i++)
-            requiredSpace += values[i].Length;        
-        
+        int requiredSpace = ComputeSpaceRequirements(values);
+
         if (FreeSpace < requiredSpace)
             UnlikelyGrowAuxiliaryBuffer(requiredSpace);
 
-        int dataLocation = _dataIndex;
-        var buffer = Buffer;
-
         // Write known field pointer.
         ref int fieldLocation = ref KnownFieldsLocations[field];
-        fieldLocation = dataLocation | Constants.IndexWriter.IntKnownFieldMask;
+        fieldLocation = _dataIndex | Constants.IndexWriter.IntKnownFieldMask;
 
-        // Write the list metadata information. 
+        WriteList(values, type);
+    }
+
+    private void WriteList<TEnumerator>(TEnumerator values, IndexEntryFieldType type) where TEnumerator : IReadOnlySpanIndexer
+    {
+        var buffer = Buffer;
+
+        int dataLocation = _dataIndex; // Write the list metadata information. 
         ref var indexEntryField = ref Unsafe.AsRef<IndexEntryFieldType>(Unsafe.AsPointer(ref buffer[dataLocation]));
         indexEntryField = IndexEntryFieldType.List | type;
         dataLocation += sizeof(IndexEntryFieldType);
@@ -362,7 +524,7 @@ public unsafe partial struct IndexEntryWriter : IDisposable
             dataLocation += value.Length;
             stringLengths[i] = value.Length;
         }
-                
+
         // Write the pointer to the location
         stringPtrTableLocation = dataLocation;
         dataLocation = WriteNullsTableIfRequired(values, dataLocation, ref indexEntryField);
@@ -374,6 +536,118 @@ public unsafe partial struct IndexEntryWriter : IDisposable
         _dataIndex = dataLocation;
     }
 
+    private static int ComputeSpaceRequirements<TEnumerator>(TEnumerator values) where TEnumerator : IReadOnlySpanIndexer
+    {
+        int requiredSpace = sizeof(IndexEntryFieldType) + 2 * values.Length * sizeof(long) + 4 * sizeof(long);
+        for (int i = 0; i < values.Length; i++)
+            requiredSpace += values[i].Length;
+        return requiredSpace;
+    }
+
+
+    public void WriteDynamic<TEnumerable>(string name, TEnumerable values, ReadOnlySpan<long> longValues, ReadOnlySpan<double> doubleValues)
+        where TEnumerable : IReadOnlySpanIndexer
+    {
+        using var _ = _context.From(name, ByteStringType.Immutable, out var fieldNameStr);
+        long requiredSize = VariableSizeEncoding.MaximumSizeOf<int>() + // max field len size 
+                            fieldNameStr.Length +
+                            sizeof(IndexEntryFieldType) +
+                            ComputeSpaceRequirements(values);
+
+        if (FreeSpace < requiredSize)
+            UnlikelyGrowAuxiliaryBuffer(requiredSize);
+
+        WriteDynamicFieldName(fieldNameStr, true);
+
+        WriteTupleList(values, longValues, doubleValues);
+    }
+
+    public void Write(int field, IReadOnlySpanIndexer values, ReadOnlySpan<long> longValues, ReadOnlySpan<double> doubleValues)
+    {
+        Debug.Assert(field < _knownFields.Count, "The field must be known");
+        Debug.Assert(KnownFieldsLocations[field] == Invalid, "The field has been written before.");
+
+        if (values.Length != longValues.Length || values.Length != doubleValues.Length)
+            throw new ArgumentException($"The lengths of the {nameof(values)} and {nameof(longValues)} and {nameof(doubleValues)} must be the same.");
+
+        // We are calculating the space required based on the necessary space needed to store
+        // the lists, metadata and the content.  
+        int requiredSpace = sizeof(IndexEntryFieldType) + 2 * longValues.Length * sizeof(long) + 4 * sizeof(long);
+        for (int i = 0; i < values.Length; i++)
+            requiredSpace += values[i].Length;
+
+        if (FreeSpace < requiredSpace)
+            UnlikelyGrowAuxiliaryBuffer(requiredSpace);
+
+        int dataLocation = _dataIndex;
+
+        // Write known field pointer.
+        ref int fieldLocation = ref KnownFieldsLocations[field];
+        fieldLocation = dataLocation | Constants.IndexWriter.IntKnownFieldMask;
+        WriteTupleList(values, longValues, doubleValues);
+    }
+
+    private void WriteTupleList<TEnumerator>(TEnumerator values, ReadOnlySpan<long> longValues, ReadOnlySpan<double> doubleValues) where TEnumerator : IReadOnlySpanIndexer
+    {
+        var dataLocation = _dataIndex;
+         var buffer = Buffer;
+
+        // Write the list metadata information. 
+        ref var indexEntryField = ref Unsafe.AsRef<IndexEntryFieldType>(Unsafe.AsPointer(ref buffer[dataLocation]));
+        indexEntryField = IndexEntryFieldType.TupleList;
+        dataLocation += sizeof(IndexEntryFieldType);
+
+        dataLocation += VariableSizeEncoding.Write(buffer, values.Length, dataLocation); // Size of list.
+
+        // Prepare the location to store the pointer where the table of the strings will be (after writing the strings).
+        ref int stringPtrTableLocation = ref Unsafe.AsRef<int>(Unsafe.AsPointer(ref buffer[dataLocation]));
+        dataLocation += sizeof(int);
+
+        // Prepare the location to store the pointer where the long values are going to be stored.
+        ref int longPtrLocation = ref Unsafe.AsRef<int>(Unsafe.AsPointer(ref buffer[dataLocation]));
+        dataLocation += sizeof(int);
+
+        if (values.Length == 0)
+        {
+            // Write the pointer to the location.
+            stringPtrTableLocation = Invalid;
+            longPtrLocation = Invalid;
+
+            // Signal that we will have to deal with the empties.
+            indexEntryField |= IndexEntryFieldType.Empty;
+
+            goto Done;
+        }
+
+        var doubleValuesList = MemoryMarshal.Cast<byte, double>(buffer.Slice(dataLocation, values.Length * sizeof(double)));
+        doubleValues.CopyTo(doubleValuesList);
+        dataLocation += doubleValuesList.Length * sizeof(double);
+
+        // We start to write the strings in a place we know where it is from implicit positioning...
+        // 4b + 4b + len(values) * 8b
+        int[] stringLengths = ArrayPool<int>.Shared.Rent(values.Length);
+        for (int i = 0; i < values.Length; i++)
+        {
+            var value = values[i];
+            value.CopyTo(buffer.Slice(dataLocation, value.Length));
+            dataLocation += value.Length;
+            stringLengths[i] = value.Length;
+        }
+
+        // Write the pointer to the location.
+        stringPtrTableLocation = dataLocation;
+        dataLocation = WriteNullsTableIfRequired(values, dataLocation, ref indexEntryField);
+        dataLocation += VariableSizeEncoding.WriteMany<int>(buffer, stringLengths[..values.Length], dataLocation);
+
+        // Write the long values
+        longPtrLocation = dataLocation;
+        dataLocation += VariableSizeEncoding.WriteMany(buffer, longValues, pos: dataLocation);
+
+        ArrayPool<int>.Shared.Return(stringLengths);
+
+        Done:
+        _dataIndex = dataLocation;
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private int WriteNullsTableIfRequired<TEnumerator>(TEnumerator values, int dataLocation, ref IndexEntryFieldType indexEntryFieldLocation)
@@ -423,11 +697,11 @@ public unsafe partial struct IndexEntryWriter : IDisposable
         where TEnumerator : IReadOnlySpanIndexer
     {
         int nullBitStreamSize = values.Length / Bits.InByte + (values.Length % Bits.InByte == 0 ? 0 : 1);
-        
+
         using var _ = _context.Allocate(nullBitStreamSize, out var nullBitStream);
         nullBitStream.ToSpan().Fill(0); // Initialize with zeros.
 
-        var nullBitStreamBuffer = nullBitStream.Ptr; 
+        var nullBitStreamBuffer = nullBitStream.Ptr;
 
         // We will include null values if there are nulls to be stored.           
         bool hasNull = false;
@@ -441,7 +715,7 @@ public unsafe partial struct IndexEntryWriter : IDisposable
         }
 
         if (hasNull)
-        {            
+        {
             // Copy the null stream.
             new ReadOnlySpan<byte>(nullBitStreamBuffer, nullBitStreamSize)
                 .CopyTo(Buffer.Slice(dataLocation, nullBitStreamSize));
@@ -455,96 +729,18 @@ public unsafe partial struct IndexEntryWriter : IDisposable
         return dataLocation;
     }
 
-    public unsafe void Write(int field, IReadOnlySpanIndexer values, ReadOnlySpan<long> longValues, ReadOnlySpan<double> doubleValues)
-    {
-        Debug.Assert(field < _knownFields.Count, "The field must be known");
-        Debug.Assert(KnownFieldsLocations[field] == Invalid, "The field has been written before.");
-
-        if (values.Length != longValues.Length || values.Length != doubleValues.Length)
-            throw new ArgumentException($"The lengths of the {nameof(values)} and {nameof(longValues)} and {nameof(doubleValues)} must be the same.");
-
-        // We are calculating the space required based on the necessary space needed to store
-        // the lists, metadata and the content.  
-        int requiredSpace = sizeof(IndexEntryFieldType) + 2 * longValues.Length * sizeof(long) + 4 * sizeof(long);
-        for (int i = 0; i < values.Length; i++)
-            requiredSpace += values[i].Length;
-
-        if (FreeSpace < requiredSpace)
-            UnlikelyGrowAuxiliaryBuffer(requiredSpace);
-
-        int dataLocation = _dataIndex;
-
-        // Write known field pointer.
-        ref int fieldLocation = ref KnownFieldsLocations[field];
-        fieldLocation = dataLocation | Constants.IndexWriter.IntKnownFieldMask;
-
-        var buffer = Buffer;
-
-        // Write the list metadata information. 
-        ref var indexEntryField = ref Unsafe.AsRef<IndexEntryFieldType>(Unsafe.AsPointer(ref buffer[dataLocation]));
-        indexEntryField = IndexEntryFieldType.TupleList;
-        dataLocation += sizeof(IndexEntryFieldType);       
-
-        dataLocation += VariableSizeEncoding.Write(buffer, values.Length, dataLocation); // Size of list.
-
-        // Prepare the location to store the pointer where the table of the strings will be (after writing the strings).
-        ref int stringPtrTableLocation = ref Unsafe.AsRef<int>(Unsafe.AsPointer(ref buffer[dataLocation]));
-        dataLocation += sizeof(int);
-
-        // Prepare the location to store the pointer where the long values are going to be stored.
-        ref int longPtrLocation = ref Unsafe.AsRef<int>(Unsafe.AsPointer(ref buffer[dataLocation]));
-        dataLocation += sizeof(int);
-        
-        if (values.Length == 0)
-        {
-            // Write the pointer to the location.
-            stringPtrTableLocation = Invalid;
-            longPtrLocation = Invalid;
-
-            // Signal that we will have to deal with the empties.
-            indexEntryField |= IndexEntryFieldType.Empty;
-
-            goto Done;
-        }
-
-        var doubleValuesList = MemoryMarshal.Cast<byte, double>(buffer.Slice(dataLocation, values.Length * sizeof(double)));
-        doubleValues.CopyTo(doubleValuesList);
-        dataLocation += doubleValuesList.Length * sizeof(double);
-
-        // We start to write the strings in a place we know where it is from implicit positioning...
-        // 4b + 4b + len(values) * 8b
-        int[] stringLengths = ArrayPool<int>.Shared.Rent(values.Length);
-        for (int i = 0; i < values.Length; i++)
-        {
-            var value = values[i];            
-            value.CopyTo(buffer.Slice(dataLocation, value.Length));
-            dataLocation += value.Length;
-            stringLengths[i] = value.Length;
-        }
-
-        // Write the pointer to the location.
-        stringPtrTableLocation = dataLocation;
-        dataLocation = WriteNullsTableIfRequired(values, dataLocation, ref indexEntryField);
-        dataLocation += VariableSizeEncoding.WriteMany<int>(buffer, stringLengths[..values.Length], dataLocation);
-
-        // Write the long values
-        longPtrLocation = dataLocation;
-        dataLocation += VariableSizeEncoding.WriteMany(buffer, longValues, pos: dataLocation);
-
-        ArrayPool<int>.Shared.Return(stringLengths);
-        
-        Done:
-        _dataIndex = dataLocation;
-    }
-
     public ByteStringContext<ByteStringMemoryCache>.InternalScope Finish(out ByteString output)
     {
-        // Since we are at the end of the process, as long as we hve 2 longs of space we can
-        // finish the preprocessing to write the data into the new allocated buffer. 
-        int requiredSpace = (_knownFields.Count + 2) * sizeof(long);
+        // Since we are at the end of the process, as long as we have 2 longs of space we can
+        // finish the preprocessing to write the data into the new allocated buffer. We also
+        // need to figure out how many dynamic entries we need
+
+        int numberOfDynamicFields = (_dynamicFieldsLocations?.Count ?? 0);
+
+        int requiredSpace = (_knownFields.Count + 2) * sizeof(long) + (numberOfDynamicFields + 1) * 5;
         if (FreeSpace < requiredSpace)
             UnlikelyGrowAuxiliaryBuffer(requiredSpace);
-        
+
         var knownFieldsLocations = KnownFieldsLocations;
 
         // We need to know how big the metadata table is going to be.
@@ -566,32 +762,26 @@ public unsafe partial struct IndexEntryWriter : IDisposable
 
         // The size of the known fields metadata section
         int metadataSection = IndexEntryReader.TableEncodingLookupTable[(int)encodeSize] * _knownFields.Count;
-        // The size of the unknown/dynamic fields metadata section            
-        int dynamicMetadataSection = _dynamicFieldIndex * sizeof(uint);
-        int dynamicMetadataSectionOffset = buffer.Length - dynamicMetadataSection - 1;
 
         ref var header = ref MemoryMarshal.AsRef<IndexEntryHeader>(buffer);
-        header.Length = (uint)(_dataIndex + dynamicMetadataSection + metadataSection + 1);
 
         // The known field count is encoded as xxxxxxyy where:
-        // x: the count
+        // x: the count (1 ... 16K should be enough, using checked math to verify it anyway)
         // y: the encode size
-        header.KnownFieldCount = (ushort)(_knownFields.Count << 2 | (int)encodeSize);
-        header.DynamicTable = (uint)_dataIndex;
+        header.KnownFieldCount = checked((ushort)(_knownFields.Count << 2 | (int)encodeSize));
 
         // The dynamic metadata fields count. 
-        Unsafe.WriteUnaligned(ref buffer[_dataIndex], (byte)_dynamicFieldIndex);
-        _dataIndex += sizeof(byte);
-
-        if (dynamicMetadataSection != 0)
+        header.DynamicTable = (uint)_dataIndex;
+        _dataIndex += VariableSizeEncoding.Write(buffer, numberOfDynamicFields, _dataIndex);
+        if (_dynamicFieldsLocations != null)
         {
-            // From the offset to the end... move the data toward the closest position
-            var metadataTable = buffer[dynamicMetadataSectionOffset..];
-            metadataTable.CopyTo(buffer[_dataIndex..]);
-
-            // Move the pointer to the end of the copied section.
-            _dataIndex += dynamicMetadataSection;
+            foreach (int fieldsLocation in _dynamicFieldsLocations!)
+            {
+                _dataIndex += VariableSizeEncoding.Write(buffer, fieldsLocation, _dataIndex);
+            }
         }
+
+        header.Length = (uint)(_dataIndex + metadataSection);
 
         switch (encodeSize)
         {
@@ -616,9 +806,9 @@ public unsafe partial struct IndexEntryWriter : IDisposable
         // prepare for the next after finish instead of explicitly call something like `.Reset()`
         // if we dont know if are going to be write another entry. The usage pattern is to write
         // as many as possible with the same instance, so overall the performance impact is negligible. 
-        _dynamicFieldIndex = 0;
+        _dynamicFieldsLocations?.Clear();
         _dataIndex = Unsafe.SizeOf<IndexEntryHeader>();
-        KnownFieldsLocations.Fill(Invalid); 
+        KnownFieldsLocations.Fill(Invalid);
 
         return scope;
     }
@@ -674,9 +864,9 @@ public unsafe partial struct IndexEntryWriter : IDisposable
 
         // We need to copy the data over to the new buffer.
         Unsafe.CopyBlock(newBuffer.Ptr, _rawBuffer.Ptr, (uint)_rawBuffer.Length);
-        Unsafe.CopyBlock(newBuffer.Ptr + newBuffer.Length - KnownFieldMetadataSize - _dynamicFieldIndex,
-                         _rawBuffer.Ptr + _rawBuffer.Length - KnownFieldMetadataSize - _dynamicFieldIndex,
-                         (uint)(_dynamicFieldIndex + KnownFieldMetadataSize));
+        Unsafe.CopyBlock(newBuffer.Ptr + newBuffer.Length - KnownFieldMetadataSize,
+            _rawBuffer.Ptr + _rawBuffer.Length - KnownFieldMetadataSize,
+            (uint)(KnownFieldMetadataSize));
 
         _bufferScope.Dispose();
         _bufferScope = newBufferScope;

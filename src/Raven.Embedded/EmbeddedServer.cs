@@ -149,6 +149,8 @@ namespace Raven.Embedded
                     Conventions = options.Conventions
                 };
 
+                store.Conventions.DisableTopologyCache = true;
+
                 store.AfterDispose += (sender, args) => _documentStores.TryRemove(databaseName, out _);
 
                 store.Initialize();
@@ -242,7 +244,7 @@ namespace Raven.Embedded
 
             var process = await RavenServerRunner.RunAsync(_serverOptions).ConfigureAwait(false);
             if (_logger.IsInfoEnabled)
-                _logger.Info($"Starting global server: { process.Id }");
+                _logger.Info($"Starting global server: {process.Id}");
 
             process.Exited += (sender, e) => ServerProcessExited?.Invoke(sender, new ServerProcessExitedEventArgs());
 

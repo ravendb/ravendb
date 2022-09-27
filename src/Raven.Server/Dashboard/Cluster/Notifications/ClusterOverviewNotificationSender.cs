@@ -49,7 +49,7 @@ namespace Raven.Server.Dashboard.Cluster.Notifications
             return new ClusterOverviewPayload
             {
                 NodeTag = nodeTag,
-                NodeUrl = _server.WebUrl,
+                NodeUrl = _server.ServerStore.GetNodeHttpServerUrl(),
                 NodeType = nodeType,
                 NodeState = _server.ServerStore.CurrentRachisState,
                 StartTime = testStartTime,

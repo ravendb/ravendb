@@ -5,6 +5,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using Corax.Utils;
 using Lucene.Net.Documents;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
@@ -404,14 +405,54 @@ namespace Raven.Server.Documents.Indexes.Static
             return new RecursiveFunction(item, func).Execute();
         }
 
-        protected IEnumerable<AbstractField> CreateField(string name, object value, CreateFieldOptions options)
+        protected IEnumerable<object> CreateField(string name, object value, CreateFieldOptions options)
+        {
+            var scope = CurrentIndexingScope.Current;
+            return scope.Index.SearchEngineType switch
+            {
+                SearchEngineType.Corax => CoraxCreateField(scope, name, value, options),
+                _ => LuceneCreateField(scope, name, value, options)
+            };
+        }
+
+        protected IEnumerable<object> CoraxCreateField(CurrentIndexingScope scope, string name, object value, CreateFieldOptions options)
+        {
+            options = options ?? CreateFieldOptions.Default;
+
+            IndexFieldOptions allFields = null;
+            if (scope.IndexDefinition is MapIndexDefinition mapIndexDefinition)
+                mapIndexDefinition.IndexDefinition.Fields.TryGetValue(Constants.Documents.Indexing.Fields.AllFields, out allFields);
+
+            var field = IndexField.Create(name, new IndexFieldOptions
+            {
+                Storage = options.Storage,
+                TermVector = options.TermVector,
+                Indexing = options.Indexing,
+            }, allFields, Corax.Constants.IndexWriter.DynamicField);
+
+            if (scope.DynamicFields == null)
+                scope.DynamicFields = new Dictionary<string, FieldIndexing>();
+
+            scope.DynamicFields[name] = field.Indexing;
+            
+            var result = new List<CoraxDynamicItem>();
+            result.Add(new CoraxDynamicItem()
+            {
+                Field = field,
+                FieldName = name,
+                Value = value
+            });
+           
+            return result;
+        }
+        
+        protected IEnumerable<AbstractField> LuceneCreateField(CurrentIndexingScope scope, string name, object value, CreateFieldOptions options)
         {
             // IMPORTANT: Do not delete this method, it is used by the indexes code when using CreateField
 
             options = options ?? CreateFieldOptions.Default;
 
             IndexFieldOptions allFields = null;
-            var scope = CurrentIndexingScope.Current;
             if (scope.IndexDefinition is MapIndexDefinition mapIndexDefinition)
                 mapIndexDefinition.IndexDefinition.Fields.TryGetValue(Constants.Documents.Indexing.Fields.AllFields, out allFields);
 
@@ -435,8 +476,8 @@ namespace Raven.Server.Documents.Indexes.Static
             scope.CreateFieldConverter.GetRegularFields(new StaticIndexLuceneDocumentWrapper(result), field, value, CurrentIndexingScope.Current.IndexContext, scope?.Source, out _);
             return result;
         }
-
-        protected IEnumerable<AbstractField> CreateField(string name, object value, bool stored = false, bool? analyzed = null)
+        
+        protected IEnumerable<object> CreateField(string name, object value, bool stored = false, bool? analyzed = null)
         {
             // IMPORTANT: Do not delete this method, it is used by the indexes code when using CreateField
 
@@ -455,12 +496,16 @@ namespace Raven.Server.Documents.Indexes.Static
                     break;
             }
 
-            return CreateField(name, value, new CreateFieldOptions
+            var scope = CurrentIndexingScope.Current;
+            var creationFieldOptions = new CreateFieldOptions
             {
-                Storage = stored ? FieldStorage.Yes : FieldStorage.No,
-                Indexing = indexing,
-                TermVector = FieldTermVector.No
-            });
+                Storage = stored ? FieldStorage.Yes : FieldStorage.No, Indexing = indexing, TermVector = FieldTermVector.No
+            };
+            return scope.Index.SearchEngineType switch
+            {
+                SearchEngineType.Corax => CoraxCreateField(scope, name, value, creationFieldOptions),
+                _ => LuceneCreateField(scope, name, value, creationFieldOptions)
+            };
         }
 
         public unsafe dynamic AsDateOnly(dynamic field)

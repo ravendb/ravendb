@@ -14,13 +14,13 @@ namespace Corax
 #if ENABLE_TERMDUMPER
             private readonly StreamWriter _writer;
 
-            public IndexTermDumper(Tree tree, int fieldId)
+            public IndexTermDumper(Tree tree, Slice field)
             {
                 _writer = File.AppendText(tree.Name.ToString() + fieldId);
             }
 #else
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public IndexTermDumper(Tree tree, int fieldId)
+            public IndexTermDumper(Tree tree, Slice field)
             {}
 #endif
 

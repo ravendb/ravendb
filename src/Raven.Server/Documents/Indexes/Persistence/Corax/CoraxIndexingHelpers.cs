@@ -46,7 +46,7 @@ public static class CoraxIndexingHelpers
         return analyzerInstance;
     }
 
-    public static IndexFieldsMapping CreateCoraxAnalyzers(ByteStringContext context, Index index, IndexDefinitionBaseServerSide indexDefinition, bool forQuerying = false)
+    public static IndexFieldsMapping CreateMappingWithAnalyzers(ByteStringContext context, Index index, IndexDefinitionBaseServerSide indexDefinition, IndexFieldsMapping rawMapping, bool forQuerying = false)
     {
         if (indexDefinition.IndexFields.ContainsKey(Constants.Documents.Indexing.Fields.AllFields))
             throw new InvalidOperationException(
@@ -98,7 +98,11 @@ public static class CoraxIndexingHelpers
             analyzers.Add(defaultAnalyzerToUse.GetType(), defaultAnalyzerToUse);
         }
 
-        var perFieldAnalyzerWrapper = new IndexFieldsMapping(context);
+        var perFieldAnalyzerWrapper = indexDefinition.HasDynamicFields 
+            ? new IndexFieldsMapping(context, 
+                searchAnalyzer: fieldName => GetOrCreateAnalyzer(fieldName, index.Configuration.DefaultSearchAnalyzerType.Value.Type, CreateStandardAnalyzer),
+                exactAnalyzer: fieldName => GetOrCreateAnalyzer(fieldName, index.Configuration.DefaultExactAnalyzerType.Value.Type, CreateKeywordAnalyzer)) 
+            : new IndexFieldsMapping(context);
         perFieldAnalyzerWrapper.DefaultAnalyzer = defaultAnalyzerToUse;
         
         foreach (var field in indexDefinition.IndexFields)
@@ -138,8 +142,18 @@ public static class CoraxIndexingHelpers
                     }
 
                     break;
+                
             }
         }
+
+        foreach (var originField in rawMapping)
+        {
+            if (perFieldAnalyzerWrapper.TryGetByFieldName(originField.FieldName, out _))
+                continue;
+
+            perFieldAnalyzerWrapper.AddBinding(originField);
+        }
+        perFieldAnalyzerWrapper.CompleteAnalyzerGathering();
         
         return perFieldAnalyzerWrapper;
 
