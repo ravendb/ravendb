@@ -86,7 +86,7 @@ internal static class CertificateLoaderUtil
     private static void DebugAssertDoesntContainKeySet(X509KeyStorageFlags? flags)
     {
         const X509KeyStorageFlags keyStorageFlags =
-#if NETCOREAPP_3_1_OR_GREATER
+#if NETCOREAPP3_1_OR_GREATER 
             X509KeyStorageFlags.EphemeralKeySet |
 #endif
             X509KeyStorageFlags.UserKeySet |
