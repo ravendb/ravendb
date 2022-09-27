@@ -13,7 +13,6 @@ namespace Raven.Server.Documents.Includes
         private readonly DocumentsOperationContext _context;
         private readonly DateTime? _revisionsBeforeDateTime;
         private readonly HashSet<string> _pathsForRevisionsChangeVectors;
-        private readonly HashSet<string> _revisionsChangeVectors;
         public Dictionary<string, Document> RevisionsChangeVectorResults { get; private set; }
         public Dictionary<string, Dictionary<DateTime, Document>> IdByRevisionsByDateTimeResults { get; private set; }
 
@@ -25,7 +24,6 @@ namespace Raven.Server.Documents.Includes
         
         public IncludeRevisionsCommand(DocumentDatabase database, DocumentsOperationContext context, RevisionIncludeField revisionIncludeField): this(database, context)
         {
-            _revisionsChangeVectors = revisionIncludeField?.RevisionsChangeVectors ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             _pathsForRevisionsChangeVectors = revisionIncludeField?.RevisionsChangeVectorsPaths ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase); 
             _revisionsBeforeDateTime = revisionIncludeField?.RevisionsBeforeDateTime ?? new DateTime();
         }
@@ -43,19 +41,6 @@ namespace Raven.Server.Documents.Includes
                 IdByRevisionsByDateTimeResults ??= new Dictionary<string, Dictionary<DateTime, Document>>(StringComparer.OrdinalIgnoreCase); 
                 RevisionsChangeVectorResults[doc.ChangeVector] = doc;
                 IdByRevisionsByDateTimeResults[document.Id] = new Dictionary<DateTime, Document> (){{_revisionsBeforeDateTime.Value, doc}};
-            }
-
-            if (_revisionsChangeVectors?.Count > 0)
-            {
-                foreach (var changeVector in _revisionsChangeVectors)
-                {
-                    RevisionsChangeVectorResults ??= new Dictionary<string, Document>(StringComparer.OrdinalIgnoreCase);
-                    if (RevisionsChangeVectorResults.ContainsKey(changeVector))
-                        continue;
-                    var doc  = _database.DocumentsStorage.RevisionsStorage.GetRevision(context: _context, changeVector:changeVector);
-                    if (doc is null) return;
-                    RevisionsChangeVectorResults[changeVector] = doc;
-                }
             }
 
             if (_pathsForRevisionsChangeVectors?.Count > 0)
