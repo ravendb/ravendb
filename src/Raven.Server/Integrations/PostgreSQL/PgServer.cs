@@ -175,6 +175,9 @@ namespace Raven.Server.Integrations.PostgreSQL
                                 _logger.Operations($"Failed to accept TCP client (port: {((IPEndPoint)tcpListener.LocalEndpoint).Port})", e);
                         }
 
+                        if (client == null)
+                            continue;
+
                         _connections.TryAdd(client, HandleConnection(client));
                     }
                 }

@@ -93,7 +93,7 @@ namespace Raven.Server.Integrations.PostgreSQL
                         PgErrorCodes.ProtocolViolation,
                         "SSLRequest received twice"), _token);
                     break;
-                case Cancel cancel: 
+                case Cancel cancel:
                     // TODO: Support Cancel message
                     await writer.WriteAsync(messageBuilder.ErrorResponse(
                         PgSeverity.Fatal,
@@ -136,9 +136,9 @@ namespace Raven.Server.Integrations.PostgreSQL
                 return;
             }
 
-            var database = await _databasesLandlord.TryGetOrCreateResourceStore(databaseName);
+            var result = _databasesLandlord.TryGetOrCreateDatabase(databaseName);
 
-            if (database == null)
+            if (result.DatabaseStatus == DatabasesLandlord.DatabaseSearchResult.Status.Missing)
             {
                 await writer.WriteAsync(messageBuilder.ErrorResponse(
                     PgSeverity.Fatal,
@@ -148,13 +148,25 @@ namespace Raven.Server.Integrations.PostgreSQL
                 return;
             }
 
+            if (result.DatabaseStatus == DatabasesLandlord.DatabaseSearchResult.Status.Sharded)
+            {
+                await writer.WriteAsync(messageBuilder.ErrorResponse(
+                    PgSeverity.Fatal,
+                    PgErrorCodes.ConnectionFailure,
+                    "Failed to connect to database",
+                    $"Database '{databaseName}' is a sharded database and does not support PostgreSQL."), _token);
+                return;
+            }
+
+            var database = await result.DatabaseTask;
+
             string username = null;
 
             try
             {
                 username = _clientOptions["user"];
 
-                using var transaction = new PgTransaction(database, new MessageReader(), username,this);
+                using var transaction = new PgTransaction(database, new MessageReader(), username, this);
 
                 if (_serverCertificate != null)
                 {
