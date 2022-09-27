@@ -30,7 +30,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private readonly bool _hasSuggestions;
 
         private readonly LuceneDocumentConverterBase _converter;
-        protected readonly DocumentDatabase DocumentDatabase;
         private readonly Lock _locker;
         private readonly IDisposable _releaseWriteTransaction;
 
@@ -43,7 +42,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             : base(index, LoggingSource.Instance.GetLogger<LuceneIndexWriteOperation>(index._indexStorage.DocumentDatabase.Name))
         {
             _converter = converter;
-            DocumentDatabase = index._indexStorage.DocumentDatabase;
 
 
             try
