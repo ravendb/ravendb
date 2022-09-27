@@ -221,11 +221,9 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
 
         if (_query.Metadata.RevisionIncludes != null)
         {
-            // TODO arek - write test for that
-
             includeBuilder ??= new IncludeBuilder();
 
-            includeBuilder.RevisionsToIncludeByChangeVector = _query.Metadata.RevisionIncludes.RevisionsChangeVectors;
+            includeBuilder.RevisionsToIncludeByChangeVector = _query.Metadata.RevisionIncludes.RevisionsChangeVectorsPaths;
             includeBuilder.RevisionsToIncludeByDateTime = _query.Metadata.RevisionIncludes.RevisionsBeforeDateTime;
         }
 
