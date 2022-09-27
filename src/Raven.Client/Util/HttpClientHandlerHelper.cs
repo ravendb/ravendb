@@ -13,7 +13,8 @@ internal static class HttpClientHandlerHelper
     static HttpClientHandlerHelper()
     {
 #if NETCOREAPP3_1_OR_GREATER
-        GetUnderlyingHandler = typeof(HttpClientHandler).GetField("_underlyingHandler", BindingFlags.Instance | BindingFlags.NonPublic);
+        GetUnderlyingHandler = typeof(HttpClientHandler).GetField("_underlyingHandler", BindingFlags.Instance | BindingFlags.NonPublic) ??
+                               typeof(HttpClientHandler).GetField("_socketsHttpHandler", BindingFlags.Instance | BindingFlags.NonPublic);
 
         if (GetUnderlyingHandler == null)
             throw new InvalidOperationException("Could not get underlying handler field from HttpClientHandler.");
