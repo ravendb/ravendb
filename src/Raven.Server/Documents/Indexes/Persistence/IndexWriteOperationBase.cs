@@ -12,9 +12,11 @@ namespace Raven.Server.Documents.Indexes.Persistence
     {
         protected IndexingStatsScope _statsInstance;
         protected readonly IndexWriteOperationStats Stats = new IndexWriteOperationStats();
+        protected readonly DocumentDatabase DocumentDatabase;
 
         protected IndexWriteOperationBase(Index index, Logger logger) : base(index, logger)
         {
+            DocumentDatabase = index._indexStorage.DocumentDatabase;
         }
 
         public abstract void Commit(IndexingStatsScope stats);
