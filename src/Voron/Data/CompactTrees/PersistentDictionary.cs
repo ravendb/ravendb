@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Buffers;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Sparrow;
 using Sparrow.Server.Compression;
@@ -189,30 +190,39 @@ namespace Voron.Data.CompactTrees
             decodedKey = decodedKey.Slice(0, len);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Encode(ReadOnlySpan<byte> key, ref Span<byte> encodedKey)
         {
-            if (key.Length == 0)
-                throw new ArgumentException("Cannot encode an empty key!", nameof(key));
-
-            if (key[^1] != 0)
+            ReadOnlySpan<byte> UnlikelyZeroPadKey(ReadOnlySpan<byte> readOnlySpan)
             {
-                if (_tempBuffer == null || _tempBuffer.Length < key.Length + 1)
+                if (_tempBuffer == null || _tempBuffer.Length < readOnlySpan.Length + 1)
                 {
                     if (_tempBuffer != null)
                         ArrayPool<byte>.Shared.Return(_tempBuffer);
-                    _tempBuffer = ArrayPool<byte>.Shared.Rent(key.Length + 1);
+                    _tempBuffer = ArrayPool<byte>.Shared.Rent(readOnlySpan.Length + 1);
                 }
 
                 var newKey = _tempBuffer.AsSpan();
-                key.CopyTo(newKey);
-                newKey[key.Length] = 0;
-                key = newKey.Slice(0, key.Length + 1);
+                readOnlySpan.CopyTo(newKey);
+                newKey[readOnlySpan.Length] = 0;
+                readOnlySpan = newKey.Slice(0, readOnlySpan.Length + 1);
+                return readOnlySpan;
             }
-            
+
+            if (key.Length == 0)
+                throw new ArgumentException("Cannot encode an empty key!", nameof(key));
+
+            // PERF: It may happen that the caller would not include a zero pad. We are handling this situation
+            // but it costs pretty much. If this Unlikely gets triggered too much, we need to figure out
+            // what to do to avoid it to happen. 
+            if (key[^1] != 0)
+                key = UnlikelyZeroPadKey(key);
+
             int bitsLength = _encoder.Encode(key, encodedKey);
             int bytesLength = Math.DivRem(bitsLength, 8, out var remainder);
             encodedKey = encodedKey.Slice(0, bytesLength + (remainder == 0 ? 0 : 1));
         }
+
 
         public int GetMaxEncodingBytes(ReadOnlySpan<byte> key)
         {
