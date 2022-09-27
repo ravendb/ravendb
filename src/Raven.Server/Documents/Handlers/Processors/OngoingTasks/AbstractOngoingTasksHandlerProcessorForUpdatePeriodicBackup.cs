@@ -10,7 +10,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 {
-    internal abstract class AbstractOngoingTasksHandlerProcessorForUpdatePeriodicBackup<TRequestHandler, TOperationContext> : AbstractHandlerProcessorForUpdateDatabaseConfiguration<BlittableJsonReaderObject, TRequestHandler, TOperationContext>
+    internal abstract class AbstractOngoingTasksHandlerProcessorForUpdatePeriodicBackup<TRequestHandler, TOperationContext> : AbstractHandlerProcessorForUpdateDatabaseConfiguration<PeriodicBackupConfiguration, TRequestHandler, TOperationContext>
         where TOperationContext : JsonOperationContext
         where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
@@ -19,30 +19,30 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
         {
         }
 
-        protected override void OnBeforeUpdateConfiguration(ref BlittableJsonReaderObject configuration, JsonOperationContext context)
+        protected override async ValueTask<PeriodicBackupConfiguration> GetConfigurationAsync(TransactionOperationContext context, AsyncBlittableJsonTextWriter writer)
         {
-            var periodicBackupConfiguration = JsonDeserializationCluster.PeriodicBackupConfiguration(configuration);
+            var json = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), GetType().Name);
 
-            RequestHandler.ServerStore.LicenseManager.AssertCanAddPeriodicBackup(periodicBackupConfiguration);
-            BackupConfigurationHelper.UpdateLocalPathIfNeeded(periodicBackupConfiguration, RequestHandler.ServerStore);
-            BackupConfigurationHelper.AssertBackupConfiguration(periodicBackupConfiguration);
-            BackupConfigurationHelper.AssertDestinationAndRegionAreAllowed(periodicBackupConfiguration, RequestHandler.ServerStore);
-
-            configuration = context.ReadObject(periodicBackupConfiguration.ToJson(), "updated-backup-configuration");
+            return JsonDeserializationCluster.PeriodicBackupConfiguration(json);
         }
 
-        protected override void OnBeforeResponseWrite(TransactionOperationContext _, DynamicJsonValue responseJson, BlittableJsonReaderObject configuration, long index)
+        protected override void OnBeforeUpdateConfiguration(ref PeriodicBackupConfiguration configuration, JsonOperationContext context)
+        {
+            BackupConfigurationHelper.AssertPeriodicBackup(configuration, RequestHandler.ServerStore);
+        }
+
+        protected override void OnBeforeResponseWrite(TransactionOperationContext _, DynamicJsonValue responseJson, PeriodicBackupConfiguration configuration, long index)
         {
             const string taskIdName = nameof(PeriodicBackupConfiguration.TaskId);
 
-            configuration.TryGet(taskIdName, out long taskId);
+            var taskId = configuration.TaskId;
             if (taskId == 0)
                 taskId = index;
             
             responseJson[taskIdName] = taskId;
         }
 
-        protected override Task<(long Index, object Result)> OnUpdateConfiguration(TransactionOperationContext context, BlittableJsonReaderObject configuration, string raftRequestId)
+        protected override Task<(long Index, object Result)> OnUpdateConfiguration(TransactionOperationContext context, PeriodicBackupConfiguration configuration, string raftRequestId)
         {
             return RequestHandler.ServerStore.ModifyPeriodicBackup(context, RequestHandler.DatabaseName, configuration, raftRequestId);
         }

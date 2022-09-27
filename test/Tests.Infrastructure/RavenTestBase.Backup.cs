@@ -185,7 +185,7 @@ namespace FastTests
             /// Create and run backup with provided task id in cluster.
             /// </summary>
             /// <returns>TaskId</returns>
-            public long CreateAndRunBackupInCluster(PeriodicBackupConfiguration config, DocumentStore store, bool isFullBackup = true, OperationStatus opStatus = OperationStatus.Completed, int? timeout = default)
+            public long CreateAndRunBackupInCluster(PeriodicBackupConfiguration config, IDocumentStore store, bool isFullBackup = true, OperationStatus opStatus = OperationStatus.Completed, int? timeout = default)
             {
                 return AsyncHelpers.RunSync(() => CreateAndRunBackupInClusterAsync(config, store, isFullBackup, opStatus, timeout));
             }
@@ -194,7 +194,7 @@ namespace FastTests
             /// Create and run backup with provided task id in cluster.
             /// </summary>
             /// <returns>TaskId</returns>
-            public async Task<long> CreateAndRunBackupInClusterAsync(PeriodicBackupConfiguration config, DocumentStore store, bool isFullBackup = true, OperationStatus opStatus = OperationStatus.Completed, int? timeout = default)
+            public async Task<long> CreateAndRunBackupInClusterAsync(PeriodicBackupConfiguration config, IDocumentStore store, bool isFullBackup = true, OperationStatus opStatus = OperationStatus.Completed, int? timeout = default)
             {
                 var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
                 await RunBackupInClusterAsync(store, backupTaskId, isFullBackup, opStatus, timeout);
@@ -212,7 +212,7 @@ namespace FastTests
             /// <summary>
             /// Run backup with provided task id in a cluster.
             /// </summary>
-            public async Task RunBackupInClusterAsync(DocumentStore store, long taskId, bool isFullBackup = true, OperationStatus opStatus = OperationStatus.Completed, int? timeout = default)
+            public async Task RunBackupInClusterAsync(IDocumentStore store, long taskId, bool isFullBackup = true, OperationStatus opStatus = OperationStatus.Completed, int? timeout = default)
             {
                 var op = await store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup, taskId));
 
@@ -479,7 +479,7 @@ namespace FastTests
                     }
                 }
             }
-            
+
             public Task<WaitHandle[]> WaitForBackupToComplete(IDocumentStore store)
             {
                 return WaitForBackupsToComplete(new List<IDocumentStore> { store });

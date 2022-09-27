@@ -8,12 +8,10 @@ using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Http;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
-using Raven.Server.Documents.Commands.OngoingTasks;
 using Raven.Server.Documents.Handlers.Processors.OngoingTasks;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.System.Processors.OngoingTasks;
-using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Web.System

@@ -21,7 +21,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             var info = new DataDirectoryInfo(serverStore, pathResult.FolderPath, databaseName, isBackup, getNodesInfo, requestTimeoutInMs, responseStream);
             await info.UpdateDirectoryResult(databaseName: databaseName, error: pathResult.Error);
         }
-        
+
         public static void UpdateLocalPathIfNeeded(PeriodicBackupConfiguration configuration, ServerStore serverStore)
         {
             if (configuration.LocalSettings == null || configuration.LocalSettings.Disabled)
@@ -141,6 +141,23 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             if (configuration.GlacierSettings != null && configuration.GlacierSettings.Disabled == false)
                 serverStore.Configuration.Backup.AssertRegionAllowed(configuration.GlacierSettings.AwsRegionName);
+        }
+
+        public static void AssertPeriodicBackup(PeriodicBackupConfiguration configuration, ServerStore serverStore)
+        {
+            serverStore.LicenseManager.AssertCanAddPeriodicBackup(configuration);
+
+            UpdateLocalPathIfNeeded(configuration, serverStore);
+            AssertBackupConfiguration(configuration);
+            AssertDestinationAndRegionAreAllowed(configuration, serverStore);
+        }
+
+        public static void AssertOneTimeBackup(BackupConfiguration configuration, ServerStore serverStore)
+        {
+            serverStore.LicenseManager.AssertCanAddPeriodicBackup(configuration);
+
+            AssertBackupConfigurationInternal(configuration);
+            AssertDestinationAndRegionAreAllowed(configuration, serverStore);
         }
 
         public class ActualPathResult
