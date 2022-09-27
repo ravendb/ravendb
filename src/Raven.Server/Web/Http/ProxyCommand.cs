@@ -66,6 +66,16 @@ public class ProxyCommand<T> : RavenCommand
         }
     }
 
+    internal override bool CanReadFromCache
+    {
+        get => _command?.CanReadFromCache ?? false;
+        set
+        {
+            if (_command != null)
+                _command.CanReadFromCache = value;
+        }
+    }
+
     public override RavenCommandResponseType ResponseType
     {
         get => _command?.ResponseType ?? RavenCommandResponseType.Empty;

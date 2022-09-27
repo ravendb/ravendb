@@ -62,6 +62,7 @@ namespace Raven.Client.Http
         public virtual TimeSpan? Timeout { get; protected internal set; }
         public virtual bool CanCache { get; protected internal set; }
         public virtual bool CanCacheAggressively { get; protected internal set; }
+        internal virtual bool CanReadFromCache { get; set; } = true;
         public virtual string SelectedNodeTag { get; protected internal set; }
         internal virtual int? SelectedShardNumber { get; set; }
         public int NumberOfAttempts { get; internal set; }
@@ -81,6 +82,7 @@ namespace Raven.Client.Http
             CancellationToken = copy.CancellationToken;
             Timeout = copy.Timeout;
             CanCache = copy.CanCache;
+            CanReadFromCache = copy.CanReadFromCache;
             CanCacheAggressively = copy.CanCacheAggressively;
             SelectedNodeTag = copy.SelectedNodeTag;
             SelectedShardNumber = copy.SelectedShardNumber;
