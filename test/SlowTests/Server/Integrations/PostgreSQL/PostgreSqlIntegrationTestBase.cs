@@ -72,9 +72,9 @@ namespace SlowTests.Server.Integrations.PostgreSQL
             string connectionString;
 
             if (server.Certificate.Certificate == null || forceSslMode == false)
-                connectionString = $"Host={host};Port={port};Database={database};Uid={CorrectUser};";
+                connectionString = $"Host={host};Port={port};Database={database};Uid={CorrectUser};Include Error Detail=True;";
             else
-                connectionString = $"Host={host};Port={port};Database={database};Uid={CorrectUser};Password={CorrectPassword};SSL Mode=Prefer;Trust Server Certificate=true";
+                connectionString = $"Host={host};Port={port};Database={database};Uid={CorrectUser};Password={CorrectPassword};SSL Mode=Prefer;Trust Server Certificate=true;Include Error Detail=True;";
 
             return connectionString;
         }

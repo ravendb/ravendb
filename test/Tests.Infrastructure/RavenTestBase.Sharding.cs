@@ -57,7 +57,7 @@ public partial class RavenTestBase
             Resharding = new ReshardingTestBase(_parent);
         }
 
-        public IDocumentStore GetDocumentStore(Options options = null, [CallerMemberName] string caller = null, DatabaseTopology[] shards = null)
+        public DocumentStore GetDocumentStore(Options options = null, [CallerMemberName] string caller = null, DatabaseTopology[] shards = null)
         {
             var shardedOptions = options ?? new Options();
             shardedOptions.ModifyDatabaseRecord += r =>
