@@ -26,7 +26,7 @@ namespace Raven.Client.Documents.Operations.Replication
                 var certBytes = Convert.FromBase64String(pullReplication.CertificateWithPrivateKey);
                 using (var certificate = CertificateLoaderUtil.CreateCertificate(certBytes,
                     pullReplication.CertificatePassword,
-                    X509KeyStorageFlags.Exportable))
+                    CertificateLoaderUtil.FlagsForExport))
                 {
                     if (certificate.HasPrivateKey == false)
                         throw new AuthorizationException("Certificate with private key is required");

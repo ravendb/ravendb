@@ -85,10 +85,12 @@ internal static class CertificateLoaderUtil
     [Conditional("DEBUG")]
     private static void DebugAssertDoesntContainKeySet(X509KeyStorageFlags? flags)
     {
-        const X509KeyStorageFlags keyStorageFlags = 
-            X509KeyStorageFlags.UserKeySet | 
-            X509KeyStorageFlags.MachineKeySet | 
-            (X509KeyStorageFlags)0x20 ; // X509KeyStorageFlags.EphemeralKeySet not defined in .Netstandard
+        const X509KeyStorageFlags keyStorageFlags =
+#if NETCOREAPP_3_1_OR_GREATER
+            X509KeyStorageFlags.EphemeralKeySet |
+#endif
+            X509KeyStorageFlags.UserKeySet |
+            X509KeyStorageFlags.MachineKeySet;
         
         Debug.Assert(flags.HasValue == false || (flags.Value & keyStorageFlags) == 0);
     }
@@ -111,7 +113,7 @@ internal static class CertificateLoaderUtil
         {
             var msg = $"{nameof(CertificateLoaderUtil)}.{method} - Flags used {f}";
             if (exception != null)
-                msg += $"Firs attempt exception : {exception}";
+                msg += $"First attempt exception : {exception}";
             return msg;
         }
     }
