@@ -1,17 +1,50 @@
-﻿$primary: #d7325a;
-$body-bg: #22252b;
-$body-color: #98a7b7;
-
-.bs5 {
-    //TODO: put bootstrap 5 theme customization here
-    
-    @import "../../../node_modules/boostrap5/scss/bootstrap";
+﻿.bs5 {
+    // Required
+    @import "../../../node_modules/boostrap5/scss/functions";
+    // Default variable overrides
+    @import "../scss/colors";
+    @import "../scss/sizes";
+    //@import "../scss/variables";
+    @import "../scss/bs5variables";
+    @import "../scss/legacy";
+    // Required
+    @import "../../../node_modules/boostrap5/scss/variables";
+    @import "../../../node_modules/boostrap5/scss/maps";
+    @import "../../../node_modules/boostrap5/scss/mixins";
+    @import "../../../node_modules/boostrap5/scss/utilities";
+    @import "../../../node_modules/boostrap5/scss/root";
+    // Optional Bootstrap components
+    @import "../../../node_modules/boostrap5/scss/reboot";
+    @import "../../../node_modules/boostrap5/scss/type";
+    @import "../../../node_modules/boostrap5/scss/images";
+    @import "../../../node_modules/boostrap5/scss/containers";
+    @import "../../../node_modules/boostrap5/scss/grid";
+    @import "../../../node_modules/boostrap5/scss/tables";
+    @import "../../../node_modules/boostrap5/scss/forms";
+    @import "../../../node_modules/boostrap5/scss/buttons";
+    @import "../../../node_modules/boostrap5/scss/transitions";
+    @import "../../../node_modules/boostrap5/scss/dropdown";
+    @import "../../../node_modules/boostrap5/scss/button-group";
+    @import "../../../node_modules/boostrap5/scss/nav";
+    @import "../../../node_modules/boostrap5/scss/navbar";
+    @import "../../../node_modules/boostrap5/scss/card";
+    @import "../../../node_modules/boostrap5/scss/accordion";
+    @import "../../../node_modules/boostrap5/scss/breadcrumb";
+    @import "../../../node_modules/boostrap5/scss/pagination";
+    @import "../../../node_modules/boostrap5/scss/badge";
+    @import "../../../node_modules/boostrap5/scss/alert";
+    @import "../../../node_modules/boostrap5/scss/progress";
+    @import "../../../node_modules/boostrap5/scss/list-group";
+    @import "../../../node_modules/boostrap5/scss/close";
+    @import "../../../node_modules/boostrap5/scss/toasts";
+    @import "../../../node_modules/boostrap5/scss/modal";
+    @import "../../../node_modules/boostrap5/scss/tooltip";
+    @import "../../../node_modules/boostrap5/scss/popover";
+    @import "../../../node_modules/boostrap5/scss/carousel";
+    @import "../../../node_modules/boostrap5/scss/spinners";
+    @import "../../../node_modules/boostrap5/scss/offcanvas";
+    // Helpers
+    @import "../../../node_modules/boostrap5/scss/helpers";
+    // Utilities
+    @import "../../../node_modules/boostrap5/scss/utilities/api";
 }
-
-@import "../../../node_modules/boostrap5/scss/functions";
-@import "../../../node_modules/boostrap5/scss/variables";
-@import "../../../node_modules/boostrap5/scss/maps";
-@import "../../../node_modules/boostrap5/scss/mixins";
-@import "../../../node_modules/boostrap5/scss/utilities";
-
-@import "../../../node_modules/boostrap5/scss/root";
