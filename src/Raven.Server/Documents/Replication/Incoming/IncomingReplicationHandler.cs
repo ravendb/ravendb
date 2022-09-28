@@ -226,42 +226,6 @@ namespace Raven.Server.Documents.Replication.Incoming
             }
         }
 
-        public class DataForReplicationCommand : IDisposable
-        {
-            internal string SourceDatabaseId { get; set; }
-
-            internal ReplicationBatchItem[] ReplicatedItems { get; set; }
-
-            internal Dictionary<Slice, AttachmentReplicationItem> ReplicatedAttachmentStreams { get; set; }
-
-            public TcpConnectionHeaderMessage.SupportedFeatures SupportedFeatures { get; set; }
-
-            public Logger Logger { get; set; }
-
-            public void Dispose()
-            {
-                if (ReplicatedAttachmentStreams != null)
-                {
-                    foreach (var item in ReplicatedAttachmentStreams.Values)
-                    {
-                        item?.Dispose();
-                    }
-
-                    ReplicatedAttachmentStreams?.Clear();
-                }
-
-                if (ReplicatedItems != null)
-                {
-                    foreach (var item in ReplicatedItems)
-                    {
-                        item?.Dispose();
-                    }
-                }
-
-                ReplicatedItems = null;
-            }
-        }
-
         public override LiveReplicationPerformanceCollector.ReplicationPerformanceType GetReplicationPerformanceType()
         {
             return ReplicationType == ReplicationLatestEtagRequest.ReplicationType.Internal

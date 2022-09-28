@@ -180,6 +180,49 @@ public partial class RavenTestBase
             return true;
         }
 
+        public async Task<bool> AllShardHaveDocsAsync(RavenServer server, string databaseName, long count = 1L)
+        {
+            var databases = server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(databaseName);
+            foreach (var task in databases)
+            {
+                var documentDatabase = await task;
+                using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var ids = documentDatabase.DocumentsStorage.GetNumberOfDocuments(context);
+                    if (ids < count)
+                        return false;
+                }
+            }
+
+            return true;
+        }
+
+        public async Task<Dictionary<int, string>> GetOneDocIdForEachShardAsync(RavenServer server, string databaseName)
+        {
+            var docIdPerShard = new Dictionary<int, string>();
+            var databases = server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(databaseName);
+            foreach (var task in databases)
+            {
+                var documentDatabase = await task;
+                using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var ids = documentDatabase.DocumentsStorage.GetNumberOfDocuments(context);
+                    if (ids < 1)
+                        return null;
+
+                    var randomId = documentDatabase.DocumentsStorage.GetAllIds(context).FirstOrDefault();
+                    if (randomId == null)
+                        return null;
+
+                    docIdPerShard.Add(documentDatabase.ShardNumber, randomId);
+                }
+            }
+
+            return docIdPerShard;
+        }
+
         public long GetDocsCountForCollectionInAllShards(IDictionary<string, List<DocumentDatabase>> servers, string collection)
         {
             var sum = 0L;
@@ -214,7 +257,7 @@ public partial class RavenTestBase
             return new ShardedOngoingTasksHandlerProcessorForGetOngoingTasks(handler);
         }
 
-        public class ShardedBackupTestsBase 
+        public class ShardedBackupTestsBase
         {
             internal readonly RavenTestBase _parent;
 
@@ -507,7 +550,7 @@ public partial class RavenTestBase
 
             public Task<long> UpdateConfigurationAndRunBackupAsync(RavenServer server, IDocumentStore store, PeriodicBackupConfiguration config, bool isFullBackup = false)
             {
-                return UpdateConfigurationAndRunBackupAsync(new List<RavenServer>{server}, store, config, isFullBackup);
+                return UpdateConfigurationAndRunBackupAsync(new List<RavenServer> { server }, store, config, isFullBackup);
             }
 
             public async Task<long> UpdateConfigurationAndRunBackupAsync(List<RavenServer> servers, IDocumentStore store, PeriodicBackupConfiguration config, bool isFullBackup = false)

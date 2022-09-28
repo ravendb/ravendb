@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.Replication.Incoming
 
         public long LastDocumentEtag => _lastDocumentEtag;
 
-        protected Action<IncomingReplicationHandler.DataForReplicationCommand> AfterItemsReadFromStream;
+        protected Action<DataForReplicationCommand> AfterItemsReadFromStream;
         public event Action<LiveReplicationPulsesCollector.ReplicationPulse> HandleReplicationPulse;
         public IncomingConnectionInfo ConnectionInfo { get; protected set; }
         public TcpConnectionHeaderMessage.SupportedFeatures SupportedFeatures { get; set; }
@@ -377,7 +377,7 @@ namespace Raven.Server.Documents.Replication.Incoming
             InvokeOnDocumentsReceived();
         }
 
-        protected void ReadItemsFromSource(int replicatedDocs, TOperationContext context, ByteStringContext allocator, IncomingReplicationHandler.DataForReplicationCommand data, Reader reader,
+        protected void ReadItemsFromSource(int replicatedDocs, TOperationContext context, ByteStringContext allocator, DataForReplicationCommand data, Reader reader,
             IncomingReplicationStatsScope stats)
         {
             if (data.ReplicatedItems == null)
@@ -395,8 +395,7 @@ namespace Raven.Server.Documents.Replication.Incoming
             }
         }
 
-        protected void ReadAttachmentStreamsFromSource(int attachmentStreamCount,
-            TOperationContext context, ByteStringContext allocator, IncomingReplicationHandler.DataForReplicationCommand dataForReplicationCommand, Reader reader, IncomingReplicationStatsScope stats)
+        protected void ReadAttachmentStreamsFromSource(int attachmentStreamCount, ByteStringContext allocator, DataForReplicationCommand dataForReplicationCommand, Reader reader, IncomingReplicationStatsScope stats)
         {
             if (attachmentStreamCount == 0)
                 return;
@@ -433,7 +432,7 @@ namespace Raven.Server.Documents.Replication.Incoming
 
             using (_attachmentStreamsTempFile.Scope())
             using (var incomingReplicationAllocator = new IncomingReplicationAllocator(allocator, configuration.Replication.MaxSizeToSend))
-            using (var dataForReplicationCommand = new IncomingReplicationHandler.DataForReplicationCommand
+            using (var dataForReplicationCommand = new DataForReplicationCommand
             {
                 SourceDatabaseId = ConnectionInfo.SourceDatabaseId,
                 SupportedFeatures = SupportedFeatures,
@@ -449,7 +448,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                         var reader = new Reader(_stream, _copiedBuffer, incomingReplicationAllocator);
 
                         ReadItemsFromSource(replicatedItemsCount, context, allocator, dataForReplicationCommand, reader, networkStats);
-                        ReadAttachmentStreamsFromSource(attachmentStreamCount, context, allocator, dataForReplicationCommand, reader, networkStats);
+                        ReadAttachmentStreamsFromSource(attachmentStreamCount, allocator, dataForReplicationCommand, reader, networkStats);
                     }
 
                     _server.DatabasesLandlord.ForTestingPurposes?.DelayIncomingReplication?.Invoke(_cts.Token);
@@ -575,7 +574,7 @@ namespace Raven.Server.Documents.Replication.Incoming
 
         protected abstract void InvokeOnFailed(Exception exception);
 
-        protected abstract Task HandleBatchAsync(TOperationContext context, IncomingReplicationHandler.DataForReplicationCommand batch, long lastEtag);
+        protected abstract Task HandleBatchAsync(TOperationContext context, DataForReplicationCommand batch, long lastEtag);
 
         protected abstract RavenConfiguration GetConfiguration();
 
@@ -662,6 +661,42 @@ namespace Raven.Server.Documents.Replication.Incoming
                 {
                     // can't do anything about it...
                 }
+            }
+        }
+
+        public class DataForReplicationCommand : IDisposable
+        {
+            internal string SourceDatabaseId { get; set; }
+
+            internal ReplicationBatchItem[] ReplicatedItems { get; set; }
+
+            internal Dictionary<Slice, AttachmentReplicationItem> ReplicatedAttachmentStreams { get; set; }
+
+            public TcpConnectionHeaderMessage.SupportedFeatures SupportedFeatures { get; set; }
+
+            public Logger Logger { get; set; }
+
+            public void Dispose()
+            {
+                if (ReplicatedAttachmentStreams != null)
+                {
+                    foreach (var item in ReplicatedAttachmentStreams.Values)
+                    {
+                        item?.Dispose();
+                    }
+
+                    ReplicatedAttachmentStreams?.Clear();
+                }
+
+                if (ReplicatedItems != null)
+                {
+                    foreach (var item in ReplicatedItems)
+                    {
+                        item?.Dispose();
+                    }
+                }
+
+                ReplicatedItems = null;
             }
         }
     }
