@@ -146,13 +146,18 @@ namespace Sparrow.Server.Compression
                             }
                             else
                             {
+                                // PERF: we are performing masked copy with reverse endianness using tables, with
+                                // the objective of diminishing the amount of instructions necessary for execution.
+                                // The switch implementation requires over 40 instructions including several branches,
+                                // this version is much more succinct and do not need any jump. 
+
                                 // We copy to the symbols buffer the part of the key we will be consuming.
-                                symbolValue = symbolLength switch
-                                {
-                                    3 => (uint)(keyBuffer[0] << 16 | keyBuffer[1] << 8 | keyBuffer[2]),
-                                    2 => (uint)(keyBuffer[0] << 16 | keyBuffer[1] << 8),
-                                    1 => (uint)(keyBuffer[0] << 16),
-                                };
+                                int tableIndex = symbolLength * 4;
+                                symbolValue = (uint)(keyBuffer[_encodingTailTable[tableIndex]] << 16 |
+                                                     keyBuffer[_encodingTailTable[tableIndex + 1]] << 8 |
+                                                     keyBuffer[_encodingTailTable[tableIndex + 2]]);
+
+                                symbolValue &= 0xFFFFFFFF << _encodingTailMaskTable[symbolLength];
                             }
                         }
 
@@ -212,6 +217,16 @@ namespace Sparrow.Server.Compression
                 }
             }
         }
+
+        private static ReadOnlySpan<byte> _encodingTailTable => new byte[]
+        {
+            0, 0, 0, 0,
+            0, 0, 0, 0,
+            0, 1, 0, 0,
+            0, 1, 2, 0
+        };
+
+        private static ReadOnlySpan<byte> _encodingTailMaskTable => new byte[] { 32, 16, 8, 0 };
 
         public unsafe void DecodeBatch<TSampleEnumerator, TOutputEnumerator>(ReadOnlySpan<int> dataBits, in TSampleEnumerator data, Span<int> outputSize, in TOutputEnumerator outputBuffers)
             where TSampleEnumerator : struct, IReadOnlySpanIndexer
@@ -298,13 +313,19 @@ namespace Sparrow.Server.Compression
                         }
                         else
                         {
+                            // PERF: we are performing masked copy with reverse endianness using tables, with
+                            // the objective of diminishing the amount of instructions necessary for execution.
+                            // The switch implementation requires over 40 instructions including several branches,
+                            // this version is much more succinct and do not need any jump. 
+
                             // We copy to the symbols buffer the part of the key we will be consuming.
-                            symbolValue = symbolLength switch
-                            {
-                                3 => (uint)(keyBuffer[0] << 16 | keyBuffer[1] << 8 | keyBuffer[2]), 
-                                2 => (uint)(keyBuffer[0] << 16 | keyBuffer[1] << 8), 
-                                1 => (uint)(keyBuffer[0] << 16), 
-                            };
+                            int tableIndex = symbolLength * 4;
+
+                            symbolValue = (uint)(keyBuffer[_encodingTailTable[tableIndex]] << 16 |
+                                                 keyBuffer[_encodingTailTable[tableIndex + 1]] << 8 |
+                                                 keyBuffer[_encodingTailTable[tableIndex + 2]]);
+
+                            symbolValue &= 0xFFFFFFFF << _encodingTailMaskTable[symbolLength];
                         }
                     }
 
