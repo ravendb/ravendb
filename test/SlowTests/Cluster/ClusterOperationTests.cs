@@ -248,8 +248,6 @@ namespace SlowTests.Cluster
         [Fact]
         public async Task ChangesApiFailOver()
         {
-            DebuggerAttachedTimeout.DisableLongTimespan = true;
-
             using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
             {
                 var db = "ChangesApiFailOver_Test";
