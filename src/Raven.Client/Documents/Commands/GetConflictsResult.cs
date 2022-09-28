@@ -31,6 +31,8 @@ namespace Raven.Client.Documents.Commands
 
         public long TotalResults { get; set; }
 
+        public long SkippedResults { get; set; }
+
         public string ContinuationToken { get; set; }
 
         public class ConflictPreview

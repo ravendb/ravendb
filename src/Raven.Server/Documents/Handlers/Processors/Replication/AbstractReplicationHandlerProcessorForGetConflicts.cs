@@ -42,16 +42,19 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
         {
             await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
             {
+                var skippedResults = 0L;
                 var array = new DynamicJsonArray();
 
                 foreach (var conflict in previewResult.Results)
                 {
+                    skippedResults += conflict.ScannedResults;
                     array.Add(conflict.ToJson());
                 }
 
                 context.Write(writer, new DynamicJsonValue
                 {
                     [nameof(GetConflictsPreviewResult.TotalResults)] = previewResult.TotalResults,
+                    [nameof(GetConflictsPreviewResult.SkippedResults)] = skippedResults,
                     [nameof(GetConflictsPreviewResult.Results)] = array,
                     [nameof(GetConflictsPreviewResult.ContinuationToken)] = previewResult.ContinuationToken
                 });
