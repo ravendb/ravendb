@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
+using System.Runtime.ConstrainedExecution;
 using System.Security.Cryptography.X509Certificates;
 using Sparrow.Logging;
 
@@ -18,6 +20,7 @@ internal static class CertificateLoaderUtil
     {
         Import(f => collection.Import(rawData, password, f), flags);
     }
+
     internal static void Import(X509Certificate2Collection collection, string fileName, string password = null, X509KeyStorageFlags? flags = null)
     {
         Import(f => collection.Import(fileName, password, f), flags);
@@ -46,6 +49,7 @@ internal static class CertificateLoaderUtil
     {
         return CreateCertificate(f => new X509Certificate2(rawData, password, f), flags);
     }
+
     internal static X509Certificate2 CreateCertificate(string fileName, string password = null, X509KeyStorageFlags? flags = null)
     {
         return CreateCertificate(f => new X509Certificate2(fileName, password, f), flags);
@@ -56,20 +60,24 @@ internal static class CertificateLoaderUtil
         DebugAssertDoesntContainKeySet(flag);
         var f = AddUserKeySet(flag);
         Exception exception = null;
-        X509Certificate2 ret;
+        X509Certificate2 certificate;
+
         try
         {
-            ret = creator(f);
+            certificate = creator(f);
         }
         catch(Exception e)
         {
             exception = e;
             f = SwitchUserKeySetWithMachineKeySet(f);
-            ret = creator(f);
+            certificate = creator(f);
         }
         
         LogIfNeeded(nameof(CreateCertificate), f, exception);
-        return ret;
+
+        CertificateCleaner.RegisterForDisposalDuringFinalization(certificate);
+
+        return certificate;
     }
 
     private static X509KeyStorageFlags SwitchUserKeySetWithMachineKeySet(X509KeyStorageFlags f)
@@ -118,4 +126,17 @@ internal static class CertificateLoaderUtil
         }
     }
 
+    private class CertificateCleaner : CriticalFinalizerObject
+    {
+        private X509Certificate2 _certificate;
+        private static readonly ConditionalWeakTable<X509Certificate2, CertificateCleaner> AssociateLifetimes = new();
+
+        public static void RegisterForDisposalDuringFinalization(X509Certificate2 cert)
+        {
+            var cleaner = AssociateLifetimes.GetOrCreateValue(cert);
+            cleaner!._certificate = cert;
+        }
+
+        ~CertificateCleaner() => _certificate?.Dispose();
+    }
 }
