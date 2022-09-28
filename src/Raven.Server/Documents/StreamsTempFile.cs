@@ -1,6 +1,8 @@
 ﻿using System;
 using System.IO;
 using System.Runtime.CompilerServices;
+using Microsoft.Win32.SafeHandles;
+using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Util;
 using Raven.Server.Indexing;
 using Raven.Server.ServerWide;
@@ -73,18 +75,19 @@ namespace Raven.Server.Documents
             }
         }
 
-        private class InnerStream : Stream
+        internal class InnerStream : Stream
         {
             private readonly Stream _stream;
             private readonly StreamsTempFile _parent;
-
             private readonly long _generation;
+            private readonly long _startPosition;
 
             public InnerStream(Stream stream, StreamsTempFile parent)
             {
                 _stream = stream ?? throw new ArgumentNullException(nameof(stream));
                 _parent = parent ?? throw new ArgumentNullException(nameof(parent));
                 _generation = parent.Generation;
+                _startPosition = parent._file.Position;
             }
 
             public override void Flush()
@@ -161,6 +164,20 @@ namespace Raven.Server.Documents
                 if (_parent.Generation != _generation)
                     throw new NotSupportedException($"Invalid generation. Parent: {_parent.Generation}. Current: {_generation}");
             }
+
+            public IDisposable CreateReaderStream(out LimitedStream limitedStream)
+            {
+                var safeFileHandle = new SafeFileHandle(_parent._file.InnerStream.SafeFileHandle.DangerousGetHandle(), false);
+                var stream = new FileStream(safeFileHandle, FileAccess.Read);
+                stream.Seek(_startPosition, SeekOrigin.Begin);
+                limitedStream = new LimitedStream(stream, Length, _startPosition, _startPosition);
+
+                return new DisposableAction(() =>
+                {
+                    stream.Dispose();
+                   safeFileHandle.Dispose();
+                });
+            }
         }
 
         private class InnerPartStream : Stream
@@ -216,7 +233,7 @@ namespace Raven.Server.Documents
 
             public override long Position
             {
-                get => _file.Position + _startPosition;
+                get => _file.Position - _startPosition;
                 set => Seek(value, SeekOrigin.Begin);
             }
         }

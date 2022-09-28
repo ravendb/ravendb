@@ -94,88 +94,76 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
         private void SendDocumentsBatch(TransactionOperationContext context, ReplicationBatch batch, OutgoingReplicationStatsScope stats)
         {
-            try
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "Unify this with the ReplicationDocumentSenderBase.SendDocumentsBatch");
+
+            if (batch.LastSentEtagFromSource > _lastEtag)
+                _lastEtag = _lastSentDocumentEtag = batch.LastSentEtagFromSource;
+
+            if (batch.Items.Count == 0)
             {
-                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "Unify this with the ReplicationDocumentSenderBase.SendDocumentsBatch");
+                SendHeartbeat(batch.LastAcceptedChangeVector ?? _lastAcceptedChangeVectorFromShard);
+                batch.LastAcceptedChangeVector = LastAcceptedChangeVector;
+                return;
+            }
 
-                if (batch.LastSentEtagFromSource > _lastEtag)
-                    _lastEtag = _lastSentDocumentEtag = batch.LastSentEtagFromSource;
+            var sw = Stopwatch.StartNew();
+            var headerJson = new DynamicJsonValue
+            {
+                [nameof(ReplicationMessageHeader.Type)] = ReplicationMessageType.Documents,
+                [nameof(ReplicationMessageHeader.LastDocumentEtag)] = _lastEtag,
+                [nameof(ReplicationMessageHeader.ItemsCount)] = batch.Items.Count,
+                [nameof(ReplicationMessageHeader.AttachmentStreamsCount)] = batch.AttachmentStreams?.Count ?? 0,
+            };
 
-                if (batch.Items.Count == 0)
+            WriteToServer(headerJson);
+
+            stats.RecordLastEtag(_lastEtag);
+
+            foreach (var item in batch.Items)
+            {
+                using (Slice.From(context.Allocator, item.ChangeVector, out var cv))
                 {
-                    SendHeartbeat(batch.LastAcceptedChangeVector ?? _lastAcceptedChangeVectorFromShard);
-                    batch.LastAcceptedChangeVector = LastAcceptedChangeVector;
-                    return;
+                    item.Write(cv, _stream, _tempBuffer, stats);
                 }
 
-                var sw = Stopwatch.StartNew();
-                var headerJson = new DynamicJsonValue
+                _lastEtag = item.Etag;
+            }
+
+            if (batch.AttachmentStreams != null)
+            {
+                foreach (var kvp in batch.AttachmentStreams)
                 {
-                    [nameof(ReplicationMessageHeader.Type)] = ReplicationMessageType.Documents,
-                    [nameof(ReplicationMessageHeader.LastDocumentEtag)] = _lastEtag,
-                    [nameof(ReplicationMessageHeader.ItemsCount)] = batch.Items.Count,
-                    [nameof(ReplicationMessageHeader.AttachmentStreamsCount)] = batch.Attachments?.Count ?? 0,
-                };
-
-                WriteToServer(headerJson);
-
-                stats.RecordLastEtag(_lastEtag);
-
-                foreach (var item in batch.Items)
-                {
-                    using (Slice.From(context.Allocator, item.ChangeVector, out var cv))
+                    using (stats.For(ReplicationOperation.Outgoing.AttachmentRead))
                     {
-                        item.Write(cv, _stream, _tempBuffer, stats);
-                    }
-
-                    _lastEtag = item.Etag;
-                }
-
-                if (batch.Attachments != null)
-                {
-                    foreach (var kvp in batch.Attachments)
-                    {
-                        using (stats.For(ReplicationOperation.Outgoing.AttachmentRead))
+                        var attachment = kvp.Value;
+                        try
                         {
-                            using (var attachment = kvp.Value)
-                            {
-                                try
-                                {
-                                    attachment.WriteStream(_stream, _tempBuffer);
-                                    stats.RecordAttachmentOutput(attachment.Stream.Length);
-                                }
-                                catch
-                                {
-                                    if (Logger.IsInfoEnabled)
-                                        Logger.Info($"Failed to write Attachment stream {FromToString}");
+                            attachment.WriteStream(_stream, _tempBuffer);
+                            stats.RecordAttachmentOutput(attachment.Stream.Length);
+                        }
+                        catch
+                        {
+                            if (Logger.IsInfoEnabled)
+                                Logger.Info($"Failed to write Attachment stream {FromToString}");
 
-                                    throw;
-                                }
-                            }
+                            throw;
                         }
                     }
                 }
-
-                _stream.Flush();
-                sw.Stop();
-
-                var (type, reply) = HandleServerResponse(getFullResponse: true);
-
-                batch.LastAcceptedChangeVector = _lastAcceptedChangeVectorFromShard = reply.DatabaseChangeVector;
-                batch.LastEtagAccepted = _lastSentDocumentEtag = reply.LastEtagAccepted;
-
-                if (type == ReplicationMessageReply.ReplyType.MissingAttachments)
-                {
-                    MissingAttachmentsInLastBatch = true;
-                    MissingAttachmentMessage = reply?.Exception;
-                }
             }
-            finally
+
+            _stream.Flush();
+            sw.Stop();
+
+            var (type, reply) = HandleServerResponse(getFullResponse: true);
+
+            batch.LastAcceptedChangeVector = _lastAcceptedChangeVectorFromShard = reply.DatabaseChangeVector;
+            batch.LastEtagAccepted = _lastSentDocumentEtag = reply.LastEtagAccepted;
+
+            if (type == ReplicationMessageReply.ReplyType.MissingAttachments)
             {
-                foreach (var item in batch.Items)
-                {
-                    item.Dispose();
-                }
+                MissingAttachmentsInLastBatch = true;
+                MissingAttachmentMessage = reply?.Exception;
             }
         }
 

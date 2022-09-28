@@ -13,6 +13,7 @@ using Raven.Server.Config.Settings;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Client.Attachments;
+using Sparrow.Global;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -446,6 +447,489 @@ namespace SlowTests.Server.Replication
                                 Assert.Equal(3, buffer[2]);
                             }
                         }
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public async Task ReplicationShouldSendMissingAttachmentsFromNonShardedToShardedDatabase2()
+        {
+            using (var source = GetDocumentStore())
+            using (var destination = Sharding.GetDocumentStore())
+            {
+                await SetupReplicationAsync(source, destination);
+
+                var buffer = new byte[3];
+                for (int i = 0; i < 3; i++)
+                    buffer[i] = (byte)i;
+
+                int j = 0;
+                while (await Sharding.AllShardHaveDocsAsync(Server, destination.Database) == false)
+                {
+                    using (var session = source.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(new User { Name = "Foo" }, $"users/{j}");
+                        await session.SaveChangesAsync();
+                        j++;
+                    }
+                }
+
+                var docs = await Sharding.GetOneDocIdForEachShardAsync(Server, destination.Database);
+
+                using (var session = source.OpenAsyncSession())
+                using (var fooStream = new MemoryStream(buffer))
+                {
+                    foreach (var kvp in docs)
+                    {
+                        var docId = kvp.Value;
+
+                        fooStream.Seek(0, SeekOrigin.Begin);
+                        session.Advanced.Attachments.Store(docId, "foo.png", fooStream, "image/png");
+                        await session.SaveChangesAsync();
+                    }
+                }
+
+                foreach (var kvp in docs)
+                {
+                    var docId = kvp.Value;
+                    Assert.NotNull(WaitForDocumentWithAttachmentToReplicate<User>(destination, docId, "foo.png", 30 * 1000));
+                }
+
+                using (var session = destination.OpenAsyncSession())
+                {
+                    foreach (var kvp in docs)
+                    {
+                        var docId = kvp.Value;
+                        session.Delete(docId);
+                        await session.SaveChangesAsync();
+                    }
+                }
+
+                for (int i = 0; i < 3; i++)
+                    buffer[i] += (byte)i;
+
+                using (var session = source.OpenAsyncSession())
+                using (var fooStream2 = new MemoryStream(buffer))
+                {
+                    foreach (var kvp in docs)
+                    {
+                        var docId = kvp.Value;
+
+                        fooStream2.Seek(0, SeekOrigin.Begin);
+                        session.Advanced.Attachments.Store(docId, "foo2.png", fooStream2, "image/png");
+                        await session.SaveChangesAsync();
+
+                        Assert.NotNull(WaitForDocumentWithAttachmentToReplicate<User>(destination, docId, "foo2.png", 30 * 1000));
+                    }
+                }
+
+                buffer = new byte[3];
+                using (var session = destination.OpenAsyncSession())
+                {
+                    foreach (var kvp in docs)
+                    {
+                        var docId = kvp.Value;
+                        var user = await session.LoadAsync<User>(docId);
+                        var attachments = session.Advanced.Attachments.GetNames(user);
+                        Assert.Equal(2, attachments.Length);
+                        foreach (var name in attachments)
+                        {
+                            using (var attachment = await session.Advanced.Attachments.GetAsync(user, name.Name))
+                            {
+                                Assert.NotNull(attachment);
+                                Assert.Equal(3, await attachment.Stream.ReadAsync(buffer, 0, 3));
+                                if (attachment.Details.Name == "foo.png")
+                                {
+                                    Assert.Equal(0, buffer[0]);
+                                    Assert.Equal(1, buffer[1]);
+                                    Assert.Equal(2, buffer[2]);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        [Theory]
+        [InlineData("users/1")]
+        [InlineData("users/1-A")]
+        [InlineData("FoObAr")]
+        public async Task ReplicationShouldSendMissingAttachmentsFromNonShardedToShardedDatabase_LargeAttachments(string documentId)
+        {
+            using (var source = GetDocumentStore())
+            using (var destination = Sharding.GetDocumentStore())
+            {
+                await SetupReplicationAsync(source, destination);
+
+                var buffer = new byte[128 * Constants.Size.Kilobyte + 1];
+                for (int i = 0; i < 3; i++)
+                    buffer[i] = (byte)i;
+
+                using (var session = source.OpenAsyncSession())
+                using (var fooStream = new MemoryStream(buffer))
+                {
+                    await session.StoreAsync(new User { Name = "Foo" }, documentId);
+                    session.Advanced.Attachments.Store(documentId, "foo.png", fooStream, "image/png");
+                    await session.SaveChangesAsync();
+                }
+
+                Assert.NotNull(WaitForDocumentToReplicate<User>(destination, documentId, 30 * 1000));
+
+                using (var session = destination.OpenAsyncSession())
+                {
+                    session.Delete(documentId);
+                    await session.SaveChangesAsync();
+                }
+
+                for (int i = 0; i < 3; i++)
+                    buffer[i] += (byte)i;
+
+                using (var session = source.OpenAsyncSession())
+                using (var fooStream2 = new MemoryStream(buffer))
+                {
+                    session.Advanced.Attachments.Store(documentId, "foo2.png", fooStream2, "image/png");
+                    await session.SaveChangesAsync();
+                }
+
+                Assert.NotNull(WaitForDocumentWithAttachmentToReplicate<User>(destination, documentId, "foo2.png", 30 * 1000));
+
+                buffer = new byte[3];
+                using (var session = destination.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>(documentId);
+                    var attachments = session.Advanced.Attachments.GetNames(user);
+                    Assert.Equal(2, attachments.Length);
+                    foreach (var name in attachments)
+                    {
+                        using (var attachment = await session.Advanced.Attachments.GetAsync(user, name.Name))
+                        {
+                            Assert.NotNull(attachment);
+                            Assert.Equal(3, await attachment.Stream.ReadAsync(buffer, 0, 3));
+                            if (attachment.Details.Name == "foo.png")
+                            {
+                                Assert.Equal(0, buffer[0]);
+                                Assert.Equal(1, buffer[1]);
+                                Assert.Equal(2, buffer[2]);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public async Task ReplicationShouldSendMissingAttachmentsFromNonShardedToShardedDatabase_LargeAttachments2()
+        {
+            using (var source = GetDocumentStore())
+            using (var destination = Sharding.GetDocumentStore())
+            {
+                await SetupReplicationAsync(source, destination);
+
+                var buffer = new byte[128 * Constants.Size.Kilobyte + 1];
+                for (int i = 0; i < 3; i++)
+                    buffer[i] = (byte)i;
+
+                int j = 0;
+                while (await Sharding.AllShardHaveDocsAsync(Server, destination.Database) == false)
+                {
+                    using (var session = source.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(new User { Name = "Foo" }, $"users/{j}");
+                        await session.SaveChangesAsync();
+                        j++;
+                    }
+                }
+
+                var docs = await Sharding.GetOneDocIdForEachShardAsync(Server, destination.Database);
+
+                using (var session = source.OpenAsyncSession())
+                using (var fooStream = new MemoryStream(buffer))
+                {
+                    foreach (var kvp in docs)
+                    {
+                        var docId = kvp.Value;
+
+                        fooStream.Seek(0, SeekOrigin.Begin);
+                        session.Advanced.Attachments.Store(docId, "foo.png", fooStream, "image/png");
+                        await session.SaveChangesAsync();
+
+                        Assert.NotNull(WaitForDocumentWithAttachmentToReplicate<User>(destination, docId, "foo.png", 30 * 1000));
+                    }
+                }
+
+                using (var session = destination.OpenAsyncSession())
+                {
+                    foreach (var kvp in docs)
+                    {
+                        var docId = kvp.Value;
+                        session.Delete(docId);
+                        await session.SaveChangesAsync();
+                    }
+                }
+
+                for (int i = 0; i < 3; i++)
+                    buffer[i] += (byte)i;
+
+                using (var session = source.OpenAsyncSession())
+                using (var fooStream2 = new MemoryStream(buffer))
+                {
+                    foreach (var kvp in docs)
+                    {
+                        var docId = kvp.Value;
+
+                        fooStream2.Seek(0, SeekOrigin.Begin);
+                        session.Advanced.Attachments.Store(docId, "foo2.png", fooStream2, "image/png");
+                        await session.SaveChangesAsync();
+
+                        Assert.NotNull(WaitForDocumentWithAttachmentToReplicate<User>(destination, docId, "foo2.png", 30 * 1000));
+                    }
+                }
+
+                buffer = new byte[3];
+                using (var session = destination.OpenAsyncSession())
+                {
+                    foreach (var kvp in docs)
+                    {
+                        var docId = kvp.Value;
+                        var user = await session.LoadAsync<User>(docId);
+                        var attachments = session.Advanced.Attachments.GetNames(user);
+                        Assert.Equal(2, attachments.Length);
+                        foreach (var name in attachments)
+                        {
+                            using (var attachment = await session.Advanced.Attachments.GetAsync(user, name.Name))
+                            {
+                                Assert.NotNull(attachment);
+                                Assert.Equal(3, await attachment.Stream.ReadAsync(buffer, 0, 3));
+                                if (attachment.Details.Name == "foo.png")
+                                {
+                                    Assert.Equal(0, buffer[0]);
+                                    Assert.Equal(1, buffer[1]);
+                                    Assert.Equal(2, buffer[2]);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public async Task ReplicationShouldSendMissingAttachmentsFromNonShardedToShardedDatabase_LargeAttachments3()
+        {
+            using (var source = GetDocumentStore())
+            using (var destination = Sharding.GetDocumentStore())
+            {
+                await SetupReplicationAsync(source, destination);
+
+                var buffer = new byte[128 * Constants.Size.Kilobyte + 1];
+                for (int i = 0; i < 3; i++)
+                    buffer[i] = (byte)i;
+
+                int j = 0;
+                while (await Sharding.AllShardHaveDocsAsync(Server, destination.Database) == false)
+                {
+                    using (var session = source.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(new User { Name = "Foo" }, $"users/{j}");
+                        await session.SaveChangesAsync();
+                        j++;
+                    }
+                }
+
+                var docs = await Sharding.GetOneDocIdForEachShardAsync(Server, destination.Database);
+
+                using (var session = source.OpenAsyncSession())
+                using (var fooStream = new MemoryStream(buffer))
+                {
+                    var first = docs.First();
+                    session.Advanced.Attachments.Store(first.Value, "foo.png", fooStream, "image/png");
+
+                    foreach (var kvp in docs)
+                    {
+                        if (kvp.Equals(first))
+                            continue;
+
+                        var docId = kvp.Value;
+                        fooStream.Seek(0, SeekOrigin.Begin);
+                        session.Advanced.Attachments.Copy(first.Value, "foo.png", docId, "foo.png");
+                    }
+                    await session.SaveChangesAsync();
+
+                    foreach (var kvp in docs)
+                    {
+                        var docId = kvp.Value;
+                        Assert.NotNull(WaitForDocumentToReplicate<User>(destination, docId, 30 * 1000));
+                    }
+                }
+
+                using (var session = destination.OpenAsyncSession())
+                {
+                    foreach (var kvp in docs)
+                    {
+                        var docId = kvp.Value;
+                        session.Delete(docId);
+                        await session.SaveChangesAsync();
+                    }
+                }
+
+                for (int i = 0; i < 3; i++)
+                    buffer[i] += (byte)i;
+
+                using (var session = source.OpenAsyncSession())
+                using (var fooStream2 = new MemoryStream(buffer))
+                {
+                    foreach (var kvp in docs)
+                    {
+                        var docId = kvp.Value;
+
+                        fooStream2.Seek(0, SeekOrigin.Begin);
+                        session.Advanced.Attachments.Store(docId, "foo2.png", fooStream2, "image/png");
+                        await session.SaveChangesAsync();
+
+                        Assert.NotNull(WaitForDocumentWithAttachmentToReplicate<User>(destination, docId, "foo2.png", 30 * 1000));
+                    }
+                }
+
+                buffer = new byte[3];
+                using (var session = destination.OpenAsyncSession())
+                {
+                    foreach (var kvp in docs)
+                    {
+                        var docId = kvp.Value;
+                        var user = await session.LoadAsync<User>(docId);
+                        var attachments = session.Advanced.Attachments.GetNames(user);
+                        Assert.Equal(2, attachments.Length);
+                        foreach (var name in attachments)
+                        {
+                            using (var attachment = await session.Advanced.Attachments.GetAsync(user, name.Name))
+                            {
+                                Assert.NotNull(attachment);
+                                Assert.Equal(3, await attachment.Stream.ReadAsync(buffer, 0, 3));
+                                if (attachment.Details.Name == "foo.png")
+                                {
+                                    Assert.Equal(0, buffer[0]);
+                                    Assert.Equal(1, buffer[1]);
+                                    Assert.Equal(2, buffer[2]);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public async Task ReplicationShouldSendMissingAttachmentsFromNonShardedToShardedDatabase_LargeAttachments_Encrypted()
+        {
+           
+            var databaseName = Encryption.SetupEncryptedDatabase(out var cert, out var masterKey);
+            var databaseName2 = Encryption.SetupEncryptedDatabase(out var cert2, out var masterKey2);
+
+            using (var source = GetDocumentStore(new Options
+            {
+                AdminCertificate = cert.ServerCertificate.Value,
+                ClientCertificate = cert.ServerCertificate.Value,
+                ModifyDatabaseName = _ => databaseName,
+                ModifyDatabaseRecord = r => r.Encrypted = true
+            }))
+            using (var destination = Sharding.GetDocumentStore(new Options
+            {
+                AdminCertificate = cert2.ServerCertificate.Value,
+                ClientCertificate = cert2.ServerCertificate.Value,
+                ModifyDatabaseName = _ => databaseName2,
+                ModifyDatabaseRecord = r => r.Encrypted = true
+            }))
+            {
+                await SetupReplicationAsync(source, destination);
+
+                var buffer = new byte[128 * Constants.Size.Kilobyte + 1];
+                for (int i = 0; i < 3; i++)
+                    buffer[i] = (byte)i;
+
+                int j = 0;
+                while (await Sharding.AllShardHaveDocsAsync(Server, destination.Database) == false)
+                {
+                    using (var session = source.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(new User { Name = "Foo" }, $"users/{j}");
+                        await session.SaveChangesAsync();
+                        j++;
+                    }
+                }
+
+                var docs = await Sharding.GetOneDocIdForEachShardAsync(Server, destination.Database);
+
+                using (var session = source.OpenAsyncSession())
+                using (var fooStream = new MemoryStream(buffer))
+                {
+                    foreach (var kvp in docs)
+                    {
+                        var docId = kvp.Value;
+
+                        fooStream.Seek(0, SeekOrigin.Begin);
+                        session.Advanced.Attachments.Store(docId, "foo.png", fooStream, "image/png");
+                        await session.SaveChangesAsync();
+
+                        Assert.NotNull(WaitForDocumentToReplicate<User>(destination, docId, 30 * 1000));
+                    }
+                }
+
+                WaitForUserToContinueTheTest(source, clientCert: cert.ServerCertificate.Value);
+                using (var session = destination.OpenAsyncSession())
+                {
+                    foreach (var kvp in docs)
+                    {
+                        var docId = kvp.Value;
+                        session.Delete(docId);
+                        await session.SaveChangesAsync();
+                    }
+                }
+
+                for (int i = 0; i < 3; i++)
+                    buffer[i] += (byte)i;
+
+                using (var session = source.OpenAsyncSession())
+                using (var fooStream2 = new MemoryStream(buffer))
+                {
+                    foreach (var kvp in docs)
+                    {
+                        var docId = kvp.Value;
+
+                        fooStream2.Seek(0, SeekOrigin.Begin);
+                        session.Advanced.Attachments.Store(docId, "foo2.png", fooStream2, "image/png");
+                        await session.SaveChangesAsync();
+
+                        Assert.NotNull(WaitForDocumentWithAttachmentToReplicate<User>(destination, docId, "foo2.png", 30 * 1000));
+                    }
+                }
+
+                WaitForUserToContinueTheTest(destination, clientCert: cert2.ServerCertificate.Value);
+                using (var session = destination.OpenAsyncSession())
+                {
+                    foreach (var kvp in docs)
+                    {
+                        var docId = kvp.Value;
+                        var user = await session.LoadAsync<User>(docId);
+                        var attachments = session.Advanced.Attachments.GetNames(user);
+                        Assert.Equal(2, attachments.Length);
+
+                        //TODO: make it work
+                        //foreach (var name in attachments)
+                        //{
+                        //    using (var attachment = await session.Advanced.Attachments.GetAsync(user, name.Name))
+                        //    {
+                        //        Assert.NotNull(attachment);
+                        //        Assert.Equal(3, await attachment.Stream.ReadAsync(buffer, 0, 3));
+                        //        if (attachment.Details.Name == "foo.png")
+                        //        {
+                        //            Assert.Equal(0, buffer[0]);
+                        //            Assert.Equal(1, buffer[1]);
+                        //            Assert.Equal(2, buffer[2]);
+                        //        }
+                        //    }
+                        //}
                     }
                 }
             }
