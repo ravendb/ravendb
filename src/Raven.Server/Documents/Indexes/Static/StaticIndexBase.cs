@@ -415,7 +415,7 @@ namespace Raven.Server.Documents.Indexes.Static
             };
         }
 
-        protected IEnumerable<object> CoraxCreateField(CurrentIndexingScope scope, string name, object value, CreateFieldOptions options)
+        protected IEnumerable<CoraxDynamicItem> CoraxCreateField(CurrentIndexingScope scope, string name, object value, CreateFieldOptions options)
         {
             options = options ?? CreateFieldOptions.Default;
 
@@ -433,6 +433,9 @@ namespace Raven.Server.Documents.Indexes.Static
             if (scope.DynamicFields == null)
                 scope.DynamicFields = new Dictionary<string, FieldIndexing>();
 
+            if (scope.DynamicFields.ContainsKey(name) == false)
+                scope.CreatedFieldsCount++;
+            
             scope.DynamicFields[name] = field.Indexing;
             
             var result = new List<CoraxDynamicItem>();
