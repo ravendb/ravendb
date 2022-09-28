@@ -81,30 +81,39 @@ public partial class IndexSearcher
             if (mode.HasFlag(Constants.Search.SearchMatchOptions.StartsWith | Constants.Search.SearchMatchOptions.EndsWith))
                 mode = Constants.Search.SearchMatchOptions.Contains;
 
-            var termForTree = encoded.Slice(tokens[0].Offset, (int)tokens[0].Length);
+            int termStart = tokens[0].Offset;
+            int termLength = (int)tokens[0].Length;
             if (manuallyCutWildcards)
             {
                 if (mode != Constants.Search.SearchMatchOptions.TermMatch)
                 {
-                    if (mode is Constants.Search.SearchMatchOptions.Contains && termForTree.Length <= 2)
+                    if (mode is Constants.Search.SearchMatchOptions.Contains && termLength <= 2)
                         throw new InvalidDataException(
                             "You are looking for an empty term. Search doesn't support it. If you want to find empty strings, you have to write an equal inside WHERE clause.");
-                    else if (termForTree.Length == 1)
+                    if (termLength == 1)
                         throw new InvalidDataException("You are looking for all matches. To retrieve all matches you have to write `true` in WHERE clause.");
                 }
 
-                termForTree = mode switch
+                (int startIncrement, int lengthIncrement) = mode switch
                 {
-                    Constants.Search.SearchMatchOptions.StartsWith => termForTree.Slice(1),
-                    Constants.Search.SearchMatchOptions.EndsWith => termForTree.Slice(0, termForTree.Length - 1),
-                    Constants.Search.SearchMatchOptions.Contains => termForTree.Slice(1, termForTree.Length - 2),
-                    Constants.Search.SearchMatchOptions.TermMatch => termForTree,
+                    Constants.Search.SearchMatchOptions.StartsWith => (1,-1),
+                    Constants.Search.SearchMatchOptions.EndsWith => (0,-1),
+                    Constants.Search.SearchMatchOptions.Contains => (1,-3),
+                    Constants.Search.SearchMatchOptions.TermMatch => (0,0),
                     _ => throw new InvalidExpressionException("Unknown flag inside Search match.")
                 };
+
+                termStart += startIncrement;
+                termLength += termLength;
             }
 
-            Slice.From(_transaction.Allocator, termForTree, ByteStringType.Immutable, out var encodedString);
-            BuildExpression(Allocator, mode, encodedString);
+            _transaction.Allocator.Allocate(termLength, out ByteString encodedString);
+            unsafe
+            {
+                Unsafe.CopyBlockUnaligned(ref Unsafe.AsRef<byte>(encodedString.Ptr), ref encoded[termStart], (uint)termLength);
+            }
+
+            BuildExpression(Allocator, mode, new Slice(encodedString));
         }
 
         return typeof(TScoreFunction) == typeof(NullScoreFunction)

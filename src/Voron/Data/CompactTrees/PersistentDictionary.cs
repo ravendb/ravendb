@@ -193,30 +193,8 @@ namespace Voron.Data.CompactTrees
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Encode(ReadOnlySpan<byte> key, ref Span<byte> encodedKey)
         {
-            ReadOnlySpan<byte> UnlikelyZeroPadKey(ReadOnlySpan<byte> readOnlySpan)
-            {
-                if (_tempBuffer == null || _tempBuffer.Length < readOnlySpan.Length + 1)
-                {
-                    if (_tempBuffer != null)
-                        ArrayPool<byte>.Shared.Return(_tempBuffer);
-                    _tempBuffer = ArrayPool<byte>.Shared.Rent(readOnlySpan.Length + 1);
-                }
-
-                var newKey = _tempBuffer.AsSpan();
-                readOnlySpan.CopyTo(newKey);
-                newKey[readOnlySpan.Length] = 0;
-                readOnlySpan = newKey.Slice(0, readOnlySpan.Length + 1);
-                return readOnlySpan;
-            }
-
             if (key.Length == 0)
                 throw new ArgumentException("Cannot encode an empty key!", nameof(key));
-
-            // PERF: It may happen that the caller would not include a zero pad. We are handling this situation
-            // but it costs pretty much. If this Unlikely gets triggered too much, we need to figure out
-            // what to do to avoid it to happen. 
-            if (key[^1] != 0)
-                key = UnlikelyZeroPadKey(key);
 
             int bitsLength = _encoder.Encode(key, encodedKey);
             int bytesLength = Math.DivRem(bitsLength, 8, out var remainder);
