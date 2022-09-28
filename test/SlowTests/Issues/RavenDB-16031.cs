@@ -4,6 +4,7 @@ using FastTests;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -11,10 +12,12 @@ namespace SlowTests.Issues
 {
     public class RavenDB_16031 : RavenTestBase
     {
-        [Fact]
-        public void ShouldWork()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-19402")]
+        public void ShouldWork(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new Index_TestGrouping4().Execute(store);
                 using (var session = store.OpenSession())
@@ -25,7 +28,6 @@ namespace SlowTests.Issues
                     }, "accounts/100-A");
                     session.SaveChanges();
                 }
-                WaitForUserToContinueTheTest(store);
                 Indexes.WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {

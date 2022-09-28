@@ -6,6 +6,7 @@ using Orders;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes.Static;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,12 +18,18 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task IndexSpecificSettingShouldBeRespected()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenExplicitData(SearchEngineMode = RavenSearchEngineMode.All)]   
+        public async Task IndexSpecificSettingShouldBeRespected(RavenTestParameters parameters)
         {
             var initialMaxStepsForScript = 10;
 
-            using (var store = GetDocumentStore(new Options { ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Indexing.MaxStepsForScript)] = initialMaxStepsForScript.ToString() }))
+            using (var store = GetDocumentStore(new Options { ModifyDatabaseRecord = record =>
+                       {
+                           record.Settings[RavenConfiguration.GetKey(x => x.Indexing.MaxStepsForScript)] = initialMaxStepsForScript.ToString();
+                           record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = parameters.SearchEngine.ToString();
+                       }
+                   }))
             {
                 var index = new MyJSIndex(maxStepsForScript: null);
                 index.Execute(store);

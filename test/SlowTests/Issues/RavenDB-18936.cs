@@ -1,8 +1,10 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,10 +16,11 @@ public class RavenDB_18936 : RavenTestBase
     {
     }
     
-    [Fact]
-    public void CanCreateDynamicFieldsInsideMapJsIndex()
+    [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public void CanCreateDynamicFieldsInsideMapJsIndex(Options options)
     {
-        using var store = GetDocumentStore();
+        using var store = GetDocumentStore(options);
 
         var index = new CreateFieldInsideMapJavaScript();
         index.Execute(store);
@@ -43,7 +46,6 @@ public class RavenDB_18936 : RavenTestBase
         {
             var items = s.Advanced.DocumentQuery<Item, CreateFieldInsideMapJavaScript>()
                 .WaitForNonStaleResults()
-                .OrderByDescending("T1")
                 .ToList();
             Assert.Equal(2, items.Count);
             AssertTerm(store, index.IndexName, "T1", new[] {"10.99", "11.99"});
@@ -65,10 +67,11 @@ public class RavenDB_18936 : RavenTestBase
         }
     }
 
-    [Fact]
-    public void CanCreateDynamicFieldFromArray()
+    [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public void CanCreateDynamicFieldFromArray(Options options)
     {
-        using var store = GetDocumentStore();
+        using var store = GetDocumentStore(options);
         {
             using var session = store.OpenSession();
             session.Store(new Item()
@@ -87,10 +90,11 @@ public class RavenDB_18936 : RavenTestBase
         WaitForUserToContinueTheTest(store);
     }
     
-    [Fact]
-    public void SpatialFieldsCreatedInsideMap()
+    [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public void SpatialFieldsCreatedInsideMap(Options options)
     {
-        using var store = GetDocumentStore();
+        using var store = GetDocumentStore(options);
         {
             using var session = store.OpenSession();
             session.Store(new GeoDocument("Maciej", 

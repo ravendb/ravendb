@@ -39,7 +39,7 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void Can_Use_Dictionary_Created_Field_In_Lucene_Search(Options options)
         {
             using (var documentStore = GetDocumentStore(options))
@@ -67,7 +67,7 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void Can_Use_Dictionary_Created_Field_In_Linq_Where(Options options)
         {
             using (var documentStore = GetDocumentStore(options))
@@ -96,9 +96,7 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
-
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
         public void Can_Use_Dictionary_Created_Field_In_Linq_Search(Options options)
         {
             using (var documentStore = GetDocumentStore(options))
@@ -127,8 +125,7 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void Can_Use_Dictionary_Created_Field_In_Linq_Search_Workaround(Options options)
         {
             using (var documentStore = GetDocumentStore(options))

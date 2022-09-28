@@ -16,10 +16,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void Can_create_index_using_crete_field_on_dates()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Can_create_index_using_crete_field_on_dates(Options options)
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
             store.Maintenance.Send(new CreateSampleDataOperation());
             store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
             {
