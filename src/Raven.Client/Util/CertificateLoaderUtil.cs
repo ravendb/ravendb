@@ -18,28 +18,19 @@ internal static class CertificateLoaderUtil
 
     public static void Import(X509Certificate2Collection collection, byte[] rawData, string password = null, X509KeyStorageFlags? flags = null)
     {
-        Import(f => collection.Import(rawData, password, f), flags);
-    }
-
-    internal static void Import(X509Certificate2Collection collection, string fileName, string password = null, X509KeyStorageFlags? flags = null)
-    {
-        Import(f => collection.Import(fileName, password, f), flags);
-    }
-    
-    private static void Import(Action<X509KeyStorageFlags> importer, X509KeyStorageFlags? flag)
-    {
-        DebugAssertDoesntContainKeySet(flag);
-        var f = AddUserKeySet(flag);
+        DebugAssertDoesntContainKeySet(flags);
+        var f = AddUserKeySet(flags);
         Exception exception = null;
+
         try
         {
-            importer(f);
+            collection.Import(rawData, password, f);
         }
         catch (Exception e)
         {
             exception = e;
             f = SwitchUserKeySetWithMachineKeySet(f);
-            importer(f);
+            collection.Import(rawData, password, f);
         }
 
         LogIfNeeded(nameof(Import), f, exception);
