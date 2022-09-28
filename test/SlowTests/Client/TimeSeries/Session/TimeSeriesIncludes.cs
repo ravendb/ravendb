@@ -1775,7 +1775,7 @@ namespace SlowTests.Client.TimeSeries.Session
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
         public void QueryIncludeTimeSeriesOfRelatedDocument(Options options)
         {
             using (var store = GetDocumentStore(options))

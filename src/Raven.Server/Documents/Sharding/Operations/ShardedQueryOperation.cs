@@ -40,7 +40,8 @@ public class ShardedQueryOperation : IShardedReadOperation<QueryResult, ShardedQ
 
     RavenCommand<QueryResult> IShardedOperation<QueryResult, ShardedReadResult<ShardedQueryResult>>.CreateCommandForShard(int shardNumber) => _queryCommands[shardNumber];
 
-    public HashSet<string> MissingIncludes { get; private set; }
+    public HashSet<string> MissingDocumentIncludes { get; private set; }
+    public HashSet<string> MissingTimeSeriesIncludes { get; private set; }
 
     public string CombineCommandsEtag(Memory<RavenCommand<QueryResult>> commands)
     {
@@ -178,7 +179,7 @@ public class ShardedQueryOperation : IShardedReadOperation<QueryResult, ShardedQ
             }
             else
             {
-                (MissingIncludes ??= new HashSet<string>()).Add(id);
+                (MissingDocumentIncludes ??= new HashSet<string>()).Add(id);
             }
         }
     }

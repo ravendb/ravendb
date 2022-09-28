@@ -4,7 +4,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Operations.Counters;
-using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Spatial;
@@ -99,14 +98,12 @@ namespace Raven.Server.Documents.Queries
 
         public abstract ITimeSeriesIncludes GetTimeSeriesIncludes();
 
-        public abstract void AddCompareExchangeValueIncludes(IIncludeCompareExchangeValues values);
+        public abstract void AddCompareExchangeValueIncludes(ICompareExchangeValueIncludes values);
 
         public abstract Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> GetCompareExchangeValueIncludes();
 
-        public abstract void AddRevisionIncludes(IIncludeRevisions revisions);
+        public abstract void AddRevisionIncludes(IRevisionIncludes revisions);
        
-        public abstract Dictionary<string, Document> GetRevisionIncludesByChangeVector();
-
-        public abstract Dictionary<string, Dictionary<DateTime, Document>> GetRevisionIncludesIdByDateTime();
+        public abstract IRevisionIncludes GetRevisionIncludes();
     }
 }

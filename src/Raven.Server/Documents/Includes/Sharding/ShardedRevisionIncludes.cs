@@ -1,63 +1,58 @@
 ﻿using System.Collections.Generic;
 using System;
+using System.Threading;
+using System.Threading.Tasks;
 using Sparrow.Json;
 using Raven.Client.Documents.Operations.Revisions;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Includes.Sharding;
 
-public class ShardedRevisionIncludes : IIncludeRevisions
+public class ShardedRevisionIncludes : IRevisionIncludes
 {
-    public Dictionary<string, Document> RevisionsChangeVectorResults { get; private set; }
+    private Dictionary<string, List<BlittableJsonReaderObject>> _revisionsByDocumentId;
 
-    public Dictionary<string, Dictionary<DateTime, Document>> IdByRevisionsByDateTimeResults { get; private set; }
+    public int Count => _revisionsByDocumentId?.Count ?? 0;
 
     public void AddResults(BlittableJsonReaderArray results, JsonOperationContext contextToClone)
     {
-        if (results == null)
+        if (results == null || results.Length == 0)
             return;
+
+        _revisionsByDocumentId = new Dictionary<string, List<BlittableJsonReaderObject>>(StringComparer.OrdinalIgnoreCase);
 
         for (var i = 0; i < results.Length; i++)
         {
-            var revisionsJson = results.GetByIndex<BlittableJsonReaderObject>(i);
+            var json = results.GetByIndex<BlittableJsonReaderObject>(i);
 
-            var revision = CreateRevisionFrom(revisionsJson, contextToClone, out var before);
+            if (json.TryGet(nameof(RevisionIncludeResult.Id), out string docId) == false)
+                throw new InvalidOperationException($"Could not find revision's {nameof(RevisionIncludeResult.Id)}");
 
-            if (before != null)
-            {
-                IdByRevisionsByDateTimeResults ??= new Dictionary<string, Dictionary<DateTime, Document>>(StringComparer.OrdinalIgnoreCase);
+            if (_revisionsByDocumentId.TryGetValue(docId, out var revisions) == false)
+                _revisionsByDocumentId[docId] = revisions = new List<BlittableJsonReaderObject>();
 
-                if (IdByRevisionsByDateTimeResults.TryGetValue(revision.Id, out var revisionsByDateTime) == false)
-                    IdByRevisionsByDateTimeResults[revision.Id] = revisionsByDateTime = new Dictionary<DateTime, Document>();
+            revisions.Add(json.Clone(contextToClone));
 
-                revisionsByDateTime[before.Value] = revision;
-            }
-            else
-            {
-                RevisionsChangeVectorResults ??= new Dictionary<string, Document>(StringComparer.OrdinalIgnoreCase);
-
-                RevisionsChangeVectorResults[revision.ChangeVector] = revision;
-            }
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Arek, DevelopmentHelper.Severity.Normal, "We can get duplicated revision includes when resharding is running. How to deal with that?");
         }
     }
 
-    private static Document CreateRevisionFrom(BlittableJsonReaderObject json, JsonOperationContext context, out DateTime? before)
+    public async ValueTask WriteIncludesAsync(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, CancellationToken token)
     {
-        if (json.TryGet(nameof(RevisionIncludeResult.Id), out LazyStringValue id) == false)
-            throw new InvalidOperationException($"Could not find revision's {nameof(RevisionIncludeResult.Id)}");
+        var first = true;
 
-        if (json.TryGet(nameof(RevisionIncludeResult.ChangeVector), out string changeVector) == false)
-            throw new InvalidOperationException($"Could not find revision's {nameof(RevisionIncludeResult.ChangeVector)}");
-
-        if (json.TryGet(nameof(RevisionIncludeResult.Revision), out BlittableJsonReaderObject revision) == false)
-            throw new InvalidOperationException($"Could not find revision's body");
-
-        json.TryGet(nameof(RevisionIncludeResult.Before), out before);
-
-        return new Document
+        foreach (var kvp in _revisionsByDocumentId)
         {
-            Id = id.Clone(context), 
-            ChangeVector = changeVector,
-            Data = revision.Clone(context)
-        };
+            foreach (var revision in kvp.Value)
+            {
+                if (first == false)
+                    writer.WriteComma();
+                first = false;
+
+                writer.WriteObject(revision);
+
+                await writer.MaybeFlushAsync(token);
+            }
+        }
     }
 }

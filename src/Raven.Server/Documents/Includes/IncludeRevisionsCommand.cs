@@ -1,5 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+using Raven.Client.Documents.Operations.Revisions;
 using Raven.Server.Documents.Queries.Revisions;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
@@ -7,7 +10,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Includes
 {
-    public class IncludeRevisionsCommand : IIncludeRevisions
+    public class IncludeRevisionsCommand : IRevisionIncludes
     {
         private readonly DocumentDatabase _database;
         private readonly DocumentsOperationContext _context;
@@ -124,6 +127,70 @@ namespace Raven.Server.Documents.Includes
             IdByRevisionsByDateTimeResults[documentId] = new Dictionary<DateTime, Document> (){{dateTime.Value, doc}};
         }
 
-       
+
+        public async ValueTask WriteIncludesAsync(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, CancellationToken token)
+        {
+            var first = true;
+            if (IdByRevisionsByDateTimeResults != null)
+            {
+                foreach ((string id, var dateTimeToDictionary) in IdByRevisionsByDateTimeResults)
+                {
+                    if (first == false)
+                        writer.WriteComma();
+                    first = false;
+
+                    foreach ((DateTime dateTime, Document doc) in dateTimeToDictionary)
+                    {
+                        writer.WriteStartObject();
+
+                        writer.WritePropertyName(nameof(RevisionIncludeResult.Id));
+                        writer.WriteString(id);
+                        writer.WriteComma();
+
+                        writer.WritePropertyName(nameof(RevisionIncludeResult.ChangeVector));
+                        writer.WriteString(doc.ChangeVector);
+                        writer.WriteComma();
+
+                        writer.WritePropertyName(nameof(RevisionIncludeResult.Before));
+                        writer.WriteDateTime(dateTime, true);
+                        writer.WriteComma();
+
+                        writer.WritePropertyName(nameof(RevisionIncludeResult.Revision));
+                        writer.WriteDocument(context, metadataOnly: false, document: doc);
+                        writer.WriteEndObject();
+
+                        await writer.MaybeFlushAsync(token);
+                    }
+                }
+            }
+            if (RevisionsChangeVectorResults != null)
+            {
+                foreach ((string key, Document document) in RevisionsChangeVectorResults)
+                {
+                    if (first == false)
+                        writer.WriteComma();
+                    first = false;
+
+                    writer.WriteStartObject();
+
+                    writer.WritePropertyName(nameof(RevisionIncludeResult.ChangeVector));
+                    writer.WriteString(key);
+                    writer.WriteComma();
+
+                    writer.WritePropertyName(nameof(RevisionIncludeResult.Id));
+                    writer.WriteString(document.Id);
+                    writer.WriteComma();
+
+                    writer.WritePropertyName(nameof(RevisionIncludeResult.Revision));
+                    writer.WriteDocument(context, metadataOnly: false, document: document);
+                    await writer.MaybeFlushAsync(token);
+
+                    writer.WriteEndObject();
+                }
+            }
+            await writer.MaybeFlushAsync(token);
+        }
+
+        public int Count => RevisionsChangeVectorResults?.Count ?? 0 + IdByRevisionsByDateTimeResults?.Count ?? 0;
     }
 }

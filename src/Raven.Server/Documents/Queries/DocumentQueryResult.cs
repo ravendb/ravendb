@@ -24,10 +24,8 @@ namespace Raven.Server.Documents.Queries
         public override bool SupportsExceptionHandling => false;
 
         private Dictionary<string, List<CounterDetail>> _counterIncludes;
-        
-        private Dictionary<string, Document> _revisionsChangeVectorResults;
-        
-        private Dictionary<string, Dictionary<DateTime, Document>> _revisionsDateTimeBeforeResults;
+
+        private IRevisionIncludes _revisionIncludes;
 
         private ITimeSeriesIncludes _timeSeriesIncludes;
 
@@ -49,22 +47,19 @@ namespace Raven.Server.Documents.Queries
 
         public override ITimeSeriesIncludes GetTimeSeriesIncludes() => _timeSeriesIncludes;
 
-        public override void AddCompareExchangeValueIncludes(IIncludeCompareExchangeValues values)
+        public override void AddCompareExchangeValueIncludes(ICompareExchangeValueIncludes values)
         {
             _compareExchangeValueIncludes = values.Results;
         }
 
         public override Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> GetCompareExchangeValueIncludes() => _compareExchangeValueIncludes;
         
-        public override void AddRevisionIncludes(IIncludeRevisions revisions)
+        public override void AddRevisionIncludes(IRevisionIncludes revisions)
         {
-            _revisionsChangeVectorResults = revisions.RevisionsChangeVectorResults;
-            _revisionsDateTimeBeforeResults = revisions.IdByRevisionsByDateTimeResults;
+            _revisionIncludes = revisions;
         }
 
-        public override Dictionary<string, Document>  GetRevisionIncludesByChangeVector() => _revisionsChangeVectorResults;
-
-        public override Dictionary<string, Dictionary<DateTime, Document>>  GetRevisionIncludesIdByDateTime() => _revisionsDateTimeBeforeResults;
+        public override IRevisionIncludes GetRevisionIncludes() => _revisionIncludes;
 
         public override ValueTask AddResultAsync(Document result, CancellationToken token)
         {

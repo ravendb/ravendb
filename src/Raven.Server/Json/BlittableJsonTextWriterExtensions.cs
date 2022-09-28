@@ -590,14 +590,13 @@ namespace Raven.Server.Json
                 writer.WriteEndObject();
             }
 
-            var revisionByCv = result.GetRevisionIncludesByChangeVector();
-            var revisionByDateTime = result.GetRevisionIncludesIdByDateTime();
-            if (revisionByCv != null || revisionByDateTime != null)
+            var revisionIncludes = result.GetRevisionIncludes();
+            if (revisionIncludes?.Count > 0)
             {
                 writer.WriteComma();
                 writer.WritePropertyName(nameof(result.RevisionIncludes));
                 writer.WriteStartArray();
-                await writer.WriteRevisionIncludes(context: context, revisionsByChangeVector: revisionByCv, revisionsByDateTime: revisionByDateTime, token: token);
+                await revisionIncludes.WriteIncludesAsync(writer, context, token);
                 writer.WriteEndArray();
             }
 
@@ -1735,69 +1734,6 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
 
             return (count, sizeInBytes);
-        }
-
-        internal static async Task WriteRevisionIncludes(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, Dictionary<string, Document> revisionsByChangeVector, Dictionary<string, Dictionary<DateTime, Document>> revisionsByDateTime, CancellationToken token = default)
-        {
-            var first = true;
-            if (revisionsByDateTime != null)
-            {
-                foreach ((string id, var dateTimeToDictionary) in revisionsByDateTime)
-                {
-                    if (first == false)
-                        writer.WriteComma();
-                    first = false;
-
-                    foreach ((DateTime dateTime, Document doc) in dateTimeToDictionary)
-                    {
-                        writer.WriteStartObject();
-
-                        writer.WritePropertyName(nameof(RevisionIncludeResult.Id));
-                        writer.WriteString(id);
-                        writer.WriteComma();
-
-                        writer.WritePropertyName(nameof(RevisionIncludeResult.ChangeVector));
-                        writer.WriteString(doc.ChangeVector);
-                        writer.WriteComma();
-
-                        writer.WritePropertyName(nameof(RevisionIncludeResult.Before));
-                        writer.WriteDateTime(dateTime, true);
-                        writer.WriteComma();
-
-                        writer.WritePropertyName(nameof(RevisionIncludeResult.Revision));
-                        WriteDocument(writer, context, metadataOnly: false, document: doc);
-                        writer.WriteEndObject();
-
-                        await writer.MaybeFlushAsync(token);
-                    }
-                }
-            }
-            if (revisionsByChangeVector != null)
-            {
-                foreach ((string key, Document document) in revisionsByChangeVector)
-                {
-                    if (first == false)
-                        writer.WriteComma();
-                    first = false;
-
-                    writer.WriteStartObject();
-
-                    writer.WritePropertyName(nameof(RevisionIncludeResult.ChangeVector));
-                    writer.WriteString(key);
-                    writer.WriteComma();
-
-                    writer.WritePropertyName(nameof(RevisionIncludeResult.Id));
-                    writer.WriteString(document.Id);
-                    writer.WriteComma();
-
-                    writer.WritePropertyName(nameof(RevisionIncludeResult.Revision));
-                    WriteDocument(writer, context, metadataOnly: false, document: document);
-                    await writer.MaybeFlushAsync(token);
-
-                    writer.WriteEndObject();
-                }
-            }
-            await writer.MaybeFlushAsync(token);
         }
 
         private static void WriteConflict(AbstractBlittableJsonTextWriter writer, IncludeDocumentsCommand.ConflictDocument conflict)

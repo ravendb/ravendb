@@ -4,6 +4,7 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Results;
@@ -72,6 +73,11 @@ public class ShardedQueryProcessor : AbstractShardedQueryProcessor<ShardedQueryC
             documentsComparer = new ShardedDocumentsComparer(_query.Metadata, _isMapReduceIndex || _isAutoMapReduceQuery);
         }
 
+        if (_query.Metadata.TimeSeriesIncludes != null)
+        {
+            var timeSeriesKeys = _query.Metadata.TimeSeriesIncludes.TimeSeries.Keys;
+        }
+
         var operation = new ShardedQueryOperation(_context, _requestHandler, _commands, documentsComparer, _existingResultEtag?.ToString());
 
         var shardedReadResult = await _requestHandler.ShardExecutor.ExecuteParallelForShardsAsync(_commands.Keys.ToArray(), operation, _token);
@@ -90,9 +96,9 @@ public class ShardedQueryProcessor : AbstractShardedQueryProcessor<ShardedQueryC
             await _requestHandler.DatabaseContext.Cluster.WaitForExecutionOnAllNodesAsync(result.RaftCommandIndex.Value);
         }
 
-        if (operation.MissingIncludes is {Count: > 0})
+        if (operation.MissingDocumentIncludes is {Count: > 0})
         {
-            await HandleMissingIncludes(operation.MissingIncludes, result);
+            await HandleMissingIncludes(operation.MissingDocumentIncludes, result);
         }
 
         // For map/reduce - we need to re-run the reduce portion of the index again on the results
