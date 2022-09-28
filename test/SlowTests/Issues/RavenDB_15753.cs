@@ -401,7 +401,7 @@ namespace ObjectDetection
             
             public Context()
             {
-                var modelFilePath = DownloadCache(""https://media.githubusercontent.com/media/onnx/models/master/vision/object_detection_segmentation/tiny-yolov2/model/tinyyolov2-7.onnx"");
+                var modelFilePath = DownloadCache(""https://media.githubusercontent.com/media/onnx/models/main/vision/object_detection_segmentation/tiny-yolov2/model/tinyyolov2-7.onnx"");
                 MLContext = new MLContext();
                 var pipeline = MLContext.Transforms.ResizeImages(outputColumnName: ""image"", imageWidth: ImageNetSettings.imageWidth, imageHeight: ImageNetSettings.imageHeight, inputColumnName: ""Image"")
                                 .Append(MLContext.Transforms.ExtractPixels(outputColumnName: ""image""))
