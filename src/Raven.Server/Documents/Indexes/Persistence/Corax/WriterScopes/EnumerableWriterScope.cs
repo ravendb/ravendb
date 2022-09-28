@@ -26,15 +26,31 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
         [CanBeNull]
         private string _persistedName;
 
+        private int? _persistedId;
+        
         private bool _hasNulls;
         private readonly List<BlittableJsonReaderObject> _blittableJsonReaderObjects;
         private (int Strings, int Longs, int Doubles, int Raws, int Spatials) _count;
-
-        private void PersistName(string path)
+        
+        /// <summary>
+        /// This method is only for dynamic fields usage. In other case there is no need to flush.
+        /// </summary>
+        /// <param name="path"></param>
+        /// <param name="fieldId"></param>
+        /// <param name="entryWriter"></param>
+        private void FlushWhenNecessary(string path, int fieldId, ref IndexEntryWriter entryWriter)
         {
             _persistedName ??= path;
-            if (path != _persistedName) //I don't know if there is a case that trigger it;
-                throw new InvalidDataException("Enumerable contains multiple dynamic fields.");
+            _persistedId ??= fieldId;
+            
+            if (path != _persistedName || fieldId != _persistedId)
+            {
+                Finish(_persistedName, _persistedId.Value, ref entryWriter);
+                _persistedName = path;
+
+                _persistedId = fieldId;
+                _persistedName = path;
+            }
         }
         
         public EnumerableWriterScope(List<ByteString> stringValues, List<long> longValues, List<double> doubleValues, List<CoraxSpatialPointEntry> spatialValues,
@@ -51,6 +67,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
 
         public void WriteNull(string path, int field, ref IndexEntryWriter entryWriter)
         {
+            if (_isDynamic)
+                FlushWhenNecessary(path, field, ref entryWriter);
+
             // We cannot know if we are writing a tuple or a list. But we know that at finish
             // we will be able to figure out based on the stored counts. Therefore,
             // we will write a null here and then write the real value in the finish method.
@@ -59,7 +78,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
             _doubleValues.Add(float.NaN);
             _count.Strings++;
             _hasNulls = true;
-            PersistName(path);
         }
 
         public void Write(string path, int field, ReadOnlySpan<byte> value, ref IndexEntryWriter entryWriter)
@@ -67,6 +85,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
             if (_count.Longs != 0 || _count.Doubles != 0)
                 throw new InvalidOperationException("Cannot mix tuples writes with straightforward writes");
 
+            if (_isDynamic)
+                FlushWhenNecessary(path, field, ref entryWriter);
+            
             // Copy the value to write into memory allocated and controlled by the scope.  
             _allocator.Allocate(value.Length, out var buffer);
             value.CopyTo(buffer.ToSpan());
@@ -75,12 +96,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
             _stringValues.Add(buffer);
             _longValues.Add(0);
             _doubleValues.Add(float.NaN);
-            PersistName(path);
-
         }
 
         public void Write(string path, int field, ReadOnlySpan<byte> value, long longValue, double doubleValue, ref IndexEntryWriter entryWriter)
         {
+            if (_isDynamic)
+                FlushWhenNecessary(path, field, ref entryWriter);
+            
             if (_count.Strings != _count.Longs || _count.Strings != _count.Doubles)
                 throw new InvalidOperationException("Cannot write a tuple with a different number of values than the previous tuple.");
 
@@ -94,56 +116,60 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
             _count.Strings++;
             _count.Longs++;
             _count.Doubles++;
-            PersistName(path);
-
         }
 
         public void Write(string path, int field, string value, ref IndexEntryWriter entryWriter)
         {
+            if (_isDynamic)
+                FlushWhenNecessary(path, field, ref entryWriter);
+            
             _allocator.Allocate(Encoding.UTF8.GetMaxByteCount(value.Length), out var buffer);
 
             var length = Encoding.UTF8.GetBytes(value, buffer.ToSpan());
             buffer.Truncate(length);
             _stringValues.Add(buffer);
             _count.Strings++;
-            PersistName(path);
-
         }
 
         public void Write(string path, int field, string value, long longValue, double doubleValue, ref IndexEntryWriter entryWriter)
         {
+            if (_isDynamic)
+                FlushWhenNecessary(path, field, ref entryWriter);
+            
             Write(path, field, value, ref entryWriter);
             _longValues.Add(longValue);
             _doubleValues.Add(doubleValue);
             _count.Longs++;
             _count.Doubles++;
-            PersistName(path);
-
         }
 
         public void Write(string path, int field, BlittableJsonReaderObject reader, ref IndexEntryWriter entryWriter)
         {
+            if (_isDynamic)
+                FlushWhenNecessary(path, field, ref entryWriter);
+            
             _blittableJsonReaderObjects.Add(reader);
             _count.Raws++;
-            PersistName(path);
         }
 
         public void Write(string path, int field, CoraxSpatialPointEntry entry, ref IndexEntryWriter entryWriter)
         {
+            if (_isDynamic)
+                FlushWhenNecessary(path, field, ref entryWriter);
+            
             _count.Spatials++;
             _spatialValues.Add(entry);
-            PersistName(path);
 
         }
-
+        
         public void Finish(string path, int field, ref IndexEntryWriter entryWriter)
         {
             var dataType = GetDataType();
 
-            if (_isDynamic)
+            if (_isDynamic || field == global::Corax.Constants.IndexWriter.DynamicField)
             {
                 dataType |= DataType.Dynamic;
-                
+                path = _persistedName ?? path;
                 
                 //Look comment in DataType definition. In this case we can do this because is always going to EnumerableScope from dynamic by design.
                 if (_count.Strings == 1 || _count.Raws == 1)
@@ -152,8 +178,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
                     if (_hasNulls)
                         dataType |= DataType.Null;
                 }
-
-                path = _persistedName;
             }
             
             switch (dataType)
@@ -243,6 +267,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
 
             void ClearContainers()
             {
+                _hasNulls = false;
+                _count = (0, 0, 0, 0, 0);
                 _stringValues.Clear();
                 _longValues.Clear();
                 _doubleValues.Clear();
