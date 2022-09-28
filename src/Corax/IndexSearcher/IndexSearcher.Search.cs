@@ -34,7 +34,7 @@ public partial class IndexSearcher
             };
         }
 
-        if (_fieldMapping.TryGetByFieldId(analyzerId, out var indexFieldBinding) == false && indexFieldBinding.Analyzer is null && isDynamic == false)
+        if ((_fieldMapping.TryGetByFieldId(analyzerId, out var indexFieldBinding) == false || indexFieldBinding.Analyzer is null) && isDynamic == false)
         {
             throw new InvalidOperationException($"{nameof(SearchQuery)} requires analyzer.");
         }
