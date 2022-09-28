@@ -4,6 +4,7 @@ using System.Linq;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations.CompareExchange;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Server.Documents.Includes;
@@ -25,15 +26,16 @@ namespace Raven.Server.Documents.Sharding.Operations
         private readonly Dictionary<int, ShardLocator.IdsByShard<string>> _idsByShards;
         private readonly string[] _includePaths;
         private readonly RevisionIncludeField _includeRevisions;
+        private readonly HashSet<AbstractTimeSeriesRange> _timeSeriesIncludes;
         private readonly string[] _compareExchangeValueIncludes;
         private readonly bool _metadataOnly;
 
-        public FetchDocumentsFromShardsOperation(
-            TransactionOperationContext context,
+        public FetchDocumentsFromShardsOperation(TransactionOperationContext context,
             ShardedDatabaseRequestHandler handler,
             Dictionary<int, ShardLocator.IdsByShard<string>> idsByShards,
             string[] includePaths,
             RevisionIncludeField includeRevisions,
+            HashSet<AbstractTimeSeriesRange> timeSeriesIncludes,
             string[] compareExchangeValueIncludes,
             string etag,
             bool metadataOnly)
@@ -45,6 +47,7 @@ namespace Raven.Server.Documents.Sharding.Operations
             ExpectedEtag = etag;
             _includePaths = includePaths;
             _includeRevisions = includeRevisions;
+            _timeSeriesIncludes = timeSeriesIncludes;
             _compareExchangeValueIncludes = compareExchangeValueIncludes;
             _metadataOnly = metadataOnly;
         }
@@ -58,8 +61,9 @@ namespace Raven.Server.Documents.Sharding.Operations
             var includesMap = new Dictionary<string, BlittableJsonReaderObject>(StringComparer.OrdinalIgnoreCase);
             var missingIncludes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            ShardedIncludeCompareExchangeValues includeCompareExchangeValues = null;
-            ShardedIncludeRevisions includeRevisions = null;
+            ShardedCompareExchangeValueInclude compareExchangeValueIncludes = null;
+            ShardedRevisionIncludes revisionIncludes = null;
+            ShardedTimeSeriesIncludes timeSeriesIncludes = null;
 
             foreach (var cmd in span)
             {
@@ -71,6 +75,7 @@ namespace Raven.Server.Documents.Sharding.Operations
                 var cmdCounterIncludes = cmd.CounterIncludes;
                 var cmdCompareExchangeValueIncludes = cmd.CompareExchangeValueIncludes;
                 var cmdRevisionIncludes = cmd.RevisionIncludes;
+                var cmdTimeSeriesIncludes = cmd.TimeSeriesIncludes;
 
                 if (cmdIncludes != null)
                 {
@@ -111,16 +116,20 @@ namespace Raven.Server.Documents.Sharding.Operations
 
                 if (cmdCompareExchangeValueIncludes != null)
                 {
-                    includeCompareExchangeValues ??= new ShardedIncludeCompareExchangeValues();
-
-                    includeCompareExchangeValues.AddResults(cmdCompareExchangeValueIncludes, _context);
+                    compareExchangeValueIncludes ??= new ShardedCompareExchangeValueInclude();
+                    compareExchangeValueIncludes.AddResults(cmdCompareExchangeValueIncludes, _context);
                 }
 
                 if (cmdRevisionIncludes != null)
                 {
-                    includeRevisions ??= new ShardedIncludeRevisions();
+                    revisionIncludes ??= new ShardedRevisionIncludes();
+                    revisionIncludes.AddResults(cmdRevisionIncludes, _context);
+                }
 
-                    includeRevisions.AddResults(cmdRevisionIncludes, _context);
+                if (cmdTimeSeriesIncludes != null)
+                {
+                    timeSeriesIncludes ??= new ShardedTimeSeriesIncludes();
+                    timeSeriesIncludes.AddResults(cmdTimeSeriesIncludes, _context);
                 }
             }
 
@@ -136,9 +145,10 @@ namespace Raven.Server.Documents.Sharding.Operations
                 Documents = docs,
                 Includes = includesMap.Values.ToList(),
                 MissingIncludes = missingIncludes,
-                CompareExchangeValueIncludes = includeCompareExchangeValues?.Results,
-                RevisionsChangeVectorResults = includeRevisions?.RevisionsChangeVectorResults,
-                IdByRevisionsByDateTimeResults = includeRevisions?.IdByRevisionsByDateTimeResults
+                CompareExchangeValueIncludes = compareExchangeValueIncludes?.Results,
+                RevisionsChangeVectorResults = revisionIncludes?.RevisionsChangeVectorResults,
+                IdByRevisionsByDateTimeResults = revisionIncludes?.IdByRevisionsByDateTimeResults,
+                TimeSeriesIncludes = timeSeriesIncludes
             };
         }
 
@@ -146,9 +156,9 @@ namespace Raven.Server.Documents.Sharding.Operations
 
         public RavenCommand<GetDocumentsResult> CreateCommandForShard(int shardNumber) => new GetDocumentsCommand(_idsByShards[shardNumber].Ids.ToArray(), _includePaths,
             counterIncludes: null,
-            revisionsIncludesByChangeVector: _includeRevisions?.RevisionsChangeVectorsPaths, // TODO arek - what's the difference between RevisionsChangeVectorsPaths and RevisionsChangeVectors
+            revisionsIncludesByChangeVector: _includeRevisions?.RevisionsChangeVectorsPaths,
             revisionIncludeByDateTimeBefore: _includeRevisions?.RevisionsBeforeDateTime,
-            timeSeriesIncludes: null,
+            timeSeriesIncludes: _timeSeriesIncludes,
             compareExchangeValueIncludes: _compareExchangeValueIncludes, 
             _metadataOnly);
     }
@@ -163,5 +173,7 @@ namespace Raven.Server.Documents.Sharding.Operations
 
         public Dictionary<string, Document> RevisionsChangeVectorResults;
         public Dictionary<string, Dictionary<DateTime, Document>> IdByRevisionsByDateTimeResults;
+
+        public ITimeSeriesIncludes TimeSeriesIncludes;
     }
 }

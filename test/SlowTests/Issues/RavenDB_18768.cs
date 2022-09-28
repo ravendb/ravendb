@@ -18,7 +18,7 @@ public class RavenDB_18768 : RavenTestBase
     {
     }
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Revisions)]
     [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
     public async Task CanIncludeRevisionsByPathInLoadByIdQuery(Options options)
     {
@@ -64,7 +64,7 @@ public class RavenDB_18768 : RavenTestBase
         }
     }
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Revisions)]
     [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
     public async Task CanIncludeRevisionsBeforeInLoadByIdQuery(Options options)
     {
@@ -105,6 +105,102 @@ public class RavenDB_18768 : RavenTestBase
                 Assert.NotNull(revision);
                 Assert.NotNull(revision.Name);
                 Assert.Equal(1, session.Advanced.NumberOfRequests);
+            }
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.TimeSeries)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
+    public void CanIncludeMultipleTimeSeriesInLoadByIdQuery(Options options)
+    {
+        using (var store = GetDocumentStore(options))
+        {
+            var baseline = RavenTestHelper.UtcToday;
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(new User { Name = "Oren" }, "users/ayende");
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            {
+                for (int i = 0; i < 360; i++)
+                {
+                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Append(baseline.AddSeconds(i * 10), new[] { 6d }, "watches/fitbit");
+                    session.TimeSeriesFor("users/ayende", "BloodPressure")
+                        .Append(baseline.AddSeconds(i * 10), new[] { 66d }, "watches/fitbit");
+                    session.TimeSeriesFor("users/ayende", "Nasdaq")
+                        .Append(baseline.AddSeconds(i * 10), new[] { 8097.23 }, "nasdaq.com");
+                }
+
+                session.SaveChanges();
+
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var user = session.Query<User>()
+                    .Where(x => x.Id == "users/ayende")
+                    .Include(i => i.IncludeTimeSeries("Heartrate", baseline.AddMinutes(3), baseline.AddMinutes(5))
+                        .IncludeTimeSeries("BloodPressure", baseline.AddMinutes(40), baseline.AddMinutes(45))
+                        .IncludeTimeSeries("Nasdaq", baseline.AddMinutes(15), baseline.AddMinutes(25)))
+                    .First();
+
+                Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                Assert.Equal("Oren", user.Name);
+
+                // should not go to server
+
+                var vals = session.TimeSeriesFor("users/ayende", "Heartrate")
+                    .Get(baseline.AddMinutes(3), baseline.AddMinutes(5))
+                    .ToList();
+
+                Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                Assert.Equal(13, vals.Count);
+                Assert.Equal(baseline.AddMinutes(3), vals[0].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+                Assert.Equal(baseline.AddMinutes(5), vals[12].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+
+                // should not go to server
+
+                vals = session.TimeSeriesFor("users/ayende", "BloodPressure")
+                    .Get(baseline.AddMinutes(42), baseline.AddMinutes(43))
+                    .ToList();
+
+                Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                Assert.Equal(7, vals.Count);
+                Assert.Equal(baseline.AddMinutes(42), vals[0].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+                Assert.Equal(baseline.AddMinutes(43), vals[6].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+
+
+                // should not go to server
+
+                vals = session.TimeSeriesFor("users/ayende", "BloodPressure")
+                    .Get(baseline.AddMinutes(40), baseline.AddMinutes(45))
+                    .ToList();
+
+                Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                Assert.Equal(31, vals.Count);
+                Assert.Equal(baseline.AddMinutes(40), vals[0].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+                Assert.Equal(baseline.AddMinutes(45), vals[30].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+
+                // should not go to server
+
+                vals = session.TimeSeriesFor("users/ayende", "Nasdaq")
+                    .Get(baseline.AddMinutes(15), baseline.AddMinutes(25))
+                    .ToList();
+
+                Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                Assert.Equal(61, vals.Count);
+                Assert.Equal(baseline.AddMinutes(15), vals[0].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+                Assert.Equal(baseline.AddMinutes(25), vals[60].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+
             }
         }
     }

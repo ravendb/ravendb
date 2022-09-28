@@ -2,22 +2,24 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading.Tasks;
+using System.Threading;
 using Raven.Client;
 using Raven.Client.Documents.Operations.TimeSeries;
-using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Handlers.Processors.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.Includes
 {
-    public class IncludeTimeSeriesCommand
+    public class IncludeTimeSeriesCommand : ITimeSeriesIncludes
     {
         private readonly DocumentsOperationContext _context;
         private readonly Dictionary<string, HashSet<AbstractTimeSeriesRange>> _timeSeriesRangesBySourcePath;
         private readonly Dictionary<string, Dictionary<string, (long Count, DateTime Start, DateTime End)>> _timeSeriesStatsPerDocumentId;
 
-        public Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> Results { get; }
+        public readonly Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> Results;
 
         public IncludeTimeSeriesCommand(DocumentsOperationContext context, Dictionary<string, HashSet<AbstractTimeSeriesRange>> timeSeriesRangesBySourcePath)
         {
@@ -27,6 +29,8 @@ namespace Raven.Server.Documents.Includes
             _timeSeriesStatsPerDocumentId = new Dictionary<string, Dictionary<string, (long Count, DateTime Start, DateTime End)>>(StringComparer.OrdinalIgnoreCase);
             Results = new Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>>(StringComparer.OrdinalIgnoreCase);
         }
+
+        public int Count => Results.Count;
 
         public void Fill(Document document)
         {
@@ -167,6 +171,29 @@ namespace Raven.Server.Documents.Includes
 
                 return stats;
             }
+        }
+
+        public async ValueTask<int> WriteIncludesAsync(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, CancellationToken token)
+        {
+            int size = 0;
+            writer.WriteStartObject();
+
+            var first = true;
+            foreach (var kvp in Results)
+            {
+                if (first == false)
+                    writer.WriteComma();
+
+                first = false;
+
+                writer.WritePropertyName(kvp.Key);
+                size += kvp.Key.Length;
+                size += await TimeSeriesHandlerProcessorForGetTimeSeriesRanges.WriteTimeSeriesRangeResultsAsync(context: null, writer, documentId: null, kvp.Value, calcTotalCount: true, token);
+            }
+
+            writer.WriteEndObject();
+
+            return size;
         }
     }
 }

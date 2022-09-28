@@ -113,7 +113,7 @@ public class ShardedQueryProcessor : AbstractShardedQueryProcessor<ShardedQueryC
     private async Task HandleMissingIncludes(HashSet<string> missingIncludes, ShardedQueryResult result)
     {
         var missingIncludeIdsByShard = ShardLocator.GetDocumentIdsByShards(_context, _requestHandler.DatabaseContext, missingIncludes);
-        var missingIncludesOp = new FetchDocumentsFromShardsOperation(_context, _requestHandler, missingIncludeIdsByShard, null, null, null, null, _metadataOnly);
+        var missingIncludesOp = new FetchDocumentsFromShardsOperation(_context, _requestHandler, missingIncludeIdsByShard, null, null, null, null, null, _metadataOnly);
         var missingResult = await _requestHandler.DatabaseContext.ShardExecutor.ExecuteParallelForShardsAsync(missingIncludeIdsByShard.Keys.ToArray(), missingIncludesOp, _token);
 
         foreach (var (_, missing) in missingResult.Result.Documents)

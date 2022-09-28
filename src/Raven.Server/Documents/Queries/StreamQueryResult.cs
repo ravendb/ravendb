@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.Queries
             throw new NotSupportedException();
         }
 
-        public override void AddTimeSeriesIncludes(IncludeTimeSeriesCommand includeTimeSeriesCommand)
+        public override void AddTimeSeriesIncludes(ITimeSeriesIncludes includeTimeSeriesCommand)
         {
             throw new NotSupportedException();
         }
@@ -74,7 +74,7 @@ namespace Raven.Server.Documents.Queries
             throw new NotSupportedException();
         }
         
-        public override Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> GetTimeSeriesIncludes()
+        public override ITimeSeriesIncludes GetTimeSeriesIncludes()
         {
             throw new NotSupportedException();
         }

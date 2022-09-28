@@ -106,7 +106,7 @@ internal class DocumentHandlerProcessorForGet : AbstractDocumentHandlerProcessor
             RevisionsChangeVectorIncludes = includeRevisions?.RevisionsChangeVectorResults,
             IdByRevisionsByDateTimeIncludes = includeRevisions?.IdByRevisionsByDateTimeResults,
             CounterIncludes = includeCounters?.Results,
-            TimeSeriesIncludes = includeTimeSeries?.Results,
+            TimeSeriesIncludes = includeTimeSeries,
             CompareExchangeIncludes = includeCompareExchangeValues?.Results
         });
     }

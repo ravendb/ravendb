@@ -95,9 +95,9 @@ namespace Raven.Server.Documents.Queries
 
         public abstract Dictionary<string, List<CounterDetail>> GetCounterIncludes();
 
-        public abstract void AddTimeSeriesIncludes(IncludeTimeSeriesCommand command);
+        public abstract void AddTimeSeriesIncludes(ITimeSeriesIncludes timeSeries);
 
-        public abstract Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> GetTimeSeriesIncludes();
+        public abstract ITimeSeriesIncludes GetTimeSeriesIncludes();
 
         public abstract void AddCompareExchangeValueIncludes(IIncludeCompareExchangeValues values);
 

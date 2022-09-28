@@ -5,7 +5,7 @@ using Raven.Client.Documents.Operations.Revisions;
 
 namespace Raven.Server.Documents.Includes.Sharding;
 
-public class ShardedIncludeRevisions : IIncludeRevisions
+public class ShardedRevisionIncludes : IIncludeRevisions
 {
     public Dictionary<string, Document> RevisionsChangeVectorResults { get; private set; }
 

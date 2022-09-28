@@ -3,15 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Microsoft.Diagnostics.Tracing.Parsers.MicrosoftAntimalwareEngine;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
-using Raven.Client.Documents.Session.TimeSeries;
-using Raven.Client.Extensions;
-using Raven.Server.Documents.Sharding.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
 using Tests.Infrastructure;
@@ -27,10 +23,11 @@ namespace SlowTests.Client.TimeSeries.Session
         {
         }
 
-        [Fact]
-        public void SessionLoadWithIncludeTimeSeries()
+        [RavenTheory(RavenTestCategory.TimeSeries)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void SessionLoadWithIncludeTimeSeries(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
                 using (var session = store.OpenSession())
@@ -288,10 +285,11 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
-        public void IncludeTimeSeriesAndMergeWithExistingRangesInCache()
+        [RavenTheory(RavenTestCategory.TimeSeries)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void IncludeTimeSeriesAndMergeWithExistingRangesInCache(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -543,10 +541,11 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
-        public void IncludeTimeSeriesAndUpdateExistingRangeInCache()
+        [RavenTheory(RavenTestCategory.TimeSeries)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void IncludeTimeSeriesAndUpdateExistingRangeInCache(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -609,10 +608,11 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
-        public void IncludeMultipleTimeSeries()
+        [RavenTheory(RavenTestCategory.TimeSeries)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void IncludeMultipleTimeSeries(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -702,10 +702,11 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
-        public void ShouldCacheEmptyTimeSeriesRanges()
+        [RavenTheory(RavenTestCategory.TimeSeries)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void ShouldCacheEmptyTimeSeriesRanges(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -794,10 +795,11 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
-        public void MultiLoadWithIncludeTimeSeries()
+        [RavenTheory(RavenTestCategory.TimeSeries)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void MultiLoadWithIncludeTimeSeries(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -947,10 +949,11 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
-        public void QueryWithIncludeTimeSeries()
+        [RavenTheory(RavenTestCategory.TimeSeries)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void QueryWithIncludeTimeSeries(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -1000,10 +1003,11 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
-        public async Task AsyncQueryWithIncludeTimeSeries()
+        [RavenTheory(RavenTestCategory.TimeSeries)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task AsyncQueryWithIncludeTimeSeries(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
                 using (var session = store.OpenAsyncSession())
@@ -1063,7 +1067,7 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.TimeSeries)]
         [ClassData(typeof(TimeSeriesSessionTests.CanGetTimeSeriesRangeCases))]
         public async Task AsyncQueryWithIncludeTimeSeries2(DateTime? from, DateTime? to, int expectedValue)
         {
@@ -1113,10 +1117,11 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
-        public void RawQueryIncludeTimeSeriesWithParameter()
+        [RavenTheory(RavenTestCategory.TimeSeries)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void RawQueryIncludeTimeSeriesWithParameter(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -1170,10 +1175,11 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
-        public void IndexQueryWithIncludeTimeSeries()
+        [RavenTheory(RavenTestCategory.TimeSeries)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void IndexQueryWithIncludeTimeSeries(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -1224,10 +1230,11 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
-        public void QueryIncludeTimeSeriesAndMergeWithExistingRangesInCache()
+        [RavenTheory(RavenTestCategory.TimeSeries)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void QueryIncludeTimeSeriesAndMergeWithExistingRangesInCache(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -1432,10 +1439,11 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
-        public void QueryIncludeTimeSeriesAndUpdateExistingRangeInCache()
+        [RavenTheory(RavenTestCategory.TimeSeries)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void QueryIncludeTimeSeriesAndUpdateExistingRangeInCache(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -1498,10 +1506,11 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
-        public void QueryIncludeMultipleTimeSeries()
+        [RavenTheory(RavenTestCategory.TimeSeries)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void QueryIncludeMultipleTimeSeries(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -1592,10 +1601,11 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
-        public void QueryIncludeShouldCacheEmptyTimeSeriesRanges()
+        [RavenTheory(RavenTestCategory.TimeSeries)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void QueryIncludeShouldCacheEmptyTimeSeriesRanges(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -1764,10 +1774,11 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
-        public void QueryIncludeTimeSeriesOfRelatedDocument()
+        [RavenTheory(RavenTestCategory.TimeSeries)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public void QueryIncludeTimeSeriesOfRelatedDocument(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -1916,10 +1927,11 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
-        public void TimeSeriesIncludesShouldAffectQueryEtag_CollectionQuery()
+        [RavenTheory(RavenTestCategory.TimeSeries)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void TimeSeriesIncludesShouldAffectQueryEtag_CollectionQuery(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -2009,10 +2021,11 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
-        public void TimeSeriesIncludesShouldAffectQueryEtag_IndexQuery()
+        [RavenTheory(RavenTestCategory.TimeSeries)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void TimeSeriesIncludesShouldAffectQueryEtag_IndexQuery(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -2272,10 +2285,11 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
-        public async Task AsyncSessionLoadWithIncludeTimeSeries_LastRangeByTime()
+        [RavenTheory(RavenTestCategory.TimeSeries)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task AsyncSessionLoadWithIncludeTimeSeries_LastRangeByTime(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = DateTime.UtcNow.EnsureMilliseconds();
                 using (var session = store.OpenAsyncSession())
@@ -2334,10 +2348,11 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
-        public async Task CanLoadWithIncludeTimeSeriesRange_ByLastTimeAndFromTo()
+        [RavenTheory(RavenTestCategory.TimeSeries)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanLoadWithIncludeTimeSeriesRange_ByLastTimeAndFromTo(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = DateTime.UtcNow.EnsureMilliseconds();
                 using (var session = store.OpenAsyncSession())
@@ -2413,10 +2428,11 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
-        public async Task CanLoadAsyncWithIncludeTimeSeries_LastRange_ByCount()
+        [RavenTheory(RavenTestCategory.TimeSeries)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanLoadAsyncWithIncludeTimeSeries_LastRange_ByCount(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday.AddHours(12);
                 using (var session = store.OpenAsyncSession())
@@ -2468,10 +2484,11 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
-        public async Task CanLoadAsyncWithInclude_AllTimeSeries_LastRange_ByTime()
+        [RavenTheory(RavenTestCategory.TimeSeries)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanLoadAsyncWithInclude_AllTimeSeries_LastRange_ByTime(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = DateTime.UtcNow.EnsureMilliseconds();
                 using (var session = store.OpenAsyncSession())
@@ -2543,8 +2560,9 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
-        public async Task CanLoadAsyncWithInclude_AllTimeSeries_LastRange_ByCount()
+        [RavenTheory(RavenTestCategory.TimeSeries)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanLoadAsyncWithInclude_AllTimeSeries_LastRange_ByCount(Options options)
         {
             using (var store = GetDocumentStore())
             {
@@ -2811,12 +2829,12 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Theory]
-        [InlineData(true)]
-        [InlineData(false)]
-        public async Task CanLoadAsyncWithInclude_ArrayOfTimeSeriesLastRange(bool byTime)
+        [RavenTheory(RavenTestCategory.TimeSeries)]
+        [RavenData(true, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(false, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanLoadAsyncWithInclude_ArrayOfTimeSeriesLastRange(Options options, bool byTime)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = byTime ? DateTime.UtcNow.EnsureMilliseconds() : RavenTestHelper.UtcToday;
                 using (var session = store.OpenAsyncSession())
@@ -2914,14 +2932,14 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Theory]
-        [InlineData(true, true)]
-        [InlineData(true, false)]
-        [InlineData(false, true)]
-        [InlineData(false, false)]
-        public void CanQueryWithIncludeTimeSeries_LastRange(bool byTime, bool raw)
+        [RavenTheory(RavenTestCategory.TimeSeries)]
+        [RavenData(true, true, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(true, false, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(false, true, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(false, false, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanQueryWithIncludeTimeSeries_LastRange(Options options, bool byTime, bool raw)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = byTime ? DateTime.UtcNow.EnsureMilliseconds() : RavenTestHelper.UtcToday;
 
@@ -2997,14 +3015,14 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Theory]
-        [InlineData(true, true)]
-        [InlineData(true, false)]
-        [InlineData(false, true)]
-        [InlineData(false, false)]
-        public void CanQueryWithInclude_ArrayOfTimeSeries_LastRange(bool byTime, bool raw)
+        [RavenTheory(RavenTestCategory.TimeSeries)]
+        [RavenData(true, true, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(true, false, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(false, true, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(false, false, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanQueryWithInclude_ArrayOfTimeSeries_LastRange(Options options, bool byTime, bool raw)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = byTime ? DateTime.UtcNow.EnsureMilliseconds() : RavenTestHelper.UtcToday;
 
@@ -3101,18 +3119,19 @@ namespace SlowTests.Client.TimeSeries.Session
                 }
             }
         }
-        [Theory]
-        [InlineData(true, true, true)]
-        [InlineData(true, true, false)]
-        [InlineData(true, false, true)]
-        [InlineData(true, false, false)]
-        [InlineData(false, true, true)]
-        [InlineData(false, true, false)]
-        [InlineData(false, false, true)]
-        [InlineData(false, false, false)]
-        public void CanQueryWithInclude_AllTimeSeries_LastRange(bool byTime, bool raw1, bool raw2)
+
+        [RavenTheory(RavenTestCategory.TimeSeries)]
+        [RavenData(true, true, true, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(true, true, false, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(true, false, true, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(true, false, false, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(false, true, true, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(false, true, false, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(false, false, true, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(false, false, false, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanQueryWithInclude_AllTimeSeries_LastRange(Options options, bool byTime, bool raw1, bool raw2)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = byTime ? DateTime.UtcNow.EnsureMilliseconds() : RavenTestHelper.UtcToday;
 
@@ -3219,10 +3238,11 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
-        public void CanQueryWithIncludeTimeSeries_LastRangeByCount_WhenNumberOfTimeSeriesIsLessThanRequested()
+        [RavenTheory(RavenTestCategory.TimeSeries)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CanQueryWithIncludeTimeSeries_LastRangeByCount_WhenNumberOfTimeSeriesIsLessThanRequested(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = DateTime.UtcNow.EnsureMilliseconds();
 
