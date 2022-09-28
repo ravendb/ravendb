@@ -135,7 +135,8 @@ return attachments.map(attachment => ({
         }
 
         [RavenTheory(RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-19412")]
         public void Can_Index_Attachments(Options options)
         {
             using (var store = GetDocumentStore(options))

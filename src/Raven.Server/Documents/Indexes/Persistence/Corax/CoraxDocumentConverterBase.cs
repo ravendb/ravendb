@@ -24,6 +24,7 @@ using RavenConstants = Raven.Client.Constants;
 using CoraxConstants = Corax.Constants;
 using Encoding = System.Text.Encoding;
 using System.Diagnostics;
+using Raven.Client.Exceptions.Corax;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
@@ -358,9 +359,9 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 InsertRegularField(cdi!.Field, cdi.Value, indexContext, ref entryWriter, scope, nestedArray);
                 break;
             case ValueType.Stream:
-                throw new NotImplementedException();
+                throw new NotImplementedInCoraxException($"Streams are not implemented in Corax yet");
             case ValueType.Lucene:
-                throw new NotSupportedException("The Lucene value type is not supportes by Corax. You can change index type into Lucene.");
+                throw new NotSupportedException("The Lucene value type is not supported by Corax. You can change index type into Lucene.");
             default:
                 throw new NotImplementedException();
         }
