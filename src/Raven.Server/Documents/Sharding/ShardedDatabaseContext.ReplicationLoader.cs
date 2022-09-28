@@ -130,7 +130,7 @@ namespace Raven.Server.Documents.Sharding
         }
     }
 
-    public class ReplicationBatch
+    public class ReplicationBatch : IDisposable
     {
         public List<ReplicationBatchItem> Items = new();
         public Dictionary<Slice, AttachmentReplicationItem> Attachments;
@@ -138,6 +138,25 @@ namespace Raven.Server.Documents.Sharding
         public string LastAcceptedChangeVector;
         public long LastEtagAccepted;
         public long LastSentEtagFromSource;
+
+        public void Dispose()
+        {
+            foreach (var item in Items)
+            {
+                item.Dispose();
+            }
+
+            if (Attachments != null)
+            {
+                foreach (var attachment in Attachments)
+                    attachment.Value.Dispose();
+
+                Attachments.Clear();
+            }
+
+            Items.Clear();
+            BatchSent = null;
+        }
     }
 
     public class ShardReplicationNode : ExternalReplication

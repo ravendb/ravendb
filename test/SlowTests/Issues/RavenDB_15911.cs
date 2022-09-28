@@ -34,7 +34,7 @@ namespace SlowTests.Issues
 
             }
 
-            string temIndexFile = TempFileCache.GetTempFileName(Options);
+            string temIndexFile = TempFileCache.GetTempFileName(tempPath);
 
             using (File.Create(temIndexFile))
             {

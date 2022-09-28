@@ -237,7 +237,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             if (_initialized)
                 throw new InvalidOperationException();
 
-            TempFileCache = new TempFileCache(environment.Options);
+            TempFileCache = new TempFileCache(environment.Options.TempPath.FullPath, environment.Options.Encryption.IsEnabled);
 
             environment.NewTransactionCreated += SetStreamCacheInTx;
 

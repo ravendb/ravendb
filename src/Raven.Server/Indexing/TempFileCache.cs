@@ -1,14 +1,12 @@
 using System;
 using System.Collections.Concurrent;
 using System.IO;
-using Raven.Server.Exceptions;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow.Global;
 using Sparrow.LowMemory;
 using Sparrow.Utils;
 using Voron;
-using Sparrow.Server.Exceptions;
 
 namespace Raven.Server.Indexing
 {
@@ -18,25 +16,29 @@ namespace Raven.Server.Indexing
     /// </summary>
     public sealed class TempFileCache : IDisposable, ILowMemoryHandler
     {
-        private readonly StorageEnvironmentOptions _options;
+        private readonly string _tempPath;
+        private readonly bool _encrypted;
         private readonly ConcurrentQueue<TempFileStream> _files = new ConcurrentQueue<TempFileStream>();
         private readonly ConcurrentQueue<MemoryStream> _ms = new ConcurrentQueue<MemoryStream>();
 
         private const long MaxFileSizeToKeepInBytes = 16 * Constants.Size.Megabyte;
         internal const int MaxFilesToKeepInCache = 32;
         private int _memoryStreamCapacity = 128 * Constants.Size.Kilobyte;
+
+        public int MemoryStreamCapacity => _memoryStreamCapacity;
+
         internal const string FilePrefix = "lucene-";
 
         public int FilesCount => _files.Count;
 
-        public TempFileCache(StorageEnvironmentOptions options)
+        public TempFileCache(string tempPath, bool encrypted)
         {
-            _options = options;
-            string path = _options.TempPath.FullPath;
-            if (Directory.Exists(path) == false)
-                Directory.CreateDirectory(path);
+            _tempPath = tempPath;
+            _encrypted = encrypted;
+            if (Directory.Exists(tempPath) == false)
+                Directory.CreateDirectory(tempPath);
 
-            foreach (string file in Directory.GetFiles(path, $"{FilePrefix}*" + StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions.TempFileExtension))
+            foreach (string file in Directory.GetFiles(tempPath, $"{FilePrefix}*" + StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions.TempFileExtension))
             {
                 var info = new FileInfo(file);
                 if (info.Length > MaxFileSizeToKeepInBytes || _files.Count >= MaxFilesToKeepInCache)
@@ -62,7 +64,7 @@ namespace Raven.Server.Indexing
             LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
         }
 
-        public string FullPath => _options.TempPath.FullPath;
+        public string FullPath => _tempPath;
 
         public void SetMemoryStreamCapacity(int capacity)
         {
@@ -85,7 +87,7 @@ namespace Raven.Server.Indexing
             if (_files.TryDequeue(out var stream) == false)
             {
                 stream = new TempFileStream(SafeFileStream.Create(
-                    GetTempFileName(_options),
+                    GetTempFileName(_tempPath),
                     FileMode.CreateNew, FileAccess.ReadWrite, FileShare.Read, 4096,
                     FileOptions.DeleteOnClose));
             }
@@ -95,14 +97,14 @@ namespace Raven.Server.Indexing
             }
 
             Stream resultStream = stream;
-            if (_options.Encryption.IsEnabled)
+            if (_encrypted)
                 resultStream = new TempCryptoStream(stream).IgnoreSetLength();
             return resultStream;
         }
 
-        public static string GetTempFileName(StorageEnvironmentOptions options)
+        public static string GetTempFileName(string tempPath)
         {
-            return Path.Combine(options.TempPath.FullPath, FilePrefix + Guid.NewGuid() + StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions.TempFileExtension);
+            return Path.Combine(tempPath, FilePrefix + Guid.NewGuid() + StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions.TempFileExtension);
         }
 
         public void ReturnFileStream(Stream stream)
@@ -260,6 +262,11 @@ namespace Raven.Server.Indexing
         {
             _length = 0;
             InnerStream.Position = 0;
+        }
+
+        public Stream CreateReaderStream()
+        {
+            return new FileStream(InnerStream.Name, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 4096);
         }
     }
 }

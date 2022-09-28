@@ -29,11 +29,11 @@ namespace SlowTests.Tests
             var path = new VoronPathSetting(NewDataPath());
             var environment = new StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions(path, path, path, null, null);
 
-            using (File.Create(TempFileCache.GetTempFileName(environment)))
+            using (File.Create(TempFileCache.GetTempFileName(environment.TempPath.FullPath)))
             {
             }
 
-            using (var cache = new TempFileCache(environment))
+            using (var cache = new TempFileCache(environment.TempPath.FullPath, environment.Encryption.IsEnabled))
             {
                 Assert.Equal(1, cache.FilesCount);
             }
@@ -47,7 +47,7 @@ namespace SlowTests.Tests
 
             for (var i = 0; i < TempFileCache.MaxFilesToKeepInCache; i++)
             {
-                using (File.Create(TempFileCache.GetTempFileName(environment)))
+                using (File.Create(TempFileCache.GetTempFileName(environment.TempPath.FullPath)))
                 {
                 }
             }
@@ -55,7 +55,7 @@ namespace SlowTests.Tests
             using (File.Create(Path.Combine(environment.TempPath.FullPath,
                 TempFileCache.FilePrefix + "Z" + StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions.TempFileExtension)))
             {
-                using (new TempFileCache(environment))
+                using (var cache = new TempFileCache(environment.TempPath.FullPath, environment.Encryption.IsEnabled))
                 {
                 }
             }
