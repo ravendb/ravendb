@@ -1,9 +1,7 @@
 using System;
 using System.Buffers.Binary;
 using System.Diagnostics;
-using System.Diagnostics.SymbolStore;
 using System.IO;
-using System.IO.MemoryMappedFiles;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Sparrow.Collections;
@@ -119,13 +117,12 @@ namespace Sparrow.Server.Compression
                     bool isDone = false;
                     while (!isDone)
                     {
-                        int symbolLength;
-                        if (keyBuffer.Length > 4)
+                        uint symbolValue = 0;
+                        if (keyBuffer.Length >= 4)
                         {
                             // PERF: This is the usual case, this is the branch that gets executed for most of the
                             // key, at least until we hit the tail.
-                            symbolLength = 4;
-                            Unsafe.WriteUnaligned(symbol, MemoryMarshal.Read<int>(keyBuffer));
+                            symbolValue = BinaryPrimitives.ReverseEndianness(MemoryMarshal.Read<uint>(keyBuffer)) >> 8;
                         }
                         else
                         {
@@ -134,7 +131,7 @@ namespace Sparrow.Server.Compression
 
                             // Initialize the important variables.
                             *(int*)symbol = 0;
-                            symbolLength = keyBuffer.Length;
+                            int symbolLength = keyBuffer.Length;
 
                             // In this case we need to figure out if the key is already null terminated. In which
                             // case, we are done. 
@@ -145,31 +142,21 @@ namespace Sparrow.Server.Compression
                                     break;
 
                                 // This is the last time as there is no more key to consume.
-                                symbol[0] = 0;
-                                symbolLength = 1;
                                 isDone = true;
                             }
                             else
                             {
                                 // We copy to the symbols buffer the part of the key we will be consuming.
-                                int bytesLeft = symbolLength;
-                                while (bytesLeft > 0)
+                                symbolValue = symbolLength switch
                                 {
-                                    bytesLeft--;
-                                    symbol[bytesLeft] = keyBuffer[bytesLeft];
-                                }
-
-                                if (symbolLength < 4)
-                                {
-                                    // The string is not null-terminated so we need to 
-                                    // include the null termination in the symbol itself.
-                                    // As we have already initialized the value with zeros, we just increment.
-                                    symbolLength++;
-                                }
+                                    3 => (uint)(keyBuffer[0] << 16 | keyBuffer[1] << 8 | keyBuffer[2]),
+                                    2 => (uint)(keyBuffer[0] << 16 | keyBuffer[1] << 8),
+                                    1 => (uint)(keyBuffer[0] << 16),
+                                };
                             }
                         }
 
-                        int prefixLen = Lookup(new ReadOnlySpan<byte>(symbol, symbolLength), table, numberOfEntries, out Code code);
+                        int prefixLen = Lookup(symbolValue, table, numberOfEntries, out Code code);
                         long sBuf = code.Value;
                         int sLen = code.Length;
                         if (intBufLen + sLen > 63)
@@ -278,16 +265,17 @@ namespace Sparrow.Server.Compression
 
                 // This is the local symbol we are going to use to lookup. 
                 byte* symbol = stackalloc byte[4];
+
+
                 bool isDone = false;
                 while (!isDone)
                 {
-                    int symbolLength;
-                    if (keyBuffer.Length > 4)
+                    uint symbolValue = 0;
+                    if (keyBuffer.Length >= 4)
                     {
                         // PERF: This is the usual case, this is the branch that gets executed for most of the
                         // key, at least until we hit the tail.
-                        symbolLength = 4;
-                        Unsafe.WriteUnaligned(symbol, MemoryMarshal.Read<int>(keyBuffer));
+                        symbolValue = BinaryPrimitives.ReverseEndianness(MemoryMarshal.Read<uint>(keyBuffer)) >> 8;
                     }
                     else
                     {
@@ -295,8 +283,8 @@ namespace Sparrow.Server.Compression
                         // we need to ensure that we add the null terminator to the encoding. 
 
                         // Initialize the important variables.
-                        *(int*)symbol = 0; 
-                        symbolLength = keyBuffer.Length;
+                        *(int*)symbol = 0;
+                        int symbolLength = keyBuffer.Length;
 
                         // In this case we need to figure out if the key is already null terminated. In which
                         // case, we are done. 
@@ -306,31 +294,21 @@ namespace Sparrow.Server.Compression
                                 break;
 
                             // This is the last time as there is no more key to consume.
-                            symbol[0] = 0;
-                            symbolLength = 1;
                             isDone = true;
                         }
                         else
                         {
                             // We copy to the symbols buffer the part of the key we will be consuming.
-                            int bytesLeft = symbolLength;
-                            while (bytesLeft > 0)
+                            symbolValue = symbolLength switch
                             {
-                                bytesLeft--;
-                                symbol[bytesLeft] = keyBuffer[bytesLeft];
-                            }
-
-                            if (symbolLength < 4)
-                            {
-                                // The string is not null-terminated so we need to 
-                                // include the null termination in the symbol itself.
-                                // As we have already initialized the value with zeros, we just increment.
-                                symbolLength++;
-                            }
+                                3 => (uint)(keyBuffer[0] << 16 | keyBuffer[1] << 8 | keyBuffer[2]), 
+                                2 => (uint)(keyBuffer[0] << 16 | keyBuffer[1] << 8), 
+                                1 => (uint)(keyBuffer[0] << 16), 
+                            };
                         }
                     }
 
-                    int prefixLen = Lookup(new ReadOnlySpan<byte>(symbol, symbolLength), table, numberOfEntries, out Code code);
+                    int prefixLen = Lookup(symbolValue, table, numberOfEntries, out Code code);
                     long sBuf = code.Value;
                     int sLen = code.Length;
                     if (intBufLen + sLen > 63)
@@ -536,7 +514,7 @@ namespace Sparrow.Server.Compression
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static unsafe int Lookup(ReadOnlySpan<byte> symbol, Interval3Gram* table, int numberOfEntries, out Code code)
+        private static unsafe int Lookup(uint symbolValue, Interval3Gram* table, int numberOfEntries, out Code code)
         {
             // PERF: this is an optimized version of the CompareDictionaryEntry routine. Given that we
             // can actually perform the operation in parallel. The usual case will be to call the parallel
@@ -544,21 +522,6 @@ namespace Sparrow.Server.Compression
 
             int l = 0;
             int r = numberOfEntries;
-
-            uint symbolValue;
-            if (symbol.Length >= 4)
-            {
-                symbolValue = BinaryPrimitives.ReverseEndianness(MemoryMarshal.Read<uint>(symbol)) >> 8;
-            }
-            else
-            {
-                symbolValue = symbol.Length switch
-                {
-                    3 => (uint)(symbol[0] << 16 | symbol[1] << 8 | symbol[2]),
-                    2 => (uint)(symbol[0] << 16 | symbol[1] << 8),
-                    1 => (uint)symbol[0] << 16,
-                };
-            }
 
             while (r - l > 1)
             {
