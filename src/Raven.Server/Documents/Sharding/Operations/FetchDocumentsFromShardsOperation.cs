@@ -146,8 +146,7 @@ namespace Raven.Server.Documents.Sharding.Operations
                 Includes = includesMap.Values.ToList(),
                 MissingIncludes = missingIncludes,
                 CompareExchangeValueIncludes = compareExchangeValueIncludes?.Results,
-                RevisionsChangeVectorResults = revisionIncludes?.RevisionsChangeVectorResults,
-                IdByRevisionsByDateTimeResults = revisionIncludes?.IdByRevisionsByDateTimeResults,
+                RevisionIncludes = revisionIncludes,
                 TimeSeriesIncludes = timeSeriesIncludes
             };
         }
@@ -171,8 +170,7 @@ namespace Raven.Server.Documents.Sharding.Operations
         public HashSet<string> MissingIncludes;
         public Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> CompareExchangeValueIncludes;
 
-        public Dictionary<string, Document> RevisionsChangeVectorResults;
-        public Dictionary<string, Dictionary<DateTime, Document>> IdByRevisionsByDateTimeResults;
+        public IRevisionIncludes RevisionIncludes;
 
         public ITimeSeriesIncludes TimeSeriesIncludes;
     }

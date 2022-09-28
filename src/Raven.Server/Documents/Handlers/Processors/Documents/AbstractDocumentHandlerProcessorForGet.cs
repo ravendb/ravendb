@@ -194,12 +194,12 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
                 await result.TimeSeriesIncludes.WriteIncludesAsync(writer, context, CancellationToken);
             }
 
-            if (result.RevisionsChangeVectorIncludes?.Count > 0 || result.IdByRevisionsByDateTimeIncludes?.Count > 0)
+            if (result.RevisionIncludes?.Count > 0)
             {
                 writer.WriteComma();
                 writer.WritePropertyName(nameof(GetDocumentsResult.RevisionIncludes));
                 writer.WriteStartArray();
-                await writer.WriteRevisionIncludes(context: context, revisionsByChangeVector: result.RevisionsChangeVectorIncludes, revisionsByDateTime: result.IdByRevisionsByDateTimeIncludes, CancellationToken);
+                await result.RevisionIncludes.WriteIncludesAsync(writer, context, CancellationToken);
                 writer.WriteEndArray();
             }
 
@@ -398,9 +398,7 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
 
         public List<T> Includes { get; set; }
 
-        public Dictionary<string, Document> RevisionsChangeVectorIncludes { get; set; }
-
-        public Dictionary<string, Dictionary<DateTime, Document>> IdByRevisionsByDateTimeIncludes { get; set; }
+        public IRevisionIncludes RevisionIncludes { get; set; }
 
         public Dictionary<string, List<CounterDetail>> CounterIncludes { get; set; }
 

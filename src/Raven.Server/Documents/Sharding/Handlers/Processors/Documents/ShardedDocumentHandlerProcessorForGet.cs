@@ -57,8 +57,7 @@ internal class ShardedDocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
             Includes = shardedReadResult.Result?.Includes,
             MissingIncludes = shardedReadResult.Result?.MissingIncludes,
             CompareExchangeIncludes = shardedReadResult.Result?.CompareExchangeValueIncludes,
-            RevisionsChangeVectorIncludes = shardedReadResult.Result?.RevisionsChangeVectorResults,
-            IdByRevisionsByDateTimeIncludes = shardedReadResult.Result?.IdByRevisionsByDateTimeResults,
+            RevisionIncludes = shardedReadResult.Result?.RevisionIncludes,
             TimeSeriesIncludes = shardedReadResult.Result?.TimeSeriesIncludes,
             StatusCode = (HttpStatusCode)shardedReadResult.StatusCode
         };

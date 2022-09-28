@@ -69,7 +69,7 @@ namespace Raven.Server.Documents.Queries
             throw new NotSupportedException();
         }
 
-        public override Dictionary<string, Document>  GetRevisionIncludesByChangeVector()
+        public override IRevisionIncludes  GetRevisionIncludes()
         {
             throw new NotSupportedException();
         }
@@ -79,7 +79,7 @@ namespace Raven.Server.Documents.Queries
             throw new NotSupportedException();
         }
 
-        public override void AddCompareExchangeValueIncludes(IIncludeCompareExchangeValues values)
+        public override void AddCompareExchangeValueIncludes(ICompareExchangeValueIncludes values)
         {
             if (values.Results == null)
                 return;
@@ -87,20 +87,13 @@ namespace Raven.Server.Documents.Queries
             throw new NotSupportedException();
         }
 
-        public override void AddRevisionIncludes(IIncludeRevisions revisions)
+        public override void AddRevisionIncludes(IRevisionIncludes revisions)
         {
-            if (revisions.RevisionsChangeVectorResults is null)
-                return;
-            
-            throw new NotSupportedException();
-        }
-        
-        public override Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> GetCompareExchangeValueIncludes()
-        {
-            throw new NotSupportedException();
+            if (revisions?.Count > 0)
+                throw new NotSupportedException();
         }
 
-        public override Dictionary<string, Dictionary<DateTime, Document>> GetRevisionIncludesIdByDateTime()
+        public override Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> GetCompareExchangeValueIncludes()
         {
             throw new NotSupportedException();
         }

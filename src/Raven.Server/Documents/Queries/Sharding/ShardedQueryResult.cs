@@ -12,8 +12,8 @@ namespace Raven.Server.Documents.Queries.Sharding;
 
 public class ShardedQueryResult : QueryResultServerSide<BlittableJsonReaderObject>
 {
-    private IIncludeCompareExchangeValues _includeCompareExchangeValues;
-    private IIncludeRevisions _includeRevisions;
+    private ICompareExchangeValueIncludes _includeCompareExchangeValues;
+    private IRevisionIncludes _includeRevisions;
     private ITimeSeriesIncludes _includeTimeSeries;
     public override ValueTask AddResultAsync(BlittableJsonReaderObject result, CancellationToken token)
     {
@@ -60,25 +60,20 @@ public class ShardedQueryResult : QueryResultServerSide<BlittableJsonReaderObjec
         return _includeTimeSeries;
     }
 
-    public override void AddCompareExchangeValueIncludes(IIncludeCompareExchangeValues values)
+    public override void AddCompareExchangeValueIncludes(ICompareExchangeValueIncludes values)
     {
         _includeCompareExchangeValues = values;
     }
 
     public override Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> GetCompareExchangeValueIncludes() => _includeCompareExchangeValues?.Results;
 
-    public override void AddRevisionIncludes(IIncludeRevisions revisions)
+    public override void AddRevisionIncludes(IRevisionIncludes revisions)
     {
         _includeRevisions = revisions;
     }
 
-    public override Dictionary<string, Document> GetRevisionIncludesByChangeVector()
+    public override IRevisionIncludes GetRevisionIncludes()
     {
-        return _includeRevisions?.RevisionsChangeVectorResults;
-    }
-
-    public override Dictionary<string, Dictionary<DateTime, Document>> GetRevisionIncludesIdByDateTime()
-    {
-        return _includeRevisions?.IdByRevisionsByDateTimeResults;
+        return _includeRevisions;
     }
 }

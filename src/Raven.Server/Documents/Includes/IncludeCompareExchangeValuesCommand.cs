@@ -12,7 +12,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Includes
 {
-    public class IncludeCompareExchangeValuesCommand : IIncludeCompareExchangeValues, IDisposable
+    public class IncludeCompareExchangeValuesCommand : ICompareExchangeValueIncludes, IDisposable
     {
         private readonly ServerStore _serverStore;
         private readonly string _databaseName;

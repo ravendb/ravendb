@@ -103,8 +103,7 @@ internal class DocumentHandlerProcessorForGet : AbstractDocumentHandlerProcessor
             Etag = actualEtag,
             Documents = documents,
             Includes = includes,
-            RevisionsChangeVectorIncludes = includeRevisions?.RevisionsChangeVectorResults,
-            IdByRevisionsByDateTimeIncludes = includeRevisions?.IdByRevisionsByDateTimeResults,
+            RevisionIncludes = includeRevisions,
             CounterIncludes = includeCounters?.Results,
             TimeSeriesIncludes = includeTimeSeries,
             CompareExchangeIncludes = includeCompareExchangeValues?.Results
