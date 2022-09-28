@@ -1015,6 +1015,7 @@ namespace Raven.Server
                     if (Interlocked.CompareExchange(ref Certificate, newCertificate, currentCertificate) == currentCertificate)
                         _httpsConnectionMiddleware.SetCertificate(newCertificate.Certificate);
                     ServerCertificateChanged?.Invoke(this, EventArgs.Empty);
+                    //todo: dispose old certificate
                     return;
                 }
 
@@ -1721,7 +1722,7 @@ namespace Raven.Server
         public string WebUrl { get; private set; }
 
         internal CertificateUtils.CertificateHolder Certificate;
-        
+
         public class TcpListenerStatus
         {
             public readonly List<TcpListener> Listeners = new List<TcpListener>();
@@ -2286,6 +2287,7 @@ namespace Raven.Server
             {
                 _httpsConnectionMiddleware.SetCertificate(certificate);
                 ServerCertificateChanged?.Invoke(this, EventArgs.Empty);
+                //todo: dispose old certificate
             }
         }
 
@@ -2644,7 +2646,6 @@ namespace Raven.Server
                 }
 
                 ea.Execute(() => ServerStore?.Dispose());
-                ea.Execute(() => Certificate?.Dispose());
                 ea.Execute(() =>
                 {
                     try
@@ -2662,6 +2663,7 @@ namespace Raven.Server
                 ea.Execute(() => _clusterMaintenanceWorker?.Dispose());
                 ea.Execute(() => _cpuCreditsMonitoring?.Join(int.MaxValue));
                 ea.Execute(() => CpuUsageCalculator.Dispose());
+                ea.Execute(() => Certificate?.Dispose());
 
                 // this should be last
                 ea.Execute(() => AfterDisposal?.Invoke());

@@ -78,7 +78,7 @@ public partial class RavenTestBase
             return certificates;
         }
 
-        public TestCertificatesHolder GenerateAndSaveSelfSignedCertificate(bool createNew = false, [CallerMemberName] string caller = null)
+        public TestCertificatesHolder GenerateAndSaveSelfSignedCertificate(bool createNew = true, [CallerMemberName] string caller = null)
         {
             if (createNew)
                 return ReturnCertificatesHolder(Generate(caller, Interlocked.Increment(ref Counter)));
