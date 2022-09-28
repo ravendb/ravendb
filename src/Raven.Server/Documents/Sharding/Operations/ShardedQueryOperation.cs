@@ -64,8 +64,9 @@ public class ShardedQueryOperation : IShardedReadOperation<QueryResult, ShardedQ
 
         DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Arek, DevelopmentHelper.Severity.Normal, "Check if we could handle this in streaming manner so we won't need to materialize all blittables and do Clone() here");
 
-        ShardedIncludeCompareExchangeValues includeCompareExchangeValues = null;
-        ShardedIncludeRevisions includeRevisions = null;
+        ShardedRevisionIncludes revisionIncludes = null;
+        ShardedCompareExchangeValueInclude compareExchangeValueIncludes = null;
+        ShardedTimeSeriesIncludes timeSeriesIncludes = null;
 
         foreach (var cmdResult in results.Span)
         {
@@ -101,16 +102,23 @@ public class ShardedQueryOperation : IShardedReadOperation<QueryResult, ShardedQ
 
             if (cmdResult.RevisionIncludes is {Length: > 0})
             {
-                includeRevisions ??= new ShardedIncludeRevisions();
+                revisionIncludes ??= new ShardedRevisionIncludes();
 
-                includeRevisions.AddResults(cmdResult.RevisionIncludes, _context);
+                revisionIncludes.AddResults(cmdResult.RevisionIncludes, _context);
             }
 
             if (cmdResult.CompareExchangeValueIncludes != null)
             {
-                includeCompareExchangeValues ??= new ShardedIncludeCompareExchangeValues();
+                compareExchangeValueIncludes ??= new ShardedCompareExchangeValueInclude();
 
-                includeCompareExchangeValues.AddResults(cmdResult.CompareExchangeValueIncludes, _context);
+                compareExchangeValueIncludes.AddResults(cmdResult.CompareExchangeValueIncludes, _context);
+            }
+
+            if (cmdResult.TimeSeriesIncludes != null)
+            {
+                timeSeriesIncludes ??= new ShardedTimeSeriesIncludes();
+
+                timeSeriesIncludes.AddResults(cmdResult.TimeSeriesIncludes, _context);
             }
 
             if (_sortingComparer == null)
@@ -122,11 +130,14 @@ public class ShardedQueryOperation : IShardedReadOperation<QueryResult, ShardedQ
             }
         }
 
-        if (includeCompareExchangeValues != null)
-            result.AddCompareExchangeValueIncludes(includeCompareExchangeValues);
+        if (compareExchangeValueIncludes != null)
+            result.AddCompareExchangeValueIncludes(compareExchangeValueIncludes);
 
-        if (includeRevisions != null)
-            result.AddRevisionIncludes(includeRevisions);
+        if (revisionIncludes != null)
+            result.AddRevisionIncludes(revisionIncludes);
+
+        if (timeSeriesIncludes != null)
+            result.AddTimeSeriesIncludes(timeSeriesIncludes);
 
         if (_sortingComparer != null)
         {

@@ -18,6 +18,7 @@ using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session.Loaders;
 using Raven.Client.Http;
 using Raven.Server.Documents.Handlers.Processors.TimeSeries;
+using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries.Revisions;
 using Raven.Server.Documents.Sharding.Handlers.ContinuationTokens;
 using Raven.Server.Json;
@@ -190,7 +191,7 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
             {
                 writer.WriteComma();
                 writer.WritePropertyName(nameof(GetDocumentsResult.TimeSeriesIncludes));
-                await writer.WriteTimeSeriesAsync(result.TimeSeriesIncludes, CancellationToken);
+                await result.TimeSeriesIncludes.WriteIncludesAsync(writer, context, CancellationToken);
             }
 
             if (result.RevisionsChangeVectorIncludes?.Count > 0 || result.IdByRevisionsByDateTimeIncludes?.Count > 0)
@@ -403,7 +404,7 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
 
         public Dictionary<string, List<CounterDetail>> CounterIncludes { get; set; }
 
-        public Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> TimeSeriesIncludes { get; set; }
+        public ITimeSeriesIncludes TimeSeriesIncludes { get; set; }
 
         public Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> CompareExchangeIncludes { get; set; }
 

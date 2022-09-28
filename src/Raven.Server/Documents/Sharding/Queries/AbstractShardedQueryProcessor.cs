@@ -227,6 +227,13 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
             includeBuilder.RevisionsToIncludeByDateTime = _query.Metadata.RevisionIncludes.RevisionsBeforeDateTime;
         }
 
+        if (_query.Metadata.TimeSeriesIncludes != null)
+        {
+            includeBuilder ??= new IncludeBuilder();
+
+            includeBuilder.TimeSeriesToIncludeBySourceAlias = _query.Metadata.TimeSeriesIncludes.TimeSeries;
+        }
+
         if (includeBuilder != null)
             documentQuery.Include(includeBuilder);
 

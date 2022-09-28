@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.Queries
         
         private Dictionary<string, Dictionary<DateTime, Document>> _revisionsDateTimeBeforeResults;
 
-        private Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> _timeSeriesIncludes;
+        private ITimeSeriesIncludes _timeSeriesIncludes;
 
         private Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> _compareExchangeValueIncludes;
         
@@ -42,13 +42,12 @@ namespace Raven.Server.Documents.Queries
 
         public override Dictionary<string, List<CounterDetail>> GetCounterIncludes() => _counterIncludes;
 
-        public override void AddTimeSeriesIncludes(IncludeTimeSeriesCommand includeTimeSeriesCommand)
+        public override void AddTimeSeriesIncludes(ITimeSeriesIncludes includeTimeSeriesCommand)
         {
-            _timeSeriesIncludes = includeTimeSeriesCommand.Results;
+            _timeSeriesIncludes = includeTimeSeriesCommand;
         }
-        
 
-        public override Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> GetTimeSeriesIncludes() => _timeSeriesIncludes;
+        public override ITimeSeriesIncludes GetTimeSeriesIncludes() => _timeSeriesIncludes;
 
         public override void AddCompareExchangeValueIncludes(IIncludeCompareExchangeValues values)
         {

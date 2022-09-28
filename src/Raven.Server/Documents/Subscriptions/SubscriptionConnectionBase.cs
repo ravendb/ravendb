@@ -972,7 +972,7 @@ namespace Raven.Server.Documents.Subscriptions
                 writer.WriteComma();
 
                 writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(TimeSeriesIncludesSegment));
-                var size = await writer.WriteTimeSeriesAsync(includeTimeSeriesCommand.Results, CancellationTokenSource.Token);
+                var size = await includeTimeSeriesCommand.WriteIncludesAsync(writer, context, CancellationTokenSource.Token);
 
                 batchScope.RecordIncludedTimeSeriesInfo(includeTimeSeriesCommand.Results.Sum(x =>
                     x.Value.Sum(y => y.Value.Sum(z => z.Entries.Length))), size);

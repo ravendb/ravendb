@@ -618,7 +618,7 @@ namespace Raven.Server.Json
             {
                 writer.WriteComma();
                 writer.WritePropertyName(nameof(result.TimeSeriesIncludes));
-                await writer.WriteTimeSeriesAsync(timeSeries, token);
+                await timeSeries.WriteIncludesAsync(writer, context, token);
             }
 
             if (result.TimeSeriesFields != null)
@@ -1750,7 +1750,6 @@ namespace Raven.Server.Json
 
                     foreach ((DateTime dateTime, Document doc) in dateTimeToDictionary)
                     {
-
                         writer.WriteStartObject();
 
                         writer.WritePropertyName(nameof(RevisionIncludeResult.Id));
@@ -1783,15 +1782,15 @@ namespace Raven.Server.Json
 
                     writer.WriteStartObject();
 
-                    writer.WritePropertyName("ChangeVector");
+                    writer.WritePropertyName(nameof(RevisionIncludeResult.ChangeVector));
                     writer.WriteString(key);
                     writer.WriteComma();
 
-                    writer.WritePropertyName("Id");
-                    writer.WriteString(document.Id.ToString());
+                    writer.WritePropertyName(nameof(RevisionIncludeResult.Id));
+                    writer.WriteString(document.Id);
                     writer.WriteComma();
 
-                    writer.WritePropertyName("Revision");
+                    writer.WritePropertyName(nameof(RevisionIncludeResult.Revision));
                     WriteDocument(writer, context, metadataOnly: false, document: document);
                     await writer.MaybeFlushAsync(token);
 
@@ -2008,29 +2007,6 @@ namespace Raven.Server.Json
             }
 
             writer.WriteEndObject();
-        }
-
-        public static async ValueTask<int> WriteTimeSeriesAsync(this AsyncBlittableJsonTextWriter writer, Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> timeSeries, CancellationToken token)
-        {
-            int size = 0;
-            writer.WriteStartObject();
-
-            var first = true;
-            foreach (var kvp in timeSeries)
-            {
-                if (first == false)
-                    writer.WriteComma();
-
-                first = false;
-
-                writer.WritePropertyName(kvp.Key);
-                size += kvp.Key.Length;
-                size += await TimeSeriesHandlerProcessorForGetTimeSeriesRanges.WriteTimeSeriesRangeResultsAsync(context: null, writer, documentId: null, kvp.Value, calcTotalCount: true, token);
-            }
-
-            writer.WriteEndObject();
-
-            return size;
         }
 
         private static void WriteDocumentMetadata(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context,
