@@ -35,6 +35,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             if (index.Definition.HasDynamicFields)
             {
                 _dynamicFields = knownFields.CreateIndexMappingForDynamic();
+                _indexingScope.DynamicFields ??= new();
                 UpdateDynamicFieldsBindings();
             }
             
