@@ -2,6 +2,7 @@
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -39,10 +40,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void TestSearch()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void TestSearch(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var d = new Test
                 {
@@ -79,7 +81,7 @@ namespace SlowTests.Issues
 
                     var result5 = session.Advanced.DocumentQuery<Test, TestIndex>()
                         .Search("NameTranslations_en", "test").ToList().Count;
-
+                    WaitForUserToContinueTheTest(store);
                     var result6 = session.Advanced.DocumentQuery<Test, TestIndex>()
                         .Search("NameTranslations_en", "translation").ToList().Count;
 

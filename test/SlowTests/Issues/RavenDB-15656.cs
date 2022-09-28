@@ -14,10 +14,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void CanCreateMapIndexWithMissingExpressionInFor()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanCreateMapIndexWithMissingExpressionInFor(Options options)
         {
-            using DocumentStore s = GetDocumentStore();
+            using DocumentStore s = GetDocumentStore(options);
             new MyIndex().Execute(s);
         }
 

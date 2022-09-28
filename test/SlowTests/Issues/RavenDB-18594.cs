@@ -5,6 +5,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq.Indexing;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,10 +17,12 @@ public class RavenDB_18594 : RavenTestBase
     {
     }
     
-    [Fact]
-    public void ShouldApplyBoostingToDocumentInsteadOfIndividualFieldsInStaticIndex()
+    [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-18146")]
+    public void ShouldApplyBoostingToDocumentInsteadOfIndividualFieldsInStaticIndex(Options options)
     {
-        using var store = GetDocumentStore();
+        using var store = GetDocumentStore(options);
         {
             InsertUsers(store);
         }
@@ -44,10 +47,12 @@ public class RavenDB_18594 : RavenTestBase
         }
     }
     
-    [Fact]
-    public void ShouldApplyBoostingToDocumentInsteadOfIndividualFieldsInStaticJavaScriptIndex()
+    [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-18146")]
+    public void ShouldApplyBoostingToDocumentInsteadOfIndividualFieldsInStaticJavaScriptIndex(Options options)
     {
-        using var store = GetDocumentStore();
+        using var store = GetDocumentStore(options);
         {
             InsertUsers(store);
         }

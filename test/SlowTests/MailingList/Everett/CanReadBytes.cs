@@ -31,7 +31,8 @@ namespace SlowTests.MailingList.Everett
             {
                 ModifyDocumentStore = s =>
                 {
-                    s.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
+                    s.
+                        Conventions.Serialization = new NewtonsoftJsonSerializationConventions
                     {
                         CustomizeJsonSerializer = serializer =>
                         {

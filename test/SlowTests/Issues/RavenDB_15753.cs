@@ -551,7 +551,7 @@ namespace ObjectDetection
                 }
 
                 Indexes.WaitForIndexing(store);
-
+                WaitForUserToContinueTheTest(store);
                 RavenTestHelper.AssertNoIndexErrors(store);
             }
         }
