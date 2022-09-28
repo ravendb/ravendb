@@ -35,6 +35,7 @@ module.exports = {
         const incomingRules = webpackConfig.module.rules
             .filter(x => (x.use && x.use.indexOf && x.use.indexOf("imports-loader") === 0)
                 || (x.use && x.use.loader === "html-loader")
+                || (x.type && x.type === "asset/source")
                 || (x.test && x.test.toString().includes(".less"))
                 || (x.test && x.test.toString().includes(".font\\.js"))
                 || (x.test && x.test.toString().includes(".scss")));
