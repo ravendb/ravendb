@@ -232,6 +232,9 @@ public class JintCoraxDocumentConverter : JintCoraxDocumentConverterBase
                     currentId = binding.FieldId;
 
                 field = _fields[propertyAsString] = IndexField.Create(propertyAsString, new IndexFieldOptions(), _allFields, currentId);
+                indexingScope.DynamicFields ??= new();
+                indexingScope.DynamicFields[propertyAsString] = field.Indexing;
+                indexingScope.CreatedFieldsCount++;
             }
 
             return field;
