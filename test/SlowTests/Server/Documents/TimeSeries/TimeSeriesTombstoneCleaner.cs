@@ -124,7 +124,7 @@ namespace SlowTests.Server.Documents.TimeSeries
                 }
 
                 await SetupReplicationAsync(store1, store2);
-                EnsureReplicating(store1, store2);
+                await EnsureReplicatingAsync(store1, store2);
 
                 using (var session = store1.OpenSession())
                 {
@@ -140,6 +140,8 @@ namespace SlowTests.Server.Documents.TimeSeries
                     session.SaveChanges();
                 }
 
+                await EnsureReplicatingAsync(store1, store2);
+
                 var storage = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database);
                 using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenWriteTransaction())
@@ -150,21 +152,24 @@ namespace SlowTests.Server.Documents.TimeSeries
                     Assert.Equal(2, c3);
                 }
 
-                EnsureReplicating(store1, store2);
-
                 var cleaner = storage.TombstoneCleaner;
-                await cleaner.ExecuteCleanup();
 
-                var c = 0L;
-                using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                using (context.OpenReadTransaction())
+                await WaitAndAssertForValueAsync(async () =>
                 {
-                    c += storage.DocumentsStorage.GetNumberOfTombstones(context);
-                    c += storage.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesDeletedRanges(context);
-                    c += storage.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesPendingDeletionSegments(context);
-                }
+                    await cleaner.ExecuteCleanup();
 
-                Assert.Equal(0, c);
+                    var c = 0L;
+                    using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        c += storage.DocumentsStorage.GetNumberOfTombstones(context);
+                        c += storage.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesDeletedRanges(context);
+                        c += storage.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesPendingDeletionSegments(context);
+                    }
+
+                    return c;
+                }, 0);
+              
                 long tsCount1 = 0;
                 using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
