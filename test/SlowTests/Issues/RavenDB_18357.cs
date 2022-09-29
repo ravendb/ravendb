@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Config;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -18,6 +19,13 @@ public class RavenDB_18357 : RavenTestBase
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public void AutoIndexShouldThrowWhenTryingToIndexComplexObjec(Options options)
     {
+        var oldModifyDatabaseRecord = options.ModifyDatabaseRecord;
+        options.ModifyDatabaseRecord = doc =>
+        {
+            oldModifyDatabaseRecord(doc);
+            doc.Settings[RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexCannotBeOpened)] = "false";
+        };
+        
         using var store = GetDocumentStore(options);
         {
             using var s = store.OpenSession();
@@ -29,7 +37,7 @@ public class RavenDB_18357 : RavenTestBase
 
 
         session.Query<Input>().Where(w => w.Nested == new NestedItem() {Name = "Matt"}).ToList();
-        var errors = Indexes.WaitForIndexingErrors(store);
+        var errors = Indexes.WaitForIndexingErrors(store, errorsShouldExists: true);
         Assert.NotEmpty(errors);
         Assert.NotEmpty(errors[0].Errors);
     }
