@@ -918,7 +918,7 @@ namespace Raven.Server.Documents.Handlers
 
                             var docId = cmd.Id;
 
-                            if (docId[docId.Length - 1] == Database.IdentityPartsSeparator)
+                            if (docId[docId.Length - 1] == Database.IdentityPartsSeparator && cmd.FromEtl)
                             {
                                 // attachment sent by Raven ETL, only prefix is defined
 
