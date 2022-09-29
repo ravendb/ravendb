@@ -21,7 +21,6 @@ namespace Corax;
 
 public sealed unsafe partial class IndexSearcher : IDisposable
 {
-    private List<string> _fieldsInIndex;
     private readonly Transaction _transaction;
     private readonly IndexFieldsMapping _fieldMapping;
     private Page _lastPage = default;
@@ -224,15 +223,12 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     
     public List<string> GetFields()
     {
-        if (_fieldsInIndex != null)
-            return _fieldsInIndex;
-        
-        _fieldsInIndex = new();
+        List<string> fieldsInIndex = new();
         var fields = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
 
         //Return an empty set when the index doesn't contain any fields. Case when index has 0 entries.
         if (fields is null)
-            return _fieldsInIndex;
+            return fieldsInIndex;
         
         
         using (var it = fields.Iterate(false))
@@ -244,12 +240,12 @@ public sealed unsafe partial class IndexSearcher : IDisposable
                     if (it.CurrentKey.EndsWith(Constants.IndexWriter.DoubleTreeSuffix) || it.CurrentKey.EndsWith(Constants.IndexWriter.LongTreeSuffix))
                         continue;
                     
-                    _fieldsInIndex.Add(it.CurrentKey.ToString());
+                    fieldsInIndex.Add(it.CurrentKey.ToString());
                 } while (it.MoveNext());
             }
         }
        
-        return _fieldsInIndex;
+        return fieldsInIndex;
     }
     
     
