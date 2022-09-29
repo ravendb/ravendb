@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
 using Xunit;
 using Xunit.Abstractions;
@@ -37,11 +38,21 @@ namespace SlowTests.Issues
 
                 session.Advanced.Attachments.Store(user, "foo", ms);
                 session.Advanced.Attachments.Store(user2, "foo2", ms2);
-                await Assert.ThrowsAsync<DocumentDoesNotExistException>(async () =>
+
+                Exception exception = null;
+                try
                 {
                     await session.SaveChangesAsync();
-                });
+                }
+                catch (Exception e)
+                {
+                    exception = e;
+                }
 
+                Assert.NotNull(exception);
+                Assert.IsType<RavenException>(exception);
+                var ravenException = (RavenException)exception;
+                Assert.IsType<InvalidOperationException>(ravenException.InnerException);
             }
         }
 
