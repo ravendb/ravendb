@@ -761,7 +761,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 };
 
                 var e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(serverWideBackupConfiguration2)));
-                var expectedError = $"Can't use task name '{backupName}', there is already a Periodic ServerWide Backup task with that name";
+                var expectedError = $"Can't use task name '{backupName}', there is already a Server-Wide Backup task with that name";
                 Assert.Contains(expectedError, e.Message);
 
                 serverWideBackups = await store.Maintenance.Server.SendAsync(new GetServerWideBackupConfigurationsOperation());

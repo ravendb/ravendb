@@ -45,7 +45,12 @@ namespace Raven.Server.ServerWide.Commands
             {
                 previousValue.Modifications ??= new DynamicJsonValue();
 
-                if (previousValue.TryGet(Value.Name, out object _) == false)
+                if (previousValue.TryGet(Value.Name, out BlittableJsonReaderObject previousTask))
+                {
+                    if (previousTask.TryGet(nameof(ServerWideBackupConfiguration.TaskId), out long existingTaskId) && existingTaskId != prevTaskId)
+                        throw new RachisApplyException($"Can't use task name '{Value.Name}', there is already a Server-Wide Backup task with that name");
+                }
+                else
                 {
                     if (prevTaskId != 0)
                     {
