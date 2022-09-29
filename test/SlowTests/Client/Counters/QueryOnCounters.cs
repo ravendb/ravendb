@@ -6,6 +6,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Queries;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -1393,10 +1394,11 @@ from 'Users' as user select output(user)", query.ToString());
             }
         }
 
-        [Fact]
-        public void SessionQueryIncludeSingleCounter()
+        [RavenTheory(RavenTestCategory.Counters)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void SessionQueryIncludeSingleCounter(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1428,7 +1430,7 @@ from 'Users' as user select output(user)", query.ToString());
                     Assert.Equal("from 'Orders' include counters('Downloads')"
                                 , query.ToString());
 
-                    var queryResult = query.ToList();
+                    var queryResult = query.ToList().OrderBy(x => x.Id).ToList();
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
 
                     // included counters should be in cache
@@ -1454,10 +1456,11 @@ from 'Users' as user select output(user)", query.ToString());
             }
         }
 
-        [Fact]
-        public void SessionQueryIncludeMultipleCounters()
+        [RavenTheory(RavenTestCategory.Counters)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void SessionQueryIncludeMultipleCounters(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1492,7 +1495,7 @@ from 'Users' as user select output(user)", query.ToString());
                     Assert.Equal("from 'Orders' include counters('Downloads'),counters('Likes')"
                                 , query.ToString());
 
-                    var queryResult = query.ToList();
+                    var queryResult = query.ToList().OrderBy(x => x.Id).ToList();
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
 
                     // included counters should be in cache
@@ -1526,10 +1529,11 @@ from 'Users' as user select output(user)", query.ToString());
             }
         }
 
-        [Fact]
-        public void SessionQueryIncludeAllCounters()
+        [RavenTheory(RavenTestCategory.Counters)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void SessionQueryIncludeAllCounters(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1567,7 +1571,7 @@ from 'Users' as user select output(user)", query.ToString());
                     Assert.Equal("from 'Orders' include counters()"
                                 , query.ToString());
 
-                    var queryResult = query.ToList();
+                    var queryResult = query.ToList().OrderBy(x => x.Id).ToList();
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
 
                     // included counters should be in cache
@@ -1599,10 +1603,11 @@ from 'Users' as user select output(user)", query.ToString());
             }
         }
 
-        [Fact]
-        public void SessionQueryIncludeCounterAndDocument()
+        [RavenTheory(RavenTestCategory.Counters)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void SessionQueryIncludeCounterAndDocument(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1649,7 +1654,7 @@ from 'Users' as user select output(user)", query.ToString());
                                  "Company,counters('Downloads')"
                                 , query.ToString());
 
-                    var queryResult = query.ToList();
+                    var queryResult = query.ToList().OrderBy(x => x.Id).ToList();
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
 
                     // included documents should be in cache
@@ -1677,10 +1682,11 @@ from 'Users' as user select output(user)", query.ToString());
             }
         }
 
-        [Fact]
-        public async Task AsyncSessionQueryIncludeCounterAndDocument()
+        [RavenTheory(RavenTestCategory.Counters)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task AsyncSessionQueryIncludeCounterAndDocument(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1727,7 +1733,7 @@ from 'Users' as user select output(user)", query.ToString());
                                  "Company,counters('Downloads')"
                                 , query.ToString());
 
-                    var queryResult = await query.ToListAsync();
+                    var queryResult = (await query.ToListAsync()).OrderBy(x => x.Id).ToList();
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
 
                     // included documents should be in cache
@@ -1755,10 +1761,11 @@ from 'Users' as user select output(user)", query.ToString());
             }
         }
 
-        [Fact]
-        public void SessionQueryIncludeCounterAndDocumentWithWhere()
+        [RavenTheory(RavenTestCategory.Counters)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void SessionQueryIncludeCounterAndDocumentWithWhere(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1852,10 +1859,11 @@ from 'Users' as user select output(user)", query.ToString());
             }
         }
 
-        [Fact]
-        public async Task AsyncSessionQueryIncludeCounterAndDocumentWithWhere()
+        [RavenTheory(RavenTestCategory.Counters)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task AsyncSessionQueryIncludeCounterAndDocumentWithWhere(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1949,10 +1957,11 @@ from 'Users' as user select output(user)", query.ToString());
             }
         }
 
-        [Fact]
-        public void RawQueryIncludeCounterWithParameter()
+        [RavenTheory(RavenTestCategory.Counters)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void RawQueryIncludeCounterWithParameter(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1981,7 +1990,7 @@ from 'Users' as user select output(user)", query.ToString());
                     var query = session.Advanced
                         .RawQuery<Order>("from orders include counters($p0)")
                         .AddParameter("p0", "Downloads")
-                        .ToList();
+                        .ToList().OrderBy(x => x.Id).ToList();
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
 
@@ -2008,10 +2017,11 @@ from 'Users' as user select output(user)", query.ToString());
             }
         }
 
-        [Fact]
-        public void RawQueryIncludeCounterWithArrayParameter()
+        [RavenTheory(RavenTestCategory.Counters)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void RawQueryIncludeCounterWithArrayParameter(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -2043,7 +2053,7 @@ from 'Users' as user select output(user)", query.ToString());
                     var query = session.Advanced
                         .RawQuery<Order>("from orders include counters($p0)")
                         .AddParameter("p0", new[] { "Downloads", "Likes" })
-                        .ToList();
+                        .ToList().OrderBy(x => x.Id).ToList();
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
 
@@ -2072,10 +2082,11 @@ from 'Users' as user select output(user)", query.ToString());
             }
         }
 
-        [Fact]
-        public void RawQueryIncludeCounterOfLoadedDocument()
+        [RavenTheory(RavenTestCategory.Counters)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void RawQueryIncludeCounterOfLoadedDocument(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -2136,10 +2147,11 @@ from 'Users' as user select output(user)", query.ToString());
             }
         }
 
-        [Fact]
-        public void RawQueryIncludeAllCountersOfLoadedDocument()
+        [RavenTheory(RavenTestCategory.Counters)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void RawQueryIncludeAllCountersOfLoadedDocument(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -2209,10 +2221,11 @@ from 'Users' as user select output(user)", query.ToString());
             }
         }
 
-        [Fact]
-        public void RawQueryIncludeCountersOfDocumentAndOfLoadedDocument()
+        [RavenTheory(RavenTestCategory.Counters)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void RawQueryIncludeCountersOfDocumentAndOfLoadedDocument(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -2256,7 +2269,7 @@ from 'Users' as user select output(user)", query.ToString());
                     var query = session.Advanced
                         .RawQuery<Order>("from orders as o load o.Employee as e " +
                                          "include counters(o, 'Likes'), counters(e, 'Downloads')")
-                        .ToList();
+                        .ToList().OrderBy(x => x.Id).ToList();
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
 
@@ -2763,10 +2776,11 @@ from 'Users' as user select output(user)", query.ToString());
             }
         }
 
-        [Fact]
-        public void SessionQueryIncludeCountersWithSelect()
+        [RavenTheory(RavenTestCategory.Counters)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void SessionQueryIncludeCountersWithSelect(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -2823,7 +2837,7 @@ from 'Users' as user select output(user)", query.ToString());
                                  "include counters(x, 'Likes'),counters(x.Employee, 'Downloads')"
                         , query.ToString());
 
-                    var results = query.ToList();
+                    var results = query.ToList().OrderBy(x => x.Id).ToList();
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
 
                     // included counters should be in cache
@@ -2955,10 +2969,11 @@ from 'Users' as user select output(user)", query.ToString());
             }
         }
 
-        [Fact]
-        public void SessionQueryIncludeCountersUsingFromAliasWithSelectAndWhere()
+        [RavenTheory(RavenTestCategory.Counters)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void SessionQueryIncludeCountersUsingFromAliasWithSelectAndWhere(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -3371,10 +3386,11 @@ from 'Users' as user select output(user)", query.ToString());
             }
         }
 
-        [Fact]
-        public void CountersShouldBeCachedOnCollection()
+        [RavenTheory(RavenTestCategory.Counters)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CountersShouldBeCachedOnCollection(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -3423,10 +3439,11 @@ from 'Users' as user select output(user)", query.ToString());
             }
         }
 
-        [Fact]
-        public void CountersShouldBeCachedOnAllDocsCollection()
+        [RavenTheory(RavenTestCategory.Counters)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CountersShouldBeCachedOnAllDocsCollection(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

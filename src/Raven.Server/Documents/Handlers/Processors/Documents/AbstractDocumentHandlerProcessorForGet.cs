@@ -183,8 +183,7 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
             {
                 writer.WriteComma();
                 writer.WritePropertyName(nameof(GetDocumentsResult.CounterIncludes));
-
-                await writer.WriteCountersAsync(result.CounterIncludes, CancellationToken);
+                await result.CounterIncludes.WriteIncludesAsync(writer, context, CancellationToken);
             }
 
             if (result.TimeSeriesIncludes?.Count > 0)
@@ -400,7 +399,7 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
 
         public IRevisionIncludes RevisionIncludes { get; set; }
 
-        public Dictionary<string, List<CounterDetail>> CounterIncludes { get; set; }
+        public ICounterIncludes CounterIncludes { get; set; }
 
         public ITimeSeriesIncludes TimeSeriesIncludes { get; set; }
 

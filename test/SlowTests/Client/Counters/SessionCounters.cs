@@ -1071,10 +1071,11 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
-        public void SessionIncludeSingleCounter()
+        [RavenTheory(RavenTestCategory.Counters)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void SessionIncludeSingleCounter(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1097,15 +1098,15 @@ namespace SlowTests.Client.Counters
 
                     Assert.Equal(100, counter);
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
-
                 }
             }
         }
 
-        [Fact]
-        public void SessionChainedIncludeCounter()
+        [RavenTheory(RavenTestCategory.Counters)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void SessionChainedIncludeCounter(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

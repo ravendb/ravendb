@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.TimeSeries;
+using Raven.Client.Documents.Session.Loaders;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries.Explanation;
 using Raven.Server.ServerWide;
@@ -54,7 +55,7 @@ namespace Raven.Server.Documents.Queries
             throw new NotSupportedException();
         }
 
-        public override void AddCounterIncludes(IncludeCountersCommand includeCountersCommand)
+        public override void AddCounterIncludes(ICounterIncludes includeCountersCommand)
         {
             throw new NotSupportedException();
         }
@@ -64,7 +65,7 @@ namespace Raven.Server.Documents.Queries
             throw new NotSupportedException();
         }
 
-        public override Dictionary<string, List<CounterDetail>> GetCounterIncludes()
+        public override ICounterIncludes GetCounterIncludes()
         {
             throw new NotSupportedException();
         }

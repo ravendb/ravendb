@@ -66,6 +66,7 @@ public class ShardedQueryOperation : IShardedReadOperation<QueryResult, ShardedQ
         DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Arek, DevelopmentHelper.Severity.Normal, "Check if we could handle this in streaming manner so we won't need to materialize all blittables and do Clone() here");
 
         ShardedRevisionIncludes revisionIncludes = null;
+        ShardedCounterIncludes counterIncludes = null;
         ShardedCompareExchangeValueInclude compareExchangeValueIncludes = null;
         ShardedTimeSeriesIncludes timeSeriesIncludes = null;
 
@@ -108,11 +109,11 @@ public class ShardedQueryOperation : IShardedReadOperation<QueryResult, ShardedQ
                 revisionIncludes.AddResults(cmdResult.RevisionIncludes, _context);
             }
 
-            if (cmdResult.CompareExchangeValueIncludes != null)
+            if (cmdResult.CounterIncludes != null)
             {
-                compareExchangeValueIncludes ??= new ShardedCompareExchangeValueInclude();
+                counterIncludes ??= new ShardedCounterIncludes();
 
-                compareExchangeValueIncludes.AddResults(cmdResult.CompareExchangeValueIncludes, _context);
+                counterIncludes.AddResults(cmdResult.CounterIncludes, cmdResult.IncludedCounterNames, _context);
             }
 
             if (cmdResult.TimeSeriesIncludes != null)
@@ -120,6 +121,13 @@ public class ShardedQueryOperation : IShardedReadOperation<QueryResult, ShardedQ
                 timeSeriesIncludes ??= new ShardedTimeSeriesIncludes();
 
                 timeSeriesIncludes.AddResults(cmdResult.TimeSeriesIncludes, _context);
+            }
+
+            if (cmdResult.CompareExchangeValueIncludes != null)
+            {
+                compareExchangeValueIncludes ??= new ShardedCompareExchangeValueInclude();
+
+                compareExchangeValueIncludes.AddResults(cmdResult.CompareExchangeValueIncludes, _context);
             }
 
             if (_sortingComparer == null)
@@ -131,14 +139,17 @@ public class ShardedQueryOperation : IShardedReadOperation<QueryResult, ShardedQ
             }
         }
 
-        if (compareExchangeValueIncludes != null)
-            result.AddCompareExchangeValueIncludes(compareExchangeValueIncludes);
-
         if (revisionIncludes != null)
             result.AddRevisionIncludes(revisionIncludes);
 
+        if (counterIncludes != null)
+            result.AddCounterIncludes(counterIncludes);
+
         if (timeSeriesIncludes != null)
             result.AddTimeSeriesIncludes(timeSeriesIncludes);
+
+        if (compareExchangeValueIncludes != null)
+            result.AddCompareExchangeValueIncludes(compareExchangeValueIncludes);
 
         if (_sortingComparer != null)
         {

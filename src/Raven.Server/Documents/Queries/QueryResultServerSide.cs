@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Session.Loaders;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Spatial;
 using Raven.Server.Documents.Queries.Explanation;
@@ -90,9 +91,9 @@ namespace Raven.Server.Documents.Queries
 
         public bool NotModified { get; set; }
 
-        public abstract void AddCounterIncludes(IncludeCountersCommand command);
+        public abstract void AddCounterIncludes(ICounterIncludes counters);
 
-        public abstract Dictionary<string, List<CounterDetail>> GetCounterIncludes();
+        public abstract ICounterIncludes GetCounterIncludes();
 
         public abstract void AddTimeSeriesIncludes(ITimeSeriesIncludes timeSeries);
 

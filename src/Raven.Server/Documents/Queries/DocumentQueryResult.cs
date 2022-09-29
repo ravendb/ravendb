@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.TimeSeries;
+using Raven.Client.Documents.Session.Loaders;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries.Explanation;
 using Sparrow.Json;
@@ -23,22 +24,21 @@ namespace Raven.Server.Documents.Queries
 
         public override bool SupportsExceptionHandling => false;
 
-        private Dictionary<string, List<CounterDetail>> _counterIncludes;
+        private ICounterIncludes _counterIncludes;
 
         private IRevisionIncludes _revisionIncludes;
 
         private ITimeSeriesIncludes _timeSeriesIncludes;
 
         private Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> _compareExchangeValueIncludes;
-        
 
-        public override void AddCounterIncludes(IncludeCountersCommand includeCountersCommand)
+        public override void AddCounterIncludes(ICounterIncludes includeCountersCommand)
         {
-            _counterIncludes = includeCountersCommand.Results;
-            IncludedCounterNames = includeCountersCommand.CountersToGetByDocId;
+            _counterIncludes = includeCountersCommand;
+            IncludedCounterNames = includeCountersCommand.IncludedCounterNames;
         }
 
-        public override Dictionary<string, List<CounterDetail>> GetCounterIncludes() => _counterIncludes;
+        public override ICounterIncludes GetCounterIncludes() => _counterIncludes;
 
         public override void AddTimeSeriesIncludes(ITimeSeriesIncludes includeTimeSeriesCommand)
         {
