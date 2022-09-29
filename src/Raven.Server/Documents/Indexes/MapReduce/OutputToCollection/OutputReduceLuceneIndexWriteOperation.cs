@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
+using Raven.Server.Documents.Indexes.Persistence;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Exceptions;
@@ -16,82 +17,29 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 {
     public class OutputReduceLuceneIndexWriteOperation : LuceneIndexWriteOperation
     {
-        private readonly OutputReduceToCollectionCommandBatcher _outputReduceToCollectionCommandBatcher;
-        private readonly TransactionHolder _txHolder;
+        private readonly OutputReduceIndexWriteOperationScope<OutputReduceLuceneIndexWriteOperation> _outputScope;
 
         public OutputReduceLuceneIndexWriteOperation(MapReduceIndex index, LuceneVoronDirectory directory, LuceneDocumentConverterBase converter, Transaction writeTransaction,
             LuceneIndexPersistence persistence, JsonOperationContext indexContext)
             : base(index, directory, converter, writeTransaction, persistence)
         {
             Debug.Assert(index.OutputReduceToCollection != null);
-            _txHolder = new TransactionHolder(writeTransaction);
-            _outputReduceToCollectionCommandBatcher = index.OutputReduceToCollection.CreateCommandBatcher(indexContext, _txHolder);
+            _outputScope = new(index, writeTransaction, indexContext, this);
         }
 
-        public override void Commit(IndexingStatsScope stats)
-        {
-            var enqueue = CommitOutputReduceToCollection();
+        public override void Commit(IndexingStatsScope stats) => _outputScope.Commit(stats);
 
-            using (_txHolder.AcquireTransaction(out _))
-            {
-                base.Commit(stats);
-            }
+        public override void IndexDocument(LazyStringValue key, LazyStringValue sourceDocumentId, object document, IndexingStatsScope stats,
+            JsonOperationContext indexContext) => _outputScope.IndexDocument(key, sourceDocumentId, document, stats, indexContext);
 
-            try
-            {
-                using (stats.For(IndexingOperation.Reduce.SaveOutputDocuments))
-                {
-                    enqueue.GetAwaiter().GetResult();
-                }
-            }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch (ObjectDisposedException e) when (DocumentDatabase.DatabaseShutdown.IsCancellationRequested)
-            {
-                throw new OperationCanceledException("The operation of writing output reduce documents was cancelled because of database shutdown", e);
-            }
-            catch (Exception e) when (e.IsOutOfMemory() || e is DiskFullException)
-            {
-                throw;
-            }
-            catch (Exception e)
-            {
-                throw new IndexWriteException("Failed to save output reduce documents to disk", e);
-            }
-        }
+        public override void Delete(LazyStringValue key, IndexingStatsScope stats) => _outputScope.Delete(key, stats);
 
-        private async Task CommitOutputReduceToCollection()
-        {
-            foreach (var command in _outputReduceToCollectionCommandBatcher.CreateCommands())
-                await DocumentDatabase.TxMerger.Enqueue(command).ConfigureAwait(false);
-        }
-
-        public override void IndexDocument(LazyStringValue key, LazyStringValue sourceDocumentId, object document, IndexingStatsScope stats, JsonOperationContext indexContext)
-        {
-            base.IndexDocument(key, sourceDocumentId, document, stats, indexContext);
-
-            _outputReduceToCollectionCommandBatcher.AddReduce(key, document, stats);
-        }
-
-        public override void Delete(LazyStringValue key, IndexingStatsScope stats)
-        {
-            throw new NotSupportedException("Deleting index entries by id() field isn't supported by map-reduce indexes");
-        }
-
-        public override void DeleteReduceResult(LazyStringValue reduceKeyHash, IndexingStatsScope stats)
-        {
-            base.DeleteReduceResult(reduceKeyHash, stats);
-
-            _outputReduceToCollectionCommandBatcher.DeleteReduce(reduceKeyHash);
-        }
+        public override void DeleteReduceResult(LazyStringValue reduceKeyHash, IndexingStatsScope stats) => _outputScope.DeleteReduceResult(reduceKeyHash, stats);
 
         public override void Dispose()
         {
             base.Dispose();
-
-            _outputReduceToCollectionCommandBatcher.Dispose();
+            _outputScope.Dispose();
         }
     }
 }
