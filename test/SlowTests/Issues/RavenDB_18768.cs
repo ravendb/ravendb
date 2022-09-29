@@ -7,8 +7,10 @@ using FastTests.Utils;
 using Raven.Client;
 using Raven.Client.Documents;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
+using Raven.Client.Documents.Linq;
 
 namespace SlowTests.Issues;
 
@@ -201,6 +203,63 @@ public class RavenDB_18768 : RavenTestBase
                 Assert.Equal(baseline.AddMinutes(15), vals[0].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                 Assert.Equal(baseline.AddMinutes(25), vals[60].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
+            }
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Counters)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
+    public void CanIncludeCounterInLoadByIdQuery(Options options)
+    {
+        using (var store = GetDocumentStore(options))
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Order
+                {
+                    Company = "companies/1-A"
+                }, "orders/1-A");
+                session.Store(new Order
+                {
+                    Company = "companies/2-A"
+                }, "orders/2-A");
+                session.Store(new Order
+                {
+                    Company = "companies/3-A"
+                }, "orders/3-A");
+
+                session.CountersFor("orders/1-A").Increment("Downloads", 100);
+                session.CountersFor("orders/2-A").Increment("Downloads", 200);
+                session.CountersFor("orders/3-A").Increment("Downloads", 300);
+
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var query = session.Query<Order>().Where(x => x.Id.In("orders/1-A", "orders/2-A", "orders/3-A"))
+                    .Include(i => i.IncludeCounter("Downloads"));
+
+                var queryResult = query.ToList().OrderBy(x => x.Id).ToList();
+                Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                // included counters should be in cache
+                var order = queryResult[0];
+                Assert.Equal("orders/1-A", order.Id);
+                var val = session.CountersFor(order).Get("Downloads");
+                Assert.Equal(100, val);
+
+                order = queryResult[1];
+                Assert.Equal("orders/2-A", order.Id);
+                val = session.CountersFor(order).Get("Downloads");
+                Assert.Equal(200, val);
+
+                order = queryResult[2];
+                Assert.Equal("orders/3-A", order.Id);
+                val = session.CountersFor(order).Get("Downloads");
+                Assert.Equal(300, val);
+
+                Assert.Equal(1, session.Advanced.NumberOfRequests);
             }
         }
     }

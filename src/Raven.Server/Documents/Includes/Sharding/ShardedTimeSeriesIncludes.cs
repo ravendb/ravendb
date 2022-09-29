@@ -9,7 +9,7 @@ namespace Raven.Server.Documents.Includes.Sharding;
 
 public class ShardedTimeSeriesIncludes : ITimeSeriesIncludes
 {
-    private readonly Dictionary<string, BlittableJsonReaderObject> _resultsByDocumentId = new(StringComparer.OrdinalIgnoreCase);
+    private Dictionary<string, BlittableJsonReaderObject> _resultsByDocumentId;
 
     public int Count => _resultsByDocumentId.Count;
 
@@ -17,6 +17,8 @@ public class ShardedTimeSeriesIncludes : ITimeSeriesIncludes
     {
         if (results == null)
             return;
+
+        _resultsByDocumentId ??= new(StringComparer.OrdinalIgnoreCase);
 
         var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
         for (var i = 0; i < results.Count; i++)

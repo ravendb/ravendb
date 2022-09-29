@@ -997,10 +997,10 @@ namespace Raven.Server.Documents.Subscriptions
                 writer.WriteComma();
 
                 writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(IncludedCounterNamesSegment));
-                writer.WriteIncludedCounterNames(includeCountersCommand.CountersToGetByDocId);
+                writer.WriteIncludedCounterNames(includeCountersCommand.IncludedCounterNames);
 
-                var size = includeCountersCommand.CountersToGetByDocId.Sum(kvp =>
-                               kvp.Key.Length + kvp.Value.Sum(name => name.Length)) //CountersToGetByDocId
+                var size = includeCountersCommand.IncludedCounterNames.Sum(kvp =>
+                               kvp.Key.Length + kvp.Value.Sum(name => name.Length)) //IncludedCounterNames
                            + includeCountersCommand.Results.Sum(kvp =>
                                kvp.Value.Sum(counter => counter == null
                                        ? 0

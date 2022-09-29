@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.CompareExchange;
-using Raven.Client.Documents.Operations.Counters;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries.Explanation;
 using Sparrow.Json;
@@ -12,9 +11,11 @@ namespace Raven.Server.Documents.Queries.Sharding;
 
 public class ShardedQueryResult : QueryResultServerSide<BlittableJsonReaderObject>
 {
-    private ICompareExchangeValueIncludes _includeCompareExchangeValues;
     private IRevisionIncludes _includeRevisions;
+    private ICounterIncludes _counterIncludes;
     private ITimeSeriesIncludes _includeTimeSeries;
+    private ICompareExchangeValueIncludes _includeCompareExchangeValues;
+
     public override ValueTask AddResultAsync(BlittableJsonReaderObject result, CancellationToken token)
     {
         throw new NotSupportedException();
@@ -40,14 +41,15 @@ public class ShardedQueryResult : QueryResultServerSide<BlittableJsonReaderObjec
     public override bool SupportsHighlighting  => true;
     public override bool SupportsExplanations  => true;
 
-    public override void AddCounterIncludes(IncludeCountersCommand command)
+    public override void AddCounterIncludes(ICounterIncludes counters)
     {
-        throw new NotSupportedException();
+        _counterIncludes = counters;
+        IncludedCounterNames = counters.IncludedCounterNames;
     }
 
-    public override Dictionary<string, List<CounterDetail>> GetCounterIncludes()
+    public override ICounterIncludes GetCounterIncludes()
     {
-        return null;
+        return _counterIncludes;
     }
 
     public override void AddTimeSeriesIncludes(ITimeSeriesIncludes timeSeries)

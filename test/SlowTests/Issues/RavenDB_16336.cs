@@ -72,7 +72,7 @@ namespace SlowTests.Issues
                                            + sizeof(long) // Etag
                                            + sizeof(long) // Value
 
-                                           + id.Length + counter1.Length + counter2.Length; // CountersToGetByDocId property 
+                                           + id.Length + counter1.Length + counter2.Length; // IncludedCounterNames property 
 
                 var db = await Databases.GetDocumentDatabaseInstanceFor(store);
 

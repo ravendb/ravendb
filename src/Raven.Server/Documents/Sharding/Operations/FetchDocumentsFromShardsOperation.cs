@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Operations.TimeSeries;
@@ -26,6 +27,7 @@ namespace Raven.Server.Documents.Sharding.Operations
         private readonly Dictionary<int, ShardLocator.IdsByShard<string>> _idsByShards;
         private readonly string[] _includePaths;
         private readonly RevisionIncludeField _includeRevisions;
+        private readonly StringValues _counterIncludes;
         private readonly HashSet<AbstractTimeSeriesRange> _timeSeriesIncludes;
         private readonly string[] _compareExchangeValueIncludes;
         private readonly bool _metadataOnly;
@@ -35,6 +37,7 @@ namespace Raven.Server.Documents.Sharding.Operations
             Dictionary<int, ShardLocator.IdsByShard<string>> idsByShards,
             string[] includePaths,
             RevisionIncludeField includeRevisions,
+            StringValues counterIncludes,
             HashSet<AbstractTimeSeriesRange> timeSeriesIncludes,
             string[] compareExchangeValueIncludes,
             string etag,
@@ -47,6 +50,7 @@ namespace Raven.Server.Documents.Sharding.Operations
             ExpectedEtag = etag;
             _includePaths = includePaths;
             _includeRevisions = includeRevisions;
+            _counterIncludes = counterIncludes;
             _timeSeriesIncludes = timeSeriesIncludes;
             _compareExchangeValueIncludes = compareExchangeValueIncludes;
             _metadataOnly = metadataOnly;
@@ -61,9 +65,10 @@ namespace Raven.Server.Documents.Sharding.Operations
             var includesMap = new Dictionary<string, BlittableJsonReaderObject>(StringComparer.OrdinalIgnoreCase);
             var missingIncludes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            ShardedCompareExchangeValueInclude compareExchangeValueIncludes = null;
             ShardedRevisionIncludes revisionIncludes = null;
+            ShardedCounterIncludes counterIncludes = null;
             ShardedTimeSeriesIncludes timeSeriesIncludes = null;
+            ShardedCompareExchangeValueInclude compareExchangeValueIncludes = null;
 
             foreach (var cmd in span)
             {
@@ -104,32 +109,28 @@ namespace Raven.Server.Documents.Sharding.Operations
                     docs.TryAdd(docId, cmdResult.Clone(_context));
                 }
 
-                if (cmdCounterIncludes != null)
-                {
-                    BlittableJsonReaderObject.PropertyDetails prop = default;
-                    for (int i = 0; i < cmdCounterIncludes.Count; i++)
-                    {
-                        cmdCounterIncludes.GetPropertyByIndex(i, ref prop);
-                        includesMap[prop.Name] = ((BlittableJsonReaderObject)prop.Value).Clone(_context);
-                    }
-                }
-
-                if (cmdCompareExchangeValueIncludes != null)
-                {
-                    compareExchangeValueIncludes ??= new ShardedCompareExchangeValueInclude();
-                    compareExchangeValueIncludes.AddResults(cmdCompareExchangeValueIncludes, _context);
-                }
-
                 if (cmdRevisionIncludes != null)
                 {
                     revisionIncludes ??= new ShardedRevisionIncludes();
                     revisionIncludes.AddResults(cmdRevisionIncludes, _context);
                 }
 
+                if (cmdCounterIncludes != null)
+                {
+                    counterIncludes ??= new ShardedCounterIncludes();
+                    counterIncludes.AddResults(cmdCounterIncludes, null, _context);
+                }
+
                 if (cmdTimeSeriesIncludes != null)
                 {
                     timeSeriesIncludes ??= new ShardedTimeSeriesIncludes();
                     timeSeriesIncludes.AddResults(cmdTimeSeriesIncludes, _context);
+                }
+
+                if (cmdCompareExchangeValueIncludes != null)
+                {
+                    compareExchangeValueIncludes ??= new ShardedCompareExchangeValueInclude();
+                    compareExchangeValueIncludes.AddResults(cmdCompareExchangeValueIncludes, _context);
                 }
             }
 
@@ -138,23 +139,22 @@ namespace Raven.Server.Documents.Sharding.Operations
                 missingIncludes.Remove(kvp.Key);
             }
 
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "RavenDB-19067 Handle include of counters/time-series");
-
             return new GetShardedDocumentsResult
             {
                 Documents = docs,
                 Includes = includesMap.Values.ToList(),
-                MissingIncludes = missingIncludes,
-                CompareExchangeValueIncludes = compareExchangeValueIncludes?.Results,
+                MissingDocumentIncludes = missingIncludes,
                 RevisionIncludes = revisionIncludes,
-                TimeSeriesIncludes = timeSeriesIncludes
+                CounterIncludes = counterIncludes,
+                TimeSeriesIncludes = timeSeriesIncludes,
+                CompareExchangeValueIncludes = compareExchangeValueIncludes?.Results
             };
         }
 
         public HttpRequest HttpRequest => _handler.HttpContext.Request;
 
         public RavenCommand<GetDocumentsResult> CreateCommandForShard(int shardNumber) => new GetDocumentsCommand(_idsByShards[shardNumber].Ids.ToArray(), _includePaths,
-            counterIncludes: null,
+            counterIncludes: _counterIncludes.Count > 0 ? _counterIncludes.ToArray() : null,
             revisionsIncludesByChangeVector: _includeRevisions?.RevisionsChangeVectorsPaths,
             revisionIncludeByDateTimeBefore: _includeRevisions?.RevisionsBeforeDateTime,
             timeSeriesIncludes: _timeSeriesIncludes,
@@ -167,11 +167,14 @@ namespace Raven.Server.Documents.Sharding.Operations
         public List<BlittableJsonReaderObject> Includes;
         public Dictionary<string, BlittableJsonReaderObject> Documents;
 
-        public HashSet<string> MissingIncludes;
-        public Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> CompareExchangeValueIncludes;
+        public HashSet<string> MissingDocumentIncludes;
 
         public IRevisionIncludes RevisionIncludes;
 
+        public ICounterIncludes CounterIncludes;
+
         public ITimeSeriesIncludes TimeSeriesIncludes;
+
+        public Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> CompareExchangeValueIncludes;
     }
 }

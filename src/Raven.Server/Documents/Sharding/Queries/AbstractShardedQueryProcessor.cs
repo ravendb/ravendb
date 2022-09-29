@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
@@ -232,6 +233,26 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
             includeBuilder ??= new IncludeBuilder();
 
             includeBuilder.TimeSeriesToIncludeBySourceAlias = _query.Metadata.TimeSeriesIncludes.TimeSeries;
+        }
+
+        if (_query.Metadata.CounterIncludes != null)
+        {
+            includeBuilder ??= new IncludeBuilder();
+
+            includeBuilder.CountersToIncludeBySourcePath = new Dictionary<string, (bool AllCounters, HashSet<string> CountersToInclude)>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var counterIncludes in _query.Metadata.CounterIncludes.Counters)
+            {
+                var name = counterIncludes.Key;
+
+                if (includeBuilder.CountersToIncludeBySourcePath.TryGetValue(name, out var counters) == false)
+                    includeBuilder.CountersToIncludeBySourcePath[name] = counters = (false, new HashSet<string>(StringComparer.OrdinalIgnoreCase));
+
+                foreach (string counterName in counterIncludes.Value)
+                {
+                    counters.CountersToInclude.Add(counterName);
+                }
+            }
         }
 
         if (includeBuilder != null)

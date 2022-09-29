@@ -104,7 +104,7 @@ internal class DocumentHandlerProcessorForGet : AbstractDocumentHandlerProcessor
             Documents = documents,
             Includes = includes,
             RevisionIncludes = includeRevisions,
-            CounterIncludes = includeCounters?.Results,
+            CounterIncludes = includeCounters,
             TimeSeriesIncludes = includeTimeSeries,
             CompareExchangeIncludes = includeCompareExchangeValues?.Results
         });

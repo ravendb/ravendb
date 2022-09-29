@@ -19,7 +19,7 @@ public class ShardedRevisionIncludes : IRevisionIncludes
         if (results == null || results.Length == 0)
             return;
 
-        _revisionsByDocumentId = new Dictionary<string, List<BlittableJsonReaderObject>>(StringComparer.OrdinalIgnoreCase);
+        _revisionsByDocumentId ??= new Dictionary<string, List<BlittableJsonReaderObject>>(StringComparer.OrdinalIgnoreCase);
 
         for (var i = 0; i < results.Length; i++)
         {
@@ -32,9 +32,9 @@ public class ShardedRevisionIncludes : IRevisionIncludes
                 _revisionsByDocumentId[docId] = revisions = new List<BlittableJsonReaderObject>();
 
             revisions.Add(json.Clone(contextToClone));
-
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Arek, DevelopmentHelper.Severity.Normal, "We can get duplicated revision includes when resharding is running. How to deal with that?");
         }
+
+        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Arek, DevelopmentHelper.Severity.Normal, "We can get duplicated revision includes when resharding is running. How to deal with that?");
     }
 
     public async ValueTask WriteIncludesAsync(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, CancellationToken token)

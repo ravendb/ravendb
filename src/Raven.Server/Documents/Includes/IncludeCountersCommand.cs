@@ -1,20 +1,23 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Counters;
-using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Handlers.Processors.Counters;
+using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.Includes
 {
-    public class IncludeCountersCommand
+    public class IncludeCountersCommand : ICounterIncludes
     {
         private readonly DocumentDatabase _database;
         private readonly DocumentsOperationContext _context;
         private readonly Dictionary<string, string[]> _countersBySourcePath;
 
-        public Dictionary<string, string[]> CountersToGetByDocId { get; }
+        public Dictionary<string, string[]> IncludedCounterNames { get; }
         public Dictionary<string, List<CounterDetail>> Results { get; }
 
         private IncludeCountersCommand(DocumentDatabase database, DocumentsOperationContext context)
@@ -22,7 +25,7 @@ namespace Raven.Server.Documents.Includes
             _database = database;
             _context = context;
 
-            CountersToGetByDocId = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
+            IncludedCounterNames = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
             Results = new Dictionary<string, List<CounterDetail>>(StringComparer.OrdinalIgnoreCase);
         }
 
@@ -61,11 +64,33 @@ namespace Raven.Server.Documents.Includes
                     continue;
 
                 var countersToGet = kvp.Value.ToArray();
-                CountersToGetByDocId[docId] = countersToGet;
+                IncludedCounterNames[docId] = countersToGet;
 
                 var details = CountersHandlerProcessorForGetCounters.GetInternal(_database, _context, countersToGet, docId, false);
                 Results.Add(docId, details.Counters);
             }
         }
+
+        public async ValueTask WriteIncludesAsync(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, CancellationToken token)
+        {
+            writer.WriteStartObject();
+
+            var first = true;
+            foreach (var kvp in Results)
+            {
+                if (first == false)
+                    writer.WriteComma();
+
+                first = false;
+
+                writer.WritePropertyName(kvp.Key);
+
+                await writer.WriteCountersForDocumentAsync(kvp.Value, token);
+            }
+
+            writer.WriteEndObject();
+        }
+
+        public int Count => Results?.Count ?? 0;
     }
 }

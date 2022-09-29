@@ -605,7 +605,7 @@ namespace Raven.Server.Json
             {
                 writer.WriteComma();
                 writer.WritePropertyName(nameof(result.CounterIncludes));
-                await writer.WriteCountersAsync(counters, token);
+                await counters.WriteIncludesAsync(writer, context, token);
 
                 writer.WriteComma();
                 writer.WritePropertyName(nameof(result.IncludedCounterNames));
@@ -1815,26 +1815,6 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static async ValueTask WriteCountersAsync(this AsyncBlittableJsonTextWriter writer, Dictionary<string, List<CounterDetail>> counters, CancellationToken token)
-        {
-            writer.WriteStartObject();
-
-            var first = true;
-            foreach (var kvp in counters)
-            {
-                if (first == false)
-                    writer.WriteComma();
-
-                first = false;
-
-                writer.WritePropertyName(kvp.Key);
-
-                await writer.WriteCountersForDocumentAsync(kvp.Value, token);
-            }
-
-            writer.WriteEndObject();
-        }
-
         private static void WriteCountersForDocument(this AbstractBlittableJsonTextWriter writer, List<CounterDetail> counters)
         {
             writer.WriteStartArray();
@@ -1871,7 +1851,7 @@ namespace Raven.Server.Json
             writer.WriteEndArray();
         }
 
-        private static async Task WriteCountersForDocumentAsync(this AsyncBlittableJsonTextWriter writer, List<CounterDetail> counters, CancellationToken token)
+        public static async Task WriteCountersForDocumentAsync(this AsyncBlittableJsonTextWriter writer, List<CounterDetail> counters, CancellationToken token)
         {
             writer.WriteStartArray();
 
