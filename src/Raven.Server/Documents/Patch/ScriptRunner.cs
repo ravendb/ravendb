@@ -413,6 +413,7 @@ namespace Raven.Server.Documents.Patch
 
                 string timeSeries = GetStringArg(name, _timeSeriesSignature, "name");
                 var stats = _database.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(_docsCtx, id, timeSeries);
+                Debug.Assert(stats == default || stats.Start.Kind == DateTimeKind.Utc);
 
                 var tsStats = new ObjectInstance(ScriptEngine);
                 tsStats.Set(nameof(stats.Start), ScriptEngine.Date.Construct(stats.Start));

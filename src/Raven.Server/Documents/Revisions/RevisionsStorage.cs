@@ -510,6 +510,7 @@ namespace Raven.Server.Documents.Revisions
                 {
                     var name = timeSeriesNames[i].ToString();
                     var (count, start, end) = _documentsStorage.TimeSeriesStorage.Stats.GetStats(context, id, name);
+                    Debug.Assert(start == default || start.Kind == DateTimeKind.Utc);
 
                     dvj[name] = new DynamicJsonValue
                     {
