@@ -641,15 +641,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 yield break;
 
             var ids = QueryPool.Rent(CoraxGetPageSize(_indexSearcher, take, query, isBinary));
-
-            HashSet<string> itemList = new(32);
-
-            var maxTermLengthProceedPerAnalyzer = ArrayPool<int>.Shared.Rent(_fieldMappings.Count);
-            var encodedBuffer = Analyzer.BufferPool.Rent(_fieldMappings.MaximumOutputSize);
-            var tokensBuffer = Analyzer.TokensPool.Rent(_fieldMappings.MaximumTokenSize);
-
-            int docsToLoad = pageSize;
-
+            int docsToLoad = CoraxGetPageSize(_indexSearcher, pageSize, query, isBinary);
+            using var coraxEntryReader = new CoraxIndexedEntriesReader(_indexSearcher, _fieldMappings);
             int read;
             int i = Skip();
             while (true)
@@ -659,7 +652,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 {
                     token.ThrowIfCancellationRequested();
                     var reader = _indexSearcher.GetReaderAndIdentifyFor(ids[i], out var id);
-                    yield return documentsContext.ReadObject(GetRawDocument(ref reader), id);
+                    yield return documentsContext.ReadObject(coraxEntryReader.GetDocument(ref reader), id);
                 }
 
                 if ((read = queryMatch.Fill(ids)) == 0)
@@ -668,118 +661,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             }
 
             QueryPool.Return(ids);
-            Analyzer.BufferPool.Return(encodedBuffer);
-            Analyzer.TokensPool.Return(tokensBuffer);
-            ArrayPool<int>.Shared.Return(maxTermLengthProceedPerAnalyzer);
-            DynamicJsonValue GetRawDocument(ref IndexEntryReader reader)
-            {
-                var doc = new DynamicJsonValue();
-                foreach (var binding in _fieldMappings)
-                {
-                    if (binding.FieldIndexingMode is FieldIndexingMode.No || binding.FieldNameAsString is Client.Constants.Documents.Indexing.Fields.AllStoredFields)
-                        continue;
-                    var type = reader.GetFieldType(binding.FieldId, out var intOffset);
-                    
-                    
-                    if ((type & IndexEntryFieldType.List) != 0)
-                    {
-                        var enumerableEntries = new List<object>();
-                        if ((type & IndexEntryFieldType.SpatialPoint) != 0)
-                        {
-                            reader.GetReaderFor(binding.FieldId).TryReadManySpatialPoint(out var spatialIterator);
-                            while (spatialIterator.ReadNext())
-                            {
-                                for (int i = 1; i <= spatialIterator.Geohash.Length; ++i)
-                                    enumerableEntries.Add(Encodings.Utf8.GetString(spatialIterator.Geohash.Slice(0, i)));
-                            }
-                            doc[binding.FieldNameAsString] = enumerableEntries.ToArray();
-                            continue;
-                        }
-                        
-                        
-                        reader.GetReaderFor(binding.FieldId).TryReadMany(out var iterator);
-                        while (iterator.ReadNext())
-                        {
-                            if (iterator.IsNull || iterator.IsEmpty)
-                                continue;
-                            
-                            if (binding.FieldIndexingMode is FieldIndexingMode.Exact)
-                            {
-                                enumerableEntries.Add(Encodings.Utf8.GetString(iterator.Sequence));
-                                continue;
-                            }
-
-                            enumerableEntries.Add(GetAnalyzedItem(binding, iterator.Sequence));
-                        }
-                        doc[binding.FieldNameAsString] = enumerableEntries.ToArray();
-                    }
-                    else
-                    {
-                        reader.GetReaderFor(binding.FieldId).Read(out Span<byte> value);
-                        if ((type & IndexEntryFieldType.SpatialPoint) != 0)
-                        {
-                            var enumerableEntries = new List<object>();
-                            for (int geohashId = 1; geohashId <= value.Length; ++i)
-                                enumerableEntries.Add(Encodings.Utf8.GetString(value.Slice(0, geohashId)));
-                            doc[binding.FieldNameAsString] = enumerableEntries.ToArray();
-                            continue;
-                        }
-                        
-                        if (binding.FieldIndexingMode is FieldIndexingMode.Exact)
-                        {
-                            doc[binding.FieldNameAsString] = Encodings.Utf8.GetString(value);
-                            continue;
-                        }
-
-                        doc[binding.FieldNameAsString] = GetAnalyzedItem(binding, value);
-                    }
-                }
-
-                return doc;
-            }
-
-            object GetAnalyzedItem(IndexFieldBinding binding, ReadOnlySpan<byte> value)
-            {
-                var tokens = tokensBuffer.AsSpan();
-                var encoded = encodedBuffer.AsSpan();
-                itemList?.Clear();
-
-                if (maxTermLengthProceedPerAnalyzer[binding.FieldId] < value.Length)
-                {
-                    binding.Analyzer.GetOutputBuffersSize(value.Length, out var outputSize, out var tokenSize);
-                    if (outputSize > encodedBuffer.Length)
-                    {
-                        Analyzer.BufferPool.Return(encodedBuffer);
-                        encodedBuffer = Analyzer.BufferPool.Rent(_fieldMappings.MaximumOutputSize);
-                        encoded = encodedBuffer.AsSpan();
-
-                    }
-
-                    if (tokenSize > tokensBuffer.Length)
-                    {
-                        Analyzer.TokensPool.Return(tokensBuffer);
-                        tokensBuffer = Analyzer.TokensPool.Rent(_fieldMappings.MaximumTokenSize);
-                        tokens = tokensBuffer.AsSpan();
-                    }
-
-                    maxTermLengthProceedPerAnalyzer[binding.FieldId] = value.Length;
-                }
-                
-                binding.Analyzer.Execute(value, ref encoded, ref tokens);
-                for (var index = 0; index < tokens.Length; ++index)
-                {
-                    token.ThrowIfCancellationRequested();
-                    itemList.Add(Encodings.Utf8.GetString(encoded.Slice(tokens[index].Offset, (int)tokens[index].Length)));
-                }
-
-                return itemList.Count switch
-                {
-                    1 => itemList.First(),
-                    > 1 => itemList.ToArray(),
-                    _ => string.Empty
-                };
-            }
-            
             int Skip()
             {
                 while (true)
