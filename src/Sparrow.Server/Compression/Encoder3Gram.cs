@@ -2,8 +2,10 @@ using System;
 using System.Buffers.Binary;
 using System.Diagnostics;
 using System.IO;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Runtime.Intrinsics.X86;
 using Sparrow.Collections;
 using Sparrow.Server.Binary;
 using Sparrow.Server.Collections.Persistent;
@@ -545,28 +547,30 @@ namespace Sparrow.Server.Compression
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static unsafe int Lookup(uint symbolValue, Interval3Gram* table, int numberOfEntries, out Code code)
+        private static int Lookup(uint symbolValue, Interval3Gram* table, int numberOfEntries, out Code code)
         {
             // PERF: this is an optimized version of the CompareDictionaryEntry routine. Given that we
             // can actually perform the operation in parallel. The usual case will be to call the parallel
             // version instead of the serial, until we hit the end of the key. 
 
-            int l = 0;
-            int r = numberOfEntries;
+            uint bot = 0;
+            uint top = (uint)numberOfEntries;
 
-            while (r - l > 1)
+            while (top > 1)
             {
-                int m = (l + r) >> 1;
+                uint mid = top / 2;
+                uint codeValue = BinaryPrimitives.ReverseEndianness(table[bot + mid].BufferAndLength) >> 8;
 
-                uint codeValue = BinaryPrimitives.ReverseEndianness(table[m].BufferAndLength) >> 8;
-                if (symbolValue < codeValue)
-                    r = m;
-                else
-                    l = m;
+                if (Sse.IsSupported)
+                    Sse.Prefetch1(table + bot + mid);
+
+                if (symbolValue >= codeValue)
+                    bot += mid;
+                top -= mid;
             }
 
-            code = table[l].Code;
-            return table[l].PrefixLength;
+            code = table[bot].Code;
+            return table[bot].PrefixLength;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
