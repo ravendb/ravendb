@@ -552,7 +552,10 @@ namespace Raven.Server.Smuggler.Documents
         private class DatabaseCompareExchangeActions : ICompareExchangeActions
         {
             const int BatchSize = 1024;
+            private const int CompareExchangeBatchSize = 10 * BatchSize;
+            private const int CompareExchangeValuesBatchSize = 4 * 1024 * 1024; // 4MB
 
+            private int _compareExchangeValuesSize;
             private readonly DocumentDatabase _database;
             private readonly JsonOperationContext _context;
             private readonly CancellationToken _token;
@@ -560,6 +563,7 @@ namespace Raven.Server.Smuggler.Documents
             private readonly List<AddOrUpdateCompareExchangeCommand> _compareExchangeAddOrUpdateCommands = new List<AddOrUpdateCompareExchangeCommand>();
             private DisposableReturnedArray<BatchRequestParser.CommandData> _clusterTransactionCommands = new DisposableReturnedArray<BatchRequestParser.CommandData>(1024);
             private readonly DocumentContextHolder _documentContextHolder;
+            private long? _lastAddOrUpdateResultIndex;
 
             public DatabaseCompareExchangeActions(DocumentDatabase database, JsonOperationContext context, CancellationToken token)
             {
@@ -567,6 +571,7 @@ namespace Raven.Server.Smuggler.Documents
                 _context = context;
                 _token = token;
                 _documentContextHolder = new DocumentContextHolder(database);
+                _compareExchangeValuesSize = 0;
             }
 
             public async ValueTask WriteKeyValueAsync(string key, BlittableJsonReaderObject value)
@@ -585,10 +590,14 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     _compareExchangeAddOrUpdateCommands.Add(new AddOrUpdateCompareExchangeCommand(_database.Name, key, value, 0, _context, RaftIdGenerator.DontCareId,
                         fromBackup: true));
+                    _compareExchangeValuesSize += value.Size; 
                 }
 
-                if (_compareExchangeAddOrUpdateCommands.Count >= BatchSize)
+                if (_compareExchangeValuesSize >= CompareExchangeValuesBatchSize || _compareExchangeAddOrUpdateCommands.Count >= CompareExchangeBatchSize)
+                {
+                    _compareExchangeValuesSize = 0;
                     await SendAddOrUpdateCommandsAsync(_context);
+                }
 
                 if (_clusterTransactionCommands.Length >= BatchSize)
                     await SendClusterTransactionsAsync();
@@ -613,6 +622,9 @@ namespace Raven.Server.Smuggler.Documents
                     await SendClusterTransactionsAsync();
                     await SendAddOrUpdateCommandsAsync(_context);
                     await SendRemoveCommandsAsync(_context);
+
+                    if (_lastAddOrUpdateResultIndex != null)
+                        await _database.ServerStore.Cluster.WaitForIndexNotification(_lastAddOrUpdateResultIndex.Value);
                 }
             }
 
@@ -673,7 +685,7 @@ namespace Raven.Server.Smuggler.Documents
                 }
                 _compareExchangeAddOrUpdateCommands.Clear();
 
-                await _database.ServerStore.Cluster.WaitForIndexNotification(addOrUpdateResult.Index);
+                _lastAddOrUpdateResultIndex = addOrUpdateResult.Index;
             }
 
             private async ValueTask SendRemoveCommandsAsync(JsonOperationContext context)
