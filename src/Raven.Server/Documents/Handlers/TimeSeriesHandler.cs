@@ -68,6 +68,7 @@ namespace Raven.Server.Documents.Handlers
                         first = false;
 
                         var stats = Database.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(context, documentId, tsName);
+                        Debug.Assert(stats.Start.Kind == DateTimeKind.Utc);
 
                         writer.WriteStartObject();
 
@@ -192,6 +193,8 @@ namespace Raven.Server.Documents.Handlers
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                     return;
                 }
+
+                Debug.Assert(stats.Start.Kind == DateTimeKind.Utc);
 
                 var includesCommand = includeDoc || includeTags
                     ? new IncludeDocumentsDuringTimeSeriesLoadingCommand(context, documentId, includeDoc, includeTags)
@@ -446,6 +449,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     Debug.Assert(context != null);
                     stats = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(context, documentId, name);
+                    Debug.Assert(stats == default || stats.Start.Kind == DateTimeKind.Utc);
                 }
 
                 for (var i = 0; i < ranges.Count; i++)
@@ -499,6 +503,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     Debug.Assert(context != null);
                     stats = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(context, documentId, name);
+                    Debug.Assert(stats == default || stats.Start.Kind == DateTimeKind.Utc);
                 }
 
                 for (var i = 0; i < ranges.Count; i++)

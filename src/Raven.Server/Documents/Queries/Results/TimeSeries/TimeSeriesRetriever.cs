@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Threading;
@@ -780,6 +781,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
         private (long Count, DateTime Start, DateTime End) GetStatsAndRemoveQuotesIfNeeded(string documentId)
         {
             var stats = _context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(_context, documentId, _source);
+            Debug.Assert(stats == default || stats.Start.Kind == DateTimeKind.Utc);
             if (stats.Count > 0 || _quoted == false) 
                 return stats;
 

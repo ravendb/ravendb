@@ -158,6 +158,7 @@ namespace Raven.Server.Documents.Includes
                 if (timeSeriesStats.TryGetValue(timeSeries, out var stats) == false)
                     timeSeriesStats[timeSeries] = stats = _context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(_context, documentId, timeSeries);
 
+                Debug.Assert(stats == default || stats.Start.Kind == DateTimeKind.Utc);
                 return stats;
             }
         }
