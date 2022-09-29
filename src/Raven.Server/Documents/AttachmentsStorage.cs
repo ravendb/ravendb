@@ -164,12 +164,6 @@ namespace Raven.Server.Documents
                 Debug.Assert(false);// never hit
             }
 
-            var existingDocument = _documentsStorage.Get(context, documentId);
-            if (existingDocument == null)
-            {
-                throw new DocumentDoesNotExistException($"Document {documentId} does not exist. Cannot store attachment to a missing document.");
-            }
-
             // Attachment etag should be generated before updating the document
             var attachmentEtag = _documentsStorage.GenerateNextEtag();
 
