@@ -20,8 +20,8 @@ internal static class CertificateLoaderUtil
     {
         DebugAssertDoesntContainKeySet(flags);
         var f = AddUserKeySet(flags);
-        Exception exception = null;
 
+        Exception exception = null;
         try
         {
             collection.Import(rawData, password, f);
@@ -29,7 +29,7 @@ internal static class CertificateLoaderUtil
         catch (Exception e)
         {
             exception = e;
-            f = SwitchUserKeySetWithMachineKeySet(f);
+            f = AddMachineKeySet(flags);
             collection.Import(rawData, password, f);
         }
 
@@ -50,9 +50,9 @@ internal static class CertificateLoaderUtil
     {
         DebugAssertDoesntContainKeySet(flag);
         var f = AddUserKeySet(flag);
+
         Exception exception = null;
         X509Certificate2 certificate;
-
         try
         {
             certificate = creator(f);
@@ -60,7 +60,7 @@ internal static class CertificateLoaderUtil
         catch(Exception e)
         {
             exception = e;
-            f = SwitchUserKeySetWithMachineKeySet(f);
+            f = AddMachineKeySet(flag);
             certificate = creator(f);
         }
         
@@ -71,14 +71,13 @@ internal static class CertificateLoaderUtil
         return certificate;
     }
 
-    private static X509KeyStorageFlags SwitchUserKeySetWithMachineKeySet(X509KeyStorageFlags f)
-    {
-        return f & ~X509KeyStorageFlags.UserKeySet | X509KeyStorageFlags.MachineKeySet;
-    }
-
     private static X509KeyStorageFlags AddUserKeySet(X509KeyStorageFlags? flag)
     {
         return (flag ?? X509KeyStorageFlags.DefaultKeySet) | X509KeyStorageFlags.UserKeySet;
+    }
+    private static X509KeyStorageFlags AddMachineKeySet(X509KeyStorageFlags? flag)
+    {
+        return (flag ?? X509KeyStorageFlags.DefaultKeySet) | X509KeyStorageFlags.MachineKeySet;
     }
 
     [Conditional("DEBUG")]
@@ -94,26 +93,23 @@ internal static class CertificateLoaderUtil
         Debug.Assert(flags.HasValue == false || (flags.Value & keyStorageFlags) == 0);
     }
     
-    private static void LogIfNeeded(string method, X509KeyStorageFlags f, Exception exception)
+    private static void LogIfNeeded(string method, X509KeyStorageFlags flags, Exception exception)
     {
         if (FirstTime)
         {
             FirstTime = false;
             if (Log.IsOperationsEnabled)
-                Log.Operations(CreateMsg());
+                Log.Operations(CreateMsg(), exception);
         }
         else
         {
             if (Log.IsInfoEnabled)
-                Log.Info(CreateMsg());
+                Log.Info(CreateMsg(), exception);
         }
 
         string CreateMsg()
         {
-            var msg = $"{nameof(CertificateLoaderUtil)}.{method} - Flags used {f}";
-            if (exception != null)
-                msg += $"First attempt exception : {exception}";
-            return msg;
+            return $"{nameof(CertificateLoaderUtil)}.{method} - Flags used {flags}";
         }
     }
 
