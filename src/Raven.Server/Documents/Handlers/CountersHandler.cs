@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.Counters;
@@ -142,7 +143,14 @@ namespace Raven.Server.Documents.Handlers
                             break;
 
                         case CounterOperationType.Get:
-                            CountersHandlerProcessorForGetCounters.GetCounterValue(context, _database, docId, operation.CounterName, _replyWithAllNodesValues, CountersDetail);
+                            if (string.IsNullOrEmpty(operation.CounterName) == false)
+                                CountersHandlerProcessorForGetCounters.GetCounterValue(context, _database, docId, operation.CounterName, _replyWithAllNodesValues, CountersDetail);
+                            else
+                            {
+                                var counterDetail =
+                                    CountersHandlerProcessorForGetCounters.GetInternal(_database, context, StringValues.Empty, docId, _replyWithAllNodesValues);
+                                CountersDetail.Counters.AddRange(counterDetail.Counters);
+                            }
                             break;
 
                         default:
