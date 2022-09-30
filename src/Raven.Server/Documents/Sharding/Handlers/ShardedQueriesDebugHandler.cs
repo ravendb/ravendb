@@ -12,4 +12,11 @@ public class ShardedQueriesDebugHandler : ShardedDatabaseRequestHandler
         using (var processor = new ShardedQueriesDebugHandlerProcessorForKillQuery(this))
             await processor.ExecuteAsync();
     }
+
+    [RavenShardedAction("/databases/*/debug/queries/running", "GET")]
+    public async Task RunningQueries()
+    {
+        using (var processor = new ShardedQueriesDebugHandlerProcessorForRunningQueries(this))
+            await processor.ExecuteAsync();
+    }
 }
