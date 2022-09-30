@@ -11,21 +11,44 @@ public class OutputReduceCoraxIndexWriteOperation : CoraxIndexWriteOperation
     private readonly OutputReduceIndexWriteOperationScope<CoraxIndexWriteOperation> _outputScope;
 
     public OutputReduceCoraxIndexWriteOperation(MapReduceIndex index, Transaction writeTransaction, CoraxDocumentConverterBase converter, Logger logger,
-        JsonOperationContext indexContext) : base(index,
-        writeTransaction, converter, logger)
+        JsonOperationContext indexContext) : base(index, writeTransaction, converter, logger)
     {
         Debug.Assert(index.OutputReduceToCollection != null);
         _outputScope = new(index, writeTransaction, indexContext, this);
     }
 
-    public override void Commit(IndexingStatsScope stats) => _outputScope.Commit(stats);
+    public override void Commit(IndexingStatsScope stats)
+    {
+        if (_outputScope.IsActive)
+            base.Commit(stats);
+        else
+            _outputScope.Commit(stats);
+    }
 
     public override void IndexDocument(LazyStringValue key, LazyStringValue sourceDocumentId, object document, IndexingStatsScope stats,
-        JsonOperationContext indexContext) => _outputScope.IndexDocument(key, sourceDocumentId, document, stats, indexContext);
+        JsonOperationContext indexContext)
+    {
+        if (_outputScope.IsActive)
+            base.IndexDocument(key, sourceDocumentId, document, stats, indexContext);
+        else
+            _outputScope.IndexDocument(key, sourceDocumentId, document, stats, indexContext);
+    }
 
-    public override void Delete(LazyStringValue key, IndexingStatsScope stats) => _outputScope.Delete(key, stats);
+    public override void Delete(LazyStringValue key, IndexingStatsScope stats)
+    {
+        if (_outputScope.IsActive)
+            base.Delete(key, stats);
+        else
+            _outputScope.Delete(key, stats);
+    }
 
-    public override void DeleteReduceResult(LazyStringValue reduceKeyHash, IndexingStatsScope stats) => _outputScope.DeleteReduceResult(reduceKeyHash, stats);
+    public override void DeleteReduceResult(LazyStringValue reduceKeyHash, IndexingStatsScope stats)
+    {
+        if (_outputScope.IsActive)
+            base.DeleteReduceResult(reduceKeyHash, stats);
+        else
+            _outputScope.DeleteReduceResult(reduceKeyHash, stats);
+    }
 
     public override void Dispose()
     {

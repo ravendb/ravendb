@@ -17,6 +17,7 @@ internal class OutputReduceIndexWriteOperationScope<TWriter> where TWriter : Ind
     private readonly OutputReduceToCollectionCommandBatcher _outputReduceToCollectionCommandBatcher;
     private readonly TransactionHolder _txHolder;
     private readonly DocumentDatabase _documentDatabase;
+    public bool IsActive;
 
     public OutputReduceIndexWriteOperationScope(MapReduceIndex index, Transaction writeTransaction, JsonOperationContext indexContext, TWriter writer)
     {
@@ -24,39 +25,43 @@ internal class OutputReduceIndexWriteOperationScope<TWriter> where TWriter : Ind
         _txHolder = new TransactionHolder(writeTransaction);
         _outputReduceToCollectionCommandBatcher = index.OutputReduceToCollection.CreateCommandBatcher(indexContext, _txHolder);
         _documentDatabase = index._indexStorage.DocumentDatabase;
+        IsActive = false;
     }
 
     public void Commit(IndexingStatsScope stats)
     {
-        var enqueue = CommitOutputReduceToCollection();
-
-        using (_txHolder.AcquireTransaction(out _))
+        using (new IsActiveScope(this))
         {
-            _writer.Commit(stats);
-        }
+            var enqueue = CommitOutputReduceToCollection();
 
-        try
-        {
-            using (stats.For(IndexingOperation.Reduce.SaveOutputDocuments))
+            using (_txHolder.AcquireTransaction(out _))
             {
-                enqueue.GetAwaiter().GetResult();
+                _writer.Commit(stats);
             }
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (ObjectDisposedException e) when (_documentDatabase.DatabaseShutdown.IsCancellationRequested)
-        {
-            throw new OperationCanceledException("The operation of writing output reduce documents was cancelled because of database shutdown", e);
-        }
-        catch (Exception e) when (e.IsOutOfMemory() || e is DiskFullException)
-        {
-            throw;
-        }
-        catch (Exception e)
-        {
-            throw new IndexWriteException("Failed to save output reduce documents to disk", e);
+
+            try
+            {
+                using (stats.For(IndexingOperation.Reduce.SaveOutputDocuments))
+                {
+                    enqueue.GetAwaiter().GetResult();
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (ObjectDisposedException e) when (_documentDatabase.DatabaseShutdown.IsCancellationRequested)
+            {
+                throw new OperationCanceledException("The operation of writing output reduce documents was cancelled because of database shutdown", e);
+            }
+            catch (Exception e) when (e.IsOutOfMemory() || e is DiskFullException)
+            {
+                throw;
+            }
+            catch (Exception e)
+            {
+                throw new IndexWriteException("Failed to save output reduce documents to disk", e);
+            }
         }
     }
 
@@ -65,12 +70,15 @@ internal class OutputReduceIndexWriteOperationScope<TWriter> where TWriter : Ind
         foreach (var command in _outputReduceToCollectionCommandBatcher.CreateCommands())
             await _documentDatabase.TxMerger.Enqueue(command).ConfigureAwait(false);
     }
-
+    
     public void IndexDocument(LazyStringValue key, LazyStringValue sourceDocumentId, object document, IndexingStatsScope stats, JsonOperationContext indexContext)
     {
-        _writer.IndexDocument(key, sourceDocumentId, document, stats, indexContext);
+        using (new IsActiveScope(this))
+        {
+            _writer.IndexDocument(key, sourceDocumentId, document, stats, indexContext);
 
-        _outputReduceToCollectionCommandBatcher.AddReduce(key, document, stats);
+            _outputReduceToCollectionCommandBatcher.AddReduce(key, document, stats);
+        }
     }
 
     public void Delete(LazyStringValue key, IndexingStatsScope stats)
@@ -80,13 +88,32 @@ internal class OutputReduceIndexWriteOperationScope<TWriter> where TWriter : Ind
 
     public void DeleteReduceResult(LazyStringValue reduceKeyHash, IndexingStatsScope stats)
     {
-        _writer.DeleteReduceResult(reduceKeyHash, stats);
+        using (new IsActiveScope(this))
+        {
+            _writer.DeleteReduceResult(reduceKeyHash, stats);
 
-        _outputReduceToCollectionCommandBatcher.DeleteReduce(reduceKeyHash);
+            _outputReduceToCollectionCommandBatcher.DeleteReduce(reduceKeyHash);
+        }
     }
 
     public void Dispose()
     {
         _outputReduceToCollectionCommandBatcher.Dispose();
+    }
+    
+    private readonly struct IsActiveScope : IDisposable
+    {
+        private readonly OutputReduceIndexWriteOperationScope<TWriter> _scope;
+
+        public IsActiveScope(OutputReduceIndexWriteOperationScope<TWriter> scope)
+        {
+            _scope = scope;
+            _scope.IsActive = true;
+        }
+        
+        public void Dispose()
+        {
+            _scope.IsActive = false;
+        }
     }
 }
