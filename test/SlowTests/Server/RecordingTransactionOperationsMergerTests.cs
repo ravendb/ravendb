@@ -67,7 +67,7 @@ namespace SlowTests.Server
                 typeof(StartTransactionsRecordingCommand),
                 typeof(StopTransactionsRecordingCommand),
                 typeof(TransactionMergedCommand),
-                typeof(AbstractQueryRunner.BulkOperationCommand<>)
+                typeof(AbstractDatabaseQueryRunner.BulkOperationCommand<>)
             };
 
             var commandBaseType = typeof(TransactionOperationsMerger.MergedTransactionCommand);

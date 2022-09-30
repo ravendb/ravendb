@@ -4,7 +4,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Raven.Client;
-using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
@@ -21,10 +20,8 @@ using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
 namespace Raven.Server.Documents.Queries.Dynamic
 {
-    public class CollectionQueryRunner : AbstractQueryRunner
+    public class CollectionQueryRunner : AbstractDatabaseQueryRunner
     {
-        public const string CollectionIndexPrefix = "collection/";
-
         public CollectionQueryRunner(DocumentDatabase database) : base(database)
         {
         }
@@ -44,7 +41,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     return DocumentQueryResult.NotModifiedResult;
             }
 
-            var collection = GetCollectionName(query.Metadata.CollectionName, out var indexName);
+            var collection = GetCollectionName(query, out var indexName);
 
             using (QueryRunner.MarkQueryAsRunning(indexName, query, token))
             {
@@ -65,7 +62,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             {
                 FillCountOfResultsAndIndexEtag(result, query.Metadata, queryContext);
 
-                var collection = GetCollectionName(query.Metadata.CollectionName, out var indexName);
+                var collection = GetCollectionName(query, out var indexName);
 
                 using (QueryRunner.MarkQueryAsRunning(indexName, query, token, true))
                 {
@@ -336,16 +333,14 @@ namespace Raven.Server.Documents.Queries.Dynamic
             resultToFill.NodeTag = Database.ServerStore.NodeTag;
         }
 
-        private static string GetCollectionName(string collection, out string indexName)
+        private static string GetCollectionName(IndexQueryServerSide query, out string indexName)
         {
-            if (string.IsNullOrEmpty(collection))
-                collection = Constants.Documents.Collections.AllDocumentsCollection;
+            indexName = GetIndexName(query);
 
-            indexName = collection == Constants.Documents.Collections.AllDocumentsCollection
-                ? "AllDocs"
-                : CollectionIndexPrefix + collection;
+            if (indexName == AllDocsCollectionName)
+                return Constants.Documents.Collections.AllDocumentsCollection;
 
-            return collection;
+            return query.Metadata.CollectionName;
         }
     }
 }
