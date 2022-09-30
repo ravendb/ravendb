@@ -64,13 +64,17 @@ internal class ShardedQueriesHandlerProcessorForGet : AbstractQueriesHandlerProc
         DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal,
             @"RavenDB-19071 what do we do with: var diagnostics = GetBoolValueQueryString(""diagnostics"", required: false) ?? false");
 
-        _queryProcessor = new ShardedQueryProcessor(queryContext, RequestHandler, query, existingResultEtag, metadataOnly, indexEntriesOnly: false, token: token.Token);
+        var indexName = AbstractQueryRunner.GetIndexName(query);
 
-        _queryProcessor.Initialize();
+        using (RequestHandler.DatabaseContext.QueryRunner.MarkQueryAsRunning(indexName, query, token))
+        {
+            _queryProcessor = new ShardedQueryProcessor(queryContext, RequestHandler, query, existingResultEtag, metadataOnly, indexEntriesOnly: false,
+                token: token.Token);
 
-        var result = await _queryProcessor.ExecuteShardedOperations();
+            _queryProcessor.Initialize();
 
-        return result;
+            return await _queryProcessor.ExecuteShardedOperations();
+        }
     }
 
     public override void Dispose()

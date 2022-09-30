@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
         public ShardedStreamingHandlerProcessorForGetStreamQuery([NotNull] ShardedDatabaseRequestHandler requestHandler, HttpMethod method) : base(requestHandler, method)
         {
         }
-        
+
         protected override RequestTimeTracker GetTimeTracker()
         {
             return new RequestTimeTracker(HttpContext, Logger, RequestHandler.DatabaseContext.NotificationCenter, RequestHandler.DatabaseContext.Configuration, "StreamQuery", doPerformanceHintIfTooLong: false);
@@ -45,9 +45,9 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
         protected override async ValueTask<BlittableJsonReaderObject> GetDocumentDataAsync(TransactionOperationContext context, string fromDocument)
         {
             var shard = RequestHandler.DatabaseContext.GetShardNumber(context, fromDocument);
-            
+
             var docs = await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(context,
-                new GetDocumentsCommand(new [] { fromDocument }, includes: null, metadataOnly: false), shard);
+                new GetDocumentsCommand(new[] { fromDocument }, includes: null, metadataOnly: false), shard);
             return (BlittableJsonReaderObject)docs.Results[0];
         }
 
@@ -69,29 +69,33 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
                 //does not write query stats to stream
                 return new StreamCsvBlittableQueryResultWriter(response, responseBodyStream, propertiesArray, fileNamePrefix);
             }
-            
+
             if (isDebug)
             {
                 ThrowUnsupportedException($"You have selected \"{format}\" file format, which is not supported.");
             }
-            
+
             return new StreamBlittableDocumentQueryResultWriter(responseBodyStream, context);
         }
 
         private async ValueTask<(IEnumerator<BlittableJsonReaderObject>, StreamQueryStatistics)> ExecuteQueryAsync(TransactionOperationContext context, IndexQueryServerSide query, string debug, bool ignoreLimit, OperationCancelToken token)
         {
-            using var queryProcessor = new ShardedQueryStreamProcessor(context, RequestHandler, query, debug, ignoreLimit, token.Token);
+            var indexName = AbstractQueryRunner.GetIndexName(query);
 
-            queryProcessor.Initialize();
+            using (RequestHandler.DatabaseContext.QueryRunner.MarkQueryAsRunning(indexName, query, token))
+            using (var queryProcessor = new ShardedQueryStreamProcessor(context, RequestHandler, query, debug, ignoreLimit, token.Token))
+            {
+                queryProcessor.Initialize();
 
-            return await queryProcessor.ExecuteShardedOperations();
+                return await queryProcessor.ExecuteShardedOperations();
+            }
         }
 
         protected override async ValueTask ExecuteAndWriteQueryStreamAsync(TransactionOperationContext context, IndexQueryServerSide query, string format,
             string[] propertiesArray, string fileNamePrefix, bool ignoreLimit, bool _, OperationCancelToken token)
         {
             //writer is blittable->document or blittable->csv
-            
+
             await using (var writer = GetBlittableQueryResultWriter(format, isDebug: false, context, HttpContext.Response, RequestHandler.ResponseBodyStream(),
                              fromSharded: false, propertiesArray, fileNamePrefix))
             {

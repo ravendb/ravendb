@@ -72,7 +72,7 @@ internal abstract class AbstractOperationQueriesHandlerProcessor<TRequestHandler
     protected static string GetOperationDescription(IndexQueryServerSide query)
     {
         return query.Metadata.IsDynamic
-            ? (query.Metadata.IsCollectionQuery ? "collection/" : "dynamic/") + query.Metadata.CollectionName
+            ? (query.Metadata.IsCollectionQuery ? AbstractQueryRunner.CollectionIndexPrefix : AbstractQueryRunner.DynamicIndexPrefix) + query.Metadata.CollectionName
             : query.Metadata.IndexName;
     }
 

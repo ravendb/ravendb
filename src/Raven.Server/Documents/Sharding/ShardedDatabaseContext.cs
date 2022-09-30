@@ -8,6 +8,7 @@ using Raven.Server.Config;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Sharding.Executors;
 using Raven.Server.Documents.Sharding.NotificationCenter;
+using Raven.Server.Documents.Sharding.Queries;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -68,6 +69,7 @@ namespace Raven.Server.Documents.Sharding
             Changes = new ShardedDocumentsChanges(this);
             Operations = new ShardedOperations(this);
             Subscriptions = new ShardedSubscriptions(this, serverStore);
+            QueryRunner = new ShardedQueryRunner();
 
             RachisLogIndexNotifications = new RachisLogIndexNotifications(_databaseShutdown.Token);
             Replication = new ShardedReplicationContext(this, serverStore);

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Documents.Queries;
 using Raven.Server.Extensions;
 using Sparrow;
 
@@ -37,7 +38,7 @@ namespace Raven.Server.Documents.Indexes
 
             collection = 
                 string.Equals(collection, Constants.Documents.Collections.AllDocumentsCollection, StringComparison.OrdinalIgnoreCase) 
-                    ? "AllDocs" : collection;
+                    ? AbstractQueryRunner.AllDocsCollectionName : collection;
 
             if (fields.Count == 0)
             {

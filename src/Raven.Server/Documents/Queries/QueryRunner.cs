@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Operations;
@@ -14,37 +13,31 @@ using Raven.Server.Documents.Queries.Facets;
 using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide;
-using Sparrow.Collections;
 using Sparrow.Json;
 using Index = Raven.Server.Documents.Indexes.Index;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
 namespace Raven.Server.Documents.Queries
 {
-    public class QueryRunner : AbstractQueryRunner
+    public class QueryRunner : AbstractDatabaseQueryRunner
     {
         private const int NumberOfRetries = 3;
 
         private readonly StaticIndexQueryRunner _static;
-        private readonly AbstractQueryRunner _dynamic;
+        private readonly AbstractDatabaseQueryRunner _dynamic;
         private readonly CollectionQueryRunner _collection;
-        private long _nextQueryId;
 
         public QueryRunner(DocumentDatabase database) : base(database)
         {
             _static = new StaticIndexQueryRunner(database);
             _dynamic = database.Configuration.Indexing.DisableQueryOptimizerGeneratedIndexes
-                ? (AbstractQueryRunner)new InvalidQueryRunner(database)
+                ? new InvalidQueryRunner(database)
                 : new DynamicQueryRunner(database);
             _collection = new CollectionQueryRunner(database);
-            _currentlyRunningQueries = new ConcurrentSet<ExecutingQueryInfo>();
         }
 
-        private readonly ConcurrentSet<ExecutingQueryInfo> _currentlyRunningQueries;
-        public IEnumerable<ExecutingQueryInfo> CurrentlyRunningQueries => _currentlyRunningQueries;
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public AbstractQueryRunner GetRunner(IndexQueryServerSide query)
+        public AbstractDatabaseQueryRunner GetRunner(IndexQueryServerSide query)
         {
             if (query.Metadata.IsDynamic)
             {
@@ -450,44 +443,6 @@ namespace Raven.Server.Documents.Queries
         private static Exception CreateRetriesFailedException(Exception inner)
         {
             return new InvalidOperationException($"Could not execute query. Tried {NumberOfRetries} times.", inner);
-        }
-
-        public QueryMarker MarkQueryAsRunning(string name, IndexQueryServerSide query, OperationCancelToken token, bool isStreaming = false)
-        {
-            var queryStartTime = DateTime.UtcNow;
-            var queryId = Interlocked.Increment(ref _nextQueryId);
-
-            var executingQueryInfo = new ExecutingQueryInfo(queryStartTime, name, query, queryId, isStreaming, token);
-
-            _currentlyRunningQueries.TryAdd(executingQueryInfo);
-
-            return new QueryMarker(this, executingQueryInfo);
-        }
-
-        public class QueryMarker : IDisposable
-        {
-            private readonly QueryRunner _queryRunner;
-
-            private readonly ExecutingQueryInfo _queryInfo;
-
-            public readonly DateTime StartTime;
-
-            public long QueryId;
-
-            public QueryMarker(QueryRunner queryRunner, ExecutingQueryInfo queryInfo)
-            {
-                _queryRunner = queryRunner;
-                _queryInfo = queryInfo;
-
-                StartTime = queryInfo.StartTime;
-                QueryId = queryInfo.QueryId;
-            }
-
-            public void Dispose()
-            {
-                if (_queryInfo != null)
-                    _queryRunner._currentlyRunningQueries.TryRemove(_queryInfo);
-            }
         }
     }
 }

@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using System.Net;
 using System.Threading.Tasks;
+using Raven.Server.Documents.Handlers.Debugging.Processors;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -14,34 +14,10 @@ namespace Raven.Server.Documents.Handlers.Debugging
     public class QueriesDebugHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/debug/queries/kill", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
-        public Task KillQuery()
+        public async Task KillQuery()
         {
-            string clientQueryId = GetStringQueryString("clientQueryId", required: false);
-            ExecutingQueryInfo query;
-
-            if (clientQueryId != null)
-            {
-                query = Database.QueryRunner.CurrentlyRunningQueries
-                    .FirstOrDefault(x => x.QueryInfo is IndexQueryServerSide q && q.ClientQueryId == clientQueryId);
-            }
-            else
-            {
-                var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("indexName");
-                var id = GetLongQueryString("id");
-
-                query = Database.QueryRunner.CurrentlyRunningQueries
-                    .FirstOrDefault(x => x.IndexName == name && x.QueryId == id);
-            }
-
-            if (query == null)
-            {
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                return Task.CompletedTask;
-            }
-
-            query.Token.Cancel();
-
-            return NoContent();
+            using (var processor = new QueriesDebugHandlerProcessorForKillQuery(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/debug/queries/running", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
@@ -103,32 +79,32 @@ namespace Raven.Server.Documents.Handlers.Debugging
                         var curDjvItem = new DynamicJsonValue();
                         queriesList.Add(curDjvItem);
 
-                        curDjvItem[nameof(Queries.QueryMetadata.CreatedAt)] = item.CreatedAt;
+                        curDjvItem[nameof(QueryMetadata.CreatedAt)] = item.CreatedAt;
 
-                        curDjvItem[nameof(Queries.QueryMetadata.LastQueriedAt)] = item.LastQueriedAt;
+                        curDjvItem[nameof(QueryMetadata.LastQueriedAt)] = item.LastQueriedAt;
                         if (item.IsGroupBy)
                         {
-                            curDjvItem[nameof(Queries.QueryMetadata.IsGroupBy)] = true;
+                            curDjvItem[nameof(QueryMetadata.IsGroupBy)] = true;
                         }
 
                         if (item.IsDistinct)
                         {
-                            curDjvItem[nameof(Queries.QueryMetadata.IsDistinct)] = true;
+                            curDjvItem[nameof(QueryMetadata.IsDistinct)] = true;
                         }
 
                         if (item.HasFacet)
                         {
-                            curDjvItem[nameof(Queries.QueryMetadata.HasFacet)] = true;
+                            curDjvItem[nameof(QueryMetadata.HasFacet)] = true;
                         }
 
                         if (item.HasMoreLikeThis)
                         {
-                            curDjvItem[nameof(Queries.QueryMetadata.HasMoreLikeThis)] = true;
+                            curDjvItem[nameof(QueryMetadata.HasMoreLikeThis)] = true;
                         }
 
                         if (item.HasSuggest)
                         {
-                            curDjvItem[nameof(Queries.QueryMetadata.HasSuggest)] = true;
+                            curDjvItem[nameof(QueryMetadata.HasSuggest)] = true;
                         }
 
                         if (item.OrderBy != null)
@@ -138,22 +114,22 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
                         if (item.HasCmpXchg)
                         {
-                            curDjvItem[nameof(Queries.QueryMetadata.HasCmpXchg)] = true;
+                            curDjvItem[nameof(QueryMetadata.HasCmpXchg)] = true;
                         }
 
                         if (item.HasExplanations)
                         {
-                            curDjvItem[nameof(Queries.QueryMetadata.HasExplanations)] = true;
+                            curDjvItem[nameof(QueryMetadata.HasExplanations)] = true;
                         }
 
                         if (item.HasIntersect)
                         {
-                            curDjvItem[nameof(Queries.QueryMetadata.HasIntersect)] = true;
+                            curDjvItem[nameof(QueryMetadata.HasIntersect)] = true;
                         }
 
                         if (item.IsDynamic)
                         {
-                            curDjvItem[nameof(Queries.QueryMetadata.IsDynamic)] = true;
+                            curDjvItem[nameof(QueryMetadata.IsDynamic)] = true;
                         }
 
                         if (item.SelectFields != null && item.SelectFields.Any(x => x.Function != null))
@@ -163,20 +139,20 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
                         if (string.IsNullOrEmpty(item.CollectionName) == false)
                         {
-                            curDjvItem[nameof(Queries.QueryMetadata.CollectionName)] = item.CollectionName;
+                            curDjvItem[nameof(QueryMetadata.CollectionName)] = item.CollectionName;
                         }
 
                         if (string.IsNullOrEmpty(item.AutoIndexName) == false)
                         {
-                            curDjvItem[nameof(Queries.QueryMetadata.AutoIndexName)] = item.AutoIndexName;
+                            curDjvItem[nameof(QueryMetadata.AutoIndexName)] = item.AutoIndexName;
                         }
 
                         if (string.IsNullOrEmpty(item.IndexName) == false)
                         {
-                            curDjvItem[nameof(Queries.QueryMetadata.IndexName)] = item.IndexName;
+                            curDjvItem[nameof(QueryMetadata.IndexName)] = item.IndexName;
                         }
 
-                        curDjvItem[nameof(Queries.QueryMetadata.QueryText)] = item.QueryText;
+                        curDjvItem[nameof(QueryMetadata.QueryText)] = item.QueryText;
                     }
                 }
 
