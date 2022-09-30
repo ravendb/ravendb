@@ -12,6 +12,7 @@ using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands.MultiGet;
 using Raven.Client.Documents.Operations.ConnectionStrings;

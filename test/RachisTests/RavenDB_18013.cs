@@ -51,9 +51,9 @@ public class RavenDB_18013 : ClusterTestBase
                 Output.WriteLine($"{SystemTime.UtcNow} RavenDB-18013: waiting for '{nameof(deleteDatabaseCommandMre)}'");
 
                 deleteDatabaseCommandHasWaiterMre.Set();
-                deleteDatabaseCommandMre.WaitOne(_reasonableWaitTime);
+                var result = deleteDatabaseCommandMre.WaitOne(_reasonableWaitTime);
 
-                Output.WriteLine($"{SystemTime.UtcNow} RavenDB-18013: '{nameof(deleteDatabaseCommandMre)}' got signaled");
+                Output.WriteLine($"{SystemTime.UtcNow} RavenDB-18013: '{nameof(deleteDatabaseCommandMre)}' got signaled. Result: {result}");
 
             }
             else if (type == nameof(RemoveNodeFromDatabaseCommand))
@@ -68,10 +68,13 @@ public class RavenDB_18013 : ClusterTestBase
                 {
        
                 }
-                Output.WriteLine($"{SystemTime.UtcNow} RavenDB-18013: waiting for '{nameof(removeNodeFromDatabaseCommandMre)}'");
+                Output.WriteLine($"{SystemTime.UtcNow} RavenDB-18013: waiting for '{nameof(removeNodeFromDatabaseCommandMre)}' (1)");
 
-                removeNodeFromDatabaseCommandMre.WaitOne(_reasonableWaitTime);
+                var result = removeNodeFromDatabaseCommandMre.WaitOne(_reasonableWaitTime);
                 removeNodeFromDatabaseCommandMre.Reset();
+
+                Output.WriteLine($"{SystemTime.UtcNow} RavenDB-18013: result of waiting for '{nameof(removeNodeFromDatabaseCommandMre)}': {result} (1)");
+
                 if (Interlocked.Increment(ref c) == 1)
                 {
                     Output.WriteLine($"{SystemTime.UtcNow} RavenDB-18013: incremented '{nameof(c)}' to 1 (value: {c}), returning");
@@ -81,9 +84,11 @@ public class RavenDB_18013 : ClusterTestBase
                 else
                 {
                     Output.WriteLine($"{SystemTime.UtcNow} RavenDB-18013: incremented '{nameof(c)}', current value: {c}");
-                    Output.WriteLine($"{SystemTime.UtcNow} RavenDB-18013: waiting for '{nameof(removeNodeFromDatabaseCommandMre)}'");
+                    Output.WriteLine($"{SystemTime.UtcNow} RavenDB-18013: waiting for '{nameof(removeNodeFromDatabaseCommandMre)}' (2)");
 
-                    removeNodeFromDatabaseCommandMre.WaitOne(_reasonableWaitTime);
+                    result = removeNodeFromDatabaseCommandMre.WaitOne(_reasonableWaitTime);
+
+                    Output.WriteLine($"{SystemTime.UtcNow} RavenDB-18013: result of waiting for '{nameof(removeNodeFromDatabaseCommandMre)}': {result} (2)");
                 }
             }
         };
@@ -95,7 +100,9 @@ public class RavenDB_18013 : ClusterTestBase
                    documentDatabaseDisposeHasWaiterMre.Set();
                    Output.WriteLine($"{SystemTime.UtcNow} RavenDB-18013: waiting for '{nameof(documentDatabaseDisposeMre)}'");
 
-                   documentDatabaseDisposeMre.WaitOne(_reasonableWaitTime);
+                   var result = documentDatabaseDisposeMre.WaitOne(_reasonableWaitTime);
+
+                   Output.WriteLine($"{SystemTime.UtcNow} RavenDB-18013: result of waiting for '{nameof(documentDatabaseDisposeMre)}': {result}");
                }))
         {
 
@@ -138,6 +145,14 @@ public class RavenDB_18013 : ClusterTestBase
                 Output.WriteLine($"{SystemTime.UtcNow} RavenDB-18013: Failed to delete database from test {nameof(ShouldHandleDatabaseDeleteWhileItsBeingDeleted)}:{e}");
                 throw;
             }
+
+            // we're done with the disposal - let's signal all MREs to ensure the test will not hang on the disposal
+
+            deleteDatabaseCommandMre.Set();
+            deleteDatabaseCommandHasWaiterMre.Set();
+            removeNodeFromDatabaseCommandMre.Set();
+            documentDatabaseDisposeMre.Set();
+            documentDatabaseDisposeHasWaiterMre.Set();
         }
     }
 }

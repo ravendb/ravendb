@@ -4,6 +4,7 @@ using System.IO;
 using System.Security;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using Raven.Client;
 
 namespace FastTests
 {
@@ -229,7 +230,7 @@ namespace FastTests
             {
                 try
                 {
-                    return new TrackingX509Certificate2(path(), (string)null, X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.Exportable);
+                    return new TrackingX509Certificate2(path(), (string)null, X509KeyStorageFlags.MachineKeySet | CertificateLoaderUtil.FlagsForExport);
                 }
                 catch (CryptographicException e)
                 {
