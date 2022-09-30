@@ -8,7 +8,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
 public class OutputReduceCoraxIndexWriteOperation : CoraxIndexWriteOperation
 {
-    private readonly OutputReduceIndexWriteOperationScope<CoraxIndexWriteOperation> _outputScope;
+    private readonly OutputReduceIndexWriteOperationScope<OutputReduceCoraxIndexWriteOperation> _outputScope;
 
     public OutputReduceCoraxIndexWriteOperation(MapReduceIndex index, Transaction writeTransaction, CoraxDocumentConverterBase converter, Logger logger,
         JsonOperationContext indexContext) : base(index, writeTransaction, converter, logger)
@@ -16,7 +16,7 @@ public class OutputReduceCoraxIndexWriteOperation : CoraxIndexWriteOperation
         Debug.Assert(index.OutputReduceToCollection != null);
         _outputScope = new(index, writeTransaction, indexContext, this);
     }
-
+    
     public override void Commit(IndexingStatsScope stats)
     {
         if (_outputScope.IsActive)
@@ -41,6 +41,14 @@ public class OutputReduceCoraxIndexWriteOperation : CoraxIndexWriteOperation
         else
             _outputScope.Delete(key, stats);
     }
+    
+    public override void UpdateDocument(string keyFieldName, LazyStringValue key, LazyStringValue sourceDocumentId, object document, IndexingStatsScope stats, JsonOperationContext indexContext)
+    {
+        if (_outputScope.IsActive)
+            base.UpdateDocument(keyFieldName, key, sourceDocumentId, document, stats, indexContext);
+        else
+            _outputScope.UpdateDocument(keyFieldName, key, sourceDocumentId, document, stats, indexContext);
+    }
 
     public override void DeleteReduceResult(LazyStringValue reduceKeyHash, IndexingStatsScope stats)
     {
@@ -49,7 +57,7 @@ public class OutputReduceCoraxIndexWriteOperation : CoraxIndexWriteOperation
         else
             _outputScope.DeleteReduceResult(reduceKeyHash, stats);
     }
-
+    
     public override void Dispose()
     {
         base.Dispose();
