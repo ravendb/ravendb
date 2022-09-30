@@ -352,6 +352,7 @@ namespace Raven.Server.Documents.TimeSeries
                 if (stats.End < from)
                     return null; // nothing to delete here
 
+                Debug.Assert(stats.Start.Kind == DateTimeKind.Utc);
                 slicer.SetBaselineToKey(stats.Start > from ? stats.Start : from);
 
                 // first try to find the previous segment containing from value
@@ -2758,7 +2759,7 @@ namespace Raven.Server.Documents.TimeSeries
             var first = reader.First().Timestamp;
             var last = reader.Last().Timestamp;
 
-            Debug.Assert(first == stats.Start, $"Failed start check: {first} == {stats.Start}");
+            Debug.Assert(first == stats.Start && stats.Start.Kind == DateTimeKind.Utc, $"Failed start check: {first} == {stats.Start}");
             Debug.Assert(last == stats.End, $"Failed end check: {last} == {stats.End}");
 
             if (segment.NumberOfLiveEntries > 0)

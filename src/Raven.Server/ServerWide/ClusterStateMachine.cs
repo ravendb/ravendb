@@ -11,6 +11,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Analysis;
@@ -1068,7 +1069,7 @@ namespace Raven.Server.ServerWide
 
                 cmd.TryGet(nameof(InstallUpdatedServerCertificateCommand.ReplaceImmediately), out bool replaceImmediately);
 
-                var x509Certificate = new X509Certificate2(Convert.FromBase64String(cert), (string)null, X509KeyStorageFlags.MachineKeySet);
+                var x509Certificate = CertificateLoaderUtil.CreateCertificate(Convert.FromBase64String(cert));
                 // we assume that this is valid, and we don't check dates, since that would introduce external factor to the state machine, which is not allowed
                 using (Slice.From(context.Allocator, CertificateReplacement.CertificateReplacementDoc, out var key))
                 {
@@ -4408,7 +4409,7 @@ namespace Raven.Server.ServerWide
                 var p = result.Result.Reader.Read((int)ReplicationCertificatesTable.Certificate, out var size);
                 var buffer = new byte[size];
                 new Span<byte>(p, size).CopyTo(buffer);
-                using var knownCert = new X509Certificate2(buffer);
+                using var knownCert = CertificateLoaderUtil.CreateCertificate(buffer);
 
                 if (CertificateUtils.CertHasKnownIssuer(userCert, knownCert, securityConfiguration, out var _) == false)
                     continue;
