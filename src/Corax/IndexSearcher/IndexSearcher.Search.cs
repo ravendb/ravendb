@@ -104,7 +104,7 @@ public partial class IndexSearcher
                 };
 
                 termStart += startIncrement;
-                termLength += termLength;
+                termLength += lengthIncrement;
             }
 
             _transaction.Allocator.Allocate(termLength, out ByteString encodedString);
