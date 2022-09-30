@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Org.BouncyCastle.OpenSsl;
 using Org.BouncyCastle.Pkcs;
+using Raven.Client;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Http;
@@ -178,7 +179,7 @@ namespace Raven.Server.Web.Authentication
                 try
                 {
                     var password = string.IsNullOrEmpty(certificate.Password) ? null : certificate.Password;
-                    using var certificate2 = new X509Certificate2(certBytes, password, X509KeyStorageFlags.MachineKeySet);
+                    using var certificate2 = CertificateLoaderUtil.CreateCertificate(certBytes, password);
                 }
                 catch (Exception e)
                 {
@@ -214,9 +215,9 @@ namespace Raven.Server.Web.Authentication
             var collection = new X509Certificate2Collection();
 
             if (string.IsNullOrEmpty(password))
-                collection.Import(certBytes, (string)null, X509KeyStorageFlags.MachineKeySet);
+                CertificateLoaderUtil.Import(collection, certBytes);
             else
-                collection.Import(certBytes, password, X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+                CertificateLoaderUtil.Import(collection, certBytes, password, CertificateLoaderUtil.FlagsForPersist);
 
             var first = true;
             var collectionPrimaryKey = string.Empty;
@@ -531,7 +532,7 @@ namespace Raven.Server.Web.Authentication
                 {
                     // NotBefore will be null if the certificate was generated prior to adding the NotBefore property to class CertificateMetadata
                     // So we are manually extracting this info - See issue RavenDB-18519
-                    var tempCertificate = new X509Certificate2(Convert.FromBase64String(def.Certificate));
+                    var tempCertificate = CertificateLoaderUtil.CreateCertificate(Convert.FromBase64String(def.Certificate));
                     using (tempCertificate) 
                     {
                           def.NotBefore = tempCertificate.NotBefore;
@@ -679,7 +680,7 @@ namespace Raven.Server.Web.Authentication
             var collection = new X509Certificate2Collection();
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                collection.Import(Server.Certificate.Certificate.Export(X509ContentType.Cert), (string)null, X509KeyStorageFlags.MachineKeySet);
+                CertificateLoaderUtil.Import(collection, Server.Certificate.Certificate.Export(X509ContentType.Cert));
 
                 if (ServerStore.CurrentRachisState != RachisState.Passive)
                 {
@@ -695,10 +696,10 @@ namespace Raven.Server.Web.Authentication
 
                             foreach (var cert in clusterNodes)
                             {
-                                var x509Certificate2 = new X509Certificate2(Convert.FromBase64String(cert.Certificate), (string)null, X509KeyStorageFlags.MachineKeySet);
+                                var x509Certificate2 = CertificateLoaderUtil.CreateCertificate(Convert.FromBase64String(cert.Certificate));
 
                                 if (collection.Contains(x509Certificate2) == false)
-                                    collection.Import(x509Certificate2.Export(X509ContentType.Cert), (string)null, X509KeyStorageFlags.MachineKeySet);
+                                    CertificateLoaderUtil.Import(collection, x509Certificate2.Export(X509ContentType.Cert));
                             }
                         }
                         finally
@@ -951,7 +952,7 @@ namespace Raven.Server.Web.Authentication
                             try
                             {
                                 var cert = new X509Certificate2Collection();
-                                cert.Import(certBytes, certificate.Password, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+                                CertificateLoaderUtil.Import(cert, certBytes, certificate.Password, CertificateLoaderUtil.FlagsForExport);
                                 // Exporting with the private key, but without the password
                                 certBytes = cert.Export(X509ContentType.Pkcs12);
                                 certificate.Certificate = Convert.ToBase64String(certBytes);
@@ -965,7 +966,7 @@ namespace Raven.Server.Web.Authentication
                         // Ensure we'll be able to load the certificate
                         try
                         {
-                            var _ = new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+                            var _ = CertificateLoaderUtil.CreateCertificate(certBytes, flags: CertificateLoaderUtil.FlagsForExport);
                         }
                         catch (Exception e)
                         {
