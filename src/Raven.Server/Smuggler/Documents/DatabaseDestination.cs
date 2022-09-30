@@ -554,9 +554,10 @@ namespace Raven.Server.Smuggler.Documents
         {
             const int BatchSize = 1024;
             private const int CompareExchangeBatchSize = 10 * BatchSize;
-            private const int CompareExchangeValuesBatchSize = 4 * 1024 * 1024; // 4MB
 
-            private int _compareExchangeValuesSize;
+            private readonly Size _compareExchangeValuesBatchSize;
+            private Size _compareExchangeValuesSize;
+
             private readonly DocumentDatabase _database;
             private readonly JsonOperationContext _context;
             private readonly CancellationToken _token;
@@ -564,7 +565,7 @@ namespace Raven.Server.Smuggler.Documents
             private readonly List<AddOrUpdateCompareExchangeCommand> _compareExchangeAddOrUpdateCommands = new List<AddOrUpdateCompareExchangeCommand>();
             private DisposableReturnedArray<BatchRequestParser.CommandData> _clusterTransactionCommands = new DisposableReturnedArray<BatchRequestParser.CommandData>(1024);
             private readonly DocumentContextHolder _documentContextHolder;
-            private long? _lastAddOrUpdateResultIndex;
+            private long? _lastAddOrUpdateOrRemoveResultIndex;
 
             public DatabaseCompareExchangeActions(DocumentDatabase database, JsonOperationContext context, CancellationToken token)
             {
@@ -572,7 +573,8 @@ namespace Raven.Server.Smuggler.Documents
                 _context = context;
                 _token = token;
                 _documentContextHolder = new DocumentContextHolder(database);
-                _compareExchangeValuesSize = 0;
+                _compareExchangeValuesBatchSize = new Size(database.Is32Bits ? 2 : 4, SizeUnit.Megabytes);
+                _compareExchangeValuesSize = new Size(0, SizeUnit.Megabytes);
             }
 
             public async ValueTask WriteKeyValueAsync(string key, BlittableJsonReaderObject value)
@@ -580,24 +582,25 @@ namespace Raven.Server.Smuggler.Documents
                 if (ClusterTransactionCommand.IsAtomicGuardKey(key, out var docId))
                 {
                     var ctx = _documentContextHolder.GetContextForRead();
-                    
+
                     var doc = _database.DocumentsStorage.Get(ctx, docId, DocumentFields.Data | DocumentFields.ChangeVector | DocumentFields.Id);
                     if (doc == null)
                         return;
 
-                    _clusterTransactionCommands.Push(new BatchRequestParser.CommandData {Id = doc.Id, Document = doc.Data, Type = CommandType.PUT, OriginalChangeVector = ctx.GetLazyString(doc.ChangeVector)});
+                    _clusterTransactionCommands.Push(new BatchRequestParser.CommandData { Id = doc.Id, Document = doc.Data, Type = CommandType.PUT, OriginalChangeVector = ctx.GetLazyString(doc.ChangeVector) });
                 }
                 else
                 {
                     _compareExchangeAddOrUpdateCommands.Add(new AddOrUpdateCompareExchangeCommand(_database.Name, key, value, 0, _context, RaftIdGenerator.DontCareId,
                         fromBackup: true));
-                    _compareExchangeValuesSize += value.Size; 
+
+                    _compareExchangeValuesSize.Add(value.Size, SizeUnit.Bytes);
                 }
 
-                if (_compareExchangeValuesSize >= CompareExchangeValuesBatchSize || _compareExchangeAddOrUpdateCommands.Count >= CompareExchangeBatchSize)
+                if (_compareExchangeValuesSize >= _compareExchangeValuesBatchSize || _compareExchangeAddOrUpdateCommands.Count >= CompareExchangeBatchSize)
                 {
-                    _compareExchangeValuesSize = 0;
                     await SendAddOrUpdateCommandsAsync(_context);
+                    _compareExchangeValuesSize.Set(0, SizeUnit.Bytes);
                 }
 
                 if (_clusterTransactionCommands.Length >= BatchSize)
@@ -624,8 +627,8 @@ namespace Raven.Server.Smuggler.Documents
                     await SendAddOrUpdateCommandsAsync(_context);
                     await SendRemoveCommandsAsync(_context);
 
-                    if (_lastAddOrUpdateResultIndex != null)
-                        await _database.ServerStore.Cluster.WaitForIndexNotification(_lastAddOrUpdateResultIndex.Value);
+                    if (_lastAddOrUpdateOrRemoveResultIndex != null)
+                        await _database.ServerStore.Cluster.WaitForIndexNotification(_lastAddOrUpdateOrRemoveResultIndex.Value);
                 }
             }
 
@@ -658,7 +661,7 @@ namespace Raven.Server.Smuggler.Documents
                     {
                         ConcurrencyViolations = errors.Select(e => e.Violation).ToArray()
                     };
-                
+
                 await _database.ServerStore.Cluster.WaitForIndexNotification(clusterTransactionResult.Index);
 
                 //When restoring from snapshot the database doesn't exist yet and we cannot rely on the DocumentDatabase to execute the database cluster transaction commands
@@ -686,26 +689,28 @@ namespace Raven.Server.Smuggler.Documents
                 }
                 _compareExchangeAddOrUpdateCommands.Clear();
 
-                _lastAddOrUpdateResultIndex = addOrUpdateResult.Index;
+                _lastAddOrUpdateOrRemoveResultIndex = addOrUpdateResult.Index;
             }
 
             private async ValueTask SendRemoveCommandsAsync(JsonOperationContext context)
             {
                 if (_compareExchangeRemoveCommands.Count == 0)
                     return;
-                await _database.ServerStore.SendToLeaderAsync(context, new AddOrUpdateCompareExchangeBatchCommand(_compareExchangeRemoveCommands, context, RaftIdGenerator.DontCareId));
+                var addOrUpdateResult = await _database.ServerStore.SendToLeaderAsync(context, new AddOrUpdateCompareExchangeBatchCommand(_compareExchangeRemoveCommands, context, RaftIdGenerator.DontCareId));
                 _compareExchangeRemoveCommands.Clear();
+
+                _lastAddOrUpdateOrRemoveResultIndex = addOrUpdateResult.Index;
             }
 
             public JsonOperationContext GetContextForNewCompareExchangeValue()
             {
                 return _context;
             }
-            
+
             private struct DisposableReturnedArray<T> : IDisposable
             {
                 private readonly T[] _array;
-                
+
                 public int Length;
 
                 public DisposableReturnedArray(int length)
@@ -719,7 +724,7 @@ namespace Raven.Server.Smuggler.Documents
 
                 public ArraySegment<T> GetArraySegment() => new ArraySegment<T>(_array, 0, Length);
 
-                public void Clear() => Length = 0; 
+                public void Clear() => Length = 0;
 
                 public void Dispose() => ArrayPool<T>.Shared.Return(_array);
             }
@@ -751,7 +756,7 @@ namespace Raven.Server.Smuggler.Documents
                     using (_returnContext)
                     using (_readTx)
                     {
-                        
+
                     }
 
                     _returnContext = null;
