@@ -23,37 +23,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
         [RavenAction("/databases/*/debug/queries/running", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
         public async Task RunningQueries()
         {
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
-            {
-                writer.WriteStartObject();
-
-                var isFirst = true;
-                foreach (var group in Database.QueryRunner.CurrentlyRunningQueries.GroupBy(x => x.IndexName))
-                {
-                    if (isFirst == false)
-                        writer.WriteComma();
-                    isFirst = false;
-
-                    writer.WritePropertyName(group.Key);
-                    writer.WriteStartArray();
-
-                    var isFirstInternal = true;
-                    foreach (var query in group)
-                    {
-                        if (isFirstInternal == false)
-                            writer.WriteComma();
-
-                        isFirstInternal = false;
-
-                        query.Write(writer, context);
-                    }
-
-                    writer.WriteEndArray();
-                }
-
-                writer.WriteEndObject();
-            }
+            using (var processor = new QueriesDebugHandlerProcessorForRunningQueries(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/debug/queries/cache/list", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
