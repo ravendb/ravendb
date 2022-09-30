@@ -13,6 +13,12 @@ public class ShardedCounterIncludes : ICounterIncludes
     private Dictionary<string, List<BlittableJsonReaderObject>> _countersByDocumentId;
     private Dictionary<string, HashSet<string>> _includedCounterNames;
 
+    public HashSet<string> MissingCounterIncludes { get; set; }
+
+    public Dictionary<string, string[]> IncludedCounterNames => _includedCounterNames.ToDictionary(x => x.Key, x => x.Value.ToArray());
+
+    public int Count => _countersByDocumentId?.Count ?? 0;
+
     public void AddResults(BlittableJsonReaderObject results, Dictionary<string, string[]> includedCounterNames, JsonOperationContext contextToClone)
     {
         if (results == null || results.Count == 0)
@@ -35,11 +41,18 @@ public class ShardedCounterIncludes : ICounterIncludes
             if (_countersByDocumentId.TryGetValue(docId, out var counters) == false)
                 _countersByDocumentId[docId] = counters = new List<BlittableJsonReaderObject>();
 
-            for (int j = 0; j < countersJsonArray.Length; j++)
+            if (countersJsonArray.Length > 0)
             {
-                var json = countersJsonArray.GetByIndex<BlittableJsonReaderObject>(j);
+                for (int j = 0; j < countersJsonArray.Length; j++)
+                {
+                    var json = countersJsonArray.GetByIndex<BlittableJsonReaderObject>(j);
 
-                counters.Add(json?.Clone(contextToClone));
+                    counters.Add(json?.Clone(contextToClone));
+                }
+            }
+            else
+            {
+                (MissingCounterIncludes ??= new HashSet<string>()).Add(docId);
             }
         }
 
@@ -60,6 +73,14 @@ public class ShardedCounterIncludes : ICounterIncludes
                 }
             }
         }
+    }
+
+    public void AddMissingCounter(string docId, BlittableJsonReaderObject counter)
+    {
+        if (_countersByDocumentId.TryGetValue(docId, out var counters) == false)
+            _countersByDocumentId[docId] = counters = new List<BlittableJsonReaderObject>();
+
+        counters.Add(counter);
     }
 
     public async ValueTask WriteIncludesAsync(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, CancellationToken token)
@@ -98,8 +119,4 @@ public class ShardedCounterIncludes : ICounterIncludes
 
         writer.WriteEndObject();
     }
-
-    public Dictionary<string, string[]> IncludedCounterNames => _includedCounterNames.ToDictionary(x => x.Key, x => x.Value.ToArray());
-
-    public int Count => _countersByDocumentId?.Count ?? 0;
 }

@@ -4,17 +4,23 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries;
+using Raven.Server.Documents.Includes;
+using Raven.Server.Documents.Includes.Sharding;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Results.Sharding;
 using Raven.Server.Documents.Queries.Sharding;
 using Raven.Server.Documents.Sharding.Commands;
 using Raven.Server.Documents.Sharding.Handlers;
+using Raven.Server.Documents.Sharding.Handlers.Processors.Counters;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Web;
 using Sparrow.Json;
+using Sparrow.Server.Collections.LockFree;
 using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Queries;
@@ -98,7 +104,12 @@ public class ShardedQueryProcessor : AbstractShardedQueryProcessor<ShardedQueryC
 
         if (operation.MissingDocumentIncludes is {Count: > 0})
         {
-            await HandleMissingIncludes(operation.MissingDocumentIncludes, result);
+            await HandleMissingDocumentIncludes(operation.MissingDocumentIncludes, result);
+        }
+
+        if (operation.MissingCounterIncludes is {Count: > 0})
+        {
+            await HandleMissingCounterInclude(operation.MissingCounterIncludes, result);
         }
 
         // For map/reduce - we need to re-run the reduce portion of the index again on the results
@@ -116,7 +127,7 @@ public class ShardedQueryProcessor : AbstractShardedQueryProcessor<ShardedQueryC
         return result;
     }
 
-    private async Task HandleMissingIncludes(HashSet<string> missingIncludes, ShardedQueryResult result)
+    private async Task HandleMissingDocumentIncludes(HashSet<string> missingIncludes, ShardedQueryResult result)
     {
         var missingIncludeIdsByShard = ShardLocator.GetDocumentIdsByShards(_context, _requestHandler.DatabaseContext, missingIncludes);
         var missingIncludesOp = new FetchDocumentsFromShardsOperation(_context, _requestHandler, missingIncludeIdsByShard, null, null, counterIncludes: default, null, null, null, _metadataOnly);
@@ -128,6 +139,82 @@ public class ShardedQueryProcessor : AbstractShardedQueryProcessor<ShardedQueryC
                 continue;
 
             result.Includes.Add(missing);
+        }
+    }
+
+    private async Task HandleMissingCounterInclude(HashSet<string> missingCounterIncludes, ShardedQueryResult result)
+    {
+        var counterBatch = new CounterBatch();
+
+        // TODO arek counterBatch.ReplyWithAllNodesValues = true;
+
+        foreach (string docId in missingCounterIncludes)
+        {
+            var includes = result.GetCounterIncludes();
+
+            var  counterOperations = new List<CounterOperation>();
+
+            if (includes.IncludedCounterNames.TryGetValue(docId, out var counterNames))
+            {
+                if (counterNames.Length > 0)
+                {
+                    foreach (string counterName in counterNames)
+                    {
+                        counterOperations.Add(new CounterOperation
+                        {
+                            CounterName = counterName,
+                            Type = CounterOperationType.Get
+                        });
+                    }
+                }
+                else
+                {
+                    counterOperations.Add(new CounterOperation
+                    {
+                        Type = CounterOperationType.Get
+                    });
+                }
+            }
+            else
+            {
+                counterOperations.Add(new CounterOperation
+                {
+                    Type = CounterOperationType.Get
+                });
+            }
+
+            counterBatch.Documents.Add(new DocumentCountersOperation
+            {
+                DocumentId = docId,
+                Operations = counterOperations,
+            });
+        }
+
+        var commandsPerShard = new Dictionary<int, CounterBatchOperation.CounterBatchCommand>();
+
+        var shardsToPositions = ShardLocator.GetDocumentIdsByShards(_context, _requestHandler.DatabaseContext, missingCounterIncludes);
+        foreach (var (shardNumber, idsByShard) in shardsToPositions)
+        {
+            var countersBatchForShard = new CounterBatch()
+            {
+                ReplyWithAllNodesValues = counterBatch.ReplyWithAllNodesValues,
+                Documents = new()
+            };
+
+            foreach (var pos in idsByShard.Positions)
+            {
+                countersBatchForShard.Documents.Add(counterBatch.Documents[pos]);
+            }
+
+            commandsPerShard[shardNumber] = new CounterBatchOperation.CounterBatchCommand(countersBatchForShard);
+        }
+
+        var counterIncludes = await _requestHandler.ShardExecutor.ExecuteParallelForShardsAsync(shardsToPositions.Keys.ToArray(),
+            new ShardedCounterBatchOperation(_requestHandler.HttpContext, commandsPerShard), _token);
+
+        foreach (var counterInclude in counterIncludes.Counters)
+        {
+            ((ShardedCounterIncludes)result.GetCounterIncludes()).AddMissingCounter(counterInclude.DocumentId, _context.ReadObject(counterInclude.ToJson(), counterInclude.DocumentId));
         }
     }
 
