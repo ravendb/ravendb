@@ -128,6 +128,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     }
                 }, true);
 
+                string secondaryId; 
                 using (var session = dest.OpenSession())
                 {
                     var user = session.Load<User>("users/1-A,Chicago");
@@ -136,14 +137,14 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     Assert.Equal("Joe Doe", user.Name);
                     var other = session.Advanced.RawQuery<object>("from Users2 where startsWith(id(), 'users/1-A/')")
                         .Single();
-                    
-                    Assert.StartsWith("users/1-A/users2/chicago/", session.Advanced.GetDocumentId(other));
+
+                    secondaryId = session.Advanced.GetDocumentId(other);
+                    Assert.StartsWith("users/1-A/users2/chicago/", secondaryId);
                 }
 
                 using (var session = src.OpenSession())
                 {
                     session.Delete("users/1-A");
-
                     session.SaveChanges();
                 }
 
@@ -151,8 +152,8 @@ namespace SlowTests.Server.Documents.ETL.Raven
                 {
                     using (var session = dest.OpenSession())
                     {
-                        var user = session.Load<User>("users/1-A,Chicago");
-                        return user == null;
+                        return session.Advanced.Exists("users/1-A,Chicago") == false && 
+                               session.Advanced.Exists(secondaryId) == false;
                     }
                 }, true);
                 
