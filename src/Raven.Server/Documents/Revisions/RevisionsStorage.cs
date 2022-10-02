@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Revisions;
+using Raven.Client.Exceptions.Documents;
 using Raven.Client.ServerWide;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -1454,7 +1455,7 @@ namespace Raven.Server.Documents.Revisions
             public Action<IOperationProgress> OnProgress;
         }
 
-        public async Task<IOperationResult> RevertRevisions(DateTime before, TimeSpan window, Action<IOperationProgress> onProgress, OperationCancelToken token)
+        public async Task<IOperationResult> RevertRevisions(DateTime before, TimeSpan window, Action<IOperationProgress> onProgress, OperationCancelToken token, string collection = null)
         {
             var list = new List<Document>();
             var result = new RevertResult();
@@ -1478,7 +1479,7 @@ namespace Raven.Server.Documents.Revisions
 
                 using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext writeCtx))
                 {
-                    hasMore = PrepareRevertedRevisions(writeCtx, parameters, result, list, token);
+                    hasMore = PrepareRevertedRevisions(writeCtx, parameters, result, list, token, collection);
                     await WriteRevertedRevisions(list, token);
                 }
             }
@@ -1496,14 +1497,30 @@ namespace Raven.Server.Documents.Revisions
             list.Clear();
         }
 
-        private bool PrepareRevertedRevisions(DocumentsOperationContext writeCtx, Parameters parameters, RevertResult result, List<Document> list, OperationCancelToken token)
+        private bool PrepareRevertedRevisions(DocumentsOperationContext writeCtx, Parameters parameters, RevertResult result, List<Document> list, OperationCancelToken token, string collection = null)
         {
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext readCtx))
             using (readCtx.OpenReadTransaction())
             {
-                var revisions = new Table(RevisionsSchema, readCtx.Transaction.InnerTransaction);
-                foreach (var tvr in revisions.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice],
-                    parameters.LastScannedEtag))
+                IEnumerable<Table.TableValueHolder> tvrs = null;
+                if (collection != null)
+                {
+                    var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+                    if (collectionName == null)
+                    {
+                        throw new InvalidOperationException($"There's no such collection as '{collection}'");
+                    }
+                    var tableName = collectionName.GetTableName(CollectionTableType.Revisions);
+                    var revisions = readCtx.Transaction.InnerTransaction.OpenTable(RevisionsSchema, tableName);
+                    tvrs = revisions.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], parameters.LastScannedEtag);
+                }
+                else
+                {
+                    var revisions = new Table(RevisionsSchema, readCtx.Transaction.InnerTransaction);
+                    tvrs = revisions.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice], parameters.LastScannedEtag);
+                }
+                
+                foreach (var tvr in tvrs)
                 {
                     token.ThrowIfCancellationRequested();
 
