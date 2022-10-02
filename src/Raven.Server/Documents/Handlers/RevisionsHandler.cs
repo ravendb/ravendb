@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
@@ -180,6 +181,24 @@ namespace Raven.Server.Documents.Handlers
         public async Task Revert()
         {
             RevertRevisionsRequest configuration;
+            var collection = GetQueryOptionalStringValue("collection")?.Trim();
+
+            // Check if collection exists in the database
+            if (collection != null && CollectionExistsInDatabase(collection)==false)
+            {
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer,
+                        new DynamicJsonValue
+                        {
+                            ["Type"] = "Error",
+                            ["Message"] = $"The collection '{collection}' does not exist in the database '{Database.Name}'"
+                        });
+                }
+                return;
+            }
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
@@ -195,7 +214,7 @@ namespace Raven.Server.Documents.Handlers
                 Database,
                 $"Revert database '{Database.Name}' to {configuration.Time} UTC.",
                 Operations.Operations.OperationType.DatabaseRevert,
-                onProgress => Database.DocumentsStorage.RevisionsStorage.RevertRevisions(configuration.Time, TimeSpan.FromSeconds(configuration.WindowInSec), onProgress, token),
+                onProgress => Database.DocumentsStorage.RevisionsStorage.RevertRevisions(configuration.Time, TimeSpan.FromSeconds(configuration.WindowInSec), onProgress, token, collection),
                 operationId,
                 token: token);
 
@@ -204,6 +223,18 @@ namespace Raven.Server.Documents.Handlers
             {
                 writer.WriteOperationIdAndNodeTag(context, operationId, ServerStore.NodeTag);
             }
+        }
+
+        private bool CollectionExistsInDatabase(string collection)
+        {
+            List<string> collections = null;
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                collections = Database.DocumentsStorage.GetCollections(context).Select(c => c.Name.ToLower()).ToList();
+            }
+
+            return collections.Contains(collection.ToLower());
         }
 
         private async Task GetRevisionByChangeVector(DocumentsOperationContext context, Microsoft.Extensions.Primitives.StringValues changeVectors, bool metadataOnly, CancellationToken token)
