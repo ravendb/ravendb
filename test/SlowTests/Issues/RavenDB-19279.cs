@@ -39,20 +39,10 @@ namespace SlowTests.Issues
                 session.Advanced.Attachments.Store(user, "foo", ms);
                 session.Advanced.Attachments.Store(user2, "foo2", ms2);
 
-                Exception exception = null;
-                try
+                await Assert.ThrowsAsync<DocumentDoesNotExistException>(async () =>
                 {
                     await session.SaveChangesAsync();
-                }
-                catch (Exception e)
-                {
-                    exception = e;
-                }
-
-                Assert.NotNull(exception);
-                Assert.IsType<RavenException>(exception);
-                var ravenException = (RavenException)exception;
-                Assert.IsType<InvalidOperationException>(ravenException.InnerException);
+                });
             }
         }
 
