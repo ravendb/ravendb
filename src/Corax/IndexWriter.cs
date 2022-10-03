@@ -239,7 +239,7 @@ namespace Corax
                 _knownFieldsTerms[i] = new IndexedField(indexFieldBinding.FieldId, indexFieldBinding.FieldName, indexFieldBinding.FieldNameLong, indexFieldBinding.FieldNameDouble, indexFieldBinding.Analyzer, indexFieldBinding.FieldIndexingMode, indexFieldBinding.HasSuggestions);
             }
         }
-
+        
         public IndexWriter([NotNull] StorageEnvironment environment, IndexFieldsMapping fieldsMapping) : this(fieldsMapping)
         {
             _environment = environment;
@@ -516,21 +516,27 @@ namespace Corax
             if (_dynamicFieldsTerms.TryGetValue(slice, out var indexedField))
                 return indexedField;
 
-            AssertIfDynamicFieldsMappingExists();
-            var persistedAnalyzer = new Lazy<ReadResult>(() =>_persistedDynamicFieldsAnalyzers.Read(slice));
-
+            
             var clonedFieldName = slice.Clone(context);
-            if (_dynamicFieldsMapping.TryGetByFieldName(slice, out var binding))
+            
+            if (_dynamicFieldsMapping is null || _persistedDynamicFieldsAnalyzers is null)
+            {
+                CreateDynamicField(null, FieldIndexingMode.Normal);
+                return indexedField;
+            }
+            
+            var persistedAnalyzer = _persistedDynamicFieldsAnalyzers.Read(slice);
+            if (_dynamicFieldsMapping?.TryGetByFieldName(slice, out var binding) is true)
             {
                 
                 indexedField = new IndexedField(Constants.IndexWriter.DynamicField, binding.FieldName, binding.FieldNameLong, binding.FieldNameDouble, binding.Analyzer, binding.FieldIndexingMode, binding.HasSuggestions);
 
-                if (persistedAnalyzer.Value != null && binding.FieldIndexingMode != (FieldIndexingMode)persistedAnalyzer.Value.Reader.ReadByte())
+                if (persistedAnalyzer != null && binding.FieldIndexingMode != (FieldIndexingMode)persistedAnalyzer.Reader.ReadByte())
                 {
                     throw new InvalidDataException("Your index is dynamically changing analyzer in dynamic field. We do not support it.");
                 }
                 
-                if (binding.FieldIndexingMode != FieldIndexingMode.Normal && persistedAnalyzer.Value == null)
+                if (binding.FieldIndexingMode != FieldIndexingMode.Normal && persistedAnalyzer == null)
                 {
                     _persistedDynamicFieldsAnalyzers.Add(slice, (byte)binding.FieldIndexingMode);
                 }
@@ -540,35 +546,34 @@ namespace Corax
             else
             {
                 FieldIndexingMode mode;
-                if (persistedAnalyzer.Value == null)
+                if (persistedAnalyzer == null)
                 {
                     mode = FieldIndexingMode.Normal;
                 }
                 else
                 {
-                    mode = (FieldIndexingMode)persistedAnalyzer.Value.Reader.ReadByte();
+                    mode = (FieldIndexingMode)persistedAnalyzer.Reader.ReadByte();
                 }
 
                 Analyzer analyzer = mode switch
                 {
                     FieldIndexingMode.No => null,
-                    FieldIndexingMode.Exact => _dynamicFieldsMapping.DefaultExactAnalyzer(slice.ToString()),
-                    FieldIndexingMode.Search => _dynamicFieldsMapping.DefaultSearchAnalyzer(slice.ToString()),
-                    _ => _dynamicFieldsMapping.DefaultAnalyzer
+                    FieldIndexingMode.Exact => _dynamicFieldsMapping!.DefaultExactAnalyzer(slice.ToString()),
+                    FieldIndexingMode.Search => _dynamicFieldsMapping!.DefaultSearchAnalyzer(slice.ToString()),
+                    _ => _dynamicFieldsMapping!.DefaultAnalyzer
                 };
                 
-                IndexFieldsMappingBase.GetFieldNameForLongs(context, clonedFieldName, out var fieldNameLong);
-                IndexFieldsMappingBase.GetFieldNameForDoubles(context, clonedFieldName, out var fieldNameDouble);
-                indexedField = new IndexedField(Constants.IndexWriter.DynamicField, clonedFieldName, fieldNameLong, fieldNameDouble, analyzer, mode, false);
-                _dynamicFieldsTerms[clonedFieldName] = indexedField;
+                CreateDynamicField(analyzer, mode);
             }
             
             return indexedField;
 
-            void AssertIfDynamicFieldsMappingExists()
+            void CreateDynamicField(Analyzer analyzer, FieldIndexingMode mode)
             {
-                if (_dynamicFieldsMapping is null)
-                    throw new InvalidDataException("Index doesn't found any declaration of dynamic field during indexing but somehow we written it into corax entry.");
+                IndexFieldsMappingBase.GetFieldNameForLongs(context, clonedFieldName, out var fieldNameLong);
+                IndexFieldsMappingBase.GetFieldNameForDoubles(context, clonedFieldName, out var fieldNameDouble);
+                indexedField = new IndexedField(Constants.IndexWriter.DynamicField, clonedFieldName, fieldNameLong, fieldNameDouble, analyzer, mode, false);
+                _dynamicFieldsTerms[clonedFieldName] = indexedField;
             }
         }
 
