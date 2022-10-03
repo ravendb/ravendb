@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq.Indexing;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -111,6 +112,47 @@ public class DynamicFieldsIntegration : RavenTestBase
         }
     }
 
+    [RavenTheory(RavenTestCategory.Indexes)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void CanDeleteWithProperAnalyzer(Options options)
+    {
+        using var store = GetDocumentStore(options);
+        {
+            using var session = store.OpenSession();
+            session.Store(new Item(){Name = "Maciej Jan"}, "items/1-A");
+            session.SaveChanges();
+        }
+        new SearchDynamicIndex().Execute(store);
+        Indexes.WaitForIndexing(store);
+
+        {
+            using var session = store.OpenSession();
+            var result = session.Query<Item, SearchDynamicIndex>().Search(i => i.Name, "jan").Single();
+            session.Delete(result);            
+            session.SaveChanges();
+        }
+
+        {
+            using var session = store.OpenSession();
+            var result = session.Query<Item, SearchDynamicIndex>().Search(i => i.Name, "jan").ToList();
+            Assert.Equal(0, result.Count);
+        }
+    }
+
+    private class Item
+    {
+        public string Id { get; set; }
+        public string Name { get; set; }
+    }
+
+    private class SearchDynamicIndex : AbstractIndexCreationTask<Item>
+    {
+        public SearchDynamicIndex()
+        {
+            Map = items => items.Select(i => new {Id = i.Id, _ = CreateField("Name", i.Name, new CreateFieldOptions() {Indexing = FieldIndexing.Search})});
+        }
+    }
+    
     private async Task<IDocumentStore> GetStoreWithIndexAndData<TIndex, T>(Options options, Func<int, T> creator)
         where TIndex : AbstractIndexCreationTask, new()
     {
