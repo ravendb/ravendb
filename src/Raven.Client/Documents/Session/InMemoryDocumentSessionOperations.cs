@@ -536,6 +536,7 @@ more responsive application.
                     IncludedDocumentsById.Remove(id);
                     DocumentsByEntity[docInfo.Entity] = docInfo;
                 }
+                OnAfterConversionToEntityInvoke(id, docInfo.Document, docInfo.Entity);
 
                 return docInfo.Entity;
             }
@@ -551,6 +552,7 @@ more responsive application.
                     DocumentsById.Add(docInfo);
                     DocumentsByEntity[docInfo.Entity] = docInfo;
                 }
+                OnAfterConversionToEntityInvoke(id, docInfo.Document, docInfo.Entity);
 
                 return docInfo.Entity;
             }
@@ -574,6 +576,7 @@ more responsive application.
                 DocumentsById.Add(newDocumentInfo);
                 DocumentsByEntity[entity] = newDocumentInfo;
             }
+            OnAfterConversionToEntityInvoke(id, document, entity);
 
             return entity;
         }
@@ -2252,6 +2255,7 @@ more responsive application.
             if (DocumentsById.TryGetValue(documentInfo.Id, out DocumentInfo documentInfoById))
                 documentInfoById.Entity = entity;
 
+            OnAfterConversionToEntityInvoke(documentInfo.Id, documentInfo.Document, documentInfo.Entity);
         }
 
         protected static T GetOperationResult<T>(object result)
