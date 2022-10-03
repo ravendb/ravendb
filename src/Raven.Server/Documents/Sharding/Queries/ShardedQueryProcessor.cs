@@ -214,6 +214,9 @@ public class ShardedQueryProcessor : AbstractShardedQueryProcessor<ShardedQueryC
 
         foreach (var counterInclude in counterIncludes.Counters)
         {
+            if (counterInclude == null)
+                continue;
+
             ((ShardedCounterIncludes)result.GetCounterIncludes()).AddMissingCounter(counterInclude.DocumentId, _context.ReadObject(counterInclude.ToJson(), counterInclude.DocumentId));
         }
     }

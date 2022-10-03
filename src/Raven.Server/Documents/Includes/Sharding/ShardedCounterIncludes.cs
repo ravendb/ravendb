@@ -47,7 +47,10 @@ public class ShardedCounterIncludes : ICounterIncludes
                 {
                     var json = countersJsonArray.GetByIndex<BlittableJsonReaderObject>(j);
 
-                    counters.Add(json?.Clone(contextToClone));
+                    if (json != null)
+                        counters.Add(json.Clone(contextToClone));
+                    else
+                        (MissingCounterIncludes ??= new HashSet<string>()).Add(docId);
                 }
             }
             else

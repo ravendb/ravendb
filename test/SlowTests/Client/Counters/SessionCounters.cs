@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using Google.Protobuf.WellKnownTypes;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
@@ -1186,10 +1187,11 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
-        public void SessionIncludeCounters()
+        [RavenTheory(RavenTestCategory.Counters)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void SessionIncludeCounters(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1222,10 +1224,11 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
-        public void SessionIncludeAllCounters()
+        [RavenTheory(RavenTestCategory.Counters)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void SessionIncludeAllCounters(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1365,10 +1368,11 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
-        public void SessionIncludeAllCountersAfterIncludeSingleCounterShouldThrow()
+        [RavenTheory(RavenTestCategory.Counters)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void SessionIncludeAllCountersAfterIncludeSingleCounterShouldThrow(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1394,10 +1398,11 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
-        public void SessionIncludeCountersShouldRegisterMissingCounters()
+        [RavenTheory(RavenTestCategory.Counters)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void SessionIncludeCountersShouldRegisterMissingCounters(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1441,10 +1446,11 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
-        public void SessionIncludeCountersMultipleLoads()
+        [RavenTheory(RavenTestCategory.Counters)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void SessionIncludeCountersMultipleLoads(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
