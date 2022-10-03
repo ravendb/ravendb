@@ -9,6 +9,7 @@ using Corax.Utils;
 using Lucene.Net.Documents;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Exceptions.Corax;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.NotificationCenter.Notifications;
@@ -433,11 +434,16 @@ namespace Raven.Server.Documents.Indexes.Static
             if (scope.DynamicFields == null)
                 scope.DynamicFields = new Dictionary<string, FieldIndexing>();
 
-            if (scope.DynamicFields.ContainsKey(name) == false)
+            var fieldAlreadyExists = scope.DynamicFields.ContainsKey(name);
+            if (fieldAlreadyExists == false)
                 scope.CreatedFieldsCount++;
-            
+            else if (fieldAlreadyExists && scope.DynamicFields[name] != field.Indexing)
+            {
+                throw new NotSupportedInCoraxException("Your index is dynamically changing analyzer in dynamic field. We do not support it.");
+            }
             scope.DynamicFields[name] = field.Indexing;
-            
+
+
             var result = new List<CoraxDynamicItem>();
             result.Add(new CoraxDynamicItem()
             {
