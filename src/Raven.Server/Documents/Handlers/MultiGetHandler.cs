@@ -35,37 +35,52 @@ namespace Raven.Server.Documents.Handlers
                 if (input.TryGet("Requests", out BlittableJsonReaderArray requests) == false)
                     ThrowRequiredPropertyNameInRequest("Requests");
 
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                MemoryStream memoryStream = context.CheckoutMemoryStream();
+                try
                 {
-                    writer.WriteStartObject();
-                    writer.WritePropertyName("Results");
-                    writer.WriteStartArray();
-                    var resultProperty = context.GetLazyStringForFieldWithCaching(nameof(GetResponse.Result));
-                    var statusProperty = context.GetLazyStringForFieldWithCaching(nameof(GetResponse.StatusCode));
-                    var headersProperty = context.GetLazyStringForFieldWithCaching(nameof(GetResponse.Headers));
-
-                    var features = new FeatureCollection(HttpContext.Features);
-                    var responseStream = new MultiGetHttpResponseStream(ResponseBodyStream());
-                    features.Set<IHttpResponseFeature>(new MultiGetHttpResponseFeature());
-                    features.Set<IHttpResponseBodyFeature>(new StreamResponseBodyFeature(responseStream));
-                    var httpContext = new DefaultHttpContext(features);
-                    var host = HttpContext.Request.Host;
-                    var scheme = HttpContext.Request.Scheme;
-                    StringBuilder trafficWatchStringBuilder = null;
-                    if (TrafficWatchManager.HasRegisteredClients)
-                        trafficWatchStringBuilder = new StringBuilder();
-                    for (var i = 0; i < requests.Length; i++)
+                    Stream responseBodyStream = ResponseBodyStream();
+                    await using (var writer = new AsyncBlittableJsonTextWriter(context, memoryStream))
                     {
-                        if (i != 0)
-                            writer.WriteComma();
+                        writer.WriteStartObject();
+                        writer.WritePropertyName("Results");
+                        writer.WriteStartArray();
+                        var resultProperty = context.GetLazyStringForFieldWithCaching(nameof(GetResponse.Result));
+                        var statusProperty = context.GetLazyStringForFieldWithCaching(nameof(GetResponse.StatusCode));
+                        var headersProperty = context.GetLazyStringForFieldWithCaching(nameof(GetResponse.Headers));
 
-                        var request = (BlittableJsonReaderObject)requests[i];
-                        await HandleRequestAsync(request, context, responseStream, writer, httpContext, host, scheme, resultProperty, statusProperty, headersProperty, trafficWatchStringBuilder);
+                        var features = new FeatureCollection(HttpContext.Features);
+                        features.Set<IHttpResponseFeature>(new MultiGetHttpResponseFeature());
+                        features.Set<IHttpResponseBodyFeature>(new StreamResponseBodyFeature(memoryStream));
+                        var httpContext = new DefaultHttpContext(features);
+                        var host = HttpContext.Request.Host;
+                        var scheme = HttpContext.Request.Scheme;
+                        StringBuilder trafficWatchStringBuilder = null;
+                        if (TrafficWatchManager.HasRegisteredClients)
+                            trafficWatchStringBuilder = new StringBuilder();
+                        for (var i = 0; i < requests.Length; i++)
+                        {
+                            if (i != 0)
+                                writer.WriteComma();
+
+                            var request = (BlittableJsonReaderObject)requests[i];
+                            await HandleRequestAsync(request, context, memoryStream, writer, httpContext, host, scheme, resultProperty, statusProperty, headersProperty, trafficWatchStringBuilder);
+                            // flush to the network after every lazy request, to avoid holding too much in memory
+                            memoryStream.Position = 0;
+                            await memoryStream.CopyToAsync(responseBodyStream);
+                            memoryStream.SetLength(0);
+                        }
+                        if (trafficWatchStringBuilder != null)
+                            AddStringToHttpContext(trafficWatchStringBuilder.ToString(), TrafficWatchChangeType.MultiGet);
+                        writer.WriteEndArray();
+                        writer.WriteEndObject();
                     }
-                    if (trafficWatchStringBuilder != null)
-                        AddStringToHttpContext(trafficWatchStringBuilder.ToString(), TrafficWatchChangeType.MultiGet);
-                    writer.WriteEndArray();
-                    writer.WriteEndObject();
+
+                    memoryStream.Position = 0;
+                    await memoryStream.CopyToAsync(responseBodyStream);
+                }
+                finally
+                {
+                    context.ReturnMemoryStream(memoryStream);
                 }
             }
         }
@@ -105,7 +120,7 @@ namespace Raven.Server.Documents.Handlers
         private async ValueTask HandleRequestAsync(
             BlittableJsonReaderObject request,
             JsonOperationContext context,
-            MultiGetHttpResponseStream responseStream,
+            MemoryStream responseStream,
             AsyncBlittableJsonTextWriter writer,
             HttpContext httpContext,
             HostString host,
@@ -141,7 +156,7 @@ namespace Raven.Server.Documents.Handlers
 
             var content = await PrepareHttpContextAsync(request, context, httpContext, method, query, host, scheme, trafficWatchStringBuilder);
 
-            var bytesWrittenBeforeRequest = responseStream.BytesWritten;
+            var bytesWrittenBeforeRequest = responseStream.Length;
             int statusCode;
             try
             {
@@ -157,7 +172,7 @@ namespace Raven.Server.Documents.Handlers
                     });
                 }
 
-                if (bytesWrittenBeforeRequest == responseStream.BytesWritten)
+                if (bytesWrittenBeforeRequest == responseStream.Length)
                     writer.WriteNull();
 
                 statusCode = httpContext.Response.StatusCode == 0
@@ -166,7 +181,7 @@ namespace Raven.Server.Documents.Handlers
             }
             catch (Exception e)
             {
-                if (bytesWrittenBeforeRequest != responseStream.BytesWritten)
+                if (bytesWrittenBeforeRequest != responseStream.Length)
                     throw;
 
                 statusCode = (int)HttpStatusCode.InternalServerError;
@@ -280,166 +295,6 @@ namespace Raven.Server.Documents.Handlers
 
             public void OnStarting(Func<object, Task> callback, object state)
             {
-            }
-        }
-
-        private class MultiGetHttpResponseStream : Stream
-        {
-            private readonly Stream _stream;
-
-            public MultiGetHttpResponseStream(Stream stream)
-            {
-                _stream = stream;
-            }
-
-            public long BytesWritten { get; private set; }
-            public override bool CanRead => _stream.CanRead;
-
-            public override bool CanSeek => _stream.CanRead;
-
-            public override bool CanTimeout => _stream.CanTimeout;
-
-            public override bool CanWrite => _stream.CanRead;
-
-            public override long Length => _stream.Length;
-
-            public override long Position
-            {
-                get { return _stream.Position; }
-                set { _stream.Position = value; }
-            }
-
-            public override int ReadTimeout
-            {
-                get { return _stream.ReadTimeout; }
-                set { _stream.ReadTimeout = value; }
-            }
-
-            public override int WriteTimeout
-            {
-                get { return _stream.WriteTimeout; }
-                set { _stream.WriteTimeout = value; }
-            }
-
-            public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
-            {
-                throw new NotImplementedException();
-            }
-
-            public override IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
-            {
-                BytesWritten += count;
-                return _stream.BeginWrite(buffer, offset, count, callback, state);
-            }
-
-            public override void Close()
-            {
-                _stream.Close();
-            }
-
-            public override void CopyTo(Stream destination, int bufferSize)
-            {
-                throw new NotSupportedException();
-            }
-
-            public override Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken)
-            {
-                throw new NotSupportedException();
-            }
-
-            public override ValueTask DisposeAsync()
-            {
-                return _stream.DisposeAsync();
-            }
-
-            public override int EndRead(IAsyncResult asyncResult)
-            {
-                throw new NotImplementedException();
-            }
-
-            public override void EndWrite(IAsyncResult asyncResult)
-            {
-                _stream.EndWrite(asyncResult);
-            }
-
-            public override void Flush()
-            {
-                _stream.Flush();
-            }
-
-            public override Task FlushAsync(CancellationToken cancellationToken)
-            {
-                return _stream.FlushAsync(cancellationToken);
-            }
-
-            public override int Read(byte[] buffer, int offset, int count)
-            {
-                throw new NotSupportedException();
-            }
-
-            public override int Read(Span<byte> buffer)
-            {
-                throw new NotSupportedException();
-            }
-
-            public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
-            {
-                throw new NotSupportedException();
-            }
-
-            public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = new CancellationToken())
-            {
-                throw new NotSupportedException();
-            }
-
-            public override int ReadByte()
-            {
-                throw new NotSupportedException();
-            }
-
-            public override long Seek(long offset, SeekOrigin origin)
-            {
-                throw new NotSupportedException();
-            }
-
-            public override void SetLength(long value)
-            {
-                throw new NotSupportedException();
-            }
-
-            public override void Write(byte[] buffer, int offset, int count)
-            {
-                BytesWritten += count;
-                _stream.Write(buffer, offset, count);
-            }
-
-            public override void Write(ReadOnlySpan<byte> buffer)
-            {
-                BytesWritten += buffer.Length;
-                _stream.Write(buffer);
-            }
-
-            public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
-            {
-                BytesWritten += count;
-                return _stream.WriteAsync(buffer, offset, count, cancellationToken);
-            }
-
-            public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = new CancellationToken())
-            {
-                BytesWritten += buffer.Length;
-                return _stream.WriteAsync(buffer, cancellationToken);
-            }
-
-            public override void WriteByte(byte value)
-            {
-                BytesWritten += 1;
-                _stream.WriteByte(value);
-            }
-
-            protected override void Dispose(bool disposing)
-            {
-                _stream.Dispose();
             }
         }
     }

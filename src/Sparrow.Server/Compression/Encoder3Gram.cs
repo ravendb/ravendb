@@ -48,7 +48,7 @@ namespace Sparrow.Server.Compression
         public Encoder3Gram(TEncoderState state)
         {
             _state = state;
-            _entries = NumberOfEntries;
+            _entries = ReadNumberOfEntries(state);
         }
 
         public static int GetDictionarySize(in TEncoderState state)
@@ -438,9 +438,15 @@ namespace Sparrow.Server.Compression
 
         public int NumberOfEntries
         {
-            get { return MemoryMarshal.Read<int>(_state.EncodingTable); }
+            get { return ReadNumberOfEntries(_state); }
             set { MemoryMarshal.Write(_state.EncodingTable, ref value);}
-        } 
+        }
+
+        private static int ReadNumberOfEntries(in TEncoderState encoderState)
+        {
+            return MemoryMarshal.Read<int>(encoderState.EncodingTable);
+        }
+
         public int MemoryUse => NumberOfEntries * Unsafe.SizeOf<Interval3Gram>();
 
         public int MaxBitSequenceLength
