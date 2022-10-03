@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using Corax;
 using NetTopologySuite.Utilities;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Exceptions.Corax;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Exceptions;
@@ -134,9 +135,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         {
             foreach (var (fieldName, fieldIndexing) in _indexingScope.DynamicFields)
             {
-                if (_dynamicFields.TryGetByFieldName(fieldName, out var binding))
+                if (_dynamicFields.TryGetByFieldName(fieldName, out _))
                 {
-                    Debug.Assert(binding.FieldIndexingMode == FieldIndexingIntoFieldIndexingMode(fieldIndexing));
                     continue;
                 }
 

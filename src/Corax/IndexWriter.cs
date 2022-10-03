@@ -512,19 +512,24 @@ namespace Corax
         {
             _dynamicFieldsTerms ??= new(SliceComparer.Instance);
             using var _ = Slice.From(context, it.CurrentFieldName, out var slice);
-            var persistedAnalyzer = new Lazy<ReadResult>(() =>_persistedDynamicFieldsAnalyzers.Read(slice));
-            
-            
+
             if (_dynamicFieldsTerms.TryGetValue(slice, out var indexedField))
                 return indexedField;
 
             AssertIfDynamicFieldsMappingExists();
-            
+            var persistedAnalyzer = new Lazy<ReadResult>(() =>_persistedDynamicFieldsAnalyzers.Read(slice));
+
             var clonedFieldName = slice.Clone(context);
             if (_dynamicFieldsMapping.TryGetByFieldName(slice, out var binding))
             {
                 
                 indexedField = new IndexedField(Constants.IndexWriter.DynamicField, binding.FieldName, binding.FieldNameLong, binding.FieldNameDouble, binding.Analyzer, binding.FieldIndexingMode, binding.HasSuggestions);
+
+                if (persistedAnalyzer.Value != null && binding.FieldIndexingMode != (FieldIndexingMode)persistedAnalyzer.Value.Reader.ReadByte())
+                {
+                    throw new InvalidDataException("Your index is dynamically changing analyzer in dynamic field. We do not support it.");
+                }
+                
                 if (binding.FieldIndexingMode != FieldIndexingMode.Normal && persistedAnalyzer.Value == null)
                 {
                     _persistedDynamicFieldsAnalyzers.Add(slice, (byte)binding.FieldIndexingMode);
