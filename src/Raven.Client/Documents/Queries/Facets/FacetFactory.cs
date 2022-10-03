@@ -100,6 +100,9 @@ namespace Raven.Client.Documents.Queries.Facets
 
         public IFacetOperations<T> WithOptions(FacetOptions options)
         {
+            if (_range is not null)
+                throw new NotSupportedException($"Method {nameof(WithOptions)} is not supported for aggregation '{nameof(ByRanges)}'");
+            
             Facet.Options = options;
             return this;
         }
