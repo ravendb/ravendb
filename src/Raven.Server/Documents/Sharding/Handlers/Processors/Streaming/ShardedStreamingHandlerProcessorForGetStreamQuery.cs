@@ -83,8 +83,9 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
             var indexName = AbstractQueryRunner.GetIndexName(query);
 
             using (RequestHandler.DatabaseContext.QueryRunner.MarkQueryAsRunning(indexName, query, token))
-            using (var queryProcessor = new ShardedQueryStreamProcessor(context, RequestHandler, query, debug, ignoreLimit, token.Token))
             {
+                var queryProcessor = new ShardedQueryStreamProcessor(context, RequestHandler, query, debug, ignoreLimit, token.Token);
+
                 queryProcessor.Initialize();
 
                 return await queryProcessor.ExecuteShardedOperations();
