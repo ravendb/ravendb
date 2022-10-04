@@ -723,16 +723,22 @@ namespace Raven.Server.Smuggler.Documents
             {
                 private readonly T[] _array;
 
+                private readonly int _maxLength;
+
                 public int Length;
 
                 public DisposableReturnedArray(int length)
                 {
                     _array = ArrayPool<T>.Shared.Rent(length);
+                    _maxLength = length;
                     Length = 0;
                 }
 
                 public void Push(T item)
                 {
+                    if (Length >= _maxLength)
+                        throw new InvalidOperationException($"Cannot put more than {_maxLength} elements to the array.");
+
                     _array[Length] = item;
                     Length++;
                 }
