@@ -731,7 +731,12 @@ namespace Raven.Server.Smuggler.Documents
                     Length = 0;
                 }
 
-                public void Push(T item) => _array[Length++] = item;
+                public void Push(T item)
+                {
+                    _array[Length] = item;
+                    Length++;
+                }
+
                 public T this[int index] => _array[index];
 
                 public ArraySegment<T> GetArraySegment() => new ArraySegment<T>(_array, 0, Length);
