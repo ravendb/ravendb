@@ -76,7 +76,6 @@ namespace SlowTests.MailingList
                                     person => person.BirthDate >= d1960 && person.BirthDate < d1969,
                                     person => person.BirthDate >= d1970 && person.BirthDate < d1979
                                 )
-                                .WithOptions(new FacetOptions { IncludeRemainingTerms = true })
                         )
                         .Execute();
 
@@ -148,7 +147,6 @@ namespace SlowTests.MailingList
                                     person => person.Spouse.BirthDate >= d1960 && person.Spouse.BirthDate < d1969,
                                     person => person.Spouse.BirthDate >= d1970 && person.Spouse.BirthDate < d1979
                                 )
-                            .WithOptions(new FacetOptions { IncludeRemainingTerms = true })
                         )
                         .Execute();
 
@@ -218,7 +216,6 @@ namespace SlowTests.MailingList
                                     person => person.Children.Any(child => child.BirthDate >= d2000 && child.BirthDate < d2009),
                                     person => person.Children.Any(child => child.BirthDate >= d2010 && child.BirthDate < d2019)
                                 )
-                                .WithOptions(new FacetOptions { IncludeRemainingTerms = true })
                         )
                         .Execute();
 
