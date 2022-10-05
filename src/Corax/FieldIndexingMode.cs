@@ -14,10 +14,10 @@ public enum FieldIndexingMode : byte
     /// </summary>
     Exact = 1,
 
-    Search = 1 << 2,
+    Search = 2,
     
     /// <summary>
     /// Use the attached analyzer from IndexFieldBinding
     /// </summary>
-    Normal = 1 << 3
+    Normal = 3
 }
