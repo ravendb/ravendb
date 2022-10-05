@@ -155,7 +155,7 @@ public class DynamicFieldsIntegration : RavenTestBase
         Indexes.WaitForIndexing(store, allowErrors: true);
         var errors = Indexes.WaitForIndexingErrors(store, new[] {index.IndexName}, errorsShouldExists: true);
         Assert.Equal(1, errors.Length);
-        Assert.True(errors[0].Errors[0].Error.Contains("Exception: Raven.Client.Exceptions.Corax.NotSupportedInCoraxException: Your index is dynamically changing analyzer in dynamic field. We do not support it."));
+        Assert.True(errors[0].Errors[0].Error.Contains($"Inconsistent dynamic field creation options were detected. Field 'Name' was created with 'Search' analyzer but now 'Exact' analyzer was specified. This is not supported"));
     }
     
     private class Item
