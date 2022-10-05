@@ -52,8 +52,11 @@ public class CoraxIndexPersistence : IndexPersistenceBase
         }
         _converter ??= new CoraxDocumentConverter(index, storeValue: storeValue);
     }
-    
-    public override IndexReadOperationBase OpenIndexReader(Transaction readTransaction, IndexQueryServerSide query = null) => new CoraxIndexReadOperation(_index, _logger, readTransaction, _index._queryBuilderFactories, _converter.GetKnownFieldsForQuerying(), query);
+
+    public override IndexReadOperationBase OpenIndexReader(Transaction readTransaction, IndexQueryServerSide query = null)
+    {
+        return new CoraxIndexReadOperation(_index, _logger, readTransaction, _index._queryBuilderFactories, _converter.GetKnownFieldsForQuerying(), query);
+    }
 
     public override bool ContainsField(string field)
     {
@@ -63,9 +66,9 @@ public class CoraxIndexPersistence : IndexPersistenceBase
         return _index.Definition.IndexFields.ContainsKey(field);
     }
 
-    public override IndexFacetedReadOperation OpenFacetedIndexReader(Transaction readTransaction)
+    public override IndexFacetReadOperationBase OpenFacetedIndexReader(Transaction readTransaction)
     {
-        throw new NotImplementedException($"Facet is not supported by {nameof(Corax)} yet.");
+        return new CoraxIndexFacetedReadOperation(_index, _logger, readTransaction, _index._queryBuilderFactories, _converter.GetKnownFieldsForQuerying());
     }
 
     public override SuggestionIndexReaderBase OpenSuggestionIndexReader(Transaction readTransaction, string field)
