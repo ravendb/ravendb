@@ -23,6 +23,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
+using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Indexes;
@@ -553,18 +554,20 @@ namespace Raven.Server.Smuggler.Documents
 
         private class DatabaseCompareExchangeActions : ICompareExchangeActions
         {
-            const int BatchSize = 1024;
-            private const int CompareExchangeBatchSize = 10 * BatchSize;
+            private const int BatchSize = 10 * 1024;
 
             private readonly Size _compareExchangeValuesBatchSize;
             private Size _compareExchangeValuesSize;
+
+            private readonly Size _clusterTransactionCommandsBatchSize;
+            private Size _clusterTransactionCommandsSize;
 
             private readonly DocumentDatabase _database;
             private readonly JsonOperationContext _context;
             private readonly CancellationToken _token;
             private readonly List<RemoveCompareExchangeCommand> _compareExchangeRemoveCommands = new List<RemoveCompareExchangeCommand>();
             private readonly List<AddOrUpdateCompareExchangeCommand> _compareExchangeAddOrUpdateCommands = new List<AddOrUpdateCompareExchangeCommand>();
-            private DisposableReturnedArray<BatchRequestParser.CommandData> _clusterTransactionCommands = new DisposableReturnedArray<BatchRequestParser.CommandData>(1024);
+            private DisposableReturnedArray<BatchRequestParser.CommandData> _clusterTransactionCommands = new DisposableReturnedArray<BatchRequestParser.CommandData>(BatchSize);
             private readonly DocumentContextHolder _documentContextHolder;
             private long? _lastAddOrUpdateOrRemoveResultIndex;
 
@@ -574,12 +577,28 @@ namespace Raven.Server.Smuggler.Documents
                 _context = context;
                 _token = token;
                 _documentContextHolder = new DocumentContextHolder(database);
+
                 _compareExchangeValuesBatchSize = new Size(database.Is32Bits ? 2 : 4, SizeUnit.Megabytes);
                 _compareExchangeValuesSize = new Size(0, SizeUnit.Megabytes);
+
+                _clusterTransactionCommandsBatchSize = new Size(database.Is32Bits ? 2 : 32, SizeUnit.Megabytes);
+                _clusterTransactionCommandsSize = new Size(0, SizeUnit.Megabytes);
             }
 
             public async ValueTask WriteKeyValueAsync(string key, BlittableJsonReaderObject value)
             {
+                if (_compareExchangeValuesSize >= _compareExchangeValuesBatchSize || _compareExchangeAddOrUpdateCommands.Count >= BatchSize)
+                {
+                    await SendAddOrUpdateCommandsAsync(_context);
+                    _compareExchangeValuesSize.Set(0, SizeUnit.Bytes);
+                }
+
+                if (_clusterTransactionCommandsSize >= _clusterTransactionCommandsBatchSize || _clusterTransactionCommands.Length >= BatchSize)
+                {
+                    await SendClusterTransactionsAsync();
+                    _clusterTransactionCommandsSize.Set(0, SizeUnit.Bytes);
+                }
+
                 if (ClusterTransactionCommand.IsAtomicGuardKey(key, out var docId))
                 {
                     var ctx = _documentContextHolder.GetContextForRead();
@@ -589,6 +608,8 @@ namespace Raven.Server.Smuggler.Documents
                         return;
 
                     _clusterTransactionCommands.Push(new BatchRequestParser.CommandData { Id = doc.Id, Document = doc.Data, Type = CommandType.PUT, OriginalChangeVector = ctx.GetLazyString(doc.ChangeVector) });
+
+                    _clusterTransactionCommandsSize.Add(doc.Data.Size, SizeUnit.Bytes);
                 }
                 else
                 {
@@ -597,15 +618,6 @@ namespace Raven.Server.Smuggler.Documents
 
                     _compareExchangeValuesSize.Add(value.Size, SizeUnit.Bytes);
                 }
-
-                if (_compareExchangeValuesSize >= _compareExchangeValuesBatchSize || _compareExchangeAddOrUpdateCommands.Count >= CompareExchangeBatchSize)
-                {
-                    await SendAddOrUpdateCommandsAsync(_context);
-                    _compareExchangeValuesSize.Set(0, SizeUnit.Bytes);
-                }
-
-                if (_clusterTransactionCommands.Length >= BatchSize)
-                    await SendClusterTransactionsAsync();
             }
 
             public async ValueTask WriteTombstoneKeyAsync(string key)
@@ -712,15 +724,26 @@ namespace Raven.Server.Smuggler.Documents
             {
                 private readonly T[] _array;
 
+                private readonly int _maxLength;
+
                 public int Length;
 
                 public DisposableReturnedArray(int length)
                 {
                     _array = ArrayPool<T>.Shared.Rent(length);
+                    _maxLength = length;
                     Length = 0;
                 }
 
-                public void Push(T item) => _array[Length++] = item;
+                public void Push(T item)
+                {
+                    if (Length >= _maxLength)
+                        throw new InvalidOperationException($"Cannot put more than {_maxLength} elements to the array.");
+
+                    _array[Length] = item;
+                    Length++;
+                }
+
                 public T this[int index] => _array[index];
 
                 public ArraySegment<T> GetArraySegment() => new ArraySegment<T>(_array, 0, Length);
