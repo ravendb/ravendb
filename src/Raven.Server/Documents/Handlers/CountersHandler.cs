@@ -143,16 +143,12 @@ namespace Raven.Server.Documents.Handlers
                             break;
 
                         case CounterOperationType.Get:
-                            if (string.IsNullOrEmpty(operation.CounterName) == false)
-                                CountersHandlerProcessorForGetCounters.GetCounterValue(context, _database, docId, operation.CounterName, _replyWithAllNodesValues, CountersDetail);
-                            else
-                            {
-                                var counterDetail =
-                                    CountersHandlerProcessorForGetCounters.GetInternal(_database, context, StringValues.Empty, docId, _replyWithAllNodesValues);
-                                CountersDetail.Counters.AddRange(counterDetail.Counters);
-                            }
+                            CountersHandlerProcessorForGetCounters.GetCounterValue(context, _database, docId, operation.CounterName, _replyWithAllNodesValues, CountersDetail);
                             break;
-
+                        case CounterOperationType.GetAll:
+                            var counterDetail = CountersHandlerProcessorForGetCounters.GetInternal(_database, context, StringValues.Empty, docId, _replyWithAllNodesValues);
+                            CountersDetail.Counters.AddRange(counterDetail.Counters);
+                            break;
                         default:
                             ThrowInvalidBatchOperationType(operation);
                             break;

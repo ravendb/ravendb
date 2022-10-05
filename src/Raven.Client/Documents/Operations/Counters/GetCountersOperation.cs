@@ -110,7 +110,7 @@ namespace Raven.Client.Documents.Operations.Counters
                     foreach (var counter in uniqueNames)
                     {
                         pathBuilder.Append("&counter=").Append(Uri.EscapeDataString(counter ?? string.Empty));
-                }
+                    }
                 }
                 else
                 {
