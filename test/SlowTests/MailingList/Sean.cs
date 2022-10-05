@@ -7,6 +7,7 @@
 using System;
 using FastTests;
 using Raven.Client.Documents.Queries.Facets;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -23,7 +24,7 @@ namespace SlowTests.MailingList
             public DateTime? CreationDate { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Facets)]
         public void CanUseNullablesForFacets()
         {
             RangeFacet facet = new RangeFacet<Thread>
