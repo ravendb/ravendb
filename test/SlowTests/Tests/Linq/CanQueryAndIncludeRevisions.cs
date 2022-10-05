@@ -20,11 +20,11 @@ namespace SlowTests.Tests.Linq
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Counters | RavenTestCategory.TimeSeries | RavenTestCategory.Revisions)]
         [RavenData(false, false, SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
-        [RavenData(false, true, SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(true, false, SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(true, true, SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(false, true, SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(true, false, SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(true, true, SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Query_IncludeAllQueryFunctionality(Options options, bool includeCounters, bool includeTimeSeries)
         {
             using (var store = GetDocumentStore(options))
@@ -152,11 +152,11 @@ namespace SlowTests.Tests.Linq
         }
 
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Counters | RavenTestCategory.TimeSeries | RavenTestCategory.Revisions)]
         [RavenData(false, false, DatabaseMode = RavenDatabaseMode.All)]
-        [RavenData(false, true)]
-        [RavenData(true, false)]
-        [RavenData(true, true)]
+        [RavenData(false, true, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(true, false, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(true, true, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Query_IncludeAllQueryFunctionality_NestedField(Options options, bool includeCounters, bool includeTimeSeries)
         {
             using (var store = GetDocumentStore(options))

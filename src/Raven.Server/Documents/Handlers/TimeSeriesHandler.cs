@@ -1,14 +1,18 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Google.Protobuf;
+using Microsoft.CodeAnalysis;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Exceptions.Documents;
+using Raven.Client.Json.Serialization;
 using Raven.Server.Documents.Handlers.Processors.Configuration;
 using Raven.Server.Documents.Handlers.Processors.TimeSeries;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
+using Raven.Server.Web;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers
@@ -29,6 +33,72 @@ namespace Raven.Server.Documents.Handlers
         {
             using (var processor = new TimeSeriesHandlerProcessorForGetTimeSeriesRanges(this))
                 await processor.ExecuteAsync();
+        }
+
+        [RavenAction("/databases/*/timeseries/ranges", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task ReadRangesPost()
+        {
+            var start = GetStart();
+            var pageSize = GetPageSize();
+
+            var returnFullResults = GetBoolValueQueryString("full", required: false) ?? false;
+
+            var result = new GetMultipleTimeSeriesRangesCommand.Result()
+            {
+                Results = new List<TimeSeriesDetails>()
+            };
+
+            using (var token = CreateOperationToken())
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var timeSeriesBlittable = await context.ReadForMemoryAsync(RequestBodyStream(), "timeseries");
+
+                var timeSeries = JsonDeserializationClient.TimeSeriesRangesRequestBody(timeSeriesBlittable);
+
+                foreach (var (docId, ranges) in timeSeries.RangesPerDocumentId)
+                {
+                    var rangeResultDictionary = TimeSeriesHandlerProcessorForGetTimeSeriesRanges.GetTimeSeriesRangeResults(context, docId, ranges, start, pageSize, null, returnFullResults);
+
+                    result.Results.Add(new TimeSeriesDetails()
+                    {
+                        Id = docId,
+                        Values = rangeResultDictionary
+                    });
+                }
+
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteStartObject();
+                    {
+                        writer.WritePropertyName(nameof(GetMultipleTimeSeriesRangesCommand.Result.Results));
+                        writer.WriteStartArray();
+                        {
+                            var first = true;
+
+                            foreach (var ranges in result.Results)
+                            {
+                                if (first == false)
+                                    writer.WriteComma();
+                                first = false;
+
+                                writer.WriteStartObject();
+
+                                writer.WritePropertyName(nameof(TimeSeriesDetails.Id));
+                                writer.WriteString(ranges.Id);
+
+                                writer.WriteComma();
+                                writer.WritePropertyName(nameof(TimeSeriesDetails.Values));
+                                await TimeSeriesHandlerProcessorForGetTimeSeriesRanges.WriteTimeSeriesRangeResultsAsync(context, writer, ranges.Id, ranges.Values, false, token.Token);
+
+                                writer.WriteEndObject();
+                            }
+                        }
+                        writer.WriteEndArray();
+                    }
+                    writer.WriteEndObject();
+                }
+            }
         }
 
         [RavenAction("/databases/*/timeseries", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]

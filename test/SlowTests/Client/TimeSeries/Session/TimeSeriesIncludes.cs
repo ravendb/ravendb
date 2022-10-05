@@ -869,10 +869,11 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
-        public void IncludeTimeSeriesAndDocumentsAndCounters()
+        [RavenTheory(RavenTestCategory.TimeSeries)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void IncludeTimeSeriesAndDocumentsAndCounters(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -1692,10 +1693,11 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
-        public void QueryIncludeTimeSeriesAndDocumentsAndCounters()
+        [RavenTheory(RavenTestCategory.TimeSeries)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void QueryIncludeTimeSeriesAndDocumentsAndCounters(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -1775,7 +1777,7 @@ namespace SlowTests.Client.TimeSeries.Session
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void QueryIncludeTimeSeriesOfRelatedDocument(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1838,10 +1840,11 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
-        public void QueryIncludeTimeSeriesOfDocumentAndTimeSeriesOfRelatedDocument()
+        [RavenTheory(RavenTestCategory.TimeSeries)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void QueryIncludeTimeSeriesOfDocumentAndTimeSeriesOfRelatedDocument(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 

@@ -50,12 +50,12 @@ public class ShardedCounterIncludes : ICounterIncludes
                     if (json != null)
                         counters.Add(json.Clone(contextToClone));
                     else
-                        (MissingCounterIncludes ??= new HashSet<string>()).Add(docId);
+                        (MissingCounterIncludes ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase)).Add(docId);
                 }
             }
             else
             {
-                (MissingCounterIncludes ??= new HashSet<string>()).Add(docId);
+                (MissingCounterIncludes ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase)).Add(docId);
             }
         }
 

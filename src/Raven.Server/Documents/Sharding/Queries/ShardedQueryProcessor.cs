@@ -3,11 +3,11 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries;
-using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Includes.Sharding;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Results;
@@ -18,10 +18,9 @@ using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.Sharding.Handlers.Processors.Counters;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Web;
 using Sparrow.Json;
-using Sparrow.Server.Collections.LockFree;
 using Sparrow.Utils;
+using static Raven.Server.Smuggler.Documents.CounterItem;
 
 namespace Raven.Server.Documents.Sharding.Queries;
 
@@ -112,6 +111,11 @@ public class ShardedQueryProcessor : AbstractShardedQueryProcessor<ShardedQueryC
             await HandleMissingCounterInclude(operation.MissingCounterIncludes, result);
         }
 
+        if (operation.MissingTimeSeriesIncludes is {Count: > 0})
+        {
+            await HandleMissingTimeSeriesIncludes(operation.MissingTimeSeriesIncludes, result);
+        }
+
         // For map/reduce - we need to re-run the reduce portion of the index again on the results
         ReduceResults(ref result);
 
@@ -145,8 +149,6 @@ public class ShardedQueryProcessor : AbstractShardedQueryProcessor<ShardedQueryC
     private async Task HandleMissingCounterInclude(HashSet<string> missingCounterIncludes, ShardedQueryResult result)
     {
         var counterBatch = new CounterBatch();
-
-        // TODO arek counterBatch.ReplyWithAllNodesValues = true;
 
         foreach (string docId in missingCounterIncludes)
         {
@@ -209,6 +211,36 @@ public class ShardedQueryProcessor : AbstractShardedQueryProcessor<ShardedQueryC
 
             ((ShardedCounterIncludes)result.GetCounterIncludes()).AddMissingCounter(counterInclude.DocumentId, _context.ReadObject(counterInclude.ToJson(), counterInclude.DocumentId));
         }
+    }
+    private async Task HandleMissingTimeSeriesIncludes(Dictionary<string, List<TimeSeriesRange>> missingTimeSeriesIncludes, ShardedQueryResult result)
+    {
+        var commandsPerShard = new Dictionary<int, GetMultipleTimeSeriesRangesCommand>();
+
+        var shardsToPositions = ShardLocator.GetDocumentIdsByShards(_context, _requestHandler.DatabaseContext, missingTimeSeriesIncludes.Keys);
+
+        foreach (var (shardNumber, idsByShard) in shardsToPositions)
+        {
+            var rangesForShard = new Dictionary<string, List<TimeSeriesRange>>();
+
+            foreach (var id in idsByShard.Ids)
+            {
+                rangesForShard[id] = missingTimeSeriesIncludes[id];
+            }
+
+            commandsPerShard[shardNumber] = new GetMultipleTimeSeriesRangesCommand(rangesForShard);
+        }
+
+        var timeSeriesIncludes = await _requestHandler.ShardExecutor.ExecuteParallelForShardsAsync(shardsToPositions.Keys.ToArray(),
+            new ShardedTimeSeriesOperation(_requestHandler.HttpContext, commandsPerShard), _token);
+
+        foreach (var tsInclude in timeSeriesIncludes.Results)
+        {
+            if (tsInclude == null)
+                continue;
+
+            ((ShardedTimeSeriesIncludes)result.GetTimeSeriesIncludes()).AddMissingTimeSeries(tsInclude.Id, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(tsInclude.Values, _context));
+        }
+
     }
 
     private void ApplyPaging(ref ShardedQueryResult result)

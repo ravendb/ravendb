@@ -63,7 +63,7 @@ namespace FastTests.Client
                 "GetDatabaseSettingsCommand", "PutDatabaseConfigurationSettingsCommand", "ConfigurePostgreSqlCommand",
                 "GetTrafficWatchConfigurationCommand", "SetTrafficWatchConfigurationCommand",
                 "GetNextServerOperationIdCommand", "KillServerOperationCommand",
-                "GetEssentialStatisticsCommand"
+                "GetEssentialStatisticsCommand", "GetMultipleTimeSeriesRangesCommand"
             }.OrderBy(t => t);
 
             var commandBaseType = typeof(RavenCommand<>);
