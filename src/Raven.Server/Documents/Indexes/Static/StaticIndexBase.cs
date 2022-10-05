@@ -439,7 +439,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 scope.CreatedFieldsCount++;
             else if (fieldAlreadyExists && scope.DynamicFields[name] != field.Indexing)
             {
-                throw new NotSupportedInCoraxException("Your index is dynamically changing analyzer in dynamic field. We do not support it.");
+                throw new InvalidDataException($"Inconsistent dynamic field creation options were detected. Field '{name}' was created with '{scope.DynamicFields[name]}' analyzer but now '{field.Indexing}' analyzer was specified. This is not supported");
             }
             scope.DynamicFields[name] = field.Indexing;
 

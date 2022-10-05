@@ -530,10 +530,12 @@ namespace Corax
             {
                 
                 indexedField = new IndexedField(Constants.IndexWriter.DynamicField, binding.FieldName, binding.FieldNameLong, binding.FieldNameDouble, binding.Analyzer, binding.FieldIndexingMode, binding.HasSuggestions);
-
-                if (persistedAnalyzer != null && binding.FieldIndexingMode != (FieldIndexingMode)persistedAnalyzer.Reader.ReadByte())
+                
+                if (persistedAnalyzer != null)
                 {
-                    throw new InvalidDataException("Your index is dynamically changing analyzer in dynamic field. We do not support it.");
+                    var originalIndexingMode = (FieldIndexingMode)persistedAnalyzer.Reader.ReadByte();
+                    if (binding.FieldIndexingMode != originalIndexingMode)
+                        throw new InvalidDataException($"Inconsistent dynamic field creation options were detected. Field '{binding.FieldName}' was created with '{originalIndexingMode}' analyzer but now '{binding.FieldIndexingMode}' analyzer was specified. This is not supported");
                 }
                 
                 if (binding.FieldIndexingMode != FieldIndexingMode.Normal && persistedAnalyzer == null)
