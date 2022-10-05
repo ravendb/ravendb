@@ -49,7 +49,6 @@ namespace Voron.Data.CompactTrees
         public long PageNumber => _page.PageNumber;
         
         private readonly HopeEncoder<Encoder3Gram<NativeMemoryEncoderState>> _encoder;
-        private byte[] _tempBuffer;
 
         public static long CreateDefault(LowLevelTransaction llt)
         {
