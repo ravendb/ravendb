@@ -93,7 +93,7 @@ public class DynamicFieldsIntegration : RavenTestBase
         
         {
             using var session = store.OpenAsyncSession();
-            var result = await session.Query<TestClassResult<float?[]>, IndexFloatList>().Where(i => i.Dynamic.Contains(50)).SingleOrDefaultAsync();
+            var result = await session.Query<TestClassResult<float?[]>, IndexFloatList>().Where(i => i.Dynamic!.Contains(50)).SingleOrDefaultAsync();
             AssertResult(result);
         }
     }
@@ -160,17 +160,17 @@ public class DynamicFieldsIntegration : RavenTestBase
     
     private class Item
     {
-        public string Id { get; set; }
-        public string Name { get; set; }
+        public string? Id { get; set; }
+        public string? Name { get; set; }
         
-        public bool Analyzed { get; set; }
+        public bool? Analyzed { get; set; }
     }
 
     private class SearchDynamicIndex : AbstractIndexCreationTask<Item>
     {
         public SearchDynamicIndex()
         {
-            Map = items => items.Select(i => new {Id = i.Id, _ = CreateField("Name", i.Name, false, i.Analyzed)});
+            Map = items => items.Select(i => new {Id = i.Id, _ = CreateField("Name", i.Name, false, i.Analyzed ?? false)});
         }
     }
     
