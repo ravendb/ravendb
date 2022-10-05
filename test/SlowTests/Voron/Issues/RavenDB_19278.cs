@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using FastTests.Voron;
+using Sparrow.Platform;
+using Sparrow.Server;
 using Sparrow.Utils;
 using Voron;
 using Voron.Global;
@@ -16,11 +19,13 @@ public class RavenDB_19278 : StorageTest
 {
     private List<string> _onRecoveryErrorMessages = new();
 
+    private bool _encrypted;
+
     public RavenDB_19278(ITestOutputHelper output) : base(output)
     {
     }
 
-
+    private readonly byte[] _masterKey = Sodium.GenerateRandomBuffer((int)Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes());
     protected override void Configure(StorageEnvironmentOptions options)
     {
         options.InitialLogFileSize = 4 * Constants.Size.Megabyte;
@@ -33,11 +38,18 @@ public class RavenDB_19278 : StorageTest
         options.ManualSyncing = true;
         options.ManualFlushing = true;
         options.MaxScratchBufferSize = 1 * Constants.Size.Gigabyte;
+
+        if (_encrypted)
+            options.Encryption.MasterKey = _masterKey.ToArray();
     }
 
-    [Fact]
-    public void StopRecoveryAndRaisePartiallyRecoveredAlertAfterGettingInvalidHashOfTransaction()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void StopRecoveryAndRaisePartiallyRecoveredAlertAfterGettingInvalidHashOfTransaction(bool encrypted)
     {
+        _encrypted = encrypted;
+
         RequireFileBasedPager();
 
         using (var tx = Env.WriteTransaction())
@@ -77,7 +89,7 @@ public class RavenDB_19278 : StorageTest
 
         var journalToCorrupt = Env.Journal.GetCurrentJournalInfo().CurrentJournal - 3;
 
-        StopDatabase(); 
+        StopDatabase();
 
         CorruptJournal(journalToCorrupt, 10 * Constants.Size.Kilobyte * 4 - 1000); // it will corrupt tx 9
 
@@ -85,7 +97,14 @@ public class RavenDB_19278 : StorageTest
 
         Assert.Equal(2, _onRecoveryErrorMessages.Count);
 
-        Assert.Contains($"Invalid hash signature for transaction: HeaderMarker: Valid, TransactionId: {corruptedTx}", _onRecoveryErrorMessages[0]);
+        string message;
+
+        if (encrypted == false)
+            message = $"Invalid hash signature for transaction: HeaderMarker: Valid, TransactionId: {corruptedTx}";
+        else
+            message = $"Could not decrypt transaction {corruptedTx}. It could be not committed";
+
+        Assert.Contains(message, _onRecoveryErrorMessages[0]);
         Assert.Contains("Database recovered partially. Some data was lost.", _onRecoveryErrorMessages[1]);
 
         using (var operation = new WriteAheadJournal.JournalApplicator.SyncOperation(Env.Journal.Applicator))
@@ -117,7 +136,7 @@ public class RavenDB_19278 : StorageTest
             random.NextBytes(buffer);
 
             tx.CreateTree("tree").Add("new", new MemoryStream(buffer));
-            
+
             tx.Commit();
         }
 
@@ -129,12 +148,18 @@ public class RavenDB_19278 : StorageTest
     }
 
     [Theory]
-    [InlineData(true, false)]
-    [InlineData(false, true)]
-    [InlineData(false, false)]
-    [InlineData(true, true)]
-    public void PartialRecoveryMustUpdateEnvironmentHeaderAndEraseCorruptedDataInJournal(bool syncAfterRestart, bool limitMaxJournalSizeAfterRestart)
+    [InlineData(true, false, false)]
+    [InlineData(false, true, false)]
+    [InlineData(false, false, false)]
+    [InlineData(true, true, false)]
+    [InlineData(true, false, true)]
+    [InlineData(false, true, true)]
+    [InlineData(false, false, true)]
+    [InlineData(true, true, true)]
+    public void PartialRecoveryMustUpdateEnvironmentHeaderAndEraseCorruptedDataInJournal(bool syncAfterRestart, bool limitMaxJournalSizeAfterRestart, bool encrypted)
     {
+        _encrypted = encrypted;
+
         RequireFileBasedPager();
 
         using (var tx = Env.WriteTransaction())
@@ -196,7 +221,14 @@ public class RavenDB_19278 : StorageTest
 
         Assert.Equal(2, _onRecoveryErrorMessages.Count);
 
-        Assert.Contains($"Invalid hash signature for transaction: HeaderMarker: Valid, TransactionId: {corruptedTx}", _onRecoveryErrorMessages[0]);
+        string message;
+
+        if (encrypted == false)
+            message = $"Invalid hash signature for transaction: HeaderMarker: Valid, TransactionId: {corruptedTx}";
+        else
+            message = $"Could not decrypt transaction {corruptedTx}. It could be not committed";
+
+        Assert.Contains(message, _onRecoveryErrorMessages[0]);
         Assert.Contains("Database recovered partially. Some data was lost.", _onRecoveryErrorMessages[1]);
 
         if (syncAfterRestart)
