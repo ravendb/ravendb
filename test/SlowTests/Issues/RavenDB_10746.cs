@@ -1,6 +1,7 @@
 ﻿using FastTests;
 using Orders;
 using Raven.Client.Documents.Queries.Facets;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -12,7 +13,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Facets)]
         public void ShouldBeAbleToParseRangeFacet()
         {
             RangeFacet facet = new RangeFacet<Product>

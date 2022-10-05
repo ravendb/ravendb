@@ -7,6 +7,7 @@
 using System;
 using FastTests;
 using Raven.Client.Documents.Queries.Facets;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -26,7 +27,7 @@ namespace SlowTests.Issues
             public int Age { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Facets)]
         public void CanReturnDescriptiveParsingErrors()
         {
             var invalidOperatorEx = Assert.Throws<InvalidOperationException>(() => RangeFacet<Employee>.Parse(x => x.Salary == 5));

@@ -1,6 +1,7 @@
 ﻿using System;
 using FastTests;
 using Raven.Client.Documents.Queries.Facets;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,7 +20,7 @@ namespace SlowTests.Tests.Faceted
             public DateTimeOffset? NullableDateTimeOffset { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Facets)]
         public void FacetShouldWorkWithDateOffset()
         {
             var now = new DateTime(2017, 1, 2);
@@ -30,7 +31,7 @@ namespace SlowTests.Tests.Faceted
 
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Facets)]
         public void FacetShouldWorkWithDateTimeOffset()
         {
             var now = new DateTimeOffset(2017, 1, 2, 0, 0, 0, TimeSpan.Zero);
@@ -40,7 +41,7 @@ namespace SlowTests.Tests.Faceted
             Assert.Equal("DateTimeOffset > '0001-01-01T00:00:00.0000000Z' and DateTimeOffset < '2017-01-02T00:00:00.0000000Z'", actual);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Facets)]
         public void FacetShouldWorkWithNullableDateTimeOffset()
         {
             DateTimeOffset? now = new DateTimeOffset(2017, 1, 2, 0, 0, 0, TimeSpan.Zero);
@@ -50,7 +51,7 @@ namespace SlowTests.Tests.Faceted
             Assert.Equal("NullableDateTimeOffset > '0001-01-01T00:00:00.0000000Z' and NullableDateTimeOffset < '2017-01-02T00:00:00.0000000Z'", actual);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Facets)]
         public void IdeallyTheVariableWouldNotNeedToBeANullable()
         {
             DateTimeOffset now = new DateTimeOffset(2017, 1, 2, 0, 0, 0, TimeSpan.Zero);
@@ -60,7 +61,7 @@ namespace SlowTests.Tests.Faceted
             Assert.Equal("NullableDateTimeOffset > '0001-01-01T00:00:00.0000000Z' and NullableDateTimeOffset < '2017-01-02T00:00:00.0000000Z'", actual);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Facets)]
         public void IdeallyIWouldNotNeedAVariable()
         {
             var actual = RangeFacet<ClassWithDateTimeOffset>.Parse(c => c.DateTimeOffset > DateTimeOffset.MinValue && c.DateTimeOffset < new DateTimeOffset(2017, 1, 2, 0, 0, 0, TimeSpan.Zero));

@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,18 +16,19 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task AggregateQueryTest()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task AggregateQueryTest(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 await new DocsIndex().ExecuteAsync(store);
-
                 if (await ShouldInitData(store))
                 {
                     await InitializeData(store);
                 }
-
+                Indexes.WaitForIndexing(store);
+                
                 using (var session = store.OpenAsyncSession())
                 {
                     session.Advanced.WaitForIndexesAfterSaveChanges(TimeSpan.FromSeconds(30));

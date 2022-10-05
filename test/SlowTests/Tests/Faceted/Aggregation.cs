@@ -442,7 +442,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanCorrectlyAggregate_DateTimeDataType_WithRangeCounts(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -457,7 +457,7 @@ namespace SlowTests.Tests.Faceted
                     session.Store(new ItemsOrder { Items = new List<string> { "first" }, At = DateTime.Today });
                     session.SaveChanges();
                 }
-
+                
                 var minValue = DateTime.MinValue;
                 var end0 = DateTime.Today.AddDays(-2);
                 var end1 = DateTime.Today.AddDays(-1);
@@ -484,7 +484,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanCorrectlyAggregate_DateTimeDataType_WithRangeCounts_AndInOperator_AfterOtherWhere(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -528,7 +528,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanCorrectlyAggregate_DateTimeDataType_WithRangeCounts_AndInOperator_BeforeOtherWhere(Options options)
         {
             using (var store = GetDocumentStore(options))
