@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 {
     public class CoraxIndexReadOperation : IndexReadOperationBase
     {
-        private static readonly ArrayPool<long> QueryPool = ArrayPool<long>.Create();
+        internal static readonly ArrayPool<long> QueryPool = ArrayPool<long>.Create();
         private readonly IndexFieldsMapping _fieldMappings;
         private readonly IndexSearcher _indexSearcher;
         private readonly ByteStringContext _allocator;

@@ -24,9 +24,8 @@ using Voron.Impl;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
-    public class IndexFacetedReadOperation : IndexOperationBase
+    public class LuceneIndexFacetedReadOperation : IndexFacetReadOperationBase
     {
-        private readonly QueryBuilderFactories _queryBuilderFactories;
         private readonly IndexSearcher _searcher;
         private readonly IDisposable _releaseReadTransaction;
         private readonly LuceneRavenPerFieldAnalyzerWrapper _analyzer;
@@ -34,14 +33,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private readonly IState _state;
 
-        public IndexFacetedReadOperation(Index index,
+        public LuceneIndexFacetedReadOperation(Index index,
             IndexDefinitionBaseServerSide indexDefinition,
             LuceneVoronDirectory directory,
             LuceneIndexSearcherHolder searcherHolder,
             QueryBuilderFactories queryBuilderFactories,
             Transaction readTransaction,
             DocumentDatabase documentDatabase)
-            : base(index, LoggingSource.Instance.GetLogger<IndexFacetedReadOperation>(documentDatabase.Name))
+            : base(index, queryBuilderFactories, LoggingSource.Instance.GetLogger<LuceneIndexFacetedReadOperation>(documentDatabase.Name))
         {
             try
             {
@@ -52,14 +51,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 throw new IndexAnalyzerException(e);
             }
 
-            _queryBuilderFactories = queryBuilderFactories;
             _releaseReadTransaction = directory.SetTransaction(readTransaction, out _state);
             _releaseSearcher = searcherHolder.GetSearcher(readTransaction, _state, out _searcher);
         }
 
-        public List<FacetResult> FacetedQuery(FacetQuery facetQuery, QueryTimingsScope queryTimings, DocumentsOperationContext context, Func<string, SpatialField> getSpatialField, CancellationToken token)
+        public override List<FacetResult> FacetedQuery(FacetQuery facetQuery, QueryTimingsScope queryTimings, DocumentsOperationContext context, Func<string, SpatialField> getSpatialField, CancellationToken token)
         {
-            var results = FacetedQueryParser.Parse(context, facetQuery);
+            var results = FacetedQueryParser.Parse(context, facetQuery, SearchEngineType.Lucene);
 
             var query = facetQuery.Query;
             Dictionary<string, Dictionary<string, FacetValues>> facetsByName = null;
@@ -307,24 +305,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     result.Value.Result.RemainingTerms = allTerms.Skip(start + valuesCount).ToList();
             }
         }
-
-        private static void CompleteFacetCalculationsStage(Dictionary<string, FacetedQueryParser.FacetResult> results)
-        {
-            foreach (var result in results)
-            {
-                foreach (var value in result.Value.Result.Values)
-                {
-                    if (value.Average.HasValue == false)
-                        continue;
-
-                    if (value.Count == 0)
-                        value.Average = double.NaN;
-                    else
-                        value.Average = value.Average / value.Count;
-                }
-            }
-        }
-
+        
         private static void ApplyAggregation(Dictionary<FacetAggregationField, FacetedQueryParser.FacetResult.Aggregation> aggregations, FacetValues values, ArraySegment<int> docsInQuery, IndexReader indexReader, int docBase, IState state)
         {
             foreach (var kvp in aggregations)
@@ -661,62 +642,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             public override bool AcceptsDocsOutOfOrder => true;
         }
 
-        private class FacetValues
-        {
-            private static readonly FacetAggregationField Default = new FacetAggregationField();
 
-            private readonly bool _legacy;
-            private readonly Dictionary<FacetAggregationField, FacetValue> _values = new Dictionary<FacetAggregationField, FacetValue>();
-
-            public int Count;
-            public bool Any;
-
-            public FacetValues(bool legacy)
-            {
-                _legacy = legacy;
-            }
-
-            public void AddDefault(string range)
-            {
-                Any = true;
-                _values[Default] = new FacetValue { Range = range };
-            }
-
-            public void Add(FacetAggregationField field, string range)
-            {
-                if (_legacy)
-                {
-                    if (Any)
-                        return;
-
-                    AddDefault(range);
-                    return;
-                }
-
-                Any = true;
-                _values[field] = new FacetValue { Range = range, Name = string.IsNullOrWhiteSpace(field.DisplayName) ? field.Name : field.DisplayName };
-            }
-
-            public FacetValue Get(FacetAggregationField field)
-            {
-                if (_legacy)
-                    return _values[Default];
-
-                return _values[field];
-            }
-
-            public IEnumerable<FacetValue> GetAll()
-            {
-                return _values.Values;
-            }
-
-            public void IncrementCount(int count)
-            {
-                Count += count;
-
-                foreach (var facetValue in _values)
-                    facetValue.Value.Count += count;
-            }
-        }
     }
 }

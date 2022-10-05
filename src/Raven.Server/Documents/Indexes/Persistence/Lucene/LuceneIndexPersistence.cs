@@ -443,12 +443,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return new LuceneIndexReadOperation(_index, _directory, _luceneIndexSearcherHolder, _index._queryBuilderFactories, readTransaction, query);
         }
 
-        public override IndexFacetedReadOperation OpenFacetedIndexReader(Transaction readTransaction)
+        public override IndexFacetReadOperationBase OpenFacetedIndexReader(Transaction readTransaction)
         {
             CheckDisposed();
             CheckInitialized();
 
-            return new IndexFacetedReadOperation(_index, _index.Definition, _directory, _luceneIndexSearcherHolder, _index._queryBuilderFactories, readTransaction, _index._indexStorage.DocumentDatabase);
+            return new LuceneIndexFacetedReadOperation(_index, _index.Definition, _directory, _luceneIndexSearcherHolder, _index._queryBuilderFactories, readTransaction, _index._indexStorage.DocumentDatabase);
         }
 
         public override SuggestionIndexReaderBase OpenSuggestionIndexReader(Transaction readTransaction, string field)

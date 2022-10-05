@@ -2,20 +2,23 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using Lucene.Net.Util;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Parser;
+using Sparrow;
 using Sparrow.Json;
+using Voron;
 using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents.Queries.Facets
 {
     public static class FacetedQueryParser
     {
-        public static Dictionary<string, FacetResult> Parse(JsonOperationContext context, FacetQuery query)
+        public static Dictionary<string, FacetResult> Parse(JsonOperationContext context, FacetQuery query, SearchEngineType searchEngineType)
         {
             var results = new Dictionary<string, FacetResult>();
 
@@ -31,7 +34,7 @@ namespace Raven.Server.Documents.Queries.Facets
 
                     foreach (var f in ProcessFacetSetup(facetSetup))
                     {
-                        var r = ProcessFacet(f.Facet, f.Ranges, query);
+                        var r = ProcessFacet(f.Facet, f.Ranges, query, searchEngineType);
                         results[r.Result.Name] = r;
                     }
 
@@ -61,7 +64,7 @@ namespace Raven.Server.Documents.Queries.Facets
                 facet.Aggregations = facetField.Aggregations;
                 facet.Options = facetField.GetOptions(context, query.Query.QueryParameters) ?? FacetOptions.Default;
 
-                var result = ProcessFacet(facet, facetField.Ranges, query);
+                var result = ProcessFacet(facet, facetField.Ranges, query, searchEngineType);
                 results[result.Result.Name] = result;
             }
 
@@ -109,7 +112,7 @@ namespace Raven.Server.Documents.Queries.Facets
             }
         }
 
-        private static FacetResult ProcessFacet(FacetBase facet, List<QueryExpression> facetRanges, FacetQuery query)
+        private static FacetResult ProcessFacet(FacetBase facet, List<QueryExpression> facetRanges, FacetQuery query, SearchEngineType searchEngineType)
         {
             var result = new FacetResult
             {
@@ -133,7 +136,7 @@ namespace Raven.Server.Documents.Queries.Facets
 
                 foreach (var range in facetRanges)
                 {
-                    var parsedRange = ParseRange(range, query, out var type);
+                    var parsedRange = ParseRange(range, query, searchEngineType, out var type);
                     if (rangeType.HasValue == false)
                         rangeType = type;
                     else if (rangeType.Value != type)
@@ -191,12 +194,16 @@ namespace Raven.Server.Documents.Queries.Facets
             return result;
         }
 
-        private static ParsedRange ParseRange(QueryExpression expression, FacetQuery query, out RangeType type)
+        private static ParsedRange ParseRange(QueryExpression expression, FacetQuery query, SearchEngineType searchEngineType, out RangeType type)
         {
             if (expression is BetweenExpression bee)
             {
-                var hValue = ConvertFieldValue(bee.Max.Token.Value, bee.Max.Value, query.Query.QueryParameters);
-                var lValue = ConvertFieldValue(bee.Min.Token.Value, bee.Min.Value, query.Query.QueryParameters);
+                var hValue = searchEngineType == SearchEngineType.Corax 
+                    ? ConvertFieldValueForCorax(bee.Max.Token.Value, bee.Max.Value, query.Query.QueryParameters) 
+                    : ConvertFieldValueForLucene(bee.Max.Token.Value, bee.Max.Value, query.Query.QueryParameters);
+                var lValue = searchEngineType == SearchEngineType.Corax 
+                    ? ConvertFieldValueForCorax(bee.Min.Token.Value, bee.Min.Value, query.Query.QueryParameters)
+                    : ConvertFieldValueForLucene(bee.Min.Token.Value, bee.Min.Value, query.Query.QueryParameters);
 
                 var fieldName = ((FieldExpression)bee.Source).GetText(null);
 
@@ -215,6 +222,9 @@ namespace Raven.Server.Documents.Queries.Facets
                     RangeText = expression.GetText(query.Query)
                 };
 
+                if (searchEngineType is SearchEngineType.Corax)
+                    return new CoraxParsedRange(range);
+                
                 return range;
             }
 
@@ -229,7 +239,9 @@ namespace Raven.Server.Documents.Queries.Facets
                         var fieldName = ExtractFieldName(be, query);
 
                         var r = (ValueExpression)be.Right;
-                        var fieldValue = ConvertFieldValue(r.Token.Value, r.Value, query.Query.QueryParameters);
+                        var fieldValue = searchEngineType == SearchEngineType.Corax 
+                            ? ConvertFieldValueForCorax(r.Token.Value, r.Value, query.Query.QueryParameters)
+                            : ConvertFieldValueForLucene(r.Token.Value, r.Value, query.Query.QueryParameters);
 
                         type = fieldValue.Type;
 
@@ -238,13 +250,13 @@ namespace Raven.Server.Documents.Queries.Facets
                             Field = fieldName,
                             RangeText = expression.GetText(query.Query)
                         };
-
+                        
                         if (be.Operator == OperatorType.LessThan || be.Operator == OperatorType.LessThanEqual)
                         {
                             range.HighValue = fieldValue.Value;
                             range.HighInclusive = be.Operator == OperatorType.LessThanEqual;
 
-                            return range;
+                            return GetForSearchEngine(range);
                         }
 
                         if (be.Operator == OperatorType.GreaterThan || be.Operator == OperatorType.GreaterThanEqual)
@@ -252,13 +264,13 @@ namespace Raven.Server.Documents.Queries.Facets
                             range.LowValue = fieldValue.Value;
                             range.LowInclusive = be.Operator == OperatorType.GreaterThanEqual;
 
-                            return range;
+                            return GetForSearchEngine(range);
                         }
 
                         return range;
                     case OperatorType.And:
-                        var left = ParseRange(be.Left, query, out var lType);
-                        var right = ParseRange(be.Right, query, out var rType);
+                        var left = ParseRange(be.Left, query, searchEngineType, out var lType);
+                        var right = ParseRange(be.Right, query, searchEngineType, out var rType);
 
                         if (lType != rType)
                             ThrowDifferentTypesOfRangeValues(query, lType, rType, left.Field);
@@ -278,7 +290,7 @@ namespace Raven.Server.Documents.Queries.Facets
                         }
 
                         left.RangeText = $"{left.RangeText} and {right.RangeText}";
-                        return left;
+                        return GetForSearchEngine(left);
                     default:
                         ThrowUnsupportedRangeOperator(query, be.Operator);
                         break;
@@ -288,6 +300,13 @@ namespace Raven.Server.Documents.Queries.Facets
             ThrowUnsupportedRangeExpression(query, expression);
             type = RangeType.None;
             return null;
+
+            ParsedRange GetForSearchEngine(ParsedRange inner)
+            {
+                if (searchEngineType is SearchEngineType.Corax)
+                    return new CoraxParsedRange(inner);
+                return inner;
+            }
         }
 
         private static string ExtractFieldName(BinaryExpression be, FacetQuery query)
@@ -302,7 +321,7 @@ namespace Raven.Server.Documents.Queries.Facets
             return null;
         }
 
-        private static (string Value, RangeType Type) ConvertFieldValue(string value, ValueTokenType type, BlittableJsonReaderObject queryParameters)
+        private static (string Value, RangeType Type) ConvertFieldValueForLucene(string value, ValueTokenType type, BlittableJsonReaderObject queryParameters)
         {
             switch (type)
             {
@@ -335,6 +354,165 @@ namespace Raven.Server.Documents.Queries.Facets
             }
         }
 
+        private static (string Value, RangeType Type) ConvertFieldValueForCorax(string value, ValueTokenType type, BlittableJsonReaderObject queryParameters)
+        {
+            switch (type)
+            {
+                case ValueTokenType.Long:
+                    return (QueryBuilderHelper.ParseInt64WithSeparators(value).ToString(CultureInfo.InvariantCulture), RangeType.Long);
+                case ValueTokenType.Double:
+                    var dbl = double.Parse(value, CultureInfo.InvariantCulture);
+                    return (dbl.ToString(CultureInfo.InvariantCulture), RangeType.Double);
+                case ValueTokenType.String:
+                    return (value, RangeType.None);
+                case ValueTokenType.Null:
+                    return (null, RangeType.None);
+                case ValueTokenType.Parameter:
+                    queryParameters.TryGet(value, out object o);
+                    var rangeType = RangeType.None;
+                    if (o is long l)
+                    {
+                        rangeType = RangeType.Long;
+                    }
+                    else if (o is LazyNumberValue lnv)
+                    {
+                        rangeType = RangeType.Double;
+                    }
+                    return (o.ToString(), rangeType);
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(type), type, null);
+            }
+        }
+        
+        public class CoraxParsedRange : ParsedRange
+        {
+            private Operation _leftSide; 
+            private Operation _rightSide; 
+
+            public double LowValueAsDouble = double.MinValue;
+            public double HighValueAsDouble = double.MaxValue;
+            public long LowValueAsLong = long.MinValue;
+            public long HighValueAsLong = long.MaxValue;
+            public ReadOnlySpan<byte> HighValueAsBytes => _highValueAsBytes.AsSpan();
+            private readonly byte[] _highValueAsBytes;
+            
+            public ReadOnlySpan<byte> LowValueAsBytes => _lowValueAsBytes.AsSpan();
+            private readonly byte[] _lowValueAsBytes;
+            public CoraxParsedRange(ParsedRange range)
+            {
+                _leftSide = Operation.None;
+                _rightSide = Operation.None;
+                //Deep copy
+                LowInclusive = range.LowInclusive;
+                if (LowInclusive)
+                    _leftSide |= Operation.Equal;
+                
+                HighInclusive = range.HighInclusive;
+                if (HighInclusive)
+                    _rightSide |= Operation.Equal;
+                
+                LowValue = range.LowValue;
+                HighValue = range.HighValue;
+                RangeText = range.RangeText;
+                Field = range.Field;
+
+                if (LowValue != null)
+                {
+                    _leftSide |= Operation.GreaterThan;
+                    _lowValueAsBytes = Encodings.Utf8.GetBytes(LowValue);
+                    long.TryParse(LowValue, out LowValueAsLong);
+                    double.TryParse(LowValue, out LowValueAsDouble);
+                }
+                
+                if (HighValue != null)
+                {
+                    _rightSide |= Operation.LowerThan;
+                    _highValueAsBytes = Encodings.Utf8.GetBytes(HighValue);
+                    long.TryParse(HighValue, out HighValueAsLong);
+                    double.TryParse(HighValue, out HighValueAsDouble);
+                }
+            }
+
+            public bool IsMatch(double value)
+            {              
+                var leftSide = _leftSide switch
+                {
+                    Operation.None => true,
+                    Operation.GreaterThan => value > LowValueAsDouble,
+                    Operation.GreaterOrEqualThan => value >= LowValueAsDouble,
+                };
+                
+                var rightSide = _rightSide switch
+                {
+                    Operation.None => true,
+                    Operation.LowerThan => value < HighValueAsDouble,
+                    Operation.LowerOrEqualThan => value <= HighValueAsDouble,
+                };
+
+                return leftSide & rightSide;
+            }
+            
+            public bool IsMatch(long value)
+            {
+                var leftSide = _leftSide switch
+                {
+                    Operation.None => true,
+                    Operation.GreaterThan => value > LowValueAsLong,
+                    Operation.GreaterOrEqualThan => value >= LowValueAsLong,
+                };
+                
+                var rightSide = _rightSide switch
+                {
+                    Operation.None => true,
+                    Operation.LowerThan => value < HighValueAsLong,
+                    Operation.LowerOrEqualThan => value <= HighValueAsLong,
+                };
+
+                return leftSide & rightSide;
+            }
+            
+            public bool IsMatch(ReadOnlySpan<byte> value)
+            {
+                var compareLow =
+                    LowValue == null
+                        ? -1
+                        : value.SequenceCompareTo(LowValueAsBytes);
+                var compareHigh = HighValue == null 
+                    ? 1 
+                    : value.SequenceCompareTo(HighValueAsBytes);
+
+                return CalculateResult(in compareLow, in compareHigh);
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private bool CalculateResult(in int compareLow, in int compareHigh)
+            {
+                // if we are range exclusive on either end, check that we will skip the edge values
+                if (compareLow == 0 && LowInclusive == false ||
+                    compareHigh == 0 && HighInclusive == false)
+                    return false;
+
+                if (LowValue != null && compareLow < 0)
+                    return false;
+
+                if (HighValue != null && compareHigh > 0)
+                    return false;
+
+                return true;
+            }
+            
+            [Flags]
+            private enum Operation
+            {
+                None = 0, 
+                LowerThan = 1,
+                GreaterThan = 1 << 1,
+                Equal = 1 << 2,
+                LowerOrEqualThan = LowerThan | Equal,
+                GreaterOrEqualThan = GreaterThan | Equal,
+            }
+        }
+        
         public class ParsedRange
         {
             public bool LowInclusive;
@@ -364,7 +542,7 @@ namespace Raven.Server.Documents.Queries.Facets
 
                 return true;
             }
-
+            
             public override string ToString()
             {
                 return string.Format("{0}:{1}", Field, RangeText);
