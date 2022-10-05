@@ -157,12 +157,14 @@ namespace Raven.Server.Documents.TcpHandlers
         }
 
 
-        private IEnumerable<(Document previous, Document current)> GetRevisionsEnumerator(IEnumerable<(Document previous, Document current)> enumerable) {
+        private static IEnumerable<(Document Previous, Document Current)> GetRevisionsEnumerator(IEnumerable<(Document Previous, Document Current)> enumerable) {
             foreach (var item in enumerable)
             {
-                if (item.current.Flags.HasFlag(DocumentFlags.DeleteRevision))
+                if (item.Current.Flags.HasFlag(DocumentFlags.DeleteRevision))
                 {
-                    yield return (item.current, null);
+                    item.Previous?.Dispose();
+
+                    yield return (item.Current, null);
                 }
                 else
                 {
@@ -182,17 +184,17 @@ namespace Raven.Server.Documents.TcpHandlers
             var collectionName = new CollectionName(_collection);
             using (_db.Scripts.GetScriptRunner(_patch, true, out var run))
             {
-                IEnumerable<(Document previous, Document current)> revisions = _collection switch
+                IEnumerable<(Document Previous, Document Current)> revisions = _collection switch
                 {
                     Constants.Documents.Collections.AllDocumentsCollection =>
-                        _db.DocumentsStorage.RevisionsStorage.GetRevisionsFrom(docsContext, startEtag + 1, 0, long.MaxValue),
+                        _db.DocumentsStorage.RevisionsStorage.GetCurrentAndPreviousRevisionsForSubscriptionsFrom(docsContext, startEtag + 1, 0, long.MaxValue),
                     _ =>
-                        _db.DocumentsStorage.RevisionsStorage.GetRevisionsFrom(docsContext, collectionName, startEtag + 1, long.MaxValue)
+                        _db.DocumentsStorage.RevisionsStorage.GetCurrentAndPreviousRevisionsForSubscriptionsFrom(docsContext, collectionName, startEtag + 1, long.MaxValue)
                 };
                 
                 foreach (var revisionTuple in GetRevisionsEnumerator(revisions))
                 {
-                    var item = (revisionTuple.current ?? revisionTuple.previous);
+                    var item = (revisionTuple.Current ?? revisionTuple.Previous);
                     Debug.Assert(item != null);
                     size.Add(item.Data.Size, SizeUnit.Bytes);
                     if (ShouldSendDocumentWithRevisions(_subscription, run, _patch, docsContext, item, revisionTuple, out var transformResult, out var exception) == false)
@@ -226,7 +228,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         {
                             if (transformResult == null)
                             {
-                                yield return (revisionTuple.current, null);
+                                yield return (revisionTuple.Current, null);
                             }
                             else
                             {
