@@ -3308,10 +3308,11 @@ from 'Users' as user select output(user)", query.ToString());
             }
         }
 
-        [Fact]
-        public void SessionQueryIncludeDocumentAndCountersOfDocumentAndOfRelatedDocument()
+        [RavenTheory(RavenTestCategory.Counters)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void SessionQueryIncludeDocumentAndCountersOfDocumentAndOfRelatedDocument(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -3363,7 +3364,7 @@ from 'Users' as user select output(user)", query.ToString());
                                  "include Employee,counters(x, 'Likes'),counters(x.Employee, 'Downloads')"
                         , query.ToString());
 
-                    var orders = query.ToList();
+                    var orders = query.ToList().OrderBy(x => x.Id).ToList();
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
 
                     // included documents should be in cache
@@ -3506,14 +3507,14 @@ from 'Users' as user select output(user)", query.ToString());
             }
         }
 
-        [Theory]
-        [InlineData(IncludedCounter.IncludeCounterDownload)]
-        [InlineData(IncludedCounter.IncludeCounterUpload)]
-        [InlineData(IncludedCounter.IncludeCounters)]
-        [InlineData(IncludedCounter.IncludeAllCounters)]
-        public void CountersCachingShouldHandleDeletion(IncludedCounter query)
+        [RavenTheory(RavenTestCategory.Counters)]
+        [RavenData(IncludedCounter.IncludeCounterDownload, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(IncludedCounter.IncludeCounterUpload, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(IncludedCounter.IncludeCounters, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(IncludedCounter.IncludeAllCounters, DatabaseMode = RavenDatabaseMode.All)]
+        public void CountersCachingShouldHandleDeletion(Options options, IncludedCounter query)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
