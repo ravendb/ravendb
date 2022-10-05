@@ -61,10 +61,18 @@ namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
             }
         }
 
-        private static Dictionary<string, List<TimeSeriesRangeResult>> GetTimeSeriesRangeResults(DocumentsOperationContext context, string documentId, StringValues names, StringValues fromList, StringValues toList, int start, int pageSize,
+        private static Dictionary<string, List<TimeSeriesRangeResult>> GetTimeSeriesRangeResults(DocumentsOperationContext context, string documentId, StringValues names,
+            StringValues fromList, StringValues toList, int start, int pageSize,
             IncludeDocumentsDuringTimeSeriesLoadingCommand includes, bool returnFullResult = false)
         {
             var ranges = ConvertAndValidateMultipleTimeSeriesParameters(documentId, names, fromList, toList);
+
+            return GetTimeSeriesRangeResults(context, documentId, ranges, start, pageSize, includes, returnFullResult);
+        }
+
+        internal static Dictionary<string, List<TimeSeriesRangeResult>> GetTimeSeriesRangeResults(DocumentsOperationContext context, string documentId, List<TimeSeriesRange> ranges, int start, int pageSize,
+                IncludeDocumentsDuringTimeSeriesLoadingCommand includes, bool returnFullResult = false)
+        {
             var rangeResultDictionary = new Dictionary<string, List<TimeSeriesRangeResult>>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var range in ranges)

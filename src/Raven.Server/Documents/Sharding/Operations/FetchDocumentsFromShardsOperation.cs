@@ -123,7 +123,7 @@ namespace Raven.Server.Documents.Sharding.Operations
 
                 if (cmdTimeSeriesIncludes != null)
                 {
-                    timeSeriesIncludes ??= new ShardedTimeSeriesIncludes();
+                    timeSeriesIncludes ??= new ShardedTimeSeriesIncludes(false);
                     timeSeriesIncludes.AddResults(cmdTimeSeriesIncludes, _context);
                 }
 

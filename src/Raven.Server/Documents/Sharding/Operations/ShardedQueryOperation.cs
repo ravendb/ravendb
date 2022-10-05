@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Microsoft.AspNetCore.Http;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
@@ -43,6 +44,8 @@ public class ShardedQueryOperation : IShardedReadOperation<QueryResult, ShardedQ
     public HashSet<string> MissingDocumentIncludes { get; private set; }
 
     public HashSet<string> MissingCounterIncludes { get; private set; }
+
+    public Dictionary<string, List<TimeSeriesRange>> MissingTimeSeriesIncludes { get; set; }
 
     public string CombineCommandsEtag(Memory<RavenCommand<QueryResult>> commands)
     {
@@ -119,7 +122,7 @@ public class ShardedQueryOperation : IShardedReadOperation<QueryResult, ShardedQ
 
             if (cmdResult.TimeSeriesIncludes != null)
             {
-                timeSeriesIncludes ??= new ShardedTimeSeriesIncludes();
+                timeSeriesIncludes ??= new ShardedTimeSeriesIncludes(true);
 
                 timeSeriesIncludes.AddResults(cmdResult.TimeSeriesIncludes, _context);
             }
@@ -150,7 +153,10 @@ public class ShardedQueryOperation : IShardedReadOperation<QueryResult, ShardedQ
         }
 
         if (timeSeriesIncludes != null)
+        {
             result.AddTimeSeriesIncludes(timeSeriesIncludes);
+            MissingTimeSeriesIncludes = timeSeriesIncludes.MissingTimeSeriesIncludes;
+        }
 
         if (compareExchangeValueIncludes != null)
             result.AddCompareExchangeValueIncludes(compareExchangeValueIncludes);
