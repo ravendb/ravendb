@@ -78,7 +78,8 @@ namespace Raven.Client.Documents.Operations.Counters
         Increment,
         Delete,
         Get,
-        Put
+        Put,
+        GetAll
     }
 
     public class CounterOperation

@@ -154,23 +154,13 @@ public class ShardedQueryProcessor : AbstractShardedQueryProcessor<ShardedQueryC
 
             var  counterOperations = new List<CounterOperation>();
 
-            if (includes.IncludedCounterNames.TryGetValue(docId, out var counterNames))
+            if (includes.IncludedCounterNames.TryGetValue(docId, out var counterNames) && counterNames.Length > 0)
             {
-                if (counterNames.Length > 0)
-                {
-                    foreach (string counterName in counterNames)
-                    {
-                        counterOperations.Add(new CounterOperation
-                        {
-                            CounterName = counterName,
-                            Type = CounterOperationType.Get
-                        });
-                    }
-                }
-                else
+                foreach (string counterName in counterNames)
                 {
                     counterOperations.Add(new CounterOperation
                     {
+                        CounterName = counterName,
                         Type = CounterOperationType.Get
                     });
                 }
@@ -179,7 +169,7 @@ public class ShardedQueryProcessor : AbstractShardedQueryProcessor<ShardedQueryC
             {
                 counterOperations.Add(new CounterOperation
                 {
-                    Type = CounterOperationType.Get
+                    Type = CounterOperationType.GetAll
                 });
             }
 
