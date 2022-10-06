@@ -95,6 +95,7 @@ namespace FastTests
             IgnoreProcessorAffinityChanges(ignore: true);
             LicenseManager.AddLicenseStatusToLicenseLimitsException = true;
             RachisStateMachine.EnableDebugLongCommit = true;
+            RavenServer.SkipCertificateDispose = true;
 
             NativeMemory.GetCurrentUnmanagedThreadId = () => (ulong)Pal.rvn_get_current_thread_id();
             Lucene.Net.Util.UnmanagedStringArray.Segment.AllocateMemory = NativeMemory.AllocateMemory;
