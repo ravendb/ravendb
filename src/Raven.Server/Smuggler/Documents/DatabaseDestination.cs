@@ -606,7 +606,13 @@ namespace Raven.Server.Smuggler.Documents
                     if (doc == null)
                         return;
 
-                    _clusterTransactionCommands.Push(new BatchRequestParser.CommandData { Id = doc.Id, Document = doc.Data, Type = CommandType.PUT, OriginalChangeVector = ctx.GetLazyString(doc.ChangeVector) });
+                    _clusterTransactionCommands.Push(new BatchRequestParser.CommandData {
+                        Id = doc.Id,
+                        Document = doc.Data,
+                        Type = CommandType.PUT,
+                        OriginalChangeVector = ctx.GetLazyString(doc.ChangeVector),
+                        FromBackup = true
+                    });
 
                     _clusterTransactionCommandsSize.Add(doc.Data.Size, SizeUnit.Bytes);
                 }
