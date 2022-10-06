@@ -921,7 +921,7 @@ namespace Sparrow.Server
                 var segment = GetFromReadyToUseMemorySegments(allocationUnit);
                 if (segment != null)
                 {
-                    _currentlyAllocated += allocationUnit;
+                    _currentlyAllocated += segment.SizeLeft;
 
                     Debug.Assert(segment.Size == segment.SizeLeft, $"{segment.Size} == {segment.SizeLeft}");
 
