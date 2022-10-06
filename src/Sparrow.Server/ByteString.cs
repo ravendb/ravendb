@@ -922,7 +922,10 @@ namespace Sparrow.Server
                 if (segment != null)
                 {
                     _currentlyAllocated += allocationUnit;
-                    return Create(segment.Current, length, allocationUnit, type);
+
+                    Debug.Assert(segment.Size == segment.SizeLeft, $"{segment.Size} == {segment.SizeLeft}");
+
+                    return Create(segment.Current, length, segment.SizeLeft, type);
                 }
 
                 goto AllocateWhole;
