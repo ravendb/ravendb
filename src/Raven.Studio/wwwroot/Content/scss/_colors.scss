@@ -1,5 +1,8 @@
 //== Colors
 //
+$brand-ravendb: #b82e73;
+$brand-cloud: #37c4ac !default;
+$brand-hr: #f78831 !default;
 
 $white:     #f0f4f6;
 $gray-100:  #c4ced7;
@@ -21,9 +24,9 @@ $gray:              $gray-400;
 $gray-light:        $gray-200;
 $gray-lighter:      $white;
 
-$brand-primary-dark: #b21557;
-$brand-primary: #d7325a;
-$brand-primary-light: #ff6482;
+//$brand-primary-dark: #b21557;
+$brand-primary: $brand-ravendb;
+//$brand-primary-light: #ff6482;
 
 $color-1: #f06582;
 $color-1-1: #f3766e;
@@ -46,17 +49,13 @@ $color-5-1: #bf569f;
 $color-5-2: #d85b9a;
 $color-5-3: #ed558c;
 
-$brand-ravendb: #d7325a;
-$brand-cloud: #37c4ac !default;
-$brand-hr: #f78831 !default;
-
 $color-support-free: $color-4;
 $color-support-professional: $color-4-2;
 $color-support-production: $color-5;
 
-$brand-primary-dark: darken($color-3-2 , 5%);
-$brand-primary: $color-3-2;
-$brand-primary-light: lighten($color-3-2 , 5%);
+$brand-primary-dark: darken($brand-ravendb, 5%);
+$brand-primary: $brand-ravendb;
+$brand-primary-light: lighten($brand-ravendb, 5%);
 
 $brand-success-dark: adjust-color($color-3, $lightness: -13%, $saturation: -20%);
 $brand-success: $color-3;
@@ -74,13 +73,27 @@ $brand-danger-dark: adjust-color($color-1, $lightness: -13%, $saturation: -20%);
 $brand-danger: $color-1;
 $brand-danger-light: adjust-color($color-1, $lightness: 13%, $saturation: 20%);
 
-$colors: (
-    "primary": $brand-primary, 
-    "success": $brand-success,
-    "info": $brand-info,
-    "warning": $brand-warning,
-    "danger": $brand-danger
-);
+$primary:       $brand-primary !default;
+$secondary:     $gray-400 !default;
+$success:       $brand-success !default;
+$info:          $brand-info !default;
+$warning:       $brand-warning !default;
+$danger:        $brand-danger !default;
+$light:         $gray-100 !default;
+$dark:          $gray-900 !default;
+// scss-docs-end theme-color-variables
+
+// scss-docs-start theme-colors-map
+$theme-colors: (
+  "primary":    $primary,
+  "secondary":  $secondary,
+  "success":    $success,
+  "info":       $info,
+  "warning":    $warning,
+  "danger":     $danger,
+  "light":      $light,
+  "dark":       $dark
+) !default;
 
 $node-color: $color-3;
 $sharding-color: $color-4;
@@ -90,11 +103,12 @@ $progress-color: $color-2-3;
 // Dark Theme
 $body-bg: $black;
 $border-color: $gray-300;
+$border-color-light: $gray-500;
 $border-color-disabled: $gray-500;
 
 $text-color: $gray-100;
 $text-muted: $gray-200;
-@text-emphasis: $white;
+$text-emphasis: $white;
 
 $body-color: $text-color;
 $panel-bg-1: $gray-900;
@@ -104,3 +118,5 @@ $panel-bg-3: $gray-700;
 $well-bg: $body-bg;
 
 $link-color: #e33572;
+
+$table-bg-scale: 70% !default;

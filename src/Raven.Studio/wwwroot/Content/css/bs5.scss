@@ -1,4 +1,4 @@
-﻿.bs5 {
+﻿
     // Required
     @import "../../../node_modules/boostrap5/scss/functions";
     // Default variable overrides
@@ -13,6 +13,8 @@
     @import "../../../node_modules/boostrap5/scss/mixins";
     @import "../../../node_modules/boostrap5/scss/utilities";
     @import "../../../node_modules/boostrap5/scss/root";
+
+.bs5 {
     // Optional Bootstrap components
     @import "../../../node_modules/boostrap5/scss/reboot";
     @import "../../../node_modules/boostrap5/scss/type";
