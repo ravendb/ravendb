@@ -7,11 +7,14 @@ namespace Raven.Client.Documents.Operations.Backups
     {
         public CompressionLevel CompressionLevel { get; set; }
 
+        public bool ExcludeIndexes { get; set; }
+
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
-                [nameof(CompressionLevel)] = CompressionLevel
+                [nameof(CompressionLevel)] = CompressionLevel,
+                [nameof(ExcludeIndexes)] = ExcludeIndexes
             };
         }
     }
