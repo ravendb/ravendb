@@ -765,7 +765,7 @@ namespace Raven.Server.ServerWide
             }
             finally
             {
-                LogCommand(type, index, exception, updateCommand?.AdditionalDebugInformation(exception));
+                LogCommand(type, index, exception, updateCommand);
             }
         }
 
@@ -866,7 +866,7 @@ namespace Raven.Server.ServerWide
             }
             finally
             {
-                LogCommand(commandType, index, exception, compareExchange?.AdditionalDebugInformation(exception));
+                LogCommand(commandType, index, exception, compareExchange);
             }
         }
 
@@ -920,7 +920,7 @@ namespace Raven.Server.ServerWide
             }
             finally
             {
-                LogCommand(nameof(CleanUpClusterStateCommand), index, exception, cleanCommand?.AdditionalDebugInformation(exception));
+                LogCommand(nameof(CleanUpClusterStateCommand), index, exception, cleanCommand);
             }
         }
 
@@ -963,7 +963,7 @@ namespace Raven.Server.ServerWide
             }
             finally
             {
-                LogCommand(nameof(ClusterTransactionCommand), index, exception, clusterTransaction?.AdditionalDebugInformation(exception));
+                LogCommand(nameof(ClusterTransactionCommand), index, exception, clusterTransaction);
             }
         }
 
@@ -1277,7 +1277,7 @@ namespace Raven.Server.ServerWide
             }
             finally
             {
-                LogCommand(nameof(RemoveNodeFromClusterCommand), index, exception, removedCmd?.AdditionalDebugInformation(exception));
+                LogCommand(nameof(RemoveNodeFromClusterCommand), index, exception, removedCmd);
             }
         }
 
@@ -1397,7 +1397,7 @@ namespace Raven.Server.ServerWide
             }
             finally
             {
-                LogCommand(type, index, exception, updateCommand?.AdditionalDebugInformation(exception));
+                LogCommand(type, index, exception, updateCommand);
                 NotifyDatabaseAboutChanged(context, updateCommand?.DatabaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.ValueChanged, null);
             }
         }
@@ -1459,7 +1459,7 @@ namespace Raven.Server.ServerWide
             }
             finally
             {
-                LogCommand(nameof(RemoveNodeFromDatabaseCommand), index, exception, remove?.AdditionalDebugInformation(exception));
+                LogCommand(nameof(RemoveNodeFromDatabaseCommand), index, exception, remove);
             }
         }
 
@@ -1687,7 +1687,7 @@ namespace Raven.Server.ServerWide
             }
             finally
             {
-                LogCommand(nameof(AddDatabaseCommand), index, exception, addDatabaseCommand.AdditionalDebugInformation(exception));
+                LogCommand(nameof(AddDatabaseCommand), index, exception, addDatabaseCommand);
                 NotifyDatabaseAboutChanged(context, addDatabaseCommand.Name, index, nameof(AddDatabaseCommand),
                     addDatabaseCommand.IsRestore
                         ? DatabasesLandlord.ClusterDatabaseChangeType.RecordRestored
@@ -1888,7 +1888,7 @@ namespace Raven.Server.ServerWide
             }
             finally
             {
-                LogCommand(type, index, exception, delCmd?.AdditionalDebugInformation(exception));
+                LogCommand(type, index, exception, delCmd);
                 NotifyValueChanged(context, type, index);
             }
         }
@@ -2006,7 +2006,7 @@ namespace Raven.Server.ServerWide
             }
             finally
             {
-                LogCommand(type, index, exception, delCmd?.AdditionalDebugInformation(exception));
+                LogCommand(type, index, exception, delCmd);
                 NotifyValueChanged(context, type, index);
             }
         }
@@ -2047,7 +2047,7 @@ namespace Raven.Server.ServerWide
             }
             finally
             {
-                LogCommand(type, index, exception, command?.AdditionalDebugInformation(exception));
+                LogCommand(type, index, exception, command);
 
                 if (skipNotifyValueChanged == false)
                     NotifyValueChanged(context, type, index);
@@ -2124,7 +2124,7 @@ namespace Raven.Server.ServerWide
             }
             finally
             {
-                LogCommand(type, index, exception, command.AdditionalDebugInformation(exception));
+                LogCommand(type, index, exception, command);
                 NotifyValueChanged(context, type, index);
             }
         }
@@ -2416,25 +2416,25 @@ namespace Raven.Server.ServerWide
             }
             finally
             {
-                LogCommand(type, index, exception, updateCommand?.AdditionalDebugInformation(exception));
+                LogCommand(type, index, exception, updateCommand);
                 NotifyDatabaseAboutChanged(context, databaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged, updateCommand);
             }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void LogCommand(string type, long index, Exception exception, string additionalDebugInformation = null)
+        private void LogCommand(string type, long index, Exception exception, CommandBase commandBase = null)
         {
             if (_parent.Log.IsInfoEnabled)
             {
-                LogCommandInternal(type, index, exception, additionalDebugInformation);
+                LogCommandInternal(type, index, exception, commandBase);
             }
         }
 
-        private void LogCommandInternal(string type, long index, Exception exception, string additionalDebugInformation)
+        private void LogCommandInternal(string type, long index, Exception exception, CommandBase commandBase)
         {
             var successStatues = exception != null ? "has failed" : "was successful";
             var msg = $"Apply of {type} with index {index} {successStatues}.";
-            var additionalDebugInfo = additionalDebugInformation;
+            var additionalDebugInfo = commandBase?.AdditionalDebugInformation(exception);
             if (additionalDebugInfo != null)
             {
                 msg += $" AdditionalDebugInformation: {additionalDebugInfo}.";
@@ -2866,7 +2866,7 @@ namespace Raven.Server.ServerWide
             }
             finally
             {
-                LogCommand(type, index, exception, compareExchange?.AdditionalDebugInformation(exception));
+                LogCommand(type, index, exception, compareExchange);
             }
         }
 
