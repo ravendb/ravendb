@@ -44,6 +44,7 @@ namespace Raven.Server.Documents.Handlers
             public bool IdPrefixed;
             public long Index;
             public bool FromEtl;
+            public bool FromBackup;
             public bool ReturnDocument;
 
             public bool SeenCounters;
@@ -669,6 +670,18 @@ namespace Raven.Server.Documents.Handlers
                         commandData.FromEtl = state.CurrentTokenType == JsonParserToken.True;
                         break;
 
+                    case CommandPropertyName.FromBackup:
+                        while (parser.Read() == false)
+                            await RefillParserBuffer(stream, buffer, parser, token);
+
+                        if (state.CurrentTokenType != JsonParserToken.True && state.CurrentTokenType != JsonParserToken.False)
+                        {
+                            ThrowUnexpectedToken(JsonParserToken.True, state);
+                        }
+
+                        commandData.FromBackup = state.CurrentTokenType == JsonParserToken.True;
+                        break;
+
                     case CommandPropertyName.AttachmentType:
                         while (parser.Read() == false)
                             await RefillParserBuffer(stream, buffer, parser, token);
@@ -911,7 +924,8 @@ namespace Raven.Server.Documents.Handlers
 
             #endregion RavenData
 
-            FromEtl
+            FromEtl,
+            FromBackup
 
             // other properties are ignore (for legacy support)
         }
@@ -970,6 +984,10 @@ namespace Raven.Server.Documents.Handlers
                     if (*(long*)state.StringBuffer == 7598246930185808212 &&
                         *(short*)(state.StringBuffer + sizeof(long)) == 29541)
                         return CommandPropertyName.TimeSeries;
+
+                    if (*(long*)state.StringBuffer == 7738135522684400198 &&
+                        *(short*)(state.StringBuffer + sizeof(long)) == 28789)
+                        return CommandPropertyName.FromBackup;
 
                     return CommandPropertyName.NoSuchProperty;
 

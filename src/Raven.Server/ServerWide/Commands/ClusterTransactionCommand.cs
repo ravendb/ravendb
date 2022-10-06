@@ -40,6 +40,7 @@ namespace Raven.Server.ServerWide.Commands
             public BlittableJsonReaderObject Document;
             public string ChangeVector;
             public long Index;
+            public bool FromBackup;
             public string Error;
 
             public static ClusterTransactionDataCommand FromCommandData(BatchRequestParser.CommandData command)
@@ -55,7 +56,8 @@ namespace Raven.Server.ServerWide.Commands
                     ChangeVector = command.OriginalChangeVector ?? command.ChangeVector,
                     Document = command.Document,
                     Index = command.Index,
-                    Type = command.Type
+                    Type = command.Type,
+                    FromBackup = command.FromBackup
                 };
             }
 
@@ -68,6 +70,7 @@ namespace Raven.Server.ServerWide.Commands
                     [nameof(Index)] = Index,
                     [nameof(ChangeVector)] = ChangeVector,
                     [nameof(Document)] = Document?.Clone(context),
+                    [nameof(FromBackup)] = FromBackup,
                     [nameof(Error)] = Error
                 };
             }

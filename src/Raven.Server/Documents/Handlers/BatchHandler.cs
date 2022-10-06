@@ -628,16 +628,28 @@ namespace Raven.Server.Documents.Handlers
                                 case CommandType.PUT:
                                     if (current < count)
                                     {
-                                        // delete the document to avoid exception if we put new document in a different collection.
-                                        // TODO: document this behavior
-                                        using (DocumentIdWorker.GetSliceFromId(context, cmd.Id, out Slice lowerId))
+                                        NonPersistentDocumentFlags nonPersistentDocumentFlags = NonPersistentDocumentFlags.None;
+
+                                        if (cmd.FromBackup)
                                         {
-                                            Database.DocumentsStorage.Delete(context, lowerId, cmd.Id, expectedChangeVector: null,
-                                                nonPersistentFlags: NonPersistentDocumentFlags.SkipRevisionCreation);
+                                            // if the document came from backup it must have the same collection
+                                            // the only thing that we update is the change vector
+                                            // in this case, we can skip revision creation
+                                            nonPersistentDocumentFlags = NonPersistentDocumentFlags.SkipRevisionCreation;
+                                        }
+                                        else
+                                        {
+                                            // delete the document to avoid exception if we put new document in a different collection.
+                                            // TODO: document this behavior
+                                            using (DocumentIdWorker.GetSliceFromId(context, cmd.Id, out Slice lowerId))
+                                            {
+                                                Database.DocumentsStorage.Delete(context, lowerId, cmd.Id, expectedChangeVector: null,
+                                                    nonPersistentFlags: NonPersistentDocumentFlags.SkipRevisionCreation);
+                                            }
                                         }
 
                                         var putResult = Database.DocumentsStorage.Put(context, cmd.Id, null, cmd.Document.Clone(context), changeVector: changeVector,
-                                            flags: DocumentFlags.FromClusterTransaction);
+                                            flags: DocumentFlags.FromClusterTransaction, nonPersistentFlags: nonPersistentDocumentFlags);
                                         context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(cmd.Id, cmd.Document.Size);
                                         AddPutResult(putResult);
                                     }
