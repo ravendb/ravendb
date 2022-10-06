@@ -76,7 +76,7 @@ namespace Raven.Server.Web.System
                             return;
                         }
 
-                        WriteDatabaseInfo(databaseName, dbDoc.Raw, context, w);
+                        WriteDatabaseInfo(databaseName, dbDoc, context, w);
                     });
                     writer.WriteEndObject();
                 }
@@ -318,24 +318,23 @@ namespace Raven.Server.Web.System
                 context.OpenReadTransaction();
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    var dbId = Constants.Documents.Prefix + dbName;
-                    using (var dbRecord = ServerStore.Cluster.Read(context, dbId, out long _))
+                    var dbRecord = ServerStore.Cluster.ReadRawDatabaseRecord(context, dbName, out long _);
+                    
+                    if (dbRecord == null)
                     {
-                        if (dbRecord == null)
-                        {
-                            HttpContext.Response.Headers.Remove(Constants.Headers.ContentType);
-                            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                            HttpContext.Response.Headers["Database-Missing"] = dbName;
-                            return;
-                        }
-
-                        WriteDatabaseInfo(dbName, dbRecord, context, writer);
+                        HttpContext.Response.Headers.Remove(Constants.Headers.ContentType);
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                        HttpContext.Response.Headers["Database-Missing"] = dbName;
+                        return;
                     }
+
+                    WriteDatabaseInfo(dbName, dbRecord, context, writer);
+                    
                 }
             }
         }
 
-        private void WriteDatabaseInfo(string databaseName, BlittableJsonReaderObject dbRecordBlittable,
+        private void WriteDatabaseInfo(string databaseName, RawDatabaseRecord rawDatabaseRecord,
             TransactionOperationContext context, AbstractBlittableJsonTextWriter writer)
         {
             var nodesTopology = new NodesTopology();
@@ -346,8 +345,8 @@ namespace Raven.Server.Web.System
                              dbTask != null &&
                              dbTask.IsCompleted;
 
-                var dbRecord = JsonDeserializationCluster.DatabaseRecord(dbRecordBlittable);
-                var topology = dbRecord.Topology;
+                var dbRecord = rawDatabaseRecord.MaterializedRecord;
+                var topology = dbRecord.IsSharded ? dbRecord.Sharding.Orchestrator.Topology : dbRecord.Topology;
 
                 var statuses = ServerStore.GetNodesStatuses();
                 if (topology != null)

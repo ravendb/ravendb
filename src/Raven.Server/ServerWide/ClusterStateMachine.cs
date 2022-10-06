@@ -3447,11 +3447,11 @@ namespace Raven.Server.ServerWide
 
             if (ShardHelper.TryGetShardNumberAndDatabaseName(ref name, out var shardNumber))
             {
-                databaseRecord = BuildShardedDatabaseRecord(context, Read(context, "db/" + name.ToLowerInvariant(), out etag), shardNumber);
+                databaseRecord = BuildShardedDatabaseRecord(context, Read(context, Constants.Documents.Prefix + name.ToLowerInvariant(), out etag), shardNumber);
             }
             else
             {
-                databaseRecord = Read(context, "db/" + name.ToLowerInvariant(), out etag);
+                databaseRecord = Read(context, Constants.Documents.Prefix + name.ToLowerInvariant(), out etag);
             }
             if (databaseRecord == null)
                 return null;
