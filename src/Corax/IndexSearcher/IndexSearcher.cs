@@ -23,6 +23,9 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 {
     private readonly Transaction _transaction;
     private readonly IndexFieldsMapping _fieldMapping;
+    private readonly Lazy<Tree> _persistedDynamicTreeAnalyzer;
+
+
     private Page _lastPage = default;
     private long? _numberOfEntries;
 
@@ -66,6 +69,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         _fieldMapping = fieldsMapping ?? new IndexFieldsMapping(_transaction.Allocator);
         _fieldsTree = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
         _metadataTree = _transaction.ReadTree(Constants.IndexMetadataSlice);
+        _persistedDynamicTreeAnalyzer = new Lazy<Tree>(() => _transaction.ReadTree(Constants.IndexWriter.DynamicFieldsAnalyzersSlice));
     }
 
     public UnmanagedSpan GetIndexEntryPointer(long id)
@@ -276,6 +280,17 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         return (fieldName, numericTree);
     }
 
+    public FieldIndexingMode GetFieldIndexingModeForDynamic(Slice name)
+    {
+        var readResult = _persistedDynamicTreeAnalyzer.Value?.Read(name);
+        if (readResult == null)
+            return FieldIndexingMode.Normal;
+        
+        
+        var mode = (FieldIndexingMode)readResult.Reader.ReadByte();
+        return mode;
+    }
+    
     public void Dispose()
     {
         if (_ownsTransaction)

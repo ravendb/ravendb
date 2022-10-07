@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -14,11 +15,15 @@ using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Facets;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
 using Sparrow.Logging;
 using Sparrow.Server;
 using Voron;
+using Voron.Data.BTrees;
 using Voron.Impl;
+using IndexEntryReader = Corax.IndexEntryReader;
 using RangeType = Raven.Client.Documents.Indexes.RangeType;
+using Token = Corax.Pipeline.Token;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
@@ -48,29 +53,31 @@ public class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
         Dictionary<string, Dictionary<string, FacetValues>> facetsByName = null;
         Dictionary<string, Dictionary<string, FacetValues>> facetsByRange = null;
 
-
-        //Build corax query to prefilter before aggregations happens
         var parameters = new CoraxQueryBuilder.Parameters(_indexSearcher, null, null, query, _index, query.QueryParameters, _queryBuilderFactories,
             _fieldMappings, null, null, -1, null);
         var baseQuery = CoraxQueryBuilder.BuildQuery(parameters, out var isBinary);
         var coraxPageSize = CoraxGetPageSize(_indexSearcher, facetQuery.Query.PageSize, query, isBinary);
         var ids = CoraxIndexReadOperation.QueryPool.Rent(coraxPageSize);
-
+        using var analyzersScope = new AnalyzersScope(_indexSearcher, _fieldMappings, _index.Definition.HasDynamicFields);
         int read = 0;
         while ((read = baseQuery.Fill(ids)) != 0)
         {
-            foreach (var result in results)
+            for (int docId = 0; docId < read; docId++)
             {
-                using (var facetTiming = queryTimings?.For($"{nameof(QueryTimingsScope.Names.AggregateBy)}/{result.Key}"))
+                var entryReader = _indexSearcher.GetReaderFor(ids[docId]);
+                foreach (var result in results)
                 {
+                    token.ThrowIfCancellationRequested();
+
+                    using var facetTiming = queryTimings?.For($"{nameof(QueryTimingsScope.Names.AggregateBy)}/{result.Key}");
+
                     if (result.Value.Ranges == null || result.Value.Ranges.Count == 0)
                     {
                         facetsByName ??= new Dictionary<string, Dictionary<string, FacetValues>>();
 
-                        // HandleFacets(returnedReaders, result, facetsByName, facetQuery.Legacy, facetTiming, token);
+                        HandleFacetsPerDocument(ref entryReader, result, facetsByName, facetQuery.Legacy, facetTiming, analyzersScope, token);
                         continue;
                     }
-
 
                     // Cache facetByRange because we will fulfill data in batches instead of whole collection
                     facetsByRange ??= new();
@@ -80,19 +87,43 @@ public class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
                         facetsByRange.Add(result.Key, facetValues);
                     }
 
-                    HandleRangeFacets(ids.AsSpan()[..read], result, facetQuery.Legacy, facetTiming, facetValues, token);
+                    HandleRangeFacetsPerDocument(ref entryReader, result, facetQuery.Legacy, facetTiming, facetValues, token);
                 }
             }
+
+            token.ThrowIfCancellationRequested();
         }
+
+        UpdateRangeResults();
+        
+        UpdateFacetResults(results, query, facetsByName);
 
         CompleteFacetCalculationsStage(results);
         CoraxIndexReadOperation.QueryPool.Return(ids);
         return results.Values
             .Select(x => x.Result)
             .ToList();
+
+        void UpdateRangeResults()
+        {
+            foreach (var result in results)
+            {
+                if (facetsByRange != null)
+                    foreach (var kvp in facetsByRange)
+                    {
+                        foreach (var inner in kvp.Value)
+                        {
+                            if (inner.Value.Any == false)
+                                continue;
+
+                            result.Value.Result.Values.AddRange(inner.Value.GetAll());
+                        }
+                    }
+            }
+        }
     }
 
-    private void HandleRangeFacets(ReadOnlySpan<long> ids,
+    private void HandleRangeFacetsPerDocument(ref IndexEntryReader indexEntry,
         KeyValuePair<string, FacetedQueryParser.FacetResult> result,
         bool legacy,
         QueryTimingsScope queryTimings,
@@ -101,117 +132,101 @@ public class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
     {
         var needToApplyAggregation = result.Value.Aggregations.Count > 0;
         var ranges = result.Value.Ranges;
-
-
+        
         // Create map in first batch
         if (facetValues.Count == 0)
         {
             CreateFacetMapping();
         }
 
-        foreach (var document in ids)
+
+        foreach (var parsedRange in CollectionsMarshal.AsSpan(ranges))
         {
-            var indexEntry = _indexSearcher.GetReaderFor(document);
-            foreach (var parsedRange in CollectionsMarshal.AsSpan(ranges))
-            {
-                var range = parsedRange as FacetedQueryParser.CoraxParsedRange;
-                if (range is null)
-                    continue;
-                
-                GetFieldReader(ref indexEntry, in range.Field, out var fieldReader);
-
-                //We don't have any correct way to read it from entry, lets skip it
-                if (fieldReader.Type == IndexEntryFieldType.Invalid)
-                    continue;
-
-                var rangeType = result.Value.RangeType;
-                bool isMatching = false;
-                switch (fieldReader.Type)
-                {
-                    case IndexEntryFieldType.List:
-                    case IndexEntryFieldType.ListWithNulls:
-                    {
-                        if (fieldReader.TryReadMany(out var iterator) == false)
-                            goto default;
-                        
-                        while (iterator.ReadNext())
-                        {
-                            if ((fieldReader.Type & IndexEntryFieldType.HasNulls) != 0 && (iterator.IsEmpty || iterator.IsNull))
-                            {
-                                var value = iterator.IsEmpty ? Constants.EmptyStringSlice : Constants.NullValueSlice;
-                                isMatching |= range.IsMatch(value);
-                                continue;
-                            }
-
-                            isMatching |= range.IsMatch(iterator.Sequence);
-                        }
-
-                        break;
-                    }
-                    case IndexEntryFieldType.TupleList:
-                    case IndexEntryFieldType.TupleListWithNulls:
-                        if (fieldReader.TryReadMany(out var tupleIterator) == false)
-                            goto default;
-                        
-                        while (tupleIterator.ReadNext())
-                        {
-                            if ((fieldReader.Type & IndexEntryFieldType.HasNulls) != 0 && (tupleIterator.IsEmpty || tupleIterator.IsNull))
-                            {
-                                var value = tupleIterator.IsEmpty ? Constants.EmptyStringSlice : Constants.NullValueSlice;
-                                isMatching |= range.IsMatch(value);
-                                continue;
-                            }
-
-                            isMatching = rangeType switch
-                            {
-                                RangeType.Double => range.IsMatch(tupleIterator.Double),
-                                RangeType.Long => range.IsMatch(tupleIterator.Long),
-                                _ => range.IsMatch(tupleIterator.Sequence)
-                            };
-                        }
-
-                        break;
-                    case IndexEntryFieldType.Tuple:
-                        fieldReader.Read(out _, out var longValue, out var doubleValue, out var spanValue);
-                        isMatching = rangeType switch
-                        {
-                            RangeType.Double => range.IsMatch(doubleValue),
-                            RangeType.Long => range.IsMatch(longValue),
-                            _ => range.IsMatch(spanValue)
-                        };
-                        break;
-                    case IndexEntryFieldType.Simple:
-                        fieldReader.Read(out _, out spanValue);
-                        isMatching = range.IsMatch(spanValue);
-                        break;
-                    default:
-                        break;
-                }
-
-                var collectionOfFacetValues = facetValues[range.RangeText];
-                if (isMatching)
-                {
-                    collectionOfFacetValues.IncrementCount(1);
-                    if (needToApplyAggregation)
-                        ApplyAggregation(result.Value.Aggregations, collectionOfFacetValues, ref indexEntry);
-                }
-                
-                token.ThrowIfCancellationRequested();
-            }
-        }
-
-
-        foreach (var kvp in facetValues)
-        {
-            if (kvp.Value.Any == false)
+            var range = parsedRange as FacetedQueryParser.CoraxParsedRange;
+            if (range is null)
                 continue;
 
-            result.Value.Result.Values.AddRange(kvp.Value.GetAll());
-        }
+            GetFieldReader(ref indexEntry, in range.Field, out var fieldReader);
 
-        if (needToApplyAggregation)
-        {
+            //We don't have any correct way to read it from entry, lets skip it
+            if (fieldReader.Type == IndexEntryFieldType.Invalid)
+                continue;
+
+            var rangeType = result.Value.RangeType;
+            bool isMatching = false;
+            switch (fieldReader.Type)
+            {
+                case IndexEntryFieldType.List:
+                case IndexEntryFieldType.ListWithNulls:
+                {
+                    if (fieldReader.TryReadMany(out var iterator) == false)
+                        goto default;
+
+                    while (iterator.ReadNext())
+                    {
+                        if ((fieldReader.Type & IndexEntryFieldType.HasNulls) != 0 && (iterator.IsEmpty || iterator.IsNull))
+                        {
+                            var value = iterator.IsEmpty ? Constants.EmptyStringSlice : Constants.NullValueSlice;
+                            isMatching |= range.IsMatch(value);
+                            continue;
+                        }
+
+                        isMatching |= range.IsMatch(iterator.Sequence);
+                    }
+
+                    break;
+                }
+                case IndexEntryFieldType.TupleList:
+                case IndexEntryFieldType.TupleListWithNulls:
+                    if (fieldReader.TryReadMany(out var tupleIterator) == false)
+                        goto default;
+
+                    while (tupleIterator.ReadNext())
+                    {
+                        if ((fieldReader.Type & IndexEntryFieldType.HasNulls) != 0 && (tupleIterator.IsEmpty || tupleIterator.IsNull))
+                        {
+                            var value = tupleIterator.IsEmpty ? Constants.EmptyStringSlice : Constants.NullValueSlice;
+                            isMatching |= range.IsMatch(value);
+                            continue;
+                        }
+
+                        isMatching = rangeType switch
+                        {
+                            RangeType.Double => range.IsMatch(tupleIterator.Double),
+                            RangeType.Long => range.IsMatch(tupleIterator.Long),
+                            _ => range.IsMatch(tupleIterator.Sequence)
+                        };
+                    }
+
+                    break;
+                case IndexEntryFieldType.Tuple:
+                    fieldReader.Read(out _, out var longValue, out var doubleValue, out var spanValue);
+                    isMatching = rangeType switch
+                    {
+                        RangeType.Double => range.IsMatch(doubleValue),
+                        RangeType.Long => range.IsMatch(longValue),
+                        _ => range.IsMatch(spanValue)
+                    };
+                    break;
+                case IndexEntryFieldType.Simple:
+                    fieldReader.Read(out _, out spanValue);
+                    isMatching = range.IsMatch(spanValue);
+                    break;
+                default:
+                    break;
+            }
+
+            var collectionOfFacetValues = facetValues[range.RangeText];
+            if (isMatching)
+            {
+                collectionOfFacetValues.IncrementCount(1);
+                if (needToApplyAggregation)
+                    ApplyAggregation(result.Value.Aggregations, collectionOfFacetValues, ref indexEntry);
+            }
+
+            token.ThrowIfCancellationRequested();
         }
+        
 
         void CreateFacetMapping()
         {
@@ -233,6 +248,88 @@ public class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
                 facetValues.Add(key, collectionOfFacetValues);
             }
         }
+    }
+
+    private void HandleFacetsPerDocument(ref IndexEntryReader entryReader,
+        KeyValuePair<string, FacetedQueryParser.FacetResult> result,
+        Dictionary<string, Dictionary<string, FacetValues>> facetsByName,
+        bool legacy,
+        QueryTimingsScope queryTimings,
+        AnalyzersScope analyzersScope,
+        CancellationToken token)
+    {
+        var needToApplyAggregation = result.Value.Aggregations.Count > 0;
+        if (facetsByName.TryGetValue(result.Key, out var facetValues) == false)
+            facetsByName[result.Key] = facetValues = new Dictionary<string, FacetValues>();
+
+        GetFieldReader(ref entryReader, result.Value.AggregateBy, out var fieldReader);
+
+        switch (fieldReader.Type)
+        {
+            case IndexEntryFieldType.ListWithNulls:
+            case IndexEntryFieldType.List:
+            case IndexEntryFieldType.TupleList:
+            case IndexEntryFieldType.TupleListWithNulls:
+                if (fieldReader.TryReadMany(out var iterator)==false)
+                    break;
+
+                while (iterator.ReadNext())
+                {
+                    if (iterator.IsNull || iterator.IsEmpty)
+                    {
+                        facetValues[iterator.IsNull ? Constants.NullValue : Constants.EmptyString].IncrementCount(1);
+                        continue;
+                    }
+                    InsertTerm(iterator.Sequence, ref entryReader);
+                }
+        
+                break;
+            case IndexEntryFieldType.Tuple:
+            case IndexEntryFieldType.Simple:
+                if (fieldReader.Read(out var source))
+                    InsertTerm(source, ref entryReader);
+                break;
+            case IndexEntryFieldType.Null:
+                break;
+            default:
+                throw new Exception($"Got type {fieldReader.Type}");
+        }
+        
+         void InsertTerm(ReadOnlySpan<byte> source, ref IndexEntryReader entryReader)
+         {
+             var nameAsSlice = GetFieldNameAsSlice(result.Value.AggregateBy);
+             analyzersScope.Execute(nameAsSlice, source, out var buffer, out var tokens);
+
+             foreach (var tokenOutput in tokens)
+             {
+                 token.ThrowIfCancellationRequested();
+                 var term = buffer.Slice(tokenOutput.Offset, (int)tokenOutput.Length);
+                 var encodedTerm = Encodings.Utf8.GetString(term);
+
+
+                 if (facetValues.TryGetValue(encodedTerm, out var collectionOfFacetValues) == false)
+                 {
+                     var range = FacetedQueryHelper.GetRangeName(result.Value.AggregateBy, encodedTerm);
+                     collectionOfFacetValues = new FacetValues(legacy);
+                     if (needToApplyAggregation == false)
+                         collectionOfFacetValues.AddDefault(range);
+                     else
+                     {
+                         foreach (var aggregation in result.Value.Aggregations)
+                             collectionOfFacetValues.Add(aggregation.Key, range);
+                     }
+
+                     facetValues.Add(encodedTerm, collectionOfFacetValues);
+                 }
+                 
+                 collectionOfFacetValues.IncrementCount(1);
+
+                 if (needToApplyAggregation)
+                 {
+                     ApplyAggregation(result.Value.Aggregations, collectionOfFacetValues, ref entryReader);
+                 }
+             }
+         }
     }
 
     private void GetFieldReader(ref IndexEntryReader reader, in string name, out IndexEntryReader.FieldReader fieldReader)
@@ -261,7 +358,7 @@ public class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
             var name = kvp.Key.Name;
             var val = kvp.Value;
             double min = value.Min ?? double.MaxValue, max = value.Max ?? double.MinValue, sum = value.Sum ?? 0, avg = value.Average ?? 0;
-            GetFieldReader(ref entryReader, in name, out var fieldReader);
+            GetFieldReader(ref entryReader, name, out var fieldReader);
             switch (fieldReader.Type)
             {
                 case IndexEntryFieldType.TupleList:
@@ -315,7 +412,7 @@ public class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
             }
         }
     }
-
+    
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private Slice GetFieldNameAsSlice(string fieldName)
     {
