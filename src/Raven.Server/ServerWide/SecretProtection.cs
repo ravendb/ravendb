@@ -329,7 +329,7 @@ namespace Raven.Server.ServerWide
             return unprotectedData;
         }
 
-        private static void ValidateExpiration(string source, X509Certificate2 loadedCertificate, LicenseType licenseType, SetupProgressAndResult progress = null)
+        private static void ValidateExpiration(string source, X509Certificate2 loadedCertificate, LicenseType licenseType, bool throwOnExpired = true, SetupProgressAndResult progress = null)
         {
             if (loadedCertificate.NotAfter < DateTime.UtcNow)
             {
@@ -338,7 +338,8 @@ namespace Raven.Server.ServerWide
                     Logger.Operations(msg);
                 
                 progress?.AddError(msg);
-                throw new InvalidOperationException(msg);
+                if (throwOnExpired)
+                    throw new InvalidOperationException(msg);
             }
 
 
@@ -363,7 +364,7 @@ namespace Raven.Server.ServerWide
 
         public static CertificateUtils.CertificateHolder ValidateCertificateAndCreateCertificateHolder(string source, X509Certificate2 loadedCertificate, byte[] rawBytes, string password, LicenseType licenseType, bool validateCertKeyUsages, SetupProgressAndResult progress = null)
         {
-            ValidateExpiration(source, loadedCertificate, licenseType, progress);
+            ValidateExpiration(source, loadedCertificate, licenseType, progress: progress);
 
             ValidatePrivateKey(source, password, rawBytes, out var privateKey, progress);
 
@@ -517,7 +518,7 @@ namespace Raven.Server.ServerWide
             {
                 // may need to send this over the cluster, so use exportable here
                 loadedCertificate = CertificateLoaderUtil.CreateCertificate(rawData, (string)null, CertificateLoaderUtil.FlagsForExport);
-                ValidateExpiration(executable, loadedCertificate, licenseType);
+                ValidateExpiration(executable, loadedCertificate, licenseType, throwOnExpired: false);
                 ValidatePrivateKey(executable, null, rawData, out privateKey);
                 ValidateKeyUsages(executable, loadedCertificate, certificateValidationKeyUsages);
             }
@@ -770,7 +771,7 @@ namespace Raven.Server.ServerWide
                 // we need to load it as exportable because we might need to send it over the cluster
                 var loadedCertificate = CertificateLoaderUtil.CreateCertificate(rawData, password, CertificateLoaderUtil.FlagsForExport);
 
-                ValidateExpiration(path, loadedCertificate, licenseType);
+                ValidateExpiration(path, loadedCertificate, licenseType, throwOnExpired: false);
 
                 ValidatePrivateKey(path, password, rawData, out var privateKey);
 
