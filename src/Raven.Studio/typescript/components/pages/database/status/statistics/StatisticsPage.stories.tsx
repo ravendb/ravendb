@@ -14,7 +14,7 @@ import { IndexesStubs } from "../../../../../test/stubs/IndexesStubs";
 export default {
     title: "Pages/Statistics page",
     component: StatisticsPage,
-    decorators: [withStorybookContexts],
+    decorators: [withStorybookContexts, withBootstrap5],
     excludeStories: /Template$/,
 } as ComponentMeta<typeof StatisticsPage>;
 

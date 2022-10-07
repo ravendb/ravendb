@@ -567,12 +567,12 @@ $table-bg-scale:              -80% !default;
 
 // scss-docs-start table-loop
 $table-variants: (
-  "primary":    shift-color($primary, $table-bg-scale),
-  "secondary":  shift-color($secondary, $table-bg-scale),
-  "success":    shift-color($success, $table-bg-scale),
-  "info":       shift-color($info, $table-bg-scale),
-  "warning":    shift-color($warning, $table-bg-scale),
-  "danger":     shift-color($danger, $table-bg-scale),
+  "primary":    background-color-mix($primary, $table-bg-scale),
+  "secondary":  background-color-mix($secondary, $table-bg-scale),
+  "success":    background-color-mix($success, $table-bg-scale),
+  "info":       background-color-mix($info, $table-bg-scale),
+  "warning":    background-color-mix($warning, $table-bg-scale),
+  "danger":     background-color-mix($danger, $table-bg-scale),
   "light":      $light,
   "dark":       $dark,
 ) !default;
@@ -1281,9 +1281,9 @@ $alert-margin-bottom:           1rem !default;
 $alert-border-radius:           $border-radius !default;
 $alert-link-font-weight:        $font-weight-bold !default;
 $alert-border-width:            $border-width !default;
-$alert-bg-scale:                -80% !default;
-$alert-border-scale:            -70% !default;
-$alert-color-scale:             40% !default;
+$alert-bg-scale:                75% !default;
+$alert-border-scale:            60% !default;
+$alert-color-scale:             -20% !default;
 $alert-dismissible-padding-r:   $alert-padding-x * 3 !default; // 3x covers width of x plus default padding on either side
 // scss-docs-end alert-variables
 

@@ -2,7 +2,7 @@ import shardViewModelBase from "viewmodels/shardViewModelBase";
 import { StatisticsPage } from "../../../components/pages/database/status/statistics/StatisticsPage";
 
 class statistics extends shardViewModelBase {
-    view = { default: `<section class="stats content-margin" data-bind="react: reactOptions"></section>` };
+    view = { default: `<section class="content-margin" data-bind="react: reactOptions"></section>` };
 
     props: Parameters<typeof StatisticsPage>[0];
     
@@ -18,6 +18,10 @@ class statistics extends shardViewModelBase {
         component: StatisticsPage,
         props: this.props
     }));
+
+    isUsingBootstrap5() {
+        return true;
+    }
 }
 
 export = statistics;

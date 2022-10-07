@@ -1,7 +1,7 @@
 ﻿import React from "react";
 import { OngoingTasksPage } from "./OngoingTasksPage";
 import { ComponentMeta, ComponentStory } from "@storybook/react";
-import { forceStoryRerender, withStorybookContexts } from "../../../../../test/storybookTestUtils";
+import { forceStoryRerender, withStorybookContexts, withBootstrap5 } from "../../../../../test/storybookTestUtils";
 import { DatabasesStubs } from "../../../../../test/stubs/DatabasesStubs";
 import accessManager from "common/shell/accessManager";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
@@ -34,7 +34,7 @@ function tasksHolder(storyFn: any) {
 export default {
     title: "Pages/Ongoing tasks page",
     component: OngoingTasksPage,
-    decorators: [withStorybookContexts, tasksHolder],
+    decorators: [withStorybookContexts, tasksHolder, withBootstrap5],
     excludeStories: /Template$/,
 } as ComponentMeta<typeof OngoingTasksPage>;
 
