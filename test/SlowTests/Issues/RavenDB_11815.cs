@@ -2,6 +2,7 @@
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -198,8 +199,10 @@ groupBy(x => x.Total.Currency)
             public string Currency { get; set; }
         }
 
-        [Fact]
-        public void CanUseNestedFieldValueInGroupBy()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]     
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "complex object")]
+        public void CanUseNestedFieldValueInGroupBy(Options options)
         {
             using (var store = GetDocumentStore())
             {

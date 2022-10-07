@@ -78,7 +78,7 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanLoadOnStoredField(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -116,8 +116,7 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void IndexWithDynamicFieldsShouldNotTryToExtractBySourceAliasIfFieldIsMissing(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -136,8 +135,7 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void IndexWithDynamicFieldsShouldNotTryToExtractBySourceAliasIfFieldIsNotStored(Options options)
         {
             using (var store = GetDocumentStore(options))

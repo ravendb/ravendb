@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Subscriptions
             if (DocSent)
             {
                 // we don't mix resend and regular, so we need to do another round when we are done with the resend
-                SubscriptionConnectionsState.NotifyHasMoreDocs(); 
+                SubscriptionConnectionsState.NotifyHasMoreDocs();
                 yield break;
             }
 
@@ -42,7 +42,7 @@ namespace Raven.Server.Documents.Subscriptions
         }
     }
 
-    public abstract class SubscriptionFetcher     
+    public abstract class SubscriptionFetcher
     {
         protected readonly DocumentDatabase Database;
         protected readonly SubscriptionConnectionsState SubscriptionConnectionsState;
@@ -71,7 +71,7 @@ namespace Raven.Server.Documents.Subscriptions
             StartEtag = SubscriptionConnectionsState.GetLastEtagSent();
             DocSent = false;
         }
-        
+
         public enum FetchingOrigin
         {
             None,
@@ -93,7 +93,7 @@ namespace Raven.Server.Documents.Subscriptions
     {
         public RevisionSubscriptionFetcher(DocumentDatabase database, SubscriptionConnectionsState subscriptionConnectionsState, string collection) : base(database, subscriptionConnectionsState, collection)
         {
-        
+
         }
 
         protected override IEnumerable<(Document Previous, Document Current)> FetchByEtag()
@@ -101,9 +101,9 @@ namespace Raven.Server.Documents.Subscriptions
             return Collection switch
             {
                 Constants.Documents.Collections.AllDocumentsCollection =>
-                    Database.DocumentsStorage.RevisionsStorage.GetRevisionsFrom(DocsContext, StartEtag + 1, 0, long.MaxValue),
+                    Database.DocumentsStorage.RevisionsStorage.GetCurrentAndPreviousRevisionsForSubscriptionsFrom(DocsContext, StartEtag + 1, 0, long.MaxValue),
                 _ =>
-                    Database.DocumentsStorage.RevisionsStorage.GetRevisionsFrom(DocsContext, new CollectionName(Collection), StartEtag + 1, long.MaxValue)
+                    Database.DocumentsStorage.RevisionsStorage.GetCurrentAndPreviousRevisionsForSubscriptionsFrom(DocsContext, new CollectionName(Collection), StartEtag + 1, long.MaxValue)
             };
         }
 
@@ -112,7 +112,7 @@ namespace Raven.Server.Documents.Subscriptions
             foreach (var r in SubscriptionConnectionsState.GetRevisionsFromResend(ClusterContext, Active))
             {
                 yield return (
-                    Database.DocumentsStorage.RevisionsStorage.GetRevision(DocsContext, r.Previous), 
+                    Database.DocumentsStorage.RevisionsStorage.GetRevision(DocsContext, r.Previous),
                     Database.DocumentsStorage.RevisionsStorage.GetRevision(DocsContext, r.Current)
                     );
             }
@@ -121,7 +121,7 @@ namespace Raven.Server.Documents.Subscriptions
 
     public class DocumentSubscriptionFetcher : SubscriptionFetcher<Document>
     {
-        public DocumentSubscriptionFetcher(DocumentDatabase database, SubscriptionConnectionsState subscriptionConnectionsState, string collection) : 
+        public DocumentSubscriptionFetcher(DocumentDatabase database, SubscriptionConnectionsState subscriptionConnectionsState, string collection) :
             base(database, subscriptionConnectionsState, collection)
         {
         }
@@ -148,7 +148,7 @@ namespace Raven.Server.Documents.Subscriptions
             {
                 yield return new Document
                 {
-                    Id = DocsContext.GetLazyString(record.DocumentId), 
+                    Id = DocsContext.GetLazyString(record.DocumentId),
                     ChangeVector = record.ChangeVector
                 };
             }

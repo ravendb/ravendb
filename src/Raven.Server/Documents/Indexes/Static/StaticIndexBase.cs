@@ -9,6 +9,7 @@ using Corax.Utils;
 using Lucene.Net.Documents;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Exceptions.Corax;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.NotificationCenter.Notifications;
@@ -415,7 +416,7 @@ namespace Raven.Server.Documents.Indexes.Static
             };
         }
 
-        protected IEnumerable<object> CoraxCreateField(CurrentIndexingScope scope, string name, object value, CreateFieldOptions options)
+        protected IEnumerable<CoraxDynamicItem> CoraxCreateField(CurrentIndexingScope scope, string name, object value, CreateFieldOptions options)
         {
             options = options ?? CreateFieldOptions.Default;
 
@@ -433,8 +434,16 @@ namespace Raven.Server.Documents.Indexes.Static
             if (scope.DynamicFields == null)
                 scope.DynamicFields = new Dictionary<string, FieldIndexing>();
 
+            var fieldAlreadyExists = scope.DynamicFields.ContainsKey(name);
+            if (fieldAlreadyExists == false)
+                scope.CreatedFieldsCount++;
+            else if (fieldAlreadyExists && scope.DynamicFields[name] != field.Indexing)
+            {
+                throw new InvalidDataException($"Inconsistent dynamic field creation options were detected. Field '{name}' was created with '{scope.DynamicFields[name]}' analyzer but now '{field.Indexing}' analyzer was specified. This is not supported");
+            }
             scope.DynamicFields[name] = field.Indexing;
-            
+
+
             var result = new List<CoraxDynamicItem>();
             result.Add(new CoraxDynamicItem()
             {

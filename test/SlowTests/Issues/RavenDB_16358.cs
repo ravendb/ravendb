@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
+using Sparrow.Collections;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,7 +19,10 @@ namespace SlowTests.Issues
         [Fact]
         public async Task AggressiveCacheWithTimeoutTestAsync()
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(new Options()
+            {
+                ModifyDocumentStore = s => s.Conventions.DisableTopologyUpdates = true,
+            });
 
             var requestExecutor = store.GetRequestExecutor();
             using (var session = store.OpenSession())
@@ -34,12 +39,17 @@ namespace SlowTests.Issues
 
             Assert.Equal(requests, requestExecutor.NumberOfServerRequests);
 
+            var urls = new ConcurrentSet<string>();
+            requestExecutor.OnBeforeRequest += (sender, args) =>
+            {
+                urls.Add(args.Url);
+            };
             await Task.Delay(500); // cache timed out
 
             await LoadDataAsync(store);
 
             // additional request expected after cache timed out
-            Assert.Equal(requests + 1, requestExecutor.NumberOfServerRequests);
+            Assert.True(requests + 1 == requestExecutor.NumberOfServerRequests, $"Request number should be {requests + 1} but was {requestExecutor.NumberOfServerRequests}, Requests Urls: {string.Join(" ", urls)}");
 
             await LoadDataAsync(store);
 
@@ -60,7 +70,10 @@ namespace SlowTests.Issues
         [Fact]
         public void AggressiveCacheWithTimeoutTest()
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(new Options()
+            {
+                ModifyDocumentStore = s => s.Conventions.DisableTopologyUpdates = true,
+            });
 
             var requestExecutor = store.GetRequestExecutor();
             using (var session = store.OpenSession())
@@ -77,12 +90,17 @@ namespace SlowTests.Issues
 
             Assert.Equal(requests, requestExecutor.NumberOfServerRequests);
 
+            var urls = new ConcurrentSet<string>();
+            requestExecutor.OnBeforeRequest += (sender, args) =>
+            {
+                urls.Add(args.Url);
+            };
             Thread.Sleep(500); // cache timed out
 
             LoadData(store); 
 
             // additional request expected after cache timed out
-            Assert.Equal(requests + 1, requestExecutor.NumberOfServerRequests);
+            Assert.True(requests + 1 == requestExecutor.NumberOfServerRequests, $"Request number should be {requests + 1} but was {requestExecutor.NumberOfServerRequests}, Requests Urls: {string.Join(" ", urls)}");
 
             LoadData(store);
 

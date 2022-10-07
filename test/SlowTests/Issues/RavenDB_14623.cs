@@ -3,6 +3,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,8 +15,10 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void StoreAllFields_Test()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-19393")]
+        public void StoreAllFields_Test(Options options)
         {
             TestDocument documentInInterest = new TestDocument
             {
@@ -23,7 +26,7 @@ namespace SlowTests.Issues
                 ArrayOfStrings = new string[] { "123", "234", "345" }
             };
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex(new MyIndex());
                 store.ExecuteIndex(new MyJSIndex());

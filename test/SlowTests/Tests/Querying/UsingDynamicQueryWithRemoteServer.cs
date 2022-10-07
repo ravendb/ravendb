@@ -456,8 +456,7 @@ namespace SlowTests.Tests.Querying
 
                     Assert.Equal(1, results.Length);
                     Assert.NotEmpty(highlightings.GetFragments(results.First().Category));
-                    // TODO Federico - this fails in Corax
-                    // Assert.Equal(@"<b style=""background:yellow"">Lorem</b> ipsum dolor", highlightings.GetFragments(results.First().Category).First());
+                    Assert.Equal(@"<b style=""background:yellow"">Lorem</b> ipsum dolor", highlightings.GetFragments(results.First().Category).First());
                 }
             }
         }
@@ -527,8 +526,7 @@ namespace SlowTests.Tests.Querying
 
                     Assert.Equal(1, results.Length);
                     Assert.NotEmpty(highlightings.GetFragments(results.First().Category));
-                    // TODO Federico - this fails in Corax
-                    // Assert.Equal(@"<b style=""background:yellow"">Lorem</b> ipsum dolor",highlightings.GetFragments(results.First().Category).First());
+                    Assert.Equal(@"<b style=""background:yellow"">Lorem</b> ipsum dolor",highlightings.GetFragments(results.First().Category).First());
                 }
             }
         }

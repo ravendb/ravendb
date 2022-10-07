@@ -9,6 +9,7 @@ using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Util;
+using Raven.Server.Utils;
 using Raven.Server.Commercial.SetupWizard;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -148,9 +149,7 @@ namespace Raven.Server.Commercial
             try
             {
                 var localCertBytes = Convert.FromBase64String(Certificate);
-                return string.IsNullOrEmpty(Password)
-                    ? new X509Certificate2(localCertBytes, (string)null, X509KeyStorageFlags.MachineKeySet)
-                    : new X509Certificate2(localCertBytes, Password, X509KeyStorageFlags.MachineKeySet);
+                return CertificateLoaderUtil.CreateCertificate(localCertBytes, Password);
             }
             catch (Exception e)
             {

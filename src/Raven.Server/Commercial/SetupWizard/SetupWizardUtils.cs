@@ -5,6 +5,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Raven.Client.ServerWide.Operations.Certificates;
+using Raven.Client;
 using Raven.Server.Commercial.LetsEncrypt;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
@@ -30,7 +31,7 @@ public static class SetupWizardUtils
             {
                 var base64 = parameters.SetupInfo.Certificate;
                 serverCertBytes = Convert.FromBase64String(base64);
-                serverCert = new X509Certificate2(serverCertBytes, parameters.SetupInfo.Password, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+                serverCert = CertificateLoaderUtil.CreateCertificate(serverCertBytes, parameters.SetupInfo.Password, CertificateLoaderUtil.FlagsForExport);
 
                 var localNodeTag = parameters.SetupInfo.LocalNodeTag ?? parameters.SetupInfo.NodeSetupInfos.Keys.FirstOrDefault();
                 if (localNodeTag is null)
@@ -107,8 +108,7 @@ public static class SetupWizardUtils
                 if (parameters.PutCertificateInCluster != null && parameters.SetupInfo.RegisterClientCert && parameters.SetupInfo.ZipOnly == false)
                     await parameters.PutCertificateInCluster(selfSignedCertificate, certificateDefinition);
 
-                clientCert = new X509Certificate2(certBytes, (string)null,
-                    X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.MachineKeySet);
+                clientCert = CertificateLoaderUtil.CreateCertificate(certBytes, flags: CertificateLoaderUtil.FlagsForPersist);
             }
             catch (Exception e)
             {

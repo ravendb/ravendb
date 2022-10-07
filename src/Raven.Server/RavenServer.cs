@@ -23,6 +23,7 @@ using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
+using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Exceptions.Database;
@@ -1209,7 +1210,7 @@ namespace Raven.Server
                 X509Certificate2 newCertificate;
                 try
                 {
-                    newCertificate = new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.MachineKeySet);
+                    newCertificate = CertificateLoaderUtil.CreateCertificate(certBytes, flags: CertificateLoaderUtil.FlagsForPersist);
                 }
                 catch (Exception e)
                 {
@@ -1642,7 +1643,7 @@ namespace Raven.Server
             foreach (var certDef in certificatesWithSameHash.OrderByDescending(x => x.NotAfter))
             {
                 // Hash is good, let's validate it was signed by a known issuer, otherwise users can use the private key to register a new cert with a different issuer.
-                using (var goodKnownCert = new X509Certificate2(Convert.FromBase64String(certDef.Certificate)))
+                using (var goodKnownCert = CertificateLoaderUtil.CreateCertificate(Convert.FromBase64String(certDef.Certificate)))
                 {
                     if (CertificateUtils.CertHasKnownIssuer(certificate, goodKnownCert, Configuration.Security, out issuerHash))
                     {

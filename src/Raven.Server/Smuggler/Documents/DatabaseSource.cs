@@ -256,15 +256,11 @@ namespace Raven.Server.Smuggler.Documents
             {
                 var etag = state.StartEtagByCollection[collection];
 
-                var collectionName = _database.DocumentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
-                if (collectionName == null)
-                    continue;
-
                 state.CurrentCollection = collection;
 
-                foreach (var document in _database.DocumentsStorage.RevisionsStorage.GetRevisionsFrom(context, collectionName, etag, long.MaxValue))
+                foreach (var document in _database.DocumentsStorage.RevisionsStorage.GetRevisionsFrom(context, collection, etag, long.MaxValue))
                 {
-                    yield return document.Current;
+                    yield return document;
                 }
             }
         }

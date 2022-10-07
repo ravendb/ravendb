@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -102,10 +103,12 @@ if (typeof Object.assign !== 'function') {
             }
         }
 
-        [Fact]
-        public void CanUseComplexObjectInJavascriptMapReduce()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "complex")]
+        public void CanUseComplexObjectInJavascriptMapReduce(Options options)
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
             using (var s = store.OpenSession())
             {
                 s.Store(new Item());

@@ -172,8 +172,7 @@ public partial class IndexSearcher
         where TLow : struct, Range.Marker
         where THigh : struct, Range.Marker
     {
-        var fields = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
-        var terms = fields?.CompactTreeFor(fieldName);
+        var terms = _fieldsTree?.CompactTreeFor(fieldName);
         if (terms == null)
             return MultiTermMatch.CreateEmpty(_transaction.Allocator);
 
@@ -192,12 +191,11 @@ public partial class IndexSearcher
         where TLow : struct, Range.Marker
         where THigh : struct, Range.Marker
     {
-        var fields = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
-        var terms = fields?.CompactTreeFor(fieldName);
+        var terms = _fieldsTree?.CompactTreeFor(fieldName);
         if (terms == null)
             return MultiTermMatch.CreateEmpty(_transaction.Allocator);
 
-        var set = fields?.FixedTreeFor(fieldLong, sizeof(long));
+        var set = _fieldsTree?.FixedTreeFor(fieldLong, sizeof(long));
 
         return (isNegated, scoreFunction) switch
         {
@@ -214,12 +212,11 @@ public partial class IndexSearcher
         where TLow : struct, Range.Marker
         where THigh : struct, Range.Marker
     {
-        var fields = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
-        var terms = fields?.CompactTreeFor(fieldName);
+        var terms = _fieldsTree?.CompactTreeFor(fieldName);
         if (terms == null)
             return MultiTermMatch.CreateEmpty(_transaction.Allocator);
 
-        var set = fields?.FixedTreeForDouble(fieldLong, sizeof(long));
+        var set = _fieldsTree?.FixedTreeForDouble(fieldLong, sizeof(long));
 
         return (isNegated, scoreFunction) switch
         {

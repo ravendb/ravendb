@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Sparrow.Server;
 using Voron;
 
@@ -8,15 +8,17 @@ namespace Corax
     {
         public const string NullValue = "NULL_VALUE";
         public const string EmptyString = "EMPTY_STRING";
-        public static readonly Slice NullValueSlice, EmptyStringSlice;
         public const string IndexMetadata = "@index_metadata";
-        
+
+        public static readonly Slice NullValueSlice, EmptyStringSlice, IndexMetadataSlice;
+
         static Constants()
         {
             using (StorageEnvironment.GetStaticContext(out var ctx))
             {
                 Slice.From(ctx, NullValue, ByteStringType.Immutable, out NullValueSlice);
                 Slice.From(ctx, EmptyString, ByteStringType.Immutable, out EmptyStringSlice);
+                Slice.From(ctx, IndexMetadata, ByteStringType.Immutable, out IndexMetadataSlice);
             }
         }
         
@@ -47,7 +49,7 @@ namespace Corax
             private static readonly byte[] LongTreeSuffixBytes = new byte[]  { (byte)'-', (byte)'L' };
 
             
-            public static readonly Slice PostingListsSlice, EntriesContainerSlice, FieldsSlice, NumberOfEntriesSlice, SuggestionsFieldsSlice, IndexVersionSlice;
+            public static readonly Slice PostingListsSlice, EntriesContainerSlice, FieldsSlice, NumberOfEntriesSlice, SuggestionsFieldsSlice, IndexVersionSlice, DynamicFieldsAnalyzersSlice;
             public const int IntKnownFieldMask = unchecked((int)0x80000000);
             public const short ShortKnownFieldMask = unchecked((short)0x8000);
             public const byte ByteKnownFieldMask = unchecked((byte)0x80);
@@ -62,6 +64,7 @@ namespace Corax
                     Slice.From(ctx, "NumberOfEntries", ByteStringType.Immutable, out NumberOfEntriesSlice);
                     Slice.From(ctx, "SuggestionFields", ByteStringType.Immutable, out SuggestionsFieldsSlice);
                     Slice.From(ctx, "IndexVersion", ByteStringType.Immutable, out IndexVersionSlice);
+                    Slice.From(ctx, "DynamicFieldsAnalyzers", ByteStringType.Immutable, out DynamicFieldsAnalyzersSlice);
                 }
             }
         }

@@ -81,7 +81,10 @@ namespace Corax.Queries
             {
                 static long CountFunc(ref MultiTermMatch match)
                 {
-                    return ((TTermMatch)match._inner).Count;
+                    if (match._inner is TTermMatch inner)
+                        return inner.Count;
+
+                    return match._inner.Count;
                 }
                 static int FillFunc(ref MultiTermMatch match, Span<long> matches)
                 {

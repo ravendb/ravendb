@@ -5,6 +5,7 @@ using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,10 +17,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void ShouldWork()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void ShouldWork(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new MapReduceWithOutputToCollection().Execute(store);
                 new JavaIndex().Execute(store);
@@ -49,6 +51,7 @@ namespace SlowTests.Issues
                 {
                     var q1 = session.Query<ThirdOutput>(collectionName: "ThirdOutput");
                     var res = q1.FirstOrDefault();
+                    WaitForUserToContinueTheTest(store);
                     Assert.NotNull(res.Communications.CommunicationType);
                     Assert.Equal("1", res.Communications.CommunicationType.Communication.Value);
 
@@ -72,10 +75,11 @@ namespace SlowTests.Issues
         }
 
         // RavenDB-14884
-        [Fact]
-        public void CanCompileScriptWithSwitch()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanCompileScriptWithSwitch(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new Index_Rows().Execute(store);
                 var id = "row/1";
