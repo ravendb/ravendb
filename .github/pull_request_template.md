@@ -12,8 +12,8 @@ _Please delete below the options that are not relevant_
 
 - Bug fix
 - Regression bug fix
-- New feature
 - Optimization
+- New feature
 
 ### How risky is the change?
 
@@ -24,9 +24,9 @@ _Please delete below the options that are not relevant_
 
 ### Backward compatibility
 
+- Non breaking change
 - Ensured. Please explain how has it been implemented?
 - Breaking change
-- Non breaking change
 - Not relevant
 
 ### Is it platform specific issue?
