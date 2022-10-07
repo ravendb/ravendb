@@ -28,6 +28,7 @@ public class SpatialMatch : IQueryMatch
     private bool _isTermMatch;
     private IDisposable _startsWithDisposeHandler;
     private HashSet<long> _alreadyReturned;
+    private Slice _fieldNameSlice;
 
     public SpatialMatch(IndexSearcher indexSearcher, ByteStringContext allocator, SpatialContext spatialContext, string fieldName, IShape shape,
         CompactTree tree,
@@ -37,6 +38,7 @@ public class SpatialMatch : IQueryMatch
         _indexSearcher = indexSearcher;
         _spatialContext = spatialContext ?? throw new ArgumentNullException($"{nameof(spatialContext)} passed to {nameof(SpatialMatch)} is null.");
         _fieldName = fieldName;
+        Slice.From(allocator, fieldName, out _fieldNameSlice);
         _error = SpatialUtils.GetErrorFromPercentage(spatialContext, shape, errorInPercentage);
         _shape = shape;
         _tree = tree;
@@ -108,16 +110,15 @@ public class SpatialMatch : IQueryMatch
     private bool CheckEntryManually(long id)
     {
         var reader = _indexSearcher.GetReaderFor(id);
-        var type = reader.GetFieldType(_fieldId, out _);
+        var fieldReader = reader.GetReaderFor(_fieldNameSlice, _fieldId);
         if (_alreadyReturned?.TryGetValue(id, out _) ?? false)
         {
             return false;
         }
-        
-        if (type.HasFlag(IndexEntryFieldType.List))
+
+        if (fieldReader.TryReadManySpatialPoint(out var iterator))
         {
             _alreadyReturned ??= new HashSet<long>();
-            var iterator = reader.ReadManySpatialPoint(_fieldId);
             while (iterator.ReadNext())
             {
                 var point = new Point(iterator.Longitude, iterator.Latitude, _spatialContext);
@@ -128,9 +129,8 @@ public class SpatialMatch : IQueryMatch
                 }
             }
         }
-        else
+        else if (fieldReader.Read(out (double Lat, double Lon) coorinate))
         {
-            reader.GetReaderFor(_fieldId).Read(out (double Lat, double Lon) coorinate);
             var point = new Point(coorinate.Lon, coorinate.Lat, _spatialContext);
             if (IsTrue(point.Relate(_shape)))
             {
@@ -156,11 +156,14 @@ public class SpatialMatch : IQueryMatch
         for (int i = 0; i < matches; ++i)
         {
             var reader = _indexSearcher.GetReaderFor(buffer[i]);
-            reader.GetReaderFor(_fieldId).Read(out (double Lat, double Lon) coorinate);
-            var point = new Point(coorinate.Lon, coorinate.Lat, _spatialContext);
-            if (IsTrue(point.Relate(_shape)))
+            var entryReader = reader.GetReaderFor(_fieldNameSlice, _fieldId);
+            if (entryReader.Read(out (double Lat, double Lon) coorinate))
             {
-                buffer[currentIdx++] = buffer[i];
+                var point = new Point(coorinate.Lon, coorinate.Lat, _spatialContext);
+                if (IsTrue(point.Relate(_shape)))
+                {
+                    buffer[currentIdx++] = buffer[i];
+                }
             }
         }
 

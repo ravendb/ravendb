@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
+using Microsoft.AspNetCore.Server.Kestrel.Https;
+using Raven.Client;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Replication;
@@ -219,7 +221,8 @@ namespace Raven.Server.Documents.Replication
                         return _server.Server.Certificate.Certificate;
 
                     var certBytes = Convert.FromBase64String(sink.CertificateWithPrivateKey);
-                    return new X509Certificate2(certBytes, sink.CertificatePassword, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+
+                    return CertificateLoaderUtil.CreateCertificate(certBytes, sink.CertificatePassword, CertificateLoaderUtil.FlagsForExport);
 
                 default:
                     throw new ArgumentException($"Unknown node type {node.GetType().FullName}");

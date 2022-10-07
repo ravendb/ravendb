@@ -92,7 +92,7 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void SupportForCreateFieldWithOptions(Options options)
         {
             using (var store = GetDocumentStore(options))

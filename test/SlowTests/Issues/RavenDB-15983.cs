@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -38,10 +39,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanIndexMultipleFieldsWithSameNameUsingCreateField()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanIndexMultipleFieldsWithSameNameUsingCreateField(Options options)
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
             new Index().Execute(store);
             using (var session = store.OpenSession())
             {

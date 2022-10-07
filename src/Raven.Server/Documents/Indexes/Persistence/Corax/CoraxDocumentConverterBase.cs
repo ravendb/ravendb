@@ -24,6 +24,7 @@ using RavenConstants = Raven.Client.Constants;
 using CoraxConstants = Corax.Constants;
 using Encoding = System.Text.Encoding;
 using System.Diagnostics;
+using Raven.Client.Exceptions.Corax;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
@@ -281,21 +282,14 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
 
             case ValueType.Enumerable:
                 RuntimeHelpers.EnsureSufficientExecutionStack();
+                
                 var iterator = (IEnumerable)value;
-                if (EnumerableDataStructExist == false)
-                {
-                    StringsListForEnumerableScope = new(InitialSizeOfEnumerableBuffer);
-                    LongsListForEnumerableScope = new(InitialSizeOfEnumerableBuffer);
-                    DoublesListForEnumerableScope = new(InitialSizeOfEnumerableBuffer);
-                    BlittableJsonReaderObjectsListForEnumerableScope = new(InitialSizeOfEnumerableBuffer);
-                    CoraxSpatialPointEntryListForEnumerableScope = new(InitialSizeOfEnumerableBuffer);
-                }
 
                 var canFinishEnumerableWriting = false;
                 if (scope is not EnumerableWriterScope enumerableWriterScope)
                 {
                     canFinishEnumerableWriting = true;
-                    enumerableWriterScope = new EnumerableWriterScope(StringsListForEnumerableScope, LongsListForEnumerableScope, DoublesListForEnumerableScope, CoraxSpatialPointEntryListForEnumerableScope, BlittableJsonReaderObjectsListForEnumerableScope, _allocator);
+                    enumerableWriterScope = CreateEnumerableWriterScope();
                 }
                
                 foreach (var item in iterator)
@@ -365,9 +359,9 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 InsertRegularField(cdi!.Field, cdi.Value, indexContext, ref entryWriter, scope, nestedArray);
                 break;
             case ValueType.Stream:
-                throw new NotImplementedException();
+                throw new NotImplementedInCoraxException($"Streams are not implemented in Corax yet");
             case ValueType.Lucene:
-                throw new NotSupportedException("The Lucene value type is not supportes by Corax. You can change index type into Lucene.");
+                throw new NotSupportedException("The Lucene value type is not supported by Corax. You can change index type into Lucene.");
             default:
                 throw new NotImplementedException();
         }
@@ -400,8 +394,9 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         
         if (field.Indexing is not FieldIndexing.No) 
             AssertOrAdjustIndexingOptionForComplexObject(field);
-
-        GetKnownFieldsForWriter().GetByFieldId(field.Id).SetAnalyzer(null);
+        if (GetKnownFieldsForWriter().TryGetByFieldId(field.Id, out var binding))
+            binding.SetAnalyzer(null);
+        
         scope.Write(field.Name, field.Id, val, ref entryWriter);
     }
 
@@ -435,6 +430,20 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         throw new NotSupportedException(exceptionMessage);
     }
 
+    protected EnumerableWriterScope CreateEnumerableWriterScope()
+    {
+        if (EnumerableDataStructExist == false)
+        {
+            StringsListForEnumerableScope = new(InitialSizeOfEnumerableBuffer);
+            LongsListForEnumerableScope = new(InitialSizeOfEnumerableBuffer);
+            DoublesListForEnumerableScope = new(InitialSizeOfEnumerableBuffer);
+            BlittableJsonReaderObjectsListForEnumerableScope = new(InitialSizeOfEnumerableBuffer);
+            CoraxSpatialPointEntryListForEnumerableScope = new(InitialSizeOfEnumerableBuffer);
+        }
+        
+        return new EnumerableWriterScope(StringsListForEnumerableScope, LongsListForEnumerableScope, DoublesListForEnumerableScope, CoraxSpatialPointEntryListForEnumerableScope, BlittableJsonReaderObjectsListForEnumerableScope, _allocator);
+    }
+    
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static FieldIndexingMode TranslateRavenFieldIndexingIntoCoraxFieldIndexingMode(FieldIndexing indexing) => indexing switch
     {

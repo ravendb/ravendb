@@ -44,7 +44,8 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
     private readonly bool _ownsTransaction;
 
-    private Tree _metadataTree;
+    private readonly Tree _metadataTree;
+    private readonly Tree _fieldsTree;
 
     // The reason why we want to have the transaction open for us is so that we avoid having
     // to explicitly provide the index searcher with opening semantics and also every new
@@ -54,7 +55,8 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         _ownsTransaction = true;
         _transaction = environment.ReadTransaction();
         _fieldMapping = fieldsMapping ?? new IndexFieldsMapping(_transaction.Allocator);
-        _metadataTree = _transaction.ReadTree(Constants.IndexMetadata);
+        _fieldsTree = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
+        _metadataTree = _transaction.ReadTree(Constants.IndexMetadataSlice);
     }
 
     public IndexSearcher(Transaction tx, IndexFieldsMapping fieldsMapping = null)
@@ -62,7 +64,8 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         _ownsTransaction = false;
         _transaction = tx;
         _fieldMapping = fieldsMapping ?? new IndexFieldsMapping(_transaction.Allocator);
-        _metadataTree = _transaction.ReadTree(Constants.IndexMetadata);
+        _fieldsTree = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
+        _metadataTree = _transaction.ReadTree(Constants.IndexMetadataSlice);
     }
 
     public UnmanagedSpan GetIndexEntryPointer(long id)
@@ -80,19 +83,25 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     public static IndexEntryReader GetReaderFor(Transaction transaction, ref Page page, long id, out int rawSize)
     {
         var item = Container.MaybeGetFromSamePage(transaction.LowLevelTransaction, ref page, id);
+        int size = ZigZagEncoding.Decode<int>(item.Address, out var len);
+
         rawSize = item.Length;
-        var data = item.ToSpan();
-        int size = ZigZagEncoding.Decode<int>(data, out var len);
-        return new IndexEntryReader(data.Slice(size + len));
+        int headerSize = size + len;
+        return new IndexEntryReader(new Span<byte>(item.Address + headerSize, item.Length - headerSize));
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public IndexEntryReader GetReaderAndIdentifyFor(long id, out string key)
     {
-        var data = Container.MaybeGetFromSamePage(_transaction.LowLevelTransaction, ref _lastPage, id).ToSpan();
-        int size = ZigZagEncoding.Decode<int>(data, out var len);
-        key = Encoding.UTF8.GetString(data.Slice(len, size));
-        return new(data.Slice(size + len));
+        var item = Container.MaybeGetFromSamePage(_transaction.LowLevelTransaction, ref _lastPage, id);
+
+        int size = ZigZagEncoding.Decode<int>(item.Address, out var len);
+
+        var idSpan = new ReadOnlySpan<byte>(item.Address + len, size);
+        key = Encoding.UTF8.GetString(idSpan);
+        
+        int headerSize = size + len;
+        return new(new Span<byte>(item.Address + headerSize, item.Length - headerSize));
     }
 
     public string GetIdentityFor(long id)
@@ -199,8 +208,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
     public long GetEntriesAmountInField(string name)
     {
-        var fields = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
-        var terms = fields?.CompactTreeFor(name);
+        var terms = _fieldsTree?.CompactTreeFor(name);
 
         return terms?.NumberOfEntries ?? 0;
     }
@@ -208,8 +216,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     public bool TryGetTermsOfField(string field, out ExistsTermProvider existsTermProvider)
     {
         using var _ = Slice.From(Allocator, field, ByteStringType.Immutable, out var fieldName);
-        var fields = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
-        var terms = fields?.CompactTreeFor(fieldName);
+        var terms = _fieldsTree?.CompactTreeFor(fieldName);
 
         if (terms == null)
         {
@@ -223,12 +230,12 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     
     public List<string> GetFields()
     {
-        var termContainer = new List<string>();
+        List<string> fieldsInIndex = new();
         var fields = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
 
         //Return an empty set when the index doesn't contain any fields. Case when index has 0 entries.
         if (fields is null)
-            return termContainer;
+            return fieldsInIndex;
         
         
         using (var it = fields.Iterate(false))
@@ -240,12 +247,12 @@ public sealed unsafe partial class IndexSearcher : IDisposable
                     if (it.CurrentKey.EndsWith(Constants.IndexWriter.DoubleTreeSuffix) || it.CurrentKey.EndsWith(Constants.IndexWriter.LongTreeSuffix))
                         continue;
                     
-                    termContainer.Add(it.CurrentKey.ToString());
+                    fieldsInIndex.Add(it.CurrentKey.ToString());
                 } while (it.MoveNext());
             }
         }
        
-        return termContainer;
+        return fieldsInIndex;
     }
     
     

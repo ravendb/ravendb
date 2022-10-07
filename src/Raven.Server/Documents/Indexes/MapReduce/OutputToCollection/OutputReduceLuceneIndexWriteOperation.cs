@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
+using Raven.Server.Documents.Indexes.Persistence;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Exceptions;
@@ -16,82 +17,53 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 {
     public class OutputReduceLuceneIndexWriteOperation : LuceneIndexWriteOperation
     {
-        private readonly OutputReduceToCollectionCommandBatcher _outputReduceToCollectionCommandBatcher;
-        private readonly TransactionHolder _txHolder;
+        private readonly OutputReduceIndexWriteOperationScope<OutputReduceLuceneIndexWriteOperation> _outputScope;
 
         public OutputReduceLuceneIndexWriteOperation(MapReduceIndex index, LuceneVoronDirectory directory, LuceneDocumentConverterBase converter, Transaction writeTransaction,
             LuceneIndexPersistence persistence, JsonOperationContext indexContext)
             : base(index, directory, converter, writeTransaction, persistence)
         {
             Debug.Assert(index.OutputReduceToCollection != null);
-            _txHolder = new TransactionHolder(writeTransaction);
-            _outputReduceToCollectionCommandBatcher = index.OutputReduceToCollection.CreateCommandBatcher(indexContext, _txHolder);
+            _outputScope = new(index, writeTransaction, indexContext, this);
         }
 
         public override void Commit(IndexingStatsScope stats)
         {
-            var enqueue = CommitOutputReduceToCollection();
-
-            using (_txHolder.AcquireTransaction(out _))
-            {
+            if (_outputScope.IsActive)
                 base.Commit(stats);
-            }
-
-            try
-            {
-                using (stats.For(IndexingOperation.Reduce.SaveOutputDocuments))
-                {
-                    enqueue.GetAwaiter().GetResult();
-                }
-            }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch (ObjectDisposedException e) when (DocumentDatabase.DatabaseShutdown.IsCancellationRequested)
-            {
-                throw new OperationCanceledException("The operation of writing output reduce documents was cancelled because of database shutdown", e);
-            }
-            catch (Exception e) when (e.IsOutOfMemory() || e is DiskFullException)
-            {
-                throw;
-            }
-            catch (Exception e)
-            {
-                throw new IndexWriteException("Failed to save output reduce documents to disk", e);
-            }
+            else
+                _outputScope.Commit(stats);
         }
 
-        private async Task CommitOutputReduceToCollection()
+        public override void IndexDocument(LazyStringValue key, LazyStringValue sourceDocumentId, object document, IndexingStatsScope stats,
+            JsonOperationContext indexContext)
         {
-            foreach (var command in _outputReduceToCollectionCommandBatcher.CreateCommands())
-                await DocumentDatabase.TxMerger.Enqueue(command).ConfigureAwait(false);
-        }
-
-        public override void IndexDocument(LazyStringValue key, LazyStringValue sourceDocumentId, object document, IndexingStatsScope stats, JsonOperationContext indexContext)
-        {
-            base.IndexDocument(key, sourceDocumentId, document, stats, indexContext);
-
-            _outputReduceToCollectionCommandBatcher.AddReduce(key, document, stats);
+            if (_outputScope.IsActive)
+                base.IndexDocument(key, sourceDocumentId, document, stats, indexContext);
+            else
+                _outputScope.IndexDocument(key, sourceDocumentId, document, stats, indexContext);
         }
 
         public override void Delete(LazyStringValue key, IndexingStatsScope stats)
         {
-            throw new NotSupportedException("Deleting index entries by id() field isn't supported by map-reduce indexes");
+            if (_outputScope.IsActive)
+                base.Delete(key, stats);
+            else
+                _outputScope.Delete(key, stats);
         }
 
         public override void DeleteReduceResult(LazyStringValue reduceKeyHash, IndexingStatsScope stats)
         {
-            base.DeleteReduceResult(reduceKeyHash, stats);
-
-            _outputReduceToCollectionCommandBatcher.DeleteReduce(reduceKeyHash);
+            if (_outputScope.IsActive)
+                base.DeleteReduceResult(reduceKeyHash, stats);
+            else
+                _outputScope.DeleteReduceResult(reduceKeyHash, stats);
         }
 
         public override void Dispose()
         {
             base.Dispose();
-
-            _outputReduceToCollectionCommandBatcher.Dispose();
+            _outputScope.Dispose();
         }
     }
 }

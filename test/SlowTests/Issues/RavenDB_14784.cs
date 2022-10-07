@@ -6,6 +6,7 @@ using FastTests;
 using Orders;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Tests.Infrastructure;
 using Tests.Infrastructure.Operations;
 using Xunit;
 using Xunit.Abstractions;
@@ -133,10 +134,12 @@ return attachments.map(attachment => ({
             }
         }
 
-        [Fact]
-        public void Can_Index_Attachments()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-19412")]
+        public void Can_Index_Attachments(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var index = new Companies_With_Attachments();
                 index.Execute(store);
@@ -320,10 +323,11 @@ return attachments.map(attachment => ({
             }
         }
 
-        [Fact]
-        public void Can_Index_Multiple_Attachments()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Can_Index_Multiple_Attachments(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var index = new Companies_With_Multiple_Attachments();
                 index.Execute(store);
@@ -506,10 +510,11 @@ return attachments.map(attachment => ({
             }
         }
 
-        [Fact]
-        public void Can_Index_Attachments_JavaScript()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Can_Index_Attachments_JavaScript(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var index = new Companies_With_Attachments_JavaScript();
                 index.Execute(store);
@@ -693,10 +698,11 @@ return attachments.map(attachment => ({
             }
         }
 
-        [Fact]
-        public void Can_Index_Multiple_Attachments_JavaScript()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Can_Index_Multiple_Attachments_JavaScript(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var index = new Companies_With_Multiple_Attachments_JavaScript();
                 index.Execute(store);

@@ -10,8 +10,7 @@ public partial class IndexSearcher
 {
     public IQueryMatch SpatialQuery(string fieldName, int fieldId, double error, IShape shape, SpatialContext spatialContext, Utils.Spatial.SpatialRelation spatialRelation, bool isNegated = false)
     {
-        var fields = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
-        var terms = fields?.CompactTreeFor(fieldName);
+        var terms = _fieldsTree?.CompactTreeFor(fieldName);
         if (terms == null)
         {
             // If either the term or the field does not exist the request will be empty. 

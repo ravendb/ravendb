@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Sparrow.Server.Binary;
@@ -41,7 +41,7 @@ namespace Sparrow.Server.Collections.Persistent
             public bool HasValue
             {
                 get { return (_leftChild & HasValueMask) != 0; }
-                set { _leftChild = (ushort)(Convert.ToInt32(value) << 15 | LeftChild); }
+                set { _leftChild = (ushort)(value.ToInt32() << 15 | LeftChild); }
             } 
         }
 

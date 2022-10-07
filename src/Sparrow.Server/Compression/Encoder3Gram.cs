@@ -1,10 +1,11 @@
 using System;
 using System.Buffers.Binary;
 using System.Diagnostics;
-using System.Diagnostics.SymbolStore;
 using System.IO;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Runtime.Intrinsics.X86;
 using Sparrow.Collections;
 using Sparrow.Server.Binary;
 using Sparrow.Server.Collections.Persistent;
@@ -38,7 +39,7 @@ namespace Sparrow.Server.Compression
         }
     }
 
-    public struct Encoder3Gram<TEncoderState> : IEncoderAlgorithm
+    public unsafe struct Encoder3Gram<TEncoderState> : IEncoderAlgorithm
         where TEncoderState : struct, IEncoderState
     {
         private readonly TEncoderState _state;
@@ -47,9 +48,7 @@ namespace Sparrow.Server.Compression
         public Encoder3Gram(TEncoderState state)
         {
             _state = state;
-            _entries = 0; // Zero means not trained.
-
-            _entries = _numberOfEntries[0];
+            _entries = NumberOfEntries;
         }
 
         public static int GetDictionarySize(in TEncoderState state)
@@ -96,52 +95,109 @@ namespace Sparrow.Server.Compression
             where TSampleEnumerator : struct, IReadOnlySpanIndexer
             where TOutputEnumerator : struct, ISpanIndexer
         {
-            var table = EncodingTable;
-            var numberOfEntries = _entries;
-
-            int length = data.Length;
-            for (int i = 0; i < length; i++)
+            fixed (Interval3Gram* table = EncodingTable)
             {
-                var intBuf = MemoryMarshal.Cast<byte, long>(outputBuffers[i]);
+                var numberOfEntries = _entries;
 
-                int idx = 0;
-                intBuf[0] = 0;
-                int intBufLen = 0;
-
-                var keyStr = data[i];
-                int pos = 0;
-                while (pos < keyStr.Length)
+                int length = data.Length;
+                for (int i = 0; i < length; i++)
                 {
-                    int prefixLen = Lookup(keyStr.Slice(pos), table, numberOfEntries, out Code code);
-                    long sBuf = code.Value;
-                    int sLen = code.Length;
-                    if (intBufLen + sLen > 63)
-                    {
-                        int numBitsLeft = 64 - intBufLen;
-                        intBufLen = sLen - numBitsLeft;
-                        intBuf[idx] <<= numBitsLeft;
-                        intBuf[idx] |= (sBuf >> intBufLen);
-                        intBuf[idx] = BinaryPrimitives.ReverseEndianness(intBuf[idx]);
-                        intBuf[idx + 1] = sBuf;
-                        idx++;
-                    }
-                    else
-                    {
-                        intBuf[idx] <<= sLen;
-                        intBuf[idx] |= sBuf;
-                        intBufLen += sLen;
-                    }
+                    var intBuf = MemoryMarshal.Cast<byte, long>(outputBuffers[i]);
 
-                    pos += prefixLen;
+                    int idx = 0;
+                    intBuf[0] = 0;
+                    int intBufLen = 0;
+
+                    var bitWriterBuffer = intBuf[idx];
+
+                    var key = data[i];
+
+                    fixed (byte* fixedKey = key)
+                    {
+                        int keyLength = key.Length;
+                        byte* keyPtr = fixedKey;
+
+                        bool isDone = false;
+                        while (!isDone)
+                        {
+                            // Initialize the important variables.
+                            uint symbolValue = 0;
+                            if (keyLength >= 4)
+                            {
+                                // PERF: This is the usual case, this is the branch that gets executed for most of the
+                                // key, at least until we hit the tail.
+                                symbolValue = BinaryPrimitives.ReverseEndianness(*(uint*)keyPtr) >> 8;
+                            }
+                            else
+                            {
+                                // This is the edge case, we need to deal with the tail, which would also mean that
+                                // we need to ensure that we add the null terminator to the encoding. 
+
+                                // In this case we need to figure out if the key is already null terminated. In which
+                                // case, we are done. 
+                                int symbolLength = keyLength;
+                                if (symbolLength == 0)
+                                {
+                                    if (key.Length != 0 && key[^1] == 0)
+                                        break;
+
+                                    // This is the last time as there is no more key to consume.
+                                    isDone = true;
+                                }
+                                else
+                                {
+                                    // PERF: we are performing masked copy with reverse endianness using tables, with
+                                    // the objective of diminishing the amount of instructions necessary for execution.
+                                    // The switch implementation requires over 40 instructions including several branches,
+                                    // this version is much more succinct and do not need any jump. 
+
+                                    // We copy to the symbols buffer the part of the key we will be consuming.
+                                    int tableIndex = symbolLength * 4;
+
+                                    symbolValue = (uint)(keyPtr[EncodingTailTable[tableIndex]] << 16 |
+                                                         keyPtr[EncodingTailTable[tableIndex + 1]] << 8 |
+                                                         keyPtr[EncodingTailTable[tableIndex + 2]]);
+
+                                    symbolValue &= 0xFFFFFFFF << EncodingTailMaskTable[symbolLength];
+                                }
+                            }
+
+                            int prefixLen = Lookup(symbolValue, table, numberOfEntries, out Code code);
+
+                            // PERF: While naturally this would happen at the end of the loop, as they are not used anymore
+                            // we can do the work here instead and allow the JIT to reschedule the registers to be used on
+                            // the next block and fore-go on keep tracking of them. 
+                            if (keyLength != 0)
+                                keyLength -= prefixLen;
+                            keyPtr += prefixLen;
+
+                            // Perform the actual encoding in a bitwise fashion. 
+                            long sBuf = code.Value;
+                            int sLen = code.Length;
+                            if (intBufLen + sLen > 63)
+                            {
+                                int numBitsLeft = 64 - intBufLen;
+                                intBufLen = sLen - numBitsLeft;
+
+                                intBuf[idx] = BinaryPrimitives.ReverseEndianness((bitWriterBuffer << numBitsLeft) | (sBuf >> intBufLen));
+                                idx++;
+                                bitWriterBuffer = sBuf;
+                            }
+                            else
+                            {
+                                bitWriterBuffer = (bitWriterBuffer << sLen) | sBuf;
+                                intBufLen += sLen;
+                            }
+                        }
+
+                        intBuf[idx] = BinaryPrimitives.ReverseEndianness(bitWriterBuffer << (64 - intBufLen));
+                        outputSizes[i] = ((idx << 6) + intBufLen);
+                    }
                 }
-
-                intBuf[idx] <<= (64 - intBufLen);
-                intBuf[idx] = BinaryPrimitives.ReverseEndianness(intBuf[idx]);
-                outputSizes[i] = ((idx << 6) + intBufLen);
             }
         }
 
-        public unsafe void DecodeBatch<TSampleEnumerator, TOutputEnumerator>(in TSampleEnumerator data, Span<int> outputSize, in TOutputEnumerator outputBuffers)
+        public void DecodeBatch<TSampleEnumerator, TOutputEnumerator>(in TSampleEnumerator data, Span<int> outputSize, in TOutputEnumerator outputBuffers)
             where TSampleEnumerator : struct, IReadOnlySpanIndexer
             where TOutputEnumerator : struct, ISpanIndexer
         {
@@ -170,7 +226,18 @@ namespace Sparrow.Server.Compression
             }
         }
 
-        public unsafe void DecodeBatch<TSampleEnumerator, TOutputEnumerator>(ReadOnlySpan<int> dataBits, in TSampleEnumerator data, Span<int> outputSize, in TOutputEnumerator outputBuffers)
+        private static ReadOnlySpan<byte> EncodingTailTable => new byte[]
+        {
+            0, 0, 0, 0,
+            0, 0, 0, 0,
+            0, 1, 0, 0,
+            0, 1, 2, 0
+        };
+
+        private static ReadOnlySpan<byte> EncodingTailMaskTable => new byte[] { 32, 16, 8, 0 };
+
+
+        public void DecodeBatch<TSampleEnumerator, TOutputEnumerator>(ReadOnlySpan<int> dataBits, in TSampleEnumerator data, Span<int> outputSize, in TOutputEnumerator outputBuffers)
             where TSampleEnumerator : struct, IReadOnlySpanIndexer
             where TOutputEnumerator : struct, ISpanIndexer
         {
@@ -202,6 +269,7 @@ namespace Sparrow.Server.Compression
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Encode(ReadOnlySpan<byte> key, Span<byte> outputBuffer)
         {
             Debug.Assert(outputBuffer.Length >= sizeof(long)); // Ensure we can safely cast to int 64
@@ -212,44 +280,94 @@ namespace Sparrow.Server.Compression
             intBuf[0] = 0;
             int intBufLen = 0;
 
-            var table = EncodingTable;
-            var numberOfEntries = _entries;
-
-            var symbol = key;
-            while (symbol.Length != 0)
+            fixed(Interval3Gram* table = EncodingTable)
+            fixed(byte* fixedKey = key)
             {
-                if (symbol[0] == 0 && symbol.Length > 1)
-                    throw new InvalidDataException("The key cannot contain null bytes unless it is the last value.");
+                var numberOfEntries = _entries;
 
-                int prefixLen = Lookup(symbol, table, numberOfEntries, out Code code);
-                long sBuf = code.Value;
-                int sLen = code.Length;
-                if (intBufLen + sLen > 63)
+                var keyPtr = fixedKey;
+                var keyLength = key.Length;
+                var bitWriterBuffer = intBuf[idx];
+
+                bool isDone = false;
+                while (!isDone)
                 {
-                    int numBitsLeft = 64 - intBufLen;
-                    intBufLen = sLen - numBitsLeft;
-                    intBuf[idx] <<= numBitsLeft;
-                    intBuf[idx] |= (sBuf >> intBufLen);
-                    intBuf[idx] = BinaryPrimitives.ReverseEndianness(intBuf[idx]);
-                    intBuf[idx + 1] = sBuf;
-                    idx++;
-                }
-                else
-                {
-                    intBuf[idx] <<= sLen;
-                    intBuf[idx] |= sBuf;
-                    intBufLen += sLen;
+                    // Initialize the important variables.
+                    uint symbolValue = 0;
+                    if (keyLength >= 4)
+                    {
+                        // PERF: This is the usual case, this is the branch that gets executed for most of the
+                        // key, at least until we hit the tail.
+                        symbolValue = BinaryPrimitives.ReverseEndianness(*(uint*)keyPtr) >> 8;
+                    }
+                    else
+                    {
+                        // This is the edge case, we need to deal with the tail, which would also mean that
+                        // we need to ensure that we add the null terminator to the encoding. 
+
+                        // In this case we need to figure out if the key is already null terminated. In which
+                        // case, we are done. 
+                        int symbolLength = keyLength;
+                        if (symbolLength == 0)
+                        {
+                            if (key.Length != 0 && key[^1] == 0)
+                                break;
+
+                            // This is the last time as there is no more key to consume.
+                            isDone = true;
+                        }
+                        else
+                        {
+                            // PERF: we are performing masked copy with reverse endianness using tables, with
+                            // the objective of diminishing the amount of instructions necessary for execution.
+                            // The switch implementation requires over 40 instructions including several branches,
+                            // this version is much more succinct and do not need any jump. 
+
+                            // We copy to the symbols buffer the part of the key we will be consuming.
+                            int tableIndex = symbolLength * 4;
+
+                            symbolValue = (uint)(keyPtr[EncodingTailTable[tableIndex]] << 16 |
+                                                 keyPtr[EncodingTailTable[tableIndex + 1]] << 8 |
+                                                 keyPtr[EncodingTailTable[tableIndex + 2]]);
+
+                            symbolValue &= 0xFFFFFFFF << EncodingTailMaskTable[symbolLength];
+                        }
+                    }
+
+                    int prefixLen = Lookup(symbolValue, table, numberOfEntries, out Code code);
+
+                    // PERF: While naturally this would happen at the end of the loop, as they are not used anymore
+                    // we can do the work here instead and allow the JIT to reschedule the registers to be used on
+                    // the next block and fore-go on keep tracking of them. 
+                    if (keyLength != 0)
+                        keyLength -= prefixLen;
+                    keyPtr += prefixLen;
+
+                    // Perform the actual encoding in a bitwise fashion. 
+                    long sBuf = code.Value;
+                    int sLen = code.Length;
+                    if (intBufLen + sLen > 63)
+                    {
+                        int numBitsLeft = 64 - intBufLen;
+                        intBufLen = sLen - numBitsLeft;
+
+                        intBuf[idx] = BinaryPrimitives.ReverseEndianness((bitWriterBuffer << numBitsLeft) | (sBuf >> intBufLen));
+                        idx++;
+                        bitWriterBuffer = sBuf;
+                    }
+                    else
+                    {
+                        bitWriterBuffer = (bitWriterBuffer << sLen) | sBuf;
+                        intBufLen += sLen;
+                    }
                 }
 
-                symbol = symbol.Slice(prefixLen);
+                intBuf[idx] = BinaryPrimitives.ReverseEndianness(bitWriterBuffer << (64 - intBufLen));
+                return (idx << 6) + intBufLen;
             }
-
-            intBuf[idx] <<= (64 - intBufLen);
-            intBuf[idx] = BinaryPrimitives.ReverseEndianness(intBuf[idx]);
-            return ((idx << 6) + intBufLen);
         }
 
-        public unsafe int DecodeStochasticBug(ReadOnlySpan<byte> data, Span<byte> outputBuffer)
+        public int DecodeStochasticBug(ReadOnlySpan<byte> data, Span<byte> outputBuffer)
         {
             Span<byte> buffer = outputBuffer;
             fixed (Interval3Gram* table = EncodingTable)
@@ -272,7 +390,7 @@ namespace Sparrow.Server.Compression
             }
         }
 
-        public unsafe int Decode(ReadOnlySpan<byte> data, Span<byte> outputBuffer)
+        public int Decode(ReadOnlySpan<byte> data, Span<byte> outputBuffer)
         {
             Span<byte> buffer = outputBuffer;
             fixed (Interval3Gram* table = EncodingTable)
@@ -294,7 +412,7 @@ namespace Sparrow.Server.Compression
             }
         }
 
-        public unsafe int Decode(int bits, ReadOnlySpan<byte> data, Span<byte> outputBuffer)
+        public int Decode(int bits, ReadOnlySpan<byte> data, Span<byte> outputBuffer)
         {
             fixed (Interval3Gram* table = EncodingTable)
             {
@@ -318,11 +436,12 @@ namespace Sparrow.Server.Compression
             }
         }
 
-        public int NumberOfEntries => _numberOfEntries[0];
-        public int MemoryUse => _numberOfEntries[0] * Unsafe.SizeOf<Interval3Gram>();
-
-
-        private Span<int> _numberOfEntries => MemoryMarshal.Cast<byte, int>(_state.EncodingTable.Slice(0, 4));
+        public int NumberOfEntries
+        {
+            get { return MemoryMarshal.Read<int>(_state.EncodingTable); }
+            set { MemoryMarshal.Write(_state.EncodingTable, ref value);}
+        } 
+        public int MemoryUse => NumberOfEntries * Unsafe.SizeOf<Interval3Gram>();
 
         public int MaxBitSequenceLength
         {
@@ -421,101 +540,68 @@ namespace Sparrow.Server.Compression
                 tree.Add(ref reader, (short)i);
             }
 
-            _numberOfEntries[0] = dictSize;
             _entries = dictSize;
+            NumberOfEntries = dictSize;
             MaxBitSequenceLength = maxBitSequenceLength;
             MinBitSequenceLength = minBitSequenceLength;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private unsafe int Lookup(ReadOnlySpan<byte> symbol, ReadOnlySpan<Interval3Gram> table, int numberOfEntries, out Code code)
+        private static int Lookup(uint symbolValue, Interval3Gram* table, int numberOfEntries, out Code code)
         {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            static int CompareDictionaryEntry(ReadOnlySpan<byte> s1, ReadOnlySpan<byte> s2)
+            // PERF: this is an optimized version of the CompareDictionaryEntry routine. Given that we
+            // can actually perform the operation in parallel. The usual case will be to call the parallel
+            // version instead of the serial, until we hit the end of the key. 
+
+            uint bot = 0;
+            uint top = (uint)numberOfEntries;
+
+            while (top > 1)
             {
-                int length = s1.Length;
-                if (0 >= length)
-                    return s2[0] == 0 ? 0 : -1;
-                if (s1[0] != s2[0])
-                    return s1[0] < s2[0] ? -1 : 1;
+                uint mid = top / 2;
+                uint codeValue = BinaryPrimitives.ReverseEndianness(table[bot + mid].BufferAndLength) >> 8;
 
-                if (1 >= length)
-                    return s2[1] == 0 ? 0 : -1;
-                if (s1[1] != s2[1])
-                    return s1[1] < s2[1] ? -1 : 1;
+                if (Sse.IsSupported)
+                    Sse.Prefetch1(table + bot + mid);
 
-                if (2 >= length)
-                    return s2[2] == 0 ? 0 : -1;
-                if (s1[2] != s2[2])
-                    return s1[2] < s2[2] ? -1 : 1;
-
-                return length > 3 ? 1 : 0;
+                if (symbolValue >= codeValue)
+                    bot += mid;
+                top -= mid;
             }
 
-            int l = 0;
-            int r = numberOfEntries;
-
-            if (symbol.Length >= 4)
-            {
-                // PERF: this is an optimized version of the CompareDictionaryEntry routine. Given that we
-                // can actually perform the operation in parallel. The usual case will be to call the parallel
-                // version instead of the serial, until we hit the end of the key. 
-                uint symbolValue = BinaryPrimitives.ReverseEndianness(MemoryMarshal.Read<uint>(symbol)) >> 8;
-                while (r - l > 1)
-                {
-                    int m = (l + r) >> 1;
-
-                    uint codeValue = BinaryPrimitives.ReverseEndianness(table[m].BufferAndLength) >> 8;
-                    if (symbolValue < codeValue)
-                        r = m;
-                    else
-                        l = m;
-                }
-            }
-            else
-            {
-                while (r - l > 1)
-                {
-                    int m = (l + r) >> 1;
-
-                    int cmp;
-                    fixed (byte* p = table[m].KeyBuffer)
-                    {
-                        cmp = CompareDictionaryEntry(symbol, new ReadOnlySpan<byte>(p, 3));
-                    }
-
-                    if (cmp < 0)
-                    {
-                        r = m;
-                    }
-                    else if (cmp == 0)
-                    {
-                        l = m;
-                        break;
-                    }
-                    else
-                    {
-                        l = m;
-                    }
-                }
-            }
-
-            code = table[l].Code;
-            return table[l].PrefixLength;
+            code = table[bot].Code;
+            return table[bot].PrefixLength;
         }
 
-        private unsafe int Lookup(in BitReader reader, ref Span<byte> symbol, Interval3Gram* table, in BinaryTree<short> tree, out bool endsWithNull)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private int Lookup(in BitReader reader, ref Span<byte> symbol, Interval3Gram* table, in BinaryTree<short> tree, out bool endsWithNull)
         {
             BitReader localReader = reader;
             if (tree.FindCommonPrefix(ref localReader, out var idx))
             {
                 var p = table + idx;
-                Span<byte> term = new(p->KeyBuffer, p->PrefixLength);
-                term.CopyTo(symbol);
-                symbol = symbol[p->PrefixLength..];
 
-                endsWithNull = term[^1] == 0;
+                int prefixLength = p->PrefixLength;
+                byte* buffer = p->KeyBuffer;
 
+                if (prefixLength == 1)
+                {
+                    symbol[0] = buffer[0];
+                }
+                else if (prefixLength == 2)
+                {
+                    symbol[0] = buffer[0];
+                    symbol[1] = buffer[1];
+                }
+                else
+                {
+                    Span<byte> term = new(p->KeyBuffer, p->PrefixLength);
+                    term.CopyTo(symbol);
+                }
+
+                endsWithNull = buffer[prefixLength - 1] == 0;
+
+                symbol = symbol[prefixLength..];
                 return reader.Length - localReader.Length;
             }
 

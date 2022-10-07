@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Buffers;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Sparrow;
 using Sparrow.Server.Compression;
@@ -48,7 +49,6 @@ namespace Voron.Data.CompactTrees
         public long PageNumber => _page.PageNumber;
         
         private readonly HopeEncoder<Encoder3Gram<NativeMemoryEncoderState>> _encoder;
-        private byte[] _tempBuffer;
 
         public static long CreateDefault(LowLevelTransaction llt)
         {
@@ -189,30 +189,17 @@ namespace Voron.Data.CompactTrees
             decodedKey = decodedKey.Slice(0, len);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Encode(ReadOnlySpan<byte> key, ref Span<byte> encodedKey)
         {
             if (key.Length == 0)
                 throw new ArgumentException("Cannot encode an empty key!", nameof(key));
 
-            if (key[^1] != 0)
-            {
-                if (_tempBuffer == null || _tempBuffer.Length < key.Length + 1)
-                {
-                    if (_tempBuffer != null)
-                        ArrayPool<byte>.Shared.Return(_tempBuffer);
-                    _tempBuffer = ArrayPool<byte>.Shared.Rent(key.Length + 1);
-                }
-
-                var newKey = _tempBuffer.AsSpan();
-                key.CopyTo(newKey);
-                newKey[key.Length] = 0;
-                key = newKey.Slice(0, key.Length + 1);
-            }
-            
             int bitsLength = _encoder.Encode(key, encodedKey);
             int bytesLength = Math.DivRem(bitsLength, 8, out var remainder);
             encodedKey = encodedKey.Slice(0, bytesLength + (remainder == 0 ? 0 : 1));
         }
+
 
         public int GetMaxEncodingBytes(ReadOnlySpan<byte> key)
         {

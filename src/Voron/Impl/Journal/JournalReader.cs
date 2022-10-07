@@ -507,7 +507,7 @@ namespace Voron.Impl.Journal
                     }
 
                     RequireHeaderUpdate = true;
-                    options.InvokeRecoveryError(this, "Transaction " + current->TransactionId + " was not committed", ex);
+                    options.InvokeRecoveryError(this, $"Could not decrypt transaction {current->TransactionId}. It could be not committed", ex);
 
                     return false;
                 }

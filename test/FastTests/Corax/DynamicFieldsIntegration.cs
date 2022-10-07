@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq.Indexing;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -92,7 +93,7 @@ public class DynamicFieldsIntegration : RavenTestBase
         
         {
             using var session = store.OpenAsyncSession();
-            var result = await session.Query<TestClassResult<float?[]>, IndexFloatList>().Where(i => i.Dynamic.Contains(50)).SingleOrDefaultAsync();
+            var result = await session.Query<TestClassResult<float?[]>, IndexFloatList>().Where(i => i.Dynamic!.Contains(50)).SingleOrDefaultAsync();
             AssertResult(result);
         }
     }
@@ -111,6 +112,68 @@ public class DynamicFieldsIntegration : RavenTestBase
         }
     }
 
+    [RavenTheory(RavenTestCategory.Indexes)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void CanDeleteWithProperAnalyzer(Options options)
+    {
+        using var store = GetDocumentStore(options);
+        {
+            using var session = store.OpenSession();
+            session.Store(new Item(){Name = "Maciej Jan", Analyzed = true}, "items/1-A");
+            session.SaveChanges();
+        }
+        new SearchDynamicIndex().Execute(store);
+        Indexes.WaitForIndexing(store);
+
+        {
+            using var session = store.OpenSession();
+            var result = session.Query<Item, SearchDynamicIndex>().Search(i => i.Name, "jan").Single();
+            session.Delete(result);            
+            session.SaveChanges();
+        }
+
+        {
+            using var session = store.OpenSession();
+            var result = session.Query<Item, SearchDynamicIndex>().Search(i => i.Name, "jan").ToList();
+            Assert.Equal(0, result.Count);
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Indexes)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void CannotChangeAnalyzerDuringIndexing(Options options)
+    {
+        using var store = GetDocumentStore(options);
+        {
+            using var session = store.OpenSession();
+            session.Store(new Item(){Name = "Maciej Jan", Analyzed = true}, "items/1-A");
+            session.Store(new Item(){Name = "Kowalski John", Analyzed = false}, "items/2-A");
+            session.SaveChanges();
+        }
+        var index = new SearchDynamicIndex();
+        index.Execute(store);
+        Indexes.WaitForIndexing(store, allowErrors: true);
+        var errors = Indexes.WaitForIndexingErrors(store, new[] {index.IndexName}, errorsShouldExists: true);
+        Assert.Equal(1, errors.Length);
+        Assert.True(errors[0].Errors[0].Error.Contains($"Inconsistent dynamic field creation options were detected. Field 'Name' was created with 'Search' analyzer but now 'Exact' analyzer was specified. This is not supported"));
+    }
+    
+    private class Item
+    {
+        public string? Id { get; set; }
+        public string? Name { get; set; }
+        
+        public bool? Analyzed { get; set; }
+    }
+
+    private class SearchDynamicIndex : AbstractIndexCreationTask<Item>
+    {
+        public SearchDynamicIndex()
+        {
+            Map = items => items.Select(i => new {Id = i.Id, _ = CreateField("Name", i.Name, false, i.Analyzed ?? false)});
+        }
+    }
+    
     private async Task<IDocumentStore> GetStoreWithIndexAndData<TIndex, T>(Options options, Func<int, T> creator)
         where TIndex : AbstractIndexCreationTask, new()
     {

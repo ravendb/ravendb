@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 
 #if !RVN
 using Jint;
+using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
@@ -648,7 +649,7 @@ namespace Raven.Server.Utils.Cli
             X509Certificate2 cert;
             try
             {
-                cert = args.Count == 3 ? new X509Certificate2(path, args[2], X509KeyStorageFlags.MachineKeySet) : new X509Certificate2(path, (string)null, X509KeyStorageFlags.MachineKeySet);
+                cert = CertificateLoaderUtil.CreateCertificate(path, args.Count == 3 ? args[2] : null);
             }
             catch (Exception e)
             {
@@ -739,7 +740,7 @@ namespace Raven.Server.Utils.Cli
             try
             {
                 certBytes = File.ReadAllBytes(path);
-                cert = password != null ? new X509Certificate2(certBytes, password, X509KeyStorageFlags.MachineKeySet) : new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.MachineKeySet);
+                cert = CertificateLoaderUtil.CreateCertificate(certBytes, password);
             }
             catch (Exception e)
             {
@@ -892,7 +893,7 @@ namespace Raven.Server.Utils.Cli
             try
             {
                 certBytes = File.ReadAllBytes(path);
-                cert.Import(certBytes, password, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+                CertificateLoaderUtil.Import(cert, certBytes, password, CertificateLoaderUtil.FlagsForExport);
             }
             catch (Exception e)
             {
@@ -919,7 +920,7 @@ namespace Raven.Server.Utils.Cli
             X509Certificate2 loadedCert;
             try
             {
-                loadedCert = new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+                loadedCert = CertificateLoaderUtil.CreateCertificate(certBytes, flags:CertificateLoaderUtil.FlagsForExport);
             }
             catch (Exception e)
             {

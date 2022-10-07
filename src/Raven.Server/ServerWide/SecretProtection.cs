@@ -17,6 +17,7 @@ using Org.BouncyCastle.Utilities;
 using Org.BouncyCastle.Utilities.Collections;
 using Org.BouncyCastle.Utilities.Encoders;
 using Org.BouncyCastle.X509;
+using Raven.Client;
 using Raven.Server.Commercial;
 using Raven.Server.Config.Categories;
 using Raven.Server.Utils;
@@ -515,7 +516,7 @@ namespace Raven.Server.ServerWide
             try
             {
                 // may need to send this over the cluster, so use exportable here
-                loadedCertificate = new X509Certificate2(rawData, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+                loadedCertificate = CertificateLoaderUtil.CreateCertificate(rawData, (string)null, CertificateLoaderUtil.FlagsForExport);
                 ValidateExpiration(executable, loadedCertificate, licenseType);
                 ValidatePrivateKey(executable, null, rawData, out privateKey);
                 ValidateKeyUsages(executable, loadedCertificate, certificateValidationKeyUsages);
@@ -695,9 +696,9 @@ namespace Raven.Server.ServerWide
             var collection = new X509Certificate2Collection();
 
             if (string.IsNullOrEmpty(password))
-                collection.Import(rawBytes, (string)null, X509KeyStorageFlags.MachineKeySet);
+                CertificateLoaderUtil.Import(collection, rawBytes);
             else
-                collection.Import(rawBytes, password, X509KeyStorageFlags.MachineKeySet);
+                CertificateLoaderUtil.Import(collection,rawBytes, password);
 
             var storeName = PlatformDetails.RunningOnMacOsx ? StoreName.My : StoreName.CertificateAuthority;
             using (var userIntermediateStore = new X509Store(storeName, StoreLocation.CurrentUser,
@@ -767,7 +768,7 @@ namespace Raven.Server.ServerWide
                 var rawData = File.ReadAllBytes(path);
 
                 // we need to load it as exportable because we might need to send it over the cluster
-                var loadedCertificate = new X509Certificate2(rawData, password, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+                var loadedCertificate = CertificateLoaderUtil.CreateCertificate(rawData, password, CertificateLoaderUtil.FlagsForExport);
 
                 ValidateExpiration(path, loadedCertificate, licenseType);
 

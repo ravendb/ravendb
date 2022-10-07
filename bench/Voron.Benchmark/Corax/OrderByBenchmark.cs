@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -183,6 +183,12 @@ namespace Voron.Benchmark.Corax
 
             _ids = new long[BufferSize];
             _indexSearcher = new IndexSearcher(Env);
+
+            _bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            Slice.From(_bsc, "Type", ByteStringType.Immutable, out _typeSlice);
+            Slice.From(_bsc, "Dog", ByteStringType.Immutable, out _dogSlice);
+            Slice.From(_bsc, "Age", ByteStringType.Immutable, out _ageSlice);
+            Slice.From(_bsc, "1", ByteStringType.Immutable, out _ageValueSlice);
         }
 
 
@@ -220,12 +226,17 @@ namespace Voron.Benchmark.Corax
 
         private long[] _ids;
         private IndexSearcher _indexSearcher;
+        private ByteStringContext _bsc;
+        private Slice _typeSlice;
+        private Slice _dogSlice;
+        private Slice _ageSlice;
+        private Slice _ageValueSlice;
 
         [Benchmark]
         public void OrderByRuntimeQuery()
         {            
-            var typeTerm = _indexSearcher.TermQuery("Type", "Dog");
-            var ageTerm = _indexSearcher.StartWithQuery("Age", "1");
+            var typeTerm = _indexSearcher.TermQuery(_typeSlice, "Dog");
+            var ageTerm = _indexSearcher.StartWithQuery(_ageSlice, _ageValueSlice);
             var andQuery = _indexSearcher.And(typeTerm, ageTerm);
             var query = _indexSearcher.OrderByAscending(andQuery, fieldId: 2, take: TakeSize);           
 

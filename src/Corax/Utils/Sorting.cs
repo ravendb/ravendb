@@ -1,10 +1,12 @@
 ﻿using System;
+using Sparrow;
 
 namespace Corax.Utils
 {
     internal static class Sorting
     {
         public static int SortAndRemoveDuplicates<T, W>(Span<T> values, Span<W> items)
+            where T : unmanaged, IBinaryNumber<T>
         {
             MemoryExtensions.Sort(values, items);
 
@@ -12,25 +14,30 @@ namespace Corax.Utils
             // If there are no duplicated the writes at the architecture level will execute
             // way faster than if there are.
 
+            int nextI = 0;
             int outputIdx = 0;
-            for (int i = 0; i < values.Length - 1; i++)
+            while (nextI < values.Length - 1)
             {
-                outputIdx += values[i + 1].Equals(values[i]) ? 0 : 1;
-                values[outputIdx] = values[i + 1];
-                items[outputIdx] = items[i + 1];
+                int i = nextI;
+                nextI++;
+
+                outputIdx += (values[nextI] != values[i]).ToInt32();
+                values[outputIdx] = values[nextI];
+                items[outputIdx] = items[nextI];
             }
 
             outputIdx++;
             if (outputIdx != values.Length)
             {
-                values[outputIdx] = values[values.Length - 1];
-                items[outputIdx] = items[items.Length - 1];
+                values[outputIdx] = values[^1];
+                items[outputIdx] = items[^1];
             }
 
             return outputIdx;
         }
 
         public static int SortAndRemoveDuplicates<T>(Span<T> values)
+            where T : unmanaged, IBinaryNumber<T>
         {
             MemoryExtensions.Sort(values);
 
@@ -38,25 +45,56 @@ namespace Corax.Utils
             // If there are no duplicated the writes at the architecture level will execute
             // way faster than if there are.
 
+            int nextI = 0;
             int outputIdx = 0;
-            for (int i = 0; i < values.Length - 1; i++)
+            while (nextI < values.Length - 1)
             {
-                outputIdx += values[i + 1].Equals(values[i]) ? 0 : 1;
-                values[outputIdx] = values[i + 1];
+                int i = nextI;
+                nextI++;
+                outputIdx += (values[nextI] != values[i]).ToInt32();
+                values[outputIdx] = values[nextI];
             }
 
             outputIdx++;
             if (outputIdx != values.Length)
             {
-                values[outputIdx] = values[values.Length - 1];               
+                values[outputIdx] = values[^1];               
             }
 
             return outputIdx;
         }
 
-        public unsafe static int SortAndRemoveDuplicates(long* bufferBasePtr, int count)
+        public static unsafe int SortAndRemoveDuplicates<T, W>(T* bufferBasePtr, W* itemsBasePtr, int count)
+            where T : unmanaged, IBinaryNumber<T>
+            where W : unmanaged
         {
-            MemoryExtensions.Sort(new Span<long>(bufferBasePtr, count));
+            MemoryExtensions.Sort(new Span<T>(bufferBasePtr, count), new Span<W>(itemsBasePtr, count));
+
+            // We need to fill in the gaps left by removing deduplication process.
+            // If there are no duplicated the writes at the architecture level will execute
+            // way faster than if there are.
+
+            int index = 0;
+            int runningIndex = 0;
+
+            count--;
+            while (runningIndex < count)
+            {
+                index += (bufferBasePtr[runningIndex + 1] != bufferBasePtr[runningIndex]).ToInt32();
+
+                bufferBasePtr[index] = bufferBasePtr[runningIndex + 1];
+                itemsBasePtr[index] = itemsBasePtr[runningIndex + 1];
+
+                runningIndex++;
+            }
+
+            return index + 1;
+        }
+
+        public static unsafe int SortAndRemoveDuplicates<T>(T* bufferBasePtr, int count)
+            where T : unmanaged, IBinaryNumber<T>
+        {
+            MemoryExtensions.Sort(new Span<T>(bufferBasePtr, count));
 
             // We need to fill in the gaps left by removing deduplication process.
             // If there are no duplicated the writes at the architecture level will execute
@@ -68,7 +106,7 @@ namespace Corax.Utils
             var bufferEndPtr = bufferBasePtr + count - 1;
             while (bufferPtr < bufferEndPtr)
             {
-                outputBufferPtr += bufferPtr[1] != bufferPtr[0] ? 1 : 0;
+                outputBufferPtr += (bufferPtr[1] != bufferPtr[0]).ToInt32();
                 *outputBufferPtr = bufferPtr[1];
 
                 bufferPtr++;

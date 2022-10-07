@@ -124,8 +124,7 @@ namespace FastTests.Client.Indexing
         }
 
         [RavenTheory(RavenTestCategory.JavaScript | RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanIndexMapWithFanout(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -156,8 +155,7 @@ namespace FastTests.Client.Indexing
         }
 
         [RavenTheory(RavenTestCategory.JavaScript | RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanIndexMapReduceWithFanoutWhenOutputingBlittableObjectInstance(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -190,8 +188,7 @@ namespace FastTests.Client.Indexing
         }
         
         [RavenTheory(RavenTestCategory.JavaScript | RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanIndexMapReduceWithFanout(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -222,8 +219,7 @@ namespace FastTests.Client.Indexing
         }
 
         [RavenTheory(RavenTestCategory.JavaScript | RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUseJavaScriptIndexWithDynamicFields(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -364,8 +360,7 @@ namespace FastTests.Client.Indexing
         }
 
         [RavenTheory(RavenTestCategory.JavaScript | RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUseSpatialFields(Options options)
         {
             var kalab = 10;
@@ -377,8 +372,7 @@ namespace FastTests.Client.Indexing
         }
 
         [RavenTheory(RavenTestCategory.JavaScript | RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
         public void CanUseDynamicSpatialFields(Options options)
         {
             var kalab = 10;
@@ -505,35 +499,62 @@ namespace FastTests.Client.Indexing
         }
 
         [RavenTheory(RavenTestCategory.JavaScript | RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void OutputReduceToCollection(Options options)
         {
             using (var store = GetDocumentStore(options))
             {
-                store.ExecuteIndex(new Products_ByCategory());
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new Category { Name = "Beverages" }, "categories/1-A");
-                    session.Store(new Category { Name = "Seafood" }, "categories/2-A");
-                    session.Store(new Product { Name = "Lakkalikööri", Category = "categories/1-A", PricePerUnit = 13 });
-                    session.Store(new Product { Name = "Original Frankfurter", Category = "categories/1-A", PricePerUnit = 16 });
-                    session.Store(new Product { Name = "Röd Kaviar", Category = "categories/2-A", PricePerUnit = 18 });
-                    session.SaveChanges();
-                    Indexes.WaitForIndexing(store);
-                    var res = session.Query<Products_ByCategory.Result>("Products/ByCategory")
-                        .ToList();
-                    var res2 = session.Query<CategoryCount>()
-                        .ToList();
-                    Assert.Equal(res.Count, res2.Count);
-                }
+                OutputReduceToCollectionAssertion(store);
+            }
+        }
+        
+        [RavenTheory(RavenTestCategory.JavaScript | RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void OutputReduceToCollectionWithDeletions(Options options)
+        {
+            using var store = GetDocumentStore(options);
+            OutputReduceToCollectionAssertion(store);
+            {
+                using var session = store.OpenSession();
+                session.Delete("categories/1-A");
+                var item = session.Query<Product>().Where(i => i.Name == "Lakkalikööri").Single();
+                session.Delete(item);
+                session.SaveChanges();
+            }
+            Indexes.WaitForIndexing(store);
 
+            {
+                using var session = store.OpenSession();
+                var res = session.Query<Products_ByCategory.Result>("Products/ByCategory")
+                    .ToList();
+                var res2 = session.Query<CategoryCount>()
+                    .ToList();
+                Assert.Equal(res.Count, res2.Count);
+            }
+        }
+
+        private void OutputReduceToCollectionAssertion(IDocumentStore store)
+        {
+            store.ExecuteIndex(new Products_ByCategory());
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Category { Name = "Beverages" }, "categories/1-A");
+                session.Store(new Category { Name = "Seafood" }, "categories/2-A");
+                session.Store(new Product { Name = "Lakkalikööri", Category = "categories/1-A", PricePerUnit = 13 });
+                session.Store(new Product { Name = "Original Frankfurter", Category = "categories/1-A", PricePerUnit = 16 });
+                session.Store(new Product { Name = "Röd Kaviar", Category = "categories/2-A", PricePerUnit = 18 });
+                session.SaveChanges();
+                Indexes.WaitForIndexing(store);
+                var res = session.Query<Products_ByCategory.Result>("Products/ByCategory")
+                    .ToList();
+                var res2 = session.Query<CategoryCount>()
+                    .ToList();
+                Assert.Equal(res.Count, res2.Count);
             }
         }
 
         [RavenTheory(RavenTestCategory.JavaScript | RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
         public void DateCheckMapReduce(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -574,6 +595,7 @@ namespace FastTests.Client.Indexing
                     });
                     session.SaveChanges();
                     Indexes.WaitForIndexing(store);
+                    WaitForUserToContinueTheTest(store);
                     var res = session.Query<Product_Sales_ByMonth.Result>("Product/Sales/ByMonth")
                         .Where(x => x.Count == 6)
                         .ToList();
@@ -584,7 +606,7 @@ namespace FastTests.Client.Indexing
 
         [RavenTheory(RavenTestCategory.JavaScript | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "Complex field")]
         public void CanQueryBySubObjectAsString(Options options)
         {
             var address = new Address
@@ -601,6 +623,7 @@ namespace FastTests.Client.Indexing
                     session.Store(new User { Name = "Foo", Address = address });
                     session.SaveChanges();
                     Indexes.WaitForIndexing(store);
+                    WaitForUserToContinueTheTest(store);
                     var user = session.Query<User>("Users/ByAddress").Single(u => u.Address == address);
                     Assert.Equal("Foo", user.Name);
                 }
@@ -613,8 +636,7 @@ namespace FastTests.Client.Indexing
         }
 
         [RavenTheory(RavenTestCategory.JavaScript | RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanIndexSwitchCases(Options options)
         {
             using (var store = GetDocumentStore(options))

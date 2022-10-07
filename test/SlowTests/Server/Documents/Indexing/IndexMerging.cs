@@ -412,6 +412,43 @@ select new
 Category = doc.Category, Name = doc.Name, PricePerUnit = doc.PricePerUnit, Supplier = doc.Supplier, UnitOnStock = LoadCompareExchangeValue(Id(doc))}"
                 , results.Suggestions.First().MergedIndex.Maps.First());
         }
+
+
+        [Fact]
+        public void ProposeDeleteWhenOneIndexIsSubsetOfAnother()
+        {
+            var index1 = new IndexDefinition
+            {
+                Name = "Orders/ByShipment/Location",
+                Maps = { @"from order in docs.Orders
+select new
+{
+    order.Employee,
+    order.Company,
+    ShipmentLocation = CreateSpatialField(order.ShipTo.Location.Latitude, order.ShipTo.Location.Longitude),
+    Total = order.Lines.Sum(l => (l.Quantity * l.PricePerUnit) * (1 - l.Discount))
+}" },
+                Type = IndexType.Map
+            };
+            var index2 = new IndexDefinition
+            {
+                Name = "Orders/Totals",
+                Maps = { @"from order in docs.Orders
+select new
+{
+    order.Employee,
+    order.Company,
+    Total = order.Lines.Sum(l => (l.Quantity * l.PricePerUnit) * (1 - l.Discount))
+}" },
+                Type = IndexType.Map
+            };
+
+            var results = GetMergeReportOfTwoIndexes(index2, index1);
+            Assert.Equal(0, results.Suggestions[0].CanMerge.Count);
+            Assert.Equal(1, results.Suggestions[0].CanDelete.Count);
+            Assert.Equal("Orders/Totals", results.Suggestions[0].CanDelete[0]);
+        }
+        
         
         [Fact]
         public void CanMergeCorrectlyWithDifferentDocumentIdentifiers()

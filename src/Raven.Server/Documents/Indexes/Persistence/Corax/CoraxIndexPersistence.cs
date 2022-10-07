@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Corax.Exceptions;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
@@ -99,7 +99,7 @@ public class CoraxIndexPersistence : IndexPersistenceBase
     {
         using (var tx = environment.WriteTransaction())
         {
-            var metadataTree = tx.ReadTree(global::Corax.Constants.IndexMetadata);
+            var metadataTree = tx.ReadTree(global::Corax.Constants.IndexMetadataSlice);
             var version = metadataTree?.ReadInt64(global::Corax.Constants.IndexWriter.IndexVersionSlice);
             if (version.HasValue)
             {
@@ -113,7 +113,7 @@ public class CoraxIndexPersistence : IndexPersistenceBase
             }
             else
             {
-                tx.CreateTree(global::Corax.Constants.IndexMetadata).Add(global::Corax.Constants.IndexWriter.IndexVersionSlice, global::Corax.Constants.IndexWriter.Version);
+                tx.CreateTree(global::Corax.Constants.IndexMetadataSlice).Add(global::Corax.Constants.IndexWriter.IndexVersionSlice, global::Corax.Constants.IndexWriter.Version);
                 tx.Commit();
             }
         }
@@ -150,6 +150,13 @@ public class CoraxIndexPersistence : IndexPersistenceBase
 
     public override IndexWriteOperationBase OpenIndexWriter(Transaction writeTransaction, JsonOperationContext indexContext)
     {
+        if (_index.Type == IndexType.MapReduce || _index.Type == IndexType.JavaScriptMapReduce)
+        {
+            var mapReduceIndex = (MapReduceIndex)_index;
+            if (string.IsNullOrWhiteSpace(mapReduceIndex.Definition.OutputReduceToCollection) == false)
+                return new OutputReduceCoraxIndexWriteOperation(mapReduceIndex, writeTransaction, _converter, _logger, indexContext);
+        }
+        
         return new CoraxIndexWriteOperation(
             _index,
             writeTransaction,

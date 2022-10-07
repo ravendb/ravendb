@@ -5,6 +5,7 @@ using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
@@ -181,7 +182,7 @@ internal abstract class AbstractOngoingTasksHandlerProcessorForGetOngoingTasks<T
                         var olapTaskInfo = GetOlapEtlTaskInfo(record, clusterTopology, olapEtl);
                         await WriteResultAsync(context, olapTaskInfo);
                         break;
-                    
+
                     case OngoingTaskType.QueueEtl:
 
                         var queueEtl = taskName != null ?
@@ -397,9 +398,9 @@ internal abstract class AbstractOngoingTasksHandlerProcessorForGetOngoingTasks<T
         {
             // fetch public key of certificate
             var certBytes = Convert.FromBase64String(sinkReplication.CertificateWithPrivateKey);
-            var certificate = new X509Certificate2(certBytes,
+            var certificate = CertificateLoaderUtil.CreateCertificate(certBytes,
                 sinkReplication.CertificatePassword,
-                X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+                CertificateLoaderUtil.FlagsForExport);
 
             sinkInfo.CertificatePublicKey = Convert.ToBase64String(certificate.Export(X509ContentType.Cert));
         }
@@ -473,7 +474,7 @@ internal abstract class AbstractOngoingTasksHandlerProcessorForGetOngoingTasks<T
             Error = sqlEtlError
         };
     }
-    
+
     protected OngoingTaskQueueEtlDetails GetQueueEtlTaskInfo(DatabaseRecord record, ClusterTopology clusterTopology, QueueEtlConfiguration config)
     {
         return new OngoingTaskQueueEtlDetails
