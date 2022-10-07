@@ -282,17 +282,20 @@ namespace SlowTests.Cluster
                     var value = await WaitForValueAsync(() => list.Count, 1);
                     Assert.Equal(1, value);
 
-                    var currentUrl = store.GetRequestExecutor().Url;
-                    RavenServer toDispose = null;
-                    RavenServer workingServer = null;
-                    DisposeCurrentServer(currentUrl, ref toDispose, ref workingServer);
+                    var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(db), cts.Token);
+                    var firstTopology = record.Topology;
+
+                    Assert.Equal(2, firstTopology.Members.Count);
+
+                    var toDispose = clusterNodes.Single(n => n.ServerStore.NodeTag == firstTopology.Members[0]);
+                    await DisposeServerAndWaitForFinishOfDisposalAsync(toDispose);
 
                     await taskObservable.EnsureConnectedNow().WithCancellation(cts.Token);
 
                     List<RavenServer> databaseServers = null;
                     Assert.True(await WaitForValueAsync(async () =>
                         {
-                            var databaseRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(db));
+                            var databaseRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(db), cts.Token);
                             topology = databaseRecord.Topology;
                             databaseServers = clusterNodes.Where(s => topology.Members.Contains(s.ServerStore.NodeTag)).ToList();
       
@@ -314,8 +317,8 @@ namespace SlowTests.Cluster
                     value = await WaitForValueAsync(() => list.Count, 2);
                     Assert.Equal(2, value);
 
-                    currentUrl = store.GetRequestExecutor().Url;
-                    DisposeCurrentServer(currentUrl, ref toDispose, ref workingServer);
+                    toDispose = clusterNodes.Single(n => firstTopology.Members.Contains(n.ServerStore.NodeTag) == false && topology.Members.Contains(n.ServerStore.NodeTag));
+                    await DisposeServerAndWaitForFinishOfDisposalAsync(toDispose);
 
                     await taskObservable.EnsureConnectedNow().WithCancellation(cts.Token);
 
@@ -377,21 +380,6 @@ namespace SlowTests.Cluster
                 value = WaitForValue(() => list.Count, 2);
                 Assert.Equal(2, value);
             }
-        }
-
-        private void DisposeCurrentServer(string currnetUrl, ref RavenServer toDispose, ref RavenServer workingServer)
-        {
-            foreach (var server in Servers)
-            {
-                if (server.WebUrl == currnetUrl)
-                {
-                    toDispose = server;
-                    continue;
-                }
-                if (server.Disposed != true)
-                    workingServer = server;
-            }
-            DisposeServerAndWaitForFinishOfDisposal(toDispose);
         }
 
         public static async Task ReverseOrderSuccessfully(IDocumentStore store, string db)
