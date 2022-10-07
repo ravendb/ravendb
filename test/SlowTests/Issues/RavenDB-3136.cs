@@ -4,6 +4,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,10 +16,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void AggregateByIntegerShouldReturnResultWithValuesAndCountEvenWithLambdaExpression()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void AggregateByIntegerShouldReturnResultWithValuesAndCountEvenWithLambdaExpression(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new SampleData_Index().Execute(store);
 
@@ -51,10 +53,11 @@ namespace SlowTests.Issues
             return sorted.First();
         }
 
-        [Fact]
-        public void AggregateByIntegerShouldReturnResultWithValuesAndCount()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void AggregateByIntegerShouldReturnResultWithValuesAndCount(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new SampleData_Index().Execute(store);
 
@@ -80,10 +83,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void AggregateByStringShouldReturnResultWithValuesAndCount()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void AggregateByStringShouldReturnResultWithValuesAndCount(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new SampleData_Index().Execute(store);
 

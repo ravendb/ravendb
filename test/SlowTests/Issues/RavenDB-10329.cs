@@ -15,7 +15,7 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanGetFacetsOnFieldsWithNamesThatAreReserevedKeywords(Options options)
         {
             using (var store = GetDocumentStore(options))

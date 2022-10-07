@@ -372,8 +372,7 @@ public class CoraxSlowQueryTests : RavenTestBase
     }
 
     [Theory]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
     public void NgramSuggestionTest(Options options)
     {
         using (var documentStore = GetDocumentStore(options))

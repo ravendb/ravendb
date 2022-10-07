@@ -9,6 +9,7 @@ using Raven.Client.Documents.Indexes;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Json.Sync;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -48,10 +49,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task TestNullIntTest()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task TestNullIntTest(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new DocIndex().Execute(store);
 

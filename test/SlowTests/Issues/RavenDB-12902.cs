@@ -6,6 +6,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
 using SlowTests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,13 +18,14 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task AfterAggregationQueryExecutedShouldBeExecutedOnlyOnce()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task AfterAggregationQueryExecutedShouldBeExecutedOnlyOnce(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex(new UsersByName());
-
+                Indexes.WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
                     var counter = 0;
@@ -116,13 +118,14 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task AfterSuggestionQueryExecutedShouldBeExecutedOnlyOnce()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public async Task AfterSuggestionQueryExecutedShouldBeExecutedOnlyOnce(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex(new UsersByName());
-
+                Indexes.WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
                     var counter = 0;
@@ -206,10 +209,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task AfterLazyQueryExecutedShouldBeExecutedOnlyOnce()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task AfterLazyQueryExecutedShouldBeExecutedOnlyOnce(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -299,10 +303,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task AfterLazyAggregationQueryExecutedShouldBeExecutedOnlyOnce()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task AfterLazyAggregationQueryExecutedShouldBeExecutedOnlyOnce(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex(new UsersByName());
 
@@ -393,10 +398,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task AfterLazySuggestionQueryExecutedShouldBeExecutedOnlyOnce()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public async Task AfterLazySuggestionQueryExecutedShouldBeExecutedOnlyOnce(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex(new UsersByName());
 
@@ -489,10 +495,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task CanGetValidStatisticsInAggregationQuery()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task CanGetValidStatisticsInAggregationQuery(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex(new UsersByName());
 
@@ -548,10 +555,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task CanGetValidStatisticsInSuggestionQuery()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public async Task CanGetValidStatisticsInSuggestionQuery(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex(new UsersByName());
 
